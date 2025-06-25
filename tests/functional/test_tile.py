@@ -13,6 +13,7 @@ This test just checks that anything which can run passes.
 """
 from __future__ import annotations
 
+import json
 import time
 from typing import Any
 
@@ -35,7 +36,7 @@ def station_fixture(available_stations: list[str]) -> tango.DeviceProxy:
 
     :returns: a proxy to the station under test.
     """
-    return tango.DeviceProxy(get_sps_station_name(available_stations[-1]))
+    return tango.DeviceProxy(get_sps_station_name(available_stations[0]))
 
 
 @pytest.fixture(name="first_tile")
@@ -62,25 +63,25 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/tile.feature", "Flagged packets is ok")
-def test_tile(sps_devices_trl_exported: list[str]) -> None:
+def test_tile(sps_devices_trl_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the tile device.
 
     :param sps_devices_trl_exported: Fixture containing the trl
         root for all sps devices.
     """
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_trl_exported:
         device.adminmode = AdminMode.ONLINE
 
 
-@given("an SPS deployment against HW")
-def check_against_hardware(hw_context: bool) -> None:
+@given("an SPS deployment against a real context")
+def check_against_hardware(true_context: bool) -> None:
     """
-    Skip the test if not against HW.
+    Skip the test if not in real context.
 
-    :param hw_context: whether or not the current context is against real HW.
+    :param true_context: whether or not the current context is real.
     """
-    if not hw_context:
+    if not true_context:
         pytest.skip("This test requires real HW.")
 
 
@@ -88,7 +89,7 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[str],
+    sps_devices_trl_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -97,7 +98,7 @@ def check_spsstation_state(
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_trl_exported: Fixture containing the trl
+    :param sps_devices_trl_exported: Fixture containing the tango.DeviceProxy
         root for all sps devices.
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
@@ -115,18 +116,24 @@ def check_spsstation_state(
     )
     change_event_callbacks.assert_change_event("device_state", Anything)
     initial_mode = station.adminmode
-    if station.adminmode != initial_mode:
+    if initial_mode != AdminMode.ONLINE:
         station.adminmode = AdminMode.ONLINE
-        change_event_callbacks.assert_change_event("device_adminmode", AdminMode.ONLINE)
+        change_event_callbacks["device_adminmode"].assert_change_event(AdminMode.ONLINE)
         if initial_mode == AdminMode.OFFLINE:
-            change_event_callbacks.assert_change_event(
-                "device_state", tango.DevState.UNKNOWN
+            change_event_callbacks["device_state"].assert_change_event(
+                tango.DevState.UNKNOWN
             )
-            change_event_callbacks.assert_change_event("device_state", Anything)
 
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    device_bar_station = [
+        dev for dev in sps_devices_trl_exported if dev.dev_name() != station.dev_name()
+    ]
+
+    for device in device_bar_station:
         if device.adminmode != AdminMode.ONLINE:
             device.adminmode = AdminMode.ONLINE
+
+    if initial_mode == AdminMode.OFFLINE:
+        change_event_callbacks["device_state"].assert_change_event(Anything)
 
     if station.state() != tango.DevState.ON:
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
@@ -157,16 +164,22 @@ def check_spsstation_state(
 
 
 @given("the Tile dropped packets is 0")
-def tile_dropped_packets_is_0(tile_device: tango.DeviceProxy) -> None:
+def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
     """
     Verify that a device is in the desired state.
 
-    :param tile_device: tile device under test.
+    :param first_tile: tile device under test.
     """
-    assert (
-        tile_device.data_router_discarded_packets
-        == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
-    )
+    try:
+        assert first_tile.data_router_discarded_packets == json.dumps(
+            {"FPGA0": [0, 0], "FPGA1": [0, 0]}
+        )
+    except Exception:  # pylint: disable=broad-except
+        # Allow time to in case of first read.
+        time.sleep(10)
+        assert first_tile.data_router_discarded_packets == json.dumps(
+            {"FPGA0": [0, 0], "FPGA1": [0, 0]}
+        )
 
 
 @when("the Tile data acquisition is started")

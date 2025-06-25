@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-214] make PduTrl optional in componentmanager.
+
 ## 6.5.0
 
 * [THORN-133] SpsStation to StartAcquisition during Initialise

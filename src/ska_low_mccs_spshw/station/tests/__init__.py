@@ -18,6 +18,7 @@ __all__ = [
     "TestIntegratedBeam",
     "TestIntegratedChannel",
     "TestRaw",
+    "TestAntennaBuffer",
     "InitialiseStation",
     "BasicTangoTest",
     "TestStationBeamDataRate",
@@ -26,6 +27,7 @@ __all__ = [
 
 from .base_daq_test import BaseDaqTest
 from .base_tpm_test import TestResult, TpmSelfCheckTest
+from .test_antenna_buffer import TestAntennaBuffer
 from .test_beam_data import TestBeam
 from .test_channel_data import TestChannel
 from .test_integrated_beam import TestIntegratedBeam

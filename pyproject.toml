@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "6.3.0"
+version = "6.4.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -45,9 +45,9 @@ jsonschema-specifications = "~2023.03.6"
 ska-low-mccs-daq = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/", branch="thorn-220-2"}
 icalendar = "^5.0.12"
 types-icalendar = "^6.3.1.20250521"
-ska-low-mccs-daq-interface = "^1.0.1"
 backoff = "^2.2.1"
 recurring-ical-events = "^2.2.1"
+ska-low-mccs-daq-interface = "^1.0.1"
 watchdog = "^3.0.0"
 h5py = "^3.12.1"
 lockfile = "^0.12.2"

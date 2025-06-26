@@ -78,14 +78,6 @@
 		"pattern",
 		"adders"
 	],
-	"dependentRequired": {
-		"ramp1": [
-			"ramp1.polarisation"
-		],
-		"ramp2": [
-			"ramp2.polarisation"
-		]
-	},
 	"$defs": {
 		"polarisation": {
 			"description": "The polarisation to apply the ramp for. Must be 0, 1, or -1 to use all stages.",

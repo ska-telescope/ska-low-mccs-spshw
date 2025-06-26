@@ -402,6 +402,7 @@ class TestMccsTile:
             "currentFrame",
             "pendingDataRequests",
             "isBeamformerRunning",
+            "stationBeamFlagEnabled",
             "rfiCount",
         ]
 
@@ -709,6 +710,7 @@ class TestMccsTile:
             "tileProgrammingState",
             "isProgrammed",
             "coreCommunicationStatus",
+            "ddr_write_size",
             "ddr_rd_cnt",
             "ddr_wr_cnt",
             "ddr_rd_dat_cnt",
@@ -1941,6 +1943,42 @@ class TestMccsTileCommands:
 
         assert result_code == ResultCode.OK
 
+    def test_EnableDisableBeamFalgging(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for Enable/Disable Beam Flagging Commands.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        """
+        values = tile_component_manager.is_station_beam_flagging_enabled
+        # assert that all values are false
+        assert all(not value for value in values)
+
+        # Enable Beam Flagging
+        [[result_code], [message]] = on_tile_device.EnableStationBeamFlagging()
+
+        assert result_code == ResultCode.OK
+
+        values = tile_component_manager.is_station_beam_flagging_enabled
+        # assert that all values are true
+        assert all(value for value in values)
+
+        # Disable Beam Flagging
+        [[result_code], [message]] = on_tile_device.DisableStationBeamFlagging()
+
+        assert result_code == ResultCode.OK
+
+        values = tile_component_manager.is_station_beam_flagging_enabled
+        # assert that all values are false again
+        assert all(not value for value in values)
+
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(
@@ -2177,37 +2215,49 @@ class TestMccsTileCommands:
             tile_device.ConfigureTestGenerator(json.dumps({"pulse_frequency": 8}))
 
     @pytest.mark.parametrize(
-        "incorrect_param",
+        ("param", "expect_failure"),
         [
-            {"stage": "invalid_stage"},
-            {"ramp1": "invalid_key"},
-            {"ramp1": {"polarisation": -1}},
-            {"ramp1": {"polarisation": 10}},
-            {"ramp1": {"invalid_key": -1}},
-            {"ramp2": {"invalid_key": -1}},
-            {"pattern": []},
-            {"pattern": list(range(1025))},
-            {"adders": list(range(31))},
-            {"adders": list(range(33))},
-            {"shift": -1},
-            {"zero": 70000},
+            (
+                {
+                    "stage": "jesd",
+                    "pattern": list(range(1024)),
+                    "adders": list(range(32)),
+                    "ramp1": {"polarisation": -1},
+                    "ramp2": {"polarisation": 0},
+                },
+                False,
+            ),
+            ({"stage": "invalid_stage"}, True),
+            ({"ramp1": "invalid_key"}, True),
+            ({"ramp1": {"polarisation": -1}}, False),
+            ({"ramp1": {"polarisation": 10}}, True),
+            ({"ramp1": {"invalid_key": -1}}, True),
+            ({"ramp2": {"invalid_key": -1}}, True),
+            ({"pattern": []}, True),
+            ({"pattern": list(range(1025))}, True),
+            ({"adders": list(range(31))}, True),
+            ({"adders": list(range(33))}, True),
+            ({"shift": -1}, True),
+            ({"zero": 70000}, True),
         ],
     )
     def test_configure_pattern_generator(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
-        incorrect_param: dict,
+        param: dict,
+        expect_failure: bool,
     ) -> None:
         """
-        Test for various incorrect args to the pattern generator.
+        Test for various args to the pattern generator.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
-        :param incorrect_param: A dictionary with the incorrect parameter.
+        :param param: A dictionary with the parameter.
+        :param expect_failure: True if we expect a failure
         """
         tile_device.subscribe_event(
             "state",
@@ -2239,9 +2289,14 @@ class TestMccsTileCommands:
             "shift": 0,
             "zero": 0,
         }
-        default_parameters.update(incorrect_param)
+        default_parameters.update(param)
 
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+        if expect_failure:
+            with pytest.raises(
+                DevFailed, match="jsonschema.exceptions.ValidationError"
+            ):
+                tile_device.ConfigurePatternGenerator(json.dumps(default_parameters))
+        else:
             tile_device.ConfigurePatternGenerator(json.dumps(default_parameters))
 
     def test_get_arp_table(

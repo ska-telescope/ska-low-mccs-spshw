@@ -5176,14 +5176,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "urllib3"
-version = "2.4.0"
+version = "2.5.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "urllib3-2.4.0-py3-none-any.whl", hash = "sha256:4e16665048960a0900c702d4a66415956a584919c03361cac9f1df5c5dd7e813"},
-    {file = "urllib3-2.4.0.tar.gz", hash = "sha256:414bc6535b787febd7567804cc015fee39daab8ad86268f1310a9250697de466"},
+    {file = "urllib3-2.5.0-py3-none-any.whl", hash = "sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc"},
+    {file = "urllib3-2.5.0.tar.gz", hash = "sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760"},
 ]
 
 [package.extras]
@@ -5701,4 +5701,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "efdb0272abe07fa86fdcb5e857aa8d6c1f116a3885dab07fbd75acca3f923cd3"
+content-hash = "3ebdc5204328263f2cd5405bb59364c53110dddef0220767b7d12f4a42a7ed74"

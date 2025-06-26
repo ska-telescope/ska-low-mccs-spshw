@@ -3,7 +3,7 @@ Feature: Test tile
 
     @XTP-76880
     Scenario: Flagged packets is ok
-        Given an SPS deployment against HW
+        Given an SPS deployment against a real context
         And the SpsStation and tiles are ON
         And the Tile dropped packets is 0
         When the Tile data acquisition is started

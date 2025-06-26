@@ -19,6 +19,7 @@ from ska_snmp_device.definitions import load_device_definition, parse_device_def
 from tango import Attribute
 from tango.server import attribute, command, device_property
 
+import re
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
 from .pdu_component_manager import PduComponentManager
@@ -75,11 +76,14 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         self._off_value: int
         self.component_manager: PduComponentManager
 
-        self._port_device_information: list[str] = [""] * 24
+        self._port_device_information: dict[int, str] = {}
 
         if self.PortDeviceTrls:
-            for i, trl in enumerate(self.PortDeviceTrls):
-                self._port_device_information[i] = trl
+            for device_info in self.PortDeviceTrls:
+                trl, port_info = device_info.split(":")
+                numbers = re.findall(r'\d+', port_info)
+                for port in numbers:
+                    self._port_device_information[port] = trl
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""

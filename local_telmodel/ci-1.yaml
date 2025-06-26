@@ -19,8 +19,6 @@ platform:
             model: ENLOGIC
             host: 10.135.253.170
             v2_community: public
-            power_marshaller_trl: low-mccs/powermarshaller/ci-1
-            port_device_trls: low-mccs/tile/ci-1-tpm10
         powermarshaller:
           ci-1:
             logging_level_default: 5
@@ -29,7 +27,7 @@ platform:
             simulated: true
             srmb_host: srmb-1
             srmb_port: 8081
-            pdu_trl: low-mccs/pdu/ci-1
+            pdu_ports: 1, 2
         tpms:
           tpm10:
             id: 9

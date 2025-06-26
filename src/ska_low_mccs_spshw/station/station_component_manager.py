@@ -19,7 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -1342,6 +1342,10 @@ class SpsStationComponentManager(
             self.logger.debug("Setting tile source IPs before initialisation")
             result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
+        if result_code == ResultCode.OK:
+            self.logger.debug("Setting global reference time")
+            self._set_global_reference_time(self._global_reference_time or None)
+
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
@@ -1394,6 +1398,7 @@ class SpsStationComponentManager(
         task_callback: Optional[Callable] = None,
         *,
         start_bandpasses: Optional[bool] = None,
+        global_reference_time: Optional[str] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _initialise method.
@@ -1404,10 +1409,16 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param start_bandpasses: Whether to configure TPMs to send
             integrated data. Defaults to True.
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
+
         :return: a task status and response message
         """
         return self.submit_task(
-            self._initialise, task_callback=task_callback, args=[start_bandpasses]
+            self._initialise,
+            task_callback=task_callback,
+            args=[start_bandpasses, global_reference_time],
         )
 
     @check_communicating
@@ -1415,6 +1426,7 @@ class SpsStationComponentManager(
     def _initialise(
         self: SpsStationComponentManager,
         start_bandasses: Optional[bool] = None,
+        global_reference_time: Optional[str] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1425,6 +1437,9 @@ class SpsStationComponentManager(
 
         :param start_bandasses: Whether to configure TPMs to send
             integrated data.
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
@@ -1452,13 +1467,18 @@ class SpsStationComponentManager(
             result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
+            self.logger.debug("Setting global reference time")
+            self._set_global_reference_time(global_reference_time)
+
+        if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code = self._reinitialise_tiles(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
             result_code = self._initialise_tile_parameters(
-                task_callback, task_abort_event
+                task_callback,
+                task_abort_event,
             )
 
         if result_code == ResultCode.OK:
@@ -1600,6 +1620,31 @@ class SpsStationComponentManager(
             src_ip2 = str(self._sdn_first_address + 2 * tile_id + 1)
             tile.srcip40gfpga1 = src_ip1
             tile.srcip40gfpga2 = src_ip2
+        return ResultCode.OK
+
+    @check_communicating
+    def _set_global_reference_time(
+        self: SpsStationComponentManager, global_reference_time: Optional[str] = None
+    ) -> ResultCode:
+        if self.csp_spead_format != "SKA":
+            self.logger.debug("Not setting global reference time for non-SKA format")
+            return ResultCode.OK
+        if global_reference_time is not None:
+            self.global_reference_time = global_reference_time
+        else:
+            rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+            time_ref = int(
+                Time(  # parse
+                    date.today().isoformat(),  # last midnight
+                    scale="tai",  # as a TAI time
+                ).unix  # convert to unix timestamp
+            )
+
+            self.global_reference_time = datetime.strftime(
+                datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
+            )
+        self.logger.debug(f"Global reference time: {self.global_reference_time}")
         return ResultCode.OK
 
     @check_communicating

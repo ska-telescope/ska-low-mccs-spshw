@@ -326,6 +326,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         self._health_model: SubrackHealthModel
         self._health_state: HealthState
+        self.component_manager: SubrackComponentManager
 
         self._tpm_present: list[bool] = []
         self._tpm_count = 0
@@ -359,6 +360,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+
+    def delete_device(self: MccsSubrack) -> None:
+        """Delete the device."""
+        self.component_manager.pdu_proxy._cleanup()
+        self.component_manager._task_executor._executor.shutdown()
+        super().delete_device()
 
     class InitCommand(DeviceInitCommand):
         """Initialisation command class for this base device."""

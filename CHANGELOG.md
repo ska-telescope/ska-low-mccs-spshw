@@ -1,7 +1,8 @@
 # Version History
 
-## Unreleased
+## 6.3.1
 
+* [THORN-220] Add cleanup for proxies and component managers.
 * [THORN-214] Update RAL platform spec.
 * [THORN-68] Added stationBeamFlagEnabled attribute
 

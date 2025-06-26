@@ -1,5 +1,9 @@
 # Version History
 
+## 6.5.0
+
+* [THORN-133] SpsStation to StartAcquisition during Initialise
+
 ## 6.4.0
 
 * [THORN-11] New self check test added 'TestAntennaBuffer'

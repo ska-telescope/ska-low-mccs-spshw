@@ -75,14 +75,14 @@ def test_tile(sps_devices_trl_exported: list[tango.DeviceProxy]) -> None:
 
 
 @given("an SPS deployment against a real context")
-def check_against_hardware(true_context: bool) -> None:
+def check_against_real_context(true_context: bool) -> None:
     """
     Skip the test if not in real context.
 
     :param true_context: whether or not the current context is real.
     """
     if not true_context:
-        pytest.skip("This test requires real HW.")
+        pytest.skip("This test requires real context.")
 
 
 @given("the SpsStation and tiles are ON")

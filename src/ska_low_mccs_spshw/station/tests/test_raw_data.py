@@ -103,9 +103,9 @@ class TestRaw(BaseDaqTest):
             "nof_tiles": len(self.tile_proxies),
             "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
         }
-        self._configure_daq("RAW_DATA", integrated=False, **configure_kwargs)
         with self.reset_context():
             self._start_directory_watch()
+            self._configure_daq("RAW_DATA", integrated=False, **configure_kwargs)
             self.test_logger.debug("Sending raw data")
             self._configure_and_start_pattern_generator("jesd")
             self._send_raw_data(sync=sync)

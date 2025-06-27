@@ -331,7 +331,11 @@ class TestTileBeamformer(BaseDaqTest):
             start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0
         )
         time.sleep(2)
-        self._configure_daq("BEAM_DATA")
+        configure_kwargs = {
+            "nof_tiles": len(self.tile_proxies),
+            "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+        }
+        self._configure_daq("BEAM_DATA", integrated=False, **configure_kwargs)
         self._data_handler = BeamDataReceivedHandler(
             self.test_logger,
             len(self.tile_proxies),

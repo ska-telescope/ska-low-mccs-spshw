@@ -99,8 +99,11 @@ class TestRaw(BaseDaqTest):
 
     def _test_raw_data(self: TestRaw, sync: bool, description: str) -> None:
         self.test_logger.debug(f"Testing {description} raw data.")
-
-        self._configure_daq("RAW_DATA")
+        configure_kwargs = {
+            "nof_tiles": len(self.tile_proxies),
+            "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+        }
+        self._configure_daq("RAW_DATA", integrated=False, **configure_kwargs)
         with self.reset_context():
             self._start_directory_watch()
             self.test_logger.debug("Sending raw data")

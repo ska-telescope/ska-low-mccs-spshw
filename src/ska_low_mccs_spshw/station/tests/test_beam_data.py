@@ -120,7 +120,11 @@ class TestBeam(BaseDaqTest):
             TileData.ADC_CHANNELS,
             self._data_received_callback,
         )
-        self._configure_daq("BEAM_DATA")
+        configure_kwargs = {
+            "nof_tiles": len(self.tile_proxies),
+            "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+        }
+        self._configure_daq("BEAM_DATA", integrated=False, **configure_kwargs)
         self.test_logger.debug("Testing beamformed data.")
         with self.reset_context():
             self._start_directory_watch()

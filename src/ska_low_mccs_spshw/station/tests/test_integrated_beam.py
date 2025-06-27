@@ -11,6 +11,7 @@ from __future__ import annotations
 import time
 from copy import copy
 
+from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
 from .data_handlers import IntegratedBeamDataReceivedHandler
 
@@ -129,11 +130,16 @@ class TestIntegratedBeam(BaseDaqTest):
                 f"Sleeping for {integration_time + 0.5} (integration length + 0.5s) sec"
             )
             time.sleep(integration_time + 0.5)
+            configure_kwargs = {
+                "nof_tiles": len(self.tile_proxies),
+                "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+            }
             self._configure_daq(
                 "INTEGRATED_BEAM_DATA",
                 integrated=True,
                 nof_beam_samples=1,
                 receiver_frame_size=9000,
+                **configure_kwargs,
             )
             self._start_directory_watch()
             assert self._data_created_event.wait(20)

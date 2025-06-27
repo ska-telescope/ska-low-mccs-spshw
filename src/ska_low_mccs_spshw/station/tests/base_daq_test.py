@@ -20,6 +20,7 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
+from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver
@@ -84,11 +85,16 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _configure_daq(
         self: BaseDaqTest,
         daq_mode: str,
-        integrated: bool = False,
+        integrated: bool,
         **daq_config: Any,
     ) -> None:
         assert self.daq_proxy is not None
         self.test_logger.debug("Configuring DAQ")
+        self.daq_proxy.adminmode = AdminMode.OFFLINE
+        time.sleep(1)
+        self.daq_proxy.adminmode = AdminMode.ONLINE
+        time.sleep(1)
+        self.daq_proxy.adminmode = AdminMode.ENGINEERING
         self.daq_proxy.Stop()
         time.sleep(1)
         daq_config.update(

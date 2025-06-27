@@ -128,10 +128,15 @@ class TestIntegratedChannel(BaseDaqTest):
                 f"Sleeping for {integration_time + 0.5} (integration length + 0.5s) sec"
             )
             time.sleep(integration_time + 0.5)
+            configure_kwargs = {
+                "nof_tiles": len(self.tile_proxies),
+                "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+            }
             self._configure_daq(
                 "INTEGRATED_CHANNEL_DATA",
                 integrated=True,
                 append_integrated=True,
+                **configure_kwargs,
             )
             self._start_directory_watch()
             assert self._data_created_event.wait(20)

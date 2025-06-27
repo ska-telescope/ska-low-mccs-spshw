@@ -103,7 +103,11 @@ class TestChannel(BaseDaqTest):
         self._data_handler = ChannelDataReceivedHandler(
             self.test_logger, len(self.tile_proxies), self._data_received_callback
         )
-        self._configure_daq("CHANNEL_DATA")
+        configure_kwargs = {
+            "nof_tiles": len(self.tile_proxies),
+            "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+        }
+        self._configure_daq("CHANNEL_DATA", integrated=False, **configure_kwargs)
         self.test_logger.debug("Testing channelised data.")
         with self.reset_context():
             self._start_directory_watch()

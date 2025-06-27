@@ -104,7 +104,7 @@ def check_spsstation_state(
         of the exported tiles. Or Empty list if no devices exported.
     """
     station.subscribe_event(
-        "adminmode",
+        "adminMode",
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["device_adminmode"],
     )
@@ -115,9 +115,9 @@ def check_spsstation_state(
         change_event_callbacks["device_state"],
     )
     change_event_callbacks.assert_change_event("device_state", Anything)
-    initial_mode = station.adminmode
+    initial_mode = station.adminMode
     if initial_mode != AdminMode.ONLINE:
-        station.adminmode = AdminMode.ONLINE
+        station.adminMode = AdminMode.ONLINE
         change_event_callbacks["device_adminmode"].assert_change_event(AdminMode.ONLINE)
         if initial_mode == AdminMode.OFFLINE:
             change_event_callbacks["device_state"].assert_change_event(
@@ -160,7 +160,8 @@ def check_spsstation_state(
         time.sleep(1)
         iters += 1
 
-    assert station.state() == tango.DevState.ON
+    if station.state() != tango.DevState.ON:
+        pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
 
 
 @given("the Tile dropped packets is 0")

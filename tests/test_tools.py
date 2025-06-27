@@ -106,6 +106,45 @@ def wait_for_completed_command_to_clear_from_queue(
                 )
 
 
+def wait_for_lrc_result(
+    device: tango.DeviceProxy, uid: str, expected_result: ResultCode, timeout: float
+) -> None:
+    """
+    Wait for a specific result from a LRC.
+
+    :param device: The tango device to listen to.
+    :param uid: The uid used to identify the task under question.
+    :param expected_result: The expected ResultCode from execution.
+    :param timeout: A time to wait in seconds.
+
+    :raises TimeoutError: When the commands failed to exit the queue in time.
+    :raises ValueError: When the Result is incorrect or the result not found.
+    """
+    count: int = 0
+    increment: int = 1
+
+    while device.lrcQueue != () or device.lrcExecuting != ():
+        time.sleep(increment)
+        count += increment
+        if count == timeout:
+            raise TimeoutError(
+                f"LRCs still running after {timeout} seconds: "
+                f"{device.dev_name()} : {device.lrcQueue=} "
+                f"{device.lrcExecuting=}"
+            )
+
+    for finished_result in device.lrcfinished:
+        loaded_result = json.loads(finished_result)
+        if loaded_result["uid"] == uid:
+            actual_result = ResultCode(loaded_result["result"][0])
+            if actual_result == expected_result:
+                return
+            raise ValueError(
+                f"Result for {uid} = {actual_result}. Expected {expected_result}"
+            )
+    raise ValueError(f"uid '{uid}' not found in LrcFinished")
+
+
 def execute_lrc_to_completion(
     change_event_callbacks: MockTangoEventCallbackGroup,
     device_proxy: tango.DeviceProxy,

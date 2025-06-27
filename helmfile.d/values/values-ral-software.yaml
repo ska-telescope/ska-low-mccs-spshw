@@ -17,6 +17,13 @@ subarraybeams:  # 6 subarraybeams, no defaults overridden
   "5": {}
   "6": {}
 
+platform:
+  stations:
+    stfc-ral-software:
+      sps:
+        daq:
+          two-pod-daq: false
+
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
 # For example,

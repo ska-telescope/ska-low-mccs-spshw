@@ -90,7 +90,7 @@ class TestChannel(BaseDaqTest):
                                 f"Expected data real: {expected_data_real}"
                             )
                             self.test_logger.error(
-                                f"Expected data imag: {expected_data_real}"
+                                f"Expected data imag: {expected_data_imag}"
                             )
                             self.test_logger.error(
                                 "Received data: "

@@ -1,7 +1,19 @@
 # Version History
 
-## Unreleased
+## 6.5.1
 
+* [THORN-214] make PduTrl optional in componentmanager.
+
+## 6.5.0
+
+* [THORN-133] SpsStation to StartAcquisition during Initialise
+
+## 6.4.0
+
+* [THORN-11] New self check test added 'TestAntennaBuffer'
+* [THORN-11] Attribute ddr_write_size added to the MccsTile device
+* [THORN-11] ska-low-mccs-daq-interface dependency 1.0.0-> 1.0.1
+* [THORN-11] Update helm ska-low-mccs-daq dependency 2.0.0 -> 2.0.4-dev.c6b8c425d
 * [THORN-214] Update RAL platform spec.
 * [THORN-68] Added stationBeamFlagEnabled attribute
 

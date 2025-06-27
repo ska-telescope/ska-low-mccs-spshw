@@ -61,13 +61,13 @@ class InitialiseStation(TpmSelfCheckTest):
         self.test_logger.debug("Starting test, initialising station.")
 
         self._task_status = TaskStatus.NOT_FOUND
-        self.component_manager._initialise(task_callback=self._task_callback)
+        self.component_manager._initialise(None, task_callback=self._task_callback)
 
         assert self._task_status == TaskStatus.COMPLETED
 
         for tile_proxy in self.tile_proxies:
             assert _wait_for_attribute(
-                tile_proxy, "tileprogrammingstate", TpmStatus.INITIALISED.pretty_name()
+                tile_proxy, "tileprogrammingstate", TpmStatus.SYNCHRONISED.pretty_name()
             )
             self.test_logger.debug(f"Sucessfully initialised {tile_proxy.dev_name()}")
 
@@ -78,18 +78,6 @@ class InitialiseStation(TpmSelfCheckTest):
             self.test_logger.debug(f"ARP table populated on {tile_proxy.dev_name()}")
 
         self.test_logger.debug("ARP tables populated.")
-        self.test_logger.debug("Sucessfully initialised station, synchronising.")
-
-        self._task_status = TaskStatus.NOT_FOUND
-        self.component_manager._start_acquisition(task_callback=self._task_callback)
-
-        assert self._task_status == TaskStatus.COMPLETED
-
-        for tile_proxy in self.tile_proxies:
-            assert _wait_for_attribute(
-                tile_proxy, "tileprogrammingstate", TpmStatus.SYNCHRONISED.pretty_name()
-            )
-            self.test_logger.debug(f"Sucessfully synchronised {tile_proxy.dev_name()}")
 
         for tile in self.tile_proxies:
             for fpga in ["fpga1", "fpga2"]:

@@ -245,6 +245,11 @@ class DaqSimulator:
         :return: a resultcode, message tuple
         """
         if config:
+            if config.get("receiver_ports") is not None:
+                if not isinstance(config["receiver_ports"], list):
+                    config["receiver_ports"] = [
+                        int(x) for x in config["receiver_ports"].split(",")
+                    ]
             self._config.update(config)
             return ResultCode.OK, "Daq reconfigured"
         return ResultCode.REJECTED, "No configuration data supplied."
@@ -258,17 +263,7 @@ class DaqSimulator:
 
         :return: a configuration dictionary.
         """
-        config: dict[str, Any] = self._config.copy()
-        try:
-            port = cast(int, config["receiver_ports"])
-        except ValueError:
-            pass
-        except TypeError:
-            ports = [str(port) for port in config["receiver_ports"]]
-            config["receiver_ports"] = "[" + ",".join(ports) + "]"
-        else:
-            config["receiver_ports"] = f"[{port}]"
-        return config
+        return self._config.copy()
 
     @check_initialisation
     def get_status(self: DaqSimulator) -> dict[str, Any]:

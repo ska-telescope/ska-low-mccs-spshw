@@ -121,7 +121,7 @@ def subrack_component_manager_fixture(
         subrack_ip,
         subrack_port,
         logger,
-        "low-mccs/pdu/pdu_1",
+        "",
         callbacks["communication_status"],
         callbacks["component_state"],
         _driver=subrack_driver,

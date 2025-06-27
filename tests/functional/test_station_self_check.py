@@ -79,7 +79,7 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[str],
+    sps_devices_trl_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -101,7 +101,7 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_trl_exported:
         device.adminmode = AdminMode.ENGINEERING
 
     if station.state() != tango.DevState.ON:

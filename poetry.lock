@@ -3453,18 +3453,21 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pysnmp"
-version = "7.1.17"
+version = "7.1.20"
 description = "A Python library for SNMP"
 optional = false
-python-versions = ">=3.9,<4.0"
+python-versions = ">=3.9"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "pysnmp-7.1.17-py3-none-any.whl", hash = "sha256:61b17359b5afdd951e0d40565f1412daaecf31c12ca58eb19094cf3af14eec09"},
-    {file = "pysnmp-7.1.17.tar.gz", hash = "sha256:a8663092a534d98af358587f77ea61339c4ffab2d4bbfe2a0cc6a77c2dbae886"},
+    {file = "pysnmp-7.1.20-py3-none-any.whl", hash = "sha256:9d7251e0cdf5f604abe53a65821da30ab3788a2320c883e7edb46d0f43007e3a"},
+    {file = "pysnmp-7.1.20.tar.gz", hash = "sha256:1a74f072eaa43725f348d82710a0e4f8854f85597d9a545fdae3929147bae502"},
 ]
 
 [package.dependencies]
 pyasn1 = ">=0.4.8,<0.5.0 || >0.5.0"
+
+[package.extras]
+dev = ["Sphinx (>=7.0.0,<8.0.0)", "bump2version (>=1.0.1)", "codecov (>=2.1.12)", "cryptography (>=43.0.1)", "doc8 (>=1.0.0)", "flake8 (>=7.0.0)", "furo (>=2023.1.1)", "pep8-naming (>=0.14.1)", "pre-commit (==2.21.0)", "pysmi (>=1.6.1)", "pytest (>=7.2.0)", "pytest-asyncio (>=0.21.1)", "pytest-codecov (>=0.4.0)", "pytest-cov (>=4.1.0)", "ruff (>=0.11.7)", "sphinx-copybutton (>=0.5.2)", "sphinx-notfound-page (>=1.0.0)", "sphinx-polyversion (>=1.0.0)", "sphinx-sitemap-lextudio (>=2.5.2)"]
 
 [package.source]
 type = "legacy"
@@ -4444,7 +4447,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "2.0.3"
+version = "2.0.4"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -4472,11 +4475,11 @@ transitions = "^0.9.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/"
 reference = "thorn-220-2"
-resolved_reference = "ab95b2a29b4a1ffb5a684ea297d38fc2bd323f18"
+resolved_reference = "065a378fb2fc7b9fefc0ede88803b922e8b31551"
 
 [[package]]
 name = "ska-low-mccs-daq"
-version = "2.1.0"
+version = "3.0.0-rc1"
 description = "Data acquisition for the SKA-Low Monitoring, Control and Calibration Subsystem (MCCS)"
 optional = false
 python-versions = "^3.10"
@@ -4506,7 +4509,7 @@ watchdog = "^3.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/"
 reference = "thorn-220-2"
-resolved_reference = "88c93abaa712897ad1fb893d18dca9a49a5b3323"
+resolved_reference = "7cb67c7c716f29d5120edf063662de19d5ad9629"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -4589,21 +4592,21 @@ reference = "skao"
 
 [[package]]
 name = "ska-ser-snmp"
-version = "0.6.1"
+version = "0.6.2"
 description = "Python package for snmp tango devices"
 optional = false
-python-versions = ">=3.10,<3.11"
+python-versions = ">=3.10.0,<4.0.0"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "ska_ser_snmp-0.6.1-py3-none-any.whl", hash = "sha256:2c45c1421a5b1f4f1f949df53f987edf8b3b38f69f048582596dfcc0c01c28f3"},
-    {file = "ska_ser_snmp-0.6.1.tar.gz", hash = "sha256:1013c095a345945554fa7ce8c0a9ffbd04b92deccb661c7c4abbe89a77e6c5eb"},
+    {file = "ska_ser_snmp-0.6.2-py3-none-any.whl", hash = "sha256:c2493af22db9b1db65d1e0d710fcf60bc4d8d35e8f3ca33158c2bd4ffd47d7fb"},
+    {file = "ska_ser_snmp-0.6.2.tar.gz", hash = "sha256:015529c6efa25b436ed17b0f16f72590e1c60e6338963115a5d83ae7b3eba71b"},
 ]
 
 [package.dependencies]
 more-itertools = ">=10.2.0,<11.0.0"
 pysmi = ">=1.6.1,<2.0.0"
-pysnmp = "7.1.17"
-pytango = ">=9.5.0,<11.0.0"
+pysnmp = "7.1.20"
+pytango = ">=10,<11"
 PyYAML = ">=6.0.1,<7.0.0"
 ska-control-model = ">=1.0.0,<2.0.0"
 ska-tango-base = ">=1.3.2,<2.0.0"

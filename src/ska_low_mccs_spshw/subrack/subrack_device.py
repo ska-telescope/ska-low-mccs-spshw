@@ -1099,8 +1099,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
-    @attribute(dtype=HealthState, label="pdu_health")
-    def pduHealth(self: MccsSubrack) -> HealthState:
+    @attribute(dtype=str, label="pdu_health")
+    def pduHealth(self: MccsSubrack) -> str | None:
         """
         Handle a Tango attribute read of the pdu health.
 
@@ -1109,7 +1109,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_health_state()
 
     @attribute(dtype=str, label="pdu_model")
-    def pduModel(self: MccsSubrack) -> str:
+    def pduModel(self: MccsSubrack) -> str | None:
         """
         Handle a Tango attribute read of the pdu model type.
 
@@ -1117,7 +1117,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._pdu_model()
 
-    def _pdu_model(self: MccsSubrack) -> str:
+    def _pdu_model(self: MccsSubrack) -> str | None:
         """
         Handle a Tango attribute read of the pdu model type.
 
@@ -1126,7 +1126,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_model()
 
     @attribute(dtype=int, label="pdu number ports")
-    def pduNumberPorts(self: MccsSubrack) -> int:
+    def pduNumberPorts(self: MccsSubrack) -> int | None:
         """
         Handle a Tango attribute read of thenumber of pdu ports.
 
@@ -1135,7 +1135,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_number_of_ports()
 
     @attribute(dtype=(int,), label="pdu port statess")
-    def pduPortStates(self: MccsSubrack) -> list[int]:
+    def pduPortStates(self: MccsSubrack) -> list[int] | None:
         """
         Handle a Tango attribute read of the state of pdu port.
 
@@ -1144,7 +1144,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_port_states()
 
     @attribute(dtype=(float,), label="pdu port currents")
-    def pduPortCurrents(self: MccsSubrack) -> list[float]:
+    def pduPortCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the current of pdu port.
 
@@ -1153,7 +1153,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_port_currents()
 
     @attribute(dtype=(float,), label="pdu port voltages")
-    def pduPortVoltages(self: MccsSubrack) -> list[float]:
+    def pduPortVoltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the current of pdu port.
 

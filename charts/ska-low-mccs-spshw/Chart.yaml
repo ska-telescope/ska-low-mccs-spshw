@@ -6,7 +6,7 @@ appVersion: 6.5.1
 icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
 dependencies:
   - name: ska-low-mccs-daq
-    version: 2.1.0
+    version: 3.0.0-rc1
     repository: https://artefact.skao.int/repository/helm-internal
     # version: 2.0.4-dev.c6b8c425d
     # repository: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/

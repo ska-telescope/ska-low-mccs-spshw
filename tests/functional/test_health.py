@@ -363,25 +363,20 @@ def device_verify_attribute(
             if device_value == enum_value:
                 break
             time.sleep(1)
-        if attribute == "HealthState":
-            try:
-                assert device_value == enum_value, (
-                    f"Expected health to be {enum_value} but got {device_value}, "
-                    f"Reason: {device_proxy.healthReport}"
-                )
-            except Exception:
-                if station_name == "stfc-ral-software":
-                    pytest.xfail(
-                        "at RAL there is an issue with the TPM current "
-                        "meaning the subrack has DEGRADED health and "
-                        "therefore station has DEGRADED healthstate."
-                    )
-                pytest.fail(
-                    f"Expected health to be {enum_value} but got {device_value}, "
-                    f"Reason: {device_proxy.healthReport}"
-                )
-        else:
-            assert device_value == enum_value
+
+        if device_value != enum_value:
+            # Try to ascertain reason.
+            reason: str = "UNKNOWN"
+            if attribute == "HealthState":
+                reason = device_proxy.healthReport
+            elif attribute == "state":
+                reason = device_proxy.status()
+
+            pytest.fail(
+                f"Expected {device_proxy.dev_name()} : "
+                f"{attribute} to be {enum_value} but got {device_value}, "
+                f"Reason: {reason}"
+            )
 
 
 @when("the Tiles board temperature thresholds are adjusted")

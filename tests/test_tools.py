@@ -84,7 +84,8 @@ def wait_for_lrc_result(
             if actual_result == expected_result:
                 return
             raise ValueError(
-                f"Result for {uid} = {actual_result}. Expected {expected_result}"
+                f"Result for {uid} = {ResultCode(actual_result).name}. "
+                f"Expected {ResultCode(expected_result).name}!"
             )
     raise ValueError(f"uid '{uid}' not found in LrcFinished")
 

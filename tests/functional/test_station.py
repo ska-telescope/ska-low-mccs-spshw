@@ -101,7 +101,11 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-
+    station.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["device_state"],
+    )
     change_event_callbacks.assert_change_event("device_state", Anything)
     initial_mode = station.adminmode
     if initial_mode != AdminMode.ONLINE:
@@ -150,7 +154,8 @@ def check_spsstation_state(
         time.sleep(1)
         iters += 1
 
-    assert station.state() == tango.DevState.ON
+    if station.state() != tango.DevState.ON:
+        pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
 
 
 @given("the station is initialised")

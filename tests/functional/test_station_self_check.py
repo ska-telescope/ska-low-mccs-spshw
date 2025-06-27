@@ -13,7 +13,6 @@ This test just checks that anything which can run passes.
 """
 from __future__ import annotations
 
-import json
 import time
 from typing import Any
 
@@ -25,6 +24,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
+from tests.test_tools import wait_for_lrc_result
 
 
 @pytest.fixture(name="station")
@@ -159,28 +159,16 @@ def check_self_check_result(station: tango.DeviceProxy, command_info: dict) -> N
     """
     # We're running a growing batch of tests which are taking longer to run, at the
     # moment about 17-18 mins on average.
-    lrc_result_callback = MockTangoEventCallbackGroup("lrc_result", timeout=20 * 60)
-    station.subscribe_event(
-        "longRunningCommandResult",
-        tango.EventType.CHANGE_EVENT,
-        lrc_result_callback["lrc_result"],
-    )
-    lrc_result_callback.assert_change_event(
-        "lrc_result",
-        Anything,
-        consume_nonmatches=True,
-    )
+    timeout = 20 * 60
+
     try:
-        lrc_result_callback.assert_change_event(
-            "lrc_result",
-            (
-                command_info["SelfCheck"],
-                json.dumps([ResultCode.OK, "Tests completed OK."]),
-            ),
-            consume_nonmatches=True,
-            lookahead=5,
+        wait_for_lrc_result(
+            device=station,
+            uid=command_info["SelfCheck"],
+            expected_result=ResultCode.OK,
+            timeout=timeout,
         )
-    except AssertionError:
+    except ValueError:
         print(station.testlogs)
         print(station.testreport)
         pytest.fail("Self Check did not succeed.")

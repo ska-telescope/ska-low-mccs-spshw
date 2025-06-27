@@ -79,7 +79,7 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[str],
+    sps_devices_trl_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -101,12 +101,28 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
-        device.adminmode = AdminMode.ENGINEERING
 
-    change_event_callbacks.assert_change_event(
-        "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
-    )
+    change_event_callbacks.assert_change_event("device_state", Anything)
+    initial_mode = station.adminmode
+    if initial_mode != AdminMode.ONLINE:
+        station.adminmode = AdminMode.ONLINE
+        change_event_callbacks["device_adminmode"].assert_change_event(AdminMode.ONLINE)
+        if initial_mode == AdminMode.OFFLINE:
+            change_event_callbacks["device_state"].assert_change_event(
+                tango.DevState.UNKNOWN
+            )
+
+    device_bar_station = [
+        dev for dev in sps_devices_trl_exported if dev.dev_name() != station.dev_name()
+    ]
+
+    for device in device_bar_station:
+        if device.adminmode != AdminMode.ONLINE:
+            device.adminmode = AdminMode.ONLINE
+
+    if initial_mode == AdminMode.OFFLINE:
+        change_event_callbacks["device_state"].assert_change_event(Anything)
+
     time.sleep(5)
 
     if station.state() != tango.DevState.ON:

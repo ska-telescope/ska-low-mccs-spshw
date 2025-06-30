@@ -2969,6 +2969,24 @@ class SpsStationComponentManager(
     def stop_beamformer(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _stop_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._stop_beamformer` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._stop_beamformer, args=[None], task_callback=task_callback
+        )
+
+    def stop_beamformer_for_channels(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
         *,
         channel_groups: Optional[list[int]] = None,
     ) -> tuple[TaskStatus, str]:
@@ -2984,7 +3002,7 @@ class SpsStationComponentManager(
 
         :return: a task status and response message
         """
-        logging.info(f"stop_beamformer called with channel_groups {channel_groups}")
+        logging.info(f"stop_beamformer called for channel_groups {channel_groups}")
         return self.submit_task(
             self._stop_beamformer, args=[channel_groups], task_callback=task_callback
         )
@@ -3003,7 +3021,6 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         parameter_list = {}
-        # if channel_groups is not None:
         parameter_list = {"channel_groups": channel_groups}
         json_argument = json.dumps(parameter_list)
         if task_callback is not None:

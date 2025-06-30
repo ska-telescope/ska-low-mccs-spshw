@@ -11,4 +11,4 @@ These schemas are for use with SpsStation commands
   SpsStation_BeamformerRunningForChannels
   SpsStation_Initialise
   SpsStation_StartBeamformer
-  SpsStation_StopBeamformer
+  SpsStation_StopBeamformerForChannels

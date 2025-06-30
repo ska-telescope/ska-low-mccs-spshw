@@ -259,10 +259,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
         )
 
-        stop_beamformer_schema: Final = json.loads(
+        stop_beamformer_for_channels_schema: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.schemas.station",
-                "SpsStation_StopBeamformer.json",
+                "SpsStation_StopBeamformerForChannels.json",
             )
         )
 
@@ -292,7 +292,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             ("SelfCheck", "self_check", None),
             ("RunTest", "run_test", run_test_schema),
             ("StartBeamformer", "start_beamformer", start_beamformer_schema),
-            ("StopBeamformer", "stop_beamformer", stop_beamformer_schema),
+            ("StopBeamformer", "stop_beamformer", None),
+            (
+                "StopBeamformerForChannels",
+                "stop_beamformer_for_channels",
+                stop_beamformer_for_channels_schema,
+            ),
         ]:
             validator = (
                 None
@@ -2213,12 +2218,34 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return ([return_code], [message])
 
     @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def StopBeamformer(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Stop the beamformer for given channel groups.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopBeamformer")
+        """
+        handler = self.get_command_object("StopBeamformer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def StopBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def StopBeamformerForChannels(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
-        Stop the beamformer.
+        Stop the beamformer for given channel groups.
 
         :param argin: json dictionary with optional keywords:
 
@@ -2235,9 +2262,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"channel_groups": [0,1,4] }
         >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("StopBeamformer", dict)
+        >>> dp.command_inout("StopBeamformerForChannels", dict)
         """
-        handler = self.get_command_object("StopBeamformer")
+        handler = self.get_command_object("StopBeamformerForChannels")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

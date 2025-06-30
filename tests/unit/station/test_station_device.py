@@ -910,6 +910,16 @@ def test_Standby(
         ),
         pytest.param(
             "StopBeamformer",
+            None,
+            "StopBeamformer",
+            json.dumps(
+                {
+                    "channel_groups": None,
+                }
+            ),
+        ),
+        pytest.param(
+            "StopBeamformerForChannels",
             "{}",
             "StopBeamformer",
             json.dumps(
@@ -919,7 +929,7 @@ def test_Standby(
             ),
         ),
         pytest.param(
-            "StopBeamformer",
+            "StopBeamformerForChannels",
             json.dumps({"channel_groups": [1, 2, 4, 5]}),
             "StopBeamformer",
             json.dumps({"channel_groups": [1, 2, 4, 5]}),

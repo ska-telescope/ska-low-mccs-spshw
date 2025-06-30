@@ -74,6 +74,7 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
         "StopDataTransmission",
         "StopIntegratedData",
         "StopBeamformer",
+        "StopBeamformerForChannels",
         "ConfigureTestGenerator",
         "ConfigureIntegratedBeamData",
         "ApplyPointingDelays",

@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://skao.int/SpsStation_StopBeamformer.json",
-    "title": "SpsStation StopBeamformer schema",
-    "description": "Schema for SpsStation's StopBeamformer command",
+    "$id": "https://skao.int/SpsStation_StopBeamformerForChannels.json",
+    "title": "SpsStation StopBeamformerForChannels schema",
+    "description": "Schema for SpsStation's StopBeamformerForChannels command",
     "type": "object",
     "properties": {
         "channel_groups": {

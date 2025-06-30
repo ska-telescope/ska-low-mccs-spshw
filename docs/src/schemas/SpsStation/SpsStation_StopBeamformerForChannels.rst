@@ -1,8 +1,8 @@
-================================
-SpsStation StopBeamformer schema
-================================
+===========================================
+SpsStation StopBeamformerForChannels schema
+===========================================
 
-Schema for SpsStation's StopBeamformer command
+Schema for SpsStation's StopBeamformerForChannels command
 
 **********
 Properties

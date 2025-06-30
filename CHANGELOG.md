@@ -1,8 +1,16 @@
 # Version History
 
-## 6.4.1
+## 6.5.2
 
 * [THORN-220] Add cleanup for proxies and component managers.
+
+## 6.5.1
+
+* [THORN-214] make PduTrl optional in componentmanager.
+
+## 6.5.0
+
+* [THORN-133] SpsStation to StartAcquisition during Initialise
 
 ## 6.4.0
 

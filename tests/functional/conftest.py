@@ -72,7 +72,7 @@ def sps_devices_trl_exported_fixture(
     exported_pdus: list[str],
 ) -> list[tango.DeviceProxy]:
     """
-    Fixture containing the trl for all sps devices.
+    Fixture containing a DeviceProxy for all sps devices.
 
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
@@ -85,7 +85,7 @@ def sps_devices_trl_exported_fixture(
     :param exported_pdus: A list containing the ``tango.DeviceProxy``
          of the exported pdus. Or Empty list if no devices exported.
 
-    :returns: A list of trl strings.
+    :returns: A list of DeviceProxy for exported sps devices.
     """
     return (
         exported_tiles
@@ -99,7 +99,7 @@ def sps_devices_trl_exported_fixture(
 @pytest.fixture(name="exported_tiles")
 def exported_tiles_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     """
-    Return the name of the tiles under test.
+    Return a list with a DeviceProxy to the tiles under test.
 
     :param true_context: whether to test against an existing Tango deployment
 
@@ -117,7 +117,7 @@ def exported_tiles_fixture(true_context: bool) -> list[tango.DeviceProxy]:
 @pytest.fixture(name="exported_pdus")
 def exported_pdus_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     """
-    Return the name of the pdus under test.
+    Return a list with a DeviceProxy to the pdus under test.
 
     :param true_context: whether to test against an existing Tango deployment
 
@@ -135,7 +135,7 @@ def exported_pdus_fixture(true_context: bool) -> list[tango.DeviceProxy]:
 @pytest.fixture(name="exported_subracks")
 def exported_subracks_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     """
-    Return the trls of the subracks under test.
+    Return a list with a DeviceProxy to the subracks under test.
 
     :param true_context: whether to test against an existing Tango deployment
 

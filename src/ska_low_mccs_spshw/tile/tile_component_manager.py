@@ -1172,6 +1172,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._update_attribute_callback(
                     programming_state=TpmStatus.INITIALISED.pretty_name()
                 )
+                # The initial pps_delay must be reset after initialisation.
+                self._initial_pps_delay = None
                 if self._global_reference_time:
                     self.logger.info(
                         "Global reference time specifed, starting acquisition"

@@ -3756,14 +3756,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pytest-xdist"
-version = "3.7.0"
+version = "3.8.0"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "pytest_xdist-3.7.0-py3-none-any.whl", hash = "sha256:7d3fbd255998265052435eb9daa4e99b62e6fb9cfb6efd1f858d4d8c0c7f0ca0"},
-    {file = "pytest_xdist-3.7.0.tar.gz", hash = "sha256:f9248c99a7c15b7d2f90715df93610353a485827bc06eefb6566d23f6400f126"},
+    {file = "pytest_xdist-3.8.0-py3-none-any.whl", hash = "sha256:202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88"},
+    {file = "pytest_xdist-3.8.0.tar.gz", hash = "sha256:7e578125ec9bc6050861aa93f2d59f1d8d085595d6551c2c90b6f4fad8d3a9f1"},
 ]
 
 [package.dependencies]
@@ -4542,7 +4542,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "0.4.0"
+version = "0.5.0"
 description = "An API for management of the Tile Processing Modules of the SKA-Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -4557,8 +4557,8 @@ numpy = "^1.26.4"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
-reference = "0.4.0"
-resolved_reference = "99fbca422b6ff046315528852f7c2f55acdfef7f"
+reference = "0.5.0"
+resolved_reference = "bb36523c665eb781b4b32d062408a300f0dffc8a"
 
 [[package]]
 name = "ska-ser-logging"
@@ -5922,4 +5922,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "c67afb97f893b280aa8834e8f2a681bdd08d7d3604c18d0d978c9e6e7756e39a"
+content-hash = "7148394c3b8313d7cbe5e780a6869004cca9e71e243a9a3628fce083aa1d91b8"

@@ -361,6 +361,10 @@ def device_verify_attribute(
             elif attribute == "HealthState":
                 device_value = device_proxy.healthState
             if device_value == enum_value:
+                print(
+                    f"Device {device_proxy.dev_name()}  "
+                    f"arrived at expected {attribute} = {device_value}!"
+                )
                 break
             time.sleep(1)
 

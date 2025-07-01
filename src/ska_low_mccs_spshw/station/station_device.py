@@ -173,13 +173,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     def delete_device(self: SpsStation) -> None:
         """Delete the device."""
         if self.component_manager._lmc_daq_proxy:
-            self.component_manager._lmc_daq_proxy._cleanup()
+            self.component_manager._lmc_daq_proxy.cleanup()
         if self.component_manager._bandpass_daq_proxy:
-            self.component_manager._bandpass_daq_proxy._cleanup()
+            self.component_manager._bandpass_daq_proxy.cleanup()
         for tile_proxy in self.component_manager._tile_proxies.values():
-            tile_proxy._cleanup()
+            tile_proxy.cleanup()
         for subrack_proxy in self.component_manager._subrack_proxies.values():
-            subrack_proxy._cleanup()
+            subrack_proxy.cleanup()
         self.component_manager._task_executor._executor.shutdown()
         super().delete_device()
 

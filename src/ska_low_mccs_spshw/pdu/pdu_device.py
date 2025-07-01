@@ -112,7 +112,7 @@ class MccsPdu(AttributePollingDevice):
         # pylint: disable=broad-exception-caught
         except Exception as ex:
             self.logger.error("Failed to delete device %s", repr(ex))
-        self.component_manager.marshaller_proxy._cleanup()
+        self.component_manager.marshaller_proxy.cleanup()
 
     def _init_state_model(self: MccsPdu) -> None:
         """Initialise the state model."""

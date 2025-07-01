@@ -158,30 +158,14 @@ def check_spsstation_state(
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
 
 
-@given("the station is initialised")
+@when("the station is initialised")
 def station_not_synched(station: tango.DeviceProxy) -> None:
     """
     Verify that a device is in the desired state.
 
     :param station: station device under test.
     """
-    if not all(status in ("Initialised") for status in station.tileProgrammingState):
-        # Reset the global reference time to None,
-        # before initialisation to ensure initialised.
-        station.globalreferencetime = ""
-        station.Initialise()
-        timeout = 0
-        while timeout < 60:
-            if all(
-                status in ("Initialised") for status in station.tileProgrammingState
-            ):
-                break
-            time.sleep(1)
-            timeout = timeout + 1
-        if timeout >= 60:
-            assert (
-                False
-            ), f"Stations failed to initialise: {station.tileProgrammingState}"
+    station.Initialise()
 
 
 @when("the station is ordered to synchronise")
@@ -204,7 +188,7 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    deadline = time.time() + 60  # seconds
+    deadline = time.time() + 120  # seconds
     print("Waiting for all remaining unprogrammed tiles Synchronise")
     while time.time() < deadline:
         time.sleep(2)

@@ -135,6 +135,9 @@ def check_spsstation_state(
     if initial_mode == AdminMode.OFFLINE:
         change_event_callbacks["device_state"].assert_change_event(Anything)
 
+    # Sleep time to discover state.
+    time.sleep(5)
+
     if station.state() != tango.DevState.ON:
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(

@@ -2222,7 +2222,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     def StopBeamformer(self: SpsStation) -> DevVarLongStringArrayType:
         """
-        Stop the beamformer for given channel groups.
+        Stop the beamformer for all channel groups.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

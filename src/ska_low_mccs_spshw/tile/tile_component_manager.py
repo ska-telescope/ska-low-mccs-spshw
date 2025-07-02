@@ -3408,22 +3408,24 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def running_beams(self: TileComponentManager) -> Optional[list[int]]:
+    def running_beams(self: TileComponentManager) -> list[bool]:
         """
         List subarray beams currently running.
 
-        :return: list of subarray beam IDs
+        :return: list of subarray beam running states
         """
-        subarray_beams = []
+        subarray_beams = [False] * 48
+        # if self.tpm_status != TpmStatus.INITIALISED:
+        #     return subarray_beams
         for beam in range(48):
             with acquire_timeout(
                 self._hardware_lock,
                 timeout=self._default_lock_timeout,
                 raise_exception=True,
             ):
-                running = self.tile.beamformer_is_running(subarray_beam=beam)
-            if running:
-                subarray_beams.append(beam)
+                subarray_beams[beam] = self.tile.beamformer_is_running(
+                    subarray_beam=beam
+                )
         return subarray_beams
 
     @property

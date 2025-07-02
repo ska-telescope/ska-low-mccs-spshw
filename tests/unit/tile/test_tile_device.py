@@ -404,6 +404,7 @@ class TestMccsTile:
             "isBeamformerRunning",
             "stationBeamFlagEnabled",
             "rfiCount",
+            "runningBeams",
         ]
 
     def test_state_with_adminmode(
@@ -709,6 +710,7 @@ class TestMccsTile:
         excluded_state_attributes = [
             "tileProgrammingState",
             "isProgrammed",
+            "runningBeams",
             "coreCommunicationStatus",
             "ddr_write_size",
             "ddr_rd_cnt",

@@ -2722,6 +2722,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["boardTemperature"].read()
 
+    @attribute(dtype=("DevBoolean",), max_dim_x=48)
+    def runningBeams(self: MccsTile) -> list[bool]:
+        """
+        List running status for each SubarrayBeam.
+
+        :return: list of hardware beam running states
+        """
+        return self.component_manager.running_beams
+
     # --------
     # Commands
     # --------
@@ -3719,14 +3728,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
 
-        >>> thresholds = {"boardTemperature" : {
-        >>>         "max_alarm": "79"
-        >>>         "min_alarm": "25"
-        >>>         "max_warning": "74"
-        >>>         "min_warning": "27"
-        >>>         },
-        >>>     }
-        >>> tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
+            >>> thresholds = {"boardTemperature" : {
+                >>>         "max_alarm": "79"
+                >>>         "min_alarm": "25"
+                >>>         "max_warning": "74"
+                >>>         "min_warning": "27"
+                >>>         },
+                >>>     }
+            >>> tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
 
         :param argin: a serialised dictionary containing attribute names and
             threshold limits.

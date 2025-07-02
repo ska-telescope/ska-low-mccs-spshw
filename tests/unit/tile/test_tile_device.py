@@ -1550,7 +1550,6 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         execute_lrc_to_completion(
-            change_event_callbacks,
             tile_device,
             "StartAcquisition",
             json.dumps({"delay": 5}),
@@ -1623,7 +1622,6 @@ class TestMccsTileCommands:
         """
         bitfile = "tests/data/Vivado_test_firmware_bitfile.bit"
         execute_lrc_to_completion(
-            change_event_callbacks,
             on_tile_device,
             "DownloadFirmware",
             bitfile,
@@ -2087,7 +2085,6 @@ class TestMccsTileCommands:
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         execute_lrc_to_completion(
-            change_event_callbacks,
             on_tile_device,
             "StartAcquisition",
             json.dumps({"delay": 5}),

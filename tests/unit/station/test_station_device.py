@@ -1248,7 +1248,6 @@ def test_write_read_channeliser_rounding(
 
     channeliser_rounding_to_set = np.array([5] * 512)
     execute_lrc_to_completion(
-        change_event_callbacks,
         station_device,
         "SetChanneliserRounding",
         channeliser_rounding_to_set,

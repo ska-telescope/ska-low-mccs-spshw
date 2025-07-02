@@ -518,7 +518,6 @@ class TestMccsTileTpmDriver:
         # Start Acquisition
         delay_time = 2
         execute_lrc_to_completion(
-            change_event_callbacks,
             tile_device,
             "StartAcquisition",
             json.dumps({"delay": delay_time}),
@@ -812,9 +811,7 @@ class TestMccsTileTpmDriver:
         tile_device.ppsDelayCorrection = tile_under_test_pps_delay
 
         # This pps delay correction is only applied during initialisation.
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
+        execute_lrc_to_completion(tile_device, "Initialise", None)
 
         request_provider = tile_component_manager._request_provider
         assert request_provider is not None

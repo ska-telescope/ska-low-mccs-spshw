@@ -92,10 +92,10 @@ def wait_for_lrc_result(
 
 
 def execute_lrc_to_completion(
-    change_event_callbacks: MockTangoEventCallbackGroup,
     device_proxy: tango.DeviceProxy,
     command_name: str,
     command_arguments: Any,
+    timeout: int = 5,
 ) -> None:
     """
     Execute a LRC to completion.
@@ -103,35 +103,29 @@ def execute_lrc_to_completion(
     :param device_proxy: fixture that provides a
         :py:class:`tango.DeviceProxy` to the device under test, in a
         :py:class:`tango.test_context.DeviceTestContext`.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
+    :param timeout: A timeout to wait for a change event.
+        Defaults to 5 seconds.
     :param command_name: the name of the device command under test
     :param command_arguments: argument to the command (optional)
     """
+    _lrc_tracker = MockTangoEventCallbackGroup("track_lrc_command", timeout=timeout)
+
     subscription_id = device_proxy.subscribe_event(
         "longrunningcommandstatus",
         EventType.CHANGE_EVENT,
-        change_event_callbacks["track_lrc_command"],
+        _lrc_tracker["track_lrc_command"],
     )
-    change_event_callbacks["track_lrc_command"].assert_change_event(Anything)
+    _lrc_tracker["track_lrc_command"].assert_change_event(Anything)
     [[task_status], [command_id]] = getattr(device_proxy, command_name)(
         command_arguments
     )
 
     assert task_status == ResultCode.QUEUED
     assert command_name in command_id.split("_")[-1]
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "STAGING")
-    )
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "QUEUED")
-    )
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "IN_PROGRESS")
-    )
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "COMPLETED")
-    )
+    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "STAGING"))
+    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "QUEUED"))
+    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "IN_PROGRESS"))
+    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "COMPLETED"))
     device_proxy.unsubscribe_event(subscription_id)
 
 

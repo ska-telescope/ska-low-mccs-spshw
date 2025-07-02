@@ -273,6 +273,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
+            "data_transmission_network": "dataTransmissionNetwork",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -2696,6 +2697,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: a list of bool values corresponding to the fpgas
         """
         return self.component_manager.is_station_beam_flagging_enabled
+
+    @command(dtype_in="DevString")
+    def dataTransmissionNetwork(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if data is sending onver SDN or NSDN.
+
+        :return: string of SND or NSDN
+        """
+        if self.component_manager.data_transmission_network is not None:
+            return self.component_manager.data_transmission_network
+        return "Not set"
 
     @attribute(
         dtype="DevDouble",

@@ -255,6 +255,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._csp_spead_format = "SKA"
         self._global_reference_time: int | None = None
         self._test_generator_active = False
+        self.data_transmission_network: Optional[str] = None
         if tpm_version not in self.FIRMWARE_NAME:
             self.logger.warning(
                 "TPM version "
@@ -1855,6 +1856,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
+                    self.data_transmission_network = mode
                     self.tile.set_up_antenna_buffer(
                         mode, ddr_start_byte_address, max_ddr_byte_size
                     )

@@ -3410,9 +3410,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def running_beams(self: TileComponentManager) -> list[bool]:
         """
-        List subarray beams currently running.
+        List hardware beams currently running.
 
-        :return: list of subarray beam running states
+        :return: list of hardware beam running states
         """
         subarray_beams = [False] * 48
         # if self.tpm_status != TpmStatus.INITIALISED:

@@ -1,5 +1,11 @@
 # Version History
 
+## 7.0.0
+
+* [THORN-175] Added beamfomer control on individual beams. 
+* [THORN-175] StartBeamformer and StopBeamformer accepts `subarray_id` parameter
+* [THORN-175] Added command BeamformerRunningForChannels and attribute RunningBeams
+
 ## Unreleased
 
 * [THORN-215] Add validation to Daq Configure command.

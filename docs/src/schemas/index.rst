@@ -10,4 +10,5 @@ These schemas are auto-generated as part of our release process. See ska_low_mcc
 
     Subrack<MccsSubrack/index>
     Tile<MccsTile/index>
+    Daq<MccsDaq/index>
     SpsStation<SpsStation/index>

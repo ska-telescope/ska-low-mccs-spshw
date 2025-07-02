@@ -440,19 +440,19 @@ class DaqComponentManager(TaskExecutorComponentManager):
     @check_communicating
     def configure_daq(
         self: DaqComponentManager,
-        daq_config: str,
+        **daq_config: Any,
     ) -> tuple[ResultCode, str]:
         """
         Apply a configuration to the DaqReceiver.
 
-        :param daq_config: A json containing configuration settings.
+        :param daq_config: validated kwargs containing configuration settings.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
         self.logger.info("Configuring DAQ receiver.")
-        result_code, message = self._daq_client.configure_daq(daq_config)
+        result_code, message = self._daq_client.configure_daq(json.dumps(daq_config))
         if result_code == ResultCode.OK:
             self.logger.info("DAQ receiver configuration complete.")
         else:
@@ -517,7 +517,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         # This delays the start call by a lot if SKUID isn't there.
         if not self._data_directory_format_adr55_compliant():
             config = {"directory": self._construct_adr55_filepath()}
-            self.configure_daq(json.dumps(config))
+            self.configure_daq(**config)
             self.logger.info(
                 "Data directory automatically reconfigured to: %s", config["directory"]
             )

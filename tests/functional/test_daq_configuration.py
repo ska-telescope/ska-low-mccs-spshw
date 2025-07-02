@@ -52,7 +52,9 @@ def daq_configuration_fixture() -> str:
 
     :return: A DAQ configuration
     """
-    config = '{"nof_tiles": 16, "nof_antennas": 256, "description": "This is a test."}'
+    config = json.dumps(
+        {"nof_tiles": 16, "nof_antennas": 256, "description": "This is a test."}
+    )
     return config
 
 

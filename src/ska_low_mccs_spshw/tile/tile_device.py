@@ -273,7 +273,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
-            "data_transmission_network": "dataTransmissionNetwork",
+            "antenna_buffer_mode": "antennaBufferMode",
+            "data_transmission_mode": "dataTransmissionMode",
+            "integrated_data_transmission_mode": "integratedDataTransmissionMode",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -2699,17 +2701,39 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.is_station_beam_flagging_enabled
 
     @command(dtype_in="DevString")
-    def dataTransmissionNetwork(
+    def antennaBufferMode(
         self: MccsTile,
     ) -> str:
         """
-        Return if data is sending onver SDN or NSDN.
+        Return if antenna buffer is sending onver SDN or NSDN.
 
         :return: string of SND or NSDN
         """
-        if self.component_manager.data_transmission_network is not None:
-            return self.component_manager.data_transmission_network
+        if self.component_manager.antenna_buffer_mode is not None:
+            return self.component_manager.antenna_buffer_mode
         return "Not set"
+
+    @command(dtype_in="DevString")
+    def dataTransmissionMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if we're sending data through 1G or 10G port.
+
+        :return: Either 1G or 10G string
+        """
+        return self.component_manager.data_transmission_mode
+
+    @command(dtype_in="DevString")
+    def integratedDataTransmissionMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if we're sending integrated data through 1G or 10G port.
+
+        :return: Either 1G or 10G string
+        """
+        return self.component_manager.integrated_data_transmission_mode
 
     @attribute(
         dtype="DevDouble",

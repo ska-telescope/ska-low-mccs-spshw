@@ -255,7 +255,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._csp_spead_format = "SKA"
         self._global_reference_time: int | None = None
         self._test_generator_active = False
-        self.data_transmission_network: Optional[str] = None
+        self.antenna_buffer_mode: Optional[str] = None
+        self.data_transmission_mode: str = "Not transmitting"
+        self.integrated_data_transmission_mode: str = "Not transmitting"
         if tpm_version not in self.FIRMWARE_NAME:
             self.logger.warning(
                 "TPM version "
@@ -1856,7 +1858,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.data_transmission_network = mode
+                    self.antenna_buffer_mode = mode
                     self.tile.set_up_antenna_buffer(
                         mode, ddr_start_byte_address, max_ddr_byte_size
                     )
@@ -2134,6 +2136,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     netmask_40g=netmask_40g,
                     gateway_ip_40g=gateway_40g,
                 )
+                self.integrated_data_transmission_mode = mode
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
@@ -2149,6 +2152,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             try:
                 self.tile.stop_integrated_data()
+                self.integrated_data_transmission_mode = "Not transmitting"
                 time.sleep(0.2)
                 self._pending_data_requests = self.tile.check_pending_data_requests()
 
@@ -2166,6 +2170,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             try:
                 self.tile.stop_data_transmission()
+                self.data_transmission_mode = "Not transmitting"
                 time.sleep(0.2)
                 self._pending_data_requests = self.tile.check_pending_data_requests()
             # pylint: disable=broad-except
@@ -3068,6 +3073,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         netmask_40g=netmask_40g,
                         gateway_ip_40g=gateway_40g,
                     )
+                    self.data_transmission_mode = mode
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(

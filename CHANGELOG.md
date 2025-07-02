@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-215] Add validation to Daq Configure command.
+
 ## 6.5.1
 
 * [THORN-214] make PduTrl optional in componentmanager.

@@ -225,6 +225,9 @@ def test_failed_poll(
     time.sleep(min_jitter / 1000)
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     subrack_simulator.network_jitter_limits = (0, 0)
+    # Possible that before we updated jitter to 0 there was another poll
+    # executed with jitter. We will sleep for max_jitter to avoid this race condition.
+    time.sleep(max_jitter / 1000)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
 

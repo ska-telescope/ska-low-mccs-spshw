@@ -1,7 +1,8 @@
 # Version History
 
-## Unreleased
+## 6.5.2
 
+* [THORN-220] Add cleanup for proxies and component managers.
 * [THORN-215] Add validation to Daq Configure command.
 
 ## 6.5.1

@@ -3,8 +3,9 @@
 ## 7.0.0
 
 * [THORN-175] Added beamfomer control on individual beams. 
-* [THORN-175] StartBeamformer and StopBeamformer accepts `subarray_id` parameter
-* [THORN-175] Added command BeamformerRunningForChannels and attribute RunningBeams
+* [THORN-175] MccsTile.StartBeamformer and StopBeamformer accepts `channel_groups` parameter
+* [THORN-175] Added command MccsTile.BeamformerRunningForChannels and attribute RunningBeams
+* [THORN-175] Added commands SpsStation.BeamformerRunningForChannels and StopBeamformerForChannels
 
 ## Unreleased
 

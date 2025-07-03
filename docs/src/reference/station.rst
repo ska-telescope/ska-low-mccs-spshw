@@ -393,19 +393,28 @@ when these commands will be implemented.
       forever. Duration is rounded down to a multiple of 2048 channelized samples 
       (2.22184 ms). 
 
-    * *channel_mask*: Channel groups to which the command applies. Bitmask with
+    * *channel_groups*: list of channel groups to which the command applies. Bitmask with
       one bit for each group of 8 beamformer channels, default applies to all 
       channels. The current firmware supports only the default (start all channels)
 
     * *scan_id*: ID for the scan which is started. Long integer, truncated to 
       48 bits, default to 0. Currently not supported by firmware. 
 
-  * *StopBeamformer*: Stop the station sending beamformed data to CSP for the 
-    specified channel groups.
+  * *StopBeamformer*: Stop the station sending beamformed data to CSP for all 
+    channel groups (all beams). 
 
-    Parameter: Channel groups to which the command applies. Bitmask with
-    one bit for each group of 8 beamformer channels, default applies to all
-    channels. The current firmware supports only the default (stop all channels)
+  * *StopBeamformerForChannels*: Stop the station sending beamformed data to CSP for the 
+    specified channel groups. 
+
+    Parameter: Channel groups to which the command applies. List with one
+    integer element (range 0 to 47) for each group of 8 beamformer channels.
+
+  * *BeamformerRunningForChannels*: Returns the beamformer running state for the
+    specified channel groups. Returns True if *all* tiles have at least one 
+    channel group with running beamformer. 
+
+    Parameter: Channel groups to which the command applies. List with one
+    integer element (range 0 to 47) for each group of 8 beamformer channels.
 
 Commands related to LMC (DAQ) data transmission
 -----------------------------------------------

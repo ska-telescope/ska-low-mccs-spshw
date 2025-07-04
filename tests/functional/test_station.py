@@ -159,29 +159,40 @@ def check_spsstation_state(
 
 
 @given("the station is initialised")
-def station_not_synched(station: tango.DeviceProxy) -> None:
+def station_not_synched(
+    station: tango.DeviceProxy,
+    exported_tiles: list[tango.DeviceProxy],
+) -> None:
     """
     Verify that a device is in the desired state.
 
     :param station: station device under test.
+    :param exported_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
     """
     if not all(status in ("Initialised") for status in station.tileProgrammingState):
-        # Reset the global reference time to None,
-        # before initialisation to ensure initialised.
-        station.globalreferencetime = ""
-        station.Initialise()
-        timeout = 0
-        while timeout < 60:
+        # Calling initialise from spsstation level will bring to
+        # synchronised state due to automatically selecting a global reference time
+        # Here we want to arrive at an Initialise state, therefore we are looping the
+        # tiles wiping the global reference time and initialising.
+        for tile in exported_tiles:
+            tile.globalreferencetime = ""
+            tile.Initialise()
+
+        timeout = 60
+        deadline = time.time() + timeout
+
+        while time.time() < deadline:
             if all(
-                status in ("Synchronised") for status in station.tileProgrammingState
+                status in ("Initialised") for status in station.tileProgrammingState
             ):
                 break
             time.sleep(1)
-            timeout = timeout + 1
-        if timeout >= 60:
-            assert (
-                False
-            ), f"Stations failed to initialise: {station.tileProgrammingState}"
+        else:
+            pytest.fail(
+                f"Stations failed to initialise: {station.tileProgrammingState} "
+                f"in {timeout} seconds."
+            )
 
 
 @when("the station is ordered to synchronise")

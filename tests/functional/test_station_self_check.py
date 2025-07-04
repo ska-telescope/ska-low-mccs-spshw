@@ -106,7 +106,7 @@ def check_spsstation_state(
 
     if station.state() != tango.DevState.ON:
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
-        station.subscribe_event(
+        sub_id = station.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
             state_callback["state"],
@@ -116,6 +116,7 @@ def check_spsstation_state(
         state_callback.assert_change_event(
             "state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
         )
+        station.unsubscribe_event(sub_id)
 
     iters = 0
     while any(

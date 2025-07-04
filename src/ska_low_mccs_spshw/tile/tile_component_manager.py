@@ -39,7 +39,7 @@ from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
-from .exception_codes import HardwareVerificationError
+from ..exception_codes import HardwareVerificationError
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,

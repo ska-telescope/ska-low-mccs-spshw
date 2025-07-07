@@ -2700,7 +2700,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.is_station_beam_flagging_enabled
 
-    @command(dtype_in="DevString")
+    @attribute(dtype="DevString")
     def antennaBufferMode(
         self: MccsTile,
     ) -> str:
@@ -2711,7 +2711,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.antenna_buffer_mode
 
-    @command(dtype_in="DevString")
+    @attribute(dtype="DevString")
     def dataTransmissionMode(
         self: MccsTile,
     ) -> str:
@@ -2722,7 +2722,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.data_transmission_mode
 
-    @command(dtype_in="DevString")
+    @attribute(dtype="DevString")
     def integratedDataTransmissionMode(
         self: MccsTile,
     ) -> str:

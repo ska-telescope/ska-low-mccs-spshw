@@ -2705,13 +2705,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
     ) -> str:
         """
-        Return if antenna buffer is sending onver SDN or NSDN.
+        Return if antenna buffer is sending over SDN or NSDN.
 
         :return: string of SND or NSDN
         """
-        if self.component_manager.antenna_buffer_mode is not None:
-            return self.component_manager.antenna_buffer_mode
-        return "Not set"
+        return self.component_manager.antenna_buffer_mode
 
     @command(dtype_in="DevString")
     def dataTransmissionMode(

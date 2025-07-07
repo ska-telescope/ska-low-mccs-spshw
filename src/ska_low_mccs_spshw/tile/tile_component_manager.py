@@ -255,7 +255,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._csp_spead_format = "SKA"
         self._global_reference_time: int | None = None
         self._test_generator_active = False
-        self.antenna_buffer_mode: Optional[str] = None
+        self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
         self.integrated_data_transmission_mode: str = "Not transmitting"
         if tpm_version not in self.FIRMWARE_NAME:
@@ -2038,6 +2038,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 try:
                     self.tile.stop_antenna_buffer()
+                    self.antenna_buffer_mode = "Not set"
                 except RuntimeError as err:
                     self.logger.error(f"Failed to stop antenna buffer: {err}")
                     return False

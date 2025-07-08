@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-183] changed health threshold for tpm and subrack using updated values: https://jira.skatelescope.org/browse/SPRTS-274
+
 ## 6.5.2
 
 * [THORN-220] Add cleanup for proxies and component managers.

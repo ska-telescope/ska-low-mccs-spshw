@@ -9,6 +9,7 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import importlib.resources
+import re
 import sys
 from typing import Any, cast
 
@@ -19,7 +20,6 @@ from ska_snmp_device.definitions import load_device_definition, parse_device_def
 from tango import Attribute
 from tango.server import attribute, command, device_property
 
-import re
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
 from .pdu_component_manager import PduComponentManager
@@ -42,6 +42,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
     UpdateRate = device_property(dtype=float, default_value=3.0)
     PowerMarshallerTrl = device_property(dtype=str, default_value="")
     PortDeviceTrls = device_property(dtype=(str,), default_value=[])
+    PortDevicePorts = device_property(dtype=(str,), default_value=[])
 
     DeviceModels: dict[str, str] = {
         "ENLOGIC": "enlogic.yaml",
@@ -78,12 +79,12 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
 
         self._port_device_information: dict[int, str] = {}
 
-        if self.PortDeviceTrls:
-            for device_info in self.PortDeviceTrls:
-                trl, port_info = device_info.split(":")
-                numbers = re.findall(r'\d+', port_info)
+        if self.PortDeviceTrls and self.PortDevicePorts:
+            for i, trl in enumerate(self.PortDeviceTrls):
+                ports = self.PortDevicePorts[i]
+                numbers = re.findall(r"\d+", ports)
                 for port in numbers:
-                    self._port_device_information[port] = trl
+                    self._port_device_information[int(port)] = trl
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""

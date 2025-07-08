@@ -500,15 +500,15 @@ class SubrackHealthRules(HealthRules):
         # The location of these values will be adjusted according to ADR-115.
         return {
             # temperature.SMM1 and temperature.SMM2 (°C)
-            "failed_max_board_temp": 50.0,
-            "degraded_max_board_temp": 40.0,  # placeholder
-            "failed_min_board_temp": 10.0,
-            "degraded_min_board_temp": 20.0,  # placeholder
+            "failed_max_board_temp": 60.0,  # placeholder
+            "degraded_max_board_temp": 50.0,
+            "failed_min_board_temp": 5.0,  # placeholder
+            "degraded_min_board_temp": 10.0,
             # temperature.BKPLN1 and temperature.BKPLN2 temp (°C)
-            "failed_max_backplane_temp": 50.0,
-            "degraded_max_backplane_temp": 40.0,  # placeholder
-            "failed_min_backplane_temp": 10.0,
-            "degraded_min_backplane_temp": 15.0,  # placeholder
+            "failed_max_backplane_temp": 60.0,  # placeholder
+            "degraded_max_backplane_temp": 50.0,
+            "failed_min_backplane_temp": 5.0,  # placeholder
+            "degraded_min_backplane_temp": 10.0,
             # fan speeds are marked  as dynamic thresholds (RPM)
             "failed_fan_speed_diff": 10.0,  # placeholder
             "degraded_fan_speed_diff": 5.0,  # placeholder
@@ -521,8 +521,8 @@ class SubrackHealthRules(HealthRules):
             "failed_max_current_diff": 12.0,  # placeholder
             "degraded_max_current_diff": 10.0,  # placeholder
             # Threshold voltage for TPM in ON state (V)
-            "failed_tpm_voltage_on": 12.6,
-            "degraded_tpm_voltage_on": 11.4,
+            "failed_tpm_voltage_on": 13.1,  # placeholder
+            "degraded_tpm_voltage_on": 12.6,
             # Currents are not directly specified as of yet
             # But power draw is given and is used to determine
             # these values. (Current = Power/Voltage) (A)

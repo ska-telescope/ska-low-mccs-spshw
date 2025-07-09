@@ -25,6 +25,7 @@ from tests.functional.conftest import (
     poll_until_state_change,
 )
 from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
+from tests.test_tools import execute_lrc_to_completion
 
 from ..test_tools import retry_communication
 
@@ -149,23 +150,26 @@ def tile_ready_to_send_to_daq(
         subrack_device.adminMode = 0
         poll_until_state_change(subrack_device, tango.DevState.ON, 5)
 
-    if tile_device.state() != tango.DevState.ON:
-        if tile_device.AdminMode != AdminMode.ONLINE:
-            tile_device.subscribe_event(
-                "adminMode",
-                tango.EventType.CHANGE_EVENT,
-                change_event_callbacks["tile_adminMode"],
-            )
-            change_event_callbacks["tile_adminMode"].assert_change_event(Anything)
-            tile_device.adminMode = 0
-            change_event_callbacks["tile_adminMode"].assert_change_event(
-                AdminMode.ONLINE
-            )
-        tile_device.globalReferenceTime = ""
-        tile_device.on()
-        poll_until_state_change(tile_device, tango.DevState.ON, 100)
+    if tile_device.AdminMode != AdminMode.ONLINE:
+        sub_id = tile_device.subscribe_event(
+            "adminMode",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_adminMode"],
+        )
+        change_event_callbacks["tile_adminMode"].assert_change_event(Anything)
+        tile_device.adminMode = 0
+        change_event_callbacks["tile_adminMode"].assert_change_event(AdminMode.ONLINE)
+        tile_device.unsubscribe_event(sub_id)
 
-    if tile_device.tileProgrammingState not in ["Initialised", "Synchronised"]:
+    if tile_device.state() != tango.DevState.ON:
+        tile_device.globalReferenceTime = ""
+        execute_lrc_to_completion(
+            device_proxy=tile_device,
+            command_name="On",
+            command_arguments=None,
+            timeout=60,
+        )
+        poll_until_state_change(tile_device, tango.DevState.ON, 100)
         assert expect_attribute(
             tile_device, "tileProgrammingState", "Initialised", timeout=240.0
         )

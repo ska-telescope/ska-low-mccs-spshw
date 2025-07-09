@@ -161,7 +161,7 @@ def tile_ready_to_send_to_daq(
             change_event_callbacks["tile_adminMode"].assert_change_event(
                 AdminMode.ONLINE
             )
-
+        tile_device.globalReferenceTime = ""
         tile_device.on()
         poll_until_state_change(tile_device, tango.DevState.ON, 100)
 

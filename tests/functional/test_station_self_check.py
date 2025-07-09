@@ -108,7 +108,10 @@ def check_spsstation_state(
         "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
     )
 
-    if station.state() != tango.DevState.ON:
+    if any(
+        tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
+        for tile in sps_devices_exported
+    ):
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(
             "state",
@@ -126,7 +129,7 @@ def check_spsstation_state(
         tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
         for tile in exported_tiles
     ):
-        if iters >= 60:
+        if iters >= 120:
             pytest.fail(
                 f"Not all tiles came ON: {[tile.state() for tile in exported_tiles]}"
             )

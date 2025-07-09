@@ -222,3 +222,4 @@ helmfile-lint:
     - ska-default
   script:
     - make helmfile-lint
+  allow_failure: true

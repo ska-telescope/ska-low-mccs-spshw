@@ -50,17 +50,17 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/station_self_check.feature", "Test SpsStation Self Check")
-def test_station_self_check(sps_devices_trl_exported: list[str]) -> None:
+def test_station_self_check(sps_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that checks the SpsStation.SelfCheck() method.
 
     Any code in this scenario function is run at the *end* of the
     scenario.
 
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     """
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
@@ -79,7 +79,7 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[tango.DeviceProxy],
+    sps_devices_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -88,8 +88,8 @@ def check_spsstation_state(
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
@@ -101,7 +101,7 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-    for device in sps_devices_trl_exported:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ENGINEERING
 
     change_event_callbacks.assert_change_event(

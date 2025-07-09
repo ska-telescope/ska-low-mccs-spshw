@@ -63,13 +63,13 @@ def pytest_addoption(
     )
 
 
-@pytest.fixture(name="sps_devices_trl_exported")
-def sps_devices_trl_exported_fixture(
-    exported_tiles: list[str],
-    exported_subracks: list[str],
-    exported_stations: list[str],
-    exported_daqs: list[str],
-    exported_pdus: list[str],
+@pytest.fixture(name="sps_devices_exported")
+def sps_devices_exported_fixture(
+    exported_tiles: list[tango.DeviceProxy],
+    exported_subracks: list[tango.DeviceProxy],
+    exported_stations: list[tango.DeviceProxy],
+    exported_daqs: list[tango.DeviceProxy],
+    exported_pdus: list[tango.DeviceProxy],
 ) -> list[tango.DeviceProxy]:
     """
     Fixture containing a DeviceProxy for all sps devices.

@@ -1,5 +1,10 @@
 
 platform:
+  pdus:
+    ci-1:
+      model: ENLOGIC
+      host: 10.135.253.170
+      v2_community: public
   stations:
     ci-1:
       id: 1
@@ -14,11 +19,6 @@ platform:
             simulated: true
           bandpass:
             simulated: true
-        pdus:
-          ci-1:
-            model: ENLOGIC
-            host: 10.135.253.170
-            v2_community: public
         powermarshaller:
           ci-1:
             logging_level_default: 5

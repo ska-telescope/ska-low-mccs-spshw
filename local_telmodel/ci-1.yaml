@@ -1,10 +1,12 @@
 
 platform:
-  pdus:
-    ci-1:
-      model: ENLOGIC
-      host: 10.135.253.170
-      v2_community: public
+  sps_facilities:
+    ci:
+      pdus:
+        ci-1:
+          model: ENLOGIC
+          host: 10.135.253.170
+          v2_community: public
   stations:
     ci-1:
       id: 1

@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-228] Override base class ON command to allow turning ON TPMs when not ON.
+
 ## 6.5.2
 
 * [THORN-220] Add cleanup for proxies and component managers.

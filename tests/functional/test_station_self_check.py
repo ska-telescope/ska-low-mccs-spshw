@@ -109,8 +109,8 @@ def check_spsstation_state(
     )
 
     if any(
-        tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
-        for tile in sps_devices_exported
+        device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
+        for device in sps_devices_exported
     ):
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(

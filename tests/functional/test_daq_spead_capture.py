@@ -27,7 +27,7 @@ from tests.functional.conftest import (
 from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
 from tests.test_tools import execute_lrc_to_completion
 
-from ..test_tools import retry_communication
+from ..test_tools import retry_communication, tango_event_subscription
 
 scenarios("./features/daq_spead_capture.feature")
 
@@ -151,15 +151,17 @@ def tile_ready_to_send_to_daq(
         poll_until_state_change(subrack_device, tango.DevState.ON, 5)
 
     if tile_device.AdminMode != AdminMode.ONLINE:
-        sub_id = tile_device.subscribe_event(
+        with tango_event_subscription(
+            tile_device,
             "adminMode",
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_adminMode"],
-        )
-        change_event_callbacks["tile_adminMode"].assert_change_event(Anything)
-        tile_device.adminMode = 0
-        change_event_callbacks["tile_adminMode"].assert_change_event(AdminMode.ONLINE)
-        tile_device.unsubscribe_event(sub_id)
+        ):
+            change_event_callbacks["tile_adminMode"].assert_change_event(Anything)
+            tile_device.adminMode = 0
+            change_event_callbacks["tile_adminMode"].assert_change_event(
+                AdminMode.ONLINE
+            )
 
     if tile_device.state() != tango.DevState.ON:
         tile_device.globalReferenceTime = ""

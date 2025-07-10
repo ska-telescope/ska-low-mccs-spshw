@@ -1,5 +1,8 @@
 # Version History
 
+## Unreleased
+
+* [JANUS-215] Support for TPM API to 0.6.0, manage whole TPM external label
 ## 6.5.2
 
 * [THORN-220] Add cleanup for proxies and component managers.

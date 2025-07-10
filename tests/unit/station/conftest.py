@@ -80,6 +80,7 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
         "ApplyCalibration",
         "SetBeamformerRegions",
         "LoadCalibrationCoefficients",
+        "on",
     ]:
         builder.add_command(
             command_name, ([ResultCode.OK], [f"{command_name} completed OK."])

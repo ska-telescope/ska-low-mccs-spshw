@@ -35,6 +35,7 @@ from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
+from tango import DebugIt
 from tango.server import attribute, command, device_property
 
 from ..version import version_info
@@ -668,6 +669,28 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 # This only works because we have no other health params
                 self._health_rollup.health_changed("self", HealthState.OK)
+
+    @command(dtype_out="DevVarLongStringArray")
+    @DebugIt()
+    def On(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Turn device on.
+
+        This is an override of the base classes. The SpsStation is
+        evaluated as ON when any of its TPMs are ON. The base class
+        will reject any calls to ON if already ON, meaning any TPMs that
+        were initially OFF will remain OFF.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        if self.component_manager.are_tiles_on():
+            return ([ResultCode.REJECTED], ["Tiles are already in ON state."])
+
+        handler = self.get_command_object("On")
+        result_code, unique_id = handler()
+        return ([result_code], [unique_id])
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """

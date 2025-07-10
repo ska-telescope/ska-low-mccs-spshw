@@ -1393,6 +1393,18 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
+    def are_tiles_on(self: SpsStationComponentManager) -> bool:
+        """
+        Check the state of the TPMs belonging to this station.
+
+        :return: True if all TPMs are in an ON state.
+        """
+        return all(
+            proxy._proxy is not None
+            and proxy._proxy.state() in [tango.DevState.ON, tango.DevState.ALARM]
+            for proxy in self._tile_proxies.values()
+        )
+
     def initialise(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,

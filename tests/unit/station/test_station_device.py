@@ -21,6 +21,7 @@ from typing import Any, Callable, Iterator
 
 import numpy as np
 import pytest
+import tango
 from astropy.utils import iers
 from ska_control_model import AdminMode, HealthState, ResultCode
 from ska_low_mccs_common.testing.mock import MockCallable
@@ -242,6 +243,45 @@ def test_Off(
     #     ),
     # )
     change_event_callbacks["command_status"].assert_not_called()
+
+
+def test_on_calls_tpm_on(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that a call to on will call TPM on.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    # prepare with 1 TPM off.
+    mock_tile_device_proxies[-1].configure_mock(
+        state=MockCallable(return_value=tango.DevState.OFF)
+    )
+
+    # First let's check the initial state
+    assert station_device.adminMode == AdminMode.OFFLINE
+
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    station_device.on()
+    time.sleep(1)
+
+    mock_tile_device_proxies[-1].On.assert_called()
 
 
 def test_On(

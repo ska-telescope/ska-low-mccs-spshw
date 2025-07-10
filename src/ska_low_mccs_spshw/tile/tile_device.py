@@ -5842,6 +5842,59 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_model._ignore_power_state = False
         return super().On()
 
+    class GetVoltageWarningThresholdsCommand(FastCommand):
+        """Class for handling the GetVoltageWarningThresholds() command."""
+
+        def __init__(
+            self: MccsTile.GetVoltageWarningThresholdsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new GetVoltageWarningThresholds instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.GetVoltageWarningThresholdsCommand,
+            *args: Any,
+            voltage: str = "",
+            **kwargs: Any,
+        ) -> dict[str, dict[str, float]]:
+            """
+            Implement :py:meth:`.MccsTile.GetVoltageWarningThresholds` command.
+
+            :param voltage: the voltage for which to get the warning thresholds.
+            :param args: unspecified arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A dictionary containing the warning thresholds for the specified
+                voltage, or for all voltages if no voltage is specified.
+            """
+            if voltage:
+                return self._component_manager.get_voltage_warning_thresholds(voltage)
+            return self._component_manager.get_voltage_warning_thresholds()
+
+    @command(dtype_out="DevVarULongArray")
+    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    def GetVoltageWarningThresholds(self: MccsTile, voltage: str | None = None) -> str:
+        """
+        Return the value(s) of the specified register.
+
+        :param voltage: voltage to get thresholds for. If not specified,
+            the method will return thresholds for all voltages.
+        :return: a list of register values
+
+        """
+        handler = self.get_command_object("GetVoltageWarningThresholds")
+        return json.dumps(handler(voltage=voltage))
+
 
 # ----------
 # Run server

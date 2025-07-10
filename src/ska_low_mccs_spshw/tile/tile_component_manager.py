@@ -3891,6 +3891,50 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.disable_station_beam_flagging()
 
+    def get_voltage_warning_thresholds(
+        self: TileComponentManager,
+        voltage: str = "",
+    ) -> dict[str, dict[str, float]]:
+        """
+        Get the voltage warning thresholds.
+
+        :param voltage: The voltage type to get the thresholds for.
+
+        :return: a dictionary with the voltage warning thresholds
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            if voltage:
+                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+            else:
+                thresholds = self.tile.get_voltage_warning_thresholds()
+            if thresholds is None:
+                return {}
+            return thresholds
+
+    def set_voltage_warning_thresholds(
+        self: TileComponentManager,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set the voltage warning thresholds.
+
+        :param voltage: The voltage type to set the thresholds for.
+            Must be one of the keys in the voltage warning thresholds dictionary.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+
     @property
     @check_communicating
     def is_station_beam_flagging_enabled(self: TileComponentManager) -> list:

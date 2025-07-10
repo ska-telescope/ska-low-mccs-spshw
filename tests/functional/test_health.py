@@ -22,6 +22,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
+from tests.test_tools import tango_event_subscription
 
 scenarios("./features/health.feature")
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -166,24 +167,25 @@ def get_device_online(
             to bring ONLINE.
         """
         print(f"Turning {device_proxy.dev_name()} online")
+        _state_tracker = MockTangoEventCallbackGroup("track_state", timeout=3)
 
-        sub_id = device_proxy.subscribe_event(
+        with tango_event_subscription(
+            device_proxy,
             "state",
             tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
-        )
-        if device_proxy.adminMode == AdminMode.OFFLINE:
-            change_event_callbacks.assert_change_event(
-                "device_state", tango.DevState.DISABLE
-            )
+            _state_tracker["track_state"],
+        ):
+            if device_proxy.adminMode == AdminMode.OFFLINE:
+                _state_tracker.assert_change_event(
+                    "track_state", tango.DevState.DISABLE
+                )
 
-            device_proxy.adminMode = AdminMode.ONLINE
-            change_event_callbacks.assert_change_event(
-                "device_state", tango.DevState.UNKNOWN
-            )
+                device_proxy.adminMode = AdminMode.ONLINE
+                _state_tracker.assert_change_event(
+                    "track_state", tango.DevState.UNKNOWN
+                )
 
-        change_event_callbacks.assert_change_event("device_state", Anything)
-        device_proxy.unsubscribe_event(sub_id)
+            _state_tracker.assert_change_event("track_state", Anything)
 
     return _get_device_online
 

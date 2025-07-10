@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Callable, Generator
 
 import pytest
 import tango
@@ -23,6 +24,29 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import EventType
+
+
+@contextmanager
+def tango_event_subscription(
+    device_proxy: tango.DeviceProxy,
+    attr_name: str,
+    event_type: tango.EventType,
+    callback: Callable[[tango.EventData], None],
+) -> Generator[int, None, None]:
+    """
+    Context manager to handle Tango event subscription.
+
+    :param device_proxy: The Tango device proxy.
+    :param attr_name: The name of the attribute to subscribe to.
+    :param event_type: The type of Tango event (e.g., CHANGE_EVENT).
+    :param callback: The callback function to handle the event.
+    :yield: The subscription ID.
+    """
+    sub_id = device_proxy.subscribe_event(attr_name, event_type, callback)
+    try:
+        yield sub_id
+    finally:
+        device_proxy.unsubscribe_event(sub_id)
 
 
 def wait_for_completed_command_to_clear_from_queue(

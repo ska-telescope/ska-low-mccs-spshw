@@ -3906,13 +3906,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             if voltage:
-                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds(
+                thresholds = self.tile.tpm_monitor[0].get_voltage_warning_thresholds(
                     voltage
                 )
                 # thresholds = self.tile.get_voltage_warning_thresholds(voltage)
             else:
                 # thresholds = self.tile.get_voltage_warning_thresholds()
-                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
+                thresholds = self.tile.tpm_monitor[0].get_voltage_warning_thresholds()
             if thresholds is None:
                 return {}
             return thresholds

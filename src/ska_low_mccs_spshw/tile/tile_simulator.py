@@ -1729,6 +1729,7 @@ class TileSimulator:
         :return: A dictionary containing the voltage thresholds or None if
             the requested voltage is not found in the thresholds.
         """
+        assert self.tpm is not None
         return self.tpm.get_voltage_warning_thresholds(voltage)
         # if voltage is not None:
         #     requested_voltage = self._voltage_warning_thresholds.get(voltage, {})

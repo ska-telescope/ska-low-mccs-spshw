@@ -63,7 +63,7 @@ class LogLock:
         :return: True if the lock was acquired, False if it was not.
         """
         caller = self._caller()
-        self.log.debug(f"lock {self.name} requested by {caller}")
+        # self.log.debug(f"lock {self.name} requested by {caller}")
 
         acquire_start = time.time()
         # pylint: disable=consider-using-with
@@ -73,9 +73,9 @@ class LogLock:
         if acquired:
             self.last_acquired_at = time.time()
             self.last_acquired_by = caller
-            self.log.debug(
-                f"lock {self.name} acquired after {acquire_time:.3f}s by {caller}"
-            )
+            # self.log.debug(
+            #     f"lock {self.name} acquired after {acquire_time:.3f}s by {caller}"
+            # )
         else:
             time_since_acquired = time.time() - self.last_acquired_at
             self.log.error(
@@ -110,7 +110,7 @@ class LogLock:
         elapsed = time.time() - self.last_acquired_at
         caller = self._caller()
 
-        self.log.debug(f"lock {self.name} released after {elapsed:.3f}s by {caller}")
+        # self.log.debug(f"lock {self.name} released after {elapsed:.3f}s by {caller}")
         if elapsed > self._timeout_warning:
             self.log.warning(f"lock {self.name} held for {elapsed:.3f}s by {caller}")
         self.lock.release()

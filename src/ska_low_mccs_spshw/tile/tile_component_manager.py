@@ -3905,14 +3905,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
+            assert self.tile.tpm is not None, "TPM is not connected."
             if voltage:
-                thresholds = self.tile.tpm_monitor[0].get_voltage_warning_thresholds(
-                    voltage
-                )
-                # thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+                thresholds = self.tile.tpm.get_voltage_warning_thresholds(voltage)
             else:
-                # thresholds = self.tile.get_voltage_warning_thresholds()
-                thresholds = self.tile.tpm_monitor[0].get_voltage_warning_thresholds()
+                thresholds = self.tile.tpm.get_voltage_warning_thresholds()
             if thresholds is None:
                 return {}
             return thresholds
@@ -3937,7 +3934,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+            assert self.tile.tpm is not None, "TPM is not connected."
+            return self.tile.tpm.set_voltage_warning_thresholds(
+                voltage, min_thr, max_thr
+            )
 
     @property
     @check_communicating

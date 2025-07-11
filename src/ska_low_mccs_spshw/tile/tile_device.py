@@ -516,6 +516,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
             ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
             ("StopAntennaBuffer", self.StopAntennaBufferCommand),
+            ("GetVoltageWarningThresholds", self.GetVoltageWarningThresholdsCommand),
+            ("SetVoltageWarningThresholds", self.SetVoltageWarningThresholdsCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -5894,6 +5896,92 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         handler = self.get_command_object("GetVoltageWarningThresholds")
         return json.dumps(handler(voltage=voltage))
+
+    class SetVoltageWarningThresholdsCommand(FastCommand):
+        """Class for handling the SetVoltageWarningThresholds() command."""
+
+        def __init__(
+            self: MccsTile.SetVoltageWarningThresholdsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new SetVoltageWarningThresholds instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.SetVoltageWarningThresholdsCommand,
+            *args: Any,
+            argin: str,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetVoltageWarningThresholds` command.
+
+            :param argin: A json string containing a dictionary with the following keys:
+                * voltage: the voltage for which to set the warning thresholds.
+                * min_thr: the minimum threshold for the specified voltage.
+                * max_thr: the maximum threshold for the specified voltage.
+            :param args: unspecified arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            argin_dict: dict = json.loads(argin)
+            voltage = argin_dict.get("voltage", "")
+            min_thr = argin_dict.get("min_thr", 0.0)
+            max_thr = argin_dict.get("max_thr", 0.0)
+            if not all([voltage, min_thr, max_thr]):
+                self.logger.error(
+                    "All parameters must be supplied. Expected 'voltage', "
+                    "'min_thr', and 'max_thr'."
+                )
+                return (
+                    ResultCode.REJECTED,
+                    "All parameters must be supplied. Expected 'voltage', "
+                    "'min_thr', and 'max_thr'.",
+                )
+            rc = self._component_manager.set_voltage_warning_thresholds(
+                voltage=voltage, min_thr=min_thr, max_thr=max_thr
+            )
+            if rc:
+                return (
+                    ResultCode.OK,
+                    "SetVoltageWarningThresholds command completed OK",
+                )
+            return (
+                ResultCode.FAILED,
+                "SetVoltageWarningThresholds command failed to complete. "
+                "Check threshold name is valid.",
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    def SetVoltageWarningThresholds(
+        self: MccsTile, argin: str
+    ) -> tuple[ResultCode, str]:
+        """
+        Set voltage warning thresholds in firmware.
+
+        :param argin: A json string containing a dictionary with the following keys:
+                * voltage: the voltage for which to set the warning thresholds.
+                * min_thr: the minimum threshold for the specified voltage.
+                * max_thr: the maximum threshold for the specified voltage.
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        """
+        handler = self.get_command_object("SetVoltageWarningThresholds")
+        return handler(argin=argin)
 
 
 # ----------

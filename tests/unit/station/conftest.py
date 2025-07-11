@@ -14,7 +14,7 @@ import unittest.mock
 import pytest
 import tango
 from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
-from ska_low_mccs_common.testing.mock import MockDeviceBuilder
+from ska_low_mccs_common.testing.mock import MockCallable, MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw import SpsStation
@@ -165,9 +165,15 @@ def mock_tile_device_proxies_fixture(
 
 
 @pytest.fixture(name="patched_sps_station_device_class")
-def patched_sps_station_device_class_fixture() -> type[SpsStation]:
+def patched_sps_station_device_class_fixture(
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_subrack_device_proxy: unittest.mock.Mock,
+) -> type[SpsStation]:
     """
     Return a station device class patched with extra methods for testing.
+
+    :param mock_tile_device_proxies: a list of mock MccsTile devices.
+    :param mock_subrack_device_proxy: a mock MccsSubrack device.
 
     :return: a station device class patched with extra methods for
         testing.
@@ -190,6 +196,9 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             event from its subracks, indicating that the subracks are
             now OFF.
             """
+            mock_subrack_device_proxy.configure_mock(
+                state=MockCallable(return_value=tango.DevState.OFF)
+            )
             for name in self.component_manager._subrack_proxies:
                 self.component_manager._subrack_state_changed(
                     name, power=PowerState.OFF
@@ -199,6 +208,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 self.component_manager._tile_state_changed(
                     name, power=PowerState.NO_SUPPLY
                 )
+            self.MockTilesOff()
 
         @command()
         def MockSubracksOn(self: PatchedSpsStationDevice) -> None:
@@ -209,11 +219,15 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             event from its subracks, indicating that the subracks are
             now ON.
             """
+            mock_subrack_device_proxy.configure_mock(
+                state=MockCallable(return_value=tango.DevState.ON)
+            )
             for name in self.component_manager._subrack_proxies:
                 self.component_manager._subrack_state_changed(name, power=PowerState.ON)
 
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.OFF)
+            self.MockTilesOn()
 
         @command()
         def MockTilesOff(self: PatchedSpsStationDevice) -> None:
@@ -223,6 +237,8 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             Make the station device think it has received state change
             event from its tiles, indicating that the tiles are now OFF.
             """
+            for tile in mock_tile_device_proxies:
+                tile.configure_mock(state=MockCallable(return_value=tango.DevState.OFF))
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.OFF)
 
@@ -234,6 +250,9 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             Make the station device think it has received state change
             event from its tiles, indicating that the tiles are now ON.
             """
+            for tile in mock_tile_device_proxies:
+                tile.configure_mock(state=MockCallable(return_value=tango.DevState.ON))
+
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
 

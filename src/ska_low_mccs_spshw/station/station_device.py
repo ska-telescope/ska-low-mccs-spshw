@@ -681,6 +681,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         will reject any calls to ON if already ON, meaning any TPMs that
         were initially OFF will remain OFF.
 
+        This override will allow the ON command to execute if any TPMs
+        are not ON.
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.

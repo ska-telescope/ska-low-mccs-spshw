@@ -3907,6 +3907,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             pprint(self.tile.tpm.__dict__)
+            print(f"{self=}")
+            print(f"{self.tile=}")
+            print(f"{self.tile.tpm=}")
+            print(f"{self.tile.tpm.tpm_monitor=}")  # type: ignore
+            print(f"{self.tile.tpm.tpm_monitor.__dict__=}")  # type: ignore
             assert self.tile.tpm is not None, "TPM is not connected."
             assert not isinstance(self.tile.tpm, MockTpm)
             if voltage:

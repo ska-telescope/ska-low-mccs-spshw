@@ -3909,9 +3909,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             pprint(self.tile.__dict__)
             assert self.tile.tpm is not None, "TPM is not connected."
             if voltage:
-                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds(  # type: ignore
+                    voltage
+                )
             else:
-                thresholds = self.tile.get_voltage_warning_thresholds()
+                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds()  # type: ignore
             if thresholds is None:
                 return {}
             return thresholds

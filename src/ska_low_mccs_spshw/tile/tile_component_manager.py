@@ -13,6 +13,7 @@ import json
 import logging
 import threading
 import time
+from pprint import pprint
 from typing import Any, Callable, Final, List, NoReturn, Optional, cast
 
 import numpy as np
@@ -3905,11 +3906,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
+            pprint(self.tile.__dict__)
             assert self.tile.tpm is not None, "TPM is not connected."
             if voltage:
-                thresholds = self.tile.tpm.get_voltage_warning_thresholds(voltage)
+                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
             else:
-                thresholds = self.tile.tpm.get_voltage_warning_thresholds()
+                thresholds = self.tile.get_voltage_warning_thresholds()
             if thresholds is None:
                 return {}
             return thresholds

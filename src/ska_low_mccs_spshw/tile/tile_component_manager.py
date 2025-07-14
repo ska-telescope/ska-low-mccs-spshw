@@ -46,7 +46,7 @@ from .tile_poll_management import (
     TileRequestProvider,
     TileResponse,
 )
-from .tile_simulator import DynamicTileSimulator, TileSimulator
+from .tile_simulator import DynamicTileSimulator, MockTpm, TileSimulator
 from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .utils import LogLock, abort_task_on_exception, acquire_timeout
@@ -3908,12 +3908,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             pprint(self.tile.__dict__)
             assert self.tile.tpm is not None, "TPM is not connected."
+            assert not isinstance(self.tile.tpm, MockTpm)
             if voltage:
-                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds(  # type: ignore
+                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds(
                     voltage
                 )
             else:
-                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds()  # type: ignore
+                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds()
             if thresholds is None:
                 return {}
             return thresholds

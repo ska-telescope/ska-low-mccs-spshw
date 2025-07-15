@@ -5884,7 +5884,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._component_manager.get_voltage_warning_thresholds()
 
     @command(dtype_out="DevVarULongArray")
-    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    # @command(dtype_in="DevString", dtype_out="DevVarULongArray")
     def GetVoltageWarningThresholds(self: MccsTile, voltage: str | None = None) -> str:
         """
         Return the value(s) of the specified register.

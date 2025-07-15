@@ -3907,11 +3907,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             if voltage:
+                print(f"before calling tpm api with voltage {voltage=}")
                 thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+                print(f"after calling tpm api with voltage {thresholds=}")
             else:
+                print("before calling tpm api without voltage")
                 thresholds = self.tile.get_voltage_warning_thresholds()
+                print(f"after calling tpm api without voltage {thresholds=}")
             if thresholds is None:
                 return {}
+            print(f"Returning {thresholds=}")
             return thresholds
 
     def set_voltage_warning_thresholds(

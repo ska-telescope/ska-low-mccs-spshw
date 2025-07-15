@@ -4605,7 +4605,7 @@ numpy = "^1.26.4"
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
 reference = "thorn-184"
-resolved_reference = "427d6adfc0de5c5a2145e9276bfaaac01d2f0c79"
+resolved_reference = "0d69b1947ff1ea531ccce89aad60f23b3bb6e17a"
 
 [[package]]
 name = "ska-ser-logging"

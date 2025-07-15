@@ -5896,7 +5896,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.logger.info("In GetVoltageWarningThresholds")
         handler = self.get_command_object("GetVoltageWarningThresholds")
-        return json.dumps(handler(voltage=voltage))
+        res = json.dumps(handler(voltage=voltage))
+        print(f"Finished GetVoltageWarningThresholds: {res}")
+        return res
 
     class SetVoltageWarningThresholdsCommand(FastCommand):
         """Class for handling the SetVoltageWarningThresholds() command."""

@@ -5879,11 +5879,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :return: A dictionary containing the warning thresholds for the specified
                 voltage, or for all voltages if no voltage is specified.
             """
+            print(f"In get voltage command class with {voltage=}")
             if voltage:
-                return self._component_manager.get_voltage_warning_thresholds(voltage)
-            return self._component_manager.get_voltage_warning_thresholds()
+                res = self._component_manager.get_voltage_warning_thresholds(voltage)
+                print(f"1 Returning: {res=}")
+                return res
+            res = self._component_manager.get_voltage_warning_thresholds()
+            print(f"2 Returning: {res=}")
+            return res
 
-    # @command(dtype_out="DevVarULongArray")
+    @command(dtype_out="DevVarULongArray")
     @command(dtype_in="DevString", dtype_out="DevVarULongArray")
     def GetVoltageWarningThresholds(self: MccsTile, voltage: str = "") -> str:
         """
@@ -5898,6 +5903,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("GetVoltageWarningThresholds")
         res = json.dumps(handler(voltage=voltage))
         print(f"Finished GetVoltageWarningThresholds: {res}")
+        print(f"{type(res)=}")
         return res
 
     class SetVoltageWarningThresholdsCommand(FastCommand):

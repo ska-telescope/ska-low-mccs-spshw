@@ -402,77 +402,8 @@ class MockTpm:
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
         self._station_beam_flagging = False
-
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
-        self._voltage_warning_thresholds: dict[str, dict[str, float]] = {
-            "VREF_2V5": {"min": 2.4, "max": 2.6},
-            "MGT_AVCC": {"min": 1.2, "max": 1.4},
-            "MGT_AVTT": {"min": 1.2, "max": 1.4},
-            "SW_AVDD1": {"min": 1.8, "max": 2.0},
-            "SW_AVDD2": {"min": 1.8, "max": 2.0},
-            "AVDD3": {"min": 1.8, "max": 2.0},
-            "MAN_1V2": {"min": 1.1, "max": 1.3},
-            "DDR0_VREF": {"min": 1.2, "max": 1.4},
-            "DDR1_VREF": {"min": 1.2, "max": 1.4},
-            "VM_DRVDD": {"min": 4.5, "max": 5.5},
-            "VIN": {"min": 11.4, "max": 12.6},
-            "MON_3V3": {"min": 3.2, "max": 3.4},
-            "MON_1V8": {"min": 1.7, "max": 1.9},
-            "MON_5V0": {"min": 4.5, "max": 5.5},
-        }
-
-    @connected
-    def get_voltage_warning_thresholds(
-        self: MockTpm,
-        voltage: str | None = None,
-    ) -> dict[str, dict[str, float]] | None:
-        """
-        Return a dictionary of voltage warning thresholds.
-
-        :param voltage: The voltage type to get the thresholds for.
-            If None, return all thresholds.
-
-        :return: A dictionary containing the voltage thresholds or None if
-            the requested voltage is not found in the thresholds.
-        """
-        if voltage is not None:
-            requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
-            if requested_voltage:
-                return {voltage: requested_voltage}
-            self.logger.error(
-                f"Requested voltage {voltage} not found in thresholds. "
-                f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
-            )
-            return None
-
-        return self._voltage_warning_thresholds
-
-    @connected
-    def set_voltage_warning_thresholds(
-        self: MockTpm,
-        voltage: str,
-        min_thr: float,
-        max_thr: float,
-    ) -> bool | None:
-        """
-        Set a voltage warning threshold.
-
-        :param voltage: The voltage type to set the thresholds for.
-        :param min_thr: The minimum threshold value.
-        :param max_thr: The maximum threshold value.
-
-        :return: True if the thresholds were set successfully,
-            or None if the voltage type is not recognized.
-        """
-        if voltage not in self._voltage_warning_thresholds:
-            self.logger.error(
-                f"Voltage {voltage} not recognized. Available: "
-                f"{[k for k in self._voltage_warning_thresholds.keys()]}"
-            )
-            return None
-
-        self._voltage_warning_thresholds[voltage] = {"min": min_thr, "max": max_thr}
-        return True
+        self.tpm_monitor = TpmMonitor(logger)
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -1715,62 +1646,62 @@ class TileSimulator:
             for fpga in fpgas
         ]
 
-    @connected
-    def get_voltage_warning_thresholds(
-        self: TileSimulator,
-        voltage: str | None = None,
-    ) -> dict[str, dict[str, float]] | None:
-        """
-        Return a dictionary of voltage warning thresholds.
+    # @connected
+    # def get_voltage_warning_thresholds(
+    #     self: TileSimulator,
+    #     voltage: str | None = None,
+    # ) -> dict[str, dict[str, float]] | None:
+    #     """
+    #     Return a dictionary of voltage warning thresholds.
 
-        :param voltage: The voltage type to get the thresholds for.
-            If None, return all thresholds.
+    #     :param voltage: The voltage type to get the thresholds for.
+    #         If None, return all thresholds.
 
-        :return: A dictionary containing the voltage thresholds or None if
-            the requested voltage is not found in the thresholds.
-        """
-        assert self.tpm is not None
-        return self.tpm.get_voltage_warning_thresholds(voltage)
-        # if voltage is not None:
-        #     requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
-        #     if requested_voltage:
-        #         return {voltage: requested_voltage}
-        #     self.logger.error(
-        #         f"Requested voltage {voltage} not found in thresholds. "
-        #         f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
-        #     )
-        #     return None
+    #     :return: A dictionary containing the voltage thresholds or None if
+    #         the requested voltage is not found in the thresholds.
+    #     """
+    #     assert self.tpm is not None
+    #     return self.tpm.get_voltage_warning_thresholds(voltage)
+    # if voltage is not None:
+    #     requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
+    #     if requested_voltage:
+    #         return {voltage: requested_voltage}
+    #     self.logger.error(
+    #         f"Requested voltage {voltage} not found in thresholds. "
+    #         f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
+    #     )
+    #     return None
 
-        # return self._voltage_warning_thresholds
+    # return self._voltage_warning_thresholds
 
-    @connected
-    def set_voltage_warning_thresholds(
-        self: TileSimulator,
-        voltage: str,
-        min_thr: float,
-        max_thr: float,
-    ) -> bool | None:
-        """
-        Set a voltage warning threshold.
+    # @connected
+    # def set_voltage_warning_thresholds(
+    #     self: TileSimulator,
+    #     voltage: str,
+    #     min_thr: float,
+    #     max_thr: float,
+    # ) -> bool | None:
+    #     """
+    #     Set a voltage warning threshold.
 
-        :param voltage: The voltage type to set the thresholds for.
-        :param min_thr: The minimum threshold value.
-        :param max_thr: The maximum threshold value.
+    #     :param voltage: The voltage type to set the thresholds for.
+    #     :param min_thr: The minimum threshold value.
+    #     :param max_thr: The maximum threshold value.
 
-        :return: True if the thresholds were set successfully,
-            or None if the voltage type is not recognized.
-        """
-        assert self.tpm is not None
-        return self.tpm.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
-        # if voltage not in self._voltage_warning_thresholds:
-        #     self.logger.error(
-        #         f"Voltage {voltage} not recognized. Available: "
-        #         f"{[k for k in self._voltage_warning_thresholds.keys()]}"
-        #     )
-        #     return None
+    #     :return: True if the thresholds were set successfully,
+    #         or None if the voltage type is not recognized.
+    #     """
+    #     assert self.tpm is not None
+    #     return self.tpm.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+    #     # if voltage not in self._voltage_warning_thresholds:
+    #     #     self.logger.error(
+    #     #         f"Voltage {voltage} not recognized. Available: "
+    #     #         f"{[k for k in self._voltage_warning_thresholds.keys()]}"
+    #     #     )
+    #     #     return None
 
-        # self._voltage_warning_thresholds[voltage] = {"min": min_thr, "max": max_thr}
-        # return True
+    #     # self._voltage_warning_thresholds[voltage] = {"min": min_thr, "max": max_thr}
+    #     # return True
 
     @property
     def tile_info(self: TileSimulator) -> str:
@@ -3256,3 +3187,87 @@ class DynamicTileSimulator(TileSimulator):
                 random.randint(0, TileData.ANTENNA_COUNT - 1),
                 random.randint(0, TileData.POLS_PER_ANTENNA - 1),
             )
+
+
+class TpmMonitor:
+    """TPM Monitor class."""
+
+    def __init__(self: TpmMonitor, logger: logging.Logger) -> None:
+        """
+        Initialise the TPM Monitor.
+
+        :param logger: a logger for this monitor to use
+        """
+        self.logger = logger
+        # All values set according to firmware.
+        self._voltage_warning_thresholds: dict[str, dict[str, float]] = {
+            "MGT_AVCC": {
+                "min": 0.0,
+                "max": 65.535,
+            },
+            "MGT_AVTT": {"min": 0.0, "max": 65.535},
+            "SW_AVDD1": {"min": 0.0, "max": 65.535},
+            "SW_AVDD2": {"min": 0.0, "max": 65.535},
+            "AVDD3": {"min": 0.0, "max": 65.535},
+            "MAN_1V2": {"min": 0.0, "max": 65.535},
+            "DDR0_VREF": {"min": 0.0, "max": 65.535},
+            "DDR1_VREF": {"min": 0.0, "max": 65.535},
+            "VM_DRVDD": {"min": 0.0, "max": 65.535},
+            "VIN": {"min": 11.4, "max": 12.6},
+            "MON_3V3": {"min": 0.0, "max": 65.535},
+            "MON_1V8": {"min": 0.0, "max": 65.535},
+            "MON_5V0": {"min": 0.0, "max": 65.535},
+        }
+
+    @connected
+    def get_voltage_warning_thresholds(
+        self: TpmMonitor,
+        voltage: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of voltage warning thresholds.
+
+        :param voltage: The voltage type to get the thresholds for.
+            If None, return all thresholds.
+
+        :return: A dictionary containing the voltage thresholds or None if
+            the requested voltage is not found in the thresholds.
+        """
+        if voltage is not None:
+            requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
+            if requested_voltage:
+                return {voltage: requested_voltage}
+            self.logger.error(
+                f"Requested voltage {voltage} not found in thresholds. "
+                f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
+            )
+            return None
+
+        return self._voltage_warning_thresholds
+
+    @connected
+    def set_voltage_warning_thresholds(
+        self: TpmMonitor,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a voltage warning threshold.
+
+        :param voltage: The voltage type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        if voltage not in self._voltage_warning_thresholds:
+            self.logger.error(
+                f"Voltage {voltage} not recognized. Available: "
+                f"{[k for k in self._voltage_warning_thresholds.keys()]}"
+            )
+            return None
+
+        self._voltage_warning_thresholds[voltage] = {"min": min_thr, "max": max_thr}
+        return True

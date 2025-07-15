@@ -5900,10 +5900,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.logger.info("In GetVoltageWarningThresholds")
         handler = self.get_command_object("GetVoltageWarningThresholds")
-        res = json.dumps(handler(voltage=voltage))
-        print(f"Finished GetVoltageWarningThresholds: {res}")
-        print(f"{type(res)=}")
-        return res
+        return json.dumps(handler(voltage=voltage))
 
     class SetVoltageWarningThresholdsCommand(FastCommand):
         """Class for handling the SetVoltageWarningThresholds() command."""
@@ -5972,10 +5969,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "Check threshold name is valid.",
             )
 
-    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArrayType")
     def SetVoltageWarningThresholds(
         self: MccsTile, argin: str
-    ) -> tuple[ResultCode, str]:
+    ) -> DevVarLongStringArrayType:
         """
         Set voltage warning thresholds in firmware.
 
@@ -5986,7 +5983,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-
         """
         handler = self.get_command_object("SetVoltageWarningThresholds")
         return handler(argin=argin)

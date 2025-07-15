@@ -3902,21 +3902,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: a dictionary with the voltage warning thresholds
         """
-        self.logger.info("In get_voltage_warning_thresholds in cpt mgr")
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
+            assert self.tile.tpm is not None, "TPM is not connected."
             if voltage:
-                print(f"before calling tpm api with voltage {voltage=}")
-                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
-                print(f"after calling tpm api with voltage {thresholds=}")
+                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds(
+                    voltage
+                )
             else:
-                print("before calling tpm api without voltage")
-                thresholds = self.tile.get_voltage_warning_thresholds()
-                print(f"after calling tpm api without voltage {thresholds=}")
+                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds()
             if thresholds is None:
                 return {}
-            print(f"Returning {thresholds=}")
             return thresholds
 
     def set_voltage_warning_thresholds(
@@ -3940,7 +3937,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             assert self.tile.tpm is not None, "TPM is not connected."
-            return self.tile.tpm.set_voltage_warning_thresholds(
+            return self.tile.tpm.tpm_monitor.set_voltage_warning_thresholds(
                 voltage, min_thr, max_thr
             )
 

@@ -5888,8 +5888,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             print(f"2 Returning: {res=}")
             return res
 
-    @command(dtype_out="DevVarULongArray")
-    @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    @command(dtype_in="DevString", dtype_out="DevString")
     def GetVoltageWarningThresholds(self: MccsTile, voltage: str = "") -> str:
         """
         Return the value(s) of the specified register.

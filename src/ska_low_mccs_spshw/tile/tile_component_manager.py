@@ -3902,6 +3902,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: a dictionary with the voltage warning thresholds
         """
+        self.logger.info("In get_voltage_warning_thresholds in cpt mgr")
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):

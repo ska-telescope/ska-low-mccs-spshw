@@ -5894,6 +5894,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: a list of register values
 
         """
+        self.logger.info("In GetVoltageWarningThresholds")
         handler = self.get_command_object("GetVoltageWarningThresholds")
         return json.dumps(handler(voltage=voltage))
 

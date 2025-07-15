@@ -5969,7 +5969,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "Check threshold name is valid.",
             )
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArrayType")
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetVoltageWarningThresholds(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:

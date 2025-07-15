@@ -5900,7 +5900,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.logger.info("In GetVoltageWarningThresholds")
         handler = self.get_command_object("GetVoltageWarningThresholds")
-        return json.dumps(handler(voltage=voltage))
+        return json.dumps(handler(voltage=voltage.upper()))
 
     class SetVoltageWarningThresholdsCommand(FastCommand):
         """Class for handling the SetVoltageWarningThresholds() command."""
@@ -5942,9 +5942,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             argin_dict: dict = json.loads(argin)
-            voltage = argin_dict.get("voltage", "")
-            min_thr = argin_dict.get("min_thr", 0.0)
-            max_thr = argin_dict.get("max_thr", 0.0)
+            voltage: str = argin_dict.get("voltage", "")
+            min_thr: float = argin_dict.get("min_thr", 0.0)
+            max_thr: float = argin_dict.get("max_thr", 0.0)
             if not all([voltage, min_thr, max_thr]):
                 self.logger.error(
                     "All parameters must be supplied. Expected 'voltage', "
@@ -5956,7 +5956,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     "'min_thr', and 'max_thr'.",
                 )
             rc = self._component_manager.set_voltage_warning_thresholds(
-                voltage=voltage, min_thr=min_thr, max_thr=max_thr
+                voltage=voltage.upper(), min_thr=min_thr, max_thr=max_thr
             )
             if rc:
                 return (
@@ -5972,7 +5972,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetVoltageWarningThresholds(
         self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+    ) -> tuple[ResultCode, str]:
         """
         Set voltage warning thresholds in firmware.
 
@@ -5985,7 +5985,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             information purpose only.
         """
         handler = self.get_command_object("SetVoltageWarningThresholds")
-        return handler(argin=argin)
+        result = handler(argin=argin)
+        # result = True on success, None on failure
+        if result:
+            return (ResultCode.OK, "SetVoltageWarningThresholds command completed OK")
+        return (
+            ResultCode.FAILED,
+            "SetVoltageWarningThresholds command FAILED (Check voltage name is valid)",
+        )
 
 
 # ----------

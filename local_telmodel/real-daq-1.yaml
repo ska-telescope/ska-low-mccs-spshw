@@ -1,5 +1,7 @@
 
 platform:
+  cluster: 
+    domain: cluster.local
   stations:
     real-daq-1:
       id: 1

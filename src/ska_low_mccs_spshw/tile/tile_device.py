@@ -5866,7 +5866,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             *args: Any,
             voltage: str = "",
             **kwargs: Any,
-        ) -> dict[str, dict[str, float]]:
+        ) -> str:
             """
             Implement :py:meth:`.MccsTile.GetVoltageWarningThresholds` command.
 
@@ -5879,13 +5879,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :return: A dictionary containing the warning thresholds for the specified
                 voltage, or for all voltages if no voltage is specified.
             """
-            print(f"In get voltage command class with {voltage=}")
             if voltage:
                 res = self._component_manager.get_voltage_warning_thresholds(voltage)
-                print(f"1 Returning: {res=}")
                 return res
             res = self._component_manager.get_voltage_warning_thresholds()
-            print(f"2 Returning: {res=}")
             return res
 
     @command(dtype_in="DevString", dtype_out="DevString")
@@ -5900,7 +5897,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.logger.info("In GetVoltageWarningThresholds")
         handler = self.get_command_object("GetVoltageWarningThresholds")
-        return json.dumps(handler(voltage=voltage.upper()))
+        return handler(voltage=voltage.upper())
 
     class SetVoltageWarningThresholdsCommand(FastCommand):
         """Class for handling the SetVoltageWarningThresholds() command."""
@@ -5958,6 +5955,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             rc = self._component_manager.set_voltage_warning_thresholds(
                 voltage=voltage.upper(), min_thr=min_thr, max_thr=max_thr
             )
+            print(f"{rc=}")
             if rc:
                 return (
                     ResultCode.OK,
@@ -5985,20 +5983,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             information purpose only.
         """
         handler = self.get_command_object("SetVoltageWarningThresholds")
-        result = handler(argin=argin)
-        # result = True on success, None on failure
-        if result:
-            return (
-                [ResultCode.OK],
-                ["SetVoltageWarningThresholds command completed OK"],
-            )
-        return (
-            [ResultCode.FAILED],
-            [
-                "SetVoltageWarningThresholds command FAILED "
-                "(Check voltage name is valid)"
-            ],
-        )
+        return handler(argin=argin)
 
 
 # ----------

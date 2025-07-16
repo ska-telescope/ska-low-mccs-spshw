@@ -3894,13 +3894,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def get_voltage_warning_thresholds(
         self: TileComponentManager,
         voltage: str = "",
-    ) -> dict[str, dict[str, float]]:
+    ) -> str:
         """
         Get the voltage warning thresholds.
 
         :param voltage: The voltage type to get the thresholds for.
 
-        :return: a dictionary with the voltage warning thresholds
+        :return: a jsonified dictionary with the voltage warning thresholds
+            or a message if the specified voltage is not recognized.
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
@@ -3913,8 +3914,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             else:
                 thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds()
             if thresholds is None:
-                return {}
-            return thresholds
+                return f"Specified voltage '{voltage}' not recognized."
+            return json.dumps(thresholds)
 
     def set_voltage_warning_thresholds(
         self: TileComponentManager,

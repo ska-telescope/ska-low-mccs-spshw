@@ -273,7 +273,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     SubrackIp = device_property(dtype=str)
     SubrackPort = device_property(dtype=int, default_value=8081)
     UpdateRate = device_property(dtype=float, default_value=15.0)
+    PowerMarshallerTrl = device_property(dtype=str)
     PduTrl = device_property(dtype=str, default_value="")
+    PduPorts = device_property(dtype=(int,), default_value=[])
+    SimulatedPDU = device_property(dtype=bool, default_value=True)
 
     # A map from the compnent manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
@@ -355,7 +358,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             f"\tSubrackIP: {self.SubrackIp}\n"
             f"\tSubrackPort: {self.SubrackPort}\n"
             f"\tUpdateRate: {self.UpdateRate}\n"
+            f"\tPowerMarshallerTrl: {self.PowerMarshallerTrl}\n"
             f"\tPduTrl: {self.PduTrl}\n"
+            f"\tPduPorts: {self.PduPorts}\n"
+            f"\tSimulatedPDU: {self.SimulatedPDU}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -423,6 +429,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.SubrackPort,
             self.logger,
             self.PduTrl,
+            self.PduPorts,
+            self.PowerMarshallerTrl,
+            self.SimulatedPDU,
             self._communication_state_changed,
             self._component_state_changed,
             update_rate=self.UpdateRate,
@@ -439,6 +448,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("PowerDownTpms", "turn_off_tpms"),
             ("PowerPduPortOn", "power_pdu_port_on"),
             ("PowerPduPortOff", "power_pdu_port_off"),
+            ("On", "on"),
+            ("Off", "off"),
         ]:
             self.register_command_object(
                 command_name,
@@ -602,6 +613,32 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         handler = self.get_command_object("SetPowerSupplyFanSpeed")
         result_code, message = handler(argin)
+        return ([result_code], [message])
+
+    @command
+    def On(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Turn self on.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("On")
+        result_code, message = handler()
+        return ([result_code], [message])
+
+    @command
+    def Off(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Turn self off.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("Off")
+        result_code, message = handler()
         return ([result_code], [message])
 
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import functools
+import json
 import logging
 from typing import Any, Callable, Optional, cast
 
@@ -25,6 +26,63 @@ from .subrack_data import FanMode
 from .subrack_driver import SubrackDriver
 
 __all__ = ["SubrackComponentManager"]
+
+
+class _PowerMarshallerProxy(DeviceComponentManager):
+    """A proxy to the power marshaller."""
+
+    def __init__(
+        self: _PowerMarshallerProxy,
+        trl: str,
+        logger: logging.Logger,
+        communication_state_callback: Callable[[CommunicationStatus], None],
+        component_state_callback: Callable[..., None],
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param trl: the trl of the device
+        :param logger: the logger to be used by this object.
+        :param communication_state_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_callback: callback to be
+            called when the component state changes
+        """
+        self.trl = trl
+        super().__init__(
+            trl,
+            logger,
+            communication_state_callback,
+            component_state_callback,
+        )
+
+    def schedule_power(
+        self: _PowerMarshallerProxy,
+        attached_device_info: str,
+        device_trl: str,
+        command_str: str,
+        on_off: str,
+    ) -> None:
+        """
+        Request a power schedule from the marshaller.
+
+        :param attached_device_info: details about the attached device.
+        :param device_trl: trl of this device.
+        :param command_str: name of the command being called.
+        :param on_off: args to be called for the command.
+        """
+        assert self._proxy is not None  # for the type checker
+        assert self._proxy._device is not None  # for the type checker
+
+        input_dict = {
+            "attached_device_info": attached_device_info,
+            "device_trl": device_trl,
+            "command_str": command_str,
+            "command_args": on_off,
+        }
+        input_str = json.dumps(input_dict)
+        self._proxy._device.SchedulePower(input_str)
 
 
 class _PDUProxy(DeviceComponentManager):
@@ -166,6 +224,7 @@ class _PDUProxy(DeviceComponentManager):
         return func()
 
 
+# pylint: disable = too-many-instance-attributes
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
 
@@ -175,6 +234,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         subrack_port: int,
         logger: logging.Logger,
         pdu_trl: str,
+        pdu_ports: list[int],
+        power_marshaller_trl: str,
+        simulated_pdu: bool,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_rate: float = 5.0,
@@ -189,6 +251,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param subrack_port: the subrack port
         :param logger: a logger for this object to use
         :param pdu_trl: trl for the pdu device
+        :param pdu_ports: the ports of the pdu that this subrack is
+            plugged into
+        :param power_marshaller_trl: trl for the power marshaller device
+        :param simulated_pdu: if we are using a simulated pdu or not
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -224,13 +290,35 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component_state_changed_callback,
             update_rate=update_rate,
         )
-        power_supply_component_manager = PowerSupplyProxySimulator(
+
+        self.proxy_map = {}
+
+        self.pdu_trl = pdu_trl
+        self.pdu_ports = pdu_ports
+        if simulated_pdu:
+            power_supply_component_manager = PowerSupplyProxySimulator(
+                logger,
+                None,  # super() call will set the communication_state_changed_callback
+                None,  # super() call with set the component_state_changed_callback
+                initial_power_state=_initial_power_state,
+                initial_fail=_initial_fail,
+            )
+        else:
+            self.pdu_proxy = _PDUProxy(
+                pdu_trl,
+                logger,
+                functools.partial(self._device_communication_state_changed, pdu_trl),
+                functools.partial(self._pdu_state_changed, pdu_trl),
+            )
+
+        self.power_marshaller_trl = power_marshaller_trl
+        self.power_marshaller_proxy = _PowerMarshallerProxy(
+            power_marshaller_trl,
             logger,
-            None,  # super() call will set the communication_state_changed_callback
-            None,  # super() call with set the component_state_changed_callback
-            initial_power_state=_initial_power_state,
-            initial_fail=_initial_fail,
+            functools.partial(self._device_communication_state_changed, pdu_trl),
+            functools.partial(self._pdu_state_changed, pdu_trl),
         )
+        self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
         # we only need one worker; the heavy lifting is done by the poller in the
         # hardware component manager
@@ -260,40 +348,23 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
-        self.pdu_proxy = (
-            None
-            if not pdu_trl
-            else _PDUProxy(
-                pdu_trl,
-                logger,
-                functools.partial(self._device_communication_state_changed, pdu_trl),
-                functools.partial(self._pdu_state_changed, pdu_trl),
-            )
-        )
-        self._communication_manager: CommunicationManager | None = None
-        if self.pdu_proxy is not None:
-            self._pdu_proxy_map = {pdu_trl: self.pdu_proxy}
 
-            # TODO: This CommunicationManager does not play well with the
-            # ComponentManagerWithUpstreamPowerSupply.
-            self._communication_manager = CommunicationManager(
-                self._update_communication_state,
-                self._update_component_state,
-                self.logger,
-                self._pdu_proxy_map,
-            )
+        self._communication_manager = CommunicationManager(
+            self._update_communication_state,
+            self._update_component_state,
+            self.logger,
+            self.proxy_map,
+        )
 
     def start_communicating(self: SubrackComponentManager) -> None:
         """Establish communication with the subrack components."""
         super().start_communicating()
-        if self._communication_manager is not None:
-            self._communication_manager.start_communicating()
+        self._communication_manager.start_communicating()
 
     def stop_communicating(self: SubrackComponentManager) -> None:
         """Break off communication with the subrack components."""
         super().stop_communicating()
-        if self._communication_manager is not None:
-            self._communication_manager.stop_communicating()
+        self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
         self: SubrackComponentManager,
@@ -306,10 +377,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param trl: device trl.
         :param communication_state: communication status
         """
-        if self._communication_manager is not None:
-            self._communication_manager.update_communication_status(
-                trl, communication_state
-            )
+        self._communication_manager.update_communication_status(
+            trl, communication_state
+        )
 
     def _pdu_state_changed(
         self: SubrackComponentManager,
@@ -561,6 +631,76 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 states.append(self.pdu_proxy._pdu_port_state(port_number))
             return states
         return None
+
+    def on(
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn self on.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self.submit_task(
+            self._on,
+            args=[],
+            task_callback=task_callback,
+        )
+
+    def _on(
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+    ) -> None:
+        """
+        Turn self on.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+        """
+        for port in self.pdu_ports:
+            self.power_marshaller_proxy.schedule_power(
+                "subrack",
+                self.pdu_trl,
+                "pduPortOn",
+                str(port),
+            )
+
+    def off(
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn self off.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self.submit_task(
+            self._off,
+            args=[],
+            task_callback=task_callback,
+        )
+
+    def _off(
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+    ) -> None:
+        """
+        Turn self off.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+        """
+        for port in self.pdu_ports:
+            self.power_marshaller_proxy.schedule_power(
+                "subrack",
+                self.pdu_trl,
+                "pduPortOff",
+                str(port),
+            )
 
     def set_subrack_fan_speed(
         self: SubrackComponentManager,

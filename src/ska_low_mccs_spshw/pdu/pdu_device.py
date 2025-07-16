@@ -9,7 +9,6 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import importlib.resources
-import re
 import sys
 from typing import Any, cast
 
@@ -41,8 +40,6 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
     MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
     UpdateRate = device_property(dtype=float, default_value=3.0)
     PowerMarshallerTrl = device_property(dtype=str, default_value="")
-    PortDeviceTrls = device_property(dtype=(str,), default_value=[])
-    PortDevicePorts = device_property(dtype=(str,), default_value=[])
 
     DeviceModels: dict[str, str] = {
         "ENLOGIC": "enlogic.yaml",
@@ -77,25 +74,24 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         self._off_value: int
         self.component_manager: PduComponentManager
 
-        self._port_device_information: dict[int, str] = {}
-
-        if self.PortDeviceTrls and self.PortDevicePorts:
-            for i, trl in enumerate(self.PortDeviceTrls):
-                ports = self.PortDevicePorts[i]
-                numbers = re.findall(r"\d+", ports)
-                for port in numbers:
-                    self._port_device_information[int(port)] = trl
-
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
         try:
             super().init_device()
+            self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
             self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
             device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
             version = f"{device_name} Software Version: {self._version_id}"
-            properties = f"Initialised {device_name} on: {self.Host}:{self.Port}"
-            version_info = f"{self.__class__.__name__}, {self._build_state}"
-            self.logger.info("\n%s\n%s\n%s", version_info, version, properties)
+            properties = (
+                f"Initialised {device_name} device with properties:\n"
+                f"\tHost: {self.Host}\n"
+                f"\tModel: {self.Model}\n"
+                f"\tPowerMarshallerTrl: {self.PowerMarshallerTrl}\n"
+            )
+            self.logger.info(
+                "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+            )
+
             if self.Model == "RARITAN":
                 self._off_value = 0
                 self._on_value = 1
@@ -270,36 +266,6 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         :param port: The pdu port to turn off
         """
         self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._off_value)
-
-    @command(dtype_in=int)
-    def SchedulePduPortOn(self: MccsPdu, port: int) -> None:
-        """
-        Schedule PDU port on with power marshaller.
-
-        :param port: The pdu port to turn on
-        """
-        if not self._port_device_information or self._port_device_information[port]:
-            self.logger.error("No information known about attached device")
-            return
-        attached_device_info = self._port_device_information[port]
-        self.component_manager.schedule_power(
-            attached_device_info, self.get_name(), "pduPortOn", str(port)
-        )
-
-    @command(dtype_in=int)
-    def SchedulePduPortOff(self: MccsPdu, port: int) -> None:
-        """
-        Schedule PDU port off with power marshaller.
-
-        :param port: The pdu port to turn off
-        """
-        if not self._port_device_information or self._port_device_information[port]:
-            self.logger.error("No information known about attached device")
-            return
-        attached_device_info = self._port_device_information[port]
-        self.component_manager.schedule_power(
-            attached_device_info, self.get_name(), "pduPortOff", str(port)
-        )
 
 
 # ----------

@@ -5995,7 +5995,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return (
             [ResultCode.FAILED],
             [
-                "SetVoltageWarningThresholds command FAILED (Check voltage name is valid)"
+                "SetVoltageWarningThresholds command FAILED "
+                "(Check voltage name is valid)"
             ],
         )
 

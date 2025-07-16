@@ -20,14 +20,12 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.functional.conftest import (
-    expect_attribute,
     poll_until_consumers_stopped,
     poll_until_state_change,
 )
 from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
-from tests.test_tools import execute_lrc_to_completion
 
-from ..test_tools import retry_communication, tango_event_subscription
+from ..test_tools import retry_communication
 
 scenarios("./features/daq_spead_capture.feature")
 
@@ -133,55 +131,20 @@ def daq_ready_to_receive_beam(
 @given("MccsTile is routed to daq")
 def tile_ready_to_send_to_daq(
     daq_device: tango.DeviceProxy,
-    tile_device: tango.DeviceProxy,
+    synchronised_tile_device: tango.DeviceProxy,
     subrack_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Configure the Daq device for select data type.
 
     :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param tile_device: A 'tango.DeviceProxy' to the Tile device.
+    :param synchronised_tile_device: A 'tango.DeviceProxy' to the Tile device
+        in the Synchronised state.
     :param subrack_device: A 'tango.DeviceProxy' to the Subrack device.
-    :param change_event_callbacks: a dictionary of callables to be used as
-        tango change event callbacks.
     """
     if subrack_device.state() != tango.DevState.ON:
-        subrack_device.adminMode = 0
+        subrack_device.adminMode = AdminMode.ONLINE
         poll_until_state_change(subrack_device, tango.DevState.ON, 5)
-
-    if tile_device.AdminMode != AdminMode.ONLINE:
-        with tango_event_subscription(
-            tile_device,
-            "adminMode",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_adminMode"],
-        ):
-            change_event_callbacks["tile_adminMode"].assert_change_event(Anything)
-            tile_device.adminMode = 0
-            change_event_callbacks["tile_adminMode"].assert_change_event(
-                AdminMode.ONLINE
-            )
-
-    if tile_device.state() != tango.DevState.ON:
-        tile_device.globalReferenceTime = ""
-        execute_lrc_to_completion(
-            device_proxy=tile_device,
-            command_name="On",
-            command_arguments=None,
-            timeout=60,
-        )
-        poll_until_state_change(tile_device, tango.DevState.ON, 100)
-        assert expect_attribute(
-            tile_device, "tileProgrammingState", "Initialised", timeout=240.0
-        )
-
-    # Start the ADCs and SDP processing chain.
-    if tile_device.tileProgrammingState != "Synchronised":
-        tile_device.startacquisition("{}")
-        assert expect_attribute(tile_device, "tileProgrammingState", "Synchronised")
-
-    assert tile_device.tileProgrammingState == "Synchronised"
 
     daq_status = json.loads(daq_device.DaqStatus())
 
@@ -190,7 +153,7 @@ def tile_ready_to_send_to_daq(
         "destination_ip": daq_status["Receiver IP"][0],
         "destination_port": int(daq_status["Receiver Ports"][0]),
     }
-    tile_device.SetLmcDownload(json.dumps(tpm_lmc_config))
+    synchronised_tile_device.SetLmcDownload(json.dumps(tpm_lmc_config))
 
 
 @given("the DAQ has no consumers running")

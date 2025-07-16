@@ -16,8 +16,9 @@ from __future__ import annotations
 import json
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, Optional, Union
 
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, ResultCode
@@ -178,3 +179,74 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
         assert device_proxy.adminMode == AdminMode.ONLINE
     else:
         print(f"Device {device_proxy.dev_name()} is already ONLINE nothing to do.")
+
+
+class AttributeWaiter:  # pylint: disable=too-few-public-methods
+    """A AttributeWaiter class."""
+
+    def __init__(self: AttributeWaiter, timeout: float = 2.0) -> None:
+        """
+        Initialise a new AttributeWaiter with a timeout.
+
+        :param timeout: the timeout to wait.
+        """
+        self._timeout = timeout
+        self._attr_callback = MockTangoEventCallbackGroup(
+            "attr_callback", timeout=timeout
+        )
+
+    def wait_for_value(
+        self: AttributeWaiter,
+        device_proxy: tango.DeviceProxy,
+        attr_name: str,
+        attr_value: Optional[Union[str, int, bool, list[Any], np.ndarray]] = None,
+        lookahead: int = 1,
+    ) -> None:
+        """
+        Wait for the value in alloted time.
+
+        :param device_proxy: the device proxy
+        :param attr_name: the name of the attribute.
+            use None for Any change event.
+        :param attr_value: the value of the attribute
+        :param lookahead: the lookahead.
+        """
+        with tango_event_subscription(
+            device_proxy,
+            attr_name,
+            tango.EventType.CHANGE_EVENT,
+            self._attr_callback["attr_callback"],
+        ):
+            self._attr_callback["attr_callback"].assert_change_event(
+                Anything,
+            )
+            read_attr_value = getattr(device_proxy, attr_name)
+            if not self._values_equal(read_attr_value, attr_value):
+                self._attr_callback["attr_callback"].assert_change_event(
+                    attr_value if attr_value is not None else Anything,
+                    lookahead=lookahead,
+                    consume_nonmatches=True,
+                )
+
+    def _values_equal(
+        self: AttributeWaiter, read_value: Any, expected_value: Any
+    ) -> bool:
+        """
+        Return whether values are equal.
+
+        :param read_value: The value read from backend.
+        :param expected_value: The value expected from backend.
+
+        :raises ValueError: when the values are not comparable.
+
+        :return: True if the values are equal.
+        """
+        if isinstance(read_value, np.ndarray):
+            if not isinstance(expected_value, np.ndarray):
+                raise ValueError(
+                    f"Expected np.ndarray for comparison with attribute value, "
+                    f"but got {type(expected_value).__name__}"
+                )
+            return np.array_equal(read_value, expected_value)
+
+        return read_value == expected_value

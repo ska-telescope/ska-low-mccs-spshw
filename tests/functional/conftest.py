@@ -12,12 +12,14 @@ import json
 import os
 import queue
 import time
+from datetime import datetime
 from time import sleep
 from typing import Any, Callable, Iterator
 
 import _pytest
 import pytest
 import tango
+from ska_control_model import AdminMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import (
@@ -25,6 +27,10 @@ from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
 )
+
+from ..test_tools import AttributeWaiter
+
+RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 # TODO: https://github.com/pytest-dev/pytest-forked/issues/67
@@ -582,3 +588,52 @@ def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
         time.sleep(1)
         time_elapsed += 1
     assert daq_status["Bandpass Monitor"] == state
+
+
+@pytest.fixture(name="synchronised_tile_device")
+def synchronised_tile_device_fixture(
+    tile_device: tango.DeviceProxy,
+) -> Iterator[tango.DeviceProxy]:
+    """
+    Fixture that returns a DeviceProxy to a Synchronised TPM.
+
+    :param tile_device: fixture that provides a
+        :py:class:`tango.DeviceProxy` to the device under test, in a
+        :py:class:`tango.test_context.DeviceTestContext`.
+
+    :yield: a 'DeviceProxy' to the Synchronised tile.
+    """
+    if tile_device.adminMode != AdminMode.ONLINE:
+        tile_device.adminMode = AdminMode.ONLINE
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            None,
+            lookahead=5,
+        )
+
+    # Grab the previous GRT, used to return to this state in teardown.
+    initial_grt = tile_device.globalreferenceTime
+
+    if tile_device.tileProgrammingState != "Synchronised":
+        if initial_grt == "":
+            start_time = datetime.strftime(
+                datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
+            )
+            tile_device.globalreferenceTime = start_time
+        if tile_device.state() == tango.DevState.OFF:
+            tile_device.on()
+        else:
+            tile_device.initialise()
+
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Synchronised",
+            lookahead=5,
+        )
+
+    yield tile_device
+
+    # Restore the previous GRT
+    tile_device.globalreferenceTime = initial_grt

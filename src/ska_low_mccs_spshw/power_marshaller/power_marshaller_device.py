@@ -203,12 +203,11 @@ class PowerMarshaller(MccsBaseDevice):
         command_str = args_expanded["command_str"]
         device_trl = args_expanded["device_trl"]
 
-        device_proxy = tango.DeviceProxy(device_trl)
-
         if attached_device_info is None:
             self.logger.info("No device info found")
             return
 
+        device_proxy = tango.DeviceProxy(device_trl)
         device_proxy.command_inout(command_str, int(command_args))
 
 

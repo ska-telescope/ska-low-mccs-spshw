@@ -29,7 +29,10 @@ platform:
             simulated: true
             srmb_host: srmb-1
             srmb_port: 8081
-            pdu_ports: 1, 2
+            pdu: ci-1
+            pdu_ports:
+            - 1
+            - 2
         tpms:
           tpm10:
             id: 9

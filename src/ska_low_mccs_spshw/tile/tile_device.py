@@ -5921,7 +5921,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             *args: Any,
             argin: str,
             **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
+        ) -> DevVarLongStringArrayType:
             """
             Implement :py:meth:`.MccsTile.SetVoltageWarningThresholds` command.
 
@@ -5948,23 +5948,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     "'min_thr', and 'max_thr'."
                 )
                 return (
-                    ResultCode.REJECTED,
-                    "All parameters must be supplied. Expected 'voltage', "
-                    "'min_thr', and 'max_thr'.",
+                    [ResultCode.REJECTED],
+                    [
+                        "All parameters must be supplied. Expected 'voltage', "
+                        "'min_thr', and 'max_thr'."
+                    ],
                 )
             rc = self._component_manager.set_voltage_warning_thresholds(
                 voltage=voltage.upper(), min_thr=min_thr, max_thr=max_thr
             )
-            print(f"{rc=}")
             if rc:
                 return (
-                    ResultCode.OK,
-                    "SetVoltageWarningThresholds command completed OK",
+                    [ResultCode.OK],
+                    ["SetVoltageWarningThresholds command completed OK"],
                 )
             return (
-                ResultCode.FAILED,
-                "SetVoltageWarningThresholds command failed to complete. "
-                "Check threshold name is valid.",
+                [ResultCode.FAILED],
+                [
+                    "SetVoltageWarningThresholds command failed to complete. "
+                    "Check threshold name is valid."
+                ],
             )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")

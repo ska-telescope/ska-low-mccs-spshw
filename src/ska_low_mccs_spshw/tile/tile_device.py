@@ -5972,7 +5972,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetVoltageWarningThresholds(
         self: MccsTile, argin: str
-    ) -> tuple[ResultCode, str]:
+    ) -> DevVarLongStringArrayType:
         """
         Set voltage warning thresholds in firmware.
 
@@ -5988,10 +5988,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         result = handler(argin=argin)
         # result = True on success, None on failure
         if result:
-            return (ResultCode.OK, "SetVoltageWarningThresholds command completed OK")
+            return (
+                [ResultCode.OK],
+                ["SetVoltageWarningThresholds command completed OK"],
+            )
         return (
-            ResultCode.FAILED,
-            "SetVoltageWarningThresholds command FAILED (Check voltage name is valid)",
+            [ResultCode.FAILED],
+            [
+                "SetVoltageWarningThresholds command FAILED (Check voltage name is valid)"
+            ],
         )
 
 

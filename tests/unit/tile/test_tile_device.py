@@ -2385,3 +2385,250 @@ class TestMccsTileCommands:
         # the device.
         change_event_callbacks["alarms"].assert_change_event(Anything)
         assert on_tile_device.state() == tango.DevState.ALARM
+
+    def test_get_voltage_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        voltage_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the voltage thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param voltage_warning_thresholds: A dictionary with the expected
+            voltage warning thresholds.
+        """
+        # Happy paths.
+        thresholds = json.loads(on_tile_device.GetVoltageWarningThresholds(""))
+        assert thresholds == voltage_warning_thresholds
+        for voltage_name, threshold_values in voltage_warning_thresholds.items():
+            assert {voltage_name: threshold_values} == json.loads(
+                on_tile_device.GetVoltageWarningThresholds(voltage_name)
+            )
+
+        # Unhappy paths.
+        assert (
+            "Specified voltage 'INVALID_VOLTAGE_NAME' not recognized."
+            == on_tile_device.GetVoltageWarningThresholds("invalid_voltage_name")
+        )
+
+    def test_set_voltage_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        updated_voltage_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the voltage thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param updated_voltage_warning_thresholds: A dictionary with the
+            updated voltage warning thresholds.
+        """
+        # Happy paths.
+        for (
+            voltage_name,
+            threshold_values,
+        ) in updated_voltage_warning_thresholds.items():
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "voltage": voltage_name,
+                        "min_thr": threshold_values["min"],
+                        "max_thr": threshold_values["max"],
+                    }
+                )
+            )
+            assert msg == ["SetVoltageWarningThresholds command completed OK"]
+            assert {voltage_name: threshold_values} == json.loads(
+                on_tile_device.GetVoltageWarningThresholds(voltage_name)
+            )
+
+        # Unhappy paths.
+        expected_fail_message = [
+            "All parameters must be supplied. "
+            "Expected 'voltage', 'min_thr', and 'max_thr'."
+        ]
+
+        # No voltage supplied.
+        _, msg = on_tile_device.SetVoltageWarningThresholds(
+            json.dumps(
+                {
+                    "min_thr": 12.3,
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == expected_fail_message
+
+        # No min thr supplied
+        _, msg = on_tile_device.SetVoltageWarningThresholds(
+            json.dumps(
+                {
+                    "voltage": "VIN",
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == expected_fail_message
+
+        # No max thr supplied
+        _, msg = on_tile_device.SetVoltageWarningThresholds(
+            json.dumps(
+                {
+                    "voltage": "VIN",
+                    "min_thr": 12.3,
+                }
+            )
+        )
+        assert msg == expected_fail_message
+
+        # Invalid voltage name supplied.
+        _, msg = on_tile_device.SetVoltageWarningThresholds(
+            json.dumps(
+                {
+                    "voltage": "VI",
+                    "min_thr": 12.3,
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == [
+            "SetVoltageWarningThresholds command failed to complete. "
+            "Check voltage name is valid."
+        ]
+
+    # current v
+    def test_get_current_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        current_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the current thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param current_warning_thresholds: A dictionary with the expected
+            current warning thresholds.
+        """
+        # Happy paths.
+        thresholds = json.loads(on_tile_device.GetCurrentWarningThresholds(""))
+        assert thresholds == current_warning_thresholds
+        for current_name, threshold_values in current_warning_thresholds.items():
+            assert {current_name: threshold_values} == json.loads(
+                on_tile_device.GetCurrentWarningThresholds(current_name)
+            )
+
+        # Unhappy paths.
+        assert (
+            "Specified current 'invalid_current_name' not recognized."
+            == on_tile_device.GetCurrentWarningThresholds("invalid_current_name")
+        )
+
+    def test_set_current_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        updated_current_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the current thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param updated_current_warning_thresholds: A dictionary with the
+            updated current warning thresholds.
+        """
+        # Happy paths.
+        for (
+            current_name,
+            threshold_values,
+        ) in updated_current_warning_thresholds.items():
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "current": current_name,
+                        "min_thr": threshold_values["min"],
+                        "max_thr": threshold_values["max"],
+                    }
+                )
+            )
+            assert msg == ["SetCurrentWarningThresholds command completed OK"]
+            assert {current_name: threshold_values} == json.loads(
+                on_tile_device.GetCurrentWarningThresholds(current_name)
+            )
+
+        # Unhappy paths.
+        expected_fail_message = [
+            "All parameters must be supplied. "
+            "Expected 'current', 'min_thr', and 'max_thr'."
+        ]
+
+        # No current supplied.
+        _, msg = on_tile_device.SetCurrentWarningThresholds(
+            json.dumps(
+                {
+                    "min_thr": 12.3,
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == expected_fail_message
+
+        # No min thr supplied
+        _, msg = on_tile_device.SetCurrentWarningThresholds(
+            json.dumps(
+                {
+                    "current": "FE0_mVA",
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == expected_fail_message
+
+        # No max thr supplied
+        _, msg = on_tile_device.SetCurrentWarningThresholds(
+            json.dumps(
+                {
+                    "current": "FE0_mVA",
+                    "min_thr": 12.3,
+                }
+            )
+        )
+        assert msg == expected_fail_message
+
+        # Invalid current name supplied.
+        _, msg = on_tile_device.SetCurrentWarningThresholds(
+            json.dumps(
+                {
+                    "current": "VI",
+                    "min_thr": 12.3,
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == [
+            "SetCurrentWarningThresholds command failed to complete. "
+            "Check current name is valid."
+        ]

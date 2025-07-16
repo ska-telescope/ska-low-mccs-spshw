@@ -5890,7 +5890,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(dtype_in="DevString", dtype_out="DevString")
     def GetVoltageWarningThresholds(self: MccsTile, voltage: str = "") -> str:
         """
-        Return the value(s) of the specified register.
+        Return the voltage warning thresholds.
+        Note: Voltage names will be uppercased.
 
         :param voltage: voltage to get thresholds for. If not specified,
             the method will return thresholds for all voltages.
@@ -5978,6 +5979,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Set voltage warning thresholds in firmware.
 
+        Note: Voltage names will be uppercased.
+
         :param argin: A json string containing a dictionary with the following keys:
                 * voltage: the voltage for which to set the warning thresholds.
                 * min_thr: the minimum threshold for the specified voltage.
@@ -6033,7 +6036,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(dtype_in="DevString", dtype_out="DevString")
     def GetCurrentWarningThresholds(self: MccsTile, current: str = "") -> str:
         """
-        Return the value(s) of the specified register.
+        Return the current (I=P/V) warning thresholds.
+
+        Note: Current names are case sensitive.
 
         :param current: current to get thresholds for. If not specified,
             the method will return thresholds for all currents.
@@ -6041,7 +6046,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         """
         handler = self.get_command_object("GetCurrentWarningThresholds")
-        return handler(current=current.upper())
+        return handler(current=current)
 
     class SetCurrentWarningThresholdsCommand(FastCommand):
         """Class for handling the SetCurrentWarningThresholds() command."""
@@ -6099,7 +6104,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     ],
                 )
             rc = self._component_manager.set_current_warning_thresholds(
-                current=current.upper(), min_thr=min_thr, max_thr=max_thr
+                current=current, min_thr=min_thr, max_thr=max_thr
             )
             if rc:
                 return (
@@ -6119,7 +6124,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
         """
-        Set current warning thresholds in firmware.
+        Set current (I=P/V) warning thresholds in firmware.
+
+        Note: Current names are case sensitive.
 
         :param argin: A json string containing a dictionary with the following keys:
                 * current: the current for which to set the warning thresholds.

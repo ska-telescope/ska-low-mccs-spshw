@@ -158,8 +158,8 @@ ral-low-k8s-test:
   variables:
     TANGO_HOST: "databaseds.skaffold.svc.stfc-ral-k8s.skao.int:10000"
     KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
-    K8S_HELMFILE_ENV: ral-software
-    STATION_LABEL: stfc-ral-software
+    K8S_HELMFILE_ENV: ral-2
+    STATION_LABEL: stfc-ral-2
     JUNITXML_REPORT_PATH: build/reports/ral-low-functional-tests.xml
     CUCUMBER_JSON_PATH: build/reports/ral-low-cucumber.json
     JSON_REPORT_PATH: build/reports/report.json

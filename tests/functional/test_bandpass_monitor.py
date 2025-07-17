@@ -482,7 +482,7 @@ def daq_received_data(
             ("integrated_channel", Anything)
         )
     except AssertionError:
-        if station_name == "stfc-ral-software":
+        if station_name == "stfc-ral-2":
             pytest.xfail(
                 "There seems to be a discrepency between the simulator and hardware."
                 "When testing against hardware the datatype collected is burst_channel"
@@ -512,7 +512,7 @@ def daq_bandpasses_saved(
         change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)
         assert np.count_nonzero(daq_device.yPolBandpass) > 0
     except AssertionError as e:
-        if station_name == "stfc-ral-software":
+        if station_name == "stfc-ral-2":
             pytest.xfail(
                 "There is an issue with this stage at RAL."
                 "Caught exception: list index out of range. "

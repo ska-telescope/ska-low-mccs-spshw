@@ -247,7 +247,7 @@ def check_capture(
             ("integrated_channel", Anything)
         )
     except AssertionError:
-        if station_name == "stfc-ral-software":
+        if station_name == "stfc-ral-2":
             pytest.xfail(
                 reason=(
                     "There is a discrepancy between the simulator and hardware."

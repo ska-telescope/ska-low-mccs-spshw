@@ -5891,6 +5891,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def GetVoltageWarningThresholds(self: MccsTile, voltage: str = "") -> str:
         """
         Return the voltage warning thresholds.
+
         Note: Voltage names will be uppercased.
 
         :param voltage: voltage to get thresholds for. If not specified,

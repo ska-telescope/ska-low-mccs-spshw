@@ -1,6 +1,13 @@
 defaults:
   logging_level_default: 5
 
+platform:
+  stations:
+    stfc-ral-3:
+      sps:
+        daq:
+          two-pod-daq: false
+
 subarrays:  # 2 subarrays, no defaults overridden
   "1": {}
     # enabled: false  # for example
@@ -26,13 +33,20 @@ helm_values:
   ska-tango-devices:
     devices:
       SpsStation:
-        low-mccs/spsstation/stfc-ral-software:
+        low-mccs/spsstation/stfc-ral-3:
           ParentTRL: ""
-#   image:
-#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.11.0-dev.cc21201e6
+  
+    # deviceServerTypes:
+    #   spshw:
+    #     image:
+    #       registry: localhost:5000
+    #       tag: 3.1.1-dirty
+    #       pullPolicy: Always
 
-#   ska-low-mccs-daq:
-#     image:
-#       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-#       tag: 0.5.0-dev.cfc920d91
+  # ska-low-mccs-daq:
+  #     ska-tango-devices:
+  #       deviceServerTypes:
+  #         daq:
+  #           image:
+  #             registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+  #             tag: 3.0.0-rc2-dev.c3a04b7ec

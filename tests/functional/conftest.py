@@ -26,6 +26,7 @@ from tests.harness import (
     DEFAULT_STATION_LABEL,
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
+    get_sps_station_name,
 )
 
 from ..test_tools import AttributeWaiter
@@ -195,7 +196,11 @@ def exported_daq_fixture(true_context: bool) -> list[tango.DeviceProxy]:
 @pytest.fixture(name="available_stations")
 def available_stations_fixture(true_context: bool) -> list[str]:
     """
-    Return the name of the station under test.
+    Return the name of all stations available in environment.
+
+    When a True context this will return all exported stations
+    that can be pinged.
+    When in a test context we will simply return the default
 
     :param true_context: whether to test against an existing Tango deployment
 
@@ -203,12 +208,25 @@ def available_stations_fixture(true_context: bool) -> list[str]:
     """
     if true_context:
         db = tango.Database()
-        stations = db.get_device_exported("low-mccs/spsstation/*")
+        stations_exported = db.get_device_exported("low-mccs/spsstation/*")
+        _available_stations = []
+        for station in stations_exported:
+            try:
+                exp_station_instance = tango.DeviceProxy(station)
+                # Ping to check that it is available.
+                exp_station_instance.ping()
+                _available_stations.append(station)
+            except tango.DevFailed:
+                pass
         return [
             str(station).rsplit("low-mccs/spsstation/", maxsplit=1)[-1]
-            for station in stations
+            for station in _available_stations
         ]
-    return [DEFAULT_STATION_LABEL]
+    try:
+        tango.DeviceProxy(get_sps_station_name()).ping()
+        return [DEFAULT_STATION_LABEL]
+    except tango.DevFailed:
+        return []
 
 
 @pytest.fixture(name="available_tiles")

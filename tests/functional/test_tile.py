@@ -31,15 +31,17 @@ from tests.test_tools import AttributeWaiter, TileWrapper, TpmStatus
 
 
 @pytest.fixture(name="station")
-def station_fixture(available_stations: list[str]) -> tango.DeviceProxy:
+def station_fixture(station_label: str | None) -> tango.DeviceProxy:
     """
     Fixture containing a proxy to the station under test.
 
-    :param available_stations: the names of the stations we are testing against.
+    :param station_label: the names of the station we are testing against.
 
     :returns: a proxy to the station under test.
     """
-    return tango.DeviceProxy(get_sps_station_name(available_stations[0]))
+    if station_label is None:
+        pytest.fail("No station label defined.")
+    return tango.DeviceProxy(get_sps_station_name(station_label))
 
 
 @pytest.fixture(name="station_with_subscriptions")

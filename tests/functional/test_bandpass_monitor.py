@@ -26,7 +26,12 @@ from tests.functional.conftest import (
     poll_until_state_change,
     verify_bandpass_state,
 )
-from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
+from tests.harness import (
+    get_lmc_daq_name,
+    get_sps_station_name,
+    get_subrack_name,
+    get_tile_name,
+)
 from tests.test_tools import retry_communication
 
 scenarios("./features/bandpass_monitor.feature")
@@ -43,18 +48,18 @@ def plot_directory_fixture() -> str:
 
 
 @given(
-    "we have a station to test against",
+    "we have a target station",
     target_fixture="station_name",
 )
-def available_station_fixture(
-    available_stations: list[str],
+def station_name_fixture(
+    station_label: str | None,
     true_context: bool,
 ) -> str:
     """
     Return an available station to test against.
 
-    :param available_stations: a list of stations available in this
-        environment.
+    :param station_label: a fixture returning the station label passed
+        in from the environment.
     :param true_context: whether to test against an existing Tango deployment
 
     :return: the station to test against.
@@ -63,7 +68,14 @@ def available_station_fixture(
         pytest.skip(
             "This needs to be run in a true-context against a real DAQ deployment"
         )
-    return available_stations[-1]
+    if station_label is None:
+        pytest.fail("No target station defined.")
+    try:
+        dp = tango.DeviceProxy(get_sps_station_name(station_label))
+        dp.ping()
+    except tango.DevFailed as e:
+        pytest.fail(f"Target station is not reachable {e}")
+    return station_label
 
 
 @pytest.fixture(name="daq_config")

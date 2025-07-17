@@ -15,16 +15,19 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+import warnings
+from typing import Any, Iterator
 
+import numpy as np
 import pytest
 import tango
-from pytest_bdd import given, scenario, then, when
+from pytest_bdd import given, parsers, scenario, then, when
 from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
+from tests.test_tools import AttributeWaiter, TileWrapper, TpmStatus
 
 
 @pytest.fixture(name="station")
@@ -37,6 +40,46 @@ def station_fixture(available_stations: list[str]) -> tango.DeviceProxy:
     :returns: a proxy to the station under test.
     """
     return tango.DeviceProxy(get_sps_station_name(available_stations[0]))
+
+
+@pytest.fixture(name="station_with_subscriptions")
+def station_with_subscriptions_fixture(
+    station: tango.DeviceProxy, change_event_callbacks: MockTangoEventCallbackGroup
+) -> Iterator[tango.DeviceProxy]:
+    """
+    Fixture containing a station with subscriptions set up.
+
+    :param station: a proxy to the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+
+    :yields: a proxy to the station under test.
+    """
+    subscription_ids = []
+    subscription_ids.append(
+        station.subscribe_event(
+            "adminMode",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["device_adminmode"],
+        )
+    )
+    change_event_callbacks.assert_change_event("device_adminmode", Anything)
+    subscription_ids.append(
+        station.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["device_state"],
+        )
+    )
+    change_event_callbacks.assert_change_event("device_state", Anything)
+
+    yield station
+
+    for sub_id in subscription_ids:
+        try:
+            station.unsubscribe_event(sub_id)
+        except tango.DevFailed:
+            warnings.warn(f"Unable to unsubscribe_event {sub_id}")
 
 
 @pytest.fixture(name="first_tile")
@@ -74,6 +117,51 @@ def test_tile(sps_devices_exported: list[tango.DeviceProxy]) -> None:
         device.adminmode = AdminMode.ONLINE
 
 
+@scenario("features/tile.feature", "Tile synchronised state recovered after dev_init")
+def test_tile_synchronised_recover(
+    sps_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param sps_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in sps_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
+def test_tile_initialised_recover(
+    sps_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param sps_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in sps_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@given("an SPS deployment against HW")
+def check_against_hardware(hw_context: bool) -> None:
+    """
+    Skip the test if not in real context.
+
+    :param hw_context: whether or not the current test is againt HW.
+    """
+    if not hw_context:
+        pytest.skip(
+            "This test requires real HW. "
+            "We require that a bounce of the Pod "
+            "Does not wipe the state of the device_under_test. "
+            "Since the simulator is constructed in init_device its "
+            "state is reset after a init_device."
+        )
+
+
 @given("an SPS deployment against a real context")
 def check_against_real_context(true_context: bool) -> None:
     """
@@ -87,7 +175,7 @@ def check_against_real_context(true_context: bool) -> None:
 
 @given("the SpsStation and tiles are ON")
 def check_spsstation_state(
-    station: tango.DeviceProxy,
+    station_with_subscriptions: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     sps_devices_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
@@ -95,7 +183,8 @@ def check_spsstation_state(
     """
     Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
 
-    :param station: a proxy to the station under test.
+    :param station_with_subscriptions: a proxy to the station under test
+        with subscriptions set up.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     :param sps_devices_exported: Fixture containing the tango.DeviceProxy
@@ -103,18 +192,7 @@ def check_spsstation_state(
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
-    station.subscribe_event(
-        "adminMode",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["device_adminmode"],
-    )
-    change_event_callbacks.assert_change_event("device_adminmode", Anything)
-    station.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["device_state"],
-    )
-    change_event_callbacks.assert_change_event("device_state", Anything)
+    station = station_with_subscriptions
     initial_mode = station.adminMode
     if initial_mode != AdminMode.ONLINE:
         station.adminMode = AdminMode.ONLINE
@@ -138,20 +216,22 @@ def check_spsstation_state(
     # Sleep time to discover state.
     time.sleep(5)
 
-    if any(
-        device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
-        for device in sps_devices_exported
-    ):
-        state_callback = MockTangoEventCallbackGroup("state", timeout=300)
-        station.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            state_callback["state"],
-        )
-        state_callback.assert_change_event("state", Anything, consume_nonmatches=True)
-        station.on()
-        state_callback.assert_change_event(
-            "state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
+    # TODO: An On from SpsStation level when ON will mean that
+    # Any TPMs that are OFF will remain OFF due to ON being defined as
+    # any TPM ON and the base class rejecting calls to ON if device is ON.
+    # Therefore we are individually calling MccsTile.On() here.
+    _initial_station_state = station.state()
+    for tile in exported_tiles:
+        if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
+            tile.on()
+            AttributeWaiter(timeout=60).wait_for_value(
+                tile,
+                "state",
+                tango.DevState.ON,
+            )
+    if _initial_station_state != tango.DevState.ON:
+        AttributeWaiter(timeout=60).wait_for_value(
+            station, "state", tango.DevState.ON, lookahead=3
         )
 
     iters = 0
@@ -189,6 +269,81 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         )
 
 
+@given("the Tile is in a defined synchronised state", target_fixture="defined_state")
+def tile_has_defined_synchronised_state(
+    tile_device: tango.DeviceProxy,
+) -> dict[str, Any]:
+    """
+    Verify that a device is in the desired state.
+
+    :param tile_device: tile device under test.
+
+    :returns: a fixture with the defined_state
+    """
+    defined_state = {
+        "logical_tile_id": 2,
+        "station_id": 2,
+        "static_time_delays": np.array([5] * 32),
+        "csp_rounding": np.array([4] * 32),
+        "channeliser_rounding": np.array([8] * 512),
+    }
+    tw = TileWrapper(tile_device)
+    tw.set_state(programming_state=TpmStatus.SYNCHRONISED, **defined_state)
+    defined_state["programming_state"] = 6
+    return defined_state
+
+
+@given("the Tile is available", target_fixture="tile_device")
+def tile_device_fixture() -> str:
+    """
+    Return a ``tango.DeviceProxy`` to the Tile device under test.
+
+    :return: a ``tango.DeviceProxy`` to the Tile device under test.
+    """
+    tile_devices = [
+        tango.DeviceProxy(trl)
+        for trl in tango.Database().get_device_exported("low-mccs/tile/*")
+    ]
+    return tile_devices[-1]
+
+
+@given("the Tile is in a defined initialised state", target_fixture="defined_state")
+def tile_has_defined_initialised_state(
+    tile_device: tango.DeviceProxy,
+) -> dict[str, Any]:
+    """
+    Verify that a device is in the desired state.
+
+    :param tile_device: tile device under test.
+
+    :returns: a fixture with the defined_state
+    """
+    defined_state = {
+        "logical_tile_id": 2,
+        "station_id": 2,
+        "static_time_delays": np.array([5] * 32),
+        "csp_rounding": np.array([4] * 32),
+        "channeliser_rounding": np.array([8] * 512),
+    }
+    tw = TileWrapper(tile_device)
+    tw.set_state(
+        programming_state=TpmStatus.INITIALISED,
+        **defined_state,
+    )
+    defined_state["programming_state"] = 5
+    return defined_state
+
+
+@when("the Tile TANGO device is restarted")
+def tile_is_restarted(tile_device: tango.DeviceProxy) -> None:
+    """
+    Restart the device.
+
+    :param tile_device: tile device under test.
+    """
+    tile_device.init()
+
+
 @when("the Tile data acquisition is started")
 def tile_start_data_acq(
     first_tile: tango.DeviceProxy,
@@ -206,6 +361,33 @@ def tile_start_data_acq(
         time.sleep(1)
         timeout = timeout + 1
     assert timeout <= 60, "Tiles didn't synchronise"
+
+
+@then(parsers.cfparse("the Tile comes up in the defined {programming_state} state"))
+def tile_is_in_state(
+    tile_device: tango.DeviceProxy,
+    defined_state: dict[str, Any],
+    programming_state: str,
+) -> None:
+    """
+    Assert that the number of dropped packets is 0.
+
+    :param tile_device: tile device under test.
+    :param defined_state: A fixture containing the defined state.
+    :param programming_state: the programmingstate to check against.
+    """
+    AttributeWaiter(timeout=15).wait_for_value(
+        tile_device,
+        "tileProgrammingState",
+        programming_state,
+    )
+    # Giving a very generous sleep to ensure attributes polled
+    for item, val in defined_state.items():
+        AttributeWaiter(timeout=15).wait_for_value(
+            tile_device,
+            item,
+            val,
+        )
 
 
 @then("the Tile dropped packets is 0 after 30 seconds")

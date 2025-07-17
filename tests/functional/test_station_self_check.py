@@ -24,7 +24,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
-from tests.test_tools import wait_for_lrc_result
+from tests.test_tools import AttributeWaiter, wait_for_lrc_result
 
 
 @pytest.fixture(name="station")
@@ -108,21 +108,18 @@ def check_spsstation_state(
         "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
     )
 
-    if any(
-        device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
-        for device in sps_devices_exported
-    ):
-        state_callback = MockTangoEventCallbackGroup("state", timeout=300)
-        station.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            state_callback["state"],
-        )
-        state_callback.assert_change_event("state", Anything, consume_nonmatches=True)
-        station.on()
-        state_callback.assert_change_event(
-            "state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
-        )
+    # TODO: An On from SpsStation level when ON will mean that
+    # Any TPMs that are OFF will remain OFF due to ON being defined as
+    # any TPM ON and the base class rejecting calls to ON if device is ON.
+    # Therefore we are individually calling MccsTile.On() here.
+    for device in sps_devices_exported:
+        if device.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
+            device.on()
+            AttributeWaiter(timeout=60).wait_for_value(
+                device,
+                "state",
+                tango.DevState.ON,
+            )
 
     iters = 0
     while any(

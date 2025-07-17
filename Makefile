@@ -76,6 +76,10 @@ else
 K8S_HELMFILE_ENV ?= minikube-ci
 endif
 
+ifeq ($(filter $(K8S_HELMFILE_ENV),ral-1 ral-2 ral-3 ral-4 ral-5),$(K8S_HELMFILE_ENV))
+KUBE_NAMESPACE := $(K8S_HELMFILE_ENV)
+endif
+
 include .make/k8s.mk
 include .make/raw.mk
 include .make/xray.mk

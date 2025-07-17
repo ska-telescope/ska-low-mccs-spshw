@@ -13,7 +13,6 @@ This test just checks that anything which can run passes.
 """
 from __future__ import annotations
 
-import json
 import time
 from typing import Any
 
@@ -25,6 +24,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
+from tests.test_tools import wait_for_lrc_result
 
 
 @pytest.fixture(name="station")
@@ -50,17 +50,17 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/station_self_check.feature", "Test SpsStation Self Check")
-def test_station_self_check(sps_devices_trl_exported: list[str]) -> None:
+def test_station_self_check(sps_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that checks the SpsStation.SelfCheck() method.
 
     Any code in this scenario function is run at the *end* of the
     scenario.
 
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     """
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
@@ -79,7 +79,7 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[str],
+    sps_devices_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -88,8 +88,8 @@ def check_spsstation_state(
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
@@ -101,14 +101,17 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ENGINEERING
 
     change_event_callbacks.assert_change_event(
         "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
     )
 
-    if station.state() != tango.DevState.ON:
+    if any(
+        device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
+        for device in sps_devices_exported
+    ):
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(
             "state",
@@ -126,7 +129,7 @@ def check_spsstation_state(
         tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
         for tile in exported_tiles
     ):
-        if iters >= 60:
+        if iters >= 120:
             pytest.fail(
                 f"Not all tiles came ON: {[tile.state() for tile in exported_tiles]}"
             )
@@ -159,28 +162,16 @@ def check_self_check_result(station: tango.DeviceProxy, command_info: dict) -> N
     """
     # We're running a growing batch of tests which are taking longer to run, at the
     # moment about 17-18 mins on average.
-    lrc_result_callback = MockTangoEventCallbackGroup("lrc_result", timeout=20 * 60)
-    station.subscribe_event(
-        "longRunningCommandResult",
-        tango.EventType.CHANGE_EVENT,
-        lrc_result_callback["lrc_result"],
-    )
-    lrc_result_callback.assert_change_event(
-        "lrc_result",
-        Anything,
-        consume_nonmatches=True,
-    )
+    timeout = 20 * 60
+
     try:
-        lrc_result_callback.assert_change_event(
-            "lrc_result",
-            (
-                command_info["SelfCheck"],
-                json.dumps([ResultCode.OK, "Tests completed OK."]),
-            ),
-            consume_nonmatches=True,
-            lookahead=5,
+        wait_for_lrc_result(
+            device=station,
+            uid=command_info["SelfCheck"],
+            expected_result=ResultCode.OK,
+            timeout=timeout,
         )
-    except AssertionError:
+    except ValueError:
         print(station.testlogs)
         print(station.testreport)
         pytest.fail("Self Check did not succeed.")

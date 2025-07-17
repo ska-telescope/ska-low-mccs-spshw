@@ -22,6 +22,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
+from tests.test_tools import tango_event_subscription
 
 scenarios("./features/health.feature")
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -166,24 +167,25 @@ def get_device_online(
             to bring ONLINE.
         """
         print(f"Turning {device_proxy.dev_name()} online")
+        _state_tracker = MockTangoEventCallbackGroup("track_state", timeout=3)
 
-        sub_id = device_proxy.subscribe_event(
+        with tango_event_subscription(
+            device_proxy,
             "state",
             tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
-        )
-        if device_proxy.adminMode == AdminMode.OFFLINE:
-            change_event_callbacks.assert_change_event(
-                "device_state", tango.DevState.DISABLE
-            )
+            _state_tracker["track_state"],
+        ):
+            if device_proxy.adminMode == AdminMode.OFFLINE:
+                _state_tracker.assert_change_event(
+                    "track_state", tango.DevState.DISABLE
+                )
 
-            device_proxy.adminMode = AdminMode.ONLINE
-            change_event_callbacks.assert_change_event(
-                "device_state", tango.DevState.UNKNOWN
-            )
+                device_proxy.adminMode = AdminMode.ONLINE
+                _state_tracker.assert_change_event(
+                    "track_state", tango.DevState.UNKNOWN
+                )
 
-        change_event_callbacks.assert_change_event("device_state", Anything)
-        device_proxy.unsubscribe_event(sub_id)
+            _state_tracker.assert_change_event("track_state", Anything)
 
     return _get_device_online
 
@@ -361,27 +363,26 @@ def device_verify_attribute(
             elif attribute == "HealthState":
                 device_value = device_proxy.healthState
             if device_value == enum_value:
+                print(
+                    f"Device {device_proxy.dev_name()}  "
+                    f"arrived at expected {attribute} = {device_value}!"
+                )
                 break
             time.sleep(1)
-        if attribute == "HealthState":
-            try:
-                assert device_value == enum_value, (
-                    f"Expected health to be {enum_value} but got {device_value}, "
-                    f"Reason: {device_proxy.healthReport}"
-                )
-            except Exception:
-                if station_name == "stfc-ral-2":
-                    pytest.xfail(
-                        "at RAL there is an issue with the TPM current "
-                        "meaning the subrack has DEGRADED health and "
-                        "therefore station has DEGRADED healthstate."
-                    )
-                pytest.fail(
-                    f"Expected health to be {enum_value} but got {device_value}, "
-                    f"Reason: {device_proxy.healthReport}"
-                )
-        else:
-            assert device_value == enum_value
+
+        if device_value != enum_value:
+            # Try to ascertain reason.
+            reason: str = "UNKNOWN"
+            if attribute == "HealthState":
+                reason = device_proxy.healthReport
+            elif attribute == "state":
+                reason = device_proxy.status()
+
+            pytest.fail(
+                f"Expected {device_proxy.dev_name()} : "
+                f"{attribute} to be {enum_value} but got {device_value}, "
+                f"Reason: {reason}"
+            )
 
 
 @when("the Tiles board temperature thresholds are adjusted")

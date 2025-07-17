@@ -156,6 +156,12 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: ChannelDataReceivedHandler) -> None:
         """Handle the reading of channel data."""
+        # TODO: Understand this behaviour. Seems without a sleep
+        # the file lock is claimed by another process.
+        # (Expected regression with locks)
+        sleep_time = 10
+        time.sleep(sleep_time)
+
         raw_file = ChannelFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(

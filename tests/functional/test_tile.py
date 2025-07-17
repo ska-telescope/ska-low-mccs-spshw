@@ -63,33 +63,33 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/tile.feature", "Flagged packets is ok")
-def test_tile(sps_devices_trl_exported: list[tango.DeviceProxy]) -> None:
+def test_tile(sps_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the tile device.
 
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     """
-    for device in sps_devices_trl_exported:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
 @given("an SPS deployment against a real context")
-def check_against_hardware(true_context: bool) -> None:
+def check_against_real_context(true_context: bool) -> None:
     """
     Skip the test if not in real context.
 
     :param true_context: whether or not the current context is real.
     """
     if not true_context:
-        pytest.skip("This test requires real HW.")
+        pytest.skip("This test requires real context.")
 
 
 @given("the SpsStation and tiles are ON")
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[tango.DeviceProxy],
+    sps_devices_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -98,13 +98,13 @@ def check_spsstation_state(
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_trl_exported: Fixture containing the tango.DeviceProxy
+    :param sps_devices_exported: Fixture containing the tango.DeviceProxy
         root for all sps devices.
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
     station.subscribe_event(
-        "adminmode",
+        "adminMode",
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["device_adminmode"],
     )
@@ -115,9 +115,9 @@ def check_spsstation_state(
         change_event_callbacks["device_state"],
     )
     change_event_callbacks.assert_change_event("device_state", Anything)
-    initial_mode = station.adminmode
+    initial_mode = station.adminMode
     if initial_mode != AdminMode.ONLINE:
-        station.adminmode = AdminMode.ONLINE
+        station.adminMode = AdminMode.ONLINE
         change_event_callbacks["device_adminmode"].assert_change_event(AdminMode.ONLINE)
         if initial_mode == AdminMode.OFFLINE:
             change_event_callbacks["device_state"].assert_change_event(
@@ -125,7 +125,7 @@ def check_spsstation_state(
             )
 
     device_bar_station = [
-        dev for dev in sps_devices_trl_exported if dev.dev_name() != station.dev_name()
+        dev for dev in sps_devices_exported if dev.dev_name() != station.dev_name()
     ]
 
     for device in device_bar_station:
@@ -135,7 +135,13 @@ def check_spsstation_state(
     if initial_mode == AdminMode.OFFLINE:
         change_event_callbacks["device_state"].assert_change_event(Anything)
 
-    if station.state() != tango.DevState.ON:
+    # Sleep time to discover state.
+    time.sleep(5)
+
+    if any(
+        device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
+        for device in sps_devices_exported
+    ):
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(
             "state",
@@ -160,7 +166,8 @@ def check_spsstation_state(
         time.sleep(1)
         iters += 1
 
-    assert station.state() == tango.DevState.ON
+    if station.state() != tango.DevState.ON:
+        pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
 
 
 @given("the Tile dropped packets is 0")

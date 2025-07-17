@@ -305,8 +305,24 @@ class TestStationTileIntegration:
         for i in range(number_of_iterations):
             # Check that the initialise LRC executes to COMPLETION
             execute_lrc_to_completion(
-                change_event_callbacks, sps_station_device, "Initialise", None
+                device_proxy=sps_station_device,
+                command_name="Initialise",
+                command_arguments=None,
+                timeout=12,
             )
+            change_event_callbacks["tile_programming_state"].assert_change_event(
+                "NotProgrammed"
+            )
+            change_event_callbacks["tile_programming_state"].assert_change_event(
+                "Programmed"
+            )
+            change_event_callbacks["tile_programming_state"].assert_change_event(
+                "Initialised"
+            )
+            change_event_callbacks["tile_programming_state"].assert_change_event(
+                "Synchronised"
+            )
+
             assert tile_device.tileProgrammingState == "Synchronised"
             wait_for_completed_command_to_clear_from_queue(tile_device)
             wait_for_completed_command_to_clear_from_queue(sps_station_device)
@@ -361,9 +377,7 @@ class TestStationTileIntegration:
         assert (pps_corrections_before_initialisation == initial_corrections).all()
 
         # Call initialise
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
+        execute_lrc_to_completion(tile_device, "Initialise", None)
         # Force a poll to get the initial values.
         request_provider = tile_component_manager._request_provider
         assert request_provider is not None
@@ -737,7 +751,6 @@ class TestStationTileIntegration:
 
         channeliser_rounding_to_set = np.array([5] * 512)
         execute_lrc_to_completion(
-            change_event_callbacks,
             sps_station_device,
             "SetChanneliserRounding",
             channeliser_rounding_to_set,

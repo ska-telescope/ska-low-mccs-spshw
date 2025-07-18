@@ -15,8 +15,7 @@ from __future__ import annotations
 
 import json
 import time
-import warnings
-from typing import Any, Iterator
+from typing import Any
 
 import numpy as np
 import pytest
@@ -27,46 +26,6 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.test_tools import AttributeWaiter, TileWrapper, TpmStatus
-
-
-@pytest.fixture(name="station_with_subscriptions")
-def station_with_subscriptions_fixture(
-    station: tango.DeviceProxy, change_event_callbacks: MockTangoEventCallbackGroup
-) -> Iterator[tango.DeviceProxy]:
-    """
-    Fixture containing a station with subscriptions set up.
-
-    :param station: a proxy to the station under test.
-    :param change_event_callbacks: a dictionary of callables to be used as
-        tango change event callbacks.
-
-    :yields: a proxy to the station under test.
-    """
-    subscription_ids = []
-    subscription_ids.append(
-        station.subscribe_event(
-            "adminMode",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_adminmode"],
-        )
-    )
-    change_event_callbacks["device_adminmode"].assert_change_event(Anything)
-    subscription_ids.append(
-        station.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
-        )
-    )
-    change_event_callbacks["device_state"].assert_change_event(Anything)
-
-    yield station
-
-    for sub_id in subscription_ids:
-        try:
-            station.unsubscribe_event(sub_id)
-        except tango.DevFailed:
-            warnings.warn(f"Unable to unsubscribe_event {sub_id}")
 
 
 @pytest.fixture(name="first_tile")
@@ -162,24 +121,35 @@ def check_against_real_context(true_context: bool) -> None:
 
 @given("the SpsStation and tiles are ON")
 def check_spsstation_state(
+    station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     stations_devices_exported: list[tango.DeviceProxy],
     station_tiles: list[tango.DeviceProxy],
-    station_with_subscriptions: tango.DeviceProxy,
 ) -> None:
     """
     Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
 
+    :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     :param stations_devices_exported: Fixture containing the tango.DeviceProxy
         root for all sps devices.
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
-    :param station_with_subscriptions: a proxy to the station under test
-        with subscriptions set up.
     """
-    station = station_with_subscriptions
+    station.subscribe_event(
+        "adminMode",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["device_adminmode"],
+    )
+    change_event_callbacks.assert_change_event("device_adminmode", Anything)
+    station.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["device_state"],
+    )
+    change_event_callbacks.assert_change_event("device_state", Anything)
+
     initial_mode = station.adminMode
     if initial_mode != AdminMode.ONLINE:
         station.adminMode = AdminMode.ONLINE

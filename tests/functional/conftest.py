@@ -13,6 +13,7 @@ import os
 import queue
 import re
 import time
+import warnings
 from datetime import datetime
 from time import sleep
 from typing import Any, Callable, Iterator
@@ -91,18 +92,26 @@ def station_devices_exported_fixture(
 
     :returns: A list of DeviceProxy for available station devices.
     """
-    return station_tiles + station_subracks + station + station_daqs
+    stations = [station] if station is not None else []
+    return station_tiles + station_subracks + stations + station_daqs
 
 
 @pytest.fixture(name="station")
-def station_fixture(station_label: str | None) -> tango.DeviceProxy:
+def station_fixture(
+    station_label: str | None, true_context: bool
+) -> tango.DeviceProxy | None:
     """
     Fixture containing a proxy to the station under test.
 
     :param station_label: the names of the station we are testing against.
+    :param true_context: Whether we are testing against a real deployment.
 
     :returns: a proxy to the station under test.
     """
+    if not true_context:
+        return None
+    if station_label is None:
+        station_label = DEFAULT_STATION_LABEL
     return tango.DeviceProxy(get_sps_station_name(station_label))
 
 
@@ -169,8 +178,6 @@ def available_station_tiles(
 
     :return: A list containing the ``tango.DeviceProxy`` of the tiles in station.
         Or Empty list if no devices available
-
-    :raises NotImplementedError: When this is used in a non true_context.
     """
     if station_label is None:
         station_label = DEFAULT_STATION_LABEL
@@ -193,7 +200,8 @@ def available_station_tiles(
 
         return _available_station_tiles
 
-    raise NotImplementedError("This fixture does not yet support a simulated context.")
+    warnings.warn("This fixture does not yet support a simulated context.")
+    return []
 
 
 @pytest.fixture(name="exported_pdus")
@@ -244,8 +252,6 @@ def available_station_subracks(
 
     :return: A list containing the ``tango.DeviceProxy`` of the subracks in station.
         Or Empty list if no devices available
-
-    :raises NotImplementedError: When this is used in a non true_context.
     """
     if station_label is None:
         station_label = DEFAULT_STATION_LABEL
@@ -270,7 +276,8 @@ def available_station_subracks(
 
         return _available_station_subracks
 
-    raise NotImplementedError("This fixture does not yet support a simulated context.")
+    warnings.warn("This fixture does not yet support a simulated context.")
+    return []
 
 
 @pytest.fixture(name="exported_stations")
@@ -321,8 +328,6 @@ def available_station_daqs(
 
     :return: A list containing the ``tango.DeviceProxy`` of the daqs in station.
         Or Empty list if no devices available
-
-    :raises NotImplementedError: When this is used in a non true_context.
     """
     if station_label is None:
         station_label = DEFAULT_STATION_LABEL
@@ -345,7 +350,8 @@ def available_station_daqs(
 
         return _available_station_daqs
 
-    raise NotImplementedError("This fixture does not yet support a simulated context.")
+    warnings.warn("This fixture does not yet support a simulated context.")
+    return []
 
 
 @pytest.fixture(name="available_stations")

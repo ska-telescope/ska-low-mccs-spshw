@@ -26,22 +26,7 @@ from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import get_sps_station_name
 from tests.test_tools import AttributeWaiter, TileWrapper, TpmStatus
-
-
-@pytest.fixture(name="station")
-def station_fixture(station_label: str | None) -> tango.DeviceProxy:
-    """
-    Fixture containing a proxy to the station under test.
-
-    :param station_label: the names of the station we are testing against.
-
-    :returns: a proxy to the station under test.
-    """
-    if station_label is None:
-        pytest.fail("No station label defined.")
-    return tango.DeviceProxy(get_sps_station_name(station_label))
 
 
 @pytest.fixture(name="station_with_subscriptions")

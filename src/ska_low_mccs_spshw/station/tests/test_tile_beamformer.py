@@ -328,7 +328,7 @@ class TestTileBeamformer(BaseDaqTest):
             datetime.fromtimestamp(int(time.time()) + 5), TileTime.RFC_FORMAT
         )
         self.component_manager.start_beamformer(
-            start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0
+            start_time=start_time, duration=-1, scan_id=0
         )
         time.sleep(5)
         self._configure_daq("BEAM_DATA")

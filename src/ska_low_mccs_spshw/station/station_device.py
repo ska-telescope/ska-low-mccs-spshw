@@ -15,6 +15,7 @@ import importlib
 import ipaddress
 import itertools
 import json
+import logging
 import sys
 import time
 from datetime import datetime, timezone
@@ -33,7 +34,7 @@ from ska_control_model import (
 )
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
-from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
+from ska_tango_base.commands import FastCommand, JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
@@ -271,6 +272,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
         )
 
+        stop_beamformer_for_channels_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.station",
+                "SpsStation_StopBeamformerForChannels.json",
+            )
+        )
+
         initialise_schema: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.schemas.station",
@@ -298,6 +306,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             ("RunTest", "run_test", run_test_schema),
             ("StartBeamformer", "start_beamformer", start_beamformer_schema),
             ("StopBeamformer", "stop_beamformer", None),
+            (
+                "StopBeamformerForChannels",
+                "stop_beamformer_for_channels",
+                stop_beamformer_for_channels_schema,
+            ),
         ]:
             validator = (
                 None
@@ -320,6 +333,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     logger=self.logger,
                     validator=validator,
                 ),
+            )
+        # Fast commands
+        for command_name, command_object in [
+            ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
+        ]:
+            self.register_command_object(
+                command_name, command_object(self.component_manager, self.logger)
             )
 
     class InitCommand(SKAObsDevice.InitCommand):
@@ -2190,9 +2210,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         * start_time - (str, ISO UTC time) start time
         * duration - (int) if > 0 is a duration in seconds
                if < 0 run forever
-        * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
-                Command affects only beamformed channels for given subarray ID
-                Default -1: all channels
+        * channel_groups - (list(int)) : list of channel groups to be started
+               Command affects only beamformed channels for given groups
+               Default: all channels
         * scan_id - (int) The unique ID for the started scan. Default 0
 
         :return: A tuple containing a return code and a string
@@ -2215,7 +2235,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     def StopBeamformer(self: SpsStation) -> DevVarLongStringArrayType:
         """
-        Stop the beamformer.
+        Stop the beamformer for all channel groups.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2228,6 +2248,37 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         handler = self.get_command_object("StopBeamformer")
         (return_code, message) = handler()
+        return ([return_code], [message])
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    def StopBeamformerForChannels(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Stop the beamformer for given channel groups.
+
+        :param argin: json dictionary with optional keywords:
+
+        * channel_groups - (list(int)) : list of channel groups to be started
+            Command affects only beamformed channels for given groups
+            Default: all channels
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"channel_groups": [0,1,4] }
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StopBeamformerForChannels", dict)
+        """
+        handler = self.get_command_object("StopBeamformerForChannels")
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(
@@ -2487,6 +2538,87 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """
         return self.component_manager.configure_test_generator(argin)
+
+    # -------------
+    # Fast commands
+    # -------------
+    class BeamformerRunningCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class to handle BeamformerRunningForChannels command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/station/SpsStation_BeamformerRunningForChannels.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.station",
+                "SpsStation_BeamformerRunningForChannels.json",
+            )
+        )
+
+        def __init__(
+            self: SpsStation.BeamformerRunningCommand,
+            component_manager: SpsStationComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new BeamformerRunningCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator(
+                "BeamformerRunningForChannels", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
+
+        def do(
+            self: SpsStation.BeamformerRunningCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.SpsStation.BeamformerRunningForChannels` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: whether the beamformer is running in the specified
+            """
+            channel_groups = kwargs.get("channel_groups", None)
+            return self._component_manager.beamformer_running_for_channels(
+                channel_groups
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevBoolean")
+    def BeamformerRunningForChannels(self: SpsStation, argin: str) -> bool:
+        """
+        Check whether the beamformer is running for the given channel groups.
+
+        :param argin: json dictionary with optional keywords:
+
+        * channel_groups - (list) List of channel groups
+
+        :return: Whether the beamformer is running
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dict = {"channel_groups": [0,1,4,5]}
+        >>> jstr = json.dumps(dict)
+        >>> running = dp.command_inout("BeamformerRunningForChannels", jstr)
+        """
+        handler = self.get_command_object("BeamformerRunningForChannels")
+        return_code = handler(argin)
+        return return_code
 
 
 # ----------

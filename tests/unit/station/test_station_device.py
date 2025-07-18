@@ -912,7 +912,27 @@ def test_Standby(
             "StopBeamformer",
             None,
             "StopBeamformer",
-            None,
+            json.dumps(
+                {
+                    "channel_groups": None,
+                }
+            ),
+        ),
+        pytest.param(
+            "StopBeamformerForChannels",
+            "{}",
+            "StopBeamformer",
+            json.dumps(
+                {
+                    "channel_groups": None,
+                }
+            ),
+        ),
+        pytest.param(
+            "StopBeamformerForChannels",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+            "StopBeamformer",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
         ),
         pytest.param(
             "StartBeamformer",
@@ -922,10 +942,34 @@ def test_Standby(
                 {
                     "start_time": None,
                     "duration": -1,
-                    "subarray_beam_id": -1,
                     "scan_id": 0,
                 }
             ),
+        ),
+        pytest.param(
+            "StartBeamformer",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+            "StartBeamformer",
+            json.dumps(
+                {
+                    "start_time": None,
+                    "duration": -1,
+                    "scan_id": 0,
+                    "channel_groups": [1, 2, 4, 5],
+                }
+            ),
+        ),
+        pytest.param(
+            "BeamformerRunningForChannels",
+            "{}",
+            "BeamformerRunningForChannels",
+            json.dumps({"channel_groups": None}),
+        ),
+        pytest.param(
+            "BeamformerRunningForChannels",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+            "BeamformerRunningForChannels",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
         ),
         pytest.param(
             "ApplyPointingDelays",

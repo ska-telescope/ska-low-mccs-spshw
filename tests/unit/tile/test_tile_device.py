@@ -404,6 +404,7 @@ class TestMccsTile:
             "isBeamformerRunning",
             "stationBeamFlagEnabled",
             "rfiCount",
+            "runningBeams",
         ]
 
     def test_state_with_adminmode(
@@ -709,6 +710,7 @@ class TestMccsTile:
         excluded_state_attributes = [
             "tileProgrammingState",
             "isProgrammed",
+            "runningBeams",
             "coreCommunicationStatus",
             "ddr_write_size",
             "ddr_rd_cnt",
@@ -1977,13 +1979,15 @@ class TestMccsTileCommands:
         # assert that all values are false again
         assert all(not value for value in values)
 
-    @pytest.mark.parametrize("start_time", (None,))
+    # @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))
+    @pytest.mark.parametrize("channel_groups", (None, [0, 1, 4]))
     def test_start_and_stop_beamformer(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
-        start_time: Optional[int],
+        # start_time: Optional[int],
         duration: Optional[int],
+        channel_groups: Optional[list[int]],
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -1991,17 +1995,19 @@ class TestMccsTileCommands:
 
         * StartBeamformer command
         * StopBeamformer command
+        * BeamformerRunningForChannels command
         * isBeamformerRunning attribute
 
         :param on_tile_device: fixture that provides a
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param start_time: time to state the beamformer
         :param duration: duration of time that the beamformer should run
+        :param channel_groups: Channel groups started and stopped
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        start_time = None  # it used to be a parameter but only None was tested
         on_tile_device.subscribe_event(
             "longrunningcommandstatus",
             EventType.CHANGE_EVENT,
@@ -2009,17 +2015,27 @@ class TestMccsTileCommands:
         )
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         assert not on_tile_device.isBeamformerRunning
-        args = {"start_time": start_time, "duration": duration}
+        assert not on_tile_device.BeamformerRunningForChannels("{}")
+        args = {
+            "start_time": start_time,
+            "duration": duration,
+            "channel_groups": channel_groups,
+        }
         [[result_code], [lrc_id]] = on_tile_device.StartBeamformer(json.dumps(args))
         change_event_callbacks["lrc_command"].assert_change_event(
             (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
         )
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
-        [[result_code], [lrc_id]] = on_tile_device.StopBeamformer()
+        assert on_tile_device.isBeamformerRunning
+        args = {"channel_groups": channel_groups}
+        assert on_tile_device.BeamformerRunningForChannels(json.dumps(args))
+
+        [[result_code], [lrc_id]] = on_tile_device.StopBeamformer(json.dumps(args))
         change_event_callbacks["lrc_command"].assert_change_event(
             (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
         )
         assert not on_tile_device.isBeamformerRunning
+        assert not on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
     def test_configure_beamformer(
         self: TestMccsTileCommands,
@@ -2032,7 +2048,6 @@ class TestMccsTileCommands:
         SetBeamFormerRegions
         beamformerTable attribute
 
-        :param on_tile_device: fixture that provides a
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.

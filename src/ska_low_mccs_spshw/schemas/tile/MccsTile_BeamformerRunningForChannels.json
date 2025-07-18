@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_BeamformerRunningForChannels.json",
+    "title": "MccsTile BeamformerRunningForChannels schema",
+    "description": "Schema for MccsTile's BeamformerRunningForChannels command",
+    "type": "object",
+    "properties": {
+	"channel_groups": {
+            "description": "Channel groups to be started.",
+                "oneOf": [
+                {
+                    "type": "array",
+                    "items":  {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 47
+                    },
+                    "minItems": 1,
+                    "maxItems": 48
+                },
+                {"type": "null"}
+            ]
+        }
+    }
+}

@@ -92,6 +92,9 @@ as *RW*.
   * *isBeamformerRunning*: Bool, True if the **station** beamformer is running. The tile 
     beamformer is always running after the *StartAcquisition* command.
 
+  * *runningBeams*: Bool array with 48 elements. Each element is True if the corresponding
+    beam (hardware beam) is running.
+
   * *ppsDelay*: delay between PPS and 10 MHz clock in 200 MHz cycles
 
   * *fpgaTime*: Time of the TPM second counter. String in UTC format, with seconds 
@@ -555,7 +558,22 @@ TPM data processing is highly configurable.
     * duration - (int) if > 0 is duration in itimestamp frames (276.48 us). (Duration/8) 
       SPEAD frames are sent to CSP for each beamformed channel. Default: -1, run forever
 
-  * *StopBeamformer*: Stop the station beamformer. Immediate. 
+    * channel_groups - (list[int]) Channel groups which will be affected. Each channel
+      group is 8 consecutive beamformer channels, as defined in the beamformer table.
+
+  * *StopBeamformer*: Stop the station beamformer.
+ 
+    Argument: json string with keywords:
+
+    * channel_groups - (list[int]) Channel groups which will be affected. Each channel
+      group is 8 consecutive beamformer channels, as defined in the beamformer table.
+
+  * *BeamformerRunningForChannels*: Returns the station beamformer running status. Immediate. 
+ 
+    Argument: json string with keywords:
+
+    * channel_groups - (list[int]) Channel groups which will be affected. Each channel
+      group is 8 consecutive beamformer channels, as defined in the beamformer table.
 
   * *cspRounding*: (attribute) Beamformed samples are re-quantised to 8 bits to be sent to CSP. 
     As for the channeliser truncation, this is performed by discarding LS bits, rounding

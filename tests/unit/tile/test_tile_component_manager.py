@@ -964,6 +964,60 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         assert not tile_component_manager.is_beamformer_running
 
+        # Test starting and stopping independent beams
+        block1 = [0, 1, 4]
+        block2 = [5, 6, 8]
+        tile_component_manager.start_beamformer(
+            callbacks["task_lrc"],
+            channel_groups=block1,
+        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
+        assert tile_component_manager.beamformer_running_for_channels(block1)
+        assert not tile_component_manager.beamformer_running_for_channels(block2)
+        tile_component_manager.start_beamformer(
+            callbacks["task_lrc"],
+            channel_groups=block2,
+        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
+        assert tile_component_manager.beamformer_running_for_channels(block1)
+        assert tile_component_manager.beamformer_running_for_channels(block2)
+
+        tile_component_manager.stop_beamformer(
+            callbacks["task_lrc"],
+            channel_groups=block1,
+        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
+        assert not tile_component_manager.beamformer_running_for_channels(block1)
+        assert tile_component_manager.beamformer_running_for_channels(block2)
+
+        tile_component_manager.stop_beamformer(
+            callbacks["task_lrc"],
+            channel_groups=block2,
+        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
+        assert not tile_component_manager.beamformer_running_for_channels(block1)
+        assert not tile_component_manager.beamformer_running_for_channels(block2)
+
     def test_set_beamformer_regions(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,

@@ -85,16 +85,16 @@ def station_with_subscriptions_fixture(
 
 
 @pytest.fixture(name="first_tile")
-def first_tile_fixture(exported_tiles: list[tango.DeviceProxy]) -> tango.DeviceProxy:
+def first_tile_fixture(station_tiles: list[tango.DeviceProxy]) -> tango.DeviceProxy:
     """
     Fixture containing a proxy to the tile under test.
 
-    :param exported_tiles: A list containing the ``tango.DeviceProxy``
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
 
     :returns: a proxy to the tile under test.
     """
-    return exported_tiles[0]
+    return station_tiles[0]
 
 
 @pytest.fixture(name="command_info")
@@ -108,42 +108,42 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/tile.feature", "Flagged packets is ok")
-def test_tile(sps_devices_exported: list[tango.DeviceProxy]) -> None:
+def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the tile device.
 
-    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
         for all exported sps devices.
     """
-    for device in sps_devices_exported:
+    for device in stations_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
 @scenario("features/tile.feature", "Tile synchronised state recovered after dev_init")
 def test_tile_synchronised_recover(
-    sps_devices_exported: list[tango.DeviceProxy],
+    stations_devices_exported: list[tango.DeviceProxy],
 ) -> None:
     """
     Run a test scenario that tests the tile device.
 
-    :param sps_devices_exported: Fixture containing the trl
+    :param stations_devices_exported: Fixture containing the trl
         root for all sps devices.
     """
-    for device in sps_devices_exported:
+    for device in stations_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
 @scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
 def test_tile_initialised_recover(
-    sps_devices_exported: list[tango.DeviceProxy],
+    stations_devices_exported: list[tango.DeviceProxy],
 ) -> None:
     """
     Run a test scenario that tests the tile device.
 
-    :param sps_devices_exported: Fixture containing the trl
+    :param stations_devices_exported: Fixture containing the trl
         root for all sps devices.
     """
-    for device in sps_devices_exported:
+    for device in stations_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
@@ -179,8 +179,8 @@ def check_against_real_context(true_context: bool) -> None:
 def check_spsstation_state(
     station_with_subscriptions: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_exported: list[tango.DeviceProxy],
-    exported_tiles: list[tango.DeviceProxy],
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
     Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
@@ -189,9 +189,9 @@ def check_spsstation_state(
         with subscriptions set up.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_exported: Fixture containing the tango.DeviceProxy
+    :param stations_devices_exported: Fixture containing the tango.DeviceProxy
         root for all sps devices.
-    :param exported_tiles: A list containing the ``tango.DeviceProxy``
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
     station = station_with_subscriptions
@@ -205,7 +205,7 @@ def check_spsstation_state(
             )
 
     device_bar_station = [
-        dev for dev in sps_devices_exported if dev.dev_name() != station.dev_name()
+        dev for dev in stations_devices_exported if dev.dev_name() != station.dev_name()
     ]
 
     for device in device_bar_station:
@@ -223,7 +223,7 @@ def check_spsstation_state(
     # any TPM ON and the base class rejecting calls to ON if device is ON.
     # Therefore we are individually calling MccsTile.On() here.
     _initial_station_state = station.state()
-    for tile in exported_tiles:
+    for tile in station_tiles:
         if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
             tile.on()
             AttributeWaiter(timeout=60).wait_for_value(
@@ -239,11 +239,11 @@ def check_spsstation_state(
     iters = 0
     while any(
         tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
-        for tile in exported_tiles
+        for tile in station_tiles
     ):
         if iters >= 60:
             pytest.fail(
-                f"Not all tiles came ON: {[tile.state() for tile in exported_tiles]}"
+                f"Not all tiles came ON: {[tile.state() for tile in station_tiles]}"
             )
         time.sleep(1)
         iters += 1

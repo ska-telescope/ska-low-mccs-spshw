@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import re
 import time
 from datetime import datetime
 from time import sleep
@@ -70,6 +71,41 @@ def pytest_addoption(
     )
 
 
+@pytest.fixture(name="stations_devices_exported")
+def station_devices_exported_fixture(
+    station_tiles: list[tango.DeviceProxy],
+    station_subracks: list[tango.DeviceProxy],
+    station: tango.DeviceProxy,
+    station_daqs: list[tango.DeviceProxy],
+) -> list[tango.DeviceProxy]:
+    """
+    Fixture containing a DeviceProxy for all station devices.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the station tiles. Or Empty list if no devices found.
+    :param station_subracks: A list containing the ``tango.DeviceProxy``
+        of the stations subracks. Or Empty list if no devices found.
+    :param station: A ``tango.DeviceProxy`` to the stations under test.
+    :param station_daqs: A list containing the ``tango.DeviceProxy``
+         of the stations daqs. Or Empty list if no devices found.
+
+    :returns: A list of DeviceProxy for available station devices.
+    """
+    return station_tiles + station_subracks + station + station_daqs
+
+
+@pytest.fixture(name="station")
+def station_fixture(station_label: str | None) -> tango.DeviceProxy:
+    """
+    Fixture containing a proxy to the station under test.
+
+    :param station_label: the names of the station we are testing against.
+
+    :returns: a proxy to the station under test.
+    """
+    return tango.DeviceProxy(get_sps_station_name(station_label))
+
+
 @pytest.fixture(name="sps_devices_exported")
 def sps_devices_exported_fixture(
     exported_tiles: list[tango.DeviceProxy],
@@ -121,6 +157,43 @@ def exported_tiles_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     return []
 
 
+@pytest.fixture(name="station_tiles")
+def available_station_tiles(
+    true_context: bool, station_label: str | None
+) -> list[tango.DeviceProxy]:
+    """
+    Return a list with a DeviceProxy to the tiles in station.
+
+    :param true_context: whether to test against an existing Tango deployment
+    :param station_label: the label of the station we are testing against.
+
+    :return: A list containing the ``tango.DeviceProxy`` of the tiles in station.
+        Or Empty list if no devices available
+
+    :raises NotImplementedError: When this is used in a non true_context.
+    """
+    if station_label is None:
+        station_label = DEFAULT_STATION_LABEL
+
+    tile_pattern = rf"low-mccs/tile/{re.escape(station_label)}-tpm(?P<number>\d{{2}})"
+
+    if true_context:
+        _available_station_tiles = []
+        for exported_tile in tango.Database().get_device_exported("low-mccs/tile/*"):
+            _dev_name = exported_tile.dev_name()
+            match = re.match(tile_pattern, _dev_name)
+            if match:
+                try:
+                    exported_tile.ping()
+                    _available_station_tiles.append(exported_tile)
+                except tango.DevFailed:
+                    pass
+
+        return _available_station_tiles
+
+    raise NotImplementedError("This fixture does not yet support a simulated context.")
+
+
 @pytest.fixture(name="exported_pdus")
 def exported_pdus_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     """
@@ -157,6 +230,47 @@ def exported_subracks_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     return []
 
 
+@pytest.fixture(name="station_subracks")
+def available_station_subracks(
+    true_context: bool, station_label: str | None
+) -> list[tango.DeviceProxy]:
+    """
+    Return a list with a DeviceProxy to the subracks in station.
+
+    :param true_context: whether to test against an existing Tango deployment
+    :param station_label: the label of the station we are testing against.
+
+    :return: A list containing the ``tango.DeviceProxy`` of the subracks in station.
+        Or Empty list if no devices available
+
+    :raises NotImplementedError: When this is used in a non true_context.
+    """
+    if station_label is None:
+        station_label = DEFAULT_STATION_LABEL
+
+    subrack_pattern = (
+        rf"low-mccs/subrack/{re.escape(station_label)}-sr(?P<number>\d{{2}})"
+    )
+
+    if true_context:
+        _available_station_subracks = []
+        for exported_subrack in tango.Database().get_device_exported(
+            "low-mccs/subrack/*"
+        ):
+            _dev_name = exported_subrack.dev_name()
+            match = re.match(subrack_pattern, _dev_name)
+            if match:
+                try:
+                    exported_subrack.ping()
+                    _available_station_subracks.append(exported_subrack)
+                except tango.DevFailed:
+                    pass
+
+        return _available_station_subracks
+
+    raise NotImplementedError("This fixture does not yet support a simulated context.")
+
+
 @pytest.fixture(name="exported_stations")
 def exported_stations_fixture(true_context: bool) -> list[tango.DeviceProxy]:
     """
@@ -191,6 +305,45 @@ def exported_daq_fixture(true_context: bool) -> list[tango.DeviceProxy]:
             for trl in tango.Database().get_device_exported("low-mccs/daqreceiver/*")
         ]
     return []
+
+
+@pytest.fixture(name="station_daqs")
+def available_station_daqs(
+    true_context: bool, station_label: str | None
+) -> list[tango.DeviceProxy]:
+    """
+    Return a list with a DeviceProxy to the daqs in station.
+
+    :param true_context: whether to test against an existing Tango deployment
+    :param station_label: the label of the station we are testing against.
+
+    :return: A list containing the ``tango.DeviceProxy`` of the daqs in station.
+        Or Empty list if no devices available
+
+    :raises NotImplementedError: When this is used in a non true_context.
+    """
+    if station_label is None:
+        station_label = DEFAULT_STATION_LABEL
+
+    daq_pattern = rf"low-mccs/daqreciever/{re.escape(station_label)}(?:-bandpass)?"
+
+    if true_context:
+        _available_station_daqs = []
+        for exported_daq in tango.Database().get_device_exported(
+            "low-mccs/daqreceiver/*"
+        ):
+            _dev_name = exported_daq.dev_name()
+            match = re.match(daq_pattern, _dev_name)
+            if match:
+                try:
+                    exported_daq.ping()
+                    _available_station_daqs.append(exported_daq)
+                except tango.DevFailed:
+                    pass
+
+        return _available_station_daqs
+
+    raise NotImplementedError("This fixture does not yet support a simulated context.")
 
 
 @pytest.fixture(name="available_stations")

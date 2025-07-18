@@ -179,11 +179,13 @@ def available_station_tiles(
 
     if true_context:
         _available_station_tiles = []
-        for exported_tile in tango.Database().get_device_exported("low-mccs/tile/*"):
-            _dev_name = exported_tile.dev_name()
-            match = re.match(tile_pattern, _dev_name)
+        for exported_tile_trl in tango.Database().get_device_exported(
+            "low-mccs/tile/*"
+        ):
+            match = re.match(tile_pattern, exported_tile_trl)
             if match:
                 try:
+                    exported_tile = tango.DeviceProxy(exported_tile_trl)
                     exported_tile.ping()
                     _available_station_tiles.append(exported_tile)
                 except tango.DevFailed:
@@ -254,13 +256,13 @@ def available_station_subracks(
 
     if true_context:
         _available_station_subracks = []
-        for exported_subrack in tango.Database().get_device_exported(
+        for exported_subrack_trl in tango.Database().get_device_exported(
             "low-mccs/subrack/*"
         ):
-            _dev_name = exported_subrack.dev_name()
-            match = re.match(subrack_pattern, _dev_name)
+            match = re.match(subrack_pattern, exported_subrack_trl)
             if match:
                 try:
+                    exported_subrack = tango.DeviceProxy(exported_subrack_trl)
                     exported_subrack.ping()
                     _available_station_subracks.append(exported_subrack)
                 except tango.DevFailed:
@@ -329,13 +331,13 @@ def available_station_daqs(
 
     if true_context:
         _available_station_daqs = []
-        for exported_daq in tango.Database().get_device_exported(
+        for exported_daq_trl in tango.Database().get_device_exported(
             "low-mccs/daqreceiver/*"
         ):
-            _dev_name = exported_daq.dev_name()
-            match = re.match(daq_pattern, _dev_name)
+            match = re.match(daq_pattern, exported_daq_trl)
             if match:
                 try:
+                    exported_daq = tango.DeviceProxy(exported_daq_trl)
                     exported_daq.ping()
                     _available_station_daqs.append(exported_daq)
                 except tango.DevFailed:

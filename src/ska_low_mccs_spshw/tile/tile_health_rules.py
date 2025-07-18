@@ -9,6 +9,7 @@
 """A file to store health transition rules for tile."""
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ska_control_model import HealthState
@@ -26,15 +27,19 @@ from .tile_data import TileData
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(
+        self: TileHealthRules, tpm_version: str, *args: Any, **kwargs: Any
+    ) -> None:
         """
         Initialise this device object.
 
+        :param tpm_version: the TPM version.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
         super().__init__(*args, **kwargs)
         self.logger = None
+        self._tpm_version = tpm_version
         # self.previous_counters: dict = {}
         # for counter in COUNTERS:
         #     self.previous_counters[counter] = None
@@ -197,9 +202,15 @@ class TileHealthRules(HealthRules):
                 elif isinstance(min_max[p], dict):
                     # If limits are min/max
                     if "min" in min_max[p].keys():
+                        allow_none_in_1_6 = min_max[p].get("allow_none_in_1_6", False)
+
+                        is_nan = math.isnan(float(p_state))
+
                         states[p] = (
                             (HealthState.OK, "")
-                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            if (is_nan and allow_none_in_1_6)
+                            and (self._tpm_version == "tpm_v1_6")
+                            or min_max[p]["min"] <= p_state <= min_max[p]["max"]
                             else (
                                 HealthState.FAILED,
                                 f'Monitoring point "{path}/{p}": {p_state} not in range'

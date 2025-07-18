@@ -3425,9 +3425,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 timeout=self._default_lock_timeout,
                 raise_exception=True,
             ):
-                subarray_beams[beam] = self.tile.beamformer_is_running(
-                    subarray_beam=beam
-                )
+                subarray_beams[beam] = self.tile.beamformer_is_running(beam=beam)
         return subarray_beams
 
     @property

@@ -9,6 +9,7 @@
 """A file to store health transition rules for tile."""
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ska_control_model import HealthState
@@ -197,9 +198,15 @@ class TileHealthRules(HealthRules):
                 elif isinstance(min_max[p], dict):
                     # If limits are min/max
                     if "min" in min_max[p].keys():
+                        allow_none = min_max[p].get("allow_none", False)
+
+                        is_nan = math.isnan(float(p_state))
+
                         states[p] = (
                             (HealthState.OK, "")
-                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            if is_nan
+                            and allow_none is True
+                            or min_max[p]["min"] <= p_state <= min_max[p]["max"]
                             else (
                                 HealthState.FAILED,
                                 f'Monitoring point "{path}/{p}": {p_state} not in range'

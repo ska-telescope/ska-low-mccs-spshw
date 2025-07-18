@@ -1,5 +1,17 @@
 # Version History
 
+## 7.0.0
+
+* [THORN-175] Added beamfomer control on individual beams. 
+* [THORN-175] MccsTile.StartBeamformer and StopBeamformer accepts `channel_groups` parameter
+* [THORN-175] Added command MccsTile.BeamformerRunningForChannels and attribute RunningBeams
+* [THORN-175] Added commands SpsStation.BeamformerRunningForChannels and StopBeamformerForChannels
+## Unreleased
+
+* [THORN-214] Correct SpsStation healthstate update to evaluate only when the power of spstation changes.
+* [THORN-214] Reset initial pps_delay after initialisation.
+* [THORN-214] Improve hardware test visibility and reliability.
+
 ## 6.5.2
 
 * [THORN-220] Add cleanup for proxies and component managers.

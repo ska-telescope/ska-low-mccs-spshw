@@ -1172,6 +1172,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._update_attribute_callback(
                     programming_state=TpmStatus.INITIALISED.pretty_name()
                 )
+                # The initial pps_delay must be reset after initialisation.
+                self._initial_pps_delay = None
                 if self._global_reference_time:
                     self.logger.info(
                         "Global reference time specifed, starting acquisition"
@@ -2465,20 +2467,30 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     def stop_beamformer(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        channel_groups: Optional[list[int]] = None,
     ) -> tuple[TaskStatus, str] | None:
         """
         Stop the beamformer.
 
         :param task_callback: Update task state, defaults to None
+        :param channel_groups: Channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
 
         :return: A tuple containing a task status and a unique id string to
 
         """
+        if channel_groups is None:
+            self.logger.info("stop_beamformer: stopping all beams")
+
         return self._submit_lrc_request(
             command_name="stop_beamformer",
             command_object=self.tile.stop_beamformer,
             task_callback=task_callback,
+            channel_groups=channel_groups,
         )
 
     @check_communicating
@@ -2488,7 +2500,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         *,
         start_time: Optional[str] = None,
         duration: int = -1,
-        subarray_beam_id: int = -1,
+        channel_groups: Optional[list[int]] = None,
         scan_id: int = 0,
     ) -> tuple[TaskStatus, str] | None:
         """
@@ -2500,9 +2512,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param task_callback: Update task state, defaults to None
         :param start_time: Start time as ISO formatted time
         :param duration: Scan duration, in frames, default "forever"
-        :param subarray_beam_id: Subarray beam ID of the channels to be started
-                Command affects only beamformed channels for given subarray ID
-                Default -1: all channels
+        :param channel_groups: Channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
         :param scan_id: ID of the scan to be started. Default 0
 
         :raises ValueError: invalid time specified
@@ -2523,12 +2535,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
 
-        if subarray_beam_id != -1:
-            self.logger.warning(
-                "start_beamformer: separate start for different subarrays not supported"
-            )
-        if scan_id != 0:
-            self.logger.warning("start_beamformer: scan ID value ignored")
+        if channel_groups is None:
+            self.logger.info("start_beamformer: starting all beams")
+        # if scan_id != 0:
+        #    self.logger.warning("start_beamformer: scan ID value ignored")
 
         return self._submit_lrc_request(
             command_name="start_beamformer",
@@ -2536,6 +2546,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             start_time=start_frame,
             duration=duration,
+            scan_id=scan_id,
+            channel_groups=channel_groups,
         )
 
     @check_communicating
@@ -3376,6 +3388,47 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             return self.tile.beamformer_is_running()
+
+    @check_communicating
+    def beamformer_running_for_channels(
+        self: TileComponentManager,
+        channel_groups: list[int] | None,
+    ) -> bool:
+        """
+        Check if the beamformer is running in a list of channel blocks.
+
+        :param channel_groups: List of channel blocks to check
+
+        :return: True if the beamformer is running
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.beamformer_is_running(channel_groups=channel_groups)
+
+    @property
+    @check_communicating
+    def running_beams(self: TileComponentManager) -> list[bool]:
+        """
+        List hardware beams currently running.
+
+        :return: list of hardware beam running states
+        """
+        subarray_beams = [False] * 48
+        # if self.tpm_status != TpmStatus.INITIALISED:
+        #     return subarray_beams
+        for beam in range(48):
+            with acquire_timeout(
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                subarray_beams[beam] = self.tile.beamformer_is_running(
+                    subarray_beam=beam
+                )
+        return subarray_beams
 
     @property
     @check_communicating

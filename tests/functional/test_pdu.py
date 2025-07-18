@@ -81,26 +81,26 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/pdu.feature", "Pdu turns ports ON")
-def test_pdu_port_on_test(sps_devices_trl_exported: list[str]) -> None:
+def test_pdu_port_on_test(sps_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests turning on the pdu port.
 
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing ``tango.DeviceProxy``
+        to all exported sps devices.
     """
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
 @scenario("features/pdu.feature", "Pdu turns ports OFF")
-def test_pdu_port_off_test(sps_devices_trl_exported: list[str]) -> None:
+def test_pdu_port_off_test(sps_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests turning off the pdu port.
 
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing ``tango.DeviceProxy``
+        to all exported sps devices.
     """
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 

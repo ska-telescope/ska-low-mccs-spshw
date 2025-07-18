@@ -109,7 +109,7 @@ def check_subrack_is_online_and_on(
     print(f"Subrack device is in admin_mode {admin_mode.name}")
     assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.ENGINEERING]
 
-    subrack_device.subscribe_event(
+    sub_id = subrack_device.subscribe_event(
         "state",
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["subrack_state"],
@@ -118,19 +118,19 @@ def check_subrack_is_online_and_on(
     # Test can run in ONLINE or ENGINEERING admin mode,
     # so we only need to act if the admin mode is OFFLINE
     if admin_mode == AdminMode.OFFLINE:
-        change_event_callbacks.assert_change_event(
-            "subrack_state", tango.DevState.DISABLE
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.DISABLE
         )
         print("Subrack device is in DISABLE state.")
         print("Putting subrack device ONLINE...")
         subrack_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks.assert_change_event(
-            "subrack_state", tango.DevState.UNKNOWN
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.UNKNOWN
         )
         print("Subrack device is in UNKNOWN state.")
 
-    change_event_callbacks.assert_change_event(
-        "subrack_state", OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=4
+    change_event_callbacks["subrack_state"].assert_change_event(
+        OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=4
     )
     state = subrack_device.state()
 
@@ -139,12 +139,12 @@ def check_subrack_is_online_and_on(
         print("Turning subrack device on...")
         subrack_device.On()
 
-        change_event_callbacks.assert_change_event(
-            "subrack_state",
+        change_event_callbacks["subrack_state"].assert_change_event(
             tango.DevState.ON,
         )
 
     assert subrack_device.state() == tango.DevState.ON
+    subrack_device.unsubscribe_event(sub_id)
     print("Subrack device is in ON state.")
 
 
@@ -218,13 +218,12 @@ def ensure_subrack_fan_mode(
     if fan_modes is None:
         pytest.fail("device failed to connect with comp manager in time")
 
-    subrack_device.subscribe_event(
+    sub_id = subrack_device.subscribe_event(
         "subrackFanModes",
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["subrack_fan_mode"],
     )
-    change_event_callbacks.assert_change_event(
-        "subrack_fan_mode",
+    change_event_callbacks["subrack_fan_mode"].assert_change_event(
         fan_modes,
         lookahead=4,
     )
@@ -246,6 +245,7 @@ def ensure_subrack_fan_mode(
         change_event_callbacks.assert_change_event(
             "subrack_fan_mode", expected_fan_modes, lookahead=4
         )
+    subrack_device.unsubscribe_event(sub_id)
 
 
 @given("the fan's speed setting is 90%")
@@ -279,7 +279,7 @@ def ensure_subrack_fan_speed_percent(
     # All we see is a HTTP timeout.
     # And the fan speed setting is never updated.
     # This scenario cannot be developed further until this bug is fixed.
-    pytest.xfail(reason="Server-side bug")
+    # pytest.xfail(reason="Server-side bug")
 
     speed_percent = fan_speeds_percent[fan_number - 1]
     if speed_percent != pytest.approx(90.0):

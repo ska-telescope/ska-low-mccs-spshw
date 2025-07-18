@@ -494,6 +494,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
+            ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
             ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
             ("ApplyCalibration", self.ApplyCalibrationCommand),
             ("LoadPointingDelays", self.LoadPointingDelaysCommand),
@@ -535,6 +536,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
         )
 
+        stop_beamformer_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_StopBeamformer.json",
+            )
+        )
+
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("DownloadFirmware", "download_firmware", None),
@@ -542,7 +550,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("StartAntennaBuffer", "start_antenna_buffer", None),
             ("Configure", "configure", None),
             ("StartBeamformer", "start_beamformer", start_beamformer_schema),
-            ("StopBeamformer", "stop_beamformer", None),
+            ("StopBeamformer", "stop_beamformer", stop_beamformer_schema),
         ]:
             validator = (
                 None
@@ -2718,6 +2726,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["boardTemperature"].read()
 
+    @attribute(dtype=("DevBoolean",), max_dim_x=48)
+    def runningBeams(self: MccsTile) -> list[bool]:
+        """
+        List running status for each SubarrayBeam.
+
+        :return: list of hardware beam running states
+        """
+        return self.component_manager.running_beams
+
     # --------
     # Commands
     # --------
@@ -3715,14 +3732,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
 
-        >>> thresholds = {"boardTemperature" : {
-        >>>         "max_alarm": "79"
-        >>>         "min_alarm": "25"
-        >>>         "max_warning": "74"
-        >>>         "min_warning": "27"
-        >>>         },
-        >>>     }
-        >>> tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
+            >>> thresholds = {"boardTemperature" : {
+                >>>         "max_alarm": "79"
+                >>>         "min_alarm": "25"
+                >>>         "max_warning": "74"
+                >>>         "min_warning": "27"
+                >>>         },
+                >>>     }
+            >>> tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
 
         :param argin: a serialised dictionary containing attribute names and
             threshold limits.
@@ -4319,7 +4336,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Apply the pointing delays at the specified time delay.
 
-        :param argin: time delay (default = 0)
+        :param argin: time for applying the delays (default = 0)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4344,9 +4361,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         * start_time - (str, ISO UTC time) start time
         * duration - (int) if > 0 is a duration in CSP frames (2211.84 us)
                if == -1 run forever
-        * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
-                Command affects only beamformed channels for given subarray ID
-                Default -1: all channels
+        * channel_groups - (list(int)) : list of channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
         * scan_id - (int) The unique ID for the started scan. Default 0
 
         :return: A tuple containing a return code and a string
@@ -4356,7 +4373,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"StartTime":10, "Duration":20}
+        >>> dict = {"StartTime":10, "Duration":20, "channel_groups": [0,1,4] }
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartBeamformer", jstr)
         """
@@ -4364,10 +4381,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def StopBeamformer(self: MccsTile) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StopBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
+
+        :param argin: json dictionary with optional keywords:
+
+        * channel_groups - (list(int)) : list of channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4376,11 +4399,91 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("StopBeamformer")
+        >>> dict = {"channel_groups": [0,1,4] }
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StopBeamformer", dict)
         """
         handler = self.get_command_object("StopBeamformer")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    class BeamformerRunningCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class to handle BeamformerRunningForChannels command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_BeamformerRunningForChannels.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_BeamformerRunningForChannels.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.BeamformerRunningCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new BeamformerRunningCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator(
+                "BeamformerRunningForChannels", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
+
+        def do(
+            self: MccsTile.BeamformerRunningCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.BeamformerRunningForChannels` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: whether the beamformer is running in the specified
+            """
+            channel_groups = kwargs.get("channel_groups", None)
+            return self._component_manager.beamformer_running_for_channels(
+                channel_groups
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevBoolean")
+    def BeamformerRunningForChannels(self: MccsTile, argin: str) -> bool:
+        """
+        Check whether the beamformer is running for the given channel groups.
+
+        :param argin: json dictionary with optional keywords:
+
+        * channel_groups - (list) List of channel groups
+
+        :return: Whether the beamformer is running
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"channel_groups": [0,1,4,5]}
+        >>> jstr = json.dumps(dict)
+        >>> running = dp.command_inout("BeamformerRunningForChannels", jstr)
+        """
+        handler = self.get_command_object("BeamformerRunningForChannels")
+        return_code = handler(argin)
+        return return_code
 
     class ConfigureIntegratedChannelDataCommand(FastCommand):
         # pylint: disable=line-too-long

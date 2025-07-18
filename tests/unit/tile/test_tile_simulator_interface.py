@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import ValuesView
+from inspect import Parameter
 from types import FunctionType
 
 import pytest
@@ -29,15 +30,15 @@ METHODS_TO_OMIT = ["__init__", "_convert_ip_to_str"]
 
 
 def check_method_parameters_match(
-    param_list_1: ValuesView, param_list_2: ValuesView
+    param_list_1: ValuesView[Parameter], param_list_2: ValuesView[Parameter]
 ) -> bool:
     """
     Check that method parameters match.
 
     Check method:
      - name
-     - default_value
-     - kind
+     - default value
+     - kind (POSITIONAL_OR_KEYWORD, VAR_POSITIONAL, etc.)
 
     :param param_list_1: the parameter list of method 1
     :param param_list_2: the parameter list of method 2
@@ -45,24 +46,11 @@ def check_method_parameters_match(
     :return: True if the paramerter list match.
 
     """
-    # Check the parameter values match
-    param_1_dictionary = {}
-    param_2_dictionary = {}
+    params1 = [(p.name, p.default, p.kind) for p in param_list_1]
+    params2 = [(p.name, p.default, p.kind) for p in param_list_2]
 
-    for param_1 in param_list_1:
-        param_1_dictionary = {
-            "name": param_1.name,
-            "default": param_1.default,
-            "kind": param_1.kind,
-        }
-    for param_2 in param_list_2:
-        param_2_dictionary = {
-            "name": param_2.name,
-            "default": param_2.default,
-            "kind": param_2.kind,
-        }
-    if param_1_dictionary != param_2_dictionary:
-        print(f"{param_1_dictionary}!={param_2_dictionary}")
+    if params1 != params2:
+        print(f"Mismatch:\n{params1}\n!=\n{params2}")
         return False
     return True
 
@@ -104,10 +92,10 @@ def test_interface() -> None:
     for tile_sim_method_name, tile_sim_method in tile_simulator_methods_to_test.items():
         print(f"checking {tile_sim_method_name} ...")
         if tile_sim_method_name in flattened_aavs_tile:
-            tile_simulator_parameters = inspect.signature(
+            aavs_tile_parameters = inspect.signature(
                 flattened_aavs_tile[tile_sim_method_name]
             ).parameters.values()
-            aavs_tile_parameters = inspect.signature(
+            tile_simulator_parameters = inspect.signature(
                 tile_sim_method
             ).parameters.values()
             if not check_method_parameters_match(

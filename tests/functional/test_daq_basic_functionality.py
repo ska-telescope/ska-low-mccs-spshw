@@ -121,8 +121,13 @@ def assert_daq_is_unknown_health(
 
     :param daq_receiver: The daq_receiver fixture to use.
     """
-    if daq_receiver.healthState != HealthState.UNKNOWN:
-        pytest.fail("Initial conditions not met, health state not unknown")
+    reported_health = daq_receiver.healthState
+    if reported_health != HealthState.UNKNOWN:
+        pytest.fail(
+            "Initial conditions not met. "
+            f"Expected health {HealthState.UNKNOWN}, "
+            f"got {reported_health}."
+        )
 
 
 @then("the DAQ is in health state UNKNOWN")

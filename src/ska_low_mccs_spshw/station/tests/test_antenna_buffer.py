@@ -55,6 +55,7 @@ class TestAntennaBuffer(BaseDaqTest):
         )
         for fpga in range(TileData.NUM_FPGA):
             self.test_fpga(fpga_id=fpga)
+        self.test_logger.info("Test passed for AntennaBuffer data!")
 
     def test_fpga(
         self: TestAntennaBuffer,

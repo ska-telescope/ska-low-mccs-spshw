@@ -2,10 +2,11 @@
 # Docker, when used with GitLab CI, runs each job in a separate and isolated container using the predefined image that is set up in .gitlab-ci.yml.
 # In this case we use the latest python docker image to build and test this project.
 
-image: $SKA_K8S_TOOLS_DOCKER_BUILDER_IMAGE
+image: $SKA_K8S_TOOLS_BUILD_DEPLOY
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  CLUSTER_DOMAIN: cluster.local
 
 # cache is used to specify a list of files and directories which should be cached between jobs. You can only use paths that are within the project workspace.
 # If cache is defined outside the scope of jobs, it means it is set globally and all jobs will use that definition
@@ -158,8 +159,8 @@ ral-low-k8s-test:
   variables:
     TANGO_HOST: "databaseds.skaffold.svc.stfc-ral-k8s.skao.int:10000"
     KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
-    K8S_HELMFILE_ENV: ral-software
-    STATION_LABEL: stfc-ral-software
+    K8S_HELMFILE_ENV: ral-2
+    STATION_LABEL: stfc-ral-2
     JUNITXML_REPORT_PATH: build/reports/ral-low-functional-tests.xml
     CUCUMBER_JSON_PATH: build/reports/ral-low-cucumber.json
     JSON_REPORT_PATH: build/reports/report.json
@@ -218,7 +219,5 @@ ral-low-stop-k8s:
 helmfile-lint:
   image: $SKA_K8S_TOOLS_BUILD_DEPLOY
   stage: lint
-  tags:
-    - ska-default
   script:
     - make helmfile-lint

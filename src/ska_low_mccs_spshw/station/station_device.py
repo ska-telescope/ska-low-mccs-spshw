@@ -561,10 +561,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :param state_change: other state updates
         """
         bandpass_data_shape = (256, 512)
-        if power is not None:
-            self._health_model.update_state(fault=fault, power=power)
-        else:
-            self._health_model.update_state(fault=fault)
 
         # Helper function to *expand* a numpy array to a shape and pad with zeros.
         def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
@@ -594,6 +590,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             if health is not None:
                 self._health_rollup.health_changed(device_name, health)
         else:
+            if power is not None:
+                self._health_model.update_state(fault=fault, power=power)
+            else:
+                self._health_model.update_state(fault=fault)
             super()._component_state_changed(fault=fault, power=power)
 
         if state_change.get("is_configured") is not None:

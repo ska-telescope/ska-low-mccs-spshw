@@ -89,7 +89,7 @@ class TestStationBeamDataRate(BaseDaqTest):
         with self.reset_context():
             for iteration in test_iterations:
                 beamformer_start_time = datetime.strftime(
-                    datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
+                    datetime.fromtimestamp(int(time.time()) + 5), TileTime.RFC_FORMAT
                 )
                 self.component_manager.start_beamformer(
                     start_time=beamformer_start_time,

@@ -21,67 +21,67 @@ tpm_monitoring_points:
       min: 10
       max: 95
     ADC0:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC1:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC2:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC3:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC4:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC5:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC6:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC7:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC8:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC9:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC10:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC11:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC12:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC13:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC14:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
     ADC15:
-      allow_none: true # NaN for tpm1_6
+      allow_none_in_1_6: true # NaN for tpm1_6
       min: 10
       max: 90
   voltages:

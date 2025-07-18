@@ -436,7 +436,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self._health_changed)
+        self._health_model = TileHealthModel(self._health_changed, self.TpmVersion)
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)
 

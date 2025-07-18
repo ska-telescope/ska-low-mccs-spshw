@@ -27,7 +27,7 @@ class TestTileHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = TileHealthModel(MockCallable())
+        health_model = TileHealthModel(MockCallable(), "tpm_v1_6")
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model

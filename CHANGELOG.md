@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 7.0.1
 
 * [THORN-214] Correct HealthRules to account for new monitoring points.
 * [THORN-214] Correct runningBeams KeyError

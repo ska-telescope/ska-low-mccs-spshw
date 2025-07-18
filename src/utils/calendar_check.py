@@ -33,6 +33,10 @@ CALENDAR_METADATA: dict[str, dict[str, Any]] = {
             "ed980302-93a7-487c-8a6b-d5989cf6877f",
             # Subrack 3
             "cdd6246b-1cd8-46d2-92b9-54ceec438235",
+            # Subrack 4
+            "0594d521-c84a-4f38-bdb6-d28c19fb7789",
+            # Subrack 5
+            "c2cc7177-90e8-4856-91a8-e508f977c559",
             # TPM 1.2
             "07cb51cf-605d-473a-8650-0e7f4fe90828",
         ],

@@ -378,6 +378,9 @@ class TestMccsTile:
             "lastPointingDelays",
             "cspSpeadFormat",
             "parentTRL",
+            "antennaBufferMode",
+            "dataTransmissionMode",
+            "integratedDataTransmissionMode",
         ]
 
     @pytest.fixture(name="active_read_attributes")

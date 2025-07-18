@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-206] Clarify when Tile is sending data
+
 ## 7.0.1
 
 * [THORN-214] Correct HealthRules to account for new monitoring points.

@@ -273,6 +273,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
+            "antenna_buffer_mode": "antennaBufferMode",
+            "data_transmission_mode": "dataTransmissionMode",
+            "integrated_data_transmission_mode": "integratedDataTransmissionMode",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -2696,6 +2699,39 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: a list of bool values corresponding to the fpgas
         """
         return self.component_manager.is_station_beam_flagging_enabled
+
+    @attribute(dtype="DevString")
+    def antennaBufferMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if antenna buffer is sending over SDN or NSDN.
+
+        :return: string of SND or NSDN
+        """
+        return self.component_manager.antenna_buffer_mode
+
+    @attribute(dtype="DevString")
+    def dataTransmissionMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if we're sending data through 1G or 10G port.
+
+        :return: Either 1G or 10G string
+        """
+        return self.component_manager.data_transmission_mode
+
+    @attribute(dtype="DevString")
+    def integratedDataTransmissionMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if we're sending integrated data through 1G or 10G port.
+
+        :return: Either 1G or 10G string
+        """
+        return self.component_manager.integrated_data_transmission_mode
 
     @attribute(
         dtype="DevDouble",

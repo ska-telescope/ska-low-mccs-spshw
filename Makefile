@@ -186,7 +186,7 @@ k8s-do-test:
 	exit $$EXIT_CODE
 
 telmodel-deps:
-	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel check-jsonschema
+	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel jsonschema jsonschema-specifications fqdn
 
 k8s-pre-install-chart: telmodel-deps
 k8s-pre-uninstall-chart: telmodel-deps
@@ -204,7 +204,7 @@ python-pre-lint:
 ########################################################################
 helmfile-lint: telmodel-deps
 	SKIPDEPS=""
-	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-1 ral-2 ral-3 ral-4 ral-5 ; do \
+	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford ral-1 ral-2 ral-3 ral-4 ral-5 ; do \
         echo "Linting helmfile against environment '$$environment'" ; \
 		helmfile -e $$environment lint $$SKIPDEPS; \
 		EXIT_CODE=$$? ; \

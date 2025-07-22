@@ -27,7 +27,7 @@ class TestTileHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = TileHealthModel(MockCallable(), "tpm_v1_6")
+        health_model = TileHealthModel(MockCallable(), "v1.6.7a")
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model
@@ -378,9 +378,9 @@ class TestTileHealthModel:
         :param final_health_report: the initial final health report
         """
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
-        health_model._state[
-            "tile_health_structure"
-        ] = TileData.get_tile_defaults()  # type: ignore[assignment]
+        health_model._state["tile_health_structure"] = (  # type: ignore[assignment]
+            TileData.get_tile_defaults()
+        )
         health_model.health_params = init_thresholds
         assert (init_health_state, init_health_report) == health_model.evaluate_health()
         health_model.health_params = final_thresholds

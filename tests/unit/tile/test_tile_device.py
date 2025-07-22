@@ -1264,7 +1264,7 @@ class TestMccsTile:
         ("expected_init_params", "new_params"),
         [
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS,
+                TileData.DEFAULT_MONITORING_POINTS,
                 {
                     "temperatures": {"board": {"max": 70}},
                     "timing": {"clocks": {"FPGA0": {"JESD": False}}},
@@ -1272,7 +1272,7 @@ class TestMccsTile:
                 id="Check temperature and timing values and check new values",
             ),
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS,
+                TileData.DEFAULT_MONITORING_POINTS,
                 {
                     "currents": {"FE0_mVA": {"max": 25}},
                     "io": {
@@ -1284,7 +1284,7 @@ class TestMccsTile:
                 id="Change current and io values and check new values",
             ),
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS,
+                TileData.DEFAULT_MONITORING_POINTS,
                 {
                     "alarms": {"I2C_access_alm": 1},
                     "adcs": {"pll_status": {"ADC0": (False, True)}},

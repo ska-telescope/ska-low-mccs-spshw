@@ -9,19 +9,61 @@
 """A file to store health transition rules for tile."""
 from __future__ import annotations
 
+import importlib.resources
 import math
+import re
 from typing import Any
 
+import yaml
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthRules
-
-from .tile_data import TileData
 
 # COUNTERS = [
 #     "rd_cnt",
 #     "wr_cnt",
 #     "rd_dat_cnt",
 # ]
+
+
+def _both_nan(a: float, b: float) -> bool:
+    """
+    Compare 2 inputs.
+
+    :param a: string a under test
+    :param b: string b under test
+
+    :return: True if both a and b are None or NaN.
+    """
+    # Guard against non-floats
+    if not isinstance(a, float) or not isinstance(b, float):
+        return False
+    return math.isnan(a) and math.isnan(b)
+
+
+def _version_to_tuple(version_str: str) -> tuple[int, int, int, str]:
+    """
+    Return a tuple with the parsed version.
+
+    :param version_str: the string to convert into a tuple.
+
+    :return: A tuple with parsed version.
+
+    :raises ValueError: when version_string has invalid format.
+    """
+    # Convert 'v1.6.7a' -> (1, 6, 7, 'a')
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)([a-z])", version_str)
+    if not match:
+        raise ValueError(f"Invalid version format: '{version_str}'")
+
+    major, minor, patch, letter = match.groups()
+    return (int(major), int(minor), int(patch), letter)
+
+
+def _in_version_range(tpm_version: str, min_version: str, max_version: str) -> bool:
+    tpm = _version_to_tuple(tpm_version)
+    min_v = _version_to_tuple(min_version)
+    max_v = _version_to_tuple(max_version)
+    return min_v <= tpm <= max_v
 
 
 class TileHealthRules(HealthRules):
@@ -36,10 +78,36 @@ class TileHealthRules(HealthRules):
         :param tpm_version: the TPM version.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
+
+        :raises FileNotFoundError: when the health thresholds are not
+            present.
         """
+        if _in_version_range(
+            tpm_version=tpm_version, min_version="v1.5.0a", max_version="v1.9.9z"
+        ):
+            resource_name = "tpm_monitoring_min_max_tpm_v1_6-v2_0.yaml"
+        elif _in_version_range(
+            tpm_version=tpm_version, min_version="v2.0.0a", max_version="v2.0.5b"
+        ):
+            resource_name = "tpm_monitoring_min_max_tpm_v2_0-v2_0_5.yaml"
+        else:
+            resource_name = f"tpm_monitoring_min_max_tpm_{tpm_version}.yaml"
+
+        # Check health values exist, else fail.
+        if importlib.resources.files(__package__).joinpath(resource_name).is_file():
+            min_max_string = importlib.resources.read_text(__package__, resource_name)
+        else:
+            raise FileNotFoundError(
+                f"File '{resource_name}' not found in package '{__package__}'"
+            )
+
+        self._min_max_monitoring_points = (
+            yaml.load(min_max_string, Loader=yaml.Loader).get("tpm_monitoring_points")
+            or {}
+        )
+        self._tpm_version = tpm_version
         super().__init__(*args, **kwargs)
         self.logger = None
-        self._tpm_version = tpm_version
         # self.previous_counters: dict = {}
         # for counter in COUNTERS:
         #     self.previous_counters[counter] = None
@@ -142,7 +210,7 @@ class TileHealthRules(HealthRules):
 
         :return: the default thresholds
         """
-        return TileData.MIN_MAX_MONITORING_POINTS
+        return self._min_max_monitoring_points
 
     def compute_intermediate_state(
         self: TileHealthRules,
@@ -202,15 +270,9 @@ class TileHealthRules(HealthRules):
                 elif isinstance(min_max[p], dict):
                     # If limits are min/max
                     if "min" in min_max[p].keys():
-                        allow_none_in_1_6 = min_max[p].get("allow_none_in_1_6", False)
-
-                        is_nan = math.isnan(float(p_state))
-
                         states[p] = (
                             (HealthState.OK, "")
-                            if (is_nan and allow_none_in_1_6)
-                            and (self._tpm_version == "tpm_v1_6")
-                            or min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
                             else (
                                 HealthState.FAILED,
                                 f'Monitoring point "{path}/{p}": {p_state} not in range'
@@ -252,7 +314,7 @@ class TileHealthRules(HealthRules):
                 else:
                     states[p] = (
                         (HealthState.OK, "")
-                        if p_state == min_max[p]
+                        if _both_nan(p_state, min_max[p]) or (p_state == min_max[p])
                         else (
                             HealthState.FAILED,
                             f'Monitoring point "{path}/{p}": '

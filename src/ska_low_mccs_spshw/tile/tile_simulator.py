@@ -926,7 +926,6 @@ class TileSimulator:
     STATIC_DELAYS = [-160.0] * 32
     PREADU_LEVELS = [0.0] * 32
     CLOCK_SIGNALS_OK = True
-    TILE_MONITORING_POINTS = copy.deepcopy(TileData.get_tile_defaults())
     VOLTAGE = 5.0
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
@@ -947,7 +946,7 @@ class TileSimulator:
         "fpga2_alarm_threshold": (-273.0, 90.0),
     }
 
-    FIRMWARE_NAME = "itpm_v1_6.bit"
+    FIRMWARE_NAME = "tpm_firmware.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},

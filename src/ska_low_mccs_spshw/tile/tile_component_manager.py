@@ -161,7 +161,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         station_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
-        tpm_version: str,
         preadu_levels: list[float] | None,
         static_time_delays: list[float],
         subrack_fqdn: str,
@@ -198,7 +197,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param station_id: the unique ID for the station to which this tile belongs.
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
-        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param preadu_levels: preADU gain attenuation settings to apply for this TPM.
         :param static_time_delays: Delays in nanoseconds to account
             for static delay missmatches.

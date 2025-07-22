@@ -68,9 +68,9 @@ class TileData:
     )  # bytes / s
 
     min_max_string = importlib.resources.read_text(
-        __package__, "tpm_monitoring_min_max.yaml"
+        __package__, "tpm_monitoring_min_max_tpm_v1_6-v2_0.yaml"
     )
-    MIN_MAX_MONITORING_POINTS = (
+    DEFAULT_MONITORING_POINTS = (
         yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"] or {}
     )
 
@@ -389,17 +389,44 @@ class TileData:
         return cls._TILE_DEFAULTS
 
     @classmethod
-    def generate_tile_defaults(cls) -> dict[str, Any]:
+    def generate_tile_defaults(cls, tpm_version: str | None = None) -> dict[str, Any]:
         """
         Compute the default values for tile monitoring points.
 
         These are computed to be halfway between the minimum and maximum values.
         In cases where there is a permitted value instead, the permitted value is used
 
+        :param tpm_version: the tpm version. Used to select correct
+            defaults.
+
         :return: the default values for tile monitoring points
+
+        :raises FileNotFoundError: When the file used to inform defaults is
+            not present.
         """
         tile_structure = copy.deepcopy(cls.TILE_MONITORING_POINTS)
-        expected_values = copy.deepcopy(cls.MIN_MAX_MONITORING_POINTS)
+
+        if tpm_version is None:
+            expected_values = cls.DEFAULT_MONITORING_POINTS
+        else:
+            resource_name = f"tpm_monitoring_min_max_{tpm_version}.yaml"
+
+            if importlib.resources.files(__package__).joinpath(resource_name).is_file():
+                min_max_string = importlib.resources.read_text(
+                    __package__, resource_name
+                )
+            else:
+                raise FileNotFoundError(
+                    f"File '{resource_name}' not found in package '{__package__}'"
+                )
+
+            expected_values = (
+                yaml.load(min_max_string, Loader=yaml.Loader).get(
+                    "tpm_monitoring_points"
+                )
+                or {}
+            )
+
         return cls._generate_tile_defaults(tile_structure, expected_values)
 
     @classmethod
@@ -428,6 +455,19 @@ class TileData:
                             (expected_values[p]["min"] + expected_values[p]["max"]) / 2,
                             3,
                         )
+                elif _is_nan_string(expected_values[p]):
+                    tile_structure[p] = float(expected_values[p])
                 else:
                     tile_structure[p] = expected_values[p]
         return tile_structure
+
+
+def _is_nan_string(s: str) -> bool:
+    """
+    Return if we have a NaN string.
+
+    :param s: the string under test.
+
+    :return: True if string is a NaN string.
+    """
+    return isinstance(s, str) and s.strip().lower() == "nan"

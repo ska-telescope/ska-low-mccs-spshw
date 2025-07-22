@@ -143,7 +143,10 @@ class TaskCompleteWaiter(TaskCallbackType):
 class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     """A component manager for a Tile (simulator or driver) and its power supply."""
 
-    FIRMWARE_NAME = {"tpm_v1_2": "itpm_v1_2.bit", "tpm_v1_6": "itpm_v1_6.bit"}
+    # This firmware name is generic to versions supported by
+    # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
+    # TPM_2_0 for example.
+    FIRMWARE_NAME: str = "tpm_firmware.bit"
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
@@ -259,17 +262,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
         self.integrated_data_transmission_mode: str = "Not transmitting"
-        if tpm_version not in self.FIRMWARE_NAME:
-            self.logger.warning(
-                "TPM version "
-                + tpm_version
-                + " not valid. Trying to read version from board, which must be on"
-            )
-            tpm_version = ""
-        self._tpm_version = tpm_version
         self._preadu_levels = preadu_levels
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
+        self._firmware_name: str = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -279,11 +274,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or DynamicTileSimulator(logger)
         else:
+            # =============================================
+            # TODO: Bug/work needed in ska-low-sps-tpm-api.
+            # If _tpm_version == None we have a chance of
+            # an unhandled LibraryError. Passing in "" does
+            # nothing, we are doing it here to avoid this bug.
+            # Bug will be present if TPM is OFF.
+            _tpm_version = ""
+            # =============================================
             self.tile = Tile(
                 ip=tpm_ip,
                 port=tpm_cpld_port,
                 logger=logger,
-                tpm_version=tpm_version,
+                tpm_version=_tpm_version,
             )
 
         super().__init__(
@@ -1464,17 +1467,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if not self.tile.is_programmed():
                 return
             self.__update_tpm_id(value, self._tile_id)
-
-    @property
-    def hardware_version(self: TileComponentManager) -> str:
-        """
-        Return whether this TPM is 1.2 or 1.6.
-
-        TODO this is not called
-
-        :return: TPM hardware version. 120 or 160
-        """
-        return self._tpm_version
 
     @property
     def firmware_name(self: TileComponentManager) -> str:

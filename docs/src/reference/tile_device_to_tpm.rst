@@ -35,8 +35,9 @@ A path and name of a Vivado bit file are passed via the Tile's
 'DownloadFirmware' command to the TPM.
 The code checks that the file exists and then passes this file path down
 to the hardware (either real or simulated).
-If no name is specified, the name defaults to "itpm_v1_6.bit" for simulator or 
-Tile16 hardware driver, and to "itpm_v1_2.bit" for Tile12 hardware driver. 
+
+
+If no name is specified, the name defaults to "tpm_firmware.bit".
 
 Ursula's Sequence Diagram
 =========================

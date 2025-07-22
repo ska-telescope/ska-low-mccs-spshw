@@ -6173,7 +6173,11 @@ reference = "PyPI-public"
 lock-version = "2.1"
 python-versions = "~3.10"
 <<<<<<< HEAD
+<<<<<<< HEAD
 content-hash = "836fbf5e7cb9c73490de22681f254d43474f2289d0503f1c87fd968b1f3d2417"
 =======
 content-hash = "cf60d8b7d7dd2408f831d8ffffbe0603272cea4a9c8404931db98317a9c86257"
 >>>>>>> c94ac12a ([THORN-101] Create dummy interface for power marshaller)
+=======
+content-hash = "f12b05a8f9b8e3504a8e6ab6a460ffe57489e578b0306938772f727fac799b74"
+>>>>>>> 5f78c36b ([THORN-101] Create dummy interface for power marshaller)

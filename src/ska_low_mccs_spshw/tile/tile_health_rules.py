@@ -9,14 +9,16 @@
 """A file to store health transition rules for tile."""
 from __future__ import annotations
 
-import importlib.resources
 import math
 import re
+from importlib.resources import files
 from typing import Any
 
 import yaml
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthRules
+
+from ska_low_mccs_spshw.tile import health_config  # import the subpackage
 
 # COUNTERS = [
 #     "rd_cnt",
@@ -85,20 +87,23 @@ class TileHealthRules(HealthRules):
         if _in_version_range(
             tpm_version=tpm_version, min_version="v1.5.0a", max_version="v1.9.9z"
         ):
-            resource_name = "tpm_monitoring_min_max_tpm_v1_6-v2_0.yaml"
+            # We have not noticed any variance in thresholds, hardcoding to v1.5.0a.yaml
+            resource_name = "v1.5.0a.yaml"
         elif _in_version_range(
             tpm_version=tpm_version, min_version="v2.0.0a", max_version="v2.0.5b"
         ):
-            resource_name = "tpm_monitoring_min_max_tpm_v2_0-v2_0_5.yaml"
+            # We have not noticed any variance in thresholds, hardcoding to v2.0.0a.yaml
+            resource_name = "v2.0.0a.yaml"
         else:
-            resource_name = f"tpm_monitoring_min_max_tpm_{tpm_version}.yaml"
+            resource_name = f"{tpm_version}.yaml"
 
-        # Check health values exist, else fail.
-        if importlib.resources.files(__package__).joinpath(resource_name).is_file():
-            min_max_string = importlib.resources.read_text(__package__, resource_name)
+        path = files(health_config).joinpath(resource_name)
+
+        if path.is_file():
+            min_max_string = path.read_text()
         else:
             raise FileNotFoundError(
-                f"File '{resource_name}' not found in package '{__package__}'"
+                f"{resource_name} not found in health_config package"
             )
 
         self._min_max_monitoring_points = (

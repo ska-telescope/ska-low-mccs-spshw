@@ -12,9 +12,12 @@ from __future__ import annotations  # allow forward references in type hints
 
 import copy
 import importlib.resources
+from importlib.resources import files
 from typing import Any
 
 import yaml
+
+from ska_low_mccs_spshw.tile import health_config  # import the subpackage
 
 __all__ = ["TileData"]
 
@@ -67,9 +70,13 @@ class TileData:
         BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_CORRECTED
     )  # bytes / s
 
-    min_max_string = importlib.resources.read_text(
-        __package__, "tpm_monitoring_min_max_tpm_v1_6-v2_0.yaml"
-    )
+    path = files(health_config).joinpath("v1.5.0a.yaml")
+
+    if path.is_file():
+        min_max_string = path.read_text()
+    else:
+        raise FileNotFoundError("item.yaml not found in health_config package")
+
     DEFAULT_MONITORING_POINTS = (
         yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"] or {}
     )

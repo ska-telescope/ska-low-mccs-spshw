@@ -1130,8 +1130,18 @@ class TestMccsTile:
         ("attribute", "initial_value", "write_value"),
         [
             (
-                "voltageMon",
+                "voltageMon5V0",
                 TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
+                None,
+            ),
+            (
+                "voltageMon3V3",
+                TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_3V3"],
+                None,
+            ),
+            (
+                "voltageMon1V8",
+                TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_1V8"],
                 None,
             ),
             (

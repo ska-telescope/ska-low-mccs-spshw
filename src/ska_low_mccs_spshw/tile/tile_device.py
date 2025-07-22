@@ -233,7 +233,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs": "adcs",
             "timing": "timing",
             "currents": "currents",
-            "voltageMon": "voltageMon",
+            "currentFE0": "currentFE0",
+            "currentFE1": "currentFE1",
+            "voltageAVDD3": "voltageAVDD3",
+            "voltageVrefDDR0": "voltageVrefDDR0",
+            "voltageVrefDDR1": "voltageVrefDDR1",
+            # "voltageVref2V5": "voltageVref2V5",
+            "voltageMan1V2": "voltageMan1V2",
+            "voltageMGT_AVCC": "voltageMGT_AVCC",
+            "voltageMGT_AVTT": "voltageMGT_AVTT",
+            "voltageMon5V0": "voltageMon5V0",
+            "voltageMon3V3": "voltageMon3V3",
+            "voltageMon1V8": "voltageMon1V8",
+            "voltageSW_AVDD1": "voltageSW_AVDD1",
+            "voltageSW_AVDD2": "voltageSW_AVDD2",
+            "voltageVIN": "voltageVIN",
+            "voltageVM_AGP0": "voltageVM_AGP0",
+            "voltageVM_AGP1": "voltageVM_AGP1",
+            "voltageVM_AGP2": "voltageVM_AGP2",
+            "voltageVM_AGP3": "voltageVM_AGP3",
+            "voltageVM_AGP4": "voltageVM_AGP4",
+            "voltageVM_AGP5": "voltageVM_AGP5",
+            "voltageVM_AGP6": "voltageVM_AGP6",
+            "voltageVM_AGP7": "voltageVM_AGP7",
+            "voltageVM_CLK0B": "voltageVM_CLK0B",
+            "voltageVM_CLK1B": "voltageVM_CLK1B",
+            "voltageVM_DDR0_VTT": "voltageVM_DDR0_VTT",
+            "voltageVM_DDR1_VDD": "voltageVM_DDR1_VDD",
+            "voltageVM_DDR1_VTT": "voltageVM_DDR1_VTT",
+            "voltageVM_DRVDD": "voltageVM_DRVDD",
+            "voltageVM_DVDD": "voltageVM_DVDD",
+            "voltageVM_FE0": "voltageVM_FE0",
+            "voltageVM_FE1": "voltageVM_FE1",
+            "voltageVM_MGT0_AUX": "voltageVM_MGT0_AUX",
+            "voltageVM_MGT1_AUX": "voltageVM_MGT1_AUX",
+            "voltageVM_PLL": "voltageVM_PLL",
+            "voltageVM_SW_AMP": "voltageVM_SW_AMP",
             "tile_id": "logicalTileId",
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
@@ -390,7 +425,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs": ["adcs"],
             "timing": ["timing"],
             "currents": ["currents"],
-            "voltageMon": ["voltages", "MON_5V0"],
+            "currentFE0": ["currents", "FE0_mVA"],
+            "currentFE1": ["currents", "FE1_mVA"],
+            "voltageAVDD3": ["voltages", "AVDD3"],
+            "voltageVrefDDR0": ["voltages", "DDR0_VREF"],
+            "voltageVrefDDR1": ["voltages", "DDR1_VREF"],
+            # "voltageVref2V5": ["voltages", "VREF_2V5"],
+            "voltageMan1V2": ["voltages", "MAN_1V2"],
+            "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
+            "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
+            "voltageMon5V0": ["voltages", "MON_5V0"],
+            "voltageMon3V3": ["voltages", "MON_3V3"],
+            "voltageMon1V8": ["voltages", "MON_1V8"],
+            "voltageSW_AVDD1": ["voltages", "SW_AVDD1"],
+            "voltageSW_AVDD2": ["voltages", "SW_AVDD2"],
+            "voltageVIN": ["voltages", "VIN"],
+            "voltageVM_AGP0": ["voltages", "VM_AGP0"],
+            "voltageVM_AGP1": ["voltages", "VM_AGP1"],
+            "voltageVM_AGP2": ["voltages", "VM_AGP2"],
+            "voltageVM_AGP3": ["voltages", "VM_AGP3"],
+            "voltageVM_AGP4": ["voltages", "VM_AGP4"],
+            "voltageVM_AGP5": ["voltages", "VM_AGP5"],
+            "voltageVM_AGP6": ["voltages", "VM_AGP6"],
+            "voltageVM_AGP7": ["voltages", "VM_AGP7"],
+            "voltageVM_CLK0B": ["voltages", "VM_CLK0B"],
+            "voltageVM_CLK1B": ["voltages", "VM_CLK1B"],
+            "voltageVM_DDR0_VTT": ["voltages", "VM_DDR0_VTT"],
+            "voltageVM_DDR1_VDD": ["voltages", "VM_DDR1_VDD"],
+            "voltageVM_DDR1_VTT": ["voltages", "VM_DDR1_VTT"],
+            "voltageVM_DRVDD": ["voltages", "VM_DRVDD"],
+            "voltageVM_DVDD": ["voltages", "VM_DVDD"],
+            "voltageVM_FE0": ["voltages", "VM_FE0"],
+            "voltageVM_FE1": ["voltages", "VM_FE1"],
+            "voltageVM_MGT0_AUX": ["voltages", "VM_MGT0_AUX"],
+            "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
+            "voltageVM_PLL": ["voltages", "VM_PLL"],
+            "voltageVM_SW_AMP": ["voltages", "VM_SW_AMP"],
             "adc_pll_status": ["adcs", "pll_status"],
             "qpll_status": ["io", "jesd_interface", "qpll_status"],
             "f2f_pll_status": ["io", "f2f_interface", "pll_status"],
@@ -1895,21 +1965,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.firmware_version = value
 
-    @attribute(
-        dtype="DevDouble",
-        abs_change=0.05,
-        min_value=4.5,
-        max_value=5.5,
-        min_alarm=4.55,
-        max_alarm=5.45,
-    )
-    def voltageMon(self: MccsTile) -> float | None:
-        """
-        Return the internal 5V supply of the TPM.
+    # @attribute(
+    #     dtype="DevDouble",
+    #     abs_change=0.05,
+    #     min_value=4.5,
+    #     max_value=5.5,
+    #     min_alarm=4.55,
+    #     max_alarm=5.45,
+    # )
+    # def voltageMon(self: MccsTile) -> float | None:
+    #     """
+    #     Return the internal 5V supply of the TPM.
 
-        :return: Internal supply of the TPM
-        """
-        return self._attribute_state["voltageMon"].read()
+    #     :return: Internal supply of the TPM
+    #     """
+    #     return self._attribute_state["voltageMon"].read()
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:
@@ -2766,6 +2836,336 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: list of hardware beam running states
         """
         return self.component_manager.running_beams
+
+    @attribute(dtype="DevDouble", label="FE0 current")
+    def currentFE0(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the FE0 current.
+
+        :return: FE0 current
+        """
+        return self._attribute_state["currentFE0"].read()
+
+    @attribute(dtype="DevDouble", label="FE1 current")
+    def currentFE1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the FE1 current.
+
+        :return: FE1 current
+        """
+        return self._attribute_state["currentFE1"].read()
+
+    @attribute(dtype="DevDouble", label="AVDD3 voltage")
+    def voltageAVDD3(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the AVDD3 voltage.
+
+        :return: AVDD3 voltage
+        """
+        return self._attribute_state["voltageAVDD3"].read()
+
+    @attribute(dtype="DevDouble", label="Vref voltages for DDR0")
+    def voltageVrefDDR0(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the Vref voltages for DDR0.
+
+        :return: Vref voltages for DDR0
+        """
+        return self._attribute_state["voltageVrefDDR0"].read()
+
+    @attribute(dtype="DevDouble", label="Vref voltages for DDR1")
+    def voltageVrefDDR1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the Vref voltages for DDR1.
+
+        :return: Vref voltages for DDR1
+        """
+        return self._attribute_state["voltageVrefDDR1"].read()
+
+    # @attribute(dtype="DevDouble", label="voltages_VREF_2V5")
+    # def voltageVref2V5(self: MccsTile) -> float | None:
+    #     """
+    #     Handle a Tango attribute read of the Vref 2.5 V voltage.
+
+    #     :return: Vref 2.5 V voltage
+    #     """
+    #     return self._attribute_state["voltageVref_2V5"].read()
+
+    @attribute(dtype="DevDouble", label="MAN_1V2 voltage")
+    def voltageMan1V2(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the MAN 1.2 V voltage.
+
+        :return: Man 1.2V voltage
+        """
+        return self._attribute_state["voltageMan1V2"].read()
+
+    @attribute(dtype="DevDouble", label="MGT_AVCC voltage")
+    def voltageMGT_AVCC(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the voltageMGT_AVCC attribute.
+
+        :return: voltageMGT_AVCC
+        """
+        return self._attribute_state["voltageMGT_AVCC"].read()
+
+    @attribute(dtype="DevDouble", label="MGT_AVTT voltage")
+    def voltageMGT_AVTT(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the voltageMGT_AVTT attribute.
+
+        :return: voltages_MGT_AVTT
+        """
+        return self._attribute_state["voltageMGT_AVTT"].read()
+
+    @attribute(dtype="DevDouble", label="voltages Mon 5V0")
+    def voltageMon5V0(self: MccsTile) -> float | None:
+        """
+        Return the internal 5V supply of the TPM.
+
+        :return: Internal supply of the TPM
+        """
+        return self._attribute_state["voltageMon5V0"].read()
+
+    @attribute(
+        dtype="DevDouble",
+        label="voltages Mon 3V3",
+    )
+    def voltageMon3V3(self: MccsTile) -> float | None:
+        """
+        Return the internal 3.3 V supply of the TPM.
+
+        :return: Internal supply of the TPM
+        """
+        return self._attribute_state["voltageMon3V3"].read()
+
+    @attribute(
+        dtype="DevDouble",
+        label="voltages Mon 1V8",
+    )
+    def voltageMon1V8(self: MccsTile) -> float | None:
+        """
+        Return the internal 1.8 V supply of the TPM.
+
+        :return: Internal supply of the TPM
+        """
+        return self._attribute_state["voltageMon1V8"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_SW_AVDD1")
+    def voltageSW_AVDD1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the SW_AVDD1 voltage.
+
+        :return: voltages_SW_AVDD1
+        """
+        return self._attribute_state["voltageSW_AVDD1"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_SW_AVDD2")
+    def voltageSW_AVDD2(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the SW_AVDD2 voltage.
+
+        :return: voltages_SW_AVDD2
+        """
+        return self._attribute_state["voltageSW_AVDD2"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VIN")
+    def voltageVIN(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VIN voltage.
+
+        :return: voltages_VIN
+        """
+        return self._attribute_state["voltageVIN"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP0")
+    def voltageVM_AGP0(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP0 voltage.
+
+        :return: voltages_VM_AGP0
+        """
+        return self._attribute_state["voltageVM_AGP0"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP1")
+    def voltageVM_AGP1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP1 voltage.
+
+        :return: voltages_VM_AGP1
+        """
+        return self._attribute_state["voltageVM_AGP1"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP2")
+    def voltageVM_AGP2(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP2 voltage.
+
+        :return: voltages_VM_AGP2
+        """
+        return self._attribute_state["voltageVM_AGP2"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP3")
+    def voltageVM_AGP3(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP3 voltage.
+
+        :return: voltages_VM_AGP3
+        """
+        return self._attribute_state["voltageVM_AGP3"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP4")
+    def voltageVM_AGP4(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP4 voltage.
+
+        :return: voltages_VM_AGP4
+        """
+        return self._attribute_state["voltageVM_AGP4"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP5")
+    def voltageVM_AGP5(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP5 voltage.
+
+        :return: voltages_VM_AGP5
+        """
+        return self._attribute_state["voltageVM_AGP5"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP6")
+    def voltageVM_AGP6(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP6 voltage.
+
+        :return: voltages_VM_AGP6
+        """
+        return self._attribute_state["voltageVM_AGP6"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_AGP7")
+    def voltageVM_AGP7(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_AGP7 voltage.
+
+        :return: voltages_VM_AGP7
+        """
+        return self._attribute_state["voltageVM_AGP7"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_CLK0B")
+    def voltageVM_CLK0B(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_CLK0B voltage.
+
+        :return: voltages_VM_CLK0B
+        """
+        return self._attribute_state["voltageVM_CLK0B"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_CLK1B")
+    def voltageVM_CLK1B(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_CLK1B voltage.
+
+        :return: voltages_VM_CLK1B
+        """
+        return self._attribute_state["voltageVM_CLK1B"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_DDR0_VTT")
+    def voltageVM_DDR0_VTT(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_DDR0_VTT voltage.
+
+        :return: voltages_VM_DDR0_VTT
+        """
+        return self._attribute_state["voltageVM_DDR0_VTT"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_DDR1_VDD")
+    def voltageVM_DDR1_VDD(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_DDR1_VDD voltage.
+
+        :return: voltages_VM_DDR1_VDD
+        """
+        return self._attribute_state["voltageVM_DDR1_VDD"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_DDR1_VTT")
+    def voltageVM_DDR1_VTT(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_DDR1_VTT voltage.
+
+        :return: voltages_VM_DDR1_VTT
+        """
+        return self._attribute_state["voltageVM_DDR1_VTT"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_DRVDD")
+    def voltageVM_DRVDD(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_DRVDD voltage.
+
+        :return: voltages_VM_DRVDD
+        """
+        return self._attribute_state["voltageVM_DRVDD"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_DVDD")
+    def voltageVM_DVDD(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_DVDD voltage.
+
+        :return: voltages_VM_DVDD
+        """
+        return self._attribute_state["voltageVM_DVDD"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_FE0")
+    def voltageVM_FE0(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_FE0 voltage.
+
+        :return: voltages_VM_FE0
+        """
+        return self._attribute_state["voltageVM_FE0"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_FE1")
+    def voltageVM_FE1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_FE1 voltage.
+
+        :return: voltages_VM_FE1
+        """
+        return self._attribute_state["voltageVM_FE1"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_MGT0_AUX")
+    def voltageVM_MGT0_AUX(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_MGT0_AUX voltage.
+
+        :return: voltages_VM_MGT0_AUX
+        """
+        return self._attribute_state["voltageVM_MGT0_AUX"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_MGT1_AUX")
+    def voltageVM_MGT1_AUX(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_MGT1_AUX voltage.
+
+        :return: voltages_VM_MGT1_AUX
+        """
+        return self._attribute_state["voltageVM_MGT1_AUX"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_PLL")
+    def voltageVM_PLL(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_PLL voltage.
+
+        :return: voltages_VM_PLL
+        """
+        return self._attribute_state["voltageVM_PLL"].read()
+
+    @attribute(dtype="DevDouble", label="voltages_VM_SW_AMP")
+    def voltageVM_SW_AMP(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VM_SW_AMP voltage.
+
+        :return: voltages_VM_SW_AMP
+        """
+        return self._attribute_state["voltageVM_SW_AMP"].read()
 
     # --------
     # Commands

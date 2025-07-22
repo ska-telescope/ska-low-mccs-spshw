@@ -75,7 +75,27 @@ class TileData:
     )
 
     TILE_MONITORING_POINTS = {
-        "temperatures": {"board": None, "FPGA0": None, "FPGA1": None},
+        "temperatures": {
+            "board": None,
+            "FPGA0": None,
+            "FPGA1": None,
+            "ADC0": None,
+            "ADC1": None,
+            "ADC2": None,
+            "ADC3": None,
+            "ADC4": None,
+            "ADC5": None,
+            "ADC6": None,
+            "ADC7": None,
+            "ADC8": None,
+            "ADC9": None,
+            "ADC10": None,
+            "ADC11": None,
+            "ADC12": None,
+            "ADC13": None,
+            "ADC14": None,
+            "ADC15": None,
+        },
         "voltages": {
             "VREF_2V5": None,
             "MGT_AVCC": None,
@@ -187,6 +207,7 @@ class TileData:
             },
             "pps": {"status": None},
             "pll": None,
+            "pll_40g": None,
         },
         "info": {
             "hardware": {

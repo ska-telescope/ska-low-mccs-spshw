@@ -56,13 +56,13 @@ Feature: Daq Status Reporting
             #        |   'CORRELATOR_DATA'           |            real-daq-1         | # bug MCCS-1810 and needs GPU.
             | 'ANTENNA_BUFFER'          | real-daq-1        |
             #       ---------------------------------
-            | 'RAW_DATA'                | stfc-ral-software |
-            | 'CHANNEL_DATA'            | stfc-ral-software |
-            | 'BEAM_DATA'               | stfc-ral-software |
-            | 'CONTINUOUS_CHANNEL_DATA' | stfc-ral-software |
-            | 'INTEGRATED_BEAM_DATA'    | stfc-ral-software |
-            | 'STATION_BEAM_DATA'       | stfc-ral-software |
-            | 'ANTENNA_BUFFER'          | stfc-ral-software |
+            | 'RAW_DATA'                | stfc-ral-2        |
+            | 'CHANNEL_DATA'            | stfc-ral-2        |
+            | 'BEAM_DATA'               | stfc-ral-2        |
+            | 'CONTINUOUS_CHANNEL_DATA' | stfc-ral-2        |
+            | 'INTEGRATED_BEAM_DATA'    | stfc-ral-2        |
+            | 'STATION_BEAM_DATA'       | stfc-ral-2        |
+            | 'ANTENNA_BUFFER'          | stfc-ral-2        |
 
     @forked
     Scenario: Consumers Stopping

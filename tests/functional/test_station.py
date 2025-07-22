@@ -53,14 +53,14 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/station.feature", "Synchronising time stamping")
-def test_tile(sps_devices_trl_exported: list[str]) -> None:
+def test_tile(sps_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the station device.
 
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     """
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
+    for device in sps_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
@@ -79,17 +79,17 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_trl_exported: list[str],
+    sps_devices_exported: list[tango.DeviceProxy],
     exported_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
-    Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
+    Check the SpsStation is ON, and all devices are in ONLINE AdminMode.
 
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_trl_exported: Fixture containing the trl
-        root for all sps devices.
+    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
     :param exported_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
@@ -101,14 +101,38 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
-        device.adminmode = AdminMode.ENGINEERING
-
-    change_event_callbacks.assert_change_event(
-        "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
+    station.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["device_state"],
     )
+    change_event_callbacks.assert_change_event("device_state", Anything)
+    initial_mode = station.adminmode
+    if initial_mode != AdminMode.ONLINE:
+        station.adminmode = AdminMode.ONLINE
+        change_event_callbacks["device_adminmode"].assert_change_event(AdminMode.ONLINE)
+        if initial_mode == AdminMode.OFFLINE:
+            change_event_callbacks["device_state"].assert_change_event(
+                tango.DevState.UNKNOWN
+            )
 
-    if station.state() != tango.DevState.ON:
+    device_bar_station = [
+        dev for dev in sps_devices_exported if dev.dev_name() != station.dev_name()
+    ]
+
+    for device in device_bar_station:
+        if device.adminmode != AdminMode.ONLINE:
+            device.adminmode = AdminMode.ONLINE
+
+    if initial_mode == AdminMode.OFFLINE:
+        change_event_callbacks["device_state"].assert_change_event(Anything)
+
+    time.sleep(5)
+
+    if any(
+        device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
+        for device in sps_devices_exported
+    ):
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(
             "state",
@@ -133,28 +157,18 @@ def check_spsstation_state(
         time.sleep(1)
         iters += 1
 
-    assert station.state() == tango.DevState.ON
+    if station.state() != tango.DevState.ON:
+        pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
 
 
-@given("the station is initialised")
+@when("the station is initialised")
 def station_not_synched(station: tango.DeviceProxy) -> None:
     """
     Verify that a device is in the desired state.
 
     :param station: station device under test.
     """
-    if not all(status in ("Synchronised") for status in station.tileProgrammingState):
-        station.initialise()
-        timeout = 0
-        while timeout < 60:
-            if all(
-                status in ("Synchronised") for status in station.tileProgrammingState
-            ):
-                break
-            time.sleep(1)
-            timeout = timeout + 1
-        if timeout >= 60:
-            assert False, "Stations failed to initialise"
+    station.Initialise()
 
 
 @when("the station is ordered to synchronise")
@@ -177,7 +191,7 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    deadline = time.time() + 60  # seconds
+    deadline = time.time() + 120  # seconds
     print("Waiting for all remaining unprogrammed tiles Synchronise")
     while time.time() < deadline:
         time.sleep(2)

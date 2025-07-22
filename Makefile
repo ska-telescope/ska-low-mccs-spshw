@@ -68,12 +68,16 @@ helm-pre-build:
 # K8S
 ########################################################################
 K8S_USE_HELMFILE = true
-K8S_HELMFILE = helmfile.d/helmfile.yaml
+K8S_HELMFILE = helmfile.d/helmfile.yaml.gotmpl
 
 ifdef CI_COMMIT_SHORT_SHA
 K8S_HELMFILE_ENV ?= stfc-ci
 else
 K8S_HELMFILE_ENV ?= minikube-ci
+endif
+
+ifeq ($(filter $(K8S_HELMFILE_ENV),ral-1 ral-2 ral-3 ral-4 ral-5),$(K8S_HELMFILE_ENV))
+KUBE_NAMESPACE := $(K8S_HELMFILE_ENV)
 endif
 
 include .make/k8s.mk
@@ -200,7 +204,7 @@ python-pre-lint:
 ########################################################################
 helmfile-lint: telmodel-deps
 	SKIPDEPS=""
-	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-software ral-software-minikube ; do \
+	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-1 ral-2 ral-3 ral-4 ral-5 ; do \
         echo "Linting helmfile against environment '$$environment'" ; \
 		helmfile -e $$environment lint $$SKIPDEPS; \
 		EXIT_CODE=$$? ; \

@@ -5,6 +5,5 @@ Feature: Test station
     Scenario: Synchronising time stamping
         Given an SPS deployment against HW
         And the SpsStation is ON
-        And the station is initialised
-        When the station is ordered to synchronise
+        When the station is initialised
         Then the station becomes synchronised

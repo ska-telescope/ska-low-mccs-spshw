@@ -910,17 +910,17 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
-                self._adc_power[logical_tile_id] = attribute_value.tolist()
+                self._adc_power[logical_tile_id] = list(attribute_value)
                 adc_powers: list[float] = []
                 for _, adc_power in self._adc_power.items():
                     if adc_power is not None:
                         adc_powers += adc_power
                 self._update_component_state(adc_power=adc_powers)
             case "statictimedelays":
-                self._static_delays[logical_tile_id] = attribute_value.tolist()
+                self._static_delays[logical_tile_id] = list(attribute_value)
             case "preadulevels":
                 # Note: Currently all we do is update the attribute value.
-                self._preadu_levels[logical_tile_id] = attribute_value.tolist()
+                self._preadu_levels[logical_tile_id] = list(attribute_value)
             case "ppsdelay":
                 # Only calc for TPMs actually present.
                 self._pps_delays[logical_tile_id] = attribute_value
@@ -2896,7 +2896,7 @@ class SpsStationComponentManager(
         *,
         start_time: Optional[str] = None,
         duration: int = -1,
-        subarray_beam_id: int = -1,
+        channel_groups: Optional[list[int]] = None,
         scan_id: int = 0,
     ) -> tuple[TaskStatus, str]:
         """
@@ -2910,14 +2910,14 @@ class SpsStationComponentManager(
             defaults to 0
         :param duration: duration for which to run the beamformer,
             defaults to -1 (run forever)
-        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param channel_groups: Channel groups to which the command applies.
         :param scan_id: ID of the scan which is started.
 
         :return: a task status and response message
         """
         return self.submit_task(
             self._start_beamformer,
-            args=[start_time, duration, subarray_beam_id, scan_id],
+            args=[start_time, duration, channel_groups, scan_id],
             task_callback=task_callback,
         )
 
@@ -2925,7 +2925,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         start_time: str,
         duration: float,
-        subarray_beam_id: int,
+        channel_groups: list[int] | None,
         scan_id: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -2937,7 +2937,7 @@ class SpsStationComponentManager(
             defaults to 0
         :param duration: duration for which to run the beamformer,
             defaults to -1 (run forever)
-        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param channel_groups: Channel groups to which the command applies.
         :param scan_id: ID of the scan which is started.
         :param task_callback: Update task state, defaults to None.
         :param task_abort_event: Check for abort, defaults to None
@@ -2947,9 +2947,10 @@ class SpsStationComponentManager(
         parameter_list = {
             "start_time": start_time,
             "duration": duration,
-            "subarray_beam_id": subarray_beam_id,
             "scan_id": scan_id,
         }
+        if channel_groups is not None:
+            parameter_list["channel_groups"] = channel_groups
         json_argument = json.dumps(parameter_list)
         start_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
@@ -2980,27 +2981,55 @@ class SpsStationComponentManager(
         :return: a task status and response message
         """
         return self.submit_task(
-            self._stop_beamformer, args=[], task_callback=task_callback
+            self._stop_beamformer, args=[None], task_callback=task_callback
+        )
+
+    def stop_beamformer_for_channels(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        channel_groups: Optional[list[int]] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _stop_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._stop_beamformer` for execution.
+
+        :param channel_groups: Channel groups to which the command applies.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        logging.info(f"stop_beamformer called for channel_groups {channel_groups}")
+        return self.submit_task(
+            self._stop_beamformer, args=[channel_groups], task_callback=task_callback
         )
 
     def _stop_beamformer(
         self: SpsStationComponentManager,
+        channel_groups: Optional[list[int]],
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Stop the beamformer.
 
+        :param channel_groups: Channel groups to which the command applies.
         :param task_callback: Update task state, defaults to None.
         :param task_abort_event: Check for abort, defaults to None
         """
+        parameter_list = {}
+        parameter_list = {"channel_groups": channel_groups}
+        json_argument = json.dumps(parameter_list)
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
         stop_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
             stop_beamformer_commands += MccsCommandProxy(
-                tile_trl, "StopBeamformer", self.logger
+                tile_trl, "StopBeamformer", self.logger, default_args=json_argument
             )
         result, message = stop_beamformer_commands(
             command_evaluator=CompositeCommandResultEvaluator()
@@ -3010,6 +3039,24 @@ class SpsStationComponentManager(
                 status=TaskStatus.COMPLETED,
                 result=(result, message),
             )
+
+    def beamformer_running_for_channels(
+        self: SpsStationComponentManager,
+        channel_groups: list[int] | None,
+    ) -> bool:
+        """
+        Check if the beamformer is running in a list of channel blocks.
+
+        :param channel_groups: List of channel blocks to check
+
+        :return: True if the beamformer is running
+        """
+        json_arg = json.dumps({"channel_groups": channel_groups})
+        return all(
+            tile._proxy is not None
+            and tile._proxy.BeamformerRunningForChannels(json_arg)
+            for tile in self._tile_proxies.values()
+        )
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,

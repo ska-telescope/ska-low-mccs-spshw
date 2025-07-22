@@ -202,6 +202,7 @@ class StationBeamformer:
         self._start_frame = 0
         self._last_frame = 0
         self.station_beam_flag = False
+        self._group_is_running = [False] * 48
 
     def define_channel_table(self: StationBeamformer, table: list[list[int]]) -> None:
         """
@@ -260,17 +261,52 @@ class StationBeamformer:
 
     def start(
         self: StationBeamformer,
+        channel_groups: Optional[list[int]],
     ) -> None:
-        """Start."""
+        """
+        Start.
+
+        :param channel_groups: Groups of channels to start
+        """
+        if channel_groups is None:
+            channel_groups = list(range(48))
         self._is_running = True
+        for group in channel_groups:
+            self._group_is_running[group] = True
 
-    def stop(self: StationBeamformer) -> None:
-        """stop."""
-        self._is_running = False
+    def stop(
+        self: StationBeamformer,
+        channel_groups: Optional[list[int]],
+    ) -> None:
+        """
+        Stop.
 
-    def is_running(self: StationBeamformer) -> bool:
-        """:return: is running."""
-        return self._is_running
+        :param channel_groups: Groups of channels to start
+        """
+        if channel_groups is None:
+            channel_groups = list(range(48))
+        for group in channel_groups:
+            self._group_is_running[group] = False
+        if not any(self._group_is_running):
+            self._is_running = False
+
+    def is_running(
+        self: StationBeamformer,
+        channel_groups: Optional[list[int]] = None,
+    ) -> bool:
+        """
+        Check if the beamformer is running for the specified channels.
+
+        :param channel_groups: Groups of channels to start
+
+        :return: is running.
+        """
+        if channel_groups is None:
+            return self._is_running
+        running = False
+        for group in channel_groups:
+            running = running or self._group_is_running[group]
+        return self._is_running and running
 
     def enable_flagging(self) -> None:
         """Enable station beam flagging."""
@@ -1243,21 +1279,24 @@ class TileSimulator:
 
     @connected
     def find_register(
-        self: TileSimulator, string: str = "", display: bool = False, info: bool = False
+        self: TileSimulator,
+        register_name: str = "",
+        display: bool = False,
+        info: bool = False,
     ) -> list[None | RegisterInfo]:
         """
         Return register information from a provided search string.
 
         Note: this is a wrapper method of 'ska_low_sps_tpm_api.boards.tpm.find_register'
 
-        :param string: Regular expression to search against
+        :param register_name: Regular expression to search against
         :param display: True to output result to console
         :param info: print a message with additional information if True.
 
         :return: List of found registers
         """
         assert self.tpm
-        return self.tpm.find_register(string, display, info)
+        return self.tpm.find_register(register_name, display, info)
 
     @connected
     def check_pll_locked(
@@ -1728,7 +1767,7 @@ class TileSimulator:
     @connected
     def get_40g_core_configuration(
         self: TileSimulator,
-        core_id: int = -1,
+        core_id: int,
         arp_table_entry: int = 0,
     ) -> dict[str, Any] | list[dict] | None:
         """
@@ -2140,16 +2179,17 @@ class TileSimulator:
         :param scan_id: ID of the scan, to be specified in the CSP SPEAD header
         :param mask: Bitmask of the channels to be started.
             Ignored if beam is specified.
-        :param beam: Beam number to start. Computes the mask using beam table
+        :param beam: beam number to start.
+            Computes the mask using beam table
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
 
         :return: true if the beamformer was started successfully.
         """
-        if self.beamformer_is_running():
+        if self.beamformer_is_running(channel_groups=channel_groups):
             return False
-        self.tpm.beam1.start()  # type: ignore
-        self.tpm.beam2.start()  # type: ignore
+        self.tpm.beam1.start(channel_groups)  # type: ignore
+        self.tpm.beam2.start(channel_groups)  # type: ignore
         return True
 
     @check_mocked_overheating
@@ -2165,12 +2205,13 @@ class TileSimulator:
 
         :param mask: Bitmask of the channels to be started.
             Ignored if beam is specified.
-        :param beam: Beam number to start. Computes the mask using beam table
+        :param beam: beam number to start.
+            Computes the mask using beam table
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
         """
-        self.tpm.beam1.stop()  # type: ignore
-        self.tpm.beam2.stop()  # type: ignore
+        self.tpm.beam1.stop(channel_groups)  # type: ignore
+        self.tpm.beam2.stop(channel_groups)  # type: ignore
 
     @check_mocked_overheating
     @connected
@@ -2458,12 +2499,12 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def test_generator_set_noise(
-        self: TileSimulator, amplitude_noise: float = 0.0, load_time: int = 0
+        self: TileSimulator, amplitude: float = 0.0, load_time: int = 0
     ) -> None:
         """
         Set generator test noise.
 
-        :param amplitude_noise: amplitude of noise
+        :param amplitude: amplitude of noise
         :param load_time: load time
         """
         self.logger.error("test_generator_set_noise not implemented in simulator")
@@ -2517,7 +2558,7 @@ class TileSimulator:
         stage: str,
         pattern: list[int],
         adders: list[int],
-        start: bool,
+        start: bool = False,
         shift: int = 0,
         zero: int = 0,
     ) -> None:
@@ -2638,7 +2679,7 @@ class TileSimulator:
     @connected
     def beamformer_is_running(
         self: TileSimulator,
-        mask: bool | None = None,
+        mask: int | None = None,
         beam: int | None = None,
         channel_groups: list[int] | None = None,
     ) -> bool:
@@ -2647,15 +2688,17 @@ class TileSimulator:
 
         :param mask: Bitmask of the channels to be started.
             Ignored if beam is specified.
-        :param beam: Beam number to start. Computes the mask using beam table
+        :param beam: beam number to start.
+            Computes the mask using beam table
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
 
         :return: is the beam is running
         """
-        return (
-            self.tpm.beam1.is_running()  # type: ignore
-            and self.tpm.beam2.is_running()  # type: ignore
+        return self.tpm.beam1.is_running(  # type: ignore
+            channel_groups
+        ) and self.tpm.beam2.is_running(  # type: ignore
+            channel_groups
         )
 
     def set_tpm_temperature_thresholds(

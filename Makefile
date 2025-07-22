@@ -204,7 +204,7 @@ python-pre-lint:
 ########################################################################
 helmfile-lint: telmodel-deps
 	SKIPDEPS=""
-	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-1 ral-2 ral-3 ral-4 ral-5 ; do \
+	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford ral-1 ral-2 ral-3 ral-4 ral-5 ; do \
         echo "Linting helmfile against environment '$$environment'" ; \
 		helmfile -e $$environment lint $$SKIPDEPS; \
 		EXIT_CODE=$$? ; \

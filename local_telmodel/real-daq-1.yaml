@@ -1,17 +1,9 @@
-
+$schema: http://schema.skao.int/low/station/2-0-0
 platform:
-  cluster: 
-    domain: cluster.local
-  sps_facilities:
-    ci:
-      pdus:
-        ci-1:
-          model: ENLOGIC
-          host: 10.135.253.170
-          v2_community: public
   stations:
     real-daq-1:
       id: 1
+      rotation: 0
       sps:
         antenna_config_uri:
           - file://local_telmodel

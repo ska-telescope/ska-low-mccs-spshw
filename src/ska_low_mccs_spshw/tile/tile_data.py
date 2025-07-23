@@ -70,7 +70,7 @@ class TileData:
         BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_CORRECTED
     )  # bytes / s
 
-    path = files(health_config).joinpath("v1.5.0a.yaml")
+    path = files(health_config).joinpath("set1.yaml")
 
     if path.is_file():
         min_max_string = path.read_text()

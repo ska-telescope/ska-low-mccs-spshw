@@ -141,6 +141,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # TODO: TpmVersion is deprecated, remove at an appropriate time.
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
     HardwareVersion = device_property(dtype=str, default_value="v1.6.7a")
+    BiosVersion = device_property(dtype=str, default_value="v0.5.0")
     # ====================================================================
 
     PreaduAttenuation = device_property(dtype=(float,), default_value=[])
@@ -201,6 +202,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"\tTpmCpldPort: {self.TpmCpldPort}\n"
             f"\tTpmVersion (deprecated by HardwareVersion): {self.TpmVersion}\n"
             f"\tHardwareVersion: {self.HardwareVersion}\n"
+            f"\tBiosVersion: {self.BiosVersion}\n"
             f"\tAntennasPerTile: {self.AntennasPerTile}\n"
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
@@ -449,7 +451,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self._health_changed, self.HardwareVersion)
+        self._health_model = TileHealthModel(
+            self._health_changed, self.HardwareVersion, self.BiosVersion
+        )
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)
 

@@ -27,7 +27,7 @@ class TestTileHealthRules:
 
         :return: Health rules to be used.
         """
-        return TileHealthRules("v1.6.7a", "v0.5.0")
+        return TileHealthRules("v1.6.7a", "0.5.0")
 
     @pytest.mark.parametrize(
         ("min_max", "monitoring_points", "expected_state", "expected_report"),

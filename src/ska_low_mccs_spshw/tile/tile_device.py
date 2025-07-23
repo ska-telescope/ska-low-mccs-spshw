@@ -142,7 +142,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # TODO: HardwareVersion and BiosVersion should be mandatory.
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
     HardwareVersion = device_property(dtype=str, default_value="v2.0.5b")
-    BiosVersion = device_property(dtype=str, default_value="v0.5.0")
+    BiosVersion = device_property(dtype=str, default_value="0.5.0")
     # ====================================================================
 
     PreaduAttenuation = device_property(dtype=(float,), default_value=[])
@@ -452,8 +452,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+        _hw_version = self.HardwareVersion
+        _bios_version = self.BiosVersion
+        if self.SimulationConfig == SimulationMode.TRUE:
+            _hw_version = "v1.6.7a"
+            _bios_version = "0.5.0"
+
         self._health_model = TileHealthModel(
-            self._health_changed, self.HardwareVersion, self.BiosVersion
+            self._health_changed, _hw_version, _bios_version
         )
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)

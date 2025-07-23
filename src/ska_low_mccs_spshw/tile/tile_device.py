@@ -139,8 +139,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # defined for retrocompatibility reasons.
 
     # TODO: TpmVersion is deprecated, remove at an appropriate time.
+    # TODO: HardwareVersion and BiosVersion should be mandatory.
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
-    HardwareVersion = device_property(dtype=str, default_value="v1.6.7a")
+    HardwareVersion = device_property(dtype=str, default_value="v2.0.5b")
     BiosVersion = device_property(dtype=str, default_value="v0.5.0")
     # ====================================================================
 

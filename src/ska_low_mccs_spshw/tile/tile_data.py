@@ -11,7 +11,6 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import copy
-import importlib.resources
 from importlib.resources import files
 from typing import Any
 
@@ -396,41 +395,42 @@ class TileData:
         return cls._TILE_DEFAULTS
 
     @classmethod
-    def generate_tile_defaults(cls, tpm_version: str | None = None) -> dict[str, Any]:
+    def generate_tile_defaults(cls, set_name: str | None = None) -> dict[str, Any]:
         """
         Compute the default values for tile monitoring points.
 
         These are computed to be halfway between the minimum and maximum values.
         In cases where there is a permitted value instead, the permitted value is used
 
-        :param tpm_version: the tpm version. Used to select correct
+        :param set_name: Used to select correct
             defaults.
 
         :return: the default values for tile monitoring points
 
         :raises FileNotFoundError: When the file used to inform defaults is
             not present.
+        :raises ValueError: when the set_name is not supported.
         """
+        available_sets = ["set1", "set2", "set3"]
+        if set_name not in available_sets:
+            raise ValueError(f"Set name {set_name} is not in {available_sets}")
+
         tile_structure = copy.deepcopy(cls.TILE_MONITORING_POINTS)
 
-        if tpm_version is None:
+        if set_name is None:
             expected_values = cls.DEFAULT_MONITORING_POINTS
         else:
-            resource_name = f"tpm_monitoring_min_max_{tpm_version}.yaml"
+            path = files(health_config).joinpath(f"{set_name}.yaml")
 
-            if importlib.resources.files(__package__).joinpath(resource_name).is_file():
-                min_max_string = importlib.resources.read_text(
-                    __package__, resource_name
-                )
+            if path.is_file():
+                min_max_string = path.read_text()
             else:
                 raise FileNotFoundError(
-                    f"File '{resource_name}' not found in package '{__package__}'"
+                    f"{set_name}.yaml not found in health_config package"
                 )
 
             expected_values = (
-                yaml.load(min_max_string, Loader=yaml.Loader).get(
-                    "tpm_monitoring_points"
-                )
+                yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"]
                 or {}
             )
 

@@ -34,6 +34,7 @@ class TileHealthModel(BaseHealthModel):
         self: TileHealthModel,
         health_changed_callback: HealthChangedCallbackProtocol,
         tpm_version: str,
+        bios_version: str,
         thresholds: Optional[dict[str, Any]] = None,
     ) -> None:
         """
@@ -43,11 +44,15 @@ class TileHealthModel(BaseHealthModel):
             there is a change to this this health model's evaluated
             health state.
         :param tpm_version: the TPM version.
+        :param bios_version: the TPM bios version.
         :param thresholds: the threshold parameters for the health rules
         """
         self._tpm_version = tpm_version
+        self._bios_version = bios_version
         self.logger = None
-        self._health_rules = TileHealthRules(self._tpm_version, thresholds)
+        self._health_rules = TileHealthRules(
+            self._tpm_version, self._bios_version, thresholds
+        )
         super().__init__(health_changed_callback)
         # Add new section for non-hardware/derived health quantities.
         additional_health = {"derived": {"pps_drift": 0}}

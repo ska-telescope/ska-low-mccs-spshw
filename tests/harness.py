@@ -418,6 +418,7 @@ class SpsTangoTestHarness:
             TpmCpldPort=10000,
             TpmVersion="tpm_v1_6",
             HardwareVersion="v1.6.7a",
+            BiosVersion="v0.5.0",
             ParentTRL=get_sps_station_name(self._station_label),
         )
 

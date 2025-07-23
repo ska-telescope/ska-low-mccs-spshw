@@ -14,6 +14,7 @@ import re
 from importlib.resources import files
 from typing import Any
 
+import semver
 import yaml
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthRules
@@ -42,25 +43,6 @@ def _both_nan(a: float, b: float) -> bool:
     return math.isnan(a) and math.isnan(b)
 
 
-def _bios_version_to_tuple(version_str: str) -> tuple[int, int, int]:
-    """
-    Return a tuple with the parsed version.
-
-    :param version_str: the string to convert into a tuple.
-
-    :return: A tuple with parsed version.
-
-    :raises ValueError: when version_string has invalid format.
-    """
-    # Convert 'v0.5.0' -> (0, 5, 0)
-    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", version_str)
-    if not match:
-        raise ValueError(f"Invalid version format: '{version_str}'")
-
-    major, minor, patch = match.groups()
-    return (int(major), int(minor), int(patch))
-
-
 def _hw_version_to_tuple(version_str: str) -> tuple[int, int, int, str]:
     """
     Return a tuple with the parsed version.
@@ -80,8 +62,8 @@ def _hw_version_to_tuple(version_str: str) -> tuple[int, int, int, str]:
     return (int(major), int(minor), int(patch), letter)
 
 
-def _hw_in_version_range(tpm_version: str, min_version: str, max_version: str) -> bool:
-    tpm = _hw_version_to_tuple(tpm_version)
+def _hw_in_version_range(hw_version: str, min_version: str, max_version: str) -> bool:
+    tpm = _hw_version_to_tuple(hw_version)
     min_v = _hw_version_to_tuple(min_version)
     max_v = _hw_version_to_tuple(max_version)
     return min_v <= tpm <= max_v
@@ -90,10 +72,9 @@ def _hw_in_version_range(tpm_version: str, min_version: str, max_version: str) -
 def _bios_in_version_range(
     bios_version: str, min_version: str, max_version: str
 ) -> bool:
-    tpm = _bios_version_to_tuple(bios_version)
-    min_v = _bios_version_to_tuple(min_version)
-    max_v = _bios_version_to_tuple(max_version)
-    return min_v <= tpm <= max_v
+    _is_equal_or_larger_than_min = semver.compare(bios_version, min_version) != -1
+    _is_equal_or_smaller_than_max = semver.compare(max_version, bios_version) != -1
+    return _is_equal_or_smaller_than_max and _is_equal_or_larger_than_min
 
 
 class TileHealthRules(HealthRules):
@@ -101,7 +82,7 @@ class TileHealthRules(HealthRules):
 
     def __init__(
         self: TileHealthRules,
-        tpm_version: str,
+        hw_version: str,
         bios_version: str,
         *args: Any,
         **kwargs: Any,
@@ -109,15 +90,15 @@ class TileHealthRules(HealthRules):
         """
         Initialise this device object.
 
-        :param tpm_version: the TPM version.
+        :param hw_version: the TPM version.
         :param bios_version: the TPM bios version.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
         self._min_max_monitoring_points = self._load_health_file(
-            tpm_version, bios_version
+            hw_version, bios_version
         )
-        self._tpm_version = tpm_version
+        self._hw_version = hw_version
         super().__init__(*args, **kwargs)
         self.logger = None
         # self.previous_counters: dict = {}
@@ -125,12 +106,12 @@ class TileHealthRules(HealthRules):
         #     self.previous_counters[counter] = None
 
     def _load_health_file(
-        self: TileHealthRules, tpm_version: str, bios_version: str
+        self: TileHealthRules, hw_version: str, bios_version: str
     ) -> dict[str, Any]:
         """
         Load a specified health set.
 
-        :param tpm_version: the hardware version used to choose correct defaults.
+        :param hw_version: the hardware version used to choose correct defaults.
         :param bios_version: the bios version used to choose correct defaults.
 
         :raises FileNotFoundError: when the health thresholds are not
@@ -145,12 +126,12 @@ class TileHealthRules(HealthRules):
             resource_name = resource_name or "set3.yaml"
 
         if _hw_in_version_range(
-            tpm_version=tpm_version, min_version="v1.5.0a", max_version="v1.9.9z"
+            hw_version=hw_version, min_version="v1.5.0a", max_version="v1.9.9z"
         ):
             # We have not noticed any variance in thresholds, hardcoding to v1.5.0a.yaml
             resource_name = resource_name or "set1.yaml"
         elif _hw_in_version_range(
-            tpm_version=tpm_version, min_version="v2.0.0a", max_version="v2.0.5b"
+            hw_version=hw_version, min_version="v2.0.0a", max_version="v2.0.5b"
         ):
             # We have not noticed any variance in thresholds, hardcoding to v2.0.0a.yaml
             resource_name = resource_name or "set2.yaml"

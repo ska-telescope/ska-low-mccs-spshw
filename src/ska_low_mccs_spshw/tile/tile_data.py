@@ -68,13 +68,13 @@ class TileData:
     FULL_STATION_BEAM_DATA_RATE = (
         BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_CORRECTED
     )  # bytes / s
-
-    path = files(health_config).joinpath("set1.yaml")
+    DEFAULT_SET = "set1.yaml"
+    path = files(health_config).joinpath(DEFAULT_SET)
 
     if path.is_file():
         min_max_string = path.read_text()
     else:
-        raise FileNotFoundError("item.yaml not found in health_config package")
+        raise FileNotFoundError(f"{DEFAULT_SET} not found in health_config package")
 
     DEFAULT_MONITORING_POINTS = (
         yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"] or {}
@@ -395,45 +395,17 @@ class TileData:
         return cls._TILE_DEFAULTS
 
     @classmethod
-    def generate_tile_defaults(cls, set_name: str | None = None) -> dict[str, Any]:
+    def generate_tile_defaults(cls) -> dict[str, Any]:
         """
         Compute the default values for tile monitoring points.
 
         These are computed to be halfway between the minimum and maximum values.
         In cases where there is a permitted value instead, the permitted value is used
 
-        :param set_name: Used to select correct
-            defaults.
-
         :return: the default values for tile monitoring points
-
-        :raises FileNotFoundError: When the file used to inform defaults is
-            not present.
-        :raises ValueError: when the set_name is not supported.
         """
-        available_sets = ["set1", "set2", "set3"]
-        if set_name not in available_sets:
-            raise ValueError(f"Set name {set_name} is not in {available_sets}")
-
         tile_structure = copy.deepcopy(cls.TILE_MONITORING_POINTS)
-
-        if set_name is None:
-            expected_values = cls.DEFAULT_MONITORING_POINTS
-        else:
-            path = files(health_config).joinpath(f"{set_name}.yaml")
-
-            if path.is_file():
-                min_max_string = path.read_text()
-            else:
-                raise FileNotFoundError(
-                    f"{set_name}.yaml not found in health_config package"
-                )
-
-            expected_values = (
-                yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"]
-                or {}
-            )
-
+        expected_values = cls.DEFAULT_MONITORING_POINTS
         return cls._generate_tile_defaults(tile_structure, expected_values)
 
     @classmethod

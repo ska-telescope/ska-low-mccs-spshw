@@ -288,6 +288,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "power_supply_currents": "powerSupplyCurrents",
         "power_supply_powers": "powerSupplyPowers",
         "power_supply_voltages": "powerSupplyVoltages",
+        "power_supply_input_voltage": "powerSupplyInputVoltage",
+        "power_supply_input_power": "powerSupplyInputPower",
         "power_supply_fan_speeds": "powerSupplyFanSpeeds",
         "subrack_fan_speeds": "subrackFanSpeeds",
         "subrack_fan_speeds_percent": "subrackFanSpeedsPercent",
@@ -303,6 +305,18 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
+        "internalVoltages1V1": "internal_voltages1V1",
+        "internalVoltages1V5": "internal_voltages1V5",
+        "internalVoltages2V5": "internal_voltages2V5",
+        "internalVoltages2V8": "internal_voltages2V8",
+        "internalVoltages3V": "internal_voltages3V",
+        "internalVoltages3V3": "internal_voltages3V3",
+        "internalVoltages5V": "internal_voltages5V",
+        "internalVoltagesARM": "internal_voltagesARM",
+        "internalVoltagesCORE": "internal_voltagesCORE",
+        "internalVoltagesDDR": "internal_voltagesDDR",
+        "internalVoltagesPOWERIN": "internal_voltagesPOWERIN",
+        "internalVoltagesSOC": "internal_voltagesSOC",
     }
 
     # --------------
@@ -961,6 +975,28 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("powerSupplyVoltages", None) or []
 
+    @attribute(dtype=(float,), max_dim_x=2, label="powerSupplyInputVoltage")
+    def powerSupplyInputVoltage(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the power supply input voltages.
+
+        :return: the power supply input voltages.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._hardware_attributes.get("powerSupplyInputVoltage", None) or []
+
+    @attribute(dtype=(float,), max_dim_x=2, label="powerSupplyInputPower")
+    def powerSupplyInputPower(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the power supply input voltages.
+
+        :return: the power supply input voltages.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._hardware_attributes.get("powerSupplyInputPower", None) or []
+
     @attribute(dtype=(float,), max_dim_x=4, label="subrack fan speeds", abs_change=0.1)
     def subrackFanSpeeds(self: MccsSubrack) -> list[float]:
         """
@@ -1053,15 +1089,219 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the subrack timestamp
         """
-        return self._subrack_timestamp()
+        #     return self._subrack_timestamp()
 
-    def _subrack_timestamp(self: MccsSubrack) -> int | None:
-        """
-        Handle a Tango attribute read of the subrack timestamp attribute.
+        # def _subrack_timestamp(self: MccsSubrack) -> int | None:
+        #     """
+        #     Handle a Tango attribute read of the subrack timestamp attribute.
 
-        :return: the subrack timestamp
-        """
+        #     :return: the subrack timestamp
+        #     """
         return self._hardware_attributes.get("subrackTimestamp", None)
+
+    @attribute(dtype=float, label="internalVoltagesV_1V1")
+    def internalVoltages1V1(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_1V1 attribute.
+
+        :return: voltage value on 1V1 connector
+        """
+        return self._internal_voltages_1v1()
+
+    def _internal_voltages_1v1(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_1V1 attribute.
+
+        :return: voltage value on 1V1 connector
+        """
+        return self._hardware_attributes.get("internalVoltages1V1", None)
+
+    @attribute(dtype=float, label="internalVoltagesV_1V5")
+    def internalVoltages1V5(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_1V5 attribute.
+
+        :return: internalVoltagesV_1V5
+        """
+        return self._internal_voltages_1v5()
+
+    def _internal_voltages_1v5(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_1V5 attribute.
+
+        :return: voltage value on 1V5 connector
+        """
+        return self._hardware_attributes.get("internalVoltages1V5", None)
+
+    @attribute(dtype=float, label="internalVoltagesV_2V5")
+    def internalVoltages2V5(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_2V5 attribute.
+
+        :return: internalVoltages_2V5
+        """
+        return self._internal_voltages_2v5()
+
+    def _internal_voltages_2V5(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_2V5 attribute.
+
+        :return: voltage value on 2V5 connector
+        """
+        return self._hardware_attributes.get("internalVoltages2V5", None)
+
+    @attribute(dtype=float, label="internalVoltages_2V8")
+    def internalVoltages2V8(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_2V8 attribute.
+
+        :return: internalVoltages_2V8
+        """
+        return self._internal_voltages_2V8()
+
+    def _internal_voltages_2V8(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_2V8 attribute.
+
+        :return: voltage value on 2V8 connector
+        """
+        return self._hardware_attributes.get("internalVoltages2V8", None)
+
+    @attribute(dtype=float, label="internalVoltages_3V")
+    def internalVoltages3V(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_3V attribute.
+
+        :return: internalVoltages_3V
+        """
+        return self._internal_voltages_3V()
+
+    def _internal_voltages_3V(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_3V attribute.
+
+        :return: voltage value on 3V connector
+        """
+        return self._hardware_attributes.get("internalVoltages3V", None)
+
+    @attribute(dtype=float, label="internalVoltages_3V3")
+    def internalVoltages3V3(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_3V3 attribute.
+
+        :return: internalVoltages_3V3
+        """
+        return self._internal_voltages_3V3()
+
+    def _internal_voltages_3V3(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_3V3 attribute.
+
+        :return: voltage value on 3V3 connector
+        """
+        return self._hardware_attributes.get("internalVoltages3V3", None)
+
+    @attribute(dtype=float, label="internalVoltages_5V")
+    def internalVoltages_5V(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_5V attribute.
+
+        :return: internalVoltages_5V
+        """
+        return self._internal_voltages_5V()
+
+    def _internal_voltages5V(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_5V attribute.
+
+        :return: voltage value on 5V connector
+        """
+        return self._hardware_attributes.get("internalVoltages5V", None)
+
+    @attribute(dtype=float, label="internalVoltages_ARM")
+    def internalVoltagesARM(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_ARM attribute.
+
+        :return: internalVoltages_ARM
+        """
+        return self._internal_voltages_ARM()
+
+    def _internal_voltages_ARM(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_ARM attribute.
+
+        :return: voltage value on ARM connector
+        """
+        return self._hardware_attributes.get("internalVoltagesARM", None)
+
+    @attribute(dtype=float, label="internalVoltages_CORE")
+    def internalVoltagesCORE(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_CORE attribute.
+
+        :return: internalVoltages_CORE
+        """
+        return self._internal_voltages_CORE()
+
+    def _internal_voltages_CORE(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_CORE attribute.
+
+        :return: voltage value on CORE connector
+        """
+        return self._hardware_attributes.get("internalVoltagesCORE", None)
+
+    @attribute(dtype=float, label="internalVoltages_DDR")
+    def internalVoltagesDDR(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_DDR attribute.
+
+        :return: internalVoltages_DDR
+        """
+        return self._internal_voltages_DDR()
+
+    def _internal_voltages_DDR(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_DDR attribute.
+
+        :return: voltage value on DDR connector
+        """
+        return self._hardware_attributes.get("internalVoltagesDDR", None)
+
+    @attribute(dtype=float, label="internalVoltages_POWERIN")
+    def internalVoltagesPOWERIN(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_POWERIN attribute.
+
+        :return: internalVoltages_POWERIN
+        """
+        return self._internal_voltages_POWERIN()
+
+    def _internal_voltages_POWERIN(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_POWERIN attribute.
+
+        :return: voltage value on POWERIN connector
+        """
+        return self._hardware_attributes.get("internalVoltagesPOWERIN", None)
+
+    @attribute(dtype=float, label="internalVoltages_SOC")
+    def internalVoltagesSOC(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_SOC attribute.
+
+        :return: internalVoltages_SOC
+        """
+        return self._internal_voltages_SOC()
+
+    def _internal_voltages_SOC(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_SOC attribute.
+
+        :return: voltage value on SOC connector
+        """
+        return self._hardware_attributes.get("internalVoltagesSOC", None)
 
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
     # Need to revisit

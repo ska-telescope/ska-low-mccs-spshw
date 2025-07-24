@@ -122,7 +122,7 @@ class TileHealthRules(HealthRules):
         """
         resource_name = None
 
-        if _bios_in_version_range(bios_version, "v0.6.0", "v0.6.0"):
+        if _bios_in_version_range(bios_version, "0.6.0", "0.6.0"):
             resource_name = resource_name or "set3.yaml"
 
         if _hw_in_version_range(

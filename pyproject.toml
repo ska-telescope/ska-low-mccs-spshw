@@ -116,6 +116,7 @@ ska-low-mccs-daq-interface = "^1.0.1"
 ska-low-mccs-daq = "^3.0.0-rc2"
 ska-telmodel = "^1.4.1"
 ska-ser-snmp = "^0.6.1"
+semver = "^3.0.4"
 
 [tool.poetry.scripts]
 spshw = "ska_low_mccs_spshw:main"

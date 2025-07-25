@@ -405,7 +405,7 @@ class TileData:
         :return: the default values for tile monitoring points
         """
         tile_structure = copy.deepcopy(cls.TILE_MONITORING_POINTS)
-        expected_values = cls.DEFAULT_MONITORING_POINTS
+        expected_values = copy.deepcopy(cls.DEFAULT_MONITORING_POINTS)
         return cls._generate_tile_defaults(tile_structure, expected_values)
 
     @classmethod
@@ -434,19 +434,6 @@ class TileData:
                             (expected_values[p]["min"] + expected_values[p]["max"]) / 2,
                             3,
                         )
-                elif _is_nan_string(expected_values[p]):
-                    tile_structure[p] = float(expected_values[p])
                 else:
                     tile_structure[p] = expected_values[p]
         return tile_structure
-
-
-def _is_nan_string(s: str) -> bool:
-    """
-    Return if we have a NaN string.
-
-    :param s: the string under test.
-
-    :return: True if string is a NaN string.
-    """
-    return isinstance(s, str) and s.strip().lower() == "nan"

@@ -76,6 +76,8 @@ class TileHealthRules(HealthRules):
         ("0.6.0", "v2.0.2a"): "set3.yaml",
         ("0.6.0", "v2.0.5b"): "set3.yaml",
         ("0.6.0", "v1.6.7a"): "set4.yaml",
+        ("0.6.0", "v1.6.5a"): "set4.yaml",
+        ("0.5.0", "v1.6.5a"): "set1.yaml",
         ("0.5.0", "v1.6.7a"): "set1.yaml",
         ("0.5.0", "v2.0.1a"): "set2.yaml",
         ("0.5.0", "v2.0.2a"): "set2.yaml",

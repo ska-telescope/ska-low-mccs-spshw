@@ -80,29 +80,29 @@ _ATTRIBUTE_MAP: Final = {
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
-    "FE0_mVA": "currentFE0",
-    "FE1_mVA": "currentFE1",
+    # "FE0_mVA": "currentFE0",
+    # "FE1_mVA": "currentFE1",
     "AVDD3": "voltageAVDD3",
     "DDR0_VREF": "voltageVrefDDR0",
     "DDR1_VREF": "voltageVrefDDR1",
     # "voltageVref2V5" "VREF_2V5",
-    "MAN_1V2": "voltageMan1V2",
-    "MGT_AVCC": "voltageMGT_AVCC",
-    "MGT_AVTT": "voltageMGT_AVTT",
+    "MAN_1V2": "voltage_man_1v2",
+    "MGT_AVCC": "voltagemgt_avcc",
+    "MGT_AVTT": "voltagemgt_avtt",
     "MON_5V0": "voltageMon5V0",
     "MON_3V3": "voltageMon3V3",
     "MON_1V8": "voltageMon1V8",
     "SW_AVDD1": "voltageSW_AVDD1",
     "SW_AVDD2": "voltageSW_AVDD2",
-    "VIN": "voltageVIN",
-    "VM_AGP0": "voltageVM_AGP0",
-    "VM_AGP1": "voltageVM_AGP1",
-    "VM_AGP2": "voltageVM_AGP2",
-    "VM_AGP3": "voltageVM_AGP3",
-    "VM_AGP4": "voltageVM_AGP4",
-    "VM_AGP5": "voltageVM_AGP5",
-    "VM_AGP6": "voltageVM_AGP6",
-    "VM_AGP7": "voltageVM_AGP7",
+    # "VIN": "voltage_vin",
+    "VM_AGP0": "voltage_vm_agp0",
+    "VM_AGP1": "voltage_vm_agp1",
+    "VM_AGP2": "voltage_vm_agp2",
+    "VM_AGP3": "voltage_vm_agp3",
+    "VM_AGP4": "voltage_vm_agp4",
+    "VM_AGP5": "voltage_vm_agp5",
+    "VM_AGP6": "voltage_vm_agp6",
+    "VM_AGP7": "voltage_vm_agp7",
     "VM_CLK0B": "voltageVM_CLK0B",
     "VM_CLK1B": "voltageVM_CLK1B",
     "VM_DDR0_VTT": "voltageVM_DDR0_VTT",
@@ -3717,20 +3717,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             return self.tile.get_health_status()["voltages"]["SW_AVDD2"]
 
-    @property
-    @check_communicating
-    def voltage_vin(self: TileComponentManager) -> float:
-        """
-        Return the internal vin supply of the TPM.
+    # @property
+    # @check_communicating
+    # def voltage_vin(self: TileComponentManager) -> float:
+    #     """
+    #     Return the internal vin supply of the TPM.
 
-        :return: the internal vin supply of the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["voltages"]["VIN"]
+    #     :return: the internal vin supply of the TPM
+    #     """
+    #     with acquire_timeout(
+    #         self._hardware_lock,
+    #         timeout=self._default_lock_timeout,
+    #         raise_exception=True,
+    #     ):
+    #         return self.tile.get_health_status()["voltages"]["VIN"]
 
     @property
     @check_communicating

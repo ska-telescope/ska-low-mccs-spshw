@@ -141,8 +141,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # TODO: TpmVersion is deprecated, remove at an appropriate time.
     # TODO: HardwareVersion and BiosVersion should be mandatory.
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
-    HardwareVersion = device_property(dtype=str, default_value="v2.0.5b")
-    BiosVersion = device_property(dtype=str, default_value="0.5.0")
+    HardwareVersion = device_property(
+        dtype=str,
+        default_value="v2.0.5b",  # TODO: Mandatory once TMData sources are updated
+        doc="The HARDWARE_REV (e.g. v1.6.7a).",
+    )
+    BiosVersion = device_property(
+        dtype=str,
+        default_value="0.5.0",  # TODO: Mandatory once TMData sources are updated
+        doc="The bios version (e.g. 0.5.0).",
+    )
     # ====================================================================
 
     PreaduAttenuation = device_property(dtype=(float,), default_value=[])
@@ -452,11 +460,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+
+        # ================================================================
+        # TODO: Once HardwareVersion and BiosVersion are mandatory this
+        # will be fed in to device server. This block can be removed once
+        # this is done.
         _hw_version = self.HardwareVersion
         _bios_version = self.BiosVersion
+
         if self.SimulationConfig == SimulationMode.TRUE:
             _hw_version = "v1.6.7a"
             _bios_version = "0.5.0"
+        # ================================================================
 
         self._health_model = TileHealthModel(
             self._health_changed, _hw_version, _bios_version

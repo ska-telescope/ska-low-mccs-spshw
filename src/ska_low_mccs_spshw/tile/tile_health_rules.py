@@ -43,13 +43,11 @@ def _both_nan(a: float, b: float) -> bool:
     return math.isnan(a) and math.isnan(b)
 
 
-def _hw_version_to_tuple(version_str: str) -> tuple[int, int, int, str]:
+def _check_hw_version(version_str: str) -> None:
     """
-    Return a tuple with the parsed version.
+    Validate hardware version.
 
     :param version_str: the string to convert into a tuple.
-
-    :return: A tuple with parsed version.
 
     :raises ValueError: when version_string has invalid format.
     """
@@ -58,27 +56,31 @@ def _hw_version_to_tuple(version_str: str) -> tuple[int, int, int, str]:
     if not match:
         raise ValueError(f"Invalid version format: '{version_str}'")
 
-    major, minor, patch, letter = match.groups()
-    return (int(major), int(minor), int(patch), letter)
 
+def _check_bios_version(bios_version: str) -> None:
+    """
+    Validate hardware bios_version.
 
-def _hw_in_version_range(hw_version: str, min_version: str, max_version: str) -> bool:
-    tpm = _hw_version_to_tuple(hw_version)
-    min_v = _hw_version_to_tuple(min_version)
-    max_v = _hw_version_to_tuple(max_version)
-    return min_v <= tpm <= max_v
-
-
-def _bios_in_version_range(
-    bios_version: str, min_version: str, max_version: str
-) -> bool:
-    _is_equal_or_larger_than_min = semver.compare(bios_version, min_version) != -1
-    _is_equal_or_smaller_than_max = semver.compare(max_version, bios_version) != -1
-    return _is_equal_or_smaller_than_max and _is_equal_or_larger_than_min
+    :param bios_version: the bios version to check.
+    """
+    semver.VersionInfo.parse(bios_version)
 
 
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
+
+    # This is a map used to locate the thresholds
+    # appropriate to the version of bios and hardware.
+    THRESHOLD_LOCATOR = {
+        ("0.6.0", "v2.0.1a"): "set3.yaml",
+        ("0.6.0", "v2.0.2a"): "set3.yaml",
+        ("0.6.0", "v2.0.5b"): "set3.yaml",
+        ("0.6.0", "v1.6.7a"): "set4.yaml",
+        ("0.5.0", "v1.6.7a"): "set1.yaml",
+        ("0.5.0", "v2.0.1a"): "set2.yaml",
+        ("0.5.0", "v2.0.2a"): "set2.yaml",
+        ("0.5.0", "v2.0.5b"): "set2.yaml",
+    }
 
     def __init__(
         self: TileHealthRules,
@@ -95,6 +97,12 @@ class TileHealthRules(HealthRules):
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
+        # Validate inputs.
+        _check_hw_version(hw_version)
+        _check_bios_version(bios_version)
+
+        self._threshold_locator = dict(self.THRESHOLD_LOCATOR)
+
         self._min_max_monitoring_points = self._load_health_file(
             hw_version, bios_version
         )
@@ -120,23 +128,13 @@ class TileHealthRules(HealthRules):
 
         :return: the loaded health dictionary.
         """
-        resource_name = None
-
-        if _bios_in_version_range(bios_version, "0.6.0", "0.6.0"):
-            resource_name = resource_name or "set3.yaml"
-
-        if _hw_in_version_range(
-            hw_version=hw_version, min_version="v1.5.0a", max_version="v1.9.9z"
-        ):
-            # We have not noticed any variance in thresholds, hardcoding to v1.5.0a.yaml
-            resource_name = resource_name or "set1.yaml"
-        elif _hw_in_version_range(
-            hw_version=hw_version, min_version="v2.0.0a", max_version="v2.0.5b"
-        ):
-            # We have not noticed any variance in thresholds, hardcoding to v2.0.0a.yaml
-            resource_name = resource_name or "set2.yaml"
-        else:
-            raise ValueError("No health set found.")
+        resource_name = self._threshold_locator.get((bios_version, hw_version))
+        if resource_name is None:
+            # TODO: Do we need a test to scrape the target platforms tmdata and check
+            # the ValueError will not be raised in production.
+            raise ValueError(
+                f"Undefined health resource for {bios_version}, {hw_version}. "
+            )
 
         path = files(health_config).joinpath(resource_name)
 

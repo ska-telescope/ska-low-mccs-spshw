@@ -1,0 +1,387 @@
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+#
+# This file provides min/max or expected values for TPM monitoring points
+tpm_monitoring_points:
+  temperatures:
+    board:
+      min: 10
+      max: 65
+    FPGA0:
+      min: 10
+      max: 95
+    FPGA1:
+      min: 10
+      max: 95
+    ADC0: .NaN
+    ADC1: .NaN
+    ADC2: .NaN
+    ADC3: .NaN
+    ADC4: .NaN
+    ADC5: .NaN
+    ADC6: .NaN
+    ADC7: .NaN
+    ADC8: .NaN
+    ADC9: .NaN
+    ADC10: .NaN
+    ADC11: .NaN
+    ADC12: .NaN
+    ADC13: .NaN
+    ADC14: .NaN
+    ADC15: .NaN
+  voltages:
+    # TODO: why is this always None? See https://jira.skatelescope.org/browse/SPRTS-126?focusedId=295368&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-295368
+    VREF_2V5: null
+    MGT_AVCC:
+      min: 0.85
+      max: 0.95
+    MGT_AVTT:
+      min: 1.14
+      max: 1.26
+    SW_AVDD1:
+      min: 1.04
+      max: 1.16
+    SW_AVDD2:
+      min: 2.18
+      max: 2.42
+    AVDD3:
+      min: 2.37
+      max: 2.6
+    MAN_1V2:
+      min: 1.14
+      max: 1.26
+    DDR0_VREF:
+      min: 0.57
+      max: 0.63
+    DDR1_VREF:
+      min: 0.57
+      max: 0.63
+    VM_DRVDD:
+      min: 1.71
+      max: 1.89
+    VIN:
+      min: 11.4
+      max: 12.6
+    # MON_3V3 and MON_1V8 have a known measurement bias from the true value,
+    # which is why the thresholds aren't centred on 3.3V and 1.8V. See SPRTS-126.
+    MON_3V3:
+      min: 3.55
+      max: 3.75
+    MON_1V8:
+      min: 1.95
+      max: 2.10
+    MON_5V0:
+      min: 4.69
+      max: 5.19
+    VM_AGP0:
+      min: 0.84
+      max: 0.99
+    VM_AGP1:
+      min: 0.84
+      max: 0.99
+    VM_AGP2:
+      min: 0.84
+      max: 0.99
+    VM_AGP3:
+      min: 0.84
+      max: 0.99
+    VM_CLK0B:
+      min: 3.04
+      max: 3.56
+    VM_DDR0_VTT:
+      min: 0.55
+      max: 0.65
+    VM_FE0:
+      min: 3.22
+      max: 3.78
+    VM_MGT0_AUX:
+      min: 1.66
+      max: 1.94
+    VM_PLL:
+      min: 3.04
+      max: 3.56
+    VM_AGP4:
+      min: 0.84
+      max: 0.99
+    VM_AGP5:
+      min: 0.84
+      max: 0.99
+    VM_AGP6:
+      min: 0.84
+      max: 0.99
+    VM_AGP7:
+      min: 0.84
+      max: 0.99
+    VM_CLK1B:
+      min: 3.04
+      max: 3.56
+    VM_DDR1_VDD:
+      min: 1.1
+      max: 1.3
+    VM_DDR1_VTT:
+      min: 0.55
+      max: 0.65
+    VM_DVDD:
+      min: 1.01
+      max: 1.19
+    VM_FE1:
+      min: 3.22
+      max: 3.78
+    VM_MGT1_AUX:
+      min: 1.66
+      max: 1.94
+    VM_SW_AMP:
+      min: 3.22
+      max: 3.78
+  currents:
+    # TODO MccsTile should dynamically set these to 0 where preADUs are not installed
+    FE0_mVA:
+      min: 0
+      max: 3
+    FE1_mVA:
+      min: 0
+      max: 3
+  alarms:
+    I2C_access_alm: 0
+    temperature_alm: 0
+    # SPRTS-141: This is stuck in WARNING in the BIOS
+    voltage_alm:
+      min: 0
+      max: 1
+    SEM_wd: 0
+    MCU_wd: 0
+  adcs:
+    pll_status:
+      ADC0: !!python/tuple [True, True]
+      ADC1: !!python/tuple [True, True]
+      ADC2: !!python/tuple [True, True]
+      ADC3: !!python/tuple [True, True]
+      ADC4: !!python/tuple [True, True]
+      ADC5: !!python/tuple [True, True]
+      ADC6: !!python/tuple [True, True]
+      ADC7: !!python/tuple [True, True]
+      ADC8: !!python/tuple [True, True]
+      ADC9: !!python/tuple [True, True]
+      ADC10: !!python/tuple [True, True]
+      ADC11: !!python/tuple [True, True]
+      ADC12: !!python/tuple [True, True]
+      ADC13: !!python/tuple [True, True]
+      ADC14: !!python/tuple [True, True]
+      ADC15: !!python/tuple [True, True]
+    sysref_timing_requirements:
+      ADC0: True
+      ADC1: True
+      ADC2: True
+      ADC3: True
+      ADC4: True
+      ADC5: True
+      ADC6: True
+      ADC7: True
+      ADC8: True
+      ADC9: True
+      ADC10: True
+      ADC11: True
+      ADC12: True
+      ADC13: True
+      ADC14: True
+      ADC15: True
+    sysref_counter:
+      ADC0: True
+      ADC1: True
+      ADC2: True
+      ADC3: True
+      ADC4: True
+      ADC5: True
+      ADC6: True
+      ADC7: True
+      ADC8: True
+      ADC9: True
+      ADC10: True
+      ADC11: True
+      ADC12: True
+      ADC13: True
+      ADC14: True
+      ADC15: True
+  timing:
+    clocks:
+      FPGA0:
+        JESD: True
+        DDR: True
+        UDP: True
+      FPGA1:
+        JESD: True
+        DDR: True
+        UDP: True
+    clock_managers:
+      FPGA0:
+        C2C_MMCM: !!python/tuple [True, 0]
+        JESD_MMCM: !!python/tuple [True, 0]
+        DSP_MMCM: !!python/tuple [True, 0]
+      FPGA1:
+        C2C_MMCM: !!python/tuple [True, 0]
+        JESD_MMCM: !!python/tuple [True, 0]
+        DSP_MMCM: !!python/tuple [True, 0]
+    pps:
+      status: True
+    pll: !!python/tuple [True, 0]
+    pll_40g: !!python/tuple [True, 0]
+  info:
+    hardware:
+      ip_address_eep: 10.0.10.2
+      netmask_eep: 255.255.255.0
+      gateway_eep: 255.255.255.255
+      SN: 0500422020045
+      PN: 'iTPM_ADU_1.6'
+      bios: 'v0.5.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)'
+      BOARD_MODE: 'NO-ADA'
+      LOCATION: '65535:255:255'
+      HARDWARE_REV: 'v1.6.7a'
+      DDR_SIZE_GB: 4
+    fpga_firmware:
+      design: 'tpm_test'
+      build: 2002
+      version: '5.3.0'
+      compile_time: '2024-02-21 20:33:55.586210'
+      compile_user: 'gitlab-runner'
+      compile_host: 'te7dastardly linux-5.4.0-169-generic-x86_64-with-glibc2.29'
+      git_branch: 'detached head'
+      git_commit: ''
+    network:
+      1g_ip_address: 10.132.0.21
+      1g_mac_address: 04:91:62:b2:75:6f
+      1g_netmask: 255.255.255.0
+      1g_gateway: 10.132.0.254
+      40g_ip_address_p1: 10.130.0.1
+      40g_mac_address_p1: 62:00:0A:82:00:01
+      40g_gateway_p1: 10.130.0.126
+      40g_netmask_p1: 255.255.255.128
+      40g_ip_address_p2: 0.0.0.0
+      40g_mac_address_p2: 02:00:00:00:00:00
+      40g_gateway_p2: 10.130.0.126
+      40g_netmask_p2: 255.255.255.128
+  io:
+    jesd_interface:
+      link_status: True
+      lane_error_count:
+        FPGA0:
+          Core0:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+          Core1:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+        FPGA1:
+          Core0:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+          Core1:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+      lane_status: True
+      resync_count:
+        FPGA0: 0
+        FPGA1: 0
+      qpll_status:
+        FPGA0: !!python/tuple [True, 0]
+        FPGA1: !!python/tuple [True, 0]
+    ddr_interface:
+      initialisation: True
+      reset_counter:
+        FPGA0: 0
+        FPGA1: 0
+      # rd_cnt:
+      #   FPGA0: 0
+      #   FPGA1: 0
+      # wr_cnt:
+      #   FPGA0: 0
+      #   FPGA1: 0
+      # rd_dat_cnt:
+      #   FPGA0: 0
+      #   FPGA1: 0
+    f2f_interface:
+      pll_status: !!python/tuple [True, 0]
+      soft_error: 0
+      hard_error: 0
+    udp_interface:
+      arp: True
+      status: True
+      crc_error_count:
+        FPGA0: 0
+        FPGA1: 0
+      bip_error_count:
+        FPGA0:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
+        FPGA1:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
+      decode_error_count:
+        FPGA0:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
+        FPGA1:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
+      linkup_loss_count:
+        FPGA0: 0
+        FPGA1: 0
+    data_router:
+      status:
+        FPGA0: 0
+        FPGA1: 0
+      discarded_packets:
+        FPGA0: [0, 0]
+        FPGA1: [0, 0]
+  dsp:
+    tile_beamf: True
+    station_beamf:
+      status: True
+      ddr_parity_error_count:
+        FPGA0: 0
+        FPGA1: 0
+      discarded_or_flagged_packet_count:
+        FPGA0: 0
+        FPGA1: 0
+  derived:
+    pps_drift:
+      soft: 4
+      hard: 10

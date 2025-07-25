@@ -43,27 +43,29 @@ def plot_directory_fixture() -> str:
 
 
 @given(
-    "we have a station to test against",
+    "we have a target station",
     target_fixture="station_name",
 )
-def available_station_fixture(
-    available_stations: list[str],
-    true_context: bool,
+def station_name_fixture(
+    station: tango.DeviceProxy | None,
+    station_label: str | None,
 ) -> str:
     """
     Return an available station to test against.
 
-    :param available_stations: a list of stations available in this
-        environment.
-    :param true_context: whether to test against an existing Tango deployment
+    :param station: the station we are testing against.
+    :param station_label: a fixture returning the station label passed
+        in from the environment.
 
     :return: the station to test against.
     """
-    if not true_context:
-        pytest.skip(
-            "This needs to be run in a true-context against a real DAQ deployment"
-        )
-    return available_stations[-1]
+    try:
+        if station is None:
+            pytest.skip("No station to test against.")
+        station.ping()
+    except tango.DevFailed as e:
+        pytest.fail(f"Target station is not reachable {e}")
+    return station_label or "real-daq-1"
 
 
 @pytest.fixture(name="daq_config")

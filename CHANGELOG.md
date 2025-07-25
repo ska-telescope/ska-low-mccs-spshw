@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-214] Select HealthThresholds from HardwareVersion and BiosVersion device_properties,
+The combination of (HardwareVersion, BiosVersion) are used to select the appropriate thresholds.
+The device will fail to initialise if we have a unaccounted (HardwareVersion, BiosVersion) pair.
+* [THORN-214] Add HardwareVersion and BiosVersion device_properties
 * [THORN-206] Clarify when Tile is sending data
 
 ## 7.0.1

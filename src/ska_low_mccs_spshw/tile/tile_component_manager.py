@@ -80,20 +80,20 @@ _ATTRIBUTE_MAP: Final = {
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
-    # "FE0_mVA": "currentFE0",
-    # "FE1_mVA": "currentFE1",
-    "AVDD3": "voltageAVDD3",
-    "DDR0_VREF": "voltageVrefDDR0",
-    "DDR1_VREF": "voltageVrefDDR1",
-    # "voltageVref2V5" "VREF_2V5",
-    "MAN_1V2": "voltage_man_1v2",
-    "MGT_AVCC": "voltagemgt_avcc",
-    "MGT_AVTT": "voltagemgt_avtt",
-    "MON_5V0": "voltageMon5V0",
-    "MON_3V3": "voltageMon3V3",
-    "MON_1V8": "voltageMon1V8",
-    "SW_AVDD1": "voltageSW_AVDD1",
-    "SW_AVDD2": "voltageSW_AVDD2",
+    "FE0_mVA": "current_fe0_mva",
+    "FE1_mVA": "current_fe1_mva",
+    "AVDD3": "voltage_avdd3",
+    "DDR0_VREF": "voltage_vref_ddr0",
+    "DDR1_VREF": "voltage_vref_ddr1",
+    # "VREF_2V5": "voltage_vref_2V5",
+    "MON_1V2": "voltage_mon_1v2",
+    "MGT_AVCC": "voltage_mgt_avcc",
+    "MGT_AVTT": "voltage_mgt_avtt",
+    "MON_5V0": "voltage_mon_5V0",
+    "MON_3V3": "voltage_mon_3V3",
+    "MON_1V8": "voltage_mon_1V8",
+    "SW_AVDD1": "voltage_sw_avdd1",
+    "SW_AVDD2": "voltage_sw_avdd2",
     # "VIN": "voltage_vin",
     "VM_AGP0": "voltage_vm_agp0",
     "VM_AGP1": "voltage_vm_agp1",
@@ -103,19 +103,19 @@ _ATTRIBUTE_MAP: Final = {
     "VM_AGP5": "voltage_vm_agp5",
     "VM_AGP6": "voltage_vm_agp6",
     "VM_AGP7": "voltage_vm_agp7",
-    "VM_CLK0B": "voltageVM_CLK0B",
-    "VM_CLK1B": "voltageVM_CLK1B",
-    "VM_DDR0_VTT": "voltageVM_DDR0_VTT",
-    "VM_DDR1_VDD": "voltageVM_DDR1_VDD",
-    "VM_DDR1_VTT": "voltageVM_DDR1_VTT",
-    "VM_DRVDD": "voltageVM_DRVDD",
-    "VM_DVDD": "voltageVM_DVDD",
-    "VM_FE0": "voltageVM_FE0",
-    "VM_FE1": "voltageVM_FE1",
-    "VM_MGT0_AUX": "voltageVM_MGT0_AUX",
-    "VM_MGT1_AUX": "voltageVM_MGT1_AUX",
-    "VM_PLL": "voltageVM_PLL",
-    "VM_SW_AMP": "voltageVM_SW_AMP",
+    "VM_CLK0B": "voltage_vm_clk0b",
+    "VM_CLK1B": "voltage_vm_clk1b",
+    "VM_DDR0_VTT": "voltage_vm_ddr0_vtt",
+    "VM_DDR1_VDD": "voltage_vm_ddr1_vdd",
+    "VM_DDR1_VTT": "voltage_vm_ddr1_vtt",
+    "VM_DRVDD": "voltage_vm_drvdd",
+    "VM_DVDD": "voltage_vm_dvdd",
+    "VM_FE0": "voltage_vm_fe0",
+    "VM_FE1": "voltage_vm_fe1",
+    "VM_MGT0_AUX": "voltage_vm_mgt0_aux",
+    "VM_MGT1_AUX": "voltage_vm_mgt1_aux",
+    "VM_PLL": "voltage_vm_pll",
+    "VM_SW_AMP": "voltage_vm_sw_amp",
 }
 
 
@@ -3599,18 +3599,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def voltage_man_1v2(self: TileComponentManager) -> float:
+    def voltage_mon_1v2(self: TileComponentManager) -> float:
         """
-        Return the internal man_1v2 supply of the TPM.
+        Return the internal mon_1v2 supply of the TPM.
 
-        :return: the internal man_1v2 supply of the TPM
+        :return: the internal mon_1v2 supply of the TPM
         """
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            return self.tile.get_health_status()["voltages"]["MAN_1V2"]
+            return self.tile.get_health_status()["voltages"]["MON_1V2"]
 
     @property
     @check_communicating

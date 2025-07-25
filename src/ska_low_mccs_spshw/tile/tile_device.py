@@ -233,42 +233,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs": "adcs",
             "timing": "timing",
             "currents": "currents",
-            # "currentFE0": "currentFE0",
-            # "currentFE1": "currentFE1",
-            "voltageAVDD3": "voltageAVDD3",
-            "voltageVrefDDR0": "voltageVrefDDR0",
-            "voltageVrefDDR1": "voltageVrefDDR1",
-            # "voltageVref2V5": "voltageVref2V5",
-            "voltageMan1V2": "voltageMan1V2",
-            "voltageMGT_AVCC": "voltageMGT_AVCC",
-            "voltageMGT_AVTT": "voltageMGT_AVTT",
-            "voltageMon5V0": "voltageMon5V0",
-            "voltageMon3V3": "voltageMon3V3",
-            "voltageMon1V8": "voltageMon1V8",
-            "voltageSW_AVDD1": "voltageSW_AVDD1",
-            "voltageSW_AVDD2": "voltageSW_AVDD2",
-            # "voltageVIN": "voltage_VIN",
-            "voltageVM_AGP0": "voltageVM_AGP0",
-            "voltageVM_AGP1": "voltageVM_AGP1",
-            "voltageVM_AGP2": "voltageVM_AGP2",
-            "voltageVM_AGP3": "voltageVM_AGP3",
-            "voltageVM_AGP4": "voltageVM_AGP4",
-            "voltageVM_AGP5": "voltageVM_AGP5",
-            "voltageVM_AGP6": "voltageVM_AGP6",
-            "voltageVM_AGP7": "voltageVM_AGP7",
-            "voltageVM_CLK0B": "voltageVM_CLK0B",
-            "voltageVM_CLK1B": "voltageVM_CLK1B",
-            "voltageVM_DDR0_VTT": "voltageVM_DDR0_VTT",
-            "voltageVM_DDR1_VDD": "voltageVM_DDR1_VDD",
-            "voltageVM_DDR1_VTT": "voltageVM_DDR1_VTT",
-            "voltageVM_DRVDD": "voltageVM_DRVDD",
-            "voltageVM_DVDD": "voltageVM_DVDD",
-            "voltageVM_FE0": "voltageVM_FE0",
-            "voltageVM_FE1": "voltageVM_FE1",
-            "voltageVM_MGT0_AUX": "voltageVM_MGT0_AUX",
-            "voltageVM_MGT1_AUX": "voltageVM_MGT1_AUX",
-            "voltageVM_PLL": "voltageVM_PLL",
-            "voltageVM_SW_AMP": "voltageVM_SW_AMP",
+            "current_fe0_mva": "currentFE0",
+            "current_fe1_mva": "currentFE1",
+            "voltage_avdd3": "voltageAVDD3",
+            "voltage_vref_ddr0": "voltageVrefDDR0",
+            "voltage_vref_ddr1": "voltageVrefDDR1",
+            # "voltage_vref_2V5": "voltageVref2V5",
+            "voltage_mon_1V2": "voltageMon1V2",
+            "voltage_mgt_avcc": "voltageMGT_AVCC",
+            "voltage_mgt_avtt": "voltageMGT_AVTT",
+            "voltage_mon_5V0": "voltageMon5V0",
+            "voltage_mon_3V3": "voltageMon3V3",
+            "voltage_mon_1V8": "voltageMon1V8",
+            "voltage_sw_avdd1": "voltageSW_AVDD1",
+            "voltage_sw_avdd2": "voltageSW_AVDD2",
+            # "voltage_VIN": "voltage_VIN",
+            "voltage_vm_agp0": "voltageVM_AGP0",
+            "voltage_vm_agp1": "voltageVM_AGP1",
+            "voltage_vm_agp2": "voltageVM_AGP2",
+            "voltage_vm_agp3": "voltageVM_AGP3",
+            "voltage_vm_agp4": "voltageVM_AGP4",
+            "voltage_vm_agp5": "voltageVM_AGP5",
+            "voltage_vm_agp6": "voltageVM_AGP6",
+            "voltage_vm_agp7": "voltageVM_AGP7",
+            "voltage_vm_clk0b": "voltageVM_CLK0B",
+            "voltage_vm_clk1b": "voltageVM_CLK1B",
+            "voltage_vm_ddr0_vtt": "voltageVM_DDR0_VTT",
+            "voltage_vm_ddr1_vdd": "voltageVM_DDR1_VDD",
+            "voltage_vm_ddr1_vtt": "voltageVM_DDR1_VTT",
+            "voltage_vm_drvdd": "voltageVM_DRVDD",
+            "voltage_vm_dvdd": "voltageVM_DVDD",
+            "voltage_vm_fe0": "voltageVM_FE0",
+            "voltage_vm_fe1": "voltageVM_FE1",
+            "voltage_vm_mgt0_aux": "voltageVM_MGT0_AUX",
+            "voltage_vm_mgt1_aux": "voltageVM_MGT1_AUX",
+            "voltage_vm_pll": "voltageVM_PLL",
+            "voltage_vm_sw_amp": "voltageVM_SW_AMP",
             "tile_id": "logicalTileId",
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
@@ -334,42 +334,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltages": _serialise_object,
             "temperatures": _serialise_object,
             "currents": _serialise_object,
-            # "currentFE0": _serialise_object,
-            # "currentFE1": _serialise_object,
-            "voltageAVDD3": _serialise_object,
-            "voltageVrefDDR0": _serialise_object,
-            "voltageVrefDDR1": _serialise_object,
-            # "voltageVref2V5": _serialise_object,
-            "voltageMan1V2": _serialise_object,
-            "voltageMGT_AVCC": _serialise_object,
-            "voltageMGT_AVTT": _serialise_object,
-            "voltageMon5V0": _serialise_object,
-            "voltageMon3V3": _serialise_object,
-            "voltageMon1V8": _serialise_object,
-            "voltageSW_AVDD1": _serialise_object,
-            "voltageSW_AVDD2": _serialise_object,
-            # "voltageVIN": _serialise_object,
-            "voltageVM_AGP0": _serialise_object,
-            "voltageVM_AGP1": _serialise_object,
-            "voltageVM_AGP2": _serialise_object,
-            "voltageVM_AGP3": _serialise_object,
-            "voltageVM_AGP4": _serialise_object,
-            "voltageVM_AGP5": _serialise_object,
-            "voltageVM_AGP6": _serialise_object,
-            "voltageVM_AGP7": _serialise_object,
-            "voltageVM_CLK0B": _serialise_object,
-            "voltageVM_CLK1B": _serialise_object,
-            "voltageVM_DDR0_VTT": _serialise_object,
-            "voltageVM_DDR1_VDD": _serialise_object,
-            "voltageVM_DDR1_VTT": _serialise_object,
-            "voltageVM_DRVDD": _serialise_object,
-            "voltageVM_DVDD": _serialise_object,
-            "voltageVM_FE0": _serialise_object,
-            "voltageVM_FE1": _serialise_object,
-            "voltageVM_MGT0_AUX": _serialise_object,
-            "voltageVM_MGT1_AUX": _serialise_object,
-            "voltageVM_PLL": _serialise_object,
-            "voltageVM_SW_AMP": _serialise_object,
             "timing": _serialise_object,
             "io": _serialise_object,
             "dsp": _serialise_object,
@@ -461,13 +425,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs": ["adcs"],
             "timing": ["timing"],
             "currents": ["currents"],
-            # "currentFE0": ["currents", "FE0_mVA"],
-            # "currentFE1": ["currents", "FE1_mVA"],
+            "currentFE0": ["currents", "FE0_mVA"],
+            "currentFE1": ["currents", "FE1_mVA"],
             "voltageAVDD3": ["voltages", "AVDD3"],
             "voltageVrefDDR0": ["voltages", "DDR0_VREF"],
             "voltageVrefDDR1": ["voltages", "DDR1_VREF"],
             # "voltageVref2V5": ["voltages", "VREF_2V5"],
-            "voltageMan1V2": ["voltages", "MAN_1V2"],
+            "voltageMon1V2": ["voltages", "MON_1V2"],
             "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
             "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
             "voltageMon5V0": ["voltages", "MON_5V0"],
@@ -2873,23 +2837,23 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.running_beams
 
-    # @attribute(dtype="DevDouble", label="FE0 current")
-    # def currentFE0(self: MccsTile) -> float | None:
-    #     """
-    #     Handle a Tango attribute read of the FE0 current.
+    @attribute(dtype="DevDouble", label="FE0 current")
+    def currentFE0(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the FE0 current.
 
-    #     :return: FE0 current
-    #     """
-    #     return self._attribute_state["currentFE0"].read()
+        :return: FE0 current
+        """
+        return self._attribute_state["currentFE0"].read()
 
-    # @attribute(dtype="DevDouble", label="FE1 current")
-    # def currentFE1(self: MccsTile) -> float | None:
-    #     """
-    #     Handle a Tango attribute read of the FE1 current.
+    @attribute(dtype="DevDouble", label="FE1 current")
+    def currentFE1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the FE1 current.
 
-    #     :return: FE1 current
-    #     """
-    #     return self._attribute_state["currentFE1"].read()
+        :return: FE1 current
+        """
+        return self._attribute_state["currentFE1"].read()
 
     @attribute(dtype="DevDouble", label="AVDD3 voltage")
     def voltageAVDD3(self: MccsTile) -> float | None:
@@ -2927,14 +2891,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     """
     #     return self._attribute_state["voltageVref_2V5"].read()
 
-    @attribute(dtype="DevDouble", label="MAN_1V2 voltage")
-    def voltageMan1V2(self: MccsTile) -> float | None:
+    @attribute(dtype="DevDouble", label="MON_1V2 voltage")
+    def voltageMon1V2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the MAN 1.2 V voltage.
 
         :return: Man 1.2V voltage
         """
-        return self._attribute_state["voltageMan1V2"].read()
+        return self._attribute_state["voltageMon1V2"].read()
 
     @attribute(dtype="DevDouble", label="MGT_AVCC voltage")
     def voltageMGT_AVCC(self: MccsTile) -> float | None:

@@ -13,9 +13,11 @@ functional (BDD).
 """
 from __future__ import annotations
 
+import enum
 import json
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Any, Callable, Generator, Optional, Union
 
 import numpy as np
@@ -25,6 +27,57 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import EventType
+
+RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+class TpmStatus(enum.IntEnum):
+    """
+    Enumerated type for tile status.
+
+    Used in initialisation to know what long running commands have been
+    issued
+    """
+
+    UNKNOWN = 0
+    """The status is not known."""
+
+    OFF = 1
+    """The TPM is not powered."""
+
+    UNCONNECTED = 2
+    """The TPM is not connected."""
+
+    UNPROGRAMMED = 3
+    """The TPM is powered on but FPGAS are not programmed."""
+
+    PROGRAMMED = 4
+    """The TPM is powered on and FPGAS are programmed."""
+
+    INITIALISED = 5
+    """Initialise command has been issued."""
+
+    SYNCHRONISED = 6
+    """Time has been synchronised with UTC, timestamp is valid."""
+
+    # TODO: More status values to come, for complete configuration in station
+
+    def pretty_name(self: TpmStatus) -> str:
+        """
+        Return string representation.
+
+        :return: String representation in camelcase
+        """
+        status_names = {
+            TpmStatus.UNKNOWN: "Unknown",
+            TpmStatus.OFF: "Off",
+            TpmStatus.UNCONNECTED: "Unconnected",
+            TpmStatus.UNPROGRAMMED: "NotProgrammed",
+            TpmStatus.PROGRAMMED: "Programmed",
+            TpmStatus.INITIALISED: "Initialised",
+            TpmStatus.SYNCHRONISED: "Synchronised",
+        }
+        return status_names[self]
 
 
 @contextmanager
@@ -199,7 +252,9 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
         self: AttributeWaiter,
         device_proxy: tango.DeviceProxy,
         attr_name: str,
-        attr_value: Optional[Union[str, int, bool, list[Any], np.ndarray]] = None,
+        attr_value: Optional[
+            Union[str, int, bool, list[Any], np.ndarray, tango.DevState]
+        ] = None,
         lookahead: int = 1,
     ) -> None:
         """
@@ -250,3 +305,316 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
             return np.array_equal(read_value, expected_value)
 
         return read_value == expected_value
+
+
+class _CommandDrivenAttributeAccess:
+    """A descriptor class for _CommandDrivenAttributeAccess."""
+
+    def __init__(
+        self: _CommandDrivenAttributeAccess, command_name: str, attr_name: str
+    ) -> None:
+        """
+        Initialise a new _CommandDrivenAttributeAccess.
+
+        :param command_name: the name of the command
+        :param attr_name: the name of the attribute
+        """
+        self.__attr_name = attr_name
+        self.__command_name = command_name
+
+    def __get__(
+        self: _CommandDrivenAttributeAccess, obj: TileWrapper, objtype: Any = None
+    ) -> Any:
+        """
+        Get method.
+
+        :param obj: the obj
+        :param objtype: the objtype
+
+        :returns: the attribute value.
+        """
+        return getattr(obj._tile_device, self.__attr_name)
+
+    def __set__(
+        self: _CommandDrivenAttributeAccess, obj: TileWrapper, value: Any
+    ) -> None:
+        """
+        Set method.
+
+        :param obj: the obj
+        :param value: the value
+        """
+        getattr(obj._tile_device, self.__command_name)(value)
+
+        AttributeWaiter(timeout=2).wait_for_value(
+            obj._tile_device, self.__attr_name, value
+        )
+
+
+class _AttributeAccess:
+    """A descriptor class for attribute."""
+
+    def __init__(self: _AttributeAccess, attr_name: str) -> None:
+        """
+        Initialise a new _AttributeAccess.
+
+        :param attr_name: the name of the attribute
+        """
+        self.__attr_name = attr_name
+
+    def __get__(self: _AttributeAccess, obj: TileWrapper, objtype: Any = None) -> Any:
+        """
+        Get method.
+
+        :param obj: the obj
+        :param objtype: the objtype
+
+        :returns: The attribute value.
+        """
+        return getattr(obj._tile_device, self.__attr_name)
+
+    def __set__(self: _AttributeAccess, obj: TileWrapper, value: Any) -> None:
+        """
+        Set method.
+
+        :param obj: the obj
+        :param value: the value
+        """
+        setattr(obj._tile_device, self.__attr_name, value)
+
+        AttributeWaiter(timeout=2).wait_for_value(
+            obj._tile_device, self.__attr_name, value
+        )
+
+
+class _ProgrammingStateAccess:
+    """A descriptor class for tileprogrammingstate."""
+
+    def __get__(
+        self: _ProgrammingStateAccess, obj: TileWrapper, objtype: Any = None
+    ) -> Any:
+        """
+        Get method.
+
+        :param obj: the obj
+        :param objtype: the objtype
+
+        :returns: the tileprogrammingstate.
+        """
+        return obj._tile_device.tileProgrammingState
+
+    def __set__(self: _ProgrammingStateAccess, obj: TileWrapper, value: Any) -> None:
+        """
+        Set method.
+
+        :param obj: the obj
+        :param value: the value
+
+        :raises NotImplementedError: when the TPM cannot be driven
+            to the desired state.
+        """
+        obj._tile_device.adminMOde = 0
+        time.sleep(1)
+        match value:
+            case TpmStatus.OFF:
+                obj._tile_device.Off()
+            case TpmStatus.UNPROGRAMMED:
+                if obj._tile_device.tileProgrammingState == "Off":
+                    obj._tile_device.On()
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
+                        "Initialised",
+                        lookahead=5,
+                    )
+                # trigger a overheating event.
+                obj._tile_device.adminMode = 2
+                obj._tile_device.SetFirmwareTemperatureThresholds(
+                    json.dumps({"board_temperature_threshold": [22.0, 32.0]})
+                )
+
+            case TpmStatus.INITIALISED:
+                obj._tile_device.globalReferenceTime = ""
+                if obj._tile_device.tileProgrammingState == "Synchronised":
+                    obj._tile_device.globalReferenceTime = ""
+                    obj._tile_device.Initialise()
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
+                        "Initialised",
+                        lookahead=5,
+                    )
+                if obj._tile_device.tileProgrammingState == "Initialised":
+                    obj._tile_device.Initialise()
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
+                        "Initialised",
+                        lookahead=5,
+                    )
+                else:
+                    obj._tile_device.globalReferenceTime = ""
+                    obj._tile_device.Off()
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
+                        "Off",
+                        lookahead=5,
+                    )
+                    obj._tile_device.On()
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
+                        "Initialised",
+                        lookahead=5,
+                    )
+            case TpmStatus.SYNCHRONISED:
+                start_time = datetime.strftime(
+                    datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
+                )
+                obj._tile_device.globalReferenceTime = start_time
+                obj._tile_device.On()
+            case _:
+                raise NotImplementedError("Not yet able to drive TPM to this state.")
+
+        AttributeWaiter(timeout=30).wait_for_value(
+            obj._tile_device,
+            "tileProgrammingState",
+            TpmStatus(value).pretty_name(),
+            lookahead=5,
+        )
+
+
+class _AttributeReadOnlyAccess:  # pylint: disable=too-few-public-methods
+    """A descriptor class."""
+
+    def __init__(self: _AttributeReadOnlyAccess, attr_name: str) -> None:
+        """
+        Initialise a new _AttributeReadOnlyAccess.
+
+        :param attr_name: the name of the attribute
+        """
+        self.__attr_name = attr_name
+
+    def __get__(
+        self: _AttributeReadOnlyAccess, obj: TileWrapper, objtype: Any = None
+    ) -> Any:
+        """
+        Get method.
+
+        :param obj: the obj
+        :param objtype: the objtype
+
+        :returns: the attribute value.
+        """
+        return getattr(obj._tile_device, self.__attr_name)
+
+
+class TileWrapper:  # pylint: disable=too-few-public-methods
+    """
+    The tile wrapper will wrap the tile DeviceProxy.
+
+    This is used for testing to allow a flat API allowing
+    us to drive the state hiding details of the API in
+    descriptors.
+    """
+
+    tile_programming_state = _ProgrammingStateAccess()
+
+    beamformer_table = _CommandDrivenAttributeAccess(
+        "SetBeamFormerRegions", "beamformerTable"
+    )
+
+    # (wrapper_attr_name, device_attr_name) pairs
+    # for assigning _AttributeAccess descriptors
+    _rw_attrs = [
+        ("preadu_levels", "preaduLevels"),
+        ("csp_rounding", "cspRounding"),
+        ("static_time_delays", "staticTimeDelays"),
+        ("channeliser_rounding", "channeliserRounding"),
+        ("global_reference_time", "globalReferenceTime"),
+        ("health_model_params", "healthModelParams"),
+        ("srcip40gfpga1", "srcip40gfpga1"),
+        ("srcip40gfpga2", "srcip40gfpga2"),
+        ("csp_spead_format", "cspSpeadFormat"),
+        ("logical_tile_id", "logicalTileId"),
+        ("station_id", "stationId"),
+        ("firmware_name", "firmwareName"),
+        ("firmware_version", "firmwareVersion"),
+        ("antenna_ids", "antennaIds"),
+        ("phase_terminal_count", "phaseTerminalCount"),
+    ]
+    for name, api_name in _rw_attrs:
+        locals()[name] = _AttributeAccess(api_name)
+
+    # (wrapper_attr_name, device_attr_name) pairs
+    # for assigning _AttributeReadOnlyAccess descriptors
+    _ro_attrs = [
+        ("adc_pll_status", "adc_pll_status"),
+        ("tile_beamformer_status", "tile_beamformer_status"),
+        ("station_beamformer_status", "station_beamformer_status"),
+        ("station_beamformer_error_count", "station_beamformer_error_count"),
+        ("station_beamformer_flagged_count", "station_beamformer_flagged_count"),
+        ("crc_error_count", "crc_error_count"),
+        ("bip_error_count", "bip_error_count"),
+        ("decode_error_count", "decode_error_count"),
+        ("linkup_loss_count", "linkup_loss_count"),
+        ("data_router_status", "data_router_status"),
+        ("data_router_discarded_packets", "data_router_discarded_packets"),
+        ("arp", "arp"),
+        ("udp_status", "udp_status"),
+        ("ddr_initialisation", "ddr_initialisation"),
+        ("ddr_reset_counter", "ddr_reset_counter"),
+        ("f2f_soft_errors", "f2f_soft_errors"),
+        ("f2f_hard_errors", "f2f_hard_errors"),
+        ("resync_count", "resync_count"),
+        ("lane_status", "lane_status"),
+        ("lane_error_count", "lane_error_count"),
+        ("clock_managers", "clock_managers"),
+        ("clocks", "clocks"),
+        ("adc_sysref_counter", "adc_sysref_counter"),
+        ("adc_sysref_timing_requirements", "adc_sysref_timing_requirements"),
+        ("f2f_pll_status", "f2f_pll_status"),
+        ("qpll_status", "qpll_status"),
+        ("timing_pll_status", "timing_pll_status"),
+        ("tile_info", "tile_info"),
+        ("voltages", "voltages"),
+        ("temperatures", "temperatures"),
+        ("currents", "currents"),
+        ("timing", "timing"),
+        ("io", "io"),
+        ("dsp", "dsp"),
+        ("adcs", "adcs"),
+        ("I2C_access_alm", "I2C_access_alm"),
+        ("temperature_alm", "temperature_alm"),
+        ("SEM_wd", "SEM_wd"),
+        ("MCU_wd", "MCU_wd"),
+        ("csp_destination_ip", "cspDestinationIp"),
+        ("csp_destination_mac", "cspDestinationMac"),
+        ("csp_destination_port", "cspDestinationPort"),
+    ]
+    for name, api_name in _ro_attrs:
+        locals()[name] = _AttributeReadOnlyAccess(api_name)
+
+    # Clean up to avoid leaking variables
+    del name, api_name, _rw_attrs, _ro_attrs
+
+    def __init__(self: TileWrapper, tile_device: tango.DeviceProxy) -> None:
+        """
+        Initialise a new TileWrapper.
+
+        :param tile_device: the tango.DeviceProxy we are wrapping.
+        """
+        self._tile_device = tile_device
+
+    def set_state(self: TileWrapper, programming_state: int, **kwargs: Any) -> None:
+        """
+        Set the state of the TPM.
+
+        :param programming_state: A mandatory argument to drive the state to the
+            correct TileProgrammingState
+        :param kwargs: Optional kwargs to populate state.
+        """
+        self.tile_programming_state = programming_state
+        for kwarg, val in kwargs.items():
+            setattr(self, kwarg, val)

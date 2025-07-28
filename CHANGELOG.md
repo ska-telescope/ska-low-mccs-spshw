@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-206] Clarify when Tile is sending data
+* [THORN-183] changed health threshold for tpm and subrack using updated values: https://jira.skatelescope.org/browse/SPRTS-274
 
 ## 7.0.1
 

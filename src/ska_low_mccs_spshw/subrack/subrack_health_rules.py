@@ -495,34 +495,45 @@ class SubrackHealthRules(HealthRules):
 
         :return: the default thresholds
         """
-        # Not certain on these values just yet, so these are placeholders
-        # for now, will need to get input from stakeholders on actual values
-        # TODO NEED to get these actual values from somewhere
+        # Some of these values are based on the data supplied under SPRTS-274
+        # The other values are derived/placeholders and are marked as such.
+        # The location of these values will be adjusted according to ADR-115.
         return {
-            "failed_max_board_temp": 70.0,
-            "degraded_max_board_temp": 60.0,
-            "failed_min_board_temp": 10.0,
-            "degraded_min_board_temp": 20.0,
-            "failed_max_backplane_temp": 70.0,
-            "degraded_max_backplane_temp": 60.0,
-            "failed_min_backplane_temp": 10.0,
-            "degraded_min_backplane_temp": 15.0,
-            "failed_fan_speed_diff": 10.0,
-            "degraded_fan_speed_diff": 5.0,
-            "failed_min_fan_speed": 20.0,
-            "degraded_min_fan_speed": 30.0,
-            "failed_voltage_drop": 5.0,
-            "degraded_voltage_drop": 3.0,
-            "failed_max_current_diff": 12.0,
-            "degraded_max_current_diff": 10.0,
-            "failed_tpm_voltage_on": 13.0,
-            "degraded_tpm_voltage_on": 12.5,
-            "failed_tpm_current_on": 10.5,
-            "degraded_tpm_current_on": 10.0,
-            "failed_tpm_voltage_standby": 5.0,
-            "degraded_tpm_voltage_standby": 4.0,
-            "failed_tpm_current_standby": 4.0,
-            "degraded_tpm_current_standby": 3.0,
+            # temperature.SMM1 and temperature.SMM2 (°C)
+            "failed_max_board_temp": 60.0,  # placeholder
+            "degraded_max_board_temp": 50.0,
+            "failed_min_board_temp": 5.0,  # placeholder
+            "degraded_min_board_temp": 10.0,
+            # temperature.BKPLN1 and temperature.BKPLN2 temp (°C)
+            "failed_max_backplane_temp": 60.0,  # placeholder
+            "degraded_max_backplane_temp": 50.0,
+            "failed_min_backplane_temp": 5.0,  # placeholder
+            "degraded_min_backplane_temp": 10.0,
+            # fan speeds are marked  as dynamic thresholds (RPM)
+            "failed_fan_speed_diff": 10.0,  # placeholder
+            "degraded_fan_speed_diff": 5.0,  # placeholder
+            "failed_min_fan_speed": 20.0,  # placeholder
+            "degraded_min_fan_speed": 30.0,  # placeholder
+            # Voltage drop on TPMs (V)
+            "failed_voltage_drop": 5.0,  # derived
+            "degraded_voltage_drop": 3.0,  # derived
+            # Current difference between PSU output and internal currents (A)
+            "failed_max_current_diff": 12.0,  # placeholder
+            "degraded_max_current_diff": 10.0,  # placeholder
+            # Threshold voltage for TPM in ON state (V)
+            "failed_tpm_voltage_on": 13.1,  # placeholder
+            "degraded_tpm_voltage_on": 12.6,
+            # Currents are not directly specified as of yet
+            # But power draw is given and is used to determine
+            # these values. (Current = Power/Voltage) (A)
+            "failed_tpm_current_on": 10.5,  # derived
+            "degraded_tpm_current_on": 10.0,  # derived
+            # Threshold voltage for TPM in Standby state (V)
+            "failed_tpm_voltage_standby": 5.0,  # placeholder
+            "degraded_tpm_voltage_standby": 4.0,  # placeholder
+            # Threshold currents for TPM in Standby state (A)
+            "failed_tpm_current_standby": 4.0,  # placeholder
+            "degraded_tpm_current_standby": 3.0,  # placeholder
             "degraded_fraction_tpm_unknown": 0.0,  # fraction allowed before degraded
             "failed_fraction_tpm_unknown": 0.5,  # fraction allowed before failed
             "clock_presence": [],

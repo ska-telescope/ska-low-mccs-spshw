@@ -50,7 +50,7 @@ class TestTileHealthRules:
                 TileData.MIN_MAX_MONITORING_POINTS["currents"],
                 {"FE0_mVA": None, "FE1_mVA": 50},
                 HealthState.FAILED,
-                'Monitoring point "/FE1_mVA": 50 not in range 0 - 3',
+                'Monitoring point "/FE1_mVA": 50 not in range 2.37 - 2.62',
                 id="One monitoring point failed, one out of range, health is FAILED",
             ),
         ],

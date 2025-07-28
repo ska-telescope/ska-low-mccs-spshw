@@ -1146,7 +1146,7 @@ class TestMccsTileTpmDriver:
             tango.DevState.OFF, lookahead=2
         )
 
-        assert tile_device.get_attribute_config(attribute).max_alarm == str(
+        assert float(tile_device.get_attribute_config(attribute).max_alarm) == float(
             less_than_initial_value
         )
 

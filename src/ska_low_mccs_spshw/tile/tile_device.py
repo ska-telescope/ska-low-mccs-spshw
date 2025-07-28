@@ -1503,7 +1503,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "compile_user": "gitlab-runner (created by john holden)", "compile_host":
             "te7nelson linux-4.18.0-553.44.1.el8_10.x86_64-x86_64-with-glibc2.28",
             "git_branch": "detached head", "git_commit":
-            "a22da05f967e73402867f23a5096e4cc7078c966 merge branch 'rel-2069-release-v-6-3-0' into 'main'",
+            "a22da05fe4cc7078c966 merge branch 'rel-2069-release-v-6-3-0' into 'main'",
             "version": "6.3.0"},
             "network": {"1g_ip_address": "10.132.0.46",
             "1g_mac_address": "fc:0f:e7:e6:43:6c", "1g_netmask": "255.255.255.0",

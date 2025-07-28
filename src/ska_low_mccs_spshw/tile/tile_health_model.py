@@ -109,7 +109,8 @@ class TileHealthModel(BaseHealthModel):
         return {
             health_key: self._health_rules.compute_intermediate_state(
                 monitoring_points.get(health_key, {}),
-                parameters,
+                min_max=parameters,
+                health_key=health_key,
             )
             for health_key, parameters in self.health_params.items()
         }

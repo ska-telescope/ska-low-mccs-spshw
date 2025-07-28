@@ -51,6 +51,9 @@ def _check_hw_version(version_str: str) -> None:
 
     :raises ValueError: when version_string has invalid format.
     """
+    if not version_str:
+        # Default
+        return
     # Convert 'v1.6.7a' -> (1, 6, 7, 'a')
     match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)([a-z])", version_str)
     if not match:
@@ -63,6 +66,9 @@ def _check_bios_version(bios_version: str) -> None:
 
     :param bios_version: the bios version to check.
     """
+    if not bios_version:
+        # Default
+        return
     semver.VersionInfo.parse(bios_version)
 
 
@@ -108,6 +114,7 @@ class TileHealthRules(HealthRules):
         self._min_max_monitoring_points = self._load_health_file(
             hw_version, bios_version
         )
+        self._bios_version = bios_version
         self._hw_version = hw_version
         super().__init__(*args, **kwargs)
         self.logger = None
@@ -132,11 +139,22 @@ class TileHealthRules(HealthRules):
         """
         resource_name = self._threshold_locator.get((bios_version, hw_version))
         if resource_name is None:
-            # TODO: Do we need a test to scrape the target platforms tmdata and check
-            # the ValueError will not be raised in production.
-            raise ValueError(
-                f"Undefined health resource for {bios_version}, {hw_version}. "
-            )
+            if bios_version == "" or hw_version == "":
+                # If either are undefined we use a standard set.
+                # When we updated ska-low-sps-tpm-api:0.4.0 -> 0.6.0
+                # we found that we had some new monitoring points.
+                # The rule set is determined from these, ideally we would
+                # make this mandatory but this required agreement at
+                # the configuration management layers. All taking time.
+                # For the time being when bios_version is not defined we will
+                # not evaluate pll_40g.
+                # When the hardware_version is not defined we will not evaluate
+                # the temperature ADCs
+                resource_name = "set3.yaml"
+            else:
+                raise ValueError(
+                    f"Undefined health resource for {bios_version}, {hw_version}. "
+                )
 
         path = files(health_config).joinpath(resource_name)
 
@@ -251,11 +269,13 @@ class TileHealthRules(HealthRules):
         """
         return self._min_max_monitoring_points
 
+    # pylint: disable = too-many-branches
     def compute_intermediate_state(
         self: TileHealthRules,
         monitoring_points: dict[str, Any],
         min_max: dict[str, Any],
         path: str = "",
+        health_key: str | None = None,
     ) -> tuple[HealthState, str]:
         """
         Compute the intermediate health state for the Tile.
@@ -271,6 +291,7 @@ class TileHealthRules(HealthRules):
             to have for the device to be healthy
         :param path: the location in the health structure dictionary that is currently
             being computed.
+        :param health_key: the root health key.
         :return: the computed health state and health report
         """
         states: dict[str, tuple[HealthState, str]] = {}
@@ -280,13 +301,35 @@ class TileHealthRules(HealthRules):
             if isinstance(p_state, dict):
                 if p in min_max:
                     states[p] = self.compute_intermediate_state(
-                        p_state, min_max[p], path=f"{path}/{p}"
+                        monitoring_points=p_state,
+                        min_max=min_max[p],
+                        path=f"{path}/{p}",
+                        health_key=health_key,
                     )
                 else:
                     # TODO: MCCS-2196 - Updating the tile_health_attribute
                     # in ska-low-sps-tpm-api can cause a key error to be raised.
                     continue
             else:
+                # We ignore specific monitoring points
+                # if the _hw_version or _bios_version are undefined.
+                if (
+                    health_key == "temperatures"
+                    and p in [f"ADC{i}" for i in range(16)]
+                    and self._hw_version == ""
+                ):
+                    # If hw_version is not defined the ADC temperatures are ignored.
+                    states[p] = (HealthState.OK, "")
+                    continue
+                if (
+                    health_key == "timing"
+                    and p == "pll_40g"
+                    and self._bios_version == ""
+                ):
+                    # If bios_verion is not defined the pll_40g is ignored.
+                    states[p] = (HealthState.OK, "")
+                    continue
+
                 # last_path = path.split("/")[-1]
                 if p_state is None and min_max[p] is not None:
                     states[p] = (

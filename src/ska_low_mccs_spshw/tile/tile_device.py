@@ -143,13 +143,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
     HardwareVersion = device_property(
         dtype=str,
-        default_value="v2.0.5b",  # TODO: Mandatory once TMData sources are updated
-        doc="The HARDWARE_REV (e.g. v1.6.7a).",
+        default_value="",
+        doc=(
+            "The HARDWARE_REV (e.g. v1.6.7a). "
+            "If not defined ADC0 -> ADC15 temperature "
+            "attributes are not evaluated in health"
+        ),
     )
     BiosVersion = device_property(
         dtype=str,
-        default_value="0.5.0",  # TODO: Mandatory once TMData sources are updated
-        doc="The bios version (e.g. 0.5.0).",
+        default_value="",
+        doc=(
+            "The bios version (e.g. 0.5.0). "
+            "If not defined pll_40g attribute "
+            "is not evaluated in health"
+        ),
     )
     # ====================================================================
 
@@ -461,20 +469,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
 
-        # ================================================================
-        # TODO: Once HardwareVersion and BiosVersion are mandatory this
-        # will be fed in to device server. This block can be removed once
-        # this is done.
-        _hw_version = self.HardwareVersion
-        _bios_version = self.BiosVersion
-
-        if self.SimulationConfig == SimulationMode.TRUE:
-            _hw_version = "v1.6.7a"
-            _bios_version = "0.5.0"
-        # ================================================================
-
         self._health_model = TileHealthModel(
-            self._health_changed, _hw_version, _bios_version
+            self._health_changed, self.HardwareVersion, self.BiosVersion
         )
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)

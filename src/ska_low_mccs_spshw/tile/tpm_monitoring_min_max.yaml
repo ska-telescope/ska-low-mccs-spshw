@@ -289,7 +289,7 @@ tpm_monitoring_points:
       PN: 'iTPM_ADU_1.6'
       bios: 'v0.5.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)'
       BOARD_MODE: 'NO-ADA'
-      LOCATION: '65535:255:255'
+      EXT_LABEL: '00291;163-010013;2.0;36240080'
       HARDWARE_REV: 'v1.6.7a'
       DDR_SIZE_GB: 4
     fpga_firmware:

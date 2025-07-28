@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [JANUS-215] Support for TPM API to 0.6.0, manage whole TPM external label
 * [THORN-206] Clarify when Tile is sending data
 * [THORN-183] changed health threshold for tpm and subrack using updated values: https://jira.skatelescope.org/browse/SPRTS-274
 

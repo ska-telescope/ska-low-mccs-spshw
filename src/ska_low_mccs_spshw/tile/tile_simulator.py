@@ -662,7 +662,7 @@ class MockTpm:
         info["hardware"] = self.get_board_info()
         info["hardware"]["HARDWARE_REV"] = "<current hardware revision>"
         info["hardware"]["BOARD_MODE"] = "<current board mode>"
-        info["hardware"]["LOCATION"] = "<current hardware location>"
+        info["hardware"]["EXT_LABEL"] = "<current hardware external label>"
         info["hardware"]["DDR_SIZE_GB"] = "<current hardware DDR size>"
 
         # Skip this as we're using strings for now.
@@ -2944,7 +2944,7 @@ class TileSimulator:
             f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
             f"Serial Number                | {info['hardware']['SN']} \n"
             f"BIOS Revision                | {info['hardware']['bios']} \n"
-            f"Board Location               | {info['hardware']['LOCATION']} \n"
+            f"Board External Label         | {info['hardware']['EXT_LABEL']} \n"
             f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
             f"GB per FPGA \n"
             f"{'_'*29}|{'_'*60} \n"

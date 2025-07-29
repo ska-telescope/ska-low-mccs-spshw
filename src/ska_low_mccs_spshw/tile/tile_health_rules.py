@@ -156,16 +156,16 @@ class TileHealthRules(HealthRules):
         resource_name = self._threshold_locator.get((bios_version, hw_version))
         if resource_name is None:
             if bios_version == "" or hw_version == "":
-                # If either are undefined we use a standard set.
-                # When we updated ska-low-sps-tpm-api:0.4.0 -> 0.6.0
-                # we found that we had some new monitoring points.
-                # The rule set is determined from these, ideally we would
-                # make this mandatory but this required agreement at
-                # the configuration management layers. All taking time.
-                # For the time being when bios_version is not defined we will
+                # When bios_version is not defined we will
                 # not evaluate pll_40g.
                 # When the hardware_version is not defined we will not evaluate
                 # the temperature ADCs
+                # When we updated ska-low-sps-tpm-api:0.4.0 -> 0.6.0
+                # we found that we had some new monitoring points.
+                # These offered a different interface for the health evaluation
+                # for different versions of bios_version and hardware_version.
+                # This we would like to make mandatory. But for now we are
+                # ommiting the appropriate monitoring points from health.
                 resource_name = "set3.yaml"
             else:
                 raise ValueError(

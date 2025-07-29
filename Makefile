@@ -186,7 +186,7 @@ k8s-do-test:
 	exit $$EXIT_CODE
 
 telmodel-deps:
-	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel check-jsonschema
+	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel jsonschema jsonschema-specifications fqdn
 
 k8s-pre-install-chart: telmodel-deps
 k8s-pre-uninstall-chart: telmodel-deps

@@ -89,11 +89,15 @@ class TileHealthRules(HealthRules):
         ("0.5.0", "v2.0.2a"): "set2.yaml",
         ("0.5.0", "v2.0.5b"): "set2.yaml",
     }
+    THRESHOLD_MODIFIERS = {
+        ("has_preadu", False): "no_preadu.yaml",
+    }
 
     def __init__(
         self: TileHealthRules,
         hw_version: str,
         bios_version: str,
+        has_preadu: bool,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -102,6 +106,7 @@ class TileHealthRules(HealthRules):
 
         :param hw_version: the TPM version.
         :param bios_version: the TPM bios version.
+        :param has_preadu: whether the TPM has a preadu attached.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
@@ -110,10 +115,21 @@ class TileHealthRules(HealthRules):
         _check_bios_version(bios_version)
 
         self._threshold_locator = dict(self.THRESHOLD_LOCATOR)
+        self._threshold_modifier = dict(self.THRESHOLD_MODIFIERS)
 
         self._min_max_monitoring_points = self._load_health_file(
             hw_version, bios_version
         )
+
+        modifiers = self._threshold_modifier.get(("has_preadu", has_preadu))
+        if modifiers is not None:
+            path = files(health_config).joinpath(modifiers)
+            modification_path = path.read_text()
+            modification = yaml.safe_load(modification_path)
+            self._min_max_monitoring_points = (
+                self._min_max_monitoring_points | modification
+            )
+
         self._bios_version = bios_version
         self._hw_version = hw_version
         super().__init__(*args, **kwargs)

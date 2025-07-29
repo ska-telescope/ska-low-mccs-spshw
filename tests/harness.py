@@ -419,6 +419,7 @@ class SpsTangoTestHarness:
             TpmVersion="tpm_v1_6",
             HardwareVersion="v1.6.7a",
             BiosVersion="0.5.0",
+            PreAduPresent=True,
             ParentTRL=get_sps_station_name(self._station_label),
         )
 

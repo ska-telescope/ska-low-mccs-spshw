@@ -1,0 +1,7 @@
+currents:
+  FE0_mVA:
+    min: 0
+    max: 0.2
+  FE1_mVA:
+    min: 0
+    max: 0.2

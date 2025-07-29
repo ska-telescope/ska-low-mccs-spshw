@@ -100,6 +100,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         default_value=[],
     )
     StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
+    BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
 
     # ---------------
     # Initialisation
@@ -166,6 +167,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tCspRounding: {self.CspRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
+            f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -228,6 +230,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.CspRounding,
             self.AntennaConfigURI,
             self.StartBandpassesInInitialise,
+            self.BandpassIntegrationTime,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,

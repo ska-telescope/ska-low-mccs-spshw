@@ -336,7 +336,7 @@ def tile_is_in_state(
     programming_state: str,
 ) -> None:
     """
-    Assert that the number of dropped packets is 0.
+    Assert that the tile comes up in the correct state.
 
     :param tile_device: tile device under test.
     :param defined_state: A fixture containing the defined state.

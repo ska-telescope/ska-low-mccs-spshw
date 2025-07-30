@@ -321,7 +321,7 @@ def available_station_daqs(
     true_context: bool, station_label: str | None
 ) -> list[tango.DeviceProxy]:
     """
-    Return a list with a DeviceProxy to the daqs in station.
+    Return a list of ``tango.DeviceProxy`` to the daqs in station.
 
     :param true_context: whether to test against an existing Tango deployment
     :param station_label: the label of the station we are testing against.

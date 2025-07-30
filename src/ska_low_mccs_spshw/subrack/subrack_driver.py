@@ -113,8 +113,6 @@ class SubrackDriver(
             power_supply_fan_speeds=None,
             power_supply_powers=None,
             power_supply_voltages=None,
-            power_supply_input_voltage=None,
-            power_supply_input_power=None,
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
@@ -126,18 +124,6 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
-            internal_voltages1V1=None,
-            internal_voltages1V5=None,
-            internal_voltages2V5=None,
-            internal_voltages2V8=None,
-            internal_voltages3V=None,
-            internal_voltages3V3=None,
-            internal_voltages5V=None,
-            internal_voltagesARM=None,
-            internal_voltagesCORE=None,
-            internal_voltagesDDR=None,
-            internal_voltagesPOWERIN=None,
-            internal_voltagesSOC=None,
         )
 
         self.logger.info(
@@ -593,8 +579,6 @@ class SubrackDriver(
                 "power_supply_fan_speeds",
                 "power_supply_powers",
                 "power_supply_voltages",
-                "power_supply_input_voltage",
-                "power_supply_input_power",
                 "subrack_fan_speeds",
                 "subrack_fan_speeds_percent",
                 "subrack_fan_mode",
@@ -604,18 +588,6 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
-                "internal_voltages1V1",
-                "internal_voltages1V5",
-                "internal_voltages2V5",
-                "internal_voltages2V8",
-                "internal_voltages3V",
-                "internal_voltages3V3",
-                "internal_voltages5V",
-                "internal_voltagesARM",
-                "internal_voltagesCORE",
-                "internal_voltagesDDR",
-                "internal_voltagesPOWERIN",
-                "internal_voltagesSOC",
             )
             self._tick = 0
         return poll_request
@@ -851,8 +823,6 @@ class SubrackDriver(
             power_supply_fan_speeds=kwargs.get("power_supply_fan_speeds"),
             power_supply_powers=kwargs.get("power_supply_powers"),
             power_supply_voltages=kwargs.get("power_supply_voltages"),
-            power_supply_input_voltage=kwargs.get("power_supply_input_voltage"),
-            power_supply_input_power=kwargs.get("power_supply_input_voltage"),
             subrack_fan_speeds=kwargs.get("subrack_fan_speeds"),
             subrack_fan_speeds_percent=kwargs.get("subrack_fan_speeds_percent"),
             subrack_fan_mode=kwargs.get("subrack_fan_mode"),
@@ -862,18 +832,6 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
-            internal_voltages1V1=kwargs.get("internal_voltage1V1"),
-            internal_voltages1V5=kwargs.get("internal_voltage1V5"),
-            internal_voltages2V5=kwargs.get("internal_voltage2V5"),
-            internal_voltages2V8=kwargs.get("internal_voltage2V8"),
-            internal_voltages3V=kwargs.get("internal_voltage3V"),
-            internal_voltages3V3=kwargs.get("internal_voltage3V3"),
-            internal_voltages5V=kwargs.get("internal_voltage5V"),
-            internal_voltagesARM=kwargs.get("internal_voltageARM"),
-            internal_voltagesCORE=kwargs.get("internal_voltageCORE"),
-            internal_voltagesDDR=kwargs.get("internal_voltageDDR"),
-            internal_voltagesPOWERIN=kwargs.get("internal_voltagePOWERIN"),
-            internal_voltagesSOC=kwargs.get("internal_voltageSOC"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

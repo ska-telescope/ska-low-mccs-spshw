@@ -250,8 +250,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             power_supply_fan_speeds=None,
             power_supply_powers=None,
             power_supply_voltages=None,
-            power_supply_input_voltage=None,
-            power_supply_input_power=None,
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
@@ -261,18 +259,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
-            internal_voltages1V1=None,
-            internal_voltages1V5=None,
-            internal_voltages2V5=None,
-            internal_voltages2V8=None,
-            internal_voltages3V=None,
-            internal_voltages3V3=None,
-            internal_voltages5V=None,
-            internal_voltagesARM=None,
-            internal_voltagesCORE=None,
-            internal_voltagesDDR=None,
-            internal_voltagesPOWERIN=None,
-            internal_voltagesSOC=None,
         )
         self.pdu_proxy = (
             None

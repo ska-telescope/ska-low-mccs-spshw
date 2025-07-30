@@ -1,5 +1,7 @@
 # Version History
 
+* [THORN-195] Add HardwareVerificationError.
+
 ## 7.1.0
 
 * [THORN-238] Add SpsStation.BandpassIntegrationTime device property for setting bandpass integration time in Initialise().

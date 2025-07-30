@@ -39,6 +39,7 @@ from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
+from .exception_codes import HardwareVerificationError
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -1138,6 +1139,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"* PreAduLevels of {self._preadu_levels} \n"
                 )
                 self.tile.initialise(
+                    station_id=self._station_id,
                     tile_id=self._tile_id,
                     pps_delay=pps_delay_correction,
                     active_40g_ports_setting="port1-only",
@@ -1145,8 +1147,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     src_ip_fpga2=self.src_ip_40g_fpga2,
                     time_delays=self._static_time_delays,
                 )
-
-                self.tile.set_station_id(0, 0)
                 #
                 # extra steps required to have it working
                 #
@@ -1158,7 +1158,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.set_first_last_tile(False, False)
 
                 # self.tile.post_synchronisation()
-                self.tile.set_station_id(self._station_id, self._tile_id)
 
                 if self._preadu_levels:
                     self.logger.info(
@@ -1399,89 +1398,72 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # --------------------------------
     # Properties
     # --------------------------------
-    @property
-    @check_communicating
-    def tile_id(self: TileComponentManager) -> int:
-        """
-        Get the Tile ID.
 
-        :return: assigned tile Id value
+    def __update_tpm_id(
+        self: TileComponentManager, station_id: int, tile_id: int
+    ) -> None:
         """
-        return self._tile_id
+        Update the TPM id.
 
-    @tile_id.setter  # type: ignore[no-redef]
-    def tile_id(self: TileComponentManager, value: int) -> None:
+        :param station_id: the station_id to set
+        :param tile_id: the tile_id to set.
+
+        :raises HardwareVerificationError: When the readback from a set_value
+            has unexpected result.
+        """
+        # ska-low-sps-tpm-api will return -1 when TPM not programmed.
+        # This flag is used to mark the attribute as INVALID.
+        error_code = -1
+
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_station_id(station_id, tile_id)
+            self._station_id = self.tile.get_station_id()
+            self._tile_id = self.tile.get_tile_id()
+
+        self._update_attribute_callback(
+            tile_id=self._tile_id, mark_invalid=self._tile_id == error_code
+        )
+        self._update_attribute_callback(
+            station_id=self._station_id, mark_invalid=self._station_id == error_code
+        )
+        if self._station_id != station_id:
+            raise HardwareVerificationError(
+                expected=station_id, actual=self._station_id
+            )
+        if self._tile_id != tile_id:
+            raise HardwareVerificationError(expected=tile_id, actual=self._tile_id)
+        self.logger.info(f"set station_id : {station_id}, " f"tile_id : {tile_id}")
+
+    def set_tile_id(self: TileComponentManager, value: int) -> None:
         """
         Set Tile ID.
 
         :param value: assigned tile Id value
-
-        :raises ValueError: If we failed to write tile_id.
         """
         with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
             if not self.tile.is_programmed():
                 return
-            try:
-                self.tile.set_station_id(self._station_id, value)
-                self._tile_id = self.tile.get_tile_id()
-                self.logger.info(
-                    f"setting station_id:{self._station_id}, "
-                    f"tile_id:{self._tile_id}"
-                )
-                if self._tile_id != value:
-                    self.logger.error(
-                        f"Failed to set tile_id. Read : {self._tile_id}, "
-                        f"Expected : {value}"
-                    )
-                    raise ValueError("Failed to set the Tile ID")
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
-    @property
-    @check_communicating
-    def station_id(self: TileComponentManager) -> int:
-        """
-        Get the Station ID.
+            self.__update_tpm_id(self._station_id, value)
 
-        :return: assigned station Id value
-        """
-        return self._station_id
-
-    @station_id.setter  # type: ignore[no-redef]
-    def station_id(self: TileComponentManager, value: int) -> None:
+    def set_station_id(self: TileComponentManager, value: int) -> None:
         """
         Set Station ID.
 
         :param value: assigned station Id value
-
-        :raises ValueError: is the read value is not as expected.
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                if not self.tile.is_programmed():
-                    return
-                try:
-                    self.tile.set_station_id(value, self._tile_id)
-                    self._station_id = self.tile.get_station_id()
-                    self.logger.info(
-                        f"setting station:{self._station_id}, tile:{self._tile_id}"
-                    )
-                    if self._station_id != value:
-                        self.logger.error(
-                            f"Failed to set station_id. Read : {self._station_id}, "
-                            f"Expected : {value}"
-                        )
-                        raise ValueError("Failed to set the Station ID")
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not self.tile.is_programmed():
+                return
+            self.__update_tpm_id(value, self._tile_id)
 
     @property
     def hardware_version(self: TileComponentManager) -> str:
@@ -3355,22 +3337,29 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Set preadu levels in dB.
 
         :param levels: Preadu attenuation levels in dB
+
+        :raises ValueError: When attempting to set preaduLevels with
+            a list of length not equal to 32 (i.e 32 ADC channels).
+        :raises HardwareVerificationError: When the readback from hardware is
+            unexpected.
         """
+        if len(levels) != 32:
+            raise ValueError(
+                f"length must be 32. Attempting to set with length {len(levels)}"
+            )
+
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            try:
-                self.tile.set_preadu_levels(levels)
-                _preadu_levels = self.tile.get_preadu_levels()
-                if _preadu_levels != levels:
-                    self.logger.warning(
-                        "TileComponentManager: Updating PreADU levels failed"
-                    )
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+            self.tile.set_preadu_levels(levels)
+            _preadu_levels = self.tile.get_preadu_levels()
+
+        self._update_attribute_callback(preadu_levels=_preadu_levels)
+
+        if _preadu_levels != levels:
+            raise HardwareVerificationError(expected=levels, actual=_preadu_levels)
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """

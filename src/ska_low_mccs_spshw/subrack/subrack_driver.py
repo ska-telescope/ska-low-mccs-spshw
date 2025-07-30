@@ -124,6 +124,18 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
+            internal_voltages_1v1=None,
+            internal_voltages_1v5=None,
+            internal_voltages_2v5=None,
+            internal_voltages_2v8=None,
+            internal_voltages_3v=None,
+            internal_voltages_3v3=None,
+            internal_voltages_5v=None,
+            internal_voltages_arm=None,
+            internal_voltages_core=None,
+            internal_voltages_ddr=None,
+            internal_voltages_powerin=None,
+            internal_voltages_soc=None,
         )
 
         self.logger.info(
@@ -588,6 +600,18 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
+                "internal_voltages_1v1",
+                "internal_voltages_1v5",
+                "internal_voltages_2v5",
+                "internal_voltages_2v8",
+                "internal_voltages_3v",
+                "internal_voltages_3v3",
+                "internal_voltages_5v",
+                "internal_voltages_arm",
+                "internal_voltages_core",
+                "internal_voltages_ddr",
+                "internal_voltages_powerin",
+                "internal_voltages_soc",
             )
             self._tick = 0
         return poll_request
@@ -832,6 +856,18 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
+            internal_voltages_1v1=kwargs.get("internal_voltages_1v1"),
+            internal_voltages_1v5=kwargs.get("internal_voltages_1v5"),
+            internal_voltages_2v5=kwargs.get("internal_voltages_2v5"),
+            internal_voltages_2v8=kwargs.get("internal_voltages_2v8"),
+            internal_voltages_3v=kwargs.get("internal_voltages_3v"),
+            internal_voltages_3v3=kwargs.get("internal_voltages_3v3"),
+            internal_voltages_5v=kwargs.get("internal_voltages_5v"),
+            internal_voltages_arm=kwargs.get("internal_voltages_arm"),
+            internal_voltages_core=kwargs.get("internal_voltages_core"),
+            internal_voltages_ddr=kwargs.get("internal_voltages_ddr"),
+            internal_voltages_powerin=kwargs.get("internal_voltages_powerin"),
+            internal_voltages_soc=kwargs.get("internal_voltages_soc"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

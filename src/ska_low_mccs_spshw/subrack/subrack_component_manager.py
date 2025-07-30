@@ -259,6 +259,18 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
+            internal_voltages_1v1=None,
+            internal_voltages_1v5=None,
+            internal_voltages_2v5=None,
+            internal_voltages_2v8=None,
+            internal_voltages_3v=None,
+            internal_voltages_3v3=None,
+            internal_voltages_5v=None,
+            internal_voltages_arm=None,
+            internal_voltages_core=None,
+            internal_voltages_ddr=None,
+            internal_voltages_powerin=None,
+            internal_voltages_soc=None,
         )
         self.pdu_proxy = (
             None

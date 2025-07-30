@@ -401,6 +401,7 @@ class SpsStationComponentManager(
         csp_rounding: int,
         antenna_config_uri: Optional[list[str]],
         start_bandpasses_in_initialise: bool,
+        bandpass_integration_time: float,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -438,6 +439,8 @@ class SpsStationComponentManager(
         :param antenna_config_uri: location of the antenna mapping file
         :param start_bandpasses_in_initialise: whether to start bandpasses
             in initialise.
+        :param bandpass_integration_time: the integration time for channelised data
+            capture started in initialise.
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -453,7 +456,7 @@ class SpsStationComponentManager(
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
-        self._bandpass_integration_time = 5.0
+        self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl

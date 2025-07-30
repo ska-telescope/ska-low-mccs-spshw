@@ -360,9 +360,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Specialised attributes.
         # - ppsPresent: tango does not have good ALARMs for Boolean
+        # - tileProgrammingState: TODO: is this state information ?
+        # Should we move into the _component_state_changed callback?
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
-        # - stationId and logicalTileId given an initial value from configuration.
-        # - alarms: alarms raised by firmware are collected in a dictionary.
         # - rfiCount: np.ndarray needs a different truth comparison.
         # We have a specific handler for this attribute.
         self._attribute_state.update(
@@ -370,14 +370,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
-                ),
-                "stationId": AttributeManager(
-                    functools.partial(self.post_change_event, "stationId"),
-                    initial_value=self.StationID,
-                ),
-                "logicalTileId": AttributeManager(
-                    functools.partial(self.post_change_event, "logicalTileId"),
-                    initial_value=self.TileId,
                 ),
                 "tileProgrammingState": AttributeManager(
                     functools.partial(self.post_change_event, "tileProgrammingState"),
@@ -419,6 +411,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "ppsPresent": ["timing", "pps", "status"],
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
+            "boardTemperature": ["temperatures", "board"],
             "io": ["io"],
             "dsp": ["dsp"],
             "voltages": ["voltages"],
@@ -771,6 +764,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        if power in [PowerState.OFF, PowerState.UNKNOWN]:
+            for attr in self._attribute_state.values():
+                attr.mark_stale()
         super()._component_state_changed(fault=fault, power=power)
         if power is not None:
             self._health_model.update_state(fault=fault, power=power)

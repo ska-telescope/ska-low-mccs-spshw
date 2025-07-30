@@ -61,24 +61,17 @@ _ATTRIBUTE_MAP: Final = {
     "HEALTH_STATUS": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
     "PLL_LOCKED": "pll_locked",
-    "CHECK_BOARD_TEMPERATURE": "board_temperature",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
     "IS_BEAMFORMER_RUNNING": "beamformer_running",
     "FPGA_REFERENCE_TIME": "fpga_reference_time",
-    "TILE_ID": "tile_id",
-    "STATION_ID": "station_id",
     "PHASE_TERMINAL_COUNT": "phase_terminal_count",
     "PPS_DELAY": "pps_delay",
     "PPS_DRIFT": "pps_drift",
     "ADC_RMS": "adc_rms",
-    "CHANNELISER_ROUNDING": "channeliser_rounding",
     "IS_PROGRAMMED": "is_programmed",
-    "CSP_ROUNDING": "csp_rounding",
-    "STATIC_DELAYS": "static_delays",
     "PENDING_DATA_REQUESTS": "pending_data_requests",
     "BEAMFORMER_TABLE": "beamformer_table",
     "CHECK_CPLD_COMMS": "global_status_alarms",
-    "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
 }
@@ -358,11 +351,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
-            case "CHECK_BOARD_TEMPERATURE":
+            case "READ_CONFIGURATION":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_temperature,
-                    publish=True,
+                    "read_config",
+                    self.__update_configuration_from_tile,
+                    publish=False,
                 )
             case "CONNECT":
                 try:
@@ -417,12 +410,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self._get_pps_drift,
                     publish=True,
                 )
-            case "ARP_TABLE":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_arp_table,
-                    publish=True,
-                )
             case "PPS_DELAY_CORRECTION":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -445,30 +432,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_preadu_levels,
-                    publish=True,
-                )
-            case "STATIC_DELAYS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.get_static_delays, publish=True
-                )
-            case "STATION_ID":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_station_id,
-                    publish=True,
-                )
-            case "TILE_ID":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.tile.get_tile_id, publish=True
-                )
-            case "CSP_ROUNDING":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.csp_rounding, publish=True
-                )
-            case "CHANNELISER_ROUNDING":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self._channeliser_truncation,
                     publish=True,
                 )
             case "BEAMFORMER_TABLE":
@@ -690,6 +653,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Initialise the request provider and start connecting."""
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
+        self._request_provider.desire_configuration_read()
         self._start_communicating_with_subrack()
 
     def polling_stopped(self: TileComponentManager) -> None:
@@ -1171,6 +1135,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
 
                 self.logger.info("TileComponentManager: initialisation completed")
+
+                # Update configuration before we transition to INITIALISED.
+                self.__update_configuration_from_tile()
+
                 self._tpm_status = TpmStatus.INITIALISED
                 self._update_attribute_callback(
                     programming_state=TpmStatus.INITIALISED.pretty_name()
@@ -1399,6 +1367,35 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # --------------------------------
     # Properties
     # --------------------------------
+    def __update_configuration_from_tile(self: TileComponentManager) -> None:
+        """Read configuration information from the TPM."""
+        self.logger.info("Updating attribute configuration from TPM")
+
+        # NOTE: There is no API to read channeliser_truncation and
+        # csp_rounding from TPM.
+        channeliser_rounding = self.channeliser_truncation
+        csp_rounding = self.csp_rounding
+
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            static_delays = self.get_static_delays()
+            station_id = self.tile.get_station_id()
+            tile_id = self.tile.get_tile_id()
+
+        self._update_attribute_callback(
+            static_delays=static_delays,
+            tile_id=tile_id,
+            station_id=station_id,
+            csp_rounding=csp_rounding,
+            channeliser_rounding=channeliser_rounding,
+        )
+
+        self.logger.info("Configuration information read from TPM")
+        assert self._request_provider is not None
+        self._request_provider.inform_configuration_read()
 
     def __update_tpm_id(
         self: TileComponentManager, station_id: int, tile_id: int
@@ -2038,6 +2035,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile[  # pylint: disable=expression-not-assigned
                         int(0x30000000)
                     ]
+                    # After connection lets check the configuration.
+                    assert self._request_provider is not None
+                    self._request_provider.desire_configuration_read()
                 except Exception as e:
                     self.logger.error(f"Failed to connect to TPM {e}")
                     self.__update_tpm_status()
@@ -2695,27 +2695,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"initialise_beamformer for chans {start_channel}:{nof_channels}"
         )
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if self.tile.tpm is None:
-                        raise ValueError("Cannot read register on unconnected TPM.")
-                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
-                    self.tile.define_channel_table(
-                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
-                    )
-                    self.tile.set_first_last_tile(is_first, is_last)
-                    self._nof_blocks = nof_channels // 8
-                    beamformer_table = self.tile.get_beamformer_table()
-                    self._update_attribute_callback(beamformer_table=beamformer_table)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                if self.tile.tpm is None:
+                    raise ValueError("Cannot read register on unconnected TPM.")
+                self.tile.set_spead_format(self._csp_spead_format == "SKA")
+                self.tile.define_channel_table(
+                    [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
+                )
+                self.tile.set_first_last_tile(is_first, is_last)
+                self._nof_blocks = nof_channels // 8
+                __beamformer_table = self.tile.get_beamformer_table()
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                return
+        self._update_attribute_callback(beamformer_table=__beamformer_table)
 
     def set_beamformer_regions(
         self: TileComponentManager, regions: list[list[int]]
@@ -2924,21 +2922,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.debug("TileComponentManager: set_static_delays")
         delays_float = [float(d) for d in delays]
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if not self.tile.set_time_delays(delays_float):
-                        self.logger.warning("Failed to set static time delays.")
-                    static_delays = self.get_static_delays()
-                    self._update_attribute_callback(static_delays=static_delays)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not self.tile.set_time_delays(delays_float):
+                self.logger.warning("Failed to set static time delays.")
+            static_delays = self.get_static_delays()
+            self._update_attribute_callback(static_delays=static_delays)
 
     @property
     @check_communicating

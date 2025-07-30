@@ -23,7 +23,11 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.test_tools import AttributeWaiter, wait_for_lrc_result
+from tests.test_tools import (
+    AttributeWaiter,
+    execute_lrc_to_completion,
+    wait_for_lrc_result,
+)
 
 
 @pytest.fixture(name="command_info")
@@ -95,18 +99,23 @@ def check_spsstation_state(
         "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
     )
 
-    # TODO: An On from SpsStation level when ON will mean that
-    # Any TPMs that are OFF will remain OFF due to ON being defined as
-    # any TPM ON and the base class rejecting calls to ON if device is ON.
-    # Therefore we are individually calling MccsTile.On() here.
-    for device in stations_devices_exported:
-        if device.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
-            device.on()
-            AttributeWaiter(timeout=60).wait_for_value(
-                device,
-                "state",
-                tango.DevState.ON,
+    if any(tile.tileProgrammingState != "Synchronised" for tile in station_tiles):
+        # TODO: THORN-228 - We must turn to standby in order to
+        # be able to execute On again.
+        station.Standby()
+        for tile in station_tiles:
+            AttributeWaiter(timeout=45).wait_for_value(
+                tile,
+                "tileProgrammingState",
+                "Off",
             )
+        AttributeWaiter(timeout=45).wait_for_value(
+            station,
+            "state",
+            tango.DevState.STANDBY,
+        )
+        # Start and wait for the On procedure to finish.
+        execute_lrc_to_completion(station, "On", None, 120)
 
     iters = 0
     while any(

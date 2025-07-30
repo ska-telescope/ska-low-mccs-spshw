@@ -218,7 +218,7 @@ class TileData:
                 "PN": None,
                 "bios": None,
                 "BOARD_MODE": None,
-                "LOCATION": None,
+                "EXT_LABEL": None,
                 "HARDWARE_REV": None,
                 "DDR_SIZE_GB": None,
             },

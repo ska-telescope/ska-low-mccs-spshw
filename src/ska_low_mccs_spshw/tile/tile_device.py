@@ -1499,14 +1499,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             '{"hardware": {"ip_address_eep": "10.0.10.2",
             "netmask_eep": "255.255.255.0", "gateway_eep": "255.255.255.255",
             "SN": "0850423050008", "PN": "iTPM_ADU_2.0",
-            "bios": "v?.?.? (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
-            "BOARD_MODE": "NO-ADA", "LOCATION": "65535:255:255",
+            "bios": "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
+            "BOARD_MODE": "NO-ADA", "EXT_LABEL": "00291;163-010013;2.0;36240080",
             "HARDWARE_REV": "v2.0.1a", "DDR_SIZE_GB": "4"},
             "fpga_firmware": {"design": "tpm_test", "build": "2004",
             "compile_time": "2024-05-29 02:00:36.158315",
-            "compile_user": "gitlab-runner", "compile_host":
-            "te7homer linux-4.15.0-213-generic-x86_64-with-ubuntu-18.04-bionic",
-            "git_branch": "detached head", "git_commit": "", "version": ""},
+            "compile_user": "gitlab-runner (created by john holden)", "compile_host":
+            "te7nelson linux-4.18.0-553.44.1.el8_10.x86_64-x86_64-with-glibc2.28",
+            "git_branch": "detached head", "git_commit":
+            "a22da05fe4cc7078c966 merge branch 'rel-2069-release-v-6-3-0' into 'main'",
+            "version": "6.3.0"},
             "network": {"1g_ip_address": "10.132.0.46",
             "1g_mac_address": "fc:0f:e7:e6:43:6c", "1g_netmask": "255.255.255.0",
             "1g_gateway": "10.132.0.254", "40g_ip_address_p1": "10.130.0.108",
@@ -5654,7 +5656,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
             f"Serial Number                | {info['hardware']['SN']} \n"
             f"BIOS Revision                | {info['hardware']['bios']} \n"
-            f"Board Location               | {info['hardware']['LOCATION']} \n"
+            f"Board External Label         | {info['hardware']['EXT_LABEL']} \n"
             f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
             f"GB per FPGA \n"
             f"{'_'*29}|{'_'*60} \n"
@@ -6076,7 +6078,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.SetVoltageWarningThresholds` command.
 
-            :param kwargs: A json string containing a dictionary with the following keys:
+            :param kwargs: A json string containing a dict with the following keys:
                 * voltage: the voltage for which to set the warning thresholds.
                 * min_thr: the minimum threshold for the specified voltage.
                 * max_thr: the maximum threshold for the specified voltage.
@@ -6229,7 +6231,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.SetCurrentWarningThresholds` command.
 
-            :param kwargs: A json string containing a dictionary with the following keys:
+            :param kwargs: A json string containing a dict with the following keys:
                 * current: the current for which to set the warning thresholds.
                 * min_thr: the minimum threshold for the specified current.
                 * max_thr: the maximum threshold for the specified current.

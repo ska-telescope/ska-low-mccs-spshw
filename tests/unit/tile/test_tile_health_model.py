@@ -72,11 +72,11 @@ class TestTileHealthModel:
                 {"currents": {"FE0_mVA": 3.2}},
                 HealthState.FAILED,
                 "Intermediate health currents is in FAILED HealthState. "
-                'Cause: Monitoring point "/FE0_mVA": 3.2 not in range 0 - 3',
+                'Cause: Monitoring point "/FE0_mVA": 3.2 not in range 2.37 - 2.62',
                 {"currents": {"FE0_mVA": 3.1}},
                 HealthState.FAILED,
                 "Intermediate health currents is in FAILED HealthState. "
-                'Cause: Monitoring point "/FE0_mVA": 3.1 not in range 0 - 3',
+                'Cause: Monitoring point "/FE0_mVA": 3.1 not in range 2.37 - 2.62',
             ),
             (
                 {"temperatures": {"board": 25}},

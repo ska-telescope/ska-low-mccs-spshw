@@ -2760,7 +2760,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check some (not all) values are as set in tile simulator.
         assert tile_info["hardware"]["HARDWARE_REV"] == "<current hardware revision>"
         assert tile_info["hardware"]["BOARD_MODE"] == "<current board mode>"
-        assert tile_info["hardware"]["LOCATION"] == "<current hardware location>"
+        assert tile_info["hardware"]["EXT_LABEL"] == "<current hardware external label>"
         assert tile_info["hardware"]["DDR_SIZE_GB"] == "<current hardware DDR size>"
         assert tile_info["fpga_firmware"]["compile_time"] == "<mock_time>"
         assert tile_info["network"]["1g_netmask"] == "123.123.123.101"

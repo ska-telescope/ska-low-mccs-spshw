@@ -1,0 +1,338 @@
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+#
+# This file provides min/max or expected values for Subrack Monitoring points
+subrack_monitoring_points:
+  temperatures:
+    SMM1:
+      min: 10
+      max: 50
+    SMM2:
+      min: 10
+      max: 50
+    BKPLN1:
+      min: 10
+      max: 50
+    BKPLN2:
+      min: 10
+      max: 50
+  # smm:
+  #   power:
+  plls:
+    BoardPllLock:
+      min: True
+      max: True
+    CPLDPllLock:
+      min: True
+      max: True
+    # PllSource:
+  psus:
+    present:
+      PSU1:
+        min: True
+        max: True
+      PSU2:
+        min: True
+        max: True
+    # busy:
+    #   PSU1:
+    #   PSU2:
+    off:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    vout_ov_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    iout_oc_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    vin_uv_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    temp_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    cml_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    vout_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    iout_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    input_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    pwr_gd:
+      PSU1:
+        min: True
+        max: True
+      PSU2:
+        min: True
+        max: True
+    fan_fault:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    other:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    unknown:
+      PSU1:
+        min: False
+        max: False
+      PSU2:
+        min: False
+        max: False
+    voltage_out:
+        PSU1:
+          min: 11.40
+          max: 12.60
+        PSU2:
+          min: 11.40
+          max: 12.60
+    power_out:
+        PSU1:
+          min: 0
+          max: 600.00
+        PSU2:
+          min: 0
+          max: 600.00
+    voltage_in:
+        PSU1:
+          min: 207.00
+          max: 253.00
+        PSU2:
+          min: 207.00
+          max: 253.00
+    power_in:
+        PSU1:
+          min: 0
+          max: 600.00
+        PSU2:
+          min: 0
+          max: 600.00
+    # fan_speed:
+    #     PSU1:
+    #       min:
+    #       max: 
+    #     PSU2:
+    #       min: 
+    #       max: 
+    # temp_inlet:
+    #     PSU1:
+    #       min: 
+    #       max: 
+    #     PSU2:
+    #       min:
+    #       max:
+    # temp_fet:
+    #     PSU1:
+    #       min:
+    #       max: 
+    #     PSU2:
+    #       min:
+    #       max: 
+  pings:
+    pings:
+      CPLD:
+        min: True
+        max: True
+  slots:
+    presence:
+      SLOT1:
+      SLOT2:
+      SLOT3:
+      SLOT4:
+      SLOT5:
+      SLOT6:
+      SLOT7:
+      SLOT8:
+    on:
+      SLOT1:
+      SLOT2:
+      SLOT3:
+      SLOT4:
+      SLOT5:
+      SLOT6:
+      SLOT7:
+      SLOT8:
+    voltages:
+      SLOT1:
+        min: 11.40
+        max: 12.60
+      SLOT2:
+        min: 11.40
+        max: 12.60
+      SLOT3:
+        min: 11.40
+        max: 12.60
+      SLOT4:
+        min: 11.40
+        max: 12.60
+      SLOT5:
+        min: 11.40
+        max: 12.60
+      SLOT6:
+        min: 11.40
+        max: 12.60
+      SLOT7:
+        min: 11.40
+        max: 12.60
+      SLOT8:
+        min: 11.40
+        max: 12.60
+    powers:
+      SLOT1:
+        min: 0.00
+        max: 120.00
+      SLOT2:
+        min: 0.00
+        max: 120.00
+      SLOT3:
+        min: 0.00
+        max: 120.00
+      SLOT4:
+        min: 0.00
+        max: 120.00
+      SLOT5:
+        min: 0.00
+        max: 120.00
+      SLOT6:
+        min: 0.00
+        max: 120.00
+      SLOT7:
+        min: 0.00
+        max: 120.00
+      SLOT8:
+        min: 0.00
+        max: 120.00
+    pings:
+      SLOT1:
+        min: True
+        max: True
+      SLOT2:
+        min: True
+        max: True
+      SLOT3:
+        min: True
+        max: True
+      SLOT4:
+        min: True
+        max: True
+      SLOT5:
+        min: True
+        max: True
+      SLOT6:
+        min: True
+        max: True
+      SLOT7:
+        min: True
+        max: True
+      SLOT8:
+        min: True
+        max: True
+  internal_voltages:
+    V_POWERIN:
+      min: 11.40
+      max: 12.60
+    V_SOC:
+      min: 1.31
+      max: 1.39
+    V_ARM:
+      min: 1.28
+      max: 1.42
+    V_DDR:
+      min: 1.31
+      max: 1.39
+    V_2V5:
+      min: 2.38
+      max: 2.62
+    V_1V1:
+      min: 1.07
+      max: 1.13
+    V_CORE:
+      min: 1.16
+      max: 1.24
+    V_1V5:
+      min: 1.46
+      max: 1.54
+    V_3V3:
+      min: 3.13
+      max: 3.46
+    V_5V:
+      min: 4.75
+      max: 5.25
+    V_3V:
+      min: 2.85
+      max: 3.15
+    V_2V8:
+      min: 2.66
+      max: 2.94
+  # fans:
+  #   speed:
+  #     FAN1:
+  #     FAN2:
+  #     FAN3:
+  #     FAN4:
+  #   pwm_duty:
+  #     FAN1:
+  #     FAN2:
+  #     FAN3:
+  #     FAN4:
+  #   mode:
+  #     FAN1:
+  #     FAN2:
+  #     FAN3:
+  #     FAN4:

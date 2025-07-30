@@ -21,7 +21,7 @@ These schemas are for use with MccsTile commands
   MccsTile_SetLmcDownload
   MccsTile_SetLmcIntegratedDownload
   MccsTile_SetTemperatureThresholds
-  MccsTile_SetVoltageWarningThresholds copy
+  MccsTile_SetVoltageWarningThresholds
   MccsTile_StartAcquisition
   MccsTile_StartBeamformer
   MccsTile_StopBeamformer

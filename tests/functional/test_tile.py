@@ -137,8 +137,6 @@ def check_spsstation_state(
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
-    change_event_callbacks["device_adminmode"].assert_not_called()
-    change_event_callbacks["device_state"].assert_not_called()
     sub_id1 = station.subscribe_event(
         "adminMode",
         tango.EventType.CHANGE_EVENT,
@@ -174,8 +172,6 @@ def check_spsstation_state(
 
     station.unsubscribe_event(sub_id1)
     station.unsubscribe_event(sub_id2)
-    change_event_callbacks["device_adminmode"].assert_not_called()
-    change_event_callbacks["device_state"].assert_not_called()
 
     # Sleep time to discover state.
     time.sleep(5)

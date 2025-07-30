@@ -980,8 +980,10 @@ class TestMccsTile:
     def test_attributes_with_initial_value(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
+        mock_subrack_device_proxy: unittest.mock.Mock,
         tile_id: int,
         station_id: int,
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test attributes with initial value.
@@ -993,10 +995,31 @@ class TestMccsTile:
             with.
         :param station_id: A fixture with the StationId this tile is configured
             with.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
+            device.
         """
         # These values are configuration values we do not have to be online to read.
         assert tile_device.logicalTileID == tile_id
         assert tile_device.stationId == station_id
+
+        #
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
+        tile_device.subscribe_event(
+            "tileprogrammingstate",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=4
+        )
+        tile_device.logicalTileID = tile_id + 1
+        tile_device.stationId = station_id + 1
+        assert tile_device.logicalTileID == tile_id + 1
+        assert tile_device.stationId == station_id + 1
 
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),

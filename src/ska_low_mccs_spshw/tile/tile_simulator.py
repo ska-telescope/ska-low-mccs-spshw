@@ -1071,6 +1071,8 @@ class TileSimulator:
     def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
         # this is set in the initialise
+        if not self.is_programmed():
+            return -1
         return self._tile_id
 
     @check_mocked_overheating
@@ -2843,6 +2845,8 @@ class TileSimulator:
         :return: station ID programmed in HW
         :rtype: int
         """
+        if not self.is_programmed():
+            return -1
         return self._station_id
 
     @check_mocked_overheating

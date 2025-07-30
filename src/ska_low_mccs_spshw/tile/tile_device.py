@@ -1795,7 +1795,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "the 'TestConfig' property set as desired."
         )
 
-    @attribute(dtype="DevLong", abs_change=1)
+    @attribute(dtype="DevLong", abs_change=1, min_value=0, max_value=15)
     def logicalTileId(self: MccsTile) -> int:
         """
         Return the logical tile id.
@@ -1815,7 +1815,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param value: the new logical tile id
         """
-        self.component_manager.tile_id = value
+        self.component_manager.set_tile_id(value)
 
     @attribute(dtype="DevString")
     def tileProgrammingState(self: MccsTile) -> str | None:
@@ -1847,7 +1847,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         message = f"stationId: write value = {value}"
         self.logger.info(message)
-        self.component_manager.station_id = value
+        self.component_manager.set_station_id(value)
 
     @attribute(dtype="DevString")
     def firmwareTemperatureThresholds(

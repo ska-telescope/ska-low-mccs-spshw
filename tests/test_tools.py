@@ -413,8 +413,13 @@ class _ProgrammingStateAccess:
         :raises NotImplementedError: when the TPM cannot be driven
             to the desired state.
         """
-        obj._tile_device.adminMOde = 0
-        time.sleep(1)
+        if obj._tile_device.adminMode != AdminMode.ONLINE:
+            obj._tile_device.adminMode = AdminMode.ONLINE
+            AttributeWaiter(timeout=3).wait_for_value(
+                obj._tile_device,
+                "state",
+            )
+
         match value:
             case TpmStatus.OFF:
                 obj._tile_device.Off()

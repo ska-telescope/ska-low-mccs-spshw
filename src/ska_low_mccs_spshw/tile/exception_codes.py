@@ -30,5 +30,3 @@ class HardwareVerificationError(Exception):
         if message is None:
             message = f"Hardware verification failed: expected {expected}, got {actual}"
         super().__init__(message)
-        self.expected = expected
-        self.actual = actual

@@ -1685,62 +1685,83 @@ class TileSimulator:
             for fpga in fpgas
         ]
 
-    # @connected
-    # def get_voltage_warning_thresholds(
-    #     self: TileSimulator,
-    #     voltage: str | None = None,
-    # ) -> dict[str, dict[str, float]] | None:
-    #     """
-    #     Return a dictionary of voltage warning thresholds.
+    @connected
+    def get_voltage_warning_thresholds(
+        self: TileSimulator,
+        voltage: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of voltage warning thresholds.
 
-    #     :param voltage: The voltage type to get the thresholds for.
-    #         If None, return all thresholds.
+        :param voltage: The voltage type to get the thresholds for.
+            If None, return all thresholds.
 
-    #     :return: A dictionary containing the voltage thresholds or None if
-    #         the requested voltage is not found in the thresholds.
-    #     """
-    #     assert self.tpm is not None
-    #     return self.tpm.get_voltage_warning_thresholds(voltage)
-    # if voltage is not None:
-    #     requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
-    #     if requested_voltage:
-    #         return {voltage: requested_voltage}
-    #     self.logger.error(
-    #         f"Requested voltage {voltage} not found in thresholds. "
-    #         f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
-    #     )
-    #     return None
+        :return: A dictionary containing the voltage thresholds or None if
+            the requested voltage is not found in the thresholds.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.get_voltage_warning_thresholds(voltage)
 
-    # return self._voltage_warning_thresholds
+    @connected
+    def set_voltage_warning_thresholds(
+        self: TileSimulator,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a voltage warning threshold.
 
-    # @connected
-    # def set_voltage_warning_thresholds(
-    #     self: TileSimulator,
-    #     voltage: str,
-    #     min_thr: float,
-    #     max_thr: float,
-    # ) -> bool | None:
-    #     """
-    #     Set a voltage warning threshold.
+        :param voltage: The voltage type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
 
-    #     :param voltage: The voltage type to set the thresholds for.
-    #     :param min_thr: The minimum threshold value.
-    #     :param max_thr: The maximum threshold value.
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.set_voltage_warning_thresholds(
+            voltage, min_thr, max_thr
+        )
 
-    #     :return: True if the thresholds were set successfully,
-    #         or None if the voltage type is not recognized.
-    #     """
-    #     assert self.tpm is not None
-    #     return self.tpm.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
-    #     # if voltage not in self._voltage_warning_thresholds:
-    #     #     self.logger.error(
-    #     #         f"Voltage {voltage} not recognized. Available: "
-    #     #         f"{[k for k in self._voltage_warning_thresholds.keys()]}"
-    #     #     )
-    #     #     return None
+    @connected
+    def get_current_warning_thresholds(
+        self: TileSimulator,
+        current: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of current warning thresholds.
 
-    #     # self._voltage_warning_thresholds[voltage] = {"min": min_thr, "max": max_thr}
-    #     # return True
+        :param current: The current type to get the thresholds for.
+            If None, return all thresholds.
+
+        :return: A dictionary containing the current thresholds or None if
+            the requested current is not found in the thresholds.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.get_current_warning_thresholds(current)
+
+    @connected
+    def set_current_warning_thresholds(
+        self: TileSimulator,
+        current: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a current warning threshold.
+
+        :param current: The current type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the current type is not recognized.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.set_current_warning_thresholds(
+            current, min_thr, max_thr
+        )
 
     @property
     def tile_info(self: TileSimulator) -> str:

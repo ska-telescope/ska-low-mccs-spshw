@@ -63,6 +63,7 @@ class LogLock:
         :return: True if the lock was acquired, False if it was not.
         """
         caller = self._caller()
+        # Some debug logs have been commented out as they're a bit spammy.
         # self.log.debug(f"lock {self.name} requested by {caller}")
 
         acquire_start = time.time()

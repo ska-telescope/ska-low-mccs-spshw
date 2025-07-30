@@ -6044,6 +6044,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     class SetVoltageWarningThresholdsCommand(FastCommand):
         """Class for handling the SetVoltageWarningThresholds() command."""
 
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_SetVoltageWarningThresholds.json",
+            )
+        )
+
         def __init__(
             self: MccsTile.SetVoltageWarningThresholdsCommand,
             component_manager: TileComponentManager,
@@ -6056,34 +6063,33 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator(
+                "SetVoltageWarningThresholds", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
 
         def do(
             self: MccsTile.SetVoltageWarningThresholdsCommand,
             *args: Any,
-            argin: str,
             **kwargs: Any,
         ) -> DevVarLongStringArrayType:
             """
             Implement :py:meth:`.MccsTile.SetVoltageWarningThresholds` command.
 
-            :param argin: A json string containing a dictionary with the following keys:
+            :param kwargs: A json string containing a dictionary with the following keys:
                 * voltage: the voltage for which to set the warning thresholds.
                 * min_thr: the minimum threshold for the specified voltage.
                 * max_thr: the maximum threshold for the specified voltage.
             :param args: unspecified arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
                 provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            argin_dict: dict = json.loads(argin)
-            voltage: str = argin_dict.get("voltage", "")
-            min_thr: float = argin_dict.get("min_thr", 0.0)
-            max_thr: float = argin_dict.get("max_thr", 0.0)
+            voltage: str = kwargs.get("voltage", "")
+            min_thr: float = kwargs.get("min_thr", 0.0)
+            max_thr: float = kwargs.get("max_thr", 0.0)
             if not all([voltage, min_thr, max_thr]):
                 self.logger.error(
                     "All parameters must be supplied. Expected 'voltage', "
@@ -6130,7 +6136,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             information purpose only.
         """
         handler = self.get_command_object("SetVoltageWarningThresholds")
-        return handler(argin=argin)
+        return handler(argin)
 
     class GetCurrentWarningThresholdsCommand(FastCommand):
         """Class for handling the GetCurrentWarningThresholds() command."""
@@ -6191,6 +6197,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     class SetCurrentWarningThresholdsCommand(FastCommand):
         """Class for handling the SetCurrentWarningThresholds() command."""
 
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_SetCurrentWarningThresholds.json",
+            )
+        )
+
         def __init__(
             self: MccsTile.SetCurrentWarningThresholdsCommand,
             component_manager: TileComponentManager,
@@ -6203,34 +6216,33 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator(
+                "SetCurrentWarningThresholds", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
 
         def do(
             self: MccsTile.SetCurrentWarningThresholdsCommand,
             *args: Any,
-            argin: str,
             **kwargs: Any,
         ) -> DevVarLongStringArrayType:
             """
             Implement :py:meth:`.MccsTile.SetCurrentWarningThresholds` command.
 
-            :param argin: A json string containing a dictionary with the following keys:
+            :param kwargs: A json string containing a dictionary with the following keys:
                 * current: the current for which to set the warning thresholds.
                 * min_thr: the minimum threshold for the specified current.
                 * max_thr: the maximum threshold for the specified current.
             :param args: unspecified arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
                 provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            argin_dict: dict = json.loads(argin)
-            current: str = argin_dict.get("current", "")
-            min_thr: float = argin_dict.get("min_thr", 0.0)
-            max_thr: float = argin_dict.get("max_thr", 0.0)
+            current: str = kwargs.get("current", "")
+            min_thr: float = kwargs.get("min_thr", 0.0)
+            max_thr: float = kwargs.get("max_thr", 0.0)
             if not all([current, min_thr, max_thr]):
                 self.logger.error(
                     "All parameters must be supplied. Expected 'current', "
@@ -6277,7 +6289,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             information purpose only.
         """
         handler = self.get_command_object("SetCurrentWarningThresholds")
-        return handler(argin=argin)
+        return handler(argin)
 
 
 # ----------

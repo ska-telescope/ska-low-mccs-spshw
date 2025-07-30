@@ -3966,13 +3966,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            assert self.tile.tpm is not None, "TPM is not connected."
             if voltage:
-                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds(
-                    voltage
-                )
+                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
             else:
-                thresholds = self.tile.tpm.tpm_monitor.get_voltage_warning_thresholds()
+                thresholds = self.tile.get_voltage_warning_thresholds()
             if thresholds is None:
                 return f"Specified voltage '{voltage}' not recognized."
             return json.dumps(thresholds)
@@ -3997,10 +3994,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            assert self.tile.tpm is not None, "TPM is not connected."
-            return self.tile.tpm.tpm_monitor.set_voltage_warning_thresholds(
-                voltage, min_thr, max_thr
-            )
+            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
 
     def get_current_warning_thresholds(
         self: TileComponentManager,
@@ -4017,13 +4011,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            assert self.tile.tpm is not None, "TPM is not connected."
             if current:
-                thresholds = self.tile.tpm.tpm_monitor.get_current_warning_thresholds(
-                    current
-                )
+                thresholds = self.tile.get_current_warning_thresholds(current)
             else:
-                thresholds = self.tile.tpm.tpm_monitor.get_current_warning_thresholds()
+                thresholds = self.tile.get_current_warning_thresholds()
             if thresholds is None:
                 return f"Specified current '{current}' not recognized."
             return json.dumps(thresholds)
@@ -4048,10 +4039,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            assert self.tile.tpm is not None, "TPM is not connected."
-            return self.tile.tpm.tpm_monitor.set_current_warning_thresholds(
-                current, min_thr, max_thr
-            )
+            return self.tile.set_current_warning_thresholds(current, min_thr, max_thr)
 
     @property
     @check_communicating

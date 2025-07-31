@@ -1367,6 +1367,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # --------------------------------
     # Properties
     # --------------------------------
+    def _with_hardware_lock(self: TileComponentManager, func: Callable[[], Any]) -> Any:
+        """
+        Acquire hardware lock and execute the given function.
+
+        :param func: a function to call within lock.
+
+        :returns: whatever the result of command was.
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return func()
+
     def __update_configuration_from_tile(self: TileComponentManager) -> None:
         """Read configuration information from the TPM."""
         self.logger.info("Updating attribute configuration from TPM")
@@ -1375,15 +1390,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # csp_rounding from TPM.
         channeliser_rounding = self.channeliser_truncation
         csp_rounding = self.csp_rounding
-
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            static_delays = self.get_static_delays()
-            station_id = self.tile.get_station_id()
-            tile_id = self.tile.get_tile_id()
+        # hardware methods recuire a lock
+        static_delays = self._with_hardware_lock(self.get_static_delays)
+        station_id = self._with_hardware_lock(self.tile.get_station_id)
+        tile_id = self._with_hardware_lock(self.tile.get_tile_id)
 
         self._update_attribute_callback(
             static_delays=static_delays,

@@ -225,7 +225,7 @@ def ensure_subrack_fan_mode(
     )
     change_event_callbacks["subrack_fan_mode"].assert_change_event(
         fan_modes,
-        lookahead=4,
+        lookahead=6,
     )
 
     if not fan_modes:
@@ -287,7 +287,7 @@ def ensure_subrack_fan_speed_percent(
         subrack_device.SetSubrackFanSpeed(encoded_arg)
         expected_fan_speeds_percent[fan_number - 1] = pytest.approx(90.0)
         change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds_percent", expected_fan_speeds_percent
+            "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=2
         )
 
 

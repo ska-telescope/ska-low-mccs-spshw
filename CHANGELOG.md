@@ -1,5 +1,6 @@
 # Version History
 
+## 7.2.0
 * [THORN-195] Add HardwareVerificationError.
 * [THORN-214] Added HardwareVersion property to MccsTile. If not defined ADC0 -> ADC15 temperature attributes are not evaluated in health
 * [THORN-214] Added BiosVersion property to MccsTile. If not defined pll_40g attribute is not evaluated in health

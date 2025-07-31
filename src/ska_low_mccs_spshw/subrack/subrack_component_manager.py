@@ -291,34 +291,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             update_rate=update_rate,
         )
 
-        self.proxy_map = {}
-
         self.pdu_trl = pdu_trl
         self.pdu_ports = pdu_ports
-        if simulated_pdu:
-            power_supply_component_manager = PowerSupplyProxySimulator(
-                logger,
-                None,  # super() call will set the communication_state_changed_callback
-                None,  # super() call with set the component_state_changed_callback
-                initial_power_state=_initial_power_state,
-                initial_fail=_initial_fail,
-            )
-        else:
-            self.pdu_proxy = _PDUProxy(
-                pdu_trl,
-                logger,
-                functools.partial(self._device_communication_state_changed, pdu_trl),
-                functools.partial(self._pdu_state_changed, pdu_trl),
-            )
-
-        self.power_marshaller_trl = power_marshaller_trl
-        self.power_marshaller_proxy = _PowerMarshallerProxy(
-            power_marshaller_trl,
+        self.simulated_pdu = simulated_pdu
+        power_supply_component_manager = PowerSupplyProxySimulator(
             logger,
-            functools.partial(self._device_communication_state_changed, pdu_trl),
-            functools.partial(self._pdu_state_changed, pdu_trl),
+            None,  # super() call will set the communication_state_changed_callback
+            None,  # super() call with set the component_state_changed_callback
+            initial_power_state=_initial_power_state,
+            initial_fail=_initial_fail,
         )
-        self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
         # we only need one worker; the heavy lifting is done by the poller in the
         # hardware component manager
@@ -348,7 +330,32 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
+        self.pdu_proxy = (
+            None
+            if simulated_pdu
+            else _PDUProxy(
+                pdu_trl,
+                logger,
+                functools.partial(self._device_communication_state_changed, pdu_trl),
+                functools.partial(self._pdu_state_changed, pdu_trl),
+            )
+        )
+        self.proxy_map: dict[str, Any] = {}
+        self.power_marshaller_trl = power_marshaller_trl
+        self.power_marshaller_proxy = _PowerMarshallerProxy(
+            power_marshaller_trl,
+            logger,
+            functools.partial(self._device_communication_state_changed, pdu_trl),
+            functools.partial(self._pdu_state_changed, pdu_trl),
+        )
+        self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
+        self._communication_manager: CommunicationManager | None = None
+        if self.pdu_proxy is not None:
+            self.proxy_map[pdu_trl] = self.pdu_proxy
+
+        # TODO: This CommunicationManager does not play well with the
+        # ComponentManagerWithUpstreamPowerSupply.
         self._communication_manager = CommunicationManager(
             self._update_communication_state,
             self._update_component_state,
@@ -359,12 +366,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def start_communicating(self: SubrackComponentManager) -> None:
         """Establish communication with the subrack components."""
         super().start_communicating()
-        self._communication_manager.start_communicating()
+        if self._communication_manager is not None:
+            self._communication_manager.start_communicating()
 
     def stop_communicating(self: SubrackComponentManager) -> None:
         """Break off communication with the subrack components."""
         super().stop_communicating()
-        self._communication_manager.stop_communicating()
+        if self._communication_manager is not None:
+            self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
         self: SubrackComponentManager,
@@ -377,9 +386,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param trl: device trl.
         :param communication_state: communication status
         """
-        self._communication_manager.update_communication_status(
-            trl, communication_state
-        )
+        if self._communication_manager is not None:
+            self._communication_manager.update_communication_status(
+                trl, communication_state
+            )
 
     def _pdu_state_changed(
         self: SubrackComponentManager,
@@ -632,12 +642,12 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             return states
         return None
 
-    def on(
+    def schedule_on(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
-        Turn self on.
+        Schedule self on.
 
         :param task_callback: callback to be called when the status of
             the command changes
@@ -645,16 +655,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the task status and a human-readable status message
         """
         return self.submit_task(
-            self._on,
+            self._schedule_on,
             args=[],
             task_callback=task_callback,
         )
 
-    def _on(
+    def _schedule_on(
         self: SubrackComponentManager, task_callback: Optional[Callable] = None
     ) -> None:
         """
-        Turn self on.
+        Schedule self on.
 
         :param task_callback: callback to be called when the status of
             the command changes
@@ -667,7 +677,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 str(port),
             )
 
-    def off(
+    def schedule_off(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
@@ -680,12 +690,12 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the task status and a human-readable status message
         """
         return self.submit_task(
-            self._off,
+            self._schedule_off,
             args=[],
             task_callback=task_callback,
         )
 
-    def _off(
+    def _schedule_off(
         self: SubrackComponentManager, task_callback: Optional[Callable] = None
     ) -> None:
         """

@@ -101,8 +101,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
             else:
                 self.logger.error(f"Invalid model {self.Model} specified")
 
-        # pylint: disable=broad-exception-caught
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-exception-caught
             self.logger.error("Initialise failed: Incomplete server: %s", repr(ex))
 
     def delete_device(self: MccsPdu) -> None:
@@ -110,8 +109,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         try:
             self.logger.info("Deleting device")
             self.component_manager.stop_communicating()
-        # pylint: disable=broad-exception-caught
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-exception-caught
             self.logger.error("Failed to delete device %s", repr(ex))
         self.component_manager.marshaller_proxy.cleanup()
 

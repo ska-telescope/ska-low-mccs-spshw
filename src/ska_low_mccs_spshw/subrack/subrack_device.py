@@ -448,8 +448,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("PowerDownTpms", "turn_off_tpms"),
             ("PowerPduPortOn", "power_pdu_port_on"),
             ("PowerPduPortOff", "power_pdu_port_off"),
-            ("On", "on"),
-            ("Off", "off"),
+            ("ScheduleOn", "schedule_on"),
+            ("ScheduleOff", "schedule_off"),
         ]:
             self.register_command_object(
                 command_name,
@@ -615,8 +615,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         result_code, message = handler(argin)
         return ([result_code], [message])
 
-    @command
-    def On(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
+    @command(dtype_out="DevVarLongStringArray")
+    def ScheduleOn(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Turn self on.
 
@@ -624,12 +624,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("On")
+        handler = self.get_command_object("ScheduleOn")
         result_code, message = handler()
         return ([result_code], [message])
 
-    @command
-    def Off(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
+    @command(dtype_out="DevVarLongStringArray")
+    def ScheduleOff(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Turn self off.
 
@@ -637,7 +637,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("Off")
+        handler = self.get_command_object("ScheduleOff")
         result_code, message = handler()
         return ([result_code], [message])
 

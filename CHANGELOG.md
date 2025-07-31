@@ -1,16 +1,15 @@
 # Version History
 
 * [THORN-195] Add HardwareVerificationError.
+* [THORN-214] Added HardwareVersion property to MccsTile. If not defined ADC0 -> ADC15 temperature attributes are not evaluated in health
+* [THORN-214] Added BiosVersion property to MccsTile. If not defined pll_40g attribute is not evaluated in health
+* [THORN-214] Added PreAduPresent property to MccsTile (default == True). When false we expect currents FE0_mVA and FE1_mVA to be 0 with some tolerance.
 
 ## 7.1.0
 
 * [THORN-238] Add SpsStation.BandpassIntegrationTime device property for setting bandpass integration time in Initialise().
 * [THORN-238] Update chart.yaml to allow for separate DAQ chart version.
 * [JANUS-215] Support for TPM API to 0.6.0, manage whole TPM external label
-* [THORN-214] Added HardwareVersion property to MccsTile. If not defined ADC0 -> ADC15 temperature attributes are not evaluated in health
-* [THORN-214] Added BiosVersion property to MccsTile. If not defined pll_40g attribute is not evaluated in health
-* [THORN-214] Added PreAduPresent property to MccsTile (default == True).
-* [THORN-214] Add HardwareVersion and BiosVersion device_properties
 * [THORN-206] Clarify when Tile is sending data
 * [THORN-183] changed health threshold for tpm and subrack using updated values: <https://jira.skatelescope.org/browse/SPRTS-274>
 

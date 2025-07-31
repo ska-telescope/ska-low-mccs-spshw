@@ -2471,43 +2471,38 @@ class TestMccsTileCommands:
             )
 
         # Unhappy paths.
-        expected_fail_message = [
-            "All parameters must be supplied. "
-            "Expected 'voltage', 'min_thr', and 'max_thr'."
-        ]
-
         # No voltage supplied.
-        _, msg = on_tile_device.SetVoltageWarningThresholds(
-            json.dumps(
-                {
-                    "min_thr": 12.3,
-                    "max_thr": 23.4,
-                }
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "min_thr": 12.3,
+                        "max_thr": 23.4,
+                    }
+                )
             )
-        )
-        assert msg == expected_fail_message
 
         # No min thr supplied
-        _, msg = on_tile_device.SetVoltageWarningThresholds(
-            json.dumps(
-                {
-                    "voltage": "VIN",
-                    "max_thr": 23.4,
-                }
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "voltage": "VIN",
+                        "max_thr": 23.4,
+                    }
+                )
             )
-        )
-        assert msg == expected_fail_message
 
         # No max thr supplied
-        _, msg = on_tile_device.SetVoltageWarningThresholds(
-            json.dumps(
-                {
-                    "voltage": "VIN",
-                    "min_thr": 12.3,
-                }
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "voltage": "VIN",
+                        "min_thr": 12.3,
+                    }
+                )
             )
-        )
-        assert msg == expected_fail_message
 
         # Invalid voltage name supplied.
         _, msg = on_tile_device.SetVoltageWarningThresholds(
@@ -2595,43 +2590,38 @@ class TestMccsTileCommands:
             )
 
         # Unhappy paths.
-        expected_fail_message = [
-            "All parameters must be supplied. "
-            "Expected 'current', 'min_thr', and 'max_thr'."
-        ]
-
         # No current supplied.
-        _, msg = on_tile_device.SetCurrentWarningThresholds(
-            json.dumps(
-                {
-                    "min_thr": 12.3,
-                    "max_thr": 23.4,
-                }
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "min_thr": 12.3,
+                        "max_thr": 23.4,
+                    }
+                )
             )
-        )
-        assert msg == expected_fail_message
 
         # No min thr supplied
-        _, msg = on_tile_device.SetCurrentWarningThresholds(
-            json.dumps(
-                {
-                    "current": "FE0_mVA",
-                    "max_thr": 23.4,
-                }
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "current": "FE0_mVA",
+                        "max_thr": 23.4,
+                    }
+                )
             )
-        )
-        assert msg == expected_fail_message
 
         # No max thr supplied
-        _, msg = on_tile_device.SetCurrentWarningThresholds(
-            json.dumps(
-                {
-                    "current": "FE0_mVA",
-                    "min_thr": 12.3,
-                }
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "current": "FE0_mVA",
+                        "min_thr": 12.3,
+                    }
+                )
             )
-        )
-        assert msg == expected_fail_message
 
         # Invalid current name supplied.
         _, msg = on_tile_device.SetCurrentWarningThresholds(

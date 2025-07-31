@@ -26,7 +26,15 @@ SIMULATOR_ONLY_METHODS = [
     "_TileSimulator__is_connectable",  # mangled
     "evaluate_mcu_action",
 ]
-METHODS_TO_OMIT = ["__init__", "_convert_ip_to_str"]
+METHODS_TO_OMIT = [
+    "__init__",
+    "_convert_ip_to_str",
+    # Get/set voltage/current methods are plugins, not direct Tile methods.
+    "get_voltage_warning_thresholds",
+    "set_voltage_warning_thresholds",
+    "get_current_warning_thresholds",
+    "set_current_warning_thresholds",
+]
 
 
 def check_method_parameters_match(

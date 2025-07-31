@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-* [SKB-928] Remove configuration attributes from polling. This information is now collected at an appropriate time.
+* [SKB-928] Remove configuration attributes from polling. Configuration is now 'read_on_connect' or 'read_on_change'
+* [SKB-928] SpsStation staticTimeDelay now raised RuntimeError when information for TPM mapping not present
+* [SKB-928] Expose exceptions to tango API for MccsTile methods staticTimeDelays and ConfigureStationBeamformer.
+* [SKB-928] stationId no longer has an initial value (this was software only and was not necessarilty True. It is now read from TPM as soon as possible.) (NOTE: property StationID will be used as the value to initialise the TPM with and writing to stationId will take precedence over the property but will not be persisted.)
+* [SKB-928] logicalTileId no longer has an initial value (this was software only and was not necessarilty True. It is now read from TPM as soon as possible.) (NOTE: property TileId will be used as the value to initialise the TPM with and writing to LogicalTileId will take precedence over the property but will not be persisted.)
 
 ## 7.2.0
 

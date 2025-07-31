@@ -515,7 +515,9 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_static_delays"].assert_change_event(
             final_static_delays.tolist()
         )
-
+        # Time slept for callback in TANGO.
+        # There is no event pushed here to subscribe to.
+        time.sleep(0.2)
         assert np.array_equal(sps_station_device.staticTimeDelays, final_static_delays)
 
     # pylint: disable-next=too-many-arguments

@@ -1371,7 +1371,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Read configuration information from the TPM."""
         self.logger.info("Updating attribute configuration from TPM")
 
-        # NOTE: There is no API to read channeliser_truncation and
+        # NOTE: THORN-207: There is no API to read channeliser_truncation and
         # csp_rounding from TPM.
         channeliser_rounding = self.channeliser_truncation
         csp_rounding = self.csp_rounding
@@ -2688,8 +2688,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param nof_channels: number of channels
         :param is_first: whether this is the first (?)
         :param is_last: whether this is the last (?)
-
-        :raises ValueError: if the tpm is value None.
         """
         self.logger.debug(
             f"initialise_beamformer for chans {start_channel}:{nof_channels}"
@@ -2699,20 +2697,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            try:
-                if self.tile.tpm is None:
-                    raise ValueError("Cannot read register on unconnected TPM.")
-                self.tile.set_spead_format(self._csp_spead_format == "SKA")
-                self.tile.define_channel_table(
-                    [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
-                )
-                self.tile.set_first_last_tile(is_first, is_last)
-                self._nof_blocks = nof_channels // 8
-                __beamformer_table = self.tile.get_beamformer_table()
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                return
+            self.tile.set_spead_format(self._csp_spead_format == "SKA")
+            self.tile.define_channel_table(
+                [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
+            )
+            self.tile.set_first_last_tile(is_first, is_last)
+            self._nof_blocks = nof_channels // 8
+            __beamformer_table = self.tile.get_beamformer_table()
         self._update_attribute_callback(beamformer_table=__beamformer_table)
 
     def set_beamformer_regions(
@@ -2928,8 +2919,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             if not self.tile.set_time_delays(delays_float):
                 self.logger.warning("Failed to set static time delays.")
-            static_delays = self.get_static_delays()
-            self._update_attribute_callback(static_delays=static_delays)
+            __static_delays = self.get_static_delays()
+        self._update_attribute_callback(static_delays=__static_delays)
 
     @property
     @check_communicating

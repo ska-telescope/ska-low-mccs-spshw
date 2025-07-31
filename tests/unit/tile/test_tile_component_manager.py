@@ -1778,9 +1778,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         is_last = True
 
         # Act
-        tile_component_manager.initialise_beamformer(
-            start_channel, nof_channels, is_first, is_last
-        )
+        with pytest.raises(ValueError):
+            tile_component_manager.initialise_beamformer(
+                start_channel, nof_channels, is_first, is_last
+            )
 
         # Assert values not written
         station_bf_1 = tile_simulator.tpm.station_beamf[0]
@@ -1800,9 +1801,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         is_last = True
 
         # Act
-        tile_component_manager.initialise_beamformer(
-            start_channel, nof_channels, is_first, is_last
-        )
+        with pytest.raises(ValueError):
+            tile_component_manager.initialise_beamformer(
+                start_channel, nof_channels, is_first, is_last
+            )
 
         # Assert values not written
         station_bf_1 = tile_simulator.tpm.station_beamf[0]
@@ -3327,7 +3329,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=5
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=9
         )
         return dynamic_tile_component_manager
 

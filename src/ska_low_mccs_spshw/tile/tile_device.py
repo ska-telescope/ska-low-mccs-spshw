@@ -132,7 +132,40 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     StationID = device_property(dtype=int, default_value=1)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
+    PreAduPresent = device_property(
+        dtype=bool,
+        default_value=True,
+        doc=(
+            "Does this board have a preADU (used for optical to electrical conversion)"
+        ),
+    )
+    # ====================================================================
+    # TpmVersion and HardwareVersion are similar in concept.
+    # TpmVersion is deprecated, preferring HardwareVersion. New property
+    # defined for retrocompatibility reasons.
+
+    # TODO: TpmVersion is deprecated, remove at an appropriate time.
+    # TODO: HardwareVersion and BiosVersion should be mandatory.
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
+    HardwareVersion = device_property(
+        dtype=str,
+        default_value="",
+        doc=(
+            "The HARDWARE_REV (e.g. v1.6.7a). "
+            "If not defined ADC0 -> ADC15 temperature "
+            "attributes are not evaluated in health"
+        ),
+    )
+    BiosVersion = device_property(
+        dtype=str,
+        default_value="",
+        doc=(
+            "The bios version (e.g. 0.5.0). "
+            "If not defined pll_40g attribute "
+            "is not evaluated in health"
+        ),
+    )
+    # ====================================================================
 
     PreaduAttenuation = device_property(dtype=(float,), default_value=[])
     StaticDelays = device_property(
@@ -190,8 +223,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"\tStationId: {self.StationID}\n"
             f"\tTpmIp: {self.TpmIp}\n"
             f"\tTpmCpldPort: {self.TpmCpldPort}\n"
-            f"\tTpmVersion: {self.TpmVersion}\n"
+            f"\tTpmVersion (deprecated by HardwareVersion): {self.TpmVersion}\n"
+            f"\tHardwareVersion: {self.HardwareVersion}\n"
+            f"\tBiosVersion: {self.BiosVersion}\n"
             f"\tAntennasPerTile: {self.AntennasPerTile}\n"
+            f"\tPreAduPresent: {self.PreAduPresent}\n"
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
@@ -439,7 +475,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self._health_changed, self.TpmVersion)
+
+        self._health_model = TileHealthModel(
+            self._health_changed,
+            self.HardwareVersion,
+            self.BiosVersion,
+            self.PreAduPresent,
+        )
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)
 
@@ -460,7 +502,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.StationID,
             self.TpmIp,
             self.TpmCpldPort,
-            self.TpmVersion,
             self.PreaduAttenuation,
             self.StaticDelays,
             self.SubrackFQDN,

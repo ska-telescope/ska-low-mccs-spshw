@@ -10,12 +10,16 @@
 from __future__ import annotations
 
 import math
+import re
+from importlib.resources import files
 from typing import Any
 
+import semver
+import yaml
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthRules
 
-from .tile_data import TileData
+from ska_low_mccs_spshw.tile import health_config  # import the subpackage
 
 # COUNTERS = [
 #     "rd_cnt",
@@ -24,25 +28,162 @@ from .tile_data import TileData
 # ]
 
 
+def _both_nan(a: float, b: float) -> bool:
+    """
+    Compare 2 inputs.
+
+    :param a: string a under test
+    :param b: string b under test
+
+    :return: True if both a and b are None or NaN.
+    """
+    # Guard against non-floats
+    if not isinstance(a, float) or not isinstance(b, float):
+        return False
+    return math.isnan(a) and math.isnan(b)
+
+
+def _check_hw_version(version_str: str) -> None:
+    """
+    Validate hardware version.
+
+    :param version_str: the string to convert into a tuple.
+
+    :raises ValueError: when version_string has invalid format.
+    """
+    if not version_str:
+        # Default
+        return
+    # Convert 'v1.6.7a' -> (1, 6, 7, 'a')
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)([a-z])", version_str)
+    if not match:
+        raise ValueError(f"Invalid version format: '{version_str}'")
+
+
+def _check_bios_version(bios_version: str) -> None:
+    """
+    Validate hardware bios_version.
+
+    :param bios_version: the bios version to check.
+    """
+    if not bios_version:
+        # Default
+        return
+    semver.VersionInfo.parse(bios_version)
+
+
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
 
+    # This is a map used to locate the thresholds
+    # appropriate to the version of bios and hardware.
+    THRESHOLD_LOCATOR = {
+        ("0.6.0", "v2.0.1a"): "set3.yaml",
+        ("0.6.0", "v2.0.2a"): "set3.yaml",
+        ("0.6.0", "v2.0.5b"): "set3.yaml",
+        ("0.6.0", "v1.6.7a"): "set4.yaml",
+        ("0.6.0", "v1.6.5a"): "set4.yaml",
+        ("0.5.0", "v1.6.5a"): "set1.yaml",
+        ("0.5.0", "v1.6.7a"): "set1.yaml",
+        ("0.5.0", "v2.0.1a"): "set2.yaml",
+        ("0.5.0", "v2.0.2a"): "set2.yaml",
+        ("0.5.0", "v2.0.5b"): "set2.yaml",
+    }
+    THRESHOLD_MODIFIERS = {
+        ("has_preadu", False): "no_preadu.yaml",
+    }
+
     def __init__(
-        self: TileHealthRules, tpm_version: str, *args: Any, **kwargs: Any
+        self: TileHealthRules,
+        hw_version: str,
+        bios_version: str,
+        has_preadu: bool,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Initialise this device object.
 
-        :param tpm_version: the TPM version.
+        :param hw_version: the TPM version.
+        :param bios_version: the TPM bios version.
+        :param has_preadu: whether the TPM has a preadu attached.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
+        # Validate inputs.
+        _check_hw_version(hw_version)
+        _check_bios_version(bios_version)
+
+        self._threshold_locator = dict(self.THRESHOLD_LOCATOR)
+        self._threshold_modifier = dict(self.THRESHOLD_MODIFIERS)
+
+        self._min_max_monitoring_points = self._load_health_file(
+            hw_version, bios_version
+        )
+
+        modifiers = self._threshold_modifier.get(("has_preadu", has_preadu))
+        if modifiers is not None:
+            path = files(health_config).joinpath(modifiers)
+            modification_path = path.read_text()
+            modification = yaml.safe_load(modification_path)
+            self._min_max_monitoring_points = (
+                self._min_max_monitoring_points | modification
+            )
+
+        self._bios_version = bios_version
+        self._hw_version = hw_version
         super().__init__(*args, **kwargs)
         self.logger = None
-        self._tpm_version = tpm_version
         # self.previous_counters: dict = {}
         # for counter in COUNTERS:
         #     self.previous_counters[counter] = None
+
+    def _load_health_file(
+        self: TileHealthRules, hw_version: str, bios_version: str
+    ) -> dict[str, Any]:
+        """
+        Load a specified health set.
+
+        :param hw_version: the hardware version used to choose correct defaults.
+        :param bios_version: the bios version used to choose correct defaults.
+
+        :raises FileNotFoundError: when the health thresholds are not
+            present.
+        :raises ValueError: When there is no set defined
+
+        :return: the loaded health dictionary.
+        """
+        resource_name = self._threshold_locator.get((bios_version, hw_version))
+        if resource_name is None:
+            if bios_version == "" or hw_version == "":
+                # When bios_version is not defined we will
+                # not evaluate pll_40g.
+                # When the hardware_version is not defined we will not evaluate
+                # the temperature ADCs
+                # When we updated ska-low-sps-tpm-api:0.4.0 -> 0.6.0
+                # we found that we had some new monitoring points.
+                # These offered a different interface for the health evaluation
+                # for different versions of bios_version and hardware_version.
+                # This we would like to make mandatory. But for now we are
+                # ommiting the appropriate monitoring points from health.
+                resource_name = "set3.yaml"
+            else:
+                raise ValueError(
+                    f"Undefined health resource for {bios_version}, {hw_version}. "
+                )
+
+        path = files(health_config).joinpath(resource_name)
+
+        if path.is_file():
+            min_max_string = path.read_text()
+        else:
+            raise FileNotFoundError(
+                f"{resource_name} not found in health_config package"
+            )
+        return (
+            yaml.load(min_max_string, Loader=yaml.Loader).get("tpm_monitoring_points")
+            or {}
+        )
 
     def set_logger(self: TileHealthRules, logger: Any) -> None:
         """
@@ -142,13 +283,15 @@ class TileHealthRules(HealthRules):
 
         :return: the default thresholds
         """
-        return TileData.MIN_MAX_MONITORING_POINTS
+        return self._min_max_monitoring_points
 
+    # pylint: disable = too-many-branches
     def compute_intermediate_state(
         self: TileHealthRules,
         monitoring_points: dict[str, Any],
         min_max: dict[str, Any],
         path: str = "",
+        health_key: str | None = None,
     ) -> tuple[HealthState, str]:
         """
         Compute the intermediate health state for the Tile.
@@ -164,6 +307,7 @@ class TileHealthRules(HealthRules):
             to have for the device to be healthy
         :param path: the location in the health structure dictionary that is currently
             being computed.
+        :param health_key: the root health key.
         :return: the computed health state and health report
         """
         states: dict[str, tuple[HealthState, str]] = {}
@@ -173,13 +317,35 @@ class TileHealthRules(HealthRules):
             if isinstance(p_state, dict):
                 if p in min_max:
                     states[p] = self.compute_intermediate_state(
-                        p_state, min_max[p], path=f"{path}/{p}"
+                        monitoring_points=p_state,
+                        min_max=min_max[p],
+                        path=f"{path}/{p}",
+                        health_key=health_key,
                     )
                 else:
                     # TODO: MCCS-2196 - Updating the tile_health_attribute
                     # in ska-low-sps-tpm-api can cause a key error to be raised.
                     continue
             else:
+                # We ignore specific monitoring points
+                # if the _hw_version or _bios_version are undefined.
+                if (
+                    health_key == "temperatures"
+                    and p in [f"ADC{i}" for i in range(16)]
+                    and self._hw_version == ""
+                ):
+                    # If hw_version is not defined the ADC temperatures are ignored.
+                    states[p] = (HealthState.OK, "")
+                    continue
+                if (
+                    health_key == "timing"
+                    and p == "pll_40g"
+                    and self._bios_version == ""
+                ):
+                    # If bios_verion is not defined the pll_40g is ignored.
+                    states[p] = (HealthState.OK, "")
+                    continue
+
                 # last_path = path.split("/")[-1]
                 if p_state is None and min_max[p] is not None:
                     states[p] = (
@@ -202,15 +368,9 @@ class TileHealthRules(HealthRules):
                 elif isinstance(min_max[p], dict):
                     # If limits are min/max
                     if "min" in min_max[p].keys():
-                        allow_none_in_1_6 = min_max[p].get("allow_none_in_1_6", False)
-
-                        is_nan = math.isnan(float(p_state))
-
                         states[p] = (
                             (HealthState.OK, "")
-                            if (is_nan and allow_none_in_1_6)
-                            and (self._tpm_version == "tpm_v1_6")
-                            or min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
                             else (
                                 HealthState.FAILED,
                                 f'Monitoring point "{path}/{p}": {p_state} not in range'
@@ -252,7 +412,7 @@ class TileHealthRules(HealthRules):
                 else:
                     states[p] = (
                         (HealthState.OK, "")
-                        if p_state == min_max[p]
+                        if _both_nan(p_state, min_max[p]) or (p_state == min_max[p])
                         else (
                             HealthState.FAILED,
                             f'Monitoring point "{path}/{p}": '

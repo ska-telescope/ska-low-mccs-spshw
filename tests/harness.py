@@ -340,6 +340,16 @@ class SpsTangoTestHarness:
             UpdateRate=update_rate,
             LoggingLevelDefault=logging_level,
             ParentTRL=get_sps_station_name(self._station_label),
+            Simulated_PDU=True,
+            PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",
+        )
+
+    def add_power_marshaller_device(self: SpsTangoTestHarness) -> None:
+        """Add power marshaller device."""
+        self._tango_test_harness.add_device(
+            "low-mccs/powermarshaller/powermarshaller",
+            "ska_low_mccs_spshw.PowerMarshaller",
+            LoggingLevelDefault=5,
         )
 
     def add_pdu_device(  # pylint: disable=too-many-arguments

@@ -801,6 +801,13 @@ def synchronised_tile_device_fixture(
                 datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
             )
             tile_device.globalreferenceTime = start_time
+        if tile_device.state() in [tango.DevState.UNKNOWN]:
+            # We are adminMode.ONLINE, we should discover state.
+            AttributeWaiter(timeout=8).wait_for_value(
+                tile_device,
+                "tileProgrammingState",
+                None,
+            )
         if tile_device.state() == tango.DevState.OFF:
             tile_device.on()
         else:

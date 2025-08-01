@@ -342,14 +342,11 @@ def tile_is_in_state(
         tile_device,
         "tileProgrammingState",
         programming_state,
+        lookahead=2,  # UNKNOWN first hence lookahead == 2
     )
-    # Giving a very generous sleep to ensure attributes polled
+    tw = TileWrapper(tile_device)
     for item, val in defined_state.items():
-        AttributeWaiter(timeout=15).wait_for_value(
-            tile_device,
-            item,
-            val,
-        )
+        assert getattr(tw, item) == val
 
 
 @then("the Tile dropped packets is 0 after 30 seconds")

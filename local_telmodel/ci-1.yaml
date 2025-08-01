@@ -9,6 +9,7 @@ platform:
           - ci-1.yaml
         sdn_first_interface: 10.0.0.152/25
         daq:
+          two-pod-daq: false
           calibration:
             simulated: true
           bandpass:

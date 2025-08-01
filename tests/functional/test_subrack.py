@@ -279,7 +279,7 @@ def ensure_subrack_fan_speed_percent(
     # All we see is a HTTP timeout.
     # And the fan speed setting is never updated.
     # This scenario cannot be developed further until this bug is fixed.
-    # pytest.xfail(reason="Server-side bug")
+    pytest.xfail(reason="Server-side bug")
 
     speed_percent = fan_speeds_percent[fan_number - 1]
     if speed_percent != pytest.approx(90.0):

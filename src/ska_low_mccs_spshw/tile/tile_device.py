@@ -238,8 +238,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltage_avdd3": "voltageAVDD3",
             "voltage_vref_ddr0": "voltageVrefDDR0",
             "voltage_vref_ddr1": "voltageVrefDDR1",
-            # "voltage_vref_2V5": "voltageVref2V5",
-            "voltage_mon_1V2": "voltageMon1V2",
+            "voltage_vref_2V5": "voltageVref2V5",
+            "voltage_man_1V2": "voltageMan1V2",
             "voltage_mgt_avcc": "voltageMGT_AVCC",
             "voltage_mgt_avtt": "voltageMGT_AVTT",
             "voltage_mon_5V0": "voltageMon5V0",
@@ -247,7 +247,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltage_mon_1V8": "voltageMon1V8",
             "voltage_sw_avdd1": "voltageSW_AVDD1",
             "voltage_sw_avdd2": "voltageSW_AVDD2",
-            # "voltage_VIN": "voltage_VIN",
+            "voltage_vin": "voltageVIN",
             "voltage_vm_agp0": "voltageVM_AGP0",
             "voltage_vm_agp1": "voltageVM_AGP1",
             "voltage_vm_agp2": "voltageVM_AGP2",
@@ -430,8 +430,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageAVDD3": ["voltages", "AVDD3"],
             "voltageVrefDDR0": ["voltages", "DDR0_VREF"],
             "voltageVrefDDR1": ["voltages", "DDR1_VREF"],
-            # "voltageVref2V5": ["voltages", "VREF_2V5"],
-            "voltageMon1V2": ["voltages", "MON_1V2"],
+            "voltageVref2V5": ["voltages", "VREF_2V5"],
+            "voltageMan1V2": ["voltages", "MAN_1V2"],
             "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
             "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
             "voltageMon5V0": ["voltages", "MON_5V0"],
@@ -439,7 +439,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageMon1V8": ["voltages", "MON_1V8"],
             "voltageSW_AVDD1": ["voltages", "SW_AVDD1"],
             "voltageSW_AVDD2": ["voltages", "SW_AVDD2"],
-            # "voltageVIN": ["voltages", "VIN"],
+            "voltageVIN": ["voltages", "VIN"],
             "voltageVM_AGP0": ["voltages", "VM_AGP0"],
             "voltageVM_AGP1": ["voltages", "VM_AGP1"],
             "voltageVM_AGP2": ["voltages", "VM_AGP2"],
@@ -2892,13 +2892,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     return self._attribute_state["voltageVref_2V5"].read()
 
     @attribute(dtype="DevDouble", label="MON_1V2 voltage")
-    def voltageMon1V2(self: MccsTile) -> float | None:
+    def voltageMan1V2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the MAN 1.2 V voltage.
 
         :return: Man 1.2V voltage
         """
-        return self._attribute_state["voltageMon1V2"].read()
+        return self._attribute_state["voltageMan1V2"].read()
 
     @attribute(dtype="DevDouble", label="MGT_AVCC voltage")
     def voltageMGT_AVCC(self: MccsTile) -> float | None:
@@ -2969,14 +2969,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageSW_AVDD2"].read()
 
-    # @attribute(dtype="DevDouble", label="voltage VIN")
-    # def voltageVIN(self: MccsTile) -> float | None:
-    #     """
-    #     Handle a Tango attribute read of the VIN voltage.
+    @attribute(dtype="DevDouble", label="voltage VIN")
+    def voltageVIN(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the VIN voltage.
 
-    #     :return: voltage VIN
-    #     """
-    #     return self._attribute_state["voltage_VIN"].read()
+        :return: voltage VIN
+        """
+        return self._attribute_state["voltageVIN"].read()
 
     @attribute(dtype="DevDouble", label="voltage VM_AGP0")
     def voltageVM_AGP0(self: MccsTile) -> float | None:

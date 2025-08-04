@@ -89,7 +89,6 @@ _ATTRIBUTE_MAP: Final = {
     "MAN_1V2": "voltage_man_1v2",
     "MGT_AVCC": "voltage_mgt_avcc",
     "MGT_AVTT": "voltage_mgt_avtt",
-    "MON_5V0": "voltage_mon_5v0",
     "MON_3V3": "voltage_mon_3v3",
     "MON_1V8": "voltage_mon_1v8",
     "SW_AVDD1": "voltage_sw_avdd1",
@@ -3713,6 +3712,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return (ResultCode.FAILED, lock_failed_message)
 
         return (ResultCode.OK, "Command executed.")
+
+    @property
+    @check_communicating
+    def voltage_mon_5v0(self: TileComponentManager) -> float:
+        """
+        Return the internal 5V supply of the TPM.
+
+        :return: the internal 5V supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_5V0"]
 
     # -----------------------------
     # Test generator methods

@@ -80,41 +80,6 @@ _ATTRIBUTE_MAP: Final = {
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
-    "FE0_mVA": "current_fe0_mva",
-    "FE1_mVA": "current_fe1_mva",
-    "AVDD3": "voltage_avdd3",
-    "DDR0_VREF": "voltage_vref_ddr0",
-    "DDR1_VREF": "voltage_vref_ddr1",
-    "VREF_2V5": "voltage_vref_2V5",
-    "MAN_1V2": "voltage_man_1v2",
-    "MGT_AVCC": "voltage_mgt_avcc",
-    "MGT_AVTT": "voltage_mgt_avtt",
-    "MON_3V3": "voltage_mon_3v3",
-    "MON_1V8": "voltage_mon_1v8",
-    "SW_AVDD1": "voltage_sw_avdd1",
-    "SW_AVDD2": "voltage_sw_avdd2",
-    "VIN": "voltage_vin",
-    "VM_AGP0": "voltage_vm_agp0",
-    "VM_AGP1": "voltage_vm_agp1",
-    "VM_AGP2": "voltage_vm_agp2",
-    "VM_AGP3": "voltage_vm_agp3",
-    "VM_AGP4": "voltage_vm_agp4",
-    "VM_AGP5": "voltage_vm_agp5",
-    "VM_AGP6": "voltage_vm_agp6",
-    "VM_AGP7": "voltage_vm_agp7",
-    "VM_CLK0B": "voltage_vm_clk0b",
-    "VM_CLK1B": "voltage_vm_clk1b",
-    "VM_DDR0_VTT": "voltage_vm_ddr0_vtt",
-    "VM_DDR1_VDD": "voltage_vm_ddr1_vdd",
-    "VM_DDR1_VTT": "voltage_vm_ddr1_vtt",
-    "VM_DRVDD": "voltage_vm_drvdd",
-    "VM_DVDD": "voltage_vm_dvdd",
-    "VM_FE0": "voltage_vm_fe0",
-    "VM_FE1": "voltage_vm_fe1",
-    "VM_MGT0_AUX": "voltage_vm_mgt0_aux",
-    "VM_MGT1_AUX": "voltage_vm_mgt1_aux",
-    "VM_PLL": "voltage_vm_pll",
-    "VM_SW_AMP": "voltage_vm_sw_amp",
 }
 
 
@@ -3523,6 +3488,531 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
+    def currents_fe0_mva(self: TileComponentManager) -> float:
+        """
+        Return the internal fe0_mva supply of the TPM.
+
+        :return: the internal fe0_mva supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["currents"]["FE0_mVA"]
+
+    @property
+    @check_communicating
+    def currents_fe1_mva(self: TileComponentManager) -> float:
+        """
+        Return the internal fe1_mva supply of the TPM.
+
+        :return: the internal fe1_mva supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["currents"]["FE1_mVA"]
+
+    @property
+    @check_communicating
+    def voltage_avdd3(self: TileComponentManager) -> float:
+        """
+        Return the internal avdd3 supply of the TPM.
+
+        :return: the internal avdd3 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["AVDD3"]
+
+    @property
+    @check_communicating
+    def voltage_ddr0_vref(self: TileComponentManager) -> float:
+        """
+        Return the internal ddr0_vref supply of the TPM.
+
+        :return: the internal ddr0_vref supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["DDR0_VREF"]
+
+    @property
+    @check_communicating
+    def voltage_ddr1_vref(self: TileComponentManager) -> float:
+        """
+        Return the internal ddr1_vref supply of the TPM.
+
+        :return: the internal ddr1_vref supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["DDR1_VREF"]
+
+    @property
+    @check_communicating
+    def voltage_mon_1v2(self: TileComponentManager) -> float:
+        """
+        Return the internal mon_1v2 supply of the TPM.
+
+        :return: the internal mon_1v2 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_1V2"]
+
+    @property
+    @check_communicating
+    def voltage_mgt_avcc(self: TileComponentManager) -> float:
+        """
+        Return the internal mgt_avcc supply of the TPM.
+
+        :return: the internal mgt_avcc supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MGT_AVCC"]
+
+    @property
+    @check_communicating
+    def voltage_mgt_avtt(self: TileComponentManager) -> float:
+        """
+        Return the internal mgt_avtt supply of the TPM.
+
+        :return: the internal mgt_avtt supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MGT_AVTT"]
+
+    @property
+    @check_communicating
+    def voltage_mon_5v0(self: TileComponentManager) -> float:
+        """
+        Return the internal mon_5v0 supply of the TPM.
+
+        :return: the internal mon_5v0 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_5V0"]
+
+    @property
+    @check_communicating
+    def voltage_mon_3v3(self: TileComponentManager) -> float:
+        """
+        Return the internal mon_3v3 supply of the TPM.
+
+        :return: the internal mon_3v3 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_3V3"]
+
+    @property
+    @check_communicating
+    def voltage_mon_1v8(self: TileComponentManager) -> float:
+        """
+        Return the internal mon_1v8 supply of the TPM.
+
+        :return: the internal mon_1v8 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_1V8"]
+
+    @property
+    @check_communicating
+    def voltage_sw_avdd1(self: TileComponentManager) -> float:
+        """
+        Return the internal sw_avdd1 supply of the TPM.
+
+        :return: the internal sw_avdd1 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["SW_AVDD1"]
+
+    @property
+    @check_communicating
+    def voltage_sw_avdd2(self: TileComponentManager) -> float:
+        """
+        Return the internal sw_avdd2 supply of the TPM.
+
+        :return: the internal sw_avdd2 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["SW_AVDD2"]
+
+    @property
+    @check_communicating
+    def voltage_vin(self: TileComponentManager) -> float:
+        """
+        Return the internal vin supply of the TPM.
+
+        :return: the internal vin supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VIN"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp0(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp0 supply of the TPM.
+
+        :return: the internal vm_agp0 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP0"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp1(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp1 supply of the TPM.
+
+        :return: the internal vm_agp1 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP1"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp2(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp2 supply of the TPM.
+
+        :return: the internal vm_agp2 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP2"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp3(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp3 supply of the TPM.
+
+        :return: the internal vm_agp3 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP3"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp4(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp4 supply of the TPM.
+
+        :return: the internal vm_agp4 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP4"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp5(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp5 supply of the TPM.
+
+        :return: the internal vm_agp5 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP5"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp6(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp6 supply of the TPM.
+
+        :return: the internal vm_agp6 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP6"]
+
+    @property
+    @check_communicating
+    def voltage_vm_agp7(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_agp7 supply of the TPM.
+
+        :return: the internal vm_agp7 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_AGP7"]
+
+    @property
+    @check_communicating
+    def voltage_vm_clk0b(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_clk0b supply of the TPM.
+
+        :return: the internal vm_clk0b supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_CLK0B"]
+
+    @property
+    @check_communicating
+    def voltage_vm_clk1b(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_clk1b supply of the TPM.
+
+        :return: the internal vm_clk1b supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_CLK1B"]
+
+    @property
+    @check_communicating
+    def voltage_vm_ddr0_vtt(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_ddr0_vtt supply of the TPM.
+
+        :return: the internal vm_ddr0_vtt supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_DDR0_VTT"]
+
+    @property
+    @check_communicating
+    def voltage_vm_ddr1_vdd(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_ddr1_vdd supply of the TPM.
+
+        :return: the internal vm_ddr1_vdd supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_DDR1_VDD"]
+
+    @property
+    @check_communicating
+    def voltage_vm_ddr1_vtt(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_ddr1_vtt supply of the TPM.
+
+        :return: the internal vm_ddr1_vtt supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_DDR1_VTT"]
+
+    @property
+    @check_communicating
+    def voltage_vm_drvdd(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_drvdd supply of the TPM.
+
+        :return: the internal vm_drvdd supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_DRVDD"]
+
+    @property
+    @check_communicating
+    def voltage_vm_dvdd(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_dvdd supply of the TPM.
+
+        :return: the internal vm_dvdd supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_DVDD"]
+
+    @property
+    @check_communicating
+    def voltage_vm_fe0(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_fe0 supply of the TPM.
+
+        :return: the internal vm_fe0 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_FE0"]
+
+    @property
+    @check_communicating
+    def voltage_vm_fe1(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_fe1 supply of the TPM.
+
+        :return: the internal vm_fe1 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_FE1"]
+
+    @property
+    @check_communicating
+    def voltage_vm_mgt0_aux(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_mgt0_aux supply of the TPM.
+
+        :return: the internal vm_mgt0_aux supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_MGT0_AUX"]
+
+    @property
+    @check_communicating
+    def voltage_vm_mgt1_aux(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_mgt1_aux supply of the TPM.
+
+        :return: the internal vm_mgt1_aux supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_MGT1_AUX"]
+
+    @property
+    @check_communicating
+    def voltage_vm_pll(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_pll supply of the TPM.
+
+        :return: the internal vm_pll supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_PLL"]
+
+    @property
+    @check_communicating
+    def voltage_vm_sw_amp(self: TileComponentManager) -> float:
+        """
+        Return the internal vm_sw_amp supply of the TPM.
+
+        :return: the internal vm_sw_amp supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VM_SW_AMP"]
+
+    @property
+    @check_communicating
     def flagged_packets(self: TileComponentManager) -> dict:
         """
         Return the total number of flagged packets by the TPM.
@@ -3712,12 +4202,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return (ResultCode.FAILED, lock_failed_message)
 
         return (ResultCode.OK, "Command executed.")
-
     @property
     @check_communicating
-    def voltage_mon_5v0(self: TileComponentManager) -> float:
+    def voltage_mon(self: TileComponentManager) -> float:
         """
         Return the internal 5V supply of the TPM.
+
+        (Deprecated)
 
         :return: the internal 5V supply of the TPM
         """
@@ -3727,7 +4218,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             return self.tile.get_health_status()["voltages"]["MON_5V0"]
-
     # -----------------------------
     # Test generator methods
     # -----------------------------

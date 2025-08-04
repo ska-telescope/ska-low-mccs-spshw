@@ -3393,7 +3393,7 @@ class TestDynamicSimulator:
     @pytest.mark.parametrize(
         "attribute_name",
         (
-            "voltage_mon_5v0",
+            "voltage_mon",
             "board_temperature",
             "fpga1_temperature",
             "fpga2_temperature",

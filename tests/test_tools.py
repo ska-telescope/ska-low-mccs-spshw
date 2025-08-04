@@ -455,7 +455,7 @@ class _ProgrammingStateAccess:
                         "Initialised",
                         lookahead=5,
                     )
-                if obj._tile_device.tileProgrammingState == "Initialised":
+                elif obj._tile_device.tileProgrammingState == "Initialised":
                     obj._tile_device.Initialise()
                     AttributeWaiter(timeout=30).wait_for_value(
                         obj._tile_device,

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "7.1.0"
+version = "7.2.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -51,6 +51,7 @@ watchdog = "^3.0.0"
 h5py = "^3.12.1"
 lockfile = "^0.12.2"
 scapy = "^2.6.0"
+semver = "^3.0.4" 
 pytz = "^2024.2"
 types-pytz= "^2025.2.0.20250516"
 configparser = "^7.1.0"
@@ -116,6 +117,7 @@ ska-low-mccs-daq-interface = "^1.0.1"
 ska-low-mccs-daq = "^3.0.0-rc2"
 ska-telmodel = "^1.4.1"
 ska-ser-snmp = "^0.6.1"
+semver = "^3.0.4"
 
 [tool.poetry.scripts]
 spshw = "ska_low_mccs_spshw:main"

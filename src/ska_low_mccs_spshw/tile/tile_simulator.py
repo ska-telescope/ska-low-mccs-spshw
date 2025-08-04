@@ -926,7 +926,6 @@ class TileSimulator:
     STATIC_DELAYS = [-160.0] * 32
     PREADU_LEVELS = [0.0] * 32
     CLOCK_SIGNALS_OK = True
-    TILE_MONITORING_POINTS = copy.deepcopy(TileData.get_tile_defaults())
     VOLTAGE = 5.0
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
@@ -947,7 +946,7 @@ class TileSimulator:
         "fpga2_alarm_threshold": (-273.0, 90.0),
     }
 
-    FIRMWARE_NAME = "itpm_v1_6.bit"
+    FIRMWARE_NAME = "tpm_firmware.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -1071,6 +1070,8 @@ class TileSimulator:
     def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
         # this is set in the initialise
+        if not self.is_programmed():
+            return -1
         return self._tile_id
 
     @check_mocked_overheating
@@ -2921,6 +2922,8 @@ class TileSimulator:
         :return: station ID programmed in HW
         :rtype: int
         """
+        if not self.is_programmed():
+            return -1
         return self._station_id
 
     @check_mocked_overheating

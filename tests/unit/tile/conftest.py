@@ -197,16 +197,6 @@ def tpm_cpld_port_fixture() -> int:
     return 10000
 
 
-@pytest.fixture(name="tpm_version")
-def tpm_version_fixture() -> str:
-    """
-    Return the TPM version.
-
-    :return: the TPM version
-    """
-    return "tpm_v1_6"
-
-
 PREADU_ATTENUATION: Final = [20.0] * 32
 STATIC_TIME_DELAYS: Final = [2.5] * 32
 
@@ -253,7 +243,6 @@ def tile_component_manager_fixture(
     station_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
-    tpm_version: str,
     preadu_attenuation: list[float],
     static_time_delays: list[float],
     subrack_id: int,
@@ -272,7 +261,6 @@ def tile_component_manager_fixture(
     :param station_id: the ID of the station to which this tile belongs.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param preadu_attenuation: the preADU attenuation to set on the tile.
     :param static_time_delays: the static delays offset to apply to the tile.
     :param subrack_id: ID of the subrack that controls power to this tile
@@ -292,7 +280,6 @@ def tile_component_manager_fixture(
         station_id,
         tpm_ip,
         tpm_cpld_port,
-        tpm_version,
         preadu_attenuation,
         static_time_delays,
         get_subrack_name(subrack_id),
@@ -399,7 +386,6 @@ def dynamic_tile_component_manager_fixture(
     station_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
-    tpm_version: str,
     preadu_attenuation: list[float],
     static_time_delays: list[float],
     subrack_id: int,
@@ -417,7 +403,6 @@ def dynamic_tile_component_manager_fixture(
     :param station_id: the ID of the station to which this tile belongs.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param preadu_attenuation: the preADU attenuation to set on the tile.
     :param static_time_delays: the static delays offset to apply to the tile.
     :param subrack_id: ID of the subrack that controls power to this tile
@@ -437,7 +422,6 @@ def dynamic_tile_component_manager_fixture(
         station_id,
         tpm_ip,
         tpm_cpld_port,
-        tpm_version,
         preadu_attenuation,
         static_time_delays,
         get_subrack_name(subrack_id),

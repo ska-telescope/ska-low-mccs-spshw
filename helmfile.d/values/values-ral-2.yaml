@@ -37,7 +37,19 @@ helm_values:
       SpsStation:
         low-mccs/spsstation/stfc-ral-2:
           ParentTRL: ""
-          
+      MccsTile:
+        low-mccs/tile/stfc-ral-2-tpm11:
+          PreAduPresent: false
+        low-mccs/tile/stfc-ral-2-tpm12:
+          PreAduPresent: false
+        low-mccs/tile/stfc-ral-2-tpm13:
+          PreAduPresent: false
+        low-mccs/tile/stfc-ral-2-tpm14:
+          PreAduPresent: false
+        low-mccs/tile/stfc-ral-2-tpm15:
+          PreAduPresent: false
+        low-mccs/tile/stfc-ral-2-tpm16:
+          PreAduPresent: false
     # deviceServerTypes:
     #   spshw:
     #     image:

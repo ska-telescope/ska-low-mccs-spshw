@@ -11,6 +11,7 @@ import json
 import logging
 import unittest.mock
 
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
@@ -54,12 +55,11 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.set_state(tango.DevState.ON)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
     builder.add_attribute("healthState", HealthState.OK)
+    builder.add_attribute("preaduLevels", np.array([22.0] * 32))
+    builder.add_attribute("adcPower", np.array([17.0] * 32))
+    builder.add_attribute("staticTimeDelays", np.array([0] * 32))
     builder.add_attribute("ppsDelay", 0)
-    builder.add_attribute("preaduLevels", [22.0] * 32)
-    builder.add_attribute("adcPower", [17.0] * 32)
-    builder.add_attribute("staticTimeDelays", [0] * 32)
-    builder.add_attribute("ppsDelay", 0)
-    builder.add_attribute("cspRounding", [2] * 384)
+    builder.add_attribute("cspRounding", np.array([2] * 384))
     builder.add_attribute("pendingDataRequests", False)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
@@ -129,15 +129,22 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
 @pytest.fixture(name="mock_tile_device_proxy")
 def mock_tile_device_proxy_fixture(
     mock_tile_builder: MockDeviceBuilder,
+    tile_id: int,
+    station_id: int,
 ) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsTile device proxy.
 
     :param mock_tile_builder: builder for mock Tiles
+    :param tile_id: the TileId fixture used to populate the
+        device_property
+    :param station_id: the stationID fixture used to populate the
+        device_property
 
     :return: a mock MccsTile device proxy.
     """
-    return mock_tile_builder()
+    logical_tile_id = tile_id - 1
+    return mock_tile_builder(TileId=[logical_tile_id], StationID=[station_id])
 
 
 @pytest.fixture(name="num_tiles")
@@ -152,17 +159,22 @@ def num_tiles_fixture() -> int:
 
 @pytest.fixture(name="mock_tile_device_proxies")
 def mock_tile_device_proxies_fixture(
-    mock_tile_builder: MockDeviceBuilder, num_tiles: int
+    mock_tile_builder: MockDeviceBuilder, num_tiles: int, station_id: int
 ) -> list[unittest.mock.Mock]:
     """
     Fixture that provides a list of mock MccsTile devices.
 
     :param mock_tile_builder: builder for mock Tiles
     :param num_tiles: the number of tiles to make mocks of
+    :param station_id: the stationID fixture used to populate the
+        device_property
 
     :return: a list of mock MccsTile devices.
     """
-    return [mock_tile_builder() for _ in range(num_tiles)]
+    return [
+        mock_tile_builder(TileId=[i + 1], StationID=[station_id])
+        for i in range(num_tiles)
+    ]
 
 
 @pytest.fixture(name="patched_sps_station_device_class")

@@ -249,7 +249,6 @@ def tile_has_defined_synchronised_state(
     }
     tw = TileWrapper(tile_device)
     tw.set_state(programming_state=TpmStatus.SYNCHRONISED, **defined_state)
-    defined_state["programming_state"] = 6
     return defined_state
 
 
@@ -292,7 +291,6 @@ def tile_has_defined_initialised_state(
         programming_state=TpmStatus.INITIALISED,
         **defined_state,
     )
-    defined_state["programming_state"] = 5
     return defined_state
 
 
@@ -351,7 +349,11 @@ def tile_is_in_state(
     time.sleep(5)
     tw = TileWrapper(tile_device)
     for item, val in defined_state.items():
-        assert getattr(tw, item) == val
+        attr = getattr(tw, item)
+        if isinstance(attr, np.ndarray):
+            assert np.array_equal(attr, val), f"{item} does not match {val}"
+        else:
+            assert getattr(tw, item) == val, f"{item} does not match {val}"
 
 
 @then("the Tile dropped packets is 0 after 30 seconds")

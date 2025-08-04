@@ -8,8 +8,12 @@ defaults:
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
   ska-low-mccs-daq:
-    labels:
-      app: ska-low-mccs-spshw # This is to be included in k8s-wait, is there a better solution?
+    ska-tango-devices:
+      labels:
+        # This label is used by the make infrastructure
+        # It was added here for to ensure that daq pods are waited for in the k8s-wait stage
+        # on pipeline
+        app: ska-low-mccs-spshw # This label is used by the make infrastructure (e.g. k8s-wait.)
   ska-tango-devices:
     devices:
       SpsStation:

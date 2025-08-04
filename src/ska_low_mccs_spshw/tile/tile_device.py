@@ -2882,14 +2882,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVrefDDR1"].read()
 
-    # @attribute(dtype="DevDouble", label="voltage VREF_2V5")
-    # def voltageVref2V5(self: MccsTile) -> float | None:
-    #     """
-    #     Handle a Tango attribute read of the Vref 2.5 V voltage.
+    @attribute(dtype="DevDouble", label="voltage VREF_2V5")
+    def voltageVref2V5(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the Vref 2.5 V voltage.
 
-    #     :return: Vref 2.5 V voltage
-    #     """
-    #     return self._attribute_state["voltageVref_2V5"].read()
+        :return: Vref 2.5 V voltage
+        """
+        return self._attribute_state["voltageVref_2V5"].read()
 
     @attribute(dtype="DevDouble", label="MON_1V2 voltage")
     def voltageMan1V2(self: MccsTile) -> float | None:

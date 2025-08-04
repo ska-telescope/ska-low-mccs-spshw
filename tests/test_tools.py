@@ -446,11 +446,23 @@ class _ProgrammingStateAccess:
                     AttributeWaiter(timeout=30).wait_for_value(
                         obj._tile_device,
                         "tileProgrammingState",
+                        "NotProgrammed",
+                        lookahead=5,
+                    )
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
                         "Initialised",
                         lookahead=5,
                     )
                 if obj._tile_device.tileProgrammingState == "Initialised":
                     obj._tile_device.Initialise()
+                    AttributeWaiter(timeout=30).wait_for_value(
+                        obj._tile_device,
+                        "tileProgrammingState",
+                        "NotProgrammed",
+                        lookahead=4,
+                    )
                     AttributeWaiter(timeout=30).wait_for_value(
                         obj._tile_device,
                         "tileProgrammingState",

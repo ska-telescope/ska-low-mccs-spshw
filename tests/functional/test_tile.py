@@ -344,6 +344,11 @@ def tile_is_in_state(
         programming_state,
         lookahead=2,  # UNKNOWN first hence lookahead == 2
     )
+    # There is an edge case here. When we are discovering state,
+    # the configuration attributes will be read on the next poll.0
+    # When driving the state the configuration will be read before
+    # we arrive at state.
+    time.sleep(5)
     tw = TileWrapper(tile_device)
     for item, val in defined_state.items():
         assert getattr(tw, item) == val

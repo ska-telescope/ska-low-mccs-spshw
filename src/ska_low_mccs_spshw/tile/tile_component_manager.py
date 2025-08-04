@@ -4202,6 +4202,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return (ResultCode.FAILED, lock_failed_message)
 
         return (ResultCode.OK, "Command executed.")
+
     @property
     @check_communicating
     def voltage_mon(self: TileComponentManager) -> float:
@@ -4218,6 +4219,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             return self.tile.get_health_status()["voltages"]["MON_5V0"]
+
     # -----------------------------
     # Test generator methods
     # -----------------------------

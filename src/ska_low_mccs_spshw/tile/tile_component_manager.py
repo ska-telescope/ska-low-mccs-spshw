@@ -3563,6 +3563,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
+    def voltage_vref_2v5(self: TileComponentManager) -> float:
+        """
+        Return the internal vref 2V5 supply of the TPM.
+
+        :return: the internal vref 2V5 supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["VREF_2V5"]
+
+    @property
+    @check_communicating
     def voltage_mon_1v2(self: TileComponentManager) -> float:
         """
         Return the internal mon_1v2 supply of the TPM.

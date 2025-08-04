@@ -238,7 +238,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltage_avdd3": "voltageAVDD3",
             "voltage_vref_ddr0": "voltageVrefDDR0",
             "voltage_vref_ddr1": "voltageVrefDDR1",
-            "voltage_vref_2V5": "voltageVref2V5",
+            "voltage_vref_2v5": "voltageVref2V5",
             "voltage_man_1V2": "voltageMan1V2",
             "voltage_mgt_avcc": "voltageMGT_AVCC",
             "voltage_mgt_avtt": "voltageMGT_AVTT",
@@ -2892,7 +2892,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Vref 2.5 V voltage
         """
-        return self._attribute_state["voltageVref_2V5"].read()
+        return self._attribute_state["voltageVref2V5"].read()
 
     @attribute(dtype="DevDouble", label="MON_1V2 voltage")
     def voltageMan1V2(self: MccsTile) -> float | None:

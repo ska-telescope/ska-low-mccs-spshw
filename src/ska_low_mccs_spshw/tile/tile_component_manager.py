@@ -3922,6 +3922,96 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.disable_station_beam_flagging()
 
+    def get_voltage_warning_thresholds(
+        self: TileComponentManager,
+        voltage: str = "",
+    ) -> str:
+        """
+        Get the voltage warning thresholds.
+
+        :param voltage: The voltage type to get the thresholds for.
+
+        :return: a jsonified dictionary with the voltage warning thresholds
+            or a message if the specified voltage is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            if voltage:
+                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+            else:
+                thresholds = self.tile.get_voltage_warning_thresholds()
+            if thresholds is None:
+                return f"Specified voltage '{voltage}' not recognized."
+            return json.dumps(thresholds)
+
+    def set_voltage_warning_thresholds(
+        self: TileComponentManager,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set the voltage warning thresholds.
+
+        :param voltage: The voltage type to set the thresholds for.
+            Must be one of the keys in the voltage warning thresholds dictionary.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+
+    def get_current_warning_thresholds(
+        self: TileComponentManager,
+        current: str = "",
+    ) -> str:
+        """
+        Get the current warning thresholds.
+
+        :param current: The current type to get the thresholds for.
+
+        :return: a jsonified dictionary with the current warning thresholds
+            or a message if the specified current is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            if current:
+                thresholds = self.tile.get_current_warning_thresholds(current)
+            else:
+                thresholds = self.tile.get_current_warning_thresholds()
+            if thresholds is None:
+                return f"Specified current '{current}' not recognized."
+            return json.dumps(thresholds)
+
+    def set_current_warning_thresholds(
+        self: TileComponentManager,
+        current: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set the current warning thresholds.
+
+        :param current: The current type to set the thresholds for.
+            Must be one of the keys in the current warning thresholds dictionary.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the current type is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.set_current_warning_thresholds(current, min_thr, max_thr)
+
     @property
     @check_communicating
     def is_station_beam_flagging_enabled(self: TileComponentManager) -> list:

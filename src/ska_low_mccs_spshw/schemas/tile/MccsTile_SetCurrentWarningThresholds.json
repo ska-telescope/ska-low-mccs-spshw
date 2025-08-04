@@ -1,0 +1,27 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_SetCurrentWarningThresholds.json",
+    "title": "MccsTile SetCurrentWarningThresholds schema",
+    "description": "Schema for MccsTile's SetCurrentWarningThresholds command",
+    "type": "object",
+    "properties": {
+        "current": {
+            "description": "Name of the current to set the warning thresholds for",
+            "type": "string"
+        },
+        "min_thr": {
+            "description": "Threshold minimum value",
+            "type": "number",
+            "minimum": 0.0
+        },
+        "max_thr": {
+            "description": "Threshold maximum value",
+            "type": "number"
+        }
+    },
+    "required": [
+        "current",
+        "min_thr",
+        "max_thr"
+    ]
+}

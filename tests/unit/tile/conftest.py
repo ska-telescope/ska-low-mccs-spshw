@@ -302,6 +302,80 @@ def dynamic_tile_simulator_fixture(logger: logging.Logger) -> DynamicTileSimulat
     return DynamicTileSimulator(logger)
 
 
+@pytest.fixture(name="voltage_warning_thresholds")
+def voltage_warning_thresholds_fixture() -> dict[str, dict[str, float]]:
+    """
+    Return the standard voltage warning thresholds.
+
+    :return: the standard voltage warning thresholds.
+    """
+    return {
+        "MGT_AVCC": {"min": 0.0, "max": 65.535},
+        "MGT_AVTT": {"min": 0.0, "max": 65.535},
+        "SW_AVDD1": {"min": 0.0, "max": 65.535},
+        "SW_AVDD2": {"min": 0.0, "max": 65.535},
+        "AVDD3": {"min": 0.0, "max": 65.535},
+        "MAN_1V2": {"min": 0.0, "max": 65.535},
+        "DDR0_VREF": {"min": 0.0, "max": 65.535},
+        "DDR1_VREF": {"min": 0.0, "max": 65.535},
+        "VM_DRVDD": {"min": 0.0, "max": 65.535},
+        "VIN": {"min": 11.4, "max": 12.6},
+        "MON_3V3": {"min": 0.0, "max": 65.535},
+        "MON_1V8": {"min": 0.0, "max": 65.535},
+        "MON_5V0": {"min": 0.0, "max": 65.535},
+    }
+
+
+@pytest.fixture(name="updated_voltage_warning_thresholds")
+def updated_voltage_warning_thresholds_fixture() -> dict[str, dict[str, float]]:
+    """
+    Return non-standard voltage warning thresholds.
+
+    :return: the non-standard voltage warning thresholds.
+    """
+    return {
+        "MGT_AVCC": {"min": 1.0, "max": 2.0},
+        "MGT_AVTT": {"min": 3.0, "max": 4.0},
+        "SW_AVDD1": {"min": 5.0, "max": 6.535},
+        "SW_AVDD2": {"min": 7.0, "max": 8.535},
+        "AVDD3": {"min": 9.0, "max": 10.535},
+        "MAN_1V2": {"min": 11.0, "max": 12.535},
+        "DDR0_VREF": {"min": 13.0, "max": 14.535},
+        "DDR1_VREF": {"min": 15.0, "max": 16.535},
+        "VM_DRVDD": {"min": 17.0, "max": 18.535},
+        "VIN": {"min": 19.4, "max": 20.6},
+        "MON_3V3": {"min": 21.0, "max": 22.535},
+        "MON_1V8": {"min": 23.0, "max": 24.535},
+        "MON_5V0": {"min": 25.0, "max": 26.535},
+    }
+
+
+@pytest.fixture(name="current_warning_thresholds")
+def current_warning_thresholds_fixture() -> dict[str, dict[str, float]]:
+    """
+    Return the standard current warning thresholds.
+
+    :return: the standard current warning thresholds.
+    """
+    return {
+        "FE0_mVA": {"min": 0.0, "max": 65.535},
+        "FE1_mVA": {"min": 0.0, "max": 65.535},
+    }
+
+
+@pytest.fixture(name="updated_current_warning_thresholds")
+def updated_current_warning_thresholds_fixture() -> dict[str, dict[str, float]]:
+    """
+    Return the standard current warning thresholds.
+
+    :return: the standard current warning thresholds.
+    """
+    return {
+        "FE0_mVA": {"min": 1.0, "max": 5.535},
+        "FE1_mVA": {"min": 2.0, "max": 6.535},
+    }
+
+
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="dynamic_tile_component_manager")
 def dynamic_tile_component_manager_fixture(

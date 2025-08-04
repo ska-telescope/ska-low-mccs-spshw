@@ -438,8 +438,8 @@ class MockTpm:
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
         self._station_beam_flagging = False
-
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
+        self.tpm_monitor = TpmMonitor(logger)
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -1685,6 +1685,84 @@ class TileSimulator:
             self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled()
             for fpga in fpgas
         ]
+
+    @connected
+    def get_voltage_warning_thresholds(
+        self: TileSimulator,
+        voltage: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of voltage warning thresholds.
+
+        :param voltage: The voltage type to get the thresholds for.
+            If None, return all thresholds.
+
+        :return: A dictionary containing the voltage thresholds or None if
+            the requested voltage is not found in the thresholds.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.get_voltage_warning_thresholds(voltage)
+
+    @connected
+    def set_voltage_warning_thresholds(
+        self: TileSimulator,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a voltage warning threshold.
+
+        :param voltage: The voltage type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.set_voltage_warning_thresholds(
+            voltage, min_thr, max_thr
+        )
+
+    @connected
+    def get_current_warning_thresholds(
+        self: TileSimulator,
+        current: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of current warning thresholds.
+
+        :param current: The current type to get the thresholds for.
+            If None, return all thresholds.
+
+        :return: A dictionary containing the current thresholds or None if
+            the requested current is not found in the thresholds.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.get_current_warning_thresholds(current)
+
+    @connected
+    def set_current_warning_thresholds(
+        self: TileSimulator,
+        current: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a current warning threshold.
+
+        :param current: The current type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the current type is not recognized.
+        """
+        assert self.tpm is not None
+        return self.tpm.tpm_monitor.set_current_warning_thresholds(
+            current, min_thr, max_thr
+        )
 
     @property
     def tile_info(self: TileSimulator) -> str:
@@ -3176,3 +3254,137 @@ class DynamicTileSimulator(TileSimulator):
                 random.randint(0, TileData.ANTENNA_COUNT - 1),
                 random.randint(0, TileData.POLS_PER_ANTENNA - 1),
             )
+
+
+class TpmMonitor:
+    """TPM Monitor class."""
+
+    def __init__(self: TpmMonitor, logger: logging.Logger) -> None:
+        """
+        Initialise the TPM Monitor.
+
+        :param logger: a logger for this monitor to use
+        """
+        self.logger = logger
+        # All values set according to firmware.
+        self._voltage_warning_thresholds: dict[str, dict[str, float]] = {
+            "MGT_AVCC": {"min": 0.0, "max": 65.535},
+            "MGT_AVTT": {"min": 0.0, "max": 65.535},
+            "SW_AVDD1": {"min": 0.0, "max": 65.535},
+            "SW_AVDD2": {"min": 0.0, "max": 65.535},
+            "AVDD3": {"min": 0.0, "max": 65.535},
+            "MAN_1V2": {"min": 0.0, "max": 65.535},
+            "DDR0_VREF": {"min": 0.0, "max": 65.535},
+            "DDR1_VREF": {"min": 0.0, "max": 65.535},
+            "VM_DRVDD": {"min": 0.0, "max": 65.535},
+            "VIN": {"min": 11.4, "max": 12.6},
+            "MON_3V3": {"min": 0.0, "max": 65.535},
+            "MON_1V8": {"min": 0.0, "max": 65.535},
+            "MON_5V0": {"min": 0.0, "max": 65.535},
+        }
+        self._current_warning_thresholds: dict[str, dict[str, float]] = {
+            "FE0_mVA": {"min": 0.0, "max": 65.535},
+            "FE1_mVA": {"min": 0.0, "max": 65.535},
+        }
+
+    def get_voltage_warning_thresholds(
+        self: TpmMonitor,
+        voltage: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of voltage warning thresholds.
+
+        :param voltage: The voltage type to get the thresholds for.
+            If None, return all thresholds.
+
+        :return: A dictionary containing the voltage thresholds or None if
+            the requested voltage is not found in the thresholds.
+        """
+        if voltage is not None:
+            requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
+            if requested_voltage:
+                return {voltage: requested_voltage}
+            self.logger.error(
+                f"Requested voltage {voltage} not found in thresholds. "
+                f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
+            )
+            return None
+
+        return self._voltage_warning_thresholds
+
+    def set_voltage_warning_thresholds(
+        self: TpmMonitor,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a voltage warning threshold.
+
+        :param voltage: The voltage type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        if voltage not in self._voltage_warning_thresholds:
+            self.logger.error(
+                f"Voltage {voltage} not recognized. Available: "
+                f"{[k for k in self._voltage_warning_thresholds.keys()]}"
+            )
+            return None
+
+        self._voltage_warning_thresholds[voltage] = {"min": min_thr, "max": max_thr}
+        return True
+
+    def get_current_warning_thresholds(
+        self: TpmMonitor,
+        current: str | None = None,
+    ) -> dict[str, dict[str, float]] | None:
+        """
+        Return a dictionary of current warning thresholds.
+
+        :param current: The current type to get the thresholds for.
+            If None, return all thresholds.
+
+        :return: A dictionary containing the current thresholds or None if
+            the requested current is not found in the thresholds.
+        """
+        if current is not None:
+            requested_current = self._current_warning_thresholds.get(current, {})
+            if requested_current:
+                return {current: requested_current}
+            self.logger.error(
+                f"Requested current {current} not found in thresholds. "
+                f"Available: {[k for k in self._current_warning_thresholds.keys()]}"
+            )
+            return None
+
+        return self._current_warning_thresholds
+
+    def set_current_warning_thresholds(
+        self: TpmMonitor,
+        current: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set a current warning threshold.
+
+        :param current: The current type to set the thresholds for.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the current type is not recognized.
+        """
+        if current not in self._current_warning_thresholds:
+            self.logger.error(
+                f"Current {current} not recognized. Available: "
+                f"{[k for k in self._current_warning_thresholds.keys()]}"
+            )
+            return None
+
+        self._current_warning_thresholds[current] = {"min": min_thr, "max": max_thr}
+        return True

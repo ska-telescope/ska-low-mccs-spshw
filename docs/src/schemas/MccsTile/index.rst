@@ -17,9 +17,11 @@ These schemas are for use with MccsTile commands
   MccsTile_ConfigureTestGenerator
   MccsTile_Get40gCoreConfiguration
   MccsTile_SendDataSamples
+  MccsTile_SetCurrentWarningThresholds
   MccsTile_SetLmcDownload
   MccsTile_SetLmcIntegratedDownload
   MccsTile_SetTemperatureThresholds
+  MccsTile_SetVoltageWarningThresholds
   MccsTile_StartAcquisition
   MccsTile_StartBeamformer
   MccsTile_StopBeamformer

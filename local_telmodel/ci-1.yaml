@@ -1,5 +1,3 @@
-
-$schema: http://schema.skao.int/low/station/2-0-0
 platform:
   stations:
     ci-1:

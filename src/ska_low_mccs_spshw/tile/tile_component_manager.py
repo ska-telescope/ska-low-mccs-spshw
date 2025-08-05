@@ -2747,10 +2747,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if len(regions[0]) == 8:
             subarray_id = regions[0][3]
             aperture_id = regions[0][7]
-        collapsed_regions = self._collapse_regions(regions)
+        # collapsed_regions = self._collapse_regions(regions)
         nof_blocks = 0
-        for region in collapsed_regions:
+        for region in regions:
             nof_blocks += region[1] // 8
+        if nof_blocks == 0:
+            self.logger.error("No valid beamformer regions specified")
+            raise ValueError("Empty channel table")
+
         self._nof_blocks = nof_blocks
         self.logger.info(f"Setting beamformer table for {self._nof_blocks} blocks")
         with acquire_timeout(
@@ -2758,10 +2762,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ) as acquired:
             if acquired:
                 try:
-                    if nof_blocks > 0:
-                        self.tile.set_beamformer_regions(collapsed_regions)
-                    else:
-                        self.logger.error("No valid beamformer regions specified")
+                    self.tile.set_beamformer_regions(regions)
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
                     beamformer_table = self.tile.get_beamformer_table()

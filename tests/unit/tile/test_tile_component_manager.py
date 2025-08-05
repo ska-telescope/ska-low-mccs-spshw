@@ -12,7 +12,6 @@ from __future__ import annotations
 import datetime
 import ipaddress
 import json
-import logging
 import time
 import unittest.mock
 from typing import Any
@@ -25,7 +24,6 @@ from ska_control_model import (
     CommunicationStatus,
     PowerState,
     ResultCode,
-    SimulationMode,
     TaskStatus,
     TestMode,
 )
@@ -681,8 +679,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
                 TileSimulator.CHANNELISER_TRUNCATION,
                 [[2] * 512],
             ),
-            ("tile_id", TileSimulator.TILE_ID, [123]),
-            ("station_id", TileSimulator.STATION_ID, [321]),
             ("test_generator_active", False, [True]),
             ("csp_spead_format", TileSimulator.CSP_SPEAD_FORMAT, ["AAVS"]),
         ),
@@ -1116,13 +1112,13 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Set tile_id case
         tile_component_manager._station_id = 2
-        tile_component_manager.tile_id = 5
+        tile_component_manager.set_tile_id(5)
         assert tile_simulator._station_id == 2
         assert tile_simulator._tile_id == 5
 
         # Set station_id case
         tile_component_manager._tile_id = 2
-        tile_component_manager.station_id = 5
+        tile_component_manager.set_station_id(5)
         assert tile_simulator._station_id == 5
         assert tile_simulator._tile_id == 2
 
@@ -1134,13 +1130,15 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         # set station_id with mocked failure
         tile_component_manager._tile_id = initial_tile_id + 1
-        tile_component_manager.station_id = initial_station_id + 1
+        with pytest.raises(LibraryError):
+            tile_component_manager.set_station_id(initial_station_id + 1)
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
         # set tile_id with mocked failure
         tile_component_manager._station_id = initial_station_id + 1
-        tile_component_manager.tile_id = initial_tile_id + 1
+        with pytest.raises(LibraryError):
+            tile_component_manager.set_tile_id(initial_tile_id + 1)
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
@@ -1719,7 +1717,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
             assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
-        assert tile_component_manager.firmware_name == "itpm_v1_6.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
         time.sleep(1.5)
@@ -1757,59 +1755,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
-    # pylint: disable=too-many-arguments
-    @pytest.mark.parametrize(
-        "tpm_version_to_test, expected_firmware_name",
-        [("tpm_v1_2", "itpm_v1_2.bit"), ("tpm_v1_6", "itpm_v1_6.bit")],
-    )
-    def test_firmware_version(
-        self: TestStaticSimulator,
-        tpm_version_to_test: str,
-        expected_firmware_name: str,
-        preadu_attenuation: list[float],
-        static_time_delays: list[float],
-        logger: logging.Logger,
-        tile_id: int,
-        station_id: int,
-        callbacks: MockCallableGroup,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Test that the TileComponentManager will get the correct firmware bitfile.
-
-        :param tpm_version_to_test: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param expected_firmware_name: the expected value of firmware_name
-        :param preadu_attenuation: the preADU attenuation to set on the tile.
-        :param static_time_delays: the static time delays applied to the tile.
-        :param logger: a object that implements the standard logging
-            interface of :py:class:`logging.Logger`
-        :param tile_id: the unique ID for the tile
-        :param station_id: the ID of the station to which the tile belongs.
-        :param callbacks: dictionary of driver callbacks.
-        :param tile_simulator: The tile used by the TileComponentManager.
-        """
-        driver = TileComponentManager(
-            SimulationMode.TRUE,
-            TestMode.TEST,
-            logger,
-            0.1,
-            tile_id,
-            station_id,
-            "tpm_ip",
-            2,
-            tpm_version_to_test,
-            preadu_attenuation,
-            static_time_delays,
-            "dsd",
-            2,
-            callbacks["communication_status"],
-            callbacks["component_state"],
-            callbacks["attribute_state"],
-            unittest.mock.Mock(),
-        )
-
-        assert driver.firmware_name == expected_firmware_name
-
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -1833,9 +1778,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         is_last = True
 
         # Act
-        tile_component_manager.initialise_beamformer(
-            start_channel, nof_channels, is_first, is_last
-        )
+        with pytest.raises(ValueError):
+            tile_component_manager.initialise_beamformer(
+                start_channel, nof_channels, is_first, is_last
+            )
 
         # Assert values not written
         station_bf_1 = tile_simulator.tpm.station_beamf[0]
@@ -1855,9 +1801,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         is_last = True
 
         # Act
-        tile_component_manager.initialise_beamformer(
-            start_channel, nof_channels, is_first, is_last
-        )
+        with pytest.raises(ValueError):
+            tile_component_manager.initialise_beamformer(
+                start_channel, nof_channels, is_first, is_last
+            )
 
         # Assert values not written
         station_bf_1 = tile_simulator.tpm.station_beamf[0]
@@ -1965,10 +1912,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Set preADU levels to 3 for all channels
         tile_component_manager.set_preadu_levels([4.0] * 32)
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 4.00
-        # Try to set more levels (33) than there are channels (32),
-        # in order to check that the TileComponentManager swallows exceptions.
-        # Possibly a bad idea?
-        tile_component_manager.set_preadu_levels([3.0] * 33)
+
+        with pytest.raises(ValueError):
+            tile_component_manager.set_preadu_levels([3.0] * 33)
 
     def test_load_calibration_coefficients(
         self: TestStaticSimulator,
@@ -2760,7 +2706,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check some (not all) values are as set in tile simulator.
         assert tile_info["hardware"]["HARDWARE_REV"] == "<current hardware revision>"
         assert tile_info["hardware"]["BOARD_MODE"] == "<current board mode>"
-        assert tile_info["hardware"]["LOCATION"] == "<current hardware location>"
+        assert tile_info["hardware"]["EXT_LABEL"] == "<current hardware external label>"
         assert tile_info["hardware"]["DDR_SIZE_GB"] == "<current hardware DDR size>"
         assert tile_info["fpga_firmware"]["compile_time"] == "<mock_time>"
         assert tile_info["network"]["1g_netmask"] == "123.123.123.101"
@@ -2950,13 +2896,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         ("attribute"),
         [
             ("register_list"),
-            ("station_id"),
-            ("tile_id"),
             ("is_programmed"),
             ("firmware_version"),
             ("firmware_name"),
             ("firmware_available"),
-            ("hardware_version"),
             ("fpgas_time"),
             ("fpga_reference_time"),
             ("fpga_current_frame"),
@@ -3386,7 +3329,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=5
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=9
         )
         return dynamic_tile_component_manager
 

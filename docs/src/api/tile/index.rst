@@ -12,6 +12,7 @@ Tile subpackage
   Tile poll management<tile_poll_management>
   Tile component manager<tile_component_manager>
   Tile device<tile_device>
+  Exceptions<exception_codes>
   Tile health model<tile_health_model>
   Tile health rules<tile_health_rules>
 

@@ -2,7 +2,26 @@
 
 ## Unreleased
 
+* [SKB-928] Remove configuration attributes from polling. Configuration is now 'read_on_connect' or 'read_on_change'
+* [SKB-928] SpsStation staticTimeDelay now raised RuntimeError when information for TPM mapping not present
+* [SKB-928] Expose exceptions to tango API for MccsTile methods staticTimeDelays and ConfigureStationBeamformer.
+* [SKB-928] stationId no longer has an initial value (this was software only and was not necessarilty True. It is now read from TPM as soon as possible.) (NOTE: property StationID will be used as the value to initialise the TPM with and writing to stationId will take precedence over the property but will not be persisted.)
+* [SKB-928] logicalTileId no longer has an initial value (this was software only and was not necessarilty True. It is now read from TPM as soon as possible.) (NOTE: property TileId will be used as the value to initialise the TPM with and writing to LogicalTileId will take precedence over the property but will not be persisted.)
+
+## 7.2.0
+
+* [THORN-195] Add HardwareVerificationError.
+* [THORN-214] Added HardwareVersion property to MccsTile. If not defined ADC0 -> ADC15 temperature attributes are not evaluated in health
+* [THORN-214] Added BiosVersion property to MccsTile. If not defined pll_40g attribute is not evaluated in health
+* [THORN-214] Added PreAduPresent property to MccsTile (default == True). When false we expect currents FE0_mVA and FE1_mVA to be 0 with some tolerance.
+
+## 7.1.0
+
+* [THORN-238] Add SpsStation.BandpassIntegrationTime device property for setting bandpass integration time in Initialise().
+* [THORN-238] Update chart.yaml to allow for separate DAQ chart version.
+* [JANUS-215] Support for TPM API to 0.6.0, manage whole TPM external label
 * [THORN-206] Clarify when Tile is sending data
+* [THORN-183] changed health threshold for tpm and subrack using updated values: <https://jira.skatelescope.org/browse/SPRTS-274>
 
 ## 7.0.1
 

@@ -270,7 +270,7 @@ def turn_tile_on(
     return tile_device
 
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, too-many-public-methods
 class TestMccsTile:
     """
     Test class for MccsTile tests.
@@ -355,7 +355,24 @@ class TestMccsTile:
             "sysrefPresent",
         ]
 
-    @pytest.fixture(name="configuration_attributes")
+    @pytest.fixture(name="tpm_configuration_attributes")
+    def tpm_configuration_attributes_fixture(self) -> list[str]:
+        """
+        Return a list of tile attributes that are TPM configuration.
+
+        :returns: a list of attributes that are TPM configuration.
+        """
+        # TODO: Do we want to add readback for the software_configuration_attributes
+        # and move them to this fixture. A bounce of the MccsTile pod will loose
+        # the software_configuration_attributes. But these can be re-read from the
+        # TPM.
+        return [
+            "logicalTileId",
+            "staticTimeDelays",
+            "stationId",
+        ]
+
+    @pytest.fixture(name="software_configuration_attributes")
     def configuration_attributes_fixture(self) -> list[str]:
         """
         Return a list of tile attributes that are software configuration.
@@ -370,8 +387,7 @@ class TestMccsTile:
             "cspDestinationIp",
             "cspDestinationMac",
             "cspDestinationPort",
-            "logicalTileId",
-            "stationId",
+            "cspRounding",
             "antennaIds",
             "srcip40gfpga1",
             "srcip40gfpga2",
@@ -409,6 +425,145 @@ class TestMccsTile:
             "rfiCount",
             "runningBeams",
         ]
+
+    def __check_attributes_invalid(
+        self: TestMccsTile, tile: DeviceProxy, attr_list: list[str]
+    ) -> None:
+        for attr in attr_list:
+            if tile.read_attribute(attr).quality != tango.AttrQuality.ATTR_INVALID:
+                pytest.fail(f"attribute {attr} not INVALID")
+
+    def __check_attributes_valid(
+        self: TestMccsTile, tile: DeviceProxy, attr_list: list[str]
+    ) -> None:
+        for attr in attr_list:
+            if tile.read_attribute(attr).quality != tango.AttrQuality.ATTR_VALID:
+                pytest.fail(f"attribute {attr} not VALID")
+
+    # pylint: disable=too-many-arguments
+    def test_tpm_configuration_invalid_when_unable_to_read(
+        self: TestMccsTile,
+        on_tile_device: DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+        static_time_delays: list[float],
+        tile_id: int,
+        tpm_configuration_attributes: list[str],
+        tile_component_manager: TileComponentManager,
+        station_id: int,
+    ) -> None:
+        """
+        Test that configuration is read from the TPM.
+
+        :param tile_id: the ID of the tile under test
+        :param station_id: the ID of the station under test
+        :param static_time_delays: the static time delays this
+            tile is configured with.
+        :param tpm_configuration_attributes: a fixture containing a list of tile
+            configuration attributes (defined in the TPM.)
+        :param tile_component_manager: the injected TileComponentManager.
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        on_tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)
+
+        # Check a few attributes against configured values as a sanity check.
+        assert on_tile_device.staticTimeDelays.tolist() == static_time_delays
+        assert on_tile_device.logicalTileId == tile_id
+        assert on_tile_device.stationId == station_id
+
+        # Mocking OFF means we cannot know if configuration has
+        # changed.
+        on_tile_device.MockTpmOff()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.OFF, lookahead=2, consume_nonmatches=True
+        )
+        self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
+        # Mock a state inconsistency where the TPM is not reachable
+        # But subrack reports ON. We are unable to connect therefore
+        # we attributes are INVALID.
+        tile_component_manager.tile.mock_off(lock=True)
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            PowerState.ON,
+            EventType.CHANGE_EVENT,
+        )
+        change_event_callbacks["state"].assert_change_event(
+            DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+
+        self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
+
+    def test_tpm_configuration_is_read_when_available(
+        self: TestMccsTile,
+        on_tile_device: DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+        tpm_configuration_attributes: list[str],
+    ) -> None:
+        """
+        Test that configuration is read from the TPM.
+
+        :param tpm_configuration_attributes: a fixture containing a list of tile
+            configuration attributes (defined in the TPM.)
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        on_tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        # Turning the device OFFLINE means that we can no longer say we know the
+        # configuration of the device_under_test. Check they move to INVALID.
+        on_tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
+
+        # Turning the device ONLINE should prompt a read of configuration.
+        on_tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(
+            DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+        self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)
+
+        # Turning the TPM off means that the configuration is not known.
+        # Check it moved to INVALID.
+        on_tile_device.MockTpmOff()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.OFF, lookahead=2, consume_nonmatches=True
+        )
+        self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
+
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
+        # When turning the TPM ON we expect the configuration to be read.
+        on_tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=4
+        )
+        self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)
 
     def test_state_with_adminmode(
         self: TestMccsTile,
@@ -619,7 +774,8 @@ class TestMccsTile:
         tango_attributes: list[str],
         ska_tango_base_attributes: list[str],
         not_implemented_attributes: list[str],
-        configuration_attributes: list[str],
+        tpm_configuration_attributes: list[str],
+        software_configuration_attributes: list[str],
         active_read_attributes: list[str],
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -654,8 +810,10 @@ class TestMccsTile:
             ska_tango_base attributes.
         :param not_implemented_attributes: a fixture containing a list of
             attributes not yet implemented in tile.
-        :param configuration_attributes: a fixture containing a list of tile
-            configuration attributes.
+        :param software_configuration_attributes: a fixture containing a list of tile
+            configuration attributes (defined in software only)
+        :param tpm_configuration_attributes: a fixture containing a list of tile
+            configuration attributes (defined in the TPM.)
         :param active_read_attributes: a fixture containing a list of tile
             attributes that actively attempt to read hardware.
         :param tile_component_manager: A component manager.
@@ -727,7 +885,8 @@ class TestMccsTile:
             + tango_attributes
             + ska_tango_base_attributes
             + not_implemented_attributes
-            + configuration_attributes
+            + software_configuration_attributes
+            + tpm_configuration_attributes
             + active_read_attributes
         )
         for attr in tile_device.get_attribute_list():
@@ -976,27 +1135,6 @@ class TestMccsTile:
             == AttrQuality.ATTR_ALARM
         )
         assert on_tile_device.state() == DevState.ALARM
-
-    def test_attributes_with_initial_value(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-        tile_id: int,
-        station_id: int,
-    ) -> None:
-        """
-        Test attributes with initial value.
-
-        :param tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param tile_id: A fixture with the TileId this tile is configured
-            with.
-        :param station_id: A fixture with the StationId this tile is configured
-            with.
-        """
-        # These values are configuration values we do not have to be online to read.
-        assert tile_device.logicalTileID == tile_id
-        assert tile_device.stationId == station_id
 
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
@@ -1264,7 +1402,7 @@ class TestMccsTile:
         ("expected_init_params", "new_params"),
         [
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS,
+                TileData.DEFAULT_MONITORING_POINTS,
                 {
                     "temperatures": {"board": {"max": 70}},
                     "timing": {"clocks": {"FPGA0": {"JESD": False}}},
@@ -1272,7 +1410,7 @@ class TestMccsTile:
                 id="Check temperature and timing values and check new values",
             ),
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS,
+                TileData.DEFAULT_MONITORING_POINTS,
                 {
                     "currents": {"FE0_mVA": {"max": 25}},
                     "io": {
@@ -1284,7 +1422,7 @@ class TestMccsTile:
                 id="Change current and io values and check new values",
             ),
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS,
+                TileData.DEFAULT_MONITORING_POINTS,
                 {
                     "alarms": {"I2C_access_alm": 1},
                     "adcs": {"pll_status": {"ADC0": (False, True)}},
@@ -2400,3 +2538,240 @@ class TestMccsTileCommands:
         # the device.
         change_event_callbacks["alarms"].assert_change_event(Anything)
         assert on_tile_device.state() == tango.DevState.ALARM
+
+    def test_get_voltage_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        voltage_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the voltage thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param voltage_warning_thresholds: A dictionary with the expected
+            voltage warning thresholds.
+        """
+        # Happy paths.
+        thresholds = json.loads(on_tile_device.GetVoltageWarningThresholds(""))
+        assert thresholds == voltage_warning_thresholds
+        for voltage_name, threshold_values in voltage_warning_thresholds.items():
+            assert {voltage_name: threshold_values} == json.loads(
+                on_tile_device.GetVoltageWarningThresholds(voltage_name)
+            )
+
+        # Unhappy paths.
+        assert (
+            "Specified voltage 'INVALID_VOLTAGE_NAME' not recognized."
+            == on_tile_device.GetVoltageWarningThresholds("invalid_voltage_name")
+        )
+
+    def test_set_voltage_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        updated_voltage_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the voltage thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param updated_voltage_warning_thresholds: A dictionary with the
+            updated voltage warning thresholds.
+        """
+        # Happy paths.
+        for (
+            voltage_name,
+            threshold_values,
+        ) in updated_voltage_warning_thresholds.items():
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "voltage": voltage_name,
+                        "min_thr": threshold_values["min"],
+                        "max_thr": threshold_values["max"],
+                    }
+                )
+            )
+            assert msg == ["SetVoltageWarningThresholds command completed OK"]
+            assert {voltage_name: threshold_values} == json.loads(
+                on_tile_device.GetVoltageWarningThresholds(voltage_name)
+            )
+
+        # Unhappy paths.
+        # No voltage supplied.
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "min_thr": 12.3,
+                        "max_thr": 23.4,
+                    }
+                )
+            )
+
+        # No min thr supplied
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "voltage": "VIN",
+                        "max_thr": 23.4,
+                    }
+                )
+            )
+
+        # No max thr supplied
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetVoltageWarningThresholds(
+                json.dumps(
+                    {
+                        "voltage": "VIN",
+                        "min_thr": 12.3,
+                    }
+                )
+            )
+
+        # Invalid voltage name supplied.
+        _, msg = on_tile_device.SetVoltageWarningThresholds(
+            json.dumps(
+                {
+                    "voltage": "VI",
+                    "min_thr": 12.3,
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == [
+            "SetVoltageWarningThresholds command failed to complete. "
+            "Check voltage name is valid."
+        ]
+
+    # current v
+    def test_get_current_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        current_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the current thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param current_warning_thresholds: A dictionary with the expected
+            current warning thresholds.
+        """
+        # Happy paths.
+        thresholds = json.loads(on_tile_device.GetCurrentWarningThresholds(""))
+        assert thresholds == current_warning_thresholds
+        for current_name, threshold_values in current_warning_thresholds.items():
+            assert {current_name: threshold_values} == json.loads(
+                on_tile_device.GetCurrentWarningThresholds(current_name)
+            )
+
+        # Unhappy paths.
+        assert (
+            "Specified current 'invalid_current_name' not recognized."
+            == on_tile_device.GetCurrentWarningThresholds("invalid_current_name")
+        )
+
+    def test_set_current_warning_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        updated_current_warning_thresholds: dict[str, dict[str, float]],
+    ) -> None:
+        """
+        Test we can get the current thresholds.
+
+        This test checks the following:
+            * Check we can get all thresholds at once and are as expected.
+            * Check we can get each threshold individually and are as expected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param updated_current_warning_thresholds: A dictionary with the
+            updated current warning thresholds.
+        """
+        # Happy paths.
+        for (
+            current_name,
+            threshold_values,
+        ) in updated_current_warning_thresholds.items():
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "current": current_name,
+                        "min_thr": threshold_values["min"],
+                        "max_thr": threshold_values["max"],
+                    }
+                )
+            )
+            assert msg == ["SetCurrentWarningThresholds command completed OK"]
+            assert {current_name: threshold_values} == json.loads(
+                on_tile_device.GetCurrentWarningThresholds(current_name)
+            )
+
+        # Unhappy paths.
+        # No current supplied.
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "min_thr": 12.3,
+                        "max_thr": 23.4,
+                    }
+                )
+            )
+
+        # No min thr supplied
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "current": "FE0_mVA",
+                        "max_thr": 23.4,
+                    }
+                )
+            )
+
+        # No max thr supplied
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            _, msg = on_tile_device.SetCurrentWarningThresholds(
+                json.dumps(
+                    {
+                        "current": "FE0_mVA",
+                        "min_thr": 12.3,
+                    }
+                )
+            )
+
+        # Invalid current name supplied.
+        _, msg = on_tile_device.SetCurrentWarningThresholds(
+            json.dumps(
+                {
+                    "current": "VI",
+                    "min_thr": 12.3,
+                    "max_thr": 23.4,
+                }
+            )
+        )
+        assert msg == [
+            "SetCurrentWarningThresholds command failed to complete. "
+            "Check current name is valid."
+        ]

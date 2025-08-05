@@ -168,16 +168,26 @@ class _TileProxy(DeviceComponentManager):
     ) -> None:
         if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
-            if self._proxy.stationId != self._station_id:
+            try:
+                __tile_id = self._proxy.logicalTileId
+            except tango.DevFailed:
+                __tile_id = None
+            try:
+                __station_id = self._proxy.stationId
+            except tango.DevFailed:
+                __station_id = None
+            if __station_id is not None and __station_id != self._station_id:
                 self.logger.warning(
                     f"Expected {self._proxy.dev_name()} stationId "
-                    f"{self._station_id}, tile has stationId {self._proxy.stationid}"
+                    f"{self._station_id}, tile has stationId {__station_id}. "
+                    "Is this a configuration issue?"
                 )
-            if self._proxy.logicalTileId != self._logical_tile_id:
+            if __tile_id is not None and __tile_id != self._logical_tile_id:
                 self.logger.warning(
                     f"Expected {self._proxy.dev_name()} logicalTileId "
                     f"{self._logical_tile_id}, tile has logicalTileID "
-                    f"{self._proxy.logicalTileId}"
+                    f"{__tile_id}. "
+                    "Is this a configuration issue?"
                 )
         super()._device_state_changed(event_name, event_value, event_quality)
 
@@ -401,6 +411,7 @@ class SpsStationComponentManager(
         csp_rounding: int,
         antenna_config_uri: Optional[list[str]],
         start_bandpasses_in_initialise: bool,
+        bandpass_integration_time: float,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -438,6 +449,8 @@ class SpsStationComponentManager(
         :param antenna_config_uri: location of the antenna mapping file
         :param start_bandpasses_in_initialise: whether to start bandpasses
             in initialise.
+        :param bandpass_integration_time: the integration time for channelised data
+            capture started in initialise.
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -453,7 +466,7 @@ class SpsStationComponentManager(
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
-        self._bandpass_integration_time = 5.0
+        self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
@@ -897,8 +910,7 @@ class SpsStationComponentManager(
         attribute_value: Any,
         attribute_quality: tango.AttrQuality,
     ) -> None:
-        # TODO: See THORN-89
-        # TODO: See THORN-89
+        # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
@@ -2194,12 +2206,22 @@ class SpsStationComponentManager(
         Set static time delay correction.
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
+
+        :raises RuntimeError: When the tiles logicalTileId is not known,
+            this information is required to ensure the delays are applied
+            to the correct TPM.
         """
         self._desired_static_delays = delays
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
-            end_entry = (proxy._proxy.logicalTileId + 1) * TileData.ADC_CHANNELS
+            __tile_id = proxy._proxy.logicalTileId
+            if __tile_id is None:
+                raise RuntimeError(
+                    "logicalTileId is not valid. "
+                    "Unable to set static delays without knowledge of mapping"
+                )
+            start_entry = (__tile_id) * TileData.ADC_CHANNELS
+            end_entry = (__tile_id + 1) * TileData.ADC_CHANNELS
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
                 proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
 

@@ -14,6 +14,7 @@ import logging
 import unittest
 from typing import Any, Iterator
 
+import numpy as np
 import pytest
 from ska_control_model import LoggingLevel, SimulationMode, TestMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
@@ -68,16 +69,6 @@ def subrack_bay_fixture() -> int:
     :return: the subrack bay.
     """
     return 1
-
-
-@pytest.fixture(name="tpm_version")
-def tpm_version_fixture() -> str:
-    """
-    Return the TPM version.
-
-    :return: the TPM version
-    """
-    return "tpm_v1_6"
 
 
 @pytest.fixture(name="preadu_level_property")
@@ -281,7 +272,7 @@ def tile_component_manager_fixture(
     subrack_id: int,
     subrack_bay: int,
     preadu_level_property: list[float],
-    tpm_version: str,
+    static_time_delays: np.ndarray,
     tile_simulator: TileSimulator,
 ) -> TileComponentManager:
     """
@@ -293,8 +284,8 @@ def tile_component_manager_fixture(
     :param tile_simulator: a tile_simulator to use as the backend.
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_bay: This tile's position in its subrack
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param preadu_level_property: the tpms preaduattentuaion configuration.
+    :param static_time_delays: a fixture containing the static_time_delays.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -310,9 +301,8 @@ def tile_component_manager_fixture(
         station_id,
         "tpm_ip",
         tpm_cpld_port,
-        tpm_version,
         preadu_level_property,
-        [2.0] * 32,
+        static_time_delays.tolist(),
         get_subrack_name(subrack_id),
         subrack_bay,
         unittest.mock.Mock(),
@@ -331,6 +321,16 @@ def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     :return: a TileSimulator
     """
     return TileSimulator(logger)
+
+
+@pytest.fixture(name="static_time_delays")
+def static_time_delays_fixture() -> np.ndarray:
+    """
+    Return the static time delays.
+
+    :return: the static time delays.
+    """
+    return np.array([2.5] * 32)
 
 
 @pytest.fixture(name="sps_station_device")

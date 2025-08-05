@@ -30,10 +30,13 @@ class TileHealthModel(BaseHealthModel):
 
     _health_rules: TileHealthRules
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileHealthModel,
         health_changed_callback: HealthChangedCallbackProtocol,
-        tpm_version: str,
+        hw_version: str,
+        bios_version: str,
+        has_preadu: bool,
         thresholds: Optional[dict[str, Any]] = None,
     ) -> None:
         """
@@ -42,12 +45,17 @@ class TileHealthModel(BaseHealthModel):
         :param health_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
-        :param tpm_version: the TPM version.
+        :param hw_version: the TPM version.
+        :param bios_version: the TPM bios version.
+        :param has_preadu: is the preADU present on board.
         :param thresholds: the threshold parameters for the health rules
         """
-        self._tpm_version = tpm_version
+        self._hw_version = hw_version
+        self._bios_version = bios_version
         self.logger = None
-        self._health_rules = TileHealthRules(self._tpm_version, thresholds)
+        self._health_rules = TileHealthRules(
+            self._hw_version, self._bios_version, has_preadu, thresholds
+        )
         super().__init__(health_changed_callback)
         # Add new section for non-hardware/derived health quantities.
         additional_health = {"derived": {"pps_drift": 0}}
@@ -103,8 +111,9 @@ class TileHealthModel(BaseHealthModel):
         monitoring_points.update(derived=self._state.get("derived", {}))
         return {
             health_key: self._health_rules.compute_intermediate_state(
-                monitoring_points.get(health_key, {}),
-                parameters,
+                monitoring_points=monitoring_points.get(health_key, {}),
+                min_max=parameters,
+                health_key=health_key,
             )
             for health_key, parameters in self.health_params.items()
         }

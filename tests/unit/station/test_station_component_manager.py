@@ -180,6 +180,7 @@ def station_component_manager_fixture(
         4,  # csp_rounding
         antenna_uri,
         True,  # whether or not to start bandpasses in initialise
+        5,  # Bandpass integration time
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],

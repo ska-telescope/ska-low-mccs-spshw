@@ -27,7 +27,7 @@ class TestTileHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = TileHealthModel(MockCallable(), "tpm_v1_6")
+        health_model = TileHealthModel(MockCallable(), "v1.6.7a", "0.5.0", True)
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model
@@ -72,11 +72,11 @@ class TestTileHealthModel:
                 {"currents": {"FE0_mVA": 3.2}},
                 HealthState.FAILED,
                 "Intermediate health currents is in FAILED HealthState. "
-                'Cause: Monitoring point "/FE0_mVA": 3.2 not in range 0 - 3',
+                'Cause: Monitoring point "/FE0_mVA": 3.2 not in range 2.37 - 2.62',
                 {"currents": {"FE0_mVA": 3.1}},
                 HealthState.FAILED,
                 "Intermediate health currents is in FAILED HealthState. "
-                'Cause: Monitoring point "/FE0_mVA": 3.1 not in range 0 - 3',
+                'Cause: Monitoring point "/FE0_mVA": 3.1 not in range 2.37 - 2.62',
             ),
             (
                 {"temperatures": {"board": 25}},
@@ -147,6 +147,158 @@ class TestTileHealthModel:
         :param final_health_state: the final expected health state
         :param final_health_report: the initial final health report
         """
+        # TODO: Fixed in ska-low-mccs-common > 0.7.2
+        health_model._state[
+            "tile_health_structure"
+        ] = health_model._merge_dicts(  # type: ignore[assignment]
+            TileData.get_tile_defaults(), init_monitoring_points
+        )
+        assert (init_health_state, init_health_report) == health_model.evaluate_health()
+        health_model._state[
+            "tile_health_structure"
+        ] = health_model._merge_dicts(  # type: ignore[assignment]
+            health_model._state["tile_health_structure"],  # type: ignore[arg-type]
+            final_monitoring_points,
+        )
+        assert (
+            final_health_state,
+            final_health_report,
+        ) == health_model.evaluate_health()
+
+    @pytest.mark.parametrize(
+        [
+            "bios_version",
+            "hw_version",
+            "init_monitoring_points",
+            "init_health_state",
+            "init_health_report",
+            "final_monitoring_points",
+            "final_health_state",
+            "final_health_report",
+        ],
+        [
+            (
+                "0.5.0",
+                "v1.6.7a",
+                {
+                    "temperatures": {
+                        "ADC0": float("NaN"),
+                        "ADC1": float("NaN"),
+                        "ADC2": float("NaN"),
+                        "ADC3": float("NaN"),
+                        "ADC4": float("NaN"),
+                        "ADC5": float("NaN"),
+                        "ADC6": float("NaN"),
+                        "ADC7": float("NaN"),
+                        "ADC8": float("NaN"),
+                        "ADC9": float("NaN"),
+                        "ADC10": float("NaN"),
+                        "ADC11": float("NaN"),
+                        "ADC12": float("NaN"),
+                        "ADC13": float("NaN"),
+                        "ADC14": float("NaN"),
+                        "ADC15": float("NaN"),
+                    }
+                },
+                HealthState.OK,
+                "Health is OK.",
+                {"temperatures": {"ADC0": 22.0}},
+                HealthState.FAILED,  # This is determined by the hw and bios versions.
+                "Intermediate health temperatures is in FAILED HealthState. "
+                'Cause: Monitoring point "/ADC0": 22.0 =/= nan',
+            ),
+            (
+                "0.5.0",
+                "v2.0.5b",
+                {
+                    "temperatures": {
+                        "ADC0": float("NaN"),
+                        "ADC1": float("NaN"),
+                        "ADC2": float("NaN"),
+                        "ADC3": float("NaN"),
+                        "ADC4": float("NaN"),
+                        "ADC5": float("NaN"),
+                        "ADC6": float("NaN"),
+                        "ADC7": float("NaN"),
+                        "ADC8": float("NaN"),
+                        "ADC9": float("NaN"),
+                        "ADC10": float("NaN"),
+                        "ADC11": float("NaN"),
+                        "ADC12": float("NaN"),
+                        "ADC13": float("NaN"),
+                        "ADC14": float("NaN"),
+                        "ADC15": float("NaN"),
+                    }
+                },
+                HealthState.FAILED,
+                "Intermediate health temperatures is in FAILED HealthState. "
+                'Cause: Monitoring point "/ADC0": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC1": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC2": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC3": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC4": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC5": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC6": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC7": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC8": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC9": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC10": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC11": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC12": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC13": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC14": nan not in range 10 - 90 | '
+                'Monitoring point "/ADC15": nan not in range 10 - 90',
+                {
+                    "temperatures": {
+                        "ADC0": 22.0,
+                        "ADC1": 22.0,
+                        "ADC2": 22.0,
+                        "ADC3": 22.0,
+                        "ADC4": 22.0,
+                        "ADC5": 22.0,
+                        "ADC6": 22.0,
+                        "ADC7": 22.0,
+                        "ADC8": 22.0,
+                        "ADC9": 22.0,
+                        "ADC10": 22.0,
+                        "ADC11": 22.0,
+                        "ADC12": 22.0,
+                        "ADC13": 22.0,
+                        "ADC14": 22.0,
+                        "ADC15": 22.0,
+                    }
+                },
+                HealthState.OK,
+                "Health is OK.",
+            ),
+        ],
+    )
+    def test_health_with_hardware_configuration(  # pylint: disable=too-many-arguments
+        self: TestTileHealthModel,
+        bios_version: str,
+        hw_version: str,
+        init_monitoring_points: dict[str, Any],
+        init_health_state: HealthState,
+        init_health_report: str,
+        final_monitoring_points: dict[str, Any],
+        final_health_state: HealthState,
+        final_health_report: str,
+    ) -> None:
+        """
+        Test the TileHealthModel for for different hardware.
+
+        :param bios_version: the bios version of the TPM.
+        :param hw_version: the hardware version of the TPM.
+        :param init_monitoring_points: the initial monitoring points,
+            using the defaults where not provided
+        :param init_health_state: the initial expected health state
+        :param init_health_report: the initial expected health report
+        :param final_monitoring_points: the new values of the monitoring points
+        :param final_health_state: the final expected health state
+        :param final_health_report: the initial final health report
+        """
+        health_model = TileHealthModel(MockCallable(), hw_version, bios_version, True)
+        health_model.update_state(communicating=True, power=PowerState.ON)
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
         health_model._state[
             "tile_health_structure"
@@ -378,9 +530,9 @@ class TestTileHealthModel:
         :param final_health_report: the initial final health report
         """
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
-        health_model._state[
-            "tile_health_structure"
-        ] = TileData.get_tile_defaults()  # type: ignore[assignment]
+        health_model._state["tile_health_structure"] = (  # type: ignore[assignment]
+            TileData.get_tile_defaults()
+        )
         health_model.health_params = init_thresholds
         assert (init_health_state, init_health_report) == health_model.evaluate_health()
         health_model.health_params = final_thresholds

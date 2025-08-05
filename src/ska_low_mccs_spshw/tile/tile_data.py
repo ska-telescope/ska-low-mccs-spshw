@@ -11,10 +11,12 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import copy
-import importlib.resources
+from importlib.resources import files
 from typing import Any
 
 import yaml
+
+from ska_low_mccs_spshw.tile import health_config  # import the subpackage
 
 __all__ = ["TileData"]
 
@@ -66,11 +68,15 @@ class TileData:
     FULL_STATION_BEAM_DATA_RATE = (
         BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_CORRECTED
     )  # bytes / s
+    DEFAULT_SET = "set1.yaml"
+    path = files(health_config).joinpath(DEFAULT_SET)
 
-    min_max_string = importlib.resources.read_text(
-        __package__, "tpm_monitoring_min_max.yaml"
-    )
-    MIN_MAX_MONITORING_POINTS = (
+    if path.is_file():
+        min_max_string = path.read_text()
+    else:
+        raise FileNotFoundError(f"{DEFAULT_SET} not found in health_config package")
+
+    DEFAULT_MONITORING_POINTS = (
         yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"] or {}
     )
 
@@ -218,7 +224,7 @@ class TileData:
                 "PN": None,
                 "bios": None,
                 "BOARD_MODE": None,
-                "LOCATION": None,
+                "EXT_LABEL": None,
                 "HARDWARE_REV": None,
                 "DDR_SIZE_GB": None,
             },
@@ -399,7 +405,7 @@ class TileData:
         :return: the default values for tile monitoring points
         """
         tile_structure = copy.deepcopy(cls.TILE_MONITORING_POINTS)
-        expected_values = copy.deepcopy(cls.MIN_MAX_MONITORING_POINTS)
+        expected_values = copy.deepcopy(cls.DEFAULT_MONITORING_POINTS)
         return cls._generate_tile_defaults(tile_structure, expected_values)
 
     @classmethod

@@ -463,6 +463,7 @@ class TestStationTileIntegration:
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
+        static_time_delays: np.ndarray,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -478,6 +479,7 @@ class TestStationTileIntegration:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         :param tile_component_manager: A component manager.
+        :param static_time_delays: a fixture containing the static_time_delays.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -499,27 +501,12 @@ class TestStationTileIntegration:
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_static_delays"],
         )
-        change_event_callbacks["tile_static_delays"].assert_change_event(Anything)
-
-        # Set the value in the backend TileSimulator.
-        initial_static_delays = np.array([12.5] + [0.0] * 31)
-        tile_simulator.set_time_delays(initial_static_delays.tolist())
-
-        request_provider = tile_component_manager._request_provider
-        assert request_provider is not None
-        request_provider.get_request = (  # type: ignore[method-assign]
-            unittest.mock.Mock(return_value="STATIC_DELAYS")
-        )
-        # This will cause the Tile to push a change event.
 
         change_event_callbacks["tile_static_delays"].assert_change_event(
-            initial_static_delays.tolist()
+            static_time_delays.tolist()
         )
 
-        time.sleep(0.1)
-        assert np.array_equal(
-            sps_station_device.staticTimeDelays, initial_static_delays
-        )
+        assert np.array_equal(sps_station_device.staticTimeDelays, static_time_delays)
 
         # Set new value from SpsStation
         final_static_delays = np.array([1.25] + [0.0] * 31)
@@ -528,8 +515,9 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_static_delays"].assert_change_event(
             final_static_delays.tolist()
         )
-        time.sleep(0.1)
-
+        # Time slept for callback in TANGO.
+        # There is no event pushed here to subscribe to.
+        time.sleep(0.2)
         assert np.array_equal(sps_station_device.staticTimeDelays, final_static_delays)
 
     # pylint: disable-next=too-many-arguments

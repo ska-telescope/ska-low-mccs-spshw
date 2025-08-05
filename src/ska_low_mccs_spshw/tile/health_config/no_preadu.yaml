@@ -1,0 +1,18 @@
+# type: ignore
+# pylint: skip-file
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+#
+# This file provides modification to health in the case the TPM has no preADU.
+currents:
+  FE0_mVA:
+    min: 0
+    max: 0.2
+  FE1_mVA:
+    min: 0
+    max: 0.2

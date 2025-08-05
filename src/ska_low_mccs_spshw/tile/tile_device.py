@@ -238,7 +238,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltage_avdd3": "voltageAVDD3",
             "voltage_vref_ddr0": "voltageVrefDDR0",
             "voltage_vref_ddr1": "voltageVrefDDR1",
-            "voltage_vref_2v5": "voltageVref2V5",
+            # "voltage_vref_2v5": "voltageVref2V5",
             "voltage_man_1V2": "voltageMan1V2",
             "voltage_mgt_avcc": "voltageMGT_AVCC",
             "voltage_mgt_avtt": "voltageMGT_AVTT",
@@ -431,7 +431,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageAVDD3": ["voltages", "AVDD3"],
             "voltageVrefDDR0": ["voltages", "DDR0_VREF"],
             "voltageVrefDDR1": ["voltages", "DDR1_VREF"],
-            "voltageVref2V5": ["voltages", "VREF_2V5"],
+            # "voltageVref2V5": ["voltages", "VREF_2V5"],
             "voltageMan1V2": ["voltages", "MAN_1V2"],
             "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
             "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
@@ -2885,14 +2885,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVrefDDR1"].read()
 
-    @attribute(dtype="DevDouble", label="voltage VREF_2V5")
-    def voltageVref2V5(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the Vref 2.5 V voltage.
+    # TODO: add back when available in BIOS.
+    # @attribute(dtype="DevDouble", label="voltage VREF_2V5")
+    # def voltageVref2V5(self: MccsTile) -> float | None:
+    #     """
+    #     Handle a Tango attribute read of the Vref 2.5 V voltage.
 
-        :return: Vref 2.5 V voltage
-        """
-        return self._attribute_state["voltageVref2V5"].read()
+    #     :return: Vref 2.5 V voltage
+    #     """
+    #     return self._attribute_state["voltageVref2V5"].read()
 
     @attribute(dtype="DevDouble", label="MON_1V2 voltage")
     def voltageMan1V2(self: MccsTile) -> float | None:

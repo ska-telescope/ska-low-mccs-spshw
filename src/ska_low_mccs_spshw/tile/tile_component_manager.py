@@ -3429,23 +3429,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def voltage_mon(self: TileComponentManager) -> float:
-        """
-        Return the internal 5V supply of the TPM.
-
-        (Deprecated)
-
-        :return: the internal 5V supply of the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["voltages"]["MON_5V0"]
-
-    @property
-    @check_communicating
     def pending_data_requests(self: TileComponentManager) -> Optional[bool]:
         """
         Check for pending data requests.
@@ -3473,6 +3456,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             return self.tile.get_health_status()["timing"]["pps"]["status"]
+
+    @property
+    @check_communicating
+    def voltage_mon(self: TileComponentManager) -> float:
+        """
+        Return the internal 5V supply of the TPM.
+
+        :return: the internal 5V supply of the TPM
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_5V0"]
 
     @property
     @check_communicating

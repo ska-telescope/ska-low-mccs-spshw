@@ -96,7 +96,8 @@ class AttributeManager:
     def mark_stale(self: AttributeManager) -> None:
         """Mark attribute as stale."""
         # Update with None and push
-        self.update(None, True)
+        if self._initial_value is None:
+            self.update(None, True)
 
     def _update_quality(self: AttributeManager, new_value: Any) -> bool:
         """

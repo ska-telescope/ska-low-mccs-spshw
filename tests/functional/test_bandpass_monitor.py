@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 import tango
 from pytest_bdd import given, scenarios, then, when
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -32,38 +32,30 @@ from tests.test_tools import retry_communication
 scenarios("./features/bandpass_monitor.feature")
 
 
-@pytest.fixture(name="plot_directory")
-def plot_directory_fixture() -> str:
-    """
-    Return the directory that plots are stored to.
-
-    :return: the directory that plots are stored to
-    """
-    return "/product/test_eb_id/low-mccs/test_scan_id/plots/"
-
-
 @given(
-    "we have a station to test against",
+    "we have a target station",
     target_fixture="station_name",
 )
-def available_station_fixture(
-    available_stations: list[str],
-    true_context: bool,
+def station_name_fixture(
+    station: tango.DeviceProxy | None,
+    station_label: str | None,
 ) -> str:
     """
     Return an available station to test against.
 
-    :param available_stations: a list of stations available in this
-        environment.
-    :param true_context: whether to test against an existing Tango deployment
+    :param station: the station we are testing against.
+    :param station_label: a fixture returning the station label passed
+        in from the environment.
 
     :return: the station to test against.
     """
-    if not true_context:
-        pytest.skip(
-            "This needs to be run in a true-context against a real DAQ deployment"
-        )
-    return available_stations[-1]
+    try:
+        if station is None:
+            pytest.skip("No station to test against.")
+        station.ping()
+    except tango.DevFailed as e:
+        pytest.fail(f"Target station is not reachable {e}")
+    return station_label or "real-daq-1"
 
 
 @pytest.fixture(name="daq_config")
@@ -208,58 +200,6 @@ def monitor_not_running(daq_device: tango.DeviceProxy) -> None:
         daq_monitor_stopped(daq_device)
 
 
-@when(
-    "the DAQ is commanded to start monitoring for bandpasses "
-    "with `auto_handle_daq` set to `False`",
-    target_fixture="no_auto_handle_result",
-)
-def daq_start_monitoring_no_auto_handle(
-    daq_device: tango.DeviceProxy, plot_directory: str
-) -> list:
-    """
-    Start monitoring for bandpasses without auto-handling starting the daq.
-
-    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param plot_directory: the directory to plots are stored to.
-    :return: result of the StartBandpassMonitor command.
-    """
-    argin = json.dumps({"auto_handle_daq": False, "plot_directory": plot_directory})
-    return daq_device.StartBandpassMonitor(argin)
-
-
-@then(
-    "the DAQ rejects the command and reports that the integrated channel data consumer "
-    "must be running to monitor for bandpasses"
-)
-def daq_reject_bandpass_need_consumer_running(
-    daq_device: tango.DeviceProxy,
-    no_auto_handle_result: list,
-    change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
-    """
-    Confirm that the bandpass monitor did not start due to no consumer running.
-
-    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param no_auto_handle_result: result of the StartBandpassMonitor command
-    :param change_event_callbacks: a dictionary of callables to be used as
-        tango change event callbacks.
-    """
-    daq_device.subscribe_event(
-        "longRunningCommandResult",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["daq_long_running_command_result"],
-    )
-    change_event_callbacks["daq_long_running_command_result"].assert_change_event(
-        (
-            no_auto_handle_result[1][0],
-            '"INTEGRATED_CHANNEL_DATA consumer must be running before bandpasses '
-            'can be monitored."',
-        ),
-        lookahead=3,
-        consume_nonmatches=True,
-    )
-
-
 @given("the DAQ is configured")
 def daq_configure(
     daq_device: tango.DeviceProxy,
@@ -341,14 +281,12 @@ def bandpass_daq_bandpass_monitor_running(
 @given("the bandpass monitor is running")
 def daq_bandpass_monitor_running(
     daq_device: tango.DeviceProxy,
-    plot_directory: str,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> Generator:
     """
     Start the bandpass monitor.
 
     :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param plot_directory: the directory to plots are stored to.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
 
@@ -366,23 +304,27 @@ def daq_bandpass_monitor_running(
     )
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)
-    argin = json.dumps(
-        {"auto_handle_daq": False, "plot_directory": plot_directory, "cadence": 0}
-    )
-    start_bandpass_result = daq_device.StartBandpassMonitor(argin)
-    daq_device.subscribe_event(
-        "longRunningCommandResult",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["daq_long_running_command_result"],
-    )
-    change_event_callbacks["daq_long_running_command_result"].assert_change_event(
-        (
-            start_bandpass_result[1][0],
-            '"Bandpass monitor active"',
-        ),
-        lookahead=12,
-        consume_nonmatches=True,
-    )
+    start_bandpass_result = daq_device.StartBandpassMonitor()
+
+    if start_bandpass_result[0][0] == ResultCode.REJECTED:
+        # Allow a rejection if already running.
+        assert start_bandpass_result[1][0] == "Bandpass monitor already started."
+    else:
+        sub_id = daq_device.subscribe_event(
+            "longRunningCommandResult",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["daq_long_running_command_result"],
+        )
+        change_event_callbacks["daq_long_running_command_result"].assert_change_event(
+            (
+                start_bandpass_result[1][0],
+                json.dumps([ResultCode.OK, "Bandpass monitor active"]),
+            ),
+            lookahead=12,
+            consume_nonmatches=True,
+        )
+        daq_device.unsubscribe_event(sub_id)
+
     verify_bandpass_state(daq_device, True)
 
     yield

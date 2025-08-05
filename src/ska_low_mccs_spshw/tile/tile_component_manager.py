@@ -39,6 +39,7 @@ from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
+from .exception_codes import HardwareVerificationError
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -60,24 +61,17 @@ _ATTRIBUTE_MAP: Final = {
     "HEALTH_STATUS": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
     "PLL_LOCKED": "pll_locked",
-    "CHECK_BOARD_TEMPERATURE": "board_temperature",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
     "IS_BEAMFORMER_RUNNING": "beamformer_running",
     "FPGA_REFERENCE_TIME": "fpga_reference_time",
-    "TILE_ID": "tile_id",
-    "STATION_ID": "station_id",
     "PHASE_TERMINAL_COUNT": "phase_terminal_count",
     "PPS_DELAY": "pps_delay",
     "PPS_DRIFT": "pps_drift",
     "ADC_RMS": "adc_rms",
-    "CHANNELISER_ROUNDING": "channeliser_rounding",
     "IS_PROGRAMMED": "is_programmed",
-    "CSP_ROUNDING": "csp_rounding",
-    "STATIC_DELAYS": "static_delays",
     "PENDING_DATA_REQUESTS": "pending_data_requests",
     "BEAMFORMER_TABLE": "beamformer_table",
     "CHECK_CPLD_COMMS": "global_status_alarms",
-    "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
 }
@@ -142,7 +136,10 @@ class TaskCompleteWaiter(TaskCallbackType):
 class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     """A component manager for a Tile (simulator or driver) and its power supply."""
 
-    FIRMWARE_NAME = {"tpm_v1_2": "itpm_v1_2.bit", "tpm_v1_6": "itpm_v1_6.bit"}
+    # This firmware name is generic to versions supported by
+    # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
+    # TPM_2_0 for example.
+    FIRMWARE_NAME: str = "tpm_firmware.bit"
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
@@ -157,7 +154,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         station_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
-        tpm_version: str,
         preadu_levels: list[float] | None,
         static_time_delays: list[float],
         subrack_fqdn: str,
@@ -194,7 +190,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param station_id: the unique ID for the station to which this tile belongs.
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
-        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param preadu_levels: preADU gain attenuation settings to apply for this TPM.
         :param static_time_delays: Delays in nanoseconds to account
             for static delay missmatches.
@@ -258,17 +253,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
         self.integrated_data_transmission_mode: str = "Not transmitting"
-        if tpm_version not in self.FIRMWARE_NAME:
-            self.logger.warning(
-                "TPM version "
-                + tpm_version
-                + " not valid. Trying to read version from board, which must be on"
-            )
-            tpm_version = ""
-        self._tpm_version = tpm_version
         self._preadu_levels = preadu_levels
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
+        self._firmware_name: str = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -278,11 +265,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or DynamicTileSimulator(logger)
         else:
+            # =============================================
+            # TODO: Bug/work needed in ska-low-sps-tpm-api.
+            # If _tpm_version == None we have a chance of
+            # an unhandled LibraryError. Passing in "" does
+            # nothing, we are doing it here to avoid this bug.
+            # Bug will be present if TPM is OFF.
+            _tpm_version = ""
+            # =============================================
             self.tile = Tile(
                 ip=tpm_ip,
                 port=tpm_cpld_port,
                 logger=logger,
-                tpm_version=tpm_version,
+                tpm_version=_tpm_version,
             )
 
         super().__init__(
@@ -356,11 +351,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
-            case "CHECK_BOARD_TEMPERATURE":
+            case "READ_CONFIGURATION":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_temperature,
-                    publish=True,
+                    "read_config",
+                    self.__update_configuration_from_tile,
+                    publish=False,
                 )
             case "CONNECT":
                 try:
@@ -415,12 +410,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self._get_pps_drift,
                     publish=True,
                 )
-            case "ARP_TABLE":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_arp_table,
-                    publish=True,
-                )
             case "PPS_DELAY_CORRECTION":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -443,30 +432,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_preadu_levels,
-                    publish=True,
-                )
-            case "STATIC_DELAYS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.get_static_delays, publish=True
-                )
-            case "STATION_ID":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_station_id,
-                    publish=True,
-                )
-            case "TILE_ID":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.tile.get_tile_id, publish=True
-                )
-            case "CSP_ROUNDING":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.csp_rounding, publish=True
-                )
-            case "CHANNELISER_ROUNDING":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self._channeliser_truncation,
                     publish=True,
                 )
             case "BEAMFORMER_TABLE":
@@ -688,6 +653,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Initialise the request provider and start connecting."""
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
+        self._request_provider.desire_configuration_read()
         self._start_communicating_with_subrack()
 
     def polling_stopped(self: TileComponentManager) -> None:
@@ -1138,6 +1104,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"* PreAduLevels of {self._preadu_levels} \n"
                 )
                 self.tile.initialise(
+                    station_id=self._station_id,
                     tile_id=self._tile_id,
                     pps_delay=pps_delay_correction,
                     active_40g_ports_setting="port1-only",
@@ -1145,8 +1112,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     src_ip_fpga2=self.src_ip_40g_fpga2,
                     time_delays=self._static_time_delays,
                 )
-
-                self.tile.set_station_id(0, 0)
                 #
                 # extra steps required to have it working
                 #
@@ -1158,7 +1123,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.set_first_last_tile(False, False)
 
                 # self.tile.post_synchronisation()
-                self.tile.set_station_id(self._station_id, self._tile_id)
 
                 if self._preadu_levels:
                     self.logger.info(
@@ -1171,6 +1135,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
 
                 self.logger.info("TileComponentManager: initialisation completed")
+
+                # Update configuration before we transition to INITIALISED.
+                self.__update_configuration_from_tile()
+
                 self._tpm_status = TpmStatus.INITIALISED
                 self._update_attribute_callback(
                     programming_state=TpmStatus.INITIALISED.pretty_name()
@@ -1399,100 +1367,111 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # --------------------------------
     # Properties
     # --------------------------------
-    @property
-    @check_communicating
-    def tile_id(self: TileComponentManager) -> int:
+    def _with_hardware_lock(self: TileComponentManager, func: Callable[[], Any]) -> Any:
         """
-        Get the Tile ID.
+        Acquire hardware lock and execute the given function.
 
-        :return: assigned tile Id value
+        :param func: a function to call within lock.
+
+        :returns: whatever the result of command was.
         """
-        return self._tile_id
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return func()
 
-    @tile_id.setter  # type: ignore[no-redef]
-    def tile_id(self: TileComponentManager, value: int) -> None:
+    def __update_configuration_from_tile(self: TileComponentManager) -> None:
+        """Read configuration information from the TPM."""
+        self.logger.info("Updating attribute configuration from TPM")
+
+        # NOTE: THORN-207: There is no API to read channeliser_truncation and
+        # csp_rounding from TPM.
+        channeliser_rounding = self.channeliser_truncation
+        csp_rounding = self.csp_rounding
+        # hardware methods recuire a lock
+        static_delays = self._with_hardware_lock(self.get_static_delays)
+        station_id = self._with_hardware_lock(self.tile.get_station_id)
+        tile_id = self._with_hardware_lock(self.tile.get_tile_id)
+
+        self._update_attribute_callback(
+            static_delays=static_delays,
+            tile_id=tile_id,
+            station_id=station_id,
+            csp_rounding=csp_rounding,
+            channeliser_rounding=channeliser_rounding,
+        )
+
+        self.logger.info("Configuration information read from TPM")
+        assert self._request_provider is not None
+        self._request_provider.inform_configuration_read()
+
+    def __update_tpm_id(
+        self: TileComponentManager, station_id: int, tile_id: int
+    ) -> None:
+        """
+        Update the TPM id.
+
+        :param station_id: the station_id to set
+        :param tile_id: the tile_id to set.
+
+        :raises HardwareVerificationError: When the readback from a set_value
+            has unexpected result.
+        """
+        # ska-low-sps-tpm-api will return -1 when TPM not programmed.
+        # This flag is used to mark the attribute as INVALID.
+        error_code = -1
+
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_station_id(station_id, tile_id)
+            self._station_id = self.tile.get_station_id()
+            self._tile_id = self.tile.get_tile_id()
+
+        self._update_attribute_callback(
+            tile_id=self._tile_id, mark_invalid=self._tile_id == error_code
+        )
+        self._update_attribute_callback(
+            station_id=self._station_id, mark_invalid=self._station_id == error_code
+        )
+        if self._station_id != station_id:
+            raise HardwareVerificationError(
+                expected=station_id, actual=self._station_id
+            )
+        if self._tile_id != tile_id:
+            raise HardwareVerificationError(expected=tile_id, actual=self._tile_id)
+        self.logger.info(f"set station_id : {station_id}, " f"tile_id : {tile_id}")
+
+    def set_tile_id(self: TileComponentManager, value: int) -> None:
         """
         Set Tile ID.
 
         :param value: assigned tile Id value
-
-        :raises ValueError: If we failed to write tile_id.
         """
         with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
             if not self.tile.is_programmed():
                 return
-            try:
-                self.tile.set_station_id(self._station_id, value)
-                self._tile_id = self.tile.get_tile_id()
-                self.logger.info(
-                    f"setting station_id:{self._station_id}, "
-                    f"tile_id:{self._tile_id}"
-                )
-                if self._tile_id != value:
-                    self.logger.error(
-                        f"Failed to set tile_id. Read : {self._tile_id}, "
-                        f"Expected : {value}"
-                    )
-                    raise ValueError("Failed to set the Tile ID")
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
-    @property
-    @check_communicating
-    def station_id(self: TileComponentManager) -> int:
-        """
-        Get the Station ID.
+            self.__update_tpm_id(self._station_id, value)
 
-        :return: assigned station Id value
-        """
-        return self._station_id
-
-    @station_id.setter  # type: ignore[no-redef]
-    def station_id(self: TileComponentManager, value: int) -> None:
+    def set_station_id(self: TileComponentManager, value: int) -> None:
         """
         Set Station ID.
 
         :param value: assigned station Id value
-
-        :raises ValueError: is the read value is not as expected.
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                if not self.tile.is_programmed():
-                    return
-                try:
-                    self.tile.set_station_id(value, self._tile_id)
-                    self._station_id = self.tile.get_station_id()
-                    self.logger.info(
-                        f"setting station:{self._station_id}, tile:{self._tile_id}"
-                    )
-                    if self._station_id != value:
-                        self.logger.error(
-                            f"Failed to set station_id. Read : {self._station_id}, "
-                            f"Expected : {value}"
-                        )
-                        raise ValueError("Failed to set the Station ID")
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-
-    @property
-    def hardware_version(self: TileComponentManager) -> str:
-        """
-        Return whether this TPM is 1.2 or 1.6.
-
-        TODO this is not called
-
-        :return: TPM hardware version. 120 or 160
-        """
-        return self._tpm_version
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not self.tile.is_programmed():
+                return
+            self.__update_tpm_id(value, self._tile_id)
 
     @property
     def firmware_name(self: TileComponentManager) -> str:
@@ -2066,6 +2045,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile[  # pylint: disable=expression-not-assigned
                         int(0x30000000)
                     ]
+                    # After connection lets check the configuration.
+                    assert self._request_provider is not None
+                    self._request_provider.desire_configuration_read()
                 except Exception as e:
                     self.logger.error(f"Failed to connect to TPM {e}")
                     self.__update_tpm_status()
@@ -2716,34 +2698,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param nof_channels: number of channels
         :param is_first: whether this is the first (?)
         :param is_last: whether this is the last (?)
-
-        :raises ValueError: if the tpm is value None.
         """
         self.logger.debug(
             f"initialise_beamformer for chans {start_channel}:{nof_channels}"
         )
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if self.tile.tpm is None:
-                        raise ValueError("Cannot read register on unconnected TPM.")
-                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
-                    self.tile.define_channel_table(
-                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
-                    )
-                    self.tile.set_first_last_tile(is_first, is_last)
-                    self._nof_blocks = nof_channels // 8
-                    beamformer_table = self.tile.get_beamformer_table()
-                    self._update_attribute_callback(beamformer_table=beamformer_table)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_spead_format(self._csp_spead_format == "SKA")
+            self.tile.define_channel_table(
+                [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
+            )
+            self.tile.set_first_last_tile(is_first, is_last)
+            self._nof_blocks = nof_channels // 8
+            __beamformer_table = self.tile.get_beamformer_table()
+        self._update_attribute_callback(beamformer_table=__beamformer_table)
 
     def set_beamformer_regions(
         self: TileComponentManager, regions: list[list[int]]
@@ -2952,21 +2923,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.debug("TileComponentManager: set_static_delays")
         delays_float = [float(d) for d in delays]
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if not self.tile.set_time_delays(delays_float):
-                        self.logger.warning("Failed to set static time delays.")
-                    static_delays = self.get_static_delays()
-                    self._update_attribute_callback(static_delays=static_delays)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not self.tile.set_time_delays(delays_float):
+                self.logger.warning("Failed to set static time delays.")
+            __static_delays = self.get_static_delays()
+        self._update_attribute_callback(static_delays=__static_delays)
 
     @property
     @check_communicating
@@ -3355,22 +3319,29 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Set preadu levels in dB.
 
         :param levels: Preadu attenuation levels in dB
+
+        :raises ValueError: When attempting to set preaduLevels with
+            a list of length not equal to 32 (i.e 32 ADC channels).
+        :raises HardwareVerificationError: When the readback from hardware is
+            unexpected.
         """
+        if len(levels) != 32:
+            raise ValueError(
+                f"length must be 32. Attempting to set with length {len(levels)}"
+            )
+
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            try:
-                self.tile.set_preadu_levels(levels)
-                _preadu_levels = self.tile.get_preadu_levels()
-                if _preadu_levels != levels:
-                    self.logger.warning(
-                        "TileComponentManager: Updating PreADU levels failed"
-                    )
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+            self.tile.set_preadu_levels(levels)
+            _preadu_levels = self.tile.get_preadu_levels()
+
+        self._update_attribute_callback(preadu_levels=_preadu_levels)
+
+        if _preadu_levels != levels:
+            raise HardwareVerificationError(expected=levels, actual=_preadu_levels)
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """
@@ -3950,6 +3921,96 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.disable_station_beam_flagging()
+
+    def get_voltage_warning_thresholds(
+        self: TileComponentManager,
+        voltage: str = "",
+    ) -> str:
+        """
+        Get the voltage warning thresholds.
+
+        :param voltage: The voltage type to get the thresholds for.
+
+        :return: a jsonified dictionary with the voltage warning thresholds
+            or a message if the specified voltage is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            if voltage:
+                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+            else:
+                thresholds = self.tile.get_voltage_warning_thresholds()
+            if thresholds is None:
+                return f"Specified voltage '{voltage}' not recognized."
+            return json.dumps(thresholds)
+
+    def set_voltage_warning_thresholds(
+        self: TileComponentManager,
+        voltage: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set the voltage warning thresholds.
+
+        :param voltage: The voltage type to set the thresholds for.
+            Must be one of the keys in the voltage warning thresholds dictionary.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the voltage type is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+
+    def get_current_warning_thresholds(
+        self: TileComponentManager,
+        current: str = "",
+    ) -> str:
+        """
+        Get the current warning thresholds.
+
+        :param current: The current type to get the thresholds for.
+
+        :return: a jsonified dictionary with the current warning thresholds
+            or a message if the specified current is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            if current:
+                thresholds = self.tile.get_current_warning_thresholds(current)
+            else:
+                thresholds = self.tile.get_current_warning_thresholds()
+            if thresholds is None:
+                return f"Specified current '{current}' not recognized."
+            return json.dumps(thresholds)
+
+    def set_current_warning_thresholds(
+        self: TileComponentManager,
+        current: str,
+        min_thr: float,
+        max_thr: float,
+    ) -> bool | None:
+        """
+        Set the current warning thresholds.
+
+        :param current: The current type to set the thresholds for.
+            Must be one of the keys in the current warning thresholds dictionary.
+        :param min_thr: The minimum threshold value.
+        :param max_thr: The maximum threshold value.
+
+        :return: True if the thresholds were set successfully,
+            or None if the current type is not recognized.
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.set_current_warning_thresholds(current, min_thr, max_thr)
 
     @property
     @check_communicating

@@ -27,27 +27,27 @@ class TestTileHealthRules:
 
         :return: Health rules to be used.
         """
-        return TileHealthRules("tpm_v1_6")
+        return TileHealthRules("v1.6.7a", "0.5.0", True)
 
     @pytest.mark.parametrize(
         ("min_max", "monitoring_points", "expected_state", "expected_report"),
         [
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS["temperatures"],
+                TileData.DEFAULT_MONITORING_POINTS["temperatures"],
                 TileData.get_tile_defaults().get("temperatures"),
                 HealthState.OK,
                 "",
                 id="Default values used, health is OK",
             ),
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS["voltages"],
+                TileData.DEFAULT_MONITORING_POINTS["voltages"],
                 TileData.TILE_MONITORING_POINTS["voltages"],
                 HealthState.UNKNOWN,
                 "is None",
                 id="Monitoring points are None, health is UNKNOWN",
             ),
             pytest.param(
-                TileData.MIN_MAX_MONITORING_POINTS["currents"],
+                TileData.DEFAULT_MONITORING_POINTS["currents"],
                 {"FE0_mVA": None, "FE1_mVA": 50},
                 HealthState.FAILED,
                 'Monitoring point "/FE1_mVA": 50 not in range 2.37 - 2.62',

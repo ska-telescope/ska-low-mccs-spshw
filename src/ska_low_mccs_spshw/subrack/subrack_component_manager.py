@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import threading
 from typing import Any, Callable, Optional, cast
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -536,12 +537,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         port_number: int,
         task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn a pdu port on.
 
         :param port_number: (one-based) number of the port to turn on.
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         if self.pdu_proxy is not None:
             self.pdu_proxy._pdu_port_on(port_number)
@@ -576,12 +579,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         port_number: int,
         task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn a pdu port off.
 
         :param port_number: (one-based) number of the port to turn off.
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         if self.pdu_proxy is not None:
             self.pdu_proxy._pdu_port_off(port_number)
@@ -661,13 +666,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
     def _schedule_on(
-        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Schedule self on.
 
         :param task_callback: callback to be called when the status of
             the command changes
+        :param task_abort_event: Check for abort, defaults to None
         """
         for port in self.pdu_ports:
             self.power_marshaller_proxy.schedule_power(
@@ -696,13 +704,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
     def _schedule_off(
-        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn self off.
 
         :param task_callback: callback to be called when the status of
             the command changes
+        :param task_abort_event: Check for abort, defaults to None
         """
         for port in self.pdu_ports:
             self.power_marshaller_proxy.schedule_power(

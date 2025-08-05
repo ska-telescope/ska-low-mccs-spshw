@@ -218,6 +218,7 @@ releases:
       - .deploy/helmfile.d/templates/spshw/ska-low-mccs-daq.yaml.gotmpl
       - .deploy/helmfile.d/templates/helm-values.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/pdus.yaml.gotmpl
+      - .deploy/helmfile.d/templates/spshw/power_marshaller.yaml.gotmpl
 
 {{- $_tango_host_provided := dig "platform" "cluster" "services" "tango-base" "tango-host" "" .Values}}
 {{- $tango_host_provided := dig "overrides" "cluster" "services" "tango-base" "tango-host" $_tango_host_provided .Values}}

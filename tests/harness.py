@@ -341,6 +341,7 @@ class SpsTangoTestHarness:
             LoggingLevelDefault=logging_level,
             ParentTRL=get_sps_station_name(self._station_label),
             Simulated_PDU=True,
+            PduTrl=get_pdu_name(),
             PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",
         )
 

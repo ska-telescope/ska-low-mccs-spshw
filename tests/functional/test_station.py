@@ -25,21 +25,7 @@ from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import get_sps_station_name
-
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
-
-@pytest.fixture(name="station")
-def station_fixture(available_stations: list[str]) -> tango.DeviceProxy:
-    """
-    Fixture containing a proxy to the station under test.
-
-    :param available_stations: the names of the stations we are testing against.
-
-    :returns: a proxy to the station under test.
-    """
-    return tango.DeviceProxy(get_sps_station_name(available_stations[-1]))
 
 
 @pytest.fixture(name="command_info")
@@ -53,14 +39,14 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/station.feature", "Synchronising time stamping")
-def test_tile(sps_devices_exported: list[tango.DeviceProxy]) -> None:
+def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the station device.
 
-    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
         for all exported sps devices.
     """
-    for device in sps_devices_exported:
+    for device in stations_devices_exported:
         device.adminmode = AdminMode.ONLINE
 
 
@@ -79,8 +65,8 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    sps_devices_exported: list[tango.DeviceProxy],
-    exported_tiles: list[tango.DeviceProxy],
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
     Check the SpsStation is ON, and all devices are in ONLINE AdminMode.
@@ -88,9 +74,9 @@ def check_spsstation_state(
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param sps_devices_exported: Fixture containing the ``tango.DeviceProxy``
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
         for all exported sps devices.
-    :param exported_tiles: A list containing the ``tango.DeviceProxy``
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
     station.subscribe_event(
@@ -117,7 +103,7 @@ def check_spsstation_state(
             )
 
     device_bar_station = [
-        dev for dev in sps_devices_exported if dev.dev_name() != station.dev_name()
+        dev for dev in stations_devices_exported if dev.dev_name() != station.dev_name()
     ]
 
     for device in device_bar_station:
@@ -131,7 +117,7 @@ def check_spsstation_state(
 
     if any(
         device.state() not in [tango.DevState.ON, tango.DevState.ALARM]
-        for device in sps_devices_exported
+        for device in stations_devices_exported
     ):
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(
@@ -148,11 +134,11 @@ def check_spsstation_state(
     iters = 0
     while any(
         tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
-        for tile in exported_tiles
+        for tile in station_tiles
     ):
         if iters >= 60:
             pytest.fail(
-                f"Not all tiles came ON: {[tile.state() for tile in exported_tiles]}"
+                f"Not all tiles came ON: {[tile.state() for tile in station_tiles]}"
             )
         time.sleep(1)
         iters += 1

@@ -137,11 +137,13 @@ class PduComponentManager(SNMPComponentManager):
 
     def start_communicating(self: PduComponentManager) -> None:
         """Establish communication with the station components."""
+        super().start_communicating()
         if self._power_marshaller_trl:
             self.marshaller_proxy.start_communicating()
 
     def stop_communicating(self: PduComponentManager) -> None:
         """Break off communication with the station components."""
+        super().stop_communicating()
         if self._power_marshaller_trl:
             self.marshaller_proxy.stop_communicating()
 

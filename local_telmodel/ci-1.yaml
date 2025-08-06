@@ -14,9 +14,6 @@ platform:
             simulated: true
           bandpass:
             simulated: true
-        powermarshaller:
-          ci-1:
-            logging_level_default: 5
         subracks:
           sr1:
             simulated: true

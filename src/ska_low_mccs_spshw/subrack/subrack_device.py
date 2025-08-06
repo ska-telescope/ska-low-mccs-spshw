@@ -275,7 +275,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     UpdateRate = device_property(dtype=float, default_value=15.0)
     PduTrl = device_property(dtype=str, default_value="")
 
-    # A map from the compnent manager argument to the name of the Tango attribute.
+    # A map from the component manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
     # Attributes that don't map one-to-one are handled individually.
     # For example, tpm_on_off is not included here because it unpacks into eight
@@ -1130,11 +1130,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("internalVoltages3V3", None)
 
     @attribute(dtype=float, label="internalVoltages_5V")
-    def internalVoltages_5V(self: MccsSubrack) -> float | None:
+    def internalVoltages5V(self: MccsSubrack) -> float | None:
         """
-        Handle a Tango attribute read of the internalVoltages_5V attribute.
+        Handle a Tango attribute read of the internalVoltages5V attribute.
 
-        :return: internalVoltages_5V
+        :return: internalVoltages5V
         """
         return self._hardware_attributes.get("internalVoltages5V", None)
 

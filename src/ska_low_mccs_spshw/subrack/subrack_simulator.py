@@ -157,6 +157,66 @@ class SubrackSimulator(SubrackProtocol):
             "default": [5.0] * 8,
             "writable": False,
         },
+        "internal_voltages_1v1": {
+            "length": None,
+            "default": 1.1,
+            "writable": False,
+        },
+        "internal_voltages_1v5": {
+            "length": None,
+            "default": 1.5,
+            "writable": False,
+        },
+        "internal_voltages_2v5": {
+            "length": None,
+            "default": 2.5,
+            "writable": False,
+        },
+        "internal_voltages_2v8": {
+            "length": None,
+            "default": 2.8,
+            "writable": False,
+        },
+        "internal_voltages_3v": {
+            "length": None,
+            "default": 3,
+            "writable": False,
+        },
+        "internal_voltages_3v3": {
+            "length": None,
+            "default": 3.3,
+            "writable": False,
+        },
+        "internal_voltages_5v": {
+            "length": None,
+            "default": 5,
+            "writable": False,
+        },
+        "internal_voltages_arm": {
+            "length": None,
+            "default": 1.3,
+            "writable": False,
+        },
+        "internal_voltages_core": {
+            "length": None,
+            "default": 1.2,
+            "writable": False,
+        },
+        "internal_voltages_ddr": {
+            "length": None,
+            "default": 1.35,
+            "writable": False,
+        },
+        "internal_voltages_powerin": {
+            "length": None,
+            "default": 12.0,
+            "writable": False,
+        },
+        "internal_voltages_soc": {
+            "length": None,
+            "default": 1.35,
+            "writable": False,
+        },
     }
 
     def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:

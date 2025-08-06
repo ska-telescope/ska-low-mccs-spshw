@@ -70,6 +70,18 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
+        "internalVoltages1V1",
+        "internalVoltages1V5",
+        "internalVoltages2V5",
+        "internalVoltages2V8",
+        "internalVoltages3V",
+        "internalVoltages3V3",
+        "internalVoltages5V",
+        "internalVoltagesARM",
+        "internalVoltagesCORE",
+        "internalVoltagesDDR",
+        "internalVoltagesPOWERIN",
+        "internalVoltagesSOC",
         timeout=5.0,
         assert_no_error=False,
     )

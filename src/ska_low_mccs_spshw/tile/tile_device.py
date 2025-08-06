@@ -201,6 +201,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
 
+    def delete_device(self: MccsTile) -> Any:
+        """
+        Prepare to delete the device.
+
+        This method must be done explicitly, else polling
+        threads are not cleaned up after init_device().
+
+        :return: result from delete_device.
+        """
+        try:
+            # We do not want to raise a exception here
+            # This can cause a segfault.
+            self.component_manager.stop_communicating()
+            del self.component_manager
+        except Exception:  # pylint: disable=broad-except
+            pass
+        return super().delete_device()
+
     def init_device(self: MccsTile) -> None:
         """
         Initialise the device.

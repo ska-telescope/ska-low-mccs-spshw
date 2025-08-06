@@ -77,6 +77,7 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
             self._logger.debug("Got data for all tiles, gathering data.")
             self._base_path = os.path.split(event._src_path)[0]
             try:
+                time.sleep(1)
                 self.handle_data()
                 self._data_created_callback(data=self.data)
                 self.reset()
@@ -156,12 +157,6 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: ChannelDataReceivedHandler) -> None:
         """Handle the reading of channel data."""
-        # TODO: Understand this behaviour. Seems without a sleep
-        # the file lock is claimed by another process.
-        # (Expected regression with locks)
-        sleep_time = 10
-        time.sleep(sleep_time)
-
         raw_file = ChannelFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(

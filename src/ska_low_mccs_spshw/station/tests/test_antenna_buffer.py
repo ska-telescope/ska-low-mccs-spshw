@@ -148,6 +148,10 @@ class TestAntennaBuffer(BaseDaqTest):
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
 
+    def _reset(self: TestAntennaBuffer) -> None:
+        self._stop_pattern_generator("jesd")
+        super()._reset()
+
     def _set_up_antenna_buffer(
         self: TestAntennaBuffer,
         tiles: list,

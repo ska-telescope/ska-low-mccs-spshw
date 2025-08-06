@@ -4661,7 +4661,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "0.6.0"
+version = "0.7.1"
 description = "An API for management of the Tile Processing Modules of the SKA-Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -4676,8 +4676,8 @@ numpy = "^1.26.4"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
-reference = "0.6.0"
-resolved_reference = "a2055a411f03083e857901e942118ebac05255d6"
+reference = "0.7.1"
+resolved_reference = "de1d22e4e48926eb52ffeff844974e05cce14c5f"
 
 [[package]]
 name = "ska-ser-logging"
@@ -5607,14 +5607,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "virtualenv"
-version = "20.33.0"
+version = "20.33.1"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "virtualenv-20.33.0-py3-none-any.whl", hash = "sha256:106b6baa8ab1b526d5a9b71165c85c456fbd49b16976c88e2bc9352ee3bc5d3f"},
-    {file = "virtualenv-20.33.0.tar.gz", hash = "sha256:47e0c0d2ef1801fce721708ccdf2a28b9403fa2307c3268aebd03225976f61d2"},
+    {file = "virtualenv-20.33.1-py3-none-any.whl", hash = "sha256:07c19bc66c11acab6a5958b815cbcee30891cd1c2ccf53785a28651a0d8d8a67"},
+    {file = "virtualenv-20.33.1.tar.gz", hash = "sha256:1b44478d9e261b3fb8baa5e74a0ca3bc0e05f21aa36167bf9cbf850e542765b8"},
 ]
 
 [package.dependencies]
@@ -6041,4 +6041,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "836fbf5e7cb9c73490de22681f254d43474f2289d0503f1c87fd968b1f3d2417"
+content-hash = "f5b2f9bbf618f9a89f8434f75442b01c586b8c98cb73c5a72f23fd07f0472130"

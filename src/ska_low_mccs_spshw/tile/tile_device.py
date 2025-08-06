@@ -266,6 +266,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "dsp": "dsp",
             "voltages": "voltages",
             "temperatures": "temperatures",
+            "temperature_adc0": "temperatureADC0",
+            "temperature_adc1": "temperatureADC1",
+            "temperature_adc2": "temperatureADC2",
+            "temperature_adc3": "temperatureADC3",
+            "temperature_adc4": "temperatureADC4",
+            "temperature_adc5": "temperatureADC5",
+            "temperature_adc6": "temperatureADC6",
+            "temperature_adc7": "temperatureADC7",
+            "temperature_adc8": "temperatureADC8",
+            "temperature_adc9": "temperatureADC9",
+            "temperature_adc10": "temperatureADC10",
+            "temperature_adc11": "temperatureADC11",
+            "temperature_adc12": "temperatureADC12",
+            "temperature_adc13": "temperatureADC13",
+            "temperature_adc14": "temperatureADC14",
+            "temperature_adc15": "temperatureADC15",
             "adcs": "adcs",
             "timing": "timing",
             "currents": "currents",
@@ -452,6 +468,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "dsp": ["dsp"],
             "voltages": ["voltages"],
             "temperatures": ["temperatures"],
+            "temperatureADC0": ["temperatures", "ADC0"],
+            "temperatureADC1": ["temperatures", "ADC1"],
+            "temperatureADC2": ["temperatures", "ADC2"],
+            "temperatureADC3": ["temperatures", "ADC3"],
+            "temperatureADC4": ["temperatures", "ADC4"],
+            "temperatureADC5": ["temperatures", "ADC5"],
+            "temperatureADC6": ["temperatures", "ADC6"],
+            "temperatureADC7": ["temperatures", "ADC7"],
+            "temperatureADC8": ["temperatures", "ADC8"],
+            "temperatureADC9": ["temperatures", "ADC9"],
+            "temperatureADC10": ["temperatures", "ADC10"],
+            "temperatureADC11": ["temperatures", "ADC11"],
+            "temperatureADC12": ["temperatures", "ADC12"],
+            "temperatureADC13": ["temperatures", "ADC13"],
+            "temperatureADC14": ["temperatures", "ADC14"],
+            "temperatureADC15": ["temperatures", "ADC15"],
             "adcs": ["adcs"],
             "timing": ["timing"],
             "currents": ["currents"],
@@ -1659,6 +1691,150 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: temperatures available
         """
         return self._attribute_state["temperatures"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 0 temperature")
+    def temperatureADC0(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 0 temperature.
+
+        :return: ADC 0 temperature
+        """
+        return self._attribute_state["temperatureADC0"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 1 temperature")
+    def temperatureADC1(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 1 temperature.
+
+        :return: ADC 1 temperature
+        """
+        return self._attribute_state["temperatureADC1"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 2 temperature")
+    def temperatureADC2(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 2 temperature.
+
+        :return: ADC 2 temperature
+        """
+        return self._attribute_state["temperatureADC2"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 3 temperature")
+    def temperatureADC3(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 3 temperature.
+
+        :return: ADC 3 temperature
+        """
+        return self._attribute_state["temperatureADC3"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 4 temperature")
+    def temperatureADC4(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 4 temperature.
+
+        :return: ADC 4 temperature
+        """
+        return self._attribute_state["temperatureADC4"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 5 temperature")
+    def temperatureADC5(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 5 temperature.
+
+        :return: ADC 5 temperature
+        """
+        return self._attribute_state["temperatureADC5"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 6 temperature")
+    def temperatureADC6(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 6 temperature.
+
+        :return: ADC 6 temperature
+        """
+        return self._attribute_state["temperatureADC6"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 7 temperature")
+    def temperatureADC7(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 7 temperature.
+
+        :return: ADC 7 temperature
+        """
+        return self._attribute_state["temperatureADC7"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 8 temperature")
+    def temperatureADC8(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 8 temperature.
+
+        :return: ADC 8 temperature
+        """
+        return self._attribute_state["temperatureADC8"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 9 temperature")
+    def temperatureADC9(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 9 temperature.
+
+        :return: ADC 9 temperature
+        """
+        return self._attribute_state["temperatureADC9"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 10 temperature")
+    def temperatureADC10(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 10 temperature.
+
+        :return: ADC 10 temperature
+        """
+        return self._attribute_state["temperatureADC10"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 11 temperature")
+    def temperatureADC11(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 11 temperature.
+
+        :return: ADC 11 temperature
+        """
+        return self._attribute_state["temperatureADC11"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 12 temperature")
+    def temperatureADC12(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 12 temperature.
+
+        :return: ADC 12 temperature
+        """
+        return self._attribute_state["temperatureADC12"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 13 temperature")
+    def temperatureADC13(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 13 temperature.
+
+        :return: ADC 13 temperature
+        """
+        return self._attribute_state["temperatureADC13"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 14 temperature")
+    def temperatureADC14(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 14 temperature.
+
+        :return: ADC 14 temperature
+        """
+        return self._attribute_state["temperatureADC14"].read()
+
+    @attribute(dtype="DevDouble", label="ADC 15 temperature")
+    def temperatureADC15(self: MccsTile) -> float | None:
+        """
+        Handle a Tango attribute read of the ADC 15 temperature.
+
+        :return: ADC 15 temperature
+        """
+        return self._attribute_state["temperatureADC15"].read()
 
     @attribute(
         dtype="DevString",

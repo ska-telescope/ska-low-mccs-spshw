@@ -319,7 +319,7 @@ class SpsTangoTestHarness:
         :param device_class: The device class to use.
             This may be used to override the usual device class,
             for example with a patched subclass.
-        :param simulated: if the subrack has a simulated pdu
+        :param simulated_pdu: if the subrack has a simulated pdu
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 

@@ -1715,7 +1715,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatures"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 0 temperature")
+    @attribute(dtype="DevDouble", label="ADC 0", unit="Celsius")
     def temperatureADC0(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 0 temperature.
@@ -1724,7 +1724,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC0"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 1 temperature")
+    @attribute(dtype="DevDouble", label="ADC 1", unit="Celsius")
     def temperatureADC1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 1 temperature.
@@ -1733,7 +1733,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC1"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 2 temperature")
+    @attribute(dtype="DevDouble", label="ADC 2", unit="Celsius")
     def temperatureADC2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 2 temperature.
@@ -1742,7 +1742,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC2"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 3 temperature")
+    @attribute(dtype="DevDouble", label="ADC 3", unit="Celsius")
     def temperatureADC3(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 3 temperature.
@@ -1751,7 +1751,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC3"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 4 temperature")
+    @attribute(dtype="DevDouble", label="ADC 4", unit="Celsius")
     def temperatureADC4(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 4 temperature.
@@ -1760,7 +1760,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC4"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 5 temperature")
+    @attribute(dtype="DevDouble", label="ADC 5", unit="Celsius")
     def temperatureADC5(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 5 temperature.
@@ -1769,7 +1769,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC5"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 6 temperature")
+    @attribute(dtype="DevDouble", label="ADC 6", unit="Celsius")
     def temperatureADC6(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 6 temperature.
@@ -1778,7 +1778,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC6"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 7 temperature")
+    @attribute(dtype="DevDouble", label="ADC 7", unit="Celsius")
     def temperatureADC7(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 7 temperature.
@@ -1787,7 +1787,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC7"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 8 temperature")
+    @attribute(dtype="DevDouble", label="ADC 8", unit="Celsius")
     def temperatureADC8(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 8 temperature.
@@ -1796,7 +1796,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC8"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 9 temperature")
+    @attribute(dtype="DevDouble", label="ADC 9", unit="Celsius")
     def temperatureADC9(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 9 temperature.
@@ -1805,7 +1805,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC9"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 10 temperature")
+    @attribute(dtype="DevDouble", label="ADC 10", unit="Celsius")
     def temperatureADC10(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 10 temperature.
@@ -1814,7 +1814,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC10"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 11 temperature")
+    @attribute(dtype="DevDouble", label="ADC 11", unit="Celsius")
     def temperatureADC11(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 11 temperature.
@@ -1823,7 +1823,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC11"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 12 temperature")
+    @attribute(dtype="DevDouble", label="ADC 12", unit="Celsius")
     def temperatureADC12(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 12 temperature.
@@ -1832,7 +1832,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC12"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 13 temperature")
+    @attribute(dtype="DevDouble", label="ADC 13", unit="Celsius")
     def temperatureADC13(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 13 temperature.
@@ -1841,7 +1841,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC13"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 14 temperature")
+    @attribute(dtype="DevDouble", label="ADC 14", unit="Celsius")
     def temperatureADC14(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 14 temperature.
@@ -1850,7 +1850,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC14"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 15 temperature")
+    @attribute(dtype="DevDouble", label="ADC 15", unit="Celsius")
     def temperatureADC15(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 15 temperature.

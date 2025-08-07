@@ -38,9 +38,15 @@ helm_values:
         low-mccs/spsstation/stfc-ral-2:
           ParentTRL: ""
       MccsTile:
+        low-mccs/tile/stfc-ral-2-tpm09:
+          BiosVersion: 0.6.0
+        low-mccs/tile/stfc-ral-2-tpm10:
+          BiosVersion: 0.6.0
         low-mccs/tile/stfc-ral-2-tpm11:
+          BiosVersion: 0.6.0
           PreAduPresent: false
         low-mccs/tile/stfc-ral-2-tpm12:
+          BiosVersion: 0.6.0
           PreAduPresent: false
         low-mccs/tile/stfc-ral-2-tpm13:
           PreAduPresent: false

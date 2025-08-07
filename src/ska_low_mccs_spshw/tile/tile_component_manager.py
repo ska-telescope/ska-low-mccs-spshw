@@ -539,9 +539,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._update_component_state(power=self._subrack_says_tpm_power)
         # ================================================================
-        # Update fault before power to allow exit from fault before OFF.
-        # "else Action component_no_fault is not allowed in op_state OFF."
-        # can occur
+        # OpStateModel raises an error: "Action component_no_fault is not
+        # allowed in op_state OFF."
+        #
+        # Therefore, only update the fault state when the operational
+        # state is NOT OFF to avoid triggering this error. This is
+        # Justified since FAULT is a subset of an ON state.
         # ================================================================
         if self.fault_state is not False:
             self._update_component_state(fault=self.fault_state)

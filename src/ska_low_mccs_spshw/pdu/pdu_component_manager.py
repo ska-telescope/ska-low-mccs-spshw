@@ -8,6 +8,7 @@
 """This module implements component management for PDUs."""
 from __future__ import annotations
 
+import json
 import logging
 from typing import Callable, Optional, Sequence
 
@@ -15,7 +16,7 @@ from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import DeviceComponentManager
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from ska_snmp_device.snmp_types import SNMPAttrInfo
-from ska_tango_base.base import CommunicationStatusCallbackType, check_communicating
+from ska_tango_base.base import CommunicationStatusCallbackType
 
 __all__ = ["PduComponentManager"]
 
@@ -52,20 +53,29 @@ class _PowerMarshallerProxy(DeviceComponentManager):
     def schedule_power(
         self: _PowerMarshallerProxy,
         attached_device_info: str,
+        device_trl: str,
+        command_str: str,
         on_off: str,
-        power_command: Callable,
     ) -> None:
         """
         Request a power schedule from the marshaller.
 
         :param attached_device_info: details about the attached device.
-        :param on_off: if the device is being turned on or off.
-        :param power_command: Callable to power on/off a port.
+        :param device_trl: trl of this device.
+        :param command_str: name of the command being called.
+        :param on_off: args to be called for the command.
         """
         assert self._proxy is not None  # for the type checker
         assert self._proxy._device is not None  # for the type checker
 
-        self._proxy._device.SchedulePower(attached_device_info, on_off, power_command)
+        input_dict = {
+            "attached_device_info": attached_device_info,
+            "device_trl": device_trl,
+            "command_str": command_str,
+            "command_args": on_off,
+        }
+        input_str = json.dumps(input_dict)
+        self._proxy._device.SchedulePower(input_str)
 
 
 class PduComponentManager(SNMPComponentManager):
@@ -125,23 +135,37 @@ class PduComponentManager(SNMPComponentManager):
         else:
             self._power_marshaller_trl = ""
 
-    @check_communicating
+    def start_communicating(self: PduComponentManager) -> None:
+        """Establish communication with the station components."""
+        super().start_communicating()
+        if self._power_marshaller_trl:
+            self.marshaller_proxy.start_communicating()
+
+    def stop_communicating(self: PduComponentManager) -> None:
+        """Break off communication with the station components."""
+        super().stop_communicating()
+        if self._power_marshaller_trl:
+            self.marshaller_proxy.stop_communicating()
+
     def schedule_power(
         self: PduComponentManager,
         attached_device_info: str,
+        device_trl: str,
+        command_str: str,
         on_off: str,
-        power_command: Callable,
     ) -> None:
         """
         Request a power schedule from the marshaller.
 
         :param attached_device_info: details about the attached device.
-        :param on_off: if the device is being turned on or off.
-        :param power_command: Callable to power on/off a port.
+        :param device_trl: trl of this device.
+        :param command_str: name of the command being called.
+        :param on_off: args to be called for the command.
         """
         if self._power_marshaller_trl:
             self.marshaller_proxy.schedule_power(
-                attached_device_info, on_off, power_command
+                attached_device_info, device_trl, command_str, on_off
             )
+            return
 
         self.logger.warning("No power marshaller established, skipping...")

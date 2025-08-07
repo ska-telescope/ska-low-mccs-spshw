@@ -4,53 +4,37 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE.txt for more info.
-"""This module implements the PDU device."""
+"""This module implements the PowerMarshaller device."""
 
 from __future__ import annotations  # allow forward references in type hints
 
-import importlib.resources
+import json
 import sys
-from typing import Any, cast
+from typing import Any, Callable, cast
 
-from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
+import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_low_mccs_common import MccsBaseDevice
-from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from tango import Attribute
-from tango.server import attribute, command, device_property
+from tango.server import attribute, command
 
-from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
+from ska_low_mccs_spshw.power_marshaller.power_marshaller_health_model import (
+    PowerMarshallerHealthModel,
+)
 
-from .pdu_component_manager import PduComponentManager
+from .power_marshaller_component_manager import PowerMarshallerComponentManager
 
-__all__ = ["MccsPdu", "main"]
+__all__ = ["PowerMarshaller", "main"]
 
 
-# pylint: disable=too-many-instance-attributes
-class MccsPdu(MccsBaseDevice, AttributePollingDevice):
-    """An implementation of a PDU Tango device for MCCS."""
-
-    Model = device_property(dtype=str, mandatory=True)
-    Host = device_property(dtype=str, mandatory=True)
-    Port = device_property(dtype=int, default_value=161)
-    V2Community = device_property(dtype=str)
-    V3UserName = device_property(dtype=str)
-    V3AuthKey = device_property(dtype=str)
-    V3PrivKey = device_property(dtype=str)
-    MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
-    UpdateRate = device_property(dtype=float, default_value=3.0)
-    PowerMarshallerTrl = device_property(dtype=str, default_value="")
-
-    DeviceModels: dict[str, str] = {
-        "ENLOGIC": "enlogic.yaml",
-        "RARITAN": "raritan.yaml",
-    }
+class PowerMarshaller(MccsBaseDevice):
+    """An implementation of a PowerMarshaller Tango device for MCCS."""
 
     # ---------------
     # Initialisation
     # ---------------
     def __init__(
-        self: MccsPdu,
+        self: PowerMarshaller,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -69,103 +53,59 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         super().__init__(*args, **kwargs)
         self._dynamic_attrs: dict[str, Attribute]
         self._health_state: HealthState
-        self._health_model: PduHealthModel
-        self._on_value: int
-        self._off_value: int
-        self.component_manager: PduComponentManager
+        self._health_model: PowerMarshallerHealthModel
+        self.component_manager: PowerMarshallerComponentManager
 
-    def init_device(self: MccsPdu) -> None:
+        self.command_queue: list[Callable] = []
+
+    def init_device(self: PowerMarshaller) -> None:
         """Initialise the device."""
         try:
             super().init_device()
-            self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
             self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
             device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
             version = f"{device_name} Software Version: {self._version_id}"
-            properties = (
-                f"Initialised {device_name} device with properties:\n"
-                f"\tHost: {self.Host}\n"
-                f"\tModel: {self.Model}\n"
-                f"\tPowerMarshallerTrl: {self.PowerMarshallerTrl}\n"
-            )
-            self.logger.info(
-                "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
-            )
+            properties = f"Initialised {device_name}"
+            version_info = f"{self.__class__.__name__}, {self._build_state}"
+            self.logger.info("\n%s\n%s\n%s", version_info, version, properties)
 
-            if self.Model == "RARITAN":
-                self._off_value = 0
-                self._on_value = 1
-            elif self.Model == "ENLOGIC":
-                self._off_value = 1
-                self._on_value = 2
-            else:
-                self.logger.error(f"Invalid model {self.Model} specified")
-
-        except Exception as ex:  # pylint: disable=broad-exception-caught
+        # pylint: disable=broad-exception-caught
+        except Exception as ex:
             self.logger.error("Initialise failed: Incomplete server: %s", repr(ex))
 
-    def delete_device(self: MccsPdu) -> None:
+    def delete_device(self: PowerMarshaller) -> None:
         """Delete the device."""
         try:
             self.logger.info("Deleting device")
             self.component_manager.stop_communicating()
-        except Exception as ex:  # pylint: disable=broad-exception-caught
+        # pylint: disable=broad-exception-caught
+        except Exception as ex:
             self.logger.error("Failed to delete device %s", repr(ex))
-        self.component_manager.marshaller_proxy.cleanup()
 
-    def _init_state_model(self: MccsPdu) -> None:
+    def _init_state_model(self: PowerMarshaller) -> None:
         """Initialise the state model."""
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN
-        self._health_model = PduHealthModel(self._health_changed, True)
+        self._health_model = PowerMarshallerHealthModel(self._health_changed, True)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
-    def create_component_manager(self: MccsPdu) -> PduComponentManager:
+    def create_component_manager(
+        self: PowerMarshaller,
+    ) -> PowerMarshallerComponentManager:
         """
-        Create and return a component manager.
+        Create and return a component manager for this device.
 
-        :return: SNMPComponent manager
+        :return: a component manager for this device.
         """
-        filename = self.DeviceModels[self.Model]
-        device_definition = importlib.resources.files(
-            "ska_low_mccs_spshw.pdu.device_definitions"
-        ).joinpath(filename)
-        # This goes here because you don't have access to properties
-        # until tango.server.BaseDevice.init_device() has been called
-        dynamic_attrs = parse_device_definition(
-            load_device_definition(str(device_definition))
-        )
-        self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
-
-        assert (self.V2Community and not self.V3UserName) or (
-            not self.V2Community and self.V3UserName
-        ), "Can't be V2 & V3 simultaneously"
-
-        if self.V2Community:
-            authority = self.V2Community
-        else:
-            authority = {
-                "auth": self.V3UserName,
-                "authKey": self.V3AuthKey,
-                "privKey": self.V3PrivKey,
-            }
-
-        return PduComponentManager(
-            host=self.Host,
-            port=self.Port,
-            authority=authority,
-            max_objects_per_pdu=self.MaxObjectsPerSNMPCmd,
+        return PowerMarshallerComponentManager(
             logger=self.logger,
             communication_state_callback=self._communication_state_changed,
             component_state_callback=self._component_state_changed,
-            attributes=dynamic_attrs,
-            poll_rate=self.UpdateRate,
-            power_marshaller_trl=self.PowerMarshallerTrl,
         )
 
     def _communication_state_changed(
-        self: MccsPdu,
+        self: PowerMarshaller,
         communication_state: CommunicationStatus,
     ) -> None:
         """
@@ -187,15 +127,15 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         if action is not None:
             self.op_state_model.perform_action(action)
 
-        info_msg = f"Communication status is {communication_state}"
+        info_msg = f"Communication status is {communication_state.name}"
         self.logger.info(info_msg)
         self._health_model.update_state(
-            communicating=communication_state == CommunicationStatus.ESTABLISHED
+            communicating=communication_state == CommunicationStatus.ESTABLISHED,
         )
         super()._communication_state_changed(communication_state)
 
     def _component_state_changed(
-        self: MccsPdu,
+        self: PowerMarshaller,
         fault: bool | None = None,
         power: PowerState | None = None,
         **kwargs: Any,
@@ -223,7 +163,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
             info_msg = f"Updating {attribute_name}, {value}"
             self.logger.info(info_msg)
 
-    def _health_changed(self: MccsPdu, health: HealthState) -> None:
+    def _health_changed(self: PowerMarshaller, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 
@@ -239,7 +179,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
             self.push_change_event("healthState", health)
 
     @attribute(dtype="DevString")
-    def healthReport(self: MccsPdu) -> str:
+    def healthReport(self: PowerMarshaller) -> str:
         """
         Get the health report.
 
@@ -247,23 +187,28 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         """
         return self._health_model.health_report
 
-    @command(dtype_in=int)
-    def pduPortOn(self: MccsPdu, port: int) -> None:
+    @command(dtype_in=str)
+    def SchedulePower(
+        self: PowerMarshaller,
+        args_in: str,
+    ) -> None:
         """
-        Set pdu port On.
+        Request a power schedule from the marshaller.
 
-        :param port: The pdu port to turn on
+        :param args_in: args in.
         """
-        self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._on_value)
+        args_expanded = json.loads(args_in)
+        attached_device_info = args_expanded["attached_device_info"]
+        command_args = args_expanded["command_args"]
+        command_str = args_expanded["command_str"]
+        device_trl = args_expanded["device_trl"]
 
-    @command(dtype_in=int)
-    def pduPortOff(self: MccsPdu, port: int) -> None:
-        """
-        Set pdu port OFF.
+        if attached_device_info is None:
+            self.logger.info("No device info found")
+            return
 
-        :param port: The pdu port to turn off
-        """
-        self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._off_value)
+        device_proxy = tango.DeviceProxy(device_trl)
+        device_proxy.command_inout(command_str, int(command_args))
 
 
 # ----------
@@ -279,7 +224,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     :param kwargs: named arguments
     :return: exit code
     """
-    return cast(int, MccsPdu.run_server(args=args or None, **kwargs))
+    return cast(int, PowerMarshaller.run_server(args=args or None, **kwargs))
 
 
 if __name__ == "__main__":

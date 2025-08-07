@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-955] Correct transient transition to ON when MccsTile is turning OFF.
+
 ## 7.3.0
 
 * [THORN-218] Added 51 monitoring points asd tango device attributes in tile. (ADC temperatures, FE currents and voltages)

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-241] Add cleanup code to delete_device. This fixes an issue where multiple calls to init() lead to multiple polling threads.
 * [SKB-928] Remove configuration attributes from polling. Configuration is now 'read_on_connect' or 'read_on_change'
 * [SKB-928] SpsStation staticTimeDelay now raised RuntimeError when information for TPM mapping not present
 * [SKB-928] Expose exceptions to tango API for MccsTile methods staticTimeDelays and ConfigureStationBeamformer.

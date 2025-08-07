@@ -537,13 +537,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
 
+        self._update_component_state(power=self._subrack_says_tpm_power)
         # ================================================================
         # Update fault before power to allow exit from fault before OFF.
         # "else Action component_no_fault is not allowed in op_state OFF."
         # can occur
-        self._update_component_state(fault=self.fault_state)
         # ================================================================
-        self._update_component_state(power=self._subrack_says_tpm_power)
+        if self.fault_state is not False:
+            self._update_component_state(fault=self.fault_state)
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 

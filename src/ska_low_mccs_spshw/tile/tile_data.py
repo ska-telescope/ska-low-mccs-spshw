@@ -376,6 +376,7 @@ class TileData:
                     "FPGA1": 0,
                 },
             },
+            "max_broadband_rfi": None,
         },
     }
 

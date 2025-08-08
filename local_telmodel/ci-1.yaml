@@ -1,29 +1,28 @@
-
 platform:
   stations:
     ci-1:
       id: 1
+      rotation: 0
       sps:
         antenna_config_uri:
           - file://local_telmodel
           - ci-1.yaml
         sdn_first_interface: 10.0.0.152/25
         daq:
+          two-pod-daq: false
           calibration:
             simulated: true
           bandpass:
             simulated: true
-        pdus:
-          ci-1:
-            model: ENLOGIC
-            host: 10.135.253.170
-            v2_community: public
         subracks:
           sr1:
             simulated: true
             srmb_host: srmb-1
             srmb_port: 8081
-            pdu_trl: low-mccs/pdu/ci-1
+            pdu: ci-1
+            pdu_ports:
+            - 1
+            - 2
         tpms:
           tpm10:
             id: 9

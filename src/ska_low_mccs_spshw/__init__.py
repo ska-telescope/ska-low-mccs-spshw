@@ -12,7 +12,7 @@ The Monitoring Control and Calibration (MCCS) subsystem is responsible
 for, amongst other things, monitoring and control of LFAA.
 """
 
-__version__ = "7.2.0"
+__version__ = "7.3.0"
 __version_info__ = (
     "ska-low-mccs-spshw",
     __version__,
@@ -25,6 +25,7 @@ __all__ = [
     "MccsTile",
     "SpsStation",
     "MccsPdu",
+    "PowerMarshaller",
     "version",
 ]
 
@@ -32,6 +33,7 @@ import tango.server
 
 from .daq_receiver import MccsDaqReceiver
 from .pdu import MccsPdu
+from .power_marshaller import PowerMarshaller
 from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile
@@ -50,7 +52,14 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     :return: exit code
     """
     return tango.server.run(
-        classes=(MccsDaqReceiver, MccsPdu, MccsSubrack, MccsTile, SpsStation),
+        classes=(
+            MccsDaqReceiver,
+            MccsPdu,
+            PowerMarshaller,
+            MccsSubrack,
+            MccsTile,
+            SpsStation,
+        ),
         args=args or None,
         **kwargs
     )

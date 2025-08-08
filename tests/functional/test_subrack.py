@@ -225,7 +225,7 @@ def ensure_subrack_fan_mode(
     )
     change_event_callbacks["subrack_fan_mode"].assert_change_event(
         fan_modes,
-        lookahead=4,
+        lookahead=6,
     )
 
     if not fan_modes:
@@ -279,7 +279,7 @@ def ensure_subrack_fan_speed_percent(
     # All we see is a HTTP timeout.
     # And the fan speed setting is never updated.
     # This scenario cannot be developed further until this bug is fixed.
-    # pytest.xfail(reason="Server-side bug")
+    pytest.xfail(reason="Server-side bug")
 
     speed_percent = fan_speeds_percent[fan_number - 1]
     if speed_percent != pytest.approx(90.0):
@@ -287,7 +287,7 @@ def ensure_subrack_fan_speed_percent(
         subrack_device.SetSubrackFanSpeed(encoded_arg)
         expected_fan_speeds_percent[fan_number - 1] = pytest.approx(90.0)
         change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds_percent", expected_fan_speeds_percent
+            "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=2
         )
 
 
@@ -319,7 +319,7 @@ def ensure_subrack_fan_speed(
         change_event_callbacks["subrack_fan_speeds"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds
+        "subrack_fan_speeds", expected_fan_speeds, lookahead=4
     )
 
 

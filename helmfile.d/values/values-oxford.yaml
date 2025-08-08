@@ -9,7 +9,7 @@ platform:
           "1":
             srmb_host: subrack_simulator
             srmb_port: 8081
-            pdu_trl: low-mccs/pdu/ci-1
+            pdu: low-mccs/pdu/ci-1
             simulated: true
 
 # Use helm_values to set arbitrary helm values.

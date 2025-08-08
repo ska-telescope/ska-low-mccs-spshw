@@ -9,6 +9,7 @@
 """A file to store health transition rules for tile."""
 from __future__ import annotations
 
+import copy
 import math
 import re
 from importlib.resources import files
@@ -26,6 +27,38 @@ from ska_low_mccs_spshw.tile import health_config  # import the subpackage
 #     "wr_cnt",
 #     "rd_dat_cnt",
 # ]
+
+
+def deep_merge_dicts(dest: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively merges the `src` dictionary into the `dest` dictionary.
+
+    For each key in `src`:
+      - If the key exists in `dest` and both values are dictionaries,
+        merge them recursively.
+      - Otherwise, overwrite or add the key-value pair in `dest` with a deep copy
+        from `src`.
+
+    This function modifies the `dest` dictionary in place and also returns it.
+
+    :example:
+        >>> dest = {'a': {'b': 1}, 'c': 2}
+        >>> src = {'a': {'d': 3}, 'c': 4}
+        >>> deep_merge_dicts(dest, src)
+        >>> # dest becomes {'a': {'b': 1, 'd': 3}, 'c': 4}
+
+
+    :param dest: The destination dictionary to merge into.
+    :param src: The source dictionary to merge from.
+
+    :return: The destination dictionary.
+    """
+    for key, value in src.items():
+        if key in dest and isinstance(dest[key], dict) and isinstance(value, dict):
+            deep_merge_dicts(dest[key], value)
+        else:
+            dest[key] = copy.deepcopy(value)
+    return dest
 
 
 def _both_nan(a: float, b: float) -> bool:
@@ -90,14 +123,15 @@ class TileHealthRules(HealthRules):
         ("0.5.0", "v2.0.5b"): "set2.yaml",
     }
     THRESHOLD_MODIFIERS = {
-        ("has_preadu", False): "no_preadu.yaml",
+        ("has_preadu_1", False): "no_preadu_1.yaml",
+        ("has_preadu_2", False): "no_preadu_2.yaml",
     }
 
     def __init__(
         self: TileHealthRules,
         hw_version: str,
         bios_version: str,
-        has_preadu: bool,
+        preadu_presence: list[bool],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -106,7 +140,8 @@ class TileHealthRules(HealthRules):
 
         :param hw_version: the TPM version.
         :param bios_version: the TPM bios version.
-        :param has_preadu: whether the TPM has a preadu attached.
+        :param preadu_presence: Represent is a PreAdu is present on a
+            per channel basis.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
@@ -120,15 +155,21 @@ class TileHealthRules(HealthRules):
         self._min_max_monitoring_points = self._load_health_file(
             hw_version, bios_version
         )
+        modifiers: list[str] = []
 
-        modifiers = self._threshold_modifier.get(("has_preadu", has_preadu))
-        if modifiers is not None:
-            path = files(health_config).joinpath(modifiers)
+        modifier1 = self._threshold_modifier.get(("has_preadu_1", preadu_presence[0]))
+        if modifier1 is not None:
+            modifiers.append(modifier1)
+
+        modifier2 = self._threshold_modifier.get(("has_preadu_2", preadu_presence[1]))
+        if modifier2 is not None:
+            modifiers.append(modifier2)
+
+        for modifier in modifiers:
+            path = files(health_config).joinpath(modifier)
             modification_path = path.read_text()
             modification = yaml.safe_load(modification_path)
-            self._min_max_monitoring_points = (
-                self._min_max_monitoring_points | modification
-            )
+            deep_merge_dicts(self._min_max_monitoring_points, modification)
 
         self._bios_version = bios_version
         self._hw_version = hw_version

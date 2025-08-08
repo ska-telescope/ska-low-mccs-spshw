@@ -158,6 +158,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         static_time_delays: list[float],
         subrack_fqdn: str,
         subrack_tpm_id: int,
+        preadu_present: list[bool],
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
@@ -196,6 +197,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
+        :param preadu_present: A list representing if the PreAdu is attached.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -213,7 +215,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._power_state_lock = threading.RLock()
         self._update_attribute_callback = update_attribute_callback
         self.fault_state: Optional[bool] = None
-
+        self._preadu_present: list[bool] = preadu_present
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._simulation_mode = simulation_mode
@@ -3351,8 +3353,32 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._update_attribute_callback(preadu_levels=_preadu_levels)
 
-        if _preadu_levels != levels:
-            raise HardwareVerificationError(expected=levels, actual=_preadu_levels)
+        _expected_readback = levels
+        if not self._preadu_present[0]:
+            _multiplication = [1] * 8 + [0] * 8 + [1] * 8 + [0] * 8
+            _expected_readback = [
+                _multiplication[i] * levels[i] for i in range(len(levels))
+            ]
+            if _expected_readback != levels:
+                self.logger.warning(
+                    "No preADU_1 fitted. "
+                    f"Adjusting expected readback to {_expected_readback}."
+                )
+        if not self._preadu_present[1]:
+            _multiplication = [0] * 8 + [1] * 8 + [0] * 8 + [1] * 8
+            _expected_readback = [
+                _multiplication[i] * levels[i] for i in range(len(levels))
+            ]
+            if _expected_readback != levels:
+                self.logger.warning(
+                    "No preADU_2 fitted. "
+                    f"Adjusting expected readback to {_expected_readback}."
+                )
+
+        if _preadu_levels != _expected_readback:
+            raise HardwareVerificationError(
+                expected=_expected_readback, actual=_preadu_levels
+            )
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """

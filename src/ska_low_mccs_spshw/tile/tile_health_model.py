@@ -36,7 +36,7 @@ class TileHealthModel(BaseHealthModel):
         health_changed_callback: HealthChangedCallbackProtocol,
         hw_version: str,
         bios_version: str,
-        has_preadu: bool,
+        preadu_presence: list[bool],
         thresholds: Optional[dict[str, Any]] = None,
     ) -> None:
         """
@@ -47,14 +47,18 @@ class TileHealthModel(BaseHealthModel):
             health state.
         :param hw_version: the TPM version.
         :param bios_version: the TPM bios version.
-        :param has_preadu: is the preADU present on board.
+        :param preadu_presence: on a per channel basis is there a PreAdu
+            present.
         :param thresholds: the threshold parameters for the health rules
         """
         self._hw_version = hw_version
         self._bios_version = bios_version
         self.logger = None
         self._health_rules = TileHealthRules(
-            self._hw_version, self._bios_version, has_preadu, thresholds
+            self._hw_version,
+            self._bios_version,
+            preadu_presence,
+            thresholds,
         )
         super().__init__(health_changed_callback)
         # Add new section for non-hardware/derived health quantities.

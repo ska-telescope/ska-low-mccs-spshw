@@ -157,6 +157,16 @@ class SubrackSimulator(SubrackProtocol):
             "default": [5.0] * 8,
             "writable": False,
         },
+        "tpm_0_voltage": {
+            "length": None,
+            "default": 12,
+            "writable": False,
+        },
+        "tpm_0_power": {
+            "length": None,
+            "default": 100,
+            "writable": False,
+        },
         "internal_voltages_1v1": {
             "length": None,
             "default": 1.1,

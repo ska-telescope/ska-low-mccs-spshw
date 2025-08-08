@@ -124,6 +124,8 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
+            tpm_0_voltage=None,
+            tpm_0_power=None,
             internal_voltages_1v1=None,
             internal_voltages_1v5=None,
             internal_voltages_2v5=None,
@@ -600,6 +602,8 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
+                "tpm_0_voltage",
+                "tpm_0_power",
                 "internal_voltages_1v1",
                 "internal_voltages_1v5",
                 "internal_voltages_2v5",
@@ -856,6 +860,8 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
+            tpm_0_voltage=kwargs.get("tpm_0_voltage"),
+            tpm_0_power=kwargs.get("tpm_0_power"),
             internal_voltages_1v1=kwargs.get("internal_voltages_1v1"),
             internal_voltages_1v5=kwargs.get("internal_voltages_1v5"),
             internal_voltages_2v5=kwargs.get("internal_voltages_2v5"),

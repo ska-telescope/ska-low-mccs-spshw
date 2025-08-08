@@ -306,6 +306,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
+        "tpm_0_voltage": "tpm0Voltage",
+        "tpm_0_power": "tpm0Power",
         "internal_voltages_1v1": "internalVoltages1V1",
         "internal_voltages_1v5": "internalVoltages1V5",
         "internal_voltages_2v5": "internalVoltages2V5",
@@ -805,6 +807,24 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the power state of TPM 8.
         """
         return self._tpm_power_states[7]
+
+    @attribute(dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts")
+    def tpm0Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
+        """
+        Handle a Tango attribute read of the voltage suplied to TPM 0.
+
+        :return: voltage to TPM 0.
+        """
+        return self._hardware_attributes.get("tpm0Voltage", None)
+
+    @attribute(dtype=float, label="TPM 0 power state", min_alarm=0, max_alarm=120, unit="Watts")
+    def tpm0Power(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
+        """
+        Handle a Tango attribute read of the power suplied to TPM 0.
+
+        :return: power to TPM 0.
+        """
+        return self._hardware_attributes.get("tpm0Power", None)
 
     @attribute(
         dtype=(float,),

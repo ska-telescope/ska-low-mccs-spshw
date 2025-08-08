@@ -330,6 +330,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
+            tpm_0_voltage=None,
+            tpm_0_power=None,
             internal_voltages_1v1=None,
             internal_voltages_1v5=None,
             internal_voltages_2v5=None,

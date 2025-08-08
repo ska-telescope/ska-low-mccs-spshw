@@ -808,7 +808,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[7]
 
-    @attribute(dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts")
+    @attribute(
+        dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts"
+    )
     def tpm0Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the voltage suplied to TPM 0.
@@ -817,7 +819,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("tpm0Voltage", None)
 
-    @attribute(dtype=float, label="TPM 0 power state", min_alarm=0, max_alarm=120, unit="Watts")
+    @attribute(
+        dtype=float, label="TPM 0 power state", min_alarm=0, max_alarm=120, unit="Watts"
+    )
     def tpm0Power(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power suplied to TPM 0.

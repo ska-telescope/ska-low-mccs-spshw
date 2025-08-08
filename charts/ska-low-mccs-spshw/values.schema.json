@@ -143,6 +143,9 @@
             },
             "MccsPdu": {
               "type": "object"
+            },
+            "PowerMarshaller": {
+              "type": "object"
             }
           },
           "additionalProperties": false
@@ -163,6 +166,9 @@
               "type": "object"
             },
             "MccsPdu": {
+              "type": "object"
+            },
+            "PowerMarshaller": {
               "type": "object"
             }
           },

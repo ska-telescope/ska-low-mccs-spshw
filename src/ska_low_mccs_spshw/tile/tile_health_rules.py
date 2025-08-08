@@ -90,14 +90,15 @@ class TileHealthRules(HealthRules):
         ("0.5.0", "v2.0.5b"): "set2.yaml",
     }
     THRESHOLD_MODIFIERS = {
-        ("has_preadu", False): "no_preadu.yaml",
+        ("has_preadu_1", False): "no_preadu_1.yaml",
+        ("has_preadu_2", False): "no_preadu_2.yaml",
     }
 
     def __init__(
         self: TileHealthRules,
         hw_version: str,
         bios_version: str,
-        has_preadu: bool,
+        preadu_presence: list[bool],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -106,7 +107,8 @@ class TileHealthRules(HealthRules):
 
         :param hw_version: the TPM version.
         :param bios_version: the TPM bios version.
-        :param has_preadu: whether the TPM has a preadu attached.
+        :param preadu_presence: Represent is a PreAdu is present on a
+            per channel basis.
         :param args: positional args to the init
         :param kwargs: keyword args to the init
         """
@@ -120,10 +122,18 @@ class TileHealthRules(HealthRules):
         self._min_max_monitoring_points = self._load_health_file(
             hw_version, bios_version
         )
+        modifiers: list[str] = []
 
-        modifiers = self._threshold_modifier.get(("has_preadu", has_preadu))
-        if modifiers is not None:
-            path = files(health_config).joinpath(modifiers)
+        modifier1 = self._threshold_modifier.get(("has_preadu_1", preadu_presence[0]))
+        if modifier1 is not None:
+            modifiers.append(modifier1)
+
+        modifier2 = self._threshold_modifier.get(("has_preadu_2", preadu_presence[1]))
+        if modifier2 is not None:
+            modifiers.append(modifier2)
+
+        for modifier in modifiers:
+            path = files(health_config).joinpath(modifier)
             modification_path = path.read_text()
             modification = yaml.safe_load(modification_path)
             self._min_max_monitoring_points = (

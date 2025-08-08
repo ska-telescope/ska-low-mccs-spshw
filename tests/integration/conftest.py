@@ -306,6 +306,7 @@ def tile_component_manager_fixture(
         static_time_delays.tolist(),
         get_subrack_name(subrack_id),
         subrack_bay,
+        [True] * 2,
         unittest.mock.Mock(),
         unittest.mock.Mock(),
         unittest.mock.Mock(),

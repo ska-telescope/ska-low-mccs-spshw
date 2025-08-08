@@ -39,17 +39,17 @@ helm_values:
           ParentTRL: ""
       MccsTile:
         low-mccs/tile/stfc-ral-2-tpm11:
-          PreAduPresent: false
+          PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm12:
-          PreAduPresent: false
+          PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm13:
-          PreAduPresent: false
+          PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm14:
-          PreAduPresent: false
+          PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm15:
-          PreAduPresent: false
+          PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm16:
-          PreAduPresent: false
+          PreAduFitted: [false, false]
     # deviceServerTypes:
     #   spshw:
     #     image:

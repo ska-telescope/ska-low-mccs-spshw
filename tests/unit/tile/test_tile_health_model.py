@@ -27,7 +27,7 @@ class TestTileHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = TileHealthModel(MockCallable(), "v1.6.7a", "0.5.0", True)
+        health_model = TileHealthModel(MockCallable(), "v1.6.7a", "0.5.0", [True, True])
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model
@@ -297,7 +297,9 @@ class TestTileHealthModel:
         :param final_health_state: the final expected health state
         :param final_health_report: the initial final health report
         """
-        health_model = TileHealthModel(MockCallable(), hw_version, bios_version, True)
+        health_model = TileHealthModel(
+            MockCallable(), hw_version, bios_version, [True, True]
+        )
         health_model.update_state(communicating=True, power=PowerState.ON)
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
         health_model._state[

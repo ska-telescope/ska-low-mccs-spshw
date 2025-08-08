@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-999] Correct PreAduPresent property to account for both preadu.renamed to array property PreAduFitted (default [True, True])
+
 ## 7.3.0
 
 * [THORN-218] Added 51 monitoring points asd tango device attributes in tile. (ADC temperatures, FE currents and voltages)

@@ -8,11 +8,8 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 #
-# This file provides modification to health in the case the TPM has no preADU.
+# This file provides modification to health in the case the TPM has no preADU1 fitted.
 currents:
   FE0_mVA:
-    min: 0
-    max: 0.2
-  FE1_mVA:
     min: 0
     max: 0.2

@@ -76,6 +76,38 @@ class SubrackSimulator(SubrackProtocol):
         default: JsonSerializable
         writable: bool
 
+    internal_voltages: dict[str, float] = {
+        "V_POWERIN": 1,
+        "V_SOC": 1,
+        "V_ARM": 1,
+        "V_DDR": 1,
+        "V_2V5": 1,
+        "V_1V1": 1,
+        "V_CORE": 1,
+        "V_1V5": 1,
+        "V_3V3": 1,
+        "V_5V": 1,
+        "V_3V": 1,
+        "V_2V8": 1,
+    }
+    tpm_values: dict[str, dict] = {
+        "voltages": {
+            "SLOT1": 1,
+            "SLOT2": 1,
+            "SLOT3": 1,
+            "SLOT4": 1,
+            "SLOT5": 1,
+            "SLOT6": 1,
+            "SLOT7": 1,
+            "SLOT8": 1,
+        }
+    }
+
+    health_status: dict[str, dict] = {
+        "internal_voltages": internal_voltages,
+        "slots": tpm_values,
+    }
+
     ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
         "tpm_present": {
             "length": SubrackData.TPM_BAY_COUNT,
@@ -157,76 +189,81 @@ class SubrackSimulator(SubrackProtocol):
             "default": [5.0] * 8,
             "writable": False,
         },
-        "tpm_0_voltage": {
-            "length": None,
-            "default": 12,
+        "get_health_status": {
+            "length": len(health_status.keys()),
+            "default": health_status,
             "writable": False,
-        },
-        "tpm_0_power": {
-            "length": None,
-            "default": 100,
-            "writable": False,
-        },
-        "internal_voltages_1v1": {
-            "length": None,
-            "default": 1.1,
-            "writable": False,
-        },
-        "internal_voltages_1v5": {
-            "length": None,
-            "default": 1.5,
-            "writable": False,
-        },
-        "internal_voltages_2v5": {
-            "length": None,
-            "default": 2.5,
-            "writable": False,
-        },
-        "internal_voltages_2v8": {
-            "length": None,
-            "default": 2.8,
-            "writable": False,
-        },
-        "internal_voltages_3v": {
-            "length": None,
-            "default": 3,
-            "writable": False,
-        },
-        "internal_voltages_3v3": {
-            "length": None,
-            "default": 3.3,
-            "writable": False,
-        },
-        "internal_voltages_5v": {
-            "length": None,
-            "default": 5,
-            "writable": False,
-        },
-        "internal_voltages_arm": {
-            "length": None,
-            "default": 1.3,
-            "writable": False,
-        },
-        "internal_voltages_core": {
-            "length": None,
-            "default": 1.2,
-            "writable": False,
-        },
-        "internal_voltages_ddr": {
-            "length": None,
-            "default": 1.35,
-            "writable": False,
-        },
-        "internal_voltages_powerin": {
-            "length": None,
-            "default": 12.0,
-            "writable": False,
-        },
-        "internal_voltages_soc": {
-            "length": None,
-            "default": 1.35,
-            "writable": False,
-        },
+        }
+        # "tpm_0_voltage": {
+        #     "length": None,
+        #     "default": 12,
+        #     "writable": False,
+        # },
+        # "tpm_0_power": {
+        #     "length": None,
+        #     "default": 100,
+        #     "writable": False,
+        # },
+        # "internal_voltages_1v1": {
+        #     "length": None,
+        #     "default": 1.1,
+        #     "writable": False,
+        # },
+        # "internal_voltages_1v5": {
+        #     "length": None,
+        #     "default": 1.5,
+        #     "writable": False,
+        # },
+        # "internal_voltages_2v5": {
+        #     "length": None,
+        #     "default": 2.5,
+        #     "writable": False,
+        # },
+        # "internal_voltages_2v8": {
+        #     "length": None,
+        #     "default": 2.8,
+        #     "writable": False,
+        # },
+        # "internal_voltages_3v": {
+        #     "length": None,
+        #     "default": 3,
+        #     "writable": False,
+        # },
+        # "internal_voltages_3v3": {
+        #     "length": None,
+        #     "default": 3.3,
+        #     "writable": False,
+        # },
+        # "internal_voltages_5v": {
+        #     "length": None,
+        #     "default": 5,
+        #     "writable": False,
+        # },
+        # "internal_voltages_arm": {
+        #     "length": None,
+        #     "default": 1.3,
+        #     "writable": False,
+        # },
+        # "internal_voltages_core": {
+        #     "length": None,
+        #     "default": 1.2,
+        #     "writable": False,
+        # },
+        # "internal_voltages_ddr": {
+        #     "length": None,
+        #     "default": 1.35,
+        #     "writable": False,
+        # },
+        # "internal_voltages_powerin": {
+        #     "length": None,
+        #     "default": 12.0,
+        #     "writable": False,
+        # },
+        # "internal_voltages_soc": {
+        #     "length": None,
+        #     "default": 1.35,
+        #     "writable": False,
+        # },
     }
 
     def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:

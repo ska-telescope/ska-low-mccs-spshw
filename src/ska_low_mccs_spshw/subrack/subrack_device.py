@@ -306,20 +306,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
-        "tpm_0_voltage": "tpm0Voltage",
-        "tpm_0_power": "tpm0Power",
-        "internal_voltages_1v1": "internalVoltages1V1",
-        "internal_voltages_1v5": "internalVoltages1V5",
-        "internal_voltages_2v5": "internalVoltages2V5",
-        "internal_voltages_2v8": "internalVoltages2V8",
-        "internal_voltages_3v": "internalVoltages3V",
-        "internal_voltages_3v3": "internalVoltages3V3",
-        "internal_voltages_5v": "internalVoltages5V",
-        "internal_voltages_arm": "internalVoltagesARM",
-        "internal_voltages_core": "internalVoltagesCORE",
-        "internal_voltages_ddr": "internalVoltagesDDR",
-        "internal_voltages_powerin": "internalVoltagesPOWERIN",
-        "internal_voltages_soc": "internalVoltagesSOC",
+        "get_health_status": "getHealthStatus",
     }
 
     # --------------
@@ -348,6 +335,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._tpm_present: list[bool] = []
         self._tpm_count = 0
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        self._tpm_voltages_dict: dict = {}
+        self._health_status: dict = {}
+        self._internal_voltages: dict = {}
 
         self._hardware_attributes: dict[str, Any] = {}
 
@@ -811,24 +801,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts"
     )
-    def tpm0Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
+    def tpm1Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the voltage suplied to TPM 0.
 
         :return: voltage to TPM 0.
         """
-        return self._hardware_attributes.get("tpm0Voltage", None)
-
-    @attribute(
-        dtype=float, label="TPM 0 power state", min_alarm=0, max_alarm=120, unit="Watts"
-    )
-    def tpm0Power(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
-        """
-        Handle a Tango attribute read of the power suplied to TPM 0.
-
-        :return: power to TPM 0.
-        """
-        return self._hardware_attributes.get("tpm0Power", None)
+        return self._tpm_voltages_dict.get("SLOT1")
 
     @attribute(
         dtype=(float,),
@@ -1143,7 +1122,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: voltage value on 1V1 connector
         """
-        return self._hardware_attributes.get("internalVoltages1V1", None)
+        return self._internal_voltages.get("V_1V1", None)
 
     @attribute(dtype=float, label="internalVoltagesV_1V5")
     def internalVoltages1V5(self: MccsSubrack) -> float | None:
@@ -1152,7 +1131,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltagesV_1V5
         """
-        return self._hardware_attributes.get("internalVoltages1V5", None)
+        return self._internal_voltages.get("V_1V5", None)
 
     @attribute(dtype=float, label="internalVoltagesV_2V5")
     def internalVoltages2V5(self: MccsSubrack) -> float | None:
@@ -1161,7 +1140,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_2V5
         """
-        return self._hardware_attributes.get("internalVoltages2V5", None)
+        return self._internal_voltages.get("V_2V5", None)
 
     @attribute(dtype=float, label="internalVoltages_2V8")
     def internalVoltages2V8(self: MccsSubrack) -> float | None:
@@ -1170,7 +1149,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_2V8
         """
-        return self._hardware_attributes.get("internalVoltages2V8", None)
+        return self._internal_voltages.get("V_2V8", None)
 
     @attribute(dtype=float, label="internalVoltages_3V")
     def internalVoltages3V(self: MccsSubrack) -> float | None:
@@ -1179,7 +1158,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_3V
         """
-        return self._hardware_attributes.get("internalVoltages3V", None)
+        return self._internal_voltages.get("V_3V", None)
 
     @attribute(dtype=float, label="internalVoltages_3V3")
     def internalVoltages3V3(self: MccsSubrack) -> float | None:
@@ -1188,7 +1167,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_3V3
         """
-        return self._hardware_attributes.get("internalVoltages3V3", None)
+        return self._internal_voltages.get("V_3V3", None)
 
     @attribute(dtype=float, label="internalVoltages_5V")
     def internalVoltages5V(self: MccsSubrack) -> float | None:
@@ -1197,7 +1176,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages5V
         """
-        return self._hardware_attributes.get("internalVoltages5V", None)
+        return self._internal_voltages.get("V_5V", None)
 
     @attribute(dtype=float, label="internalVoltages_ARM")
     def internalVoltagesARM(self: MccsSubrack) -> float | None:
@@ -1206,7 +1185,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_ARM
         """
-        return self._hardware_attributes.get("internalVoltagesARM", None)
+        return self._internal_voltages.get("V_ARM", None)
 
     @attribute(dtype=float, label="internalVoltages_CORE")
     def internalVoltagesCORE(self: MccsSubrack) -> float | None:
@@ -1215,7 +1194,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_CORE
         """
-        return self._hardware_attributes.get("internalVoltagesCORE", None)
+        return self._internal_voltages.get("V_CORE", None)
 
     @attribute(dtype=float, label="internalVoltages_DDR")
     def internalVoltagesDDR(self: MccsSubrack) -> float | None:
@@ -1224,7 +1203,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_DDR
         """
-        return self._hardware_attributes.get("internalVoltagesDDR", None)
+        return self._internal_voltages.get("V_DDR", None)
 
     @attribute(dtype=float, label="internalVoltages_POWERIN")
     def internalVoltagesPOWERIN(self: MccsSubrack) -> float | None:
@@ -1233,7 +1212,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_POWERIN
         """
-        return self._hardware_attributes.get("internalVoltagesPOWERIN", None)
+        return self._internal_voltages.get("V_POWERIN", None)
 
     @attribute(dtype=float, label="internalVoltages_SOC")
     def internalVoltagesSOC(self: MccsSubrack) -> float | None:
@@ -1242,7 +1221,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: internalVoltages_SOC
         """
-        return self._hardware_attributes.get("internalVoltagesSOC", None)
+        return self._internal_voltages.get("V_SOC", None)
 
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
     # Need to revisit
@@ -1487,6 +1466,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
+
+        health_status = self._hardware_attributes.get("getHealthStatus", None)
+
+        if health_status is not None:
+            self._health_status = health_status
+            self._internal_voltages = health_status.get("internal_voltages", None)
+            tpm_monitoring_dict = health_status.get("slots", None)
+            self._tpm_voltages_dict = tpm_monitoring_dict.get("voltages", None)
         self._update_health_data()
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:

@@ -2948,7 +2948,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: cached value for the channeliser truncation
         """
-        return list(self._channeliser_truncation)
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_channeliser_truncation()
 
     @channeliser_truncation.setter
     def channeliser_truncation(
@@ -2994,17 +2999,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
             if acquired:
-                for chan in range(32):
-                    try:
-                        self.tile.set_channeliser_truncation(trunc, chan)
-                        self._update_attribute_callback(
-                            channeliser_rounding=list(trunc)
-                        )
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(
-                            f"TileComponentManager: Tile access failed: {e}"
-                        )
+                try:
+                    self.tile.set_channeliser_truncation(trunc)
+                    self._update_attribute_callback(channeliser_rounding=list(trunc))
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(
+                        f"TileComponentManager: Tile access failed: {e}"
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 

@@ -81,6 +81,20 @@ def engineering_mode_required(func: Callable) -> Callable:
     return wrapper
 
 
+class NumpyEncoder(json.JSONEncoder):
+    """Converts numpy types to JSON."""
+
+    # pylint: disable=arguments-renamed
+    def default(self: NumpyEncoder, obj: Any) -> Any:
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
 @dataclass
 class TileAttribute:
     """Class representing the internal state of a Tile attribute."""
@@ -110,6 +124,17 @@ def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
     :return: a json serialised string.
     """
     return json.dumps(val)
+
+
+def _serialise_np_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
+    """
+    Serialise to a json string.
+
+    :param val: A dictionary or tuple to serialise.
+
+    :return: a json serialised string.
+    """
+    return json.dumps(val, cls=NumpyEncoder)
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
@@ -410,7 +435,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "currents": _serialise_object,
             "timing": _serialise_object,
             "io": _serialise_object,
-            "dsp": _serialise_object,
+            "dsp": _serialise_np_object,
             "data_router_status": _serialise_object,
             "data_router_discarded_packets": _serialise_object,
             "station_beamformer_flagged_count": _serialise_object,

@@ -1342,6 +1342,7 @@ class TileSimulator:
         self._is_last = is_last_tile
         self._tile_id = tile_id
         self._station_id = station_id
+        self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self.sync_time = 0
         reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
         reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
@@ -2163,20 +2164,26 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_channeliser_truncation(
-        self: TileSimulator, trunc: list[int], signal: int | None = None
-    ) -> None:
+    def set_channeliser_truncation(self: TileSimulator, trunc: list[int]) -> None:
         """
         Set the channeliser coefficients to modify the bandpass.
 
         :param trunc: list with M values, one for each of the
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
-        :param signal: Input signal, 0 to 31. If None, apply to all
         """
         self._channeliser_truncation = trunc
         # self.logger.info("Not implemented, return without error to allow poll.")
         return
+
+    @connected
+    def get_channeliser_truncation(self: TileSimulator) -> list[int]:
+        """
+        Get the channeliser truncation.
+
+        :return: the channeliser truncation
+        """
+        return self._channeliser_truncation
 
     @check_mocked_overheating
     @connected

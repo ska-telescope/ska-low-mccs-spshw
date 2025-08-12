@@ -2836,24 +2836,24 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         tile_simulator.set_channeliser_truncation = (  # type: ignore[assignment]
-            unittest.mock.Mock()
+            unittest.mock.Mock(wraps=tile_simulator.set_channeliser_truncation)
         )
 
         # call with a single value.
         tile_component_manager.channeliser_truncation = 2  # type: ignore
         assert tile_component_manager._channeliser_truncation == [2] * 512
-        tile_simulator.set_channeliser_truncation.assert_called_with([2] * 512, 31)
+        tile_simulator.set_channeliser_truncation.assert_called_with([2] * 512)
 
         # call with a single value in a list.
         tile_component_manager.channeliser_truncation = [3]
         assert tile_component_manager._channeliser_truncation == [3] * 512
-        tile_simulator.set_channeliser_truncation.assert_called_with([3] * 512, 31)
+        tile_simulator.set_channeliser_truncation.assert_called_with([3] * 512)
 
         # call with subset of values
         tile_component_manager.channeliser_truncation = [3] * 100
-        assert tile_component_manager.channeliser_truncation == [3] * 100
+        assert tile_component_manager.channeliser_truncation == [3] * 100 + [0] * 412
         tile_simulator.set_channeliser_truncation.assert_called_with(
-            [3] * 100 + [0] * 412, 31
+            [3] * 100 + [0] * 412
         )
 
         # Check that expections are caught at this level.

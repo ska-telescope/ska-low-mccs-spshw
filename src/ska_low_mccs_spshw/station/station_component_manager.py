@@ -975,8 +975,6 @@ class SpsStationComponentManager(
                         np.pad(attribute_value, (0, (48 * 8 - len(attribute_value)))),
                         (48, 8),
                     )
-                    for region in range(len(attribute_value) // 8):
-                        reshaped_table[region] = attribute_value[region : region + 8]
                     self._beamformer_regions = reshaped_table
                     if self._component_state_callback:
                         self._component_state_callback(

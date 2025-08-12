@@ -1531,7 +1531,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             _ = tile_component_manager.get_static_delays()
         tile_component_manager.csp_rounding = 2
         _ = tile_component_manager.csp_rounding
-        tile_component_manager.set_preadu_levels([12.0] * 32)
+        tile_component_manager.set_preadu_levels(np.array([12.0] * 32))
 
     def test_tpm_status(
         self: TestStaticSimulator,
@@ -1905,15 +1905,15 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator.tpm
 
         # Set preADU levels to 3 for all channels
-        tile_component_manager.set_preadu_levels([3.0] * 32)
+        tile_component_manager.set_preadu_levels(np.array([3.0] * 32))
         # Read ska_low_sps_tpm_api software preADU levels for preADU 1, channel 1
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
         # Set preADU levels to 3 for all channels
-        tile_component_manager.set_preadu_levels([4.0] * 32)
+        tile_component_manager.set_preadu_levels(np.array([4.0] * 32))
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 4.00
 
         with pytest.raises(ValueError):
-            tile_component_manager.set_preadu_levels([3.0] * 33)
+            tile_component_manager.set_preadu_levels(np.array([3.0] * 33))
 
     def test_load_calibration_coefficients(
         self: TestStaticSimulator,

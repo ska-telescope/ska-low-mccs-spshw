@@ -2750,7 +2750,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self.component_manager.set_preadu_levels(list(levels))
+        self.component_manager.set_preadu_levels(levels)
 
     @attribute(dtype=("DevLong",), max_dim_x=336, abs_change=1)
     def beamformerTable(self: MccsTile) -> list[int] | None:

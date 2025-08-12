@@ -255,7 +255,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
         self.integrated_data_transmission_mode: str = "Not transmitting"
-        self._preadu_levels = preadu_levels
+        self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
         self._firmware_name: str = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
@@ -1137,12 +1137,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
                 # self.tile.post_synchronisation()
 
-                if self._preadu_levels:
+                if self._preadu_levels.size != 0:
                     self.logger.info(
                         "TileComponentManager: setting PreADU attenuation..."
                     )
                     self.tile.set_preadu_levels(self._preadu_levels)
-                    if self.tile.get_preadu_levels() != self._preadu_levels:
+                    if self.tile.get_preadu_levels() != self._preadu_levels.tolist():
                         self.logger.warning(
                             "TileComponentManager: set PreADU attenuation failed"
                         )
@@ -3327,7 +3327,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._initial_pps_delay = self.tile.get_pps_delay()
             return self.tile.get_pps_delay() - self._initial_pps_delay
 
-    def set_preadu_levels(self: TileComponentManager, levels: list[float]) -> None:
+    def set_preadu_levels(self: TileComponentManager, levels: np.ndarray) -> None:
         """
         Set preadu levels in dB.
 
@@ -3353,31 +3353,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._update_attribute_callback(preadu_levels=_preadu_levels)
 
-        _expected_readback = levels
-        if not self._preadu_present[0]:
-            _multiplication = [1] * 8 + [0] * 8 + [1] * 8 + [0] * 8
-            _expected_readback = [
-                _multiplication[i] * levels[i] for i in range(len(levels))
-            ]
-            if _expected_readback != levels:
-                self.logger.warning(
-                    "No preADU_1 fitted. "
-                    f"Adjusting expected readback to {_expected_readback}."
-                )
-        if not self._preadu_present[1]:
-            _multiplication = [0] * 8 + [1] * 8 + [0] * 8 + [1] * 8
-            _expected_readback = [
-                _multiplication[i] * levels[i] for i in range(len(levels))
-            ]
-            if _expected_readback != levels:
-                self.logger.warning(
-                    "No preADU_2 fitted. "
-                    f"Adjusting expected readback to {_expected_readback}."
-                )
+        # create a 32-element mask based on preadu presence
+        preadu_mask = np.repeat(self._preadu_present * 2, 8)
 
-        if _preadu_levels != _expected_readback:
+        # multiply by the levels
+        expected_readback = preadu_mask * levels
+
+        if not np.array_equal(expected_readback, levels):
+            self.logger.info(
+                f"Preadu Mask applied {preadu_mask}."
+                f"Expected readback is {expected_readback}."
+            )
+        if not np.array_equal(np.array(_preadu_levels), expected_readback):
             raise HardwareVerificationError(
-                expected=_expected_readback, actual=_preadu_levels
+                expected=expected_readback, actual=_preadu_levels
             )
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:

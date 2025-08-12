@@ -2928,7 +2928,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_preadu_levels(self: TileSimulator, levels: list[float]) -> None:
+    def set_preadu_levels(self: TileSimulator, levels: np.ndarray) -> None:
         """
         Set preADU attenuation levels.
 

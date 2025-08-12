@@ -2936,9 +2936,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def channeliser_truncation(self: TileComponentManager) -> Optional[list[int]]:
         """
-        Read the cached value for the channeliser truncation.
+        Read the value for the channeliser truncation.
 
-        :return: cached value for the channeliser truncation
+        :return: value for the channeliser truncation
         """
         with acquire_timeout(
             self._hardware_lock,

@@ -1394,6 +1394,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         static_delays = self._with_hardware_lock(self.get_static_delays)
         station_id = self._with_hardware_lock(self.tile.get_station_id)
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
+        beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
+        beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1401,6 +1403,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             station_id=station_id,
             csp_rounding=csp_rounding,
             channeliser_rounding=channeliser_rounding,
+            beamformer_table=beamformer_table,
+            beamformer_regions=beamformer_regions,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2765,7 +2769,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
                     beamformer_table = self.tile.get_beamformer_table()
-                    self._update_attribute_callback(beamformer_table=beamformer_table)
+                    beamformer_regions = self.tile.get_beamformer_regions()
+                    self._update_attribute_callback(
+                        beamformer_table=beamformer_table,
+                        beamformer_regions=beamformer_regions,
+                    )
                     self.tile.define_spead_header(
                         station_id=self._station_id,
                         subarray_id=subarray_id,

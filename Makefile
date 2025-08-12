@@ -41,7 +41,7 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 6.2.1
+FIRMWARE_VERSION = 6.4.0
 DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
 
 install-firmware:

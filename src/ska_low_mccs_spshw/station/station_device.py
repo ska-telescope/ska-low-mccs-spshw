@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import importlib
 import ipaddress
-import itertools
 import json
 import logging
 import sys
@@ -131,6 +130,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
         self._data_received_result: Optional[tuple[str, str]] = ("", "")
+        self._beamformer_table: Optional[list[int]] = None
+        self._beamformer_regions: Optional[list[int]] = None
 
     def init_device(self: SpsStation) -> None:
         """
@@ -388,16 +389,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
             self._device.set_change_event("ppsDelaySpread", True, False)
+            self._device.set_change_event("adcPower", True, False)
+            self._device.set_change_event("dataReceivedResult", True, False)
+            self._device.set_change_event("beamformerTable", True, False)
+            self._device.set_change_event("beamformerRegions", True, False)
 
             self._device.set_archive_event("xPolBandpass", True, False)
             self._device.set_archive_event("yPolBandpass", True, False)
             self._device.set_archive_event("antennaInfo", True, False)
             self._device.set_archive_event("tileProgrammingState", True, False)
-            self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
-            self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_archive_event("dataReceivedResult", True, False)
             self._device.set_archive_event("ppsDelaySpread", True, False)
+            self._device.set_archive_event("beamformerTable", True, False)
+            self._device.set_archive_event("beamformerRegions", True, False)
 
             super().do()
 
@@ -612,6 +617,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._data_received_result = state_change.get("dataReceivedResult")
             self.push_change_event("dataReceivedResult", self._data_received_result)
             self.push_archive_event("dataReceivedResult", self._data_received_result)
+
+        if state_change.get("beamformerTable") is not None:
+            self._beamformer_table = state_change.get("beamformerTable")
+            self.push_change_event("beamformerTable", self._beamformer_table)
+            self.push_archive_event("beamformerTable", self._beamformer_table)
+
+        if state_change.get("beamformerRegions") is not None:
+            self._beamformer_regions = state_change.get("beamformerRegions")
+            self.push_change_event("beamformerRegions", self._beamformer_regions)
+            self.push_archive_event("beamformerRegions", self._beamformer_regions)
 
         x_bandpass_data = state_change.get("xPolBandpass")
         if x_bandpass_data is not None:
@@ -1007,7 +1022,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.pps_delay_spread
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
-    def beamformerTable(self: SpsStation) -> list[int]:
+    def beamformerTable(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
 
@@ -1024,9 +1039,28 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: list of up to 7*48 values
         """
-        return list(
-            itertools.chain.from_iterable(self.component_manager.beamformer_table)
-        )
+        return self._beamformer_table
+
+    @attribute(dtype=("DevLong",), max_dim_x=384)
+    def beamformerRegions(self: SpsStation) -> list[int] | None:
+        """
+        Get beamformer region table.
+
+        Bidimensional array of one row for each 8 channels, with elements:
+        0. start physical channel
+        1. number of channels
+        2. beam index
+        3. subarray ID
+        4. subarray_logical_channel
+        5. subarray_beam_id
+        6. substation_id
+        8. aperture_id
+
+        Each row is a set of 8 consecutive elements in the list.
+
+        :return: list of up to 8*48 values
+        """
+        return self._beamformer_regions
 
     @attribute(dtype="DevString")
     def fortyGbNetworkAddress(self: SpsStation) -> str:

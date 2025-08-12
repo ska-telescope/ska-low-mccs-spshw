@@ -1193,9 +1193,14 @@ class TestMccsTileTpmDriver:
             tango.DevState.ON, lookahead=2, consume_nonmatches=True
         )
         tile_device.off()
-        change_event_callbacks["tile_state"].assert_change_event(
-            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
-        )
+        tile_simulator.mock_on(lock=True)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.FAULT)
+        tile_simulator.mock_off(lock=True)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+
+        # Turn lock off
+        tile_simulator.mock_off(lock=False)
+
         assert tile_device.state() == tango.DevState.OFF
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
@@ -1203,13 +1208,20 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_state"].assert_not_called()
 
         tile_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks["tile_state"].assert_change_event(
-            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
-        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
         change_event_callbacks["tile_state"].assert_not_called()
+        tile_simulator.mock_off(lock=True)
         tile_device.on()
-
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.FAULT)
+        change_event_callbacks["tile_state"].assert_not_called()
+        tile_simulator.mock_on(lock=True)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        # Turn lock off
+        tile_simulator.mock_on(lock=False)
+
         assert tile_device.state() == tango.DevState.ON
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE

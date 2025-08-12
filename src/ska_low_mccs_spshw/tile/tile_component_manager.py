@@ -537,13 +537,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
 
-        # ================================================================
-        # Update fault before power to allow exit from fault before OFF.
-        # "else Action component_no_fault is not allowed in op_state OFF."
-        # can occur
-        self._update_component_state(fault=self.fault_state)
-        # ================================================================
-        self._update_component_state(power=self._subrack_says_tpm_power)
+        self._update_component_state(
+            power=self._subrack_says_tpm_power, fault=self.fault_state
+        )
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
@@ -583,6 +579,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             "however subrack reports it as ON. "
                         )
                         is_faulty = True
+                    if (
+                        not self.is_connected
+                        and self._subrack_says_tpm_power == PowerState.OFF
+                    ):
+                        # ============================================
+                        # OpStateModel raises an error:
+                        # "Action component_no_fault is not
+                        # allowed in op_state OFF."
+                        #
+                        # We need to reset the base classes cached
+                        # fault_state to allow a change event
+                        # when ON, therefore
+                        # we update the fault state to None.
+                        self.fault_state = None
+                        return
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the

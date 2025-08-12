@@ -95,8 +95,7 @@ class TestTileComponentManager:
                 # The polling and subrack state callbacks occur in different threads,
                 # It is possible to transition directly to UNCONNECTED or to
                 # pass a transient state UNKNOWN.
-                callbacks["component_state"].assert_call(fault=True)
-                callbacks["component_state"].assert_call(power=power_state)
+                callbacks["component_state"].assert_call(power=power_state, fault=True)
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": False, "FPGA0": False, "FPGA1": False},
                     lookahead=5,

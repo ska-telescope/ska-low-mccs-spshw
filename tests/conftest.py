@@ -91,9 +91,212 @@ def subrack_simulator_config_fixture() -> dict[str, Any]:
     }
 
 
+@pytest.fixture(name="health_status", scope="session")
+def health_status_fixture() -> dict[str, Any]:
+    """
+    Return attribute values with which the subrack simulator is configured.
+
+    :return: a key-value dictionary of attribute values with which the
+        subrack simulator is configured.
+    """
+    return {
+        "temperatures": {
+            "SMM1": 40,
+            "SMM2": 41,
+            "BKPLN1": 39,
+            "BKPLN2": 41,
+        },
+        "plls": {
+            "BoardPllLock": True,
+            "CPLDPllLock": True,
+            "PllSource": None,
+        },
+        "psus": {
+            "present": {
+                "PSU1": True,
+                "PSU2": True,
+            },
+            "busy": {
+                "PSU1": None,
+                "PSU2": None,
+            },
+            "off": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "vout_ov_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "iout_oc_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "vin_uv_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "temp_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "cml_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "vout_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "iout_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "input_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "pwr_gd": {
+                "PSU1": True,
+                "PSU2": True,
+            },
+            "fan_fault": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "other": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "unknown": {
+                "PSU1": False,
+                "PSU2": False,
+            },
+            "voltage_out": {
+                "PSU1": 12.0,
+                "PSU2": 12.1,
+            },
+            "power_out": {
+                "PSU1": 4.2 * 12,
+                "PSU2": 5.8 * 12.1,
+            },
+            "voltage_in": {
+                "PSU1": 230,
+                "PSU2": 230,
+            },
+            "power_in": {
+                "PSU1": 300,
+                "PSU2": 300,
+            },
+            "fan_speed": {
+                "PSU1": 90.0,
+                "PSU2": 100.0,
+            },
+            "temp_inlet": {
+                "PSU1": 20,
+                "PSU2": 21,
+            },
+            "temp_fet": {
+                "PSU1": 30,
+                "PSU2": 31,
+            },
+        },
+        "pings": {
+            "pings_CPLD": True,
+        },
+        "slots": {
+            "presence": {
+                "SLOT1": False,
+                "SLOT2": True,
+                "SLOT3": False,
+                "SLOT4": False,
+                "SLOT5": True,
+                "SLOT6": False,
+                "SLOT7": False,
+                "SLOT8": False,
+            },
+            "on": {
+                "SLOT1": False,
+                "SLOT2": False,
+                "SLOT3": False,
+                "SLOT4": False,
+                "SLOT5": False,
+                "SLOT6": False,
+                "SLOT7": False,
+                "SLOT8": False,
+            },
+            "voltages": {
+                "SLOT1": 12.0,
+                "SLOT2": 12.0,
+                "SLOT3": 12.0,
+                "SLOT4": 12.0,
+                "SLOT5": 12.0,
+                "SLOT6": 12.0,
+                "SLOT7": 12.0,
+                "SLOT8": 12.0,
+            },
+            "powers": {
+                "SLOT1": 0.4 * 12.0,
+                "SLOT2": 0.4 * 12.0,
+                "SLOT3": 0.4 * 12.0,
+                "SLOT4": 0.4 * 12.0,
+                "SLOT5": 0.4 * 12.0,
+                "SLOT6": 0.4 * 12.0,
+                "SLOT7": 0.4 * 12.0,
+                "SLOT8": 0.4 * 12.0,
+            },
+            "pings": {
+                "SLOT1": True,
+                "SLOT2": True,
+                "SLOT3": True,
+                "SLOT4": True,
+                "SLOT5": True,
+                "SLOT6": True,
+                "SLOT7": True,
+                "SLOT8": True,
+            },
+        },
+        "internal_voltages": {
+            "V_POWERIN": 12.0,
+            "V_SOC": 1.35,
+            "V_ARM": 1.35,
+            "V_DDR": 1.35,
+            "V_2V5": 2.5,
+            "V_1V1": 1.1,
+            "V_CORE": 1.2,
+            "V_1V5": 1.5,
+            "V_3V3": 2.3,
+            "V_5V": 5.0,
+            "V_3V": 3.0,
+            "V_2V8": 2.8,
+        },
+        "fans": {
+            "speed": {
+                "FAN1": 1,
+                "FAN2": 1,
+                "FAN3": 1,
+                "FAN4": 1,
+            },
+            "pwm_duty": {
+                "FAN1": 95,
+                "FAN2": 96,
+                "FAN3": 97,
+                "FAN4": 98,
+            },
+            "mode": {
+                "FAN1": FanMode.AUTO,
+                "FAN2": FanMode.AUTO,
+                "FAN3": FanMode.AUTO,
+                "FAN4": FanMode.AUTO,
+            },
+        },
+    }
+
+
 @pytest.fixture(name="subrack_simulator_attribute_values", scope="session")
 def subrack_simulator_attribute_values_fixture(
     subrack_simulator_config: dict[str, Any],
+    health_status: dict[str, Any],
 ) -> dict[str, Any]:
     """
     Return attribute values that the subrack simulator is expected to report.
@@ -156,6 +359,7 @@ def subrack_simulator_attribute_values_fixture(
                 subrack_simulator_config["tpm_voltages"],
             )
         ],
+        "get_health_status": health_status,
     }
 
 

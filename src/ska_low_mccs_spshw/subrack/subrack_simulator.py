@@ -76,38 +76,6 @@ class SubrackSimulator(SubrackProtocol):
         default: JsonSerializable
         writable: bool
 
-    internal_voltages: dict[str, float] = {
-        "V_POWERIN": 1,
-        "V_SOC": 1,
-        "V_ARM": 1,
-        "V_DDR": 1,
-        "V_2V5": 1,
-        "V_1V1": 1,
-        "V_CORE": 1,
-        "V_1V5": 1,
-        "V_3V3": 1,
-        "V_5V": 1,
-        "V_3V": 1,
-        "V_2V8": 1,
-    }
-    tpm_values: dict[str, dict] = {
-        "voltages": {
-            "SLOT1": 1,
-            "SLOT2": 1,
-            "SLOT3": 1,
-            "SLOT4": 1,
-            "SLOT5": 1,
-            "SLOT6": 1,
-            "SLOT7": 1,
-            "SLOT8": 1,
-        }
-    }
-
-    health_status: dict[str, dict] = {
-        "internal_voltages": internal_voltages,
-        "slots": tpm_values,
-    }
-
     ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
         "tpm_present": {
             "length": SubrackData.TPM_BAY_COUNT,
@@ -189,81 +157,6 @@ class SubrackSimulator(SubrackProtocol):
             "default": [5.0] * 8,
             "writable": False,
         },
-        "get_health_status": {
-            "length": len(health_status.keys()),
-            "default": health_status,
-            "writable": False,
-        }
-        # "tpm_0_voltage": {
-        #     "length": None,
-        #     "default": 12,
-        #     "writable": False,
-        # },
-        # "tpm_0_power": {
-        #     "length": None,
-        #     "default": 100,
-        #     "writable": False,
-        # },
-        # "internal_voltages_1v1": {
-        #     "length": None,
-        #     "default": 1.1,
-        #     "writable": False,
-        # },
-        # "internal_voltages_1v5": {
-        #     "length": None,
-        #     "default": 1.5,
-        #     "writable": False,
-        # },
-        # "internal_voltages_2v5": {
-        #     "length": None,
-        #     "default": 2.5,
-        #     "writable": False,
-        # },
-        # "internal_voltages_2v8": {
-        #     "length": None,
-        #     "default": 2.8,
-        #     "writable": False,
-        # },
-        # "internal_voltages_3v": {
-        #     "length": None,
-        #     "default": 3,
-        #     "writable": False,
-        # },
-        # "internal_voltages_3v3": {
-        #     "length": None,
-        #     "default": 3.3,
-        #     "writable": False,
-        # },
-        # "internal_voltages_5v": {
-        #     "length": None,
-        #     "default": 5,
-        #     "writable": False,
-        # },
-        # "internal_voltages_arm": {
-        #     "length": None,
-        #     "default": 1.3,
-        #     "writable": False,
-        # },
-        # "internal_voltages_core": {
-        #     "length": None,
-        #     "default": 1.2,
-        #     "writable": False,
-        # },
-        # "internal_voltages_ddr": {
-        #     "length": None,
-        #     "default": 1.35,
-        #     "writable": False,
-        # },
-        # "internal_voltages_powerin": {
-        #     "length": None,
-        #     "default": 12.0,
-        #     "writable": False,
-        # },
-        # "internal_voltages_soc": {
-        #     "length": None,
-        #     "default": 1.35,
-        #     "writable": False,
-        # },
     }
 
     def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:
@@ -443,6 +336,200 @@ class SubrackSimulator(SubrackProtocol):
             return "STARTED"
 
         raise AttributeError(f"Unknown command {name}.")
+
+    def _get_attribute_get_health_status(self: SubrackSimulator) -> dict:
+        return {
+            "temperatures": {
+                "SMM1": 40,
+                "SMM2": 41,
+                "BKPLN1": 39,
+                "BKPLN2": 41,
+            },
+            "plls": {
+                "BoardPllLock": True,
+                "CPLDPllLock": True,
+                "PllSource": None,
+            },
+            "psus": {
+                "present": {
+                    "PSU1": True,
+                    "PSU2": True,
+                },
+                "busy": {
+                    "PSU1": None,
+                    "PSU2": None,
+                },
+                "off": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "vout_ov_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "iout_oc_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "vin_uv_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "temp_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "cml_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "vout_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "iout_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "input_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "pwr_gd": {
+                    "PSU1": True,
+                    "PSU2": True,
+                },
+                "fan_fault": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "other": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "unknown": {
+                    "PSU1": False,
+                    "PSU2": False,
+                },
+                "voltage_out": {
+                    "PSU1": 12.0,
+                    "PSU2": 12.1,
+                },
+                "power_out": {
+                    "PSU1": 4.2 * 12,
+                    "PSU2": 5.8 * 12.1,
+                },
+                "voltage_in": {
+                    "PSU1": 230,
+                    "PSU2": 230,
+                },
+                "power_in": {
+                    "PSU1": 300,
+                    "PSU2": 300,
+                },
+                "fan_speed": {
+                    "PSU1": 90.0,
+                    "PSU2": 100.0,
+                },
+                "temp_inlet": {
+                    "PSU1": 20,
+                    "PSU2": 21,
+                },
+                "temp_fet": {
+                    "PSU1": 30,
+                    "PSU2": 31,
+                },
+            },
+            "pings": {
+                "pings_CPLD": True,
+            },
+            "slots": {
+                "presence": {
+                    "SLOT1": False,
+                    "SLOT2": True,
+                    "SLOT3": False,
+                    "SLOT4": False,
+                    "SLOT5": True,
+                    "SLOT6": False,
+                    "SLOT7": False,
+                    "SLOT8": False,
+                },
+                "on": {
+                    "SLOT1": False,
+                    "SLOT2": False,
+                    "SLOT3": False,
+                    "SLOT4": False,
+                    "SLOT5": False,
+                    "SLOT6": False,
+                    "SLOT7": False,
+                    "SLOT8": False,
+                },
+                "voltages": {
+                    "SLOT1": 12.0,
+                    "SLOT2": 12.0,
+                    "SLOT3": 12.0,
+                    "SLOT4": 12.0,
+                    "SLOT5": 12.0,
+                    "SLOT6": 12.0,
+                    "SLOT7": 12.0,
+                    "SLOT8": 12.0,
+                },
+                "powers": {
+                    "SLOT1": 0.4 * 12.0,
+                    "SLOT2": 0.4 * 12.0,
+                    "SLOT3": 0.4 * 12.0,
+                    "SLOT4": 0.4 * 12.0,
+                    "SLOT5": 0.4 * 12.0,
+                    "SLOT6": 0.4 * 12.0,
+                    "SLOT7": 0.4 * 12.0,
+                    "SLOT8": 0.4 * 12.0,
+                },
+                "pings": {
+                    "SLOT1": True,
+                    "SLOT2": True,
+                    "SLOT3": True,
+                    "SLOT4": True,
+                    "SLOT5": True,
+                    "SLOT6": True,
+                    "SLOT7": True,
+                    "SLOT8": True,
+                },
+            },
+            "internal_voltages": {
+                "V_POWERIN": 12.0,
+                "V_SOC": 1.35,
+                "V_ARM": 1.35,
+                "V_DDR": 1.35,
+                "V_2V5": 2.5,
+                "V_1V1": 1.1,
+                "V_CORE": 1.2,
+                "V_1V5": 1.5,
+                "V_3V3": 2.3,
+                "V_5V": 5.0,
+                "V_3V": 3.0,
+                "V_2V8": 2.8,
+            },
+            "fans": {
+                "speed": {
+                    "FAN1": 1,
+                    "FAN2": 1,
+                    "FAN3": 1,
+                    "FAN4": 1,
+                },
+                "pwm_duty": {
+                    "FAN1": 95,
+                    "FAN2": 96,
+                    "FAN3": 97,
+                    "FAN4": 98,
+                },
+                "mode": {
+                    "FAN1": FanMode.AUTO,
+                    "FAN2": FanMode.AUTO,
+                    "FAN3": FanMode.AUTO,
+                    "FAN4": FanMode.AUTO,
+                },
+            },
+        }
 
     def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
         return [

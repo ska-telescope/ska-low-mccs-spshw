@@ -306,7 +306,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
-        "get_health_status": "getHealthStatus",
+        "get_health_status": "healthStatus",
     }
 
     # --------------
@@ -798,16 +798,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[7]
 
-    @attribute(
-        dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts"
-    )
-    def tpm1Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
-        """
-        Handle a Tango attribute read of the voltage suplied to TPM 0.
+    # @attribute(
+    #     dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts"
+    # )
+    # def tpm1Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
+    #     """
+    #     Handle a Tango attribute read of the voltage suplied to TPM 0.
 
-        :return: voltage to TPM 0.
-        """
-        return self._tpm_voltages_dict.get("SLOT1")
+    #     :return: voltage to TPM 0.
+    #     """
+    #     return self._tpm_voltages_dict.get("SLOT1")
 
     @attribute(
         dtype=(float,),
@@ -1114,6 +1114,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the subrack timestamp
         """
         return self._hardware_attributes.get("subrackTimestamp", None)
+
+    @attribute(dtype=str, label="Health Status Dictionary")
+    def healthStatus(self: MccsSubrack) -> str | None:
+        """
+        Handle a dictionary of all available monitoring points.
+
+        :return: {}
+        """
+        return json.dumps(self._hardware_attributes.get("healthStatus", None))
 
     @attribute(dtype=float, label="internalVoltagesV_1V1")
     def internalVoltages1V1(self: MccsSubrack) -> float | None:
@@ -1467,11 +1476,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
 
-        health_status = self._hardware_attributes.get("getHealthStatus", None)
+        health_status = self._hardware_attributes.get("healthStatus", None)
 
         if health_status is not None:
             self._health_status = health_status
             self._internal_voltages = health_status.get("internal_voltages", None)
+            for key, value in self._internal_voltages.items():
+                tango_attribute_name = "internalVoltages" + key[1:]
+                self.push_change_event(tango_attribute_name, value)
+                self.push_archive_event(tango_attribute_name, value)
             tpm_monitoring_dict = health_status.get("slots", None)
             self._tpm_voltages_dict = tpm_monitoring_dict.get("voltages", None)
         self._update_health_data()

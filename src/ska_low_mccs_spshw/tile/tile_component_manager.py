@@ -2741,7 +2741,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # legacy code for a region specification with only 3 entries per region
         # Use default for other elements
         subarray_id = 1
-        aperture_id = self._station_id*100 + 1
+        aperture_id = self._station_id * 100 + 1
         if len(regions[0]) == 8:
             subarray_id = regions[0][3]
             aperture_id = regions[0][7]

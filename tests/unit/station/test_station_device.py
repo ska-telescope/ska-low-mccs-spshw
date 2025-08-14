@@ -1052,15 +1052,13 @@ def test_Standby(
                 4,
                 2,
                 102,
-            ]
-            + [0, 8, 0, 0, 0, 0, 0, 0] * 40,
+            ],
         ),
         pytest.param(
             "SetBeamFormerTable",
             [4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102],
             "SetBeamformerRegions",
-            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102]
-            + [0, 8, 0, 0, 0, 0, 0, 0] * 46,
+            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102],
         ),
         pytest.param(
             "SetLmcIntegratedDownload",

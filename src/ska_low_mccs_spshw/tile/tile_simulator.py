@@ -2937,6 +2937,7 @@ class TileSimulator:
         assert len(levels) == 32
         assert self.tpm  # for mypy
         for adc_channel, level in enumerate(levels):
+            level = level // 0.25 / 4
             preadu_id, preadu_ch = divmod(adc_channel, 16)
             self.tpm.preadu[preadu_id].set_attenuation(level, [preadu_ch])
 

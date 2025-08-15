@@ -3359,12 +3359,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # multiply by the levels
         expected_readback = preadu_mask * levels
 
-        if not np.array_equal(expected_readback, levels):
-            self.logger.info(
-                f"Preadu Mask applied {preadu_mask}."
-                f"Expected readback is {expected_readback}."
-            )
-        if not np.array_equal(np.array(_preadu_levels), expected_readback):
+        # Hardware has a precision of 0.25. Hence we only raise a verification
+        # error when outside this range.
+        if not np.allclose(np.array(_preadu_levels), expected_readback, atol=0.25):
             raise HardwareVerificationError(
                 expected=expected_readback, actual=_preadu_levels
             )

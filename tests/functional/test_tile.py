@@ -245,7 +245,7 @@ def tile_has_defined_synchronised_state(
         "station_id": 2,
         "static_time_delays": np.array([5] * 32),
         # "csp_rounding": np.array([4] * 384), # THORN-207
-        # "channeliser_rounding": np.array([8] * 512), # THORN-207
+        "channeliser_rounding": np.array([4] * 512),
     }
     tw = TileWrapper(tile_device)
     tw.set_state(programming_state=TpmStatus.SYNCHRONISED, **defined_state)
@@ -284,7 +284,7 @@ def tile_has_defined_initialised_state(
         "station_id": 2,
         "static_time_delays": np.array([6.25] * 32),
         # "csp_rounding": np.array([4] * 384),
-        # "channeliser_rounding": np.array([8] * 512),
+        "channeliser_rounding": np.array([3] * 512),
     }
     tw = TileWrapper(tile_device)
     tw.set_state(

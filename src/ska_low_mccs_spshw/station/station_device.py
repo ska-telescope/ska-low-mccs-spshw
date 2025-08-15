@@ -1954,7 +1954,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         region_array is defined as a flattened 2D array, for a maximum of 48 entries.
         Each entry corresponds to 8 consecutive frequency channels.
-        This is equivalent to SetBeamformerRegions, with a different way
+        This is equivalent to SetBeamFormerRegions, with a different way
         to specify the bandwidth of each spectral region.
         Input is consistent with the beamformerTable attribute
 
@@ -1979,7 +1979,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> regions = [[4, 0, 0, 0, 3, 1, 101], [26, 1, 0, 24, 4, 2, 102]]
         >>> input = list(itertools.chain.from_iterable(regions))
         >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("SetBeamFormerRegions", input)
+        >>> dp.command_inout("SetBeamFormerTable", input)
         """
         if len(argin) < 7:
             self.logger.error("Insufficient parameters specified")
@@ -2063,7 +2063,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 self.logger.error("Start channel in region must be even")
                 raise ValueError("Start channel in region must be even")
             nchannels = region[1]
-            if nchannels % 8 != 0:
+            if (nchannels % 8 != 0) or (nchannels == 0):
                 self.logger.error("Nos. of channels in region must be multiple of 8")
                 raise ValueError("Nos. of channels in region must be multiple of 8")
             beam_index = region[2]

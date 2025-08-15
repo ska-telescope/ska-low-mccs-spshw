@@ -2850,12 +2850,22 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Set the frequency regions to be beamformed into a single beam.
+        Set the frequency regions to be beamformed into each beam.
 
         :param beamformer_table: a list encoding up to 48 regions, with each
-            region containing a start channel, the size of the region
-            (which must be a multiple of 8), and a beam index (between 0 and 7)
-            and a substation ID (not used)
+            region corresponding to 8 channels. Entry items specify:
+
+        * start physical channel
+        * beam_index:  subarray beam used for this region, range [0:48)
+        * subarray_id: ID of the subarray [1:48]
+        * subarray_logical_channel: Logical channel in the subarray
+            it is the same for all (sub)stations in the subarray
+            Defaults to station logical channel
+        * subarray_beam_id: ID of the subarray beam
+            Defaults to beam index
+        * substation_ID: ID of the substation
+            Defaults to 0 (no substation)
+        * aperture_id:  ID of the aperture (station*100+substation?)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2879,11 +2889,25 @@ class SpsStationComponentManager(
             information purpose only.
         """
         # At least one entry in the beamformer table must be not null
-        # Entries with start channel = 0 are ignored in MccsTile
-        if all(entry[0] == 0 for entry in self._beamformer_table):
+        # Entries with start channel & subarray ID = 0 are ignored in MccsTile
+        if all(
+            (entry[0] == 0 and entry[2] == 0)  # At least one region must exist
+            for entry in self._beamformer_table
+        ):
             self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
+            self.logger.warning("No regions specified, providing a default one")
+        last_entry = 0
+        using_channel_0 = False
+        # transmit only entries up to the last valid one
+        for index, entry in enumerate(self._beamformer_table):
+            if entry[0] != 0 or entry[2] != 0:  # valid entry
+                last_entry = index
+                if entry[0] == 0:  # DC channel is not properly handled in HW
+                    using_channel_0 = True
+        if using_channel_0:
+            self.logger.warning("Using channel 0: DC channel not handled in hardware")
         beamformer_regions = []
-        for region, entry in enumerate(self._beamformer_table):
+        for entry in self._beamformer_table[0 : last_entry + 1]:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
         return self._execute_async_on_tiles(
             "SetBeamformerRegions",

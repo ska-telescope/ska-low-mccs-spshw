@@ -709,16 +709,16 @@ class TestMccsTileTpmDriver:
 
         final_level = [i + 1.00 for i in initial_level]
         tile_device.preadulevels = final_level
-
-        request_provider = tile_component_manager._request_provider
-        assert request_provider is not None
-        request_provider.get_request = (  # type: ignore[method-assign]
-            unittest.mock.Mock(return_value="PREADU_LEVELS")
-        )
         change_event_callbacks["preadu_levels"].assert_change_event(final_level)
 
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
+
+        # Test rounding. Hardware founds down to 0.25 precision.
+        requested_preadu = [1.24] * 32
+        expected_preadu = [1.00] * 32
+        tile_device.preadulevels = requested_preadu
+        change_event_callbacks["preadu_levels"].assert_change_event(expected_preadu)
 
     # pylint: disable=too-many-arguments
     def test_pps_present(
@@ -1193,9 +1193,14 @@ class TestMccsTileTpmDriver:
             tango.DevState.ON, lookahead=2, consume_nonmatches=True
         )
         tile_device.off()
-        change_event_callbacks["tile_state"].assert_change_event(
-            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
-        )
+        tile_simulator.mock_on(lock=True)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.FAULT)
+        tile_simulator.mock_off(lock=True)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+
+        # Turn lock off
+        tile_simulator.mock_off(lock=False)
+
         assert tile_device.state() == tango.DevState.OFF
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
@@ -1203,13 +1208,20 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_state"].assert_not_called()
 
         tile_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks["tile_state"].assert_change_event(
-            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
-        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
         change_event_callbacks["tile_state"].assert_not_called()
+        tile_simulator.mock_off(lock=True)
         tile_device.on()
-
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.FAULT)
+        change_event_callbacks["tile_state"].assert_not_called()
+        tile_simulator.mock_on(lock=True)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        # Turn lock off
+        tile_simulator.mock_on(lock=False)
+
         assert tile_device.state() == tango.DevState.ON
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE

@@ -2398,6 +2398,27 @@ class SpsStationComponentManager(
         return copy.deepcopy(self._beamformer_table.tolist())
 
     @property
+    def beamformer_regions(self: SpsStationComponentManager) -> list[list[int]]:
+        """
+        Get beamformer region table.
+
+        Bidimensional array of one row for each 8 channels, with elements:
+        0. start physical channel
+        1. number of channels
+        2. beam index
+        3. subarray ID
+        4. subarray_logical_channel
+        5. subarray_beam_id
+        6. substation_id
+        8. aperture_id
+
+        Each row is a set of 8 consecutive elements in the list.
+
+        :return: list of up to 8*48 values
+        """
+        return copy.deepcopy(self._beamformer_regions.tolist())
+
+    @property
     def forty_gb_network_address(self: SpsStationComponentManager) -> str:
         """
         Get 40Gb network address.
@@ -2862,7 +2883,7 @@ class SpsStationComponentManager(
         if all(entry[0] == 0 for entry in self._beamformer_table):
             self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         beamformer_regions = []
-        for entry in self._beamformer_table:
+        for region, entry in enumerate(self._beamformer_table):
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
         return self._execute_async_on_tiles(
             "SetBeamformerRegions",

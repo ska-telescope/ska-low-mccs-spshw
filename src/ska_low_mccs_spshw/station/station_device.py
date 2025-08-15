@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib
 import ipaddress
+import itertools
 import json
 import logging
 import sys
@@ -1039,7 +1040,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: list of up to 7*48 values
         """
-        return self._beamformer_table
+        return list(
+            itertools.chain.from_iterable(self.component_manager.beamformer_table)
+        )
 
     @attribute(dtype=("DevLong",), max_dim_x=384)
     def beamformerRegions(self: SpsStation) -> list[int] | None:
@@ -1060,7 +1063,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: list of up to 8*48 values
         """
-        return self._beamformer_regions
+        return list(
+            itertools.chain.from_iterable(self.component_manager.beamformer_regions)
+        )
 
     @attribute(dtype="DevString")
     def fortyGbNetworkAddress(self: SpsStation) -> str:
@@ -2075,6 +2080,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 entry[3] = subarray_logical_channel
                 subarray_logical_channel = subarray_logical_channel + 8
                 beamformer_table.append(entry)
+        self.component_manager._beamformer_regions = np.reshape(
+            np.pad(argin, (0, (48 * 8 - len(argin)))),
+            (48, 8),
+        )
         return self.component_manager.set_beamformer_table(beamformer_table)
 
     @command(

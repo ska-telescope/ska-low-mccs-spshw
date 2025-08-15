@@ -709,16 +709,16 @@ class TestMccsTileTpmDriver:
 
         final_level = [i + 1.00 for i in initial_level]
         tile_device.preadulevels = final_level
-
-        request_provider = tile_component_manager._request_provider
-        assert request_provider is not None
-        request_provider.get_request = (  # type: ignore[method-assign]
-            unittest.mock.Mock(return_value="PREADU_LEVELS")
-        )
         change_event_callbacks["preadu_levels"].assert_change_event(final_level)
 
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
+
+        # Test rounding. Hardware founds down to 0.25 precision.
+        requested_preadu = [1.24] * 32
+        expected_preadu = [1.00] * 32
+        tile_device.preadulevels = requested_preadu
+        change_event_callbacks["preadu_levels"].assert_change_event(expected_preadu)
 
     # pylint: disable=too-many-arguments
     def test_pps_present(

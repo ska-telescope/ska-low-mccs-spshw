@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-207] Add HW readback for channeliser truncation.
+* [SKB-999] Correct PreAduPresent property to account for both preadu.renamed to array property PreAduFitted (default [True, True])
 * [SKB-955] Correct transient transition to ON when MccsTile is turning OFF.
 
 ## 7.3.0

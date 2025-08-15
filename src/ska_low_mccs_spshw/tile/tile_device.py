@@ -132,11 +132,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     StationID = device_property(dtype=int, default_value=1)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
-    PreAduPresent = device_property(
-        dtype=bool,
-        default_value=True,
+    # TODO: This is defining the hardware configuration
+    # can be exported to TmData.
+    PreAduFitted = device_property(
+        dtype=(bool,),
+        default_value=[True] * 2,
         doc=(
-            "Does this board have a preADU (used for optical to electrical conversion)"
+            "Represents the presence of the 2 preAdus. "
+            "Index 0 -> FE0_mVA. Index 1 -> FE1_mVA"
         ),
     )
     # ====================================================================
@@ -245,7 +248,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"\tHardwareVersion: {self.HardwareVersion}\n"
             f"\tBiosVersion: {self.BiosVersion}\n"
             f"\tAntennasPerTile: {self.AntennasPerTile}\n"
-            f"\tPreAduPresent: {self.PreAduPresent}\n"
+            f"\tPreAduFitted: {self.PreAduFitted}\n"
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
@@ -598,7 +601,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_changed,
             self.HardwareVersion,
             self.BiosVersion,
-            self.PreAduPresent,
+            self.PreAduFitted,
         )
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)
@@ -624,6 +627,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.StaticDelays,
             self.SubrackFQDN,
             self.SubrackBay,
+            self.PreAduFitted,
             self._communication_state_changed,
             self._component_state_changed,
             self._update_attribute_callback,
@@ -2746,7 +2750,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self.component_manager.set_preadu_levels(list(levels))
+        self.component_manager.set_preadu_levels(levels)
 
     @attribute(dtype=("DevLong",), max_dim_x=336, abs_change=1)
     def beamformerTable(self: MccsTile) -> list[int] | None:

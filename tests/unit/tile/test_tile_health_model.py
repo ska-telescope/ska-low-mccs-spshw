@@ -27,7 +27,7 @@ class TestTileHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = TileHealthModel(MockCallable(), "v1.6.7a", "0.5.0", True)
+        health_model = TileHealthModel(MockCallable(), "v1.6.7a", "0.5.0", [True, True])
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model
@@ -169,6 +169,7 @@ class TestTileHealthModel:
         [
             "bios_version",
             "hw_version",
+            "preadu_present",
             "init_monitoring_points",
             "init_health_state",
             "init_health_report",
@@ -180,6 +181,7 @@ class TestTileHealthModel:
             (
                 "0.5.0",
                 "v1.6.7a",
+                [True, True],
                 {
                     "temperatures": {
                         "ADC0": float("NaN"),
@@ -210,6 +212,7 @@ class TestTileHealthModel:
             (
                 "0.5.0",
                 "v2.0.5b",
+                [True, True],
                 {
                     "temperatures": {
                         "ADC0": float("NaN"),
@@ -271,12 +274,35 @@ class TestTileHealthModel:
                 HealthState.OK,
                 "Health is OK.",
             ),
+            (
+                "0.5.0",
+                "v1.6.7a",
+                [True, False],
+                {
+                    "currents": {
+                        "FE0_mVA": 0,
+                        "FE1_mVA": 0,
+                    }
+                },
+                HealthState.FAILED,
+                "Intermediate health currents is in FAILED HealthState. "
+                'Cause: Monitoring point "/FE0_mVA": 0 not in range 2.37 - 2.62',
+                {
+                    "currents": {
+                        "FE0_mVA": 2.61,
+                        "FE1_mVA": 0,
+                    }
+                },
+                HealthState.OK,
+                "Health is OK.",
+            ),
         ],
     )
     def test_health_with_hardware_configuration(  # pylint: disable=too-many-arguments
         self: TestTileHealthModel,
         bios_version: str,
         hw_version: str,
+        preadu_present: list[bool],
         init_monitoring_points: dict[str, Any],
         init_health_state: HealthState,
         init_health_report: str,
@@ -289,6 +315,7 @@ class TestTileHealthModel:
 
         :param bios_version: the bios version of the TPM.
         :param hw_version: the hardware version of the TPM.
+        :param preadu_present: whether we have preadu attached.
         :param init_monitoring_points: the initial monitoring points,
             using the defaults where not provided
         :param init_health_state: the initial expected health state
@@ -297,7 +324,9 @@ class TestTileHealthModel:
         :param final_health_state: the final expected health state
         :param final_health_report: the initial final health report
         """
-        health_model = TileHealthModel(MockCallable(), hw_version, bios_version, True)
+        health_model = TileHealthModel(
+            MockCallable(), hw_version, bios_version, preadu_present
+        )
         health_model.update_state(communicating=True, power=PowerState.ON)
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
         health_model._state[

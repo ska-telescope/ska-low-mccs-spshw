@@ -158,6 +158,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         static_time_delays: list[float],
         subrack_fqdn: str,
         subrack_tpm_id: int,
+        preadu_present: list[bool],
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
@@ -196,6 +197,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
+        :param preadu_present: A list representing if the PreAdu is attached.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -213,7 +215,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._power_state_lock = threading.RLock()
         self._update_attribute_callback = update_attribute_callback
         self.fault_state: Optional[bool] = None
-
+        self._preadu_present: list[bool] = preadu_present
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._simulation_mode = simulation_mode
@@ -253,7 +255,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
         self.integrated_data_transmission_mode: str = "Not transmitting"
-        self._preadu_levels = preadu_levels
+        self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
         self._firmware_name: str = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
@@ -1135,12 +1137,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
                 # self.tile.post_synchronisation()
 
-                if self._preadu_levels:
+                if self._preadu_levels.size != 0:
                     self.logger.info(
                         "TileComponentManager: setting PreADU attenuation..."
                     )
                     self.tile.set_preadu_levels(self._preadu_levels)
-                    if self.tile.get_preadu_levels() != self._preadu_levels:
+                    if self.tile.get_preadu_levels() != self._preadu_levels.tolist():
                         self.logger.warning(
                             "TileComponentManager: set PreADU attenuation failed"
                         )
@@ -3272,7 +3274,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._initial_pps_delay = self.tile.get_pps_delay()
             return self.tile.get_pps_delay() - self._initial_pps_delay
 
-    def set_preadu_levels(self: TileComponentManager, levels: list[float]) -> None:
+    def set_preadu_levels(self: TileComponentManager, levels: np.ndarray) -> None:
         """
         Set preadu levels in dB.
 
@@ -3298,8 +3300,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._update_attribute_callback(preadu_levels=_preadu_levels)
 
-        if _preadu_levels != levels:
-            raise HardwareVerificationError(expected=levels, actual=_preadu_levels)
+        # create a 32-element mask based on preadu presence
+        preadu_mask = np.repeat(self._preadu_present * 2, 8)
+
+        # multiply by the levels
+        expected_readback = preadu_mask * levels
+
+        # Hardware has a precision of 0.25. Hence we only raise a verification
+        # error when outside this range.
+        if not np.allclose(np.array(_preadu_levels), expected_readback, atol=0.25):
+            raise HardwareVerificationError(
+                expected=expected_readback, actual=_preadu_levels
+            )
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """

@@ -2080,7 +2080,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 entry[3] = subarray_logical_channel
                 subarray_logical_channel = subarray_logical_channel + 8
                 beamformer_table.append(entry)
-        self.component_manager._beamformer_regions = np.reshape(
+        self.component_manager.beamformer_regions = np.reshape(
             np.pad(argin, (0, (48 * 8 - len(argin)))),
             (48, 8),
         )

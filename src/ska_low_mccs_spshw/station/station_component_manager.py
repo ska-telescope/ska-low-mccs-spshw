@@ -2418,6 +2418,28 @@ class SpsStationComponentManager(
         """
         return copy.deepcopy(self._beamformer_regions.tolist())
 
+    @beamformer_regions.setter
+    def beamformer_regions(
+        self: SpsStationComponentManager, regions: np.ndarray
+    ) -> None:
+        """
+        Set beamformer region table.
+
+        :param regions: bidimensional array of one row for each 8 channels,
+            with elements:
+            0. start physical channel
+            1. number of channels
+            2. beam index
+            3. subarray ID
+            4. subarray_logical_channel
+            5. subarray_beam_id
+            6. substation_id
+            7. aperture_id
+
+        Each row is a set of 8 consecutive elements in the list.
+        """
+        self._beamformer_regions = regions
+
     @property
     def forty_gb_network_address(self: SpsStationComponentManager) -> str:
         """

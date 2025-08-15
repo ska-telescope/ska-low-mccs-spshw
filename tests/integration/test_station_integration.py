@@ -585,6 +585,9 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_preadu_levels"].assert_change_event(
             initial_preadu_levels.tolist(), lookahead=2, consume_nonmatches=True
         )
+        # SpsStation has no event for this. This can take time to respond to the
+        # Pushed change event, therefore we sleep.
+        time.sleep(0.1)
         assert np.array_equal(sps_station_device.preaduLevels, initial_preadu_levels)
 
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,

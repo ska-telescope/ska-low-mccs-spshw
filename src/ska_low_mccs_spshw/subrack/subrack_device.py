@@ -799,9 +799,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._tpm_power_states[7]
 
     # @attribute(
-    #     dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6, unit="Volts"
+    #     dtype=float, label="TPM 0 voltage", min_alarm=11.4, max_alarm=12.6,
+    # unit="Volts"
     # )
-    # def tpm1Voltage(self: MccsSubrack) -> float | None:  # pylint: disable=invalid-name
+    # def tpm1Voltage(self: MccsSubrack) -> float | None:  # pylint:
+    # disable=invalid-name
     #     """
     #     Handle a Tango attribute read of the voltage suplied to TPM 0.
 
@@ -1120,7 +1122,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a dictionary of all available monitoring points.
 
-        :return: {}
+        :return: A dictionary containing all the monitoring points
         """
         return json.dumps(self._hardware_attributes.get("healthStatus", None))
 

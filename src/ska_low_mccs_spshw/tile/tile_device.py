@@ -4597,6 +4597,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     raise ValueError("Too many channels specified > 384")
                 regions.append(region)
 
+            if total_chan < 8:
+                self.logger.error("No channels specified")
+                raise ValueError("No channels specified")
             self._component_manager.set_beamformer_regions(regions)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 

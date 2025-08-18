@@ -337,7 +337,105 @@ class SubrackSimulator(SubrackProtocol):
 
         raise AttributeError(f"Unknown command {name}.")
 
-    def _get_attribute_get_health_status(self: SubrackSimulator) -> dict:
+    def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
+        return [
+            current * voltage
+            for current, voltage in zip(
+                self._attribute_values["tpm_currents"],
+                self._attribute_values["tpm_voltages"],
+            )
+        ]
+
+    def _get_attribute_power_supply_powers(self: SubrackSimulator) -> list[float]:
+        return [
+            current * voltage
+            for current, voltage in zip(
+                self._attribute_values["power_supply_currents"],
+                self._attribute_values["power_supply_voltages"],
+            )
+        ]
+
+    def _get_attribute_subrack_fan_speeds(
+        self: SubrackSimulator,
+    ) -> list[float]:
+        return [
+            percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
+            for percent in self._attribute_values["subrack_fan_speeds_percent"]
+        ]
+
+    def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
+        """
+        Check if no command is currently running.
+
+        :param _not_used: not used, should always be empty e.g. ""
+        :return: False if a command is currently run; otherwise True.
+        """
+        assert not _not_used
+        return not self._command_is_running
+
+    def _abort_command(self: SubrackSimulator, _not_used: Optional[str]) -> None:
+        """
+        Abort any currently running command.
+
+        :param _not_used: not used, should always be empty e.g. ""
+        """
+        assert not _not_used
+        if self._command_is_running:
+            self._aborted_event.set()
+
+    def _set_subrack_fan_speed(self: SubrackSimulator, arg: str) -> None:
+        (fan_str, speed_str) = arg.split(",")
+        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
+        speed = float(speed_str)
+        self._attribute_values["subrack_fan_speeds_percent"][fan_index] = speed
+
+    def _set_fan_mode(self: SubrackSimulator, arg: str) -> None:
+        (fan_str, mode_str) = arg.split(",")
+        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
+        mode = int(mode_str)  # FanMode[mode_str]
+        self._attribute_values["subrack_fan_mode"][fan_index] = mode
+
+    def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
+        (fan_str, speed_str) = arg.split(",")
+        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
+        speed = float(speed_str)
+        self._attribute_values["power_supply_fan_speeds"][fan_index] = speed
+
+    def _async_turn_off_tpm(self: SubrackSimulator, arg: str) -> None:
+        """
+        Turn off a TPM.
+
+        :param arg: number of the TPM to be turned off (in string form).
+        """
+        tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
+        cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = False
+
+    def _async_turn_on_tpm(self: SubrackSimulator, arg: str) -> None:
+        """
+        Turn on a TPM.
+
+        :param arg: number of the TPM to be turned on (in string form).
+        """
+        tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
+        cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True
+
+    def _async_turn_off_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
+        """
+        Turn off all TPMs.
+
+        :param _not_used: not used, should always be empty e.g. ""
+        """
+        self._attribute_values["tpm_on_off"] = [False] * SubrackData.TPM_BAY_COUNT
+
+    def _async_turn_on_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
+        """
+        Turn on all TPM.
+
+        :param _not_used: not used, should always be empty e.g. ""
+        """
+        self._attribute_values["tpm_on_off"] = [True] * SubrackData.TPM_BAY_COUNT
+
+    def _get_health_status(self: SubrackSimulator, arg: str) -> dict:
         return {
             "temperatures": {
                 "SMM1": 40,
@@ -530,101 +628,3 @@ class SubrackSimulator(SubrackProtocol):
                 },
             },
         }
-
-    def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
-        return [
-            current * voltage
-            for current, voltage in zip(
-                self._attribute_values["tpm_currents"],
-                self._attribute_values["tpm_voltages"],
-            )
-        ]
-
-    def _get_attribute_power_supply_powers(self: SubrackSimulator) -> list[float]:
-        return [
-            current * voltage
-            for current, voltage in zip(
-                self._attribute_values["power_supply_currents"],
-                self._attribute_values["power_supply_voltages"],
-            )
-        ]
-
-    def _get_attribute_subrack_fan_speeds(
-        self: SubrackSimulator,
-    ) -> list[float]:
-        return [
-            percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
-            for percent in self._attribute_values["subrack_fan_speeds_percent"]
-        ]
-
-    def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
-        """
-        Check if no command is currently running.
-
-        :param _not_used: not used, should always be empty e.g. ""
-        :return: False if a command is currently run; otherwise True.
-        """
-        assert not _not_used
-        return not self._command_is_running
-
-    def _abort_command(self: SubrackSimulator, _not_used: Optional[str]) -> None:
-        """
-        Abort any currently running command.
-
-        :param _not_used: not used, should always be empty e.g. ""
-        """
-        assert not _not_used
-        if self._command_is_running:
-            self._aborted_event.set()
-
-    def _set_subrack_fan_speed(self: SubrackSimulator, arg: str) -> None:
-        (fan_str, speed_str) = arg.split(",")
-        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
-        speed = float(speed_str)
-        self._attribute_values["subrack_fan_speeds_percent"][fan_index] = speed
-
-    def _set_fan_mode(self: SubrackSimulator, arg: str) -> None:
-        (fan_str, mode_str) = arg.split(",")
-        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
-        mode = int(mode_str)  # FanMode[mode_str]
-        self._attribute_values["subrack_fan_mode"][fan_index] = mode
-
-    def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
-        (fan_str, speed_str) = arg.split(",")
-        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
-        speed = float(speed_str)
-        self._attribute_values["power_supply_fan_speeds"][fan_index] = speed
-
-    def _async_turn_off_tpm(self: SubrackSimulator, arg: str) -> None:
-        """
-        Turn off a TPM.
-
-        :param arg: number of the TPM to be turned off (in string form).
-        """
-        tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
-        cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = False
-
-    def _async_turn_on_tpm(self: SubrackSimulator, arg: str) -> None:
-        """
-        Turn on a TPM.
-
-        :param arg: number of the TPM to be turned on (in string form).
-        """
-        tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
-        cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True
-
-    def _async_turn_off_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
-        """
-        Turn off all TPMs.
-
-        :param _not_used: not used, should always be empty e.g. ""
-        """
-        self._attribute_values["tpm_on_off"] = [False] * SubrackData.TPM_BAY_COUNT
-
-    def _async_turn_on_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
-        """
-        Turn on all TPM.
-
-        :param _not_used: not used, should always be empty e.g. ""
-        """
-        self._attribute_values["tpm_on_off"] = [True] * SubrackData.TPM_BAY_COUNT

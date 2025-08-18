@@ -306,7 +306,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
-        "get_health_status": "healthStatus",
     }
 
     # --------------
@@ -337,7 +336,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._tpm_voltages_dict: dict = {}
         self._health_status: dict = {}
-        self._internal_voltages: dict = {}
+        self._internal_voltages: dict[str, float] = {}
 
         self._hardware_attributes: dict[str, Any] = {}
 
@@ -1124,7 +1123,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: A dictionary containing all the monitoring points
         """
-        return json.dumps(self._hardware_attributes.get("healthStatus", None))
+        return json.dumps(self.component_manager.read_health_status())
 
     @attribute(dtype=float, label="internalVoltagesV_1V1")
     def internalVoltages1V1(self: MccsSubrack) -> float | None:
@@ -1478,17 +1477,19 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
 
-        health_status = self._hardware_attributes.get("healthStatus", None)
+        self.component_manager.get_health_status()
+
+        health_status: dict[str, dict] = self.component_manager.read_health_status()
 
         if health_status is not None:
             self._health_status = health_status
-            self._internal_voltages = health_status.get("internal_voltages", None)
+            self._internal_voltages = health_status.get("internal_voltages", {})
             for key, value in self._internal_voltages.items():
                 tango_attribute_name = "internalVoltages" + key[1:]
                 self.push_change_event(tango_attribute_name, value)
                 self.push_archive_event(tango_attribute_name, value)
-            tpm_monitoring_dict = health_status.get("slots", None)
-            self._tpm_voltages_dict = tpm_monitoring_dict.get("voltages", None)
+            tpm_monitoring_dict: dict[str, dict] = health_status.get("slots", {})
+            self._tpm_voltages_dict = tpm_monitoring_dict.get("voltages", {})
         self._update_health_data()
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:

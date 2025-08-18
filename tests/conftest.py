@@ -296,7 +296,6 @@ def health_status_fixture() -> dict[str, Any]:
 @pytest.fixture(name="subrack_simulator_attribute_values", scope="session")
 def subrack_simulator_attribute_values_fixture(
     subrack_simulator_config: dict[str, Any],
-    health_status: dict[str, Any],
 ) -> dict[str, Any]:
     """
     Return attribute values that the subrack simulator is expected to report.
@@ -360,7 +359,6 @@ def subrack_simulator_attribute_values_fixture(
                 subrack_simulator_config["tpm_voltages"],
             )
         ],
-        "get_health_status": health_status,
     }
 
 

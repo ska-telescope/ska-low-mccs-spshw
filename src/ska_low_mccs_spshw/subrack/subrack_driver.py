@@ -36,7 +36,7 @@ class RequestError(Exception):
     """Exception class for RequestExceptions."""
 
 
-# pylint: disable-next=too-many-instance-attributes
+# pylint: disable-next=too-many-instance-attributes, too-many-public-methods
 class SubrackDriver(
     MccsBaseComponentManager, PollingComponentManager[HttpPollRequest, HttpPollResponse]
 ):
@@ -97,6 +97,7 @@ class SubrackDriver(
         ] = OrderedDict()
 
         self._attributes_to_write: dict[str, Any] = {}
+        self.health_status: dict[str, Any] = {}
 
         super().__init__(
             logger,
@@ -124,7 +125,6 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
-            get_health_status=None,
         )
 
         self.logger.info(
@@ -399,6 +399,69 @@ class SubrackDriver(
                 message = f"TPM {tpm_number} will be turned {off_on} at next poll."
             return (TaskStatus.QUEUED, message)
 
+    def get_health_status(
+        self: SubrackDriver, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Read all the monitoring points available in health status.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self._get_health_status(task_callback=task_callback)
+
+    def _get_health_status(
+        self: SubrackDriver,
+        monitoring_points: Optional[str] = None,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Read a group of monitoring points.
+
+        :param monitoring_points: the group monitoring points to read
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        # Using "" will return all monitoring points
+        if monitoring_points is None:
+            monitoring_points = ""
+
+        with self._write_lock:
+            command_name = "get_health_status"
+            command_arg = monitoring_points
+            self._commands_to_execute["get_health_status"] = (
+                command_name,
+                command_arg,
+                task_callback,
+            )
+
+            if task_callback is not None:
+                task_callback(status=TaskStatus.QUEUED)
+
+            if monitoring_points == "":
+                message = (
+                    "All monitoring points in health status will be read at next"
+                    " poll."
+                )
+            else:
+                message = (
+                    f"{monitoring_points} in health status will be read at next"
+                    " poll."
+                )
+            return (TaskStatus.QUEUED, message)
+
+    def read_health_status(self: SubrackDriver) -> dict:
+        """
+        Read all the monitoring points available in health status.
+
+        :return: the task status and a human-readable status message
+        """
+        return self.health_status
+
     def set_subrack_fan_speed(
         self: SubrackDriver,
         fan_number: int,
@@ -589,7 +652,6 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
-                "get_health_status",
             )
             self._tick = 0
         return poll_request
@@ -784,6 +846,8 @@ class SubrackDriver(
                     result=(ResultCode.OK, "Command completed."),
                 )
             self._active_callback = None
+            if "get_health_status" in retvalues.keys():
+                self.health_status = retvalues["get_health_status"]
 
         values = poll_response.query_responses
         self._update_component_state(power=PowerState.ON, fault=fault)
@@ -834,7 +898,6 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
-            get_health_status=kwargs.get("get_health_status"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

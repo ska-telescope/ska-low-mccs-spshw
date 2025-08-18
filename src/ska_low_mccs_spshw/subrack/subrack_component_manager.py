@@ -225,7 +225,7 @@ class _PDUProxy(DeviceComponentManager):
         return func()
 
 
-# pylint: disable = too-many-instance-attributes
+# pylint: disable = too-many-instance-attributes, too-many-public-methods
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
 
@@ -330,7 +330,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
-            get_health_status=None,
         )
         self.pdu_proxy = (
             None
@@ -473,6 +472,31 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return cast(SubrackDriver, self._hardware_component_manager).turn_on_tpms(
             task_callback=task_callback
         )
+
+    def get_health_status(
+        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Read all the monitoring points available in health status.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return cast(SubrackDriver, self._hardware_component_manager).get_health_status(
+            task_callback=task_callback
+        )
+
+    def read_health_status(self: SubrackComponentManager) -> dict:
+        """
+        Read all the monitoring points available in health status.
+
+        :return: monitoring points available in health status.
+        """
+        return cast(
+            SubrackDriver, self._hardware_component_manager
+        ).read_health_status()
 
     @check_communicating
     def pdu_health_state(

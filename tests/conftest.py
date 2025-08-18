@@ -302,7 +302,6 @@ def subrack_simulator_attribute_values_fixture(
 
     :param subrack_simulator_config: attribute values with which the
         subrack simulator is configured.
-    :param health_status: subrack monitoring points as a dictionary.
 
     :return: a key-value dictionary of attribute values that the subrack
         simulator is expected to report.

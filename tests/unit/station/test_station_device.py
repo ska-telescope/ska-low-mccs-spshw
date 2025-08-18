@@ -1389,7 +1389,7 @@ def test_beamformerRegions(
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     for _, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
+    time.sleep(0.5)
     station_device.SetBeamFormerRegions(
         [64, 16, 1, 1, 8, 1, 1, 101, 128, 64, 1, 1, 72, 1, 1, 102]
     )

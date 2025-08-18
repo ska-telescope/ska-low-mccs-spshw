@@ -158,6 +158,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         static_time_delays: list[float],
         subrack_fqdn: str,
         subrack_tpm_id: int,
+        preadu_present: list[bool],
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
@@ -196,6 +197,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
+        :param preadu_present: A list representing if the PreAdu is attached.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -213,7 +215,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._power_state_lock = threading.RLock()
         self._update_attribute_callback = update_attribute_callback
         self.fault_state: Optional[bool] = None
-
+        self._preadu_present: list[bool] = preadu_present
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._simulation_mode = simulation_mode
@@ -253,7 +255,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
         self.integrated_data_transmission_mode: str = "Not transmitting"
-        self._preadu_levels = preadu_levels
+        self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
         self._firmware_name: str = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
@@ -537,13 +539,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
 
-        # ================================================================
-        # Update fault before power to allow exit from fault before OFF.
-        # "else Action component_no_fault is not allowed in op_state OFF."
-        # can occur
-        self._update_component_state(fault=self.fault_state)
-        # ================================================================
-        self._update_component_state(power=self._subrack_says_tpm_power)
+        self._update_component_state(
+            power=self._subrack_says_tpm_power, fault=self.fault_state
+        )
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
@@ -583,6 +581,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             "however subrack reports it as ON. "
                         )
                         is_faulty = True
+                    if (
+                        not self.is_connected
+                        and self._subrack_says_tpm_power == PowerState.OFF
+                    ):
+                        # ============================================
+                        # OpStateModel raises an error:
+                        # "Action component_no_fault is not
+                        # allowed in op_state OFF."
+                        #
+                        # We need to reset the base classes cached
+                        # fault_state to allow a change event
+                        # when ON, therefore
+                        # we update the fault state to None.
+                        self.fault_state = None
+                        return
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the
@@ -1124,12 +1137,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
                 # self.tile.post_synchronisation()
 
-                if self._preadu_levels:
+                if self._preadu_levels.size != 0:
                     self.logger.info(
                         "TileComponentManager: setting PreADU attenuation..."
                     )
                     self.tile.set_preadu_levels(self._preadu_levels)
-                    if self.tile.get_preadu_levels() != self._preadu_levels:
+                    if self.tile.get_preadu_levels() != self._preadu_levels.tolist():
                         self.logger.warning(
                             "TileComponentManager: set PreADU attenuation failed"
                         )
@@ -2738,19 +2751,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :raises ValueError: if the tpm is value None.
         """
         self.logger.debug("TileComponentManager: set_beamformer_regions")
-        # TODO: Remove when interface with station beamformer allows multiple
-        # subarrays, stations and apertures
-        subarray_id = 0
-        aperture_id = 0
-        # substation_id = 0
-        # changed = False
+        # legacy code for a region specification with only 3 entries per region
+        # Use default for other elements
+        subarray_id = 1
+        aperture_id = self._station_id * 100 + 1
         if len(regions[0]) == 8:
             subarray_id = regions[0][3]
             aperture_id = regions[0][7]
-        collapsed_regions = self._collapse_regions(regions)
         nof_blocks = 0
-        for region in collapsed_regions:
+        for region in regions:
             nof_blocks += region[1] // 8
+        if nof_blocks == 0:
+            self.logger.error("No valid beamformer regions specified")
+            raise ValueError("Empty channel table")
+
         self._nof_blocks = nof_blocks
         self.logger.info(f"Setting beamformer table for {self._nof_blocks} blocks")
         with acquire_timeout(
@@ -2758,10 +2772,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ) as acquired:
             if acquired:
                 try:
-                    if nof_blocks > 0:
-                        self.tile.set_beamformer_regions(collapsed_regions)
-                    else:
-                        self.logger.error("No valid beamformer regions specified")
+                    self.tile.set_beamformer_regions(regions)
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
                     beamformer_table = self.tile.get_beamformer_table()
@@ -2780,57 +2791,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-
-    def _collapse_regions(
-        self: TileComponentManager, regions: list[list[int]]
-    ) -> list[list[int]]:
-        """
-        Collapse the frequency regions if they are contiguous.
-
-        This is temporarily required as the tile beamformer accepts at most
-        16 regions and the current allocation/configuration structure
-        allocates individually 48 blocks of 8 channels.
-        TODO The function is not required anymore when the tile beamformer
-        firmware will accept 48 individual channel blocks.
-
-        The input list contains up to 48 blocks which represent
-        at most 16 contiguous channel regions.
-        Each block has 8 entries which represent:
-        - starting physical channel
-        - number of channels
-        - hardware beam number
-        - subarray ID
-        - subarray logical channel
-        - subarray beam ID
-        - substation ID
-        - aperture ID
-        Output blocks (up to 16) describe the same information but with
-        contiguous blocks collapsed together.
-
-        :param regions: a list encoding up to 48 blocks for up to 16 regions
-
-        :return: a list encoding up to 16 regions
-        """
-        region_collapsed = []
-        old_region = [0] * 8
-        for region in regions:
-            # find if the new record continues the previous one
-            if (
-                region[0] > 0
-                and region[0] == (old_region[0] + old_region[1])
-                and region[1] > 0
-                and region[2] == old_region[2]
-                and region[4] == (old_region[4] + old_region[1])
-            ):
-                old_region[1] += region[1]
-            else:  # not a continuation.
-                if old_region[0] > 0:
-                    region_collapsed.append(old_region)
-                old_region = region
-        # append last incomplete region if it exists
-        if old_region[0] > 0:
-            region_collapsed.append(old_region)
-        return region_collapsed
 
     @property
     @check_communicating
@@ -2936,11 +2896,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def channeliser_truncation(self: TileComponentManager) -> Optional[list[int]]:
         """
-        Read the cached value for the channeliser truncation.
+        Read the value for the channeliser truncation.
 
-        :return: cached value for the channeliser truncation
+        :return: value for the channeliser truncation
         """
-        return list(self._channeliser_truncation)
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_channeliser_truncation()
 
     @channeliser_truncation.setter
     def channeliser_truncation(
@@ -2986,17 +2951,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
             if acquired:
-                for chan in range(32):
-                    try:
-                        self.tile.set_channeliser_truncation(trunc, chan)
-                        self._update_attribute_callback(
-                            channeliser_rounding=list(trunc)
-                        )
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(
-                            f"TileComponentManager: Tile access failed: {e}"
-                        )
+                try:
+                    self.tile.set_channeliser_truncation(trunc)
+                    self._update_attribute_callback(channeliser_rounding=list(trunc))
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(
+                        f"TileComponentManager: Tile access failed: {e}"
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
@@ -3314,7 +3276,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._initial_pps_delay = self.tile.get_pps_delay()
             return self.tile.get_pps_delay() - self._initial_pps_delay
 
-    def set_preadu_levels(self: TileComponentManager, levels: list[float]) -> None:
+    def set_preadu_levels(self: TileComponentManager, levels: np.ndarray) -> None:
         """
         Set preadu levels in dB.
 
@@ -3340,8 +3302,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._update_attribute_callback(preadu_levels=_preadu_levels)
 
-        if _preadu_levels != levels:
-            raise HardwareVerificationError(expected=levels, actual=_preadu_levels)
+        # create a 32-element mask based on preadu presence
+        preadu_mask = np.repeat(self._preadu_present * 2, 8)
+
+        # multiply by the levels
+        expected_readback = preadu_mask * levels
+
+        # Hardware has a precision of 0.25. Hence we only raise a verification
+        # error when outside this range.
+        if not np.allclose(np.array(_preadu_levels), expected_readback, atol=0.25):
+            raise HardwareVerificationError(
+                expected=expected_readback, actual=_preadu_levels
+            )
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """

@@ -560,7 +560,7 @@ class TestStationTileIntegration:
         )
 
         # Initialise values in the backend TileSimulator and forces update
-        tile_simulator.set_preadu_levels([0.0] * 32)
+        tile_simulator.set_preadu_levels(np.array([0.0] * 32))
 
         request_provider = tile_component_manager._request_provider
         assert request_provider is not None
@@ -576,14 +576,19 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
         # Set the value in the backend TileSimulator.
-        initial_preadu_levels = [12.0] * 32
-        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
+        initial_preadu_levels = np.array([12.0] * 32)
+        assert not np.array_equal(
+            sps_station_device.preaduLevels, initial_preadu_levels
+        )
         tile_simulator.set_preadu_levels(initial_preadu_levels)
 
         change_event_callbacks["tile_preadu_levels"].assert_change_event(
-            initial_preadu_levels, lookahead=2, consume_nonmatches=True
+            initial_preadu_levels.tolist(), lookahead=2, consume_nonmatches=True
         )
-        assert sps_station_device.preaduLevels.tolist() == initial_preadu_levels
+        # SpsStation has no event for this. This can take time to respond to the
+        # Pushed change event, therefore we sleep.
+        time.sleep(0.1)
+        assert np.array_equal(sps_station_device.preaduLevels, initial_preadu_levels)
 
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,
         # Finally check `SpsStation` attribute value.

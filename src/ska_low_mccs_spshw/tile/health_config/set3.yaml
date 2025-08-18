@@ -413,6 +413,9 @@ tpm_monitoring_points:
       discarded_or_flagged_packet_count:
         FPGA0: 0
         FPGA1: 0
+    max_broadband_rfi: 
+      min: 0 
+      max: 65535
   derived:
     pps_drift:
       soft: 4

@@ -608,8 +608,6 @@ class SubrackDriver(
         self._tick += 1
 
         poll_request = HttpPollRequest()
-        if self._tick > self._max_tick:
-            self.get_health_status()
 
         with self._write_lock:
             if self._board_is_busy:
@@ -654,6 +652,12 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
+            )
+
+            self._commands_to_execute["get_health_status"] = (
+                "get_health_status",
+                "",
+                None,
             )
             self._tick = 0
         return poll_request

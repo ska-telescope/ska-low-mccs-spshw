@@ -21,6 +21,7 @@ from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
+    FastCommand,
     JsonValidator,
     ResultCode,
     SubmittedSlowCommand,
@@ -444,6 +445,17 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """Initialise the command handlers for this device."""
         super().init_command_objects()
 
+        for command_name, command_object in [
+            ("UpdateHealthAttributes", self.UpdateHealthAttributesCommand),
+        ]:
+            self.register_command_object(
+                command_name, command_object(self.component_manager, self.logger)
+            )
+
+        #
+        # Long running commands
+        #
+
         for command_name, method_name in [
             ("PowerOnTpm", "turn_on_tpm"),
             ("PowerOffTpm", "turn_off_tpm"),
@@ -494,6 +506,71 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # ----------
     # Commands
     # ----------
+
+    class UpdateHealthAttributesCommand(FastCommand):
+        """Class for handling the UpdateHealthAttributes command."""
+
+        def __init__(
+            self: MccsSubrack.UpdateHealthAttributesCommand,
+            component_manager: SubrackComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new UpdateHealthAttributesCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "UpdateHealthAttributes command completed OK"
+
+        def do(  # type: ignore[override]
+            self: MccsSubrack.UpdateHealthAttributesCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsSubrack.UpdateHealthAttributes` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.get_health_status()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def UpdateHealthAttributes(
+        self: MccsSubrack,
+    ) -> tuple[ResultCode, str]:
+        """
+        Request the subrack driver to poll the health status attributes.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :raises:
+
+        :example:
+
+        >>>
+        """
+        handler = self.get_command_object("UpdateHealthAttributes")
+        (return_code, message) = handler()
+        return (return_code, message)
+
+    # ----------------------
+    # Long running commands
+    # ----------------------
+
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
     def PowerOnTpm(  # pylint: disable=invalid-name
         self: MccsSubrack, argin: int

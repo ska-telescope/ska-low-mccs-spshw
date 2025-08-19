@@ -9,7 +9,7 @@
 from typing import Any
 
 import pytest
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -268,6 +268,9 @@ def test_get_health_status(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
+
+    status, message = subrack_driver.get_health_status()
+    assert status == TaskStatus.QUEUED
 
     assert health_status == subrack_driver.read_health_status()
 

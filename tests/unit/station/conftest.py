@@ -40,12 +40,46 @@ def mock_subrack_device_proxy_fixture() -> unittest.mock.Mock:
     return builder()
 
 
+@pytest.fixture(name="tile_initial_beamformer_table")
+def tile_initial_beamformer_table_fixture() -> list[int]:
+    """
+    Return an example initial beamformer table for a tile.
+
+    :returns: an example initial beamformer table for a tile.
+    """
+    return [128, 1, 1, 1, 1, 1, 101, 64, 2, 2, 2, 2, 2, 102]
+
+
+@pytest.fixture(name="tile_initial_beamformer_regions")
+def tile_initial_beamformer_regions_fixture(
+    tile_initial_beamformer_table: list[int],
+) -> list[int]:
+    """
+    Return an example initial beamformer regions for a tile.
+
+    :param tile_initial_beamformer_table: an initial beamformer table for a tile.
+
+    :returns: an example initial beamformer regions for a tile.
+    """
+    regions = []
+    for i in range(0, len(tile_initial_beamformer_table), 7):
+        chunk = tile_initial_beamformer_table[i : i + 7]
+        regions.extend((list([chunk[0], 8]) + list(chunk[1:7])))
+    return regions
+
+
 @pytest.fixture(name="mock_tile_builder")
-def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
+def mock_tile_builder_fixture(
+    tile_id: int,
+    tile_initial_beamformer_table: list[int],
+    tile_initial_beamformer_regions: list[int],
+) -> MockDeviceBuilder:
     """
     Fixture that provides a builder for a mock MccsTile device.
 
     :param tile_id: ID of the tile under test.
+    :param tile_initial_beamformer_table: an initial beamformer table for a tile.
+    :param tile_initial_beamformer_regions: an initial beamformer regions for a tile.
 
     :return: a mock MccsSubrack device builder.
     """
@@ -61,6 +95,8 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.add_attribute("ppsDelay", 0)
     builder.add_attribute("cspRounding", np.array([2] * 384))
     builder.add_attribute("pendingDataRequests", False)
+    builder.add_attribute("beamformerTable", tile_initial_beamformer_table)
+    builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))

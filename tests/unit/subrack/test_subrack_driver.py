@@ -248,6 +248,30 @@ def test_tpm_power_commands(
     callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
 
+def test_get_health_status(
+    subrack_driver: SubrackDriver,
+    health_status: dict[str, Any],
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test that the subrack driver pushes a full set of attribute values.
+
+    :param subrack_driver: the subrack driver under test
+    :param health_status: the values
+    :param callbacks: dictionary of driver callbacks.
+    """
+    callbacks["communication_status"].assert_not_called()
+    callbacks["component_state"].assert_not_called()
+
+    subrack_driver.start_communicating()
+
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    callbacks["communication_status"].assert_not_called()
+
+    assert health_status == subrack_driver.read_health_status()
+
+
 def test_other_commands(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,

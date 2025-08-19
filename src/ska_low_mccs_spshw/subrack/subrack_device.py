@@ -1477,8 +1477,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
 
-        self.component_manager.get_health_status()
-
         health_status: dict[str, dict] = self.component_manager.read_health_status()
 
         if health_status is not None:

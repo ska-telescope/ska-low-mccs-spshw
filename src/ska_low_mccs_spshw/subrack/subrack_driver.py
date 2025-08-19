@@ -608,6 +608,8 @@ class SubrackDriver(
         self._tick += 1
 
         poll_request = HttpPollRequest()
+        if self._tick > self._max_tick:
+            self.get_health_status()
 
         with self._write_lock:
             if self._board_is_busy:

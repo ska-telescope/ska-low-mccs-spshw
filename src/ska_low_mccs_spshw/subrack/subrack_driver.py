@@ -75,7 +75,7 @@ class SubrackDriver(
             However, if the `update_rate` is 5.0, then routine reads of
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
-        :param hs_update_rate: similar to update_rate but for health
+        :param command_update_rate: similar to update_rate but for health
             state values. Health State is polled as a command and it is
             helpful to be able to vary the polling rate independently.
         :param _subrack_client: an optional subrack client to use.

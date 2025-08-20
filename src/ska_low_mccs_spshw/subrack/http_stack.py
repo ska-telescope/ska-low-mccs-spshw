@@ -53,6 +53,15 @@ class HttpPollRequest:
         """
         self._setattributes.append((name, value))
 
+    def add_commands(self: HttpPollRequest, *commands: tuple[str, Any]) -> None:
+        """
+        Add a set of commands to be executed as part of this request.
+
+        :param commands: names and arguments of the commands to be added to the request
+        """
+        for name, args in commands:
+            self._commands.append((name, args))
+
     def add_command(self: HttpPollRequest, name: str, *args: Any) -> None:
         """
         Add a command to be executed as part of this request.

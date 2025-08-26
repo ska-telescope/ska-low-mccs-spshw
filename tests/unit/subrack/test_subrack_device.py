@@ -70,7 +70,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
-        timeout=10.0,
+        timeout=5.0,
         assert_no_error=False,
     )
 

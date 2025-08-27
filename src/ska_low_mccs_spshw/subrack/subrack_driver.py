@@ -51,7 +51,7 @@ class SubrackDriver(
         communication_state_callback: Callable,
         component_state_callback: Callable,
         update_rate: float = 5.0,
-        command_update_rate: float = 15.0,
+        command_update_rate: float = 5.0,
         _subrack_client: Any = None,
     ) -> None:
         """

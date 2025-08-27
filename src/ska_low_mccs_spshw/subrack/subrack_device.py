@@ -549,6 +549,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("PowerPduPortOff", "power_pdu_port_off"),
             ("ScheduleOn", "schedule_on"),
             ("ScheduleOff", "schedule_off"),
+            ("UpdateHealthAttributes", "get_health_status"),
         ]:
             self.register_command_object(
                 command_name,
@@ -591,65 +592,65 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # Commands
     # ----------
 
-    class UpdateHealthAttributesCommand(FastCommand):
-        """Class for handling the UpdateHealthAttributes command."""
+    # class UpdateHealthAttributesCommand(FastCommand):
+    #     """Class for handling the UpdateHealthAttributes command."""
 
-        def __init__(
-            self: MccsSubrack.UpdateHealthAttributesCommand,
-            component_manager: SubrackComponentManager,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new UpdateHealthAttributesCommand instance.
+    #     def __init__(
+    #         self: MccsSubrack.UpdateHealthAttributesCommand,
+    #         component_manager: SubrackComponentManager,
+    #         logger: logging.Logger,
+    #     ) -> None:
+    #         """
+    #         Initialise a new UpdateHealthAttributesCommand instance.
 
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
+    #         :param component_manager: the device to which this command belongs.
+    #         :param logger: the logger to be used by this Command. If not
+    #             provided, then a default module logger will be used.
+    #         """
+    #         self._component_manager = component_manager
+    #         super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "UpdateHealthAttributes command completed OK"
+    #     SUCCEEDED_MESSAGE = "UpdateHealthAttributes command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsSubrack.UpdateHealthAttributesCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsSubrack.UpdateHealthAttributes` command.
+    #     def do(  # type: ignore[override]
+    #         self: MccsSubrack.UpdateHealthAttributesCommand,
+    #         *args: Any,
+    #         **kwargs: Any,
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Implement :py:meth:`.MccsSubrack.UpdateHealthAttributes` command.
 
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+    #         :param args: unspecified positional arguments. This should be empty and is
+    #             provided for type hinting only
+    #         :param kwargs: unspecified keyword arguments. This should be empty and is
+    #             provided for type hinting only
 
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.get_health_status()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         self._component_manager.get_health_status()
+    #         return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-    @command(dtype_out="DevVarLongStringArray")
-    def UpdateHealthAttributes(
-        self: MccsSubrack,
-    ) -> tuple[ResultCode, str]:
-        """
-        Request the subrack driver to poll the health status attributes.
+    # @command(dtype_out="DevVarLongStringArray")
+    # def UpdateHealthAttributes(
+    #     self: MccsSubrack,
+    # ) -> tuple[ResultCode, str]:
+    #     """
+    #     Request the subrack driver to poll the health status attributes.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :raises:
+    #     :return: A tuple containing a return code and a string
+    #         message indicating status. The message is for
+    #         information purpose only.
+    #     :raises:
 
-        :example:
+    #     :example:
 
-        >>>
-        """
-        handler = self.get_command_object("UpdateHealthAttributes")
-        (return_code, message) = handler()
-        return (return_code, message)
+    #     >>>
+    #     """
+    #     handler = self.get_command_object("UpdateHealthAttributes")
+    #     (return_code, message) = handler()
+    #     return (return_code, message)
 
     # ----------------------
     # Long running commands
@@ -837,6 +838,21 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         handler = self.get_command_object("PowerPduPortOff")
         result_code, message = handler(argin)
+        return ([result_code], [message])
+
+    @command(dtype_out="DevVarLongStringArray")
+    def UpdateHealthAttributes(  # pylint: disable=invalid-name
+        self: MccsSubrack,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Request the subrack driver to poll the health status attributes.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes
+            only.
+        """
+        handler = self.get_command_object("UpdateHealthAttributes")
+        result_code, message = handler()
         return ([result_code], [message])
 
     # ----------

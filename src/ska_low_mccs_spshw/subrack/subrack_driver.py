@@ -637,14 +637,10 @@ class SubrackDriver(
                 poll_request.add_setattribute(name, value)
             self._attributes_to_write.clear()
 
-        if self._command_poll_tick > self._command_max_tick:
-            # with self._write_lock:
-            self._commands_to_execute["get_health_status"] = (
-                "get_health_status",
-                "",
-                None,
-            )
-            self._command_poll_tick = 0
+        # if self._command_poll_tick > self._command_max_tick:
+        #     # with self._write_lock:
+
+        #     self._command_poll_tick = 0
 
         if self._tick > self._max_tick:
             poll_request.add_getattributes(
@@ -667,6 +663,11 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
+            )
+            self._commands_to_execute["get_health_status"] = (
+                "get_health_status",
+                "",
+                None,
             )
             self._tick = 0
         return poll_request

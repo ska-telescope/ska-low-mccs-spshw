@@ -528,12 +528,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """Initialise the command handlers for this device."""
         super().init_command_objects()
 
-        for command_name, command_object in [
-            ("UpdateHealthAttributes", self.UpdateHealthAttributesCommand),
-        ]:
-            self.register_command_object(
-                command_name, command_object(self.component_manager, self.logger)
-            )
+        # for command_name, command_object in [
+        #     ("UpdateHealthAttributes", self.UpdateHealthAttributesCommand),
+        # ]:
+        #     self.register_command_object(
+        #         command_name, command_object(self.component_manager, self.logger)
+        #     )
 
         #
         # Long running commands

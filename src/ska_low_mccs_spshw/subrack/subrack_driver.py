@@ -51,7 +51,7 @@ class SubrackDriver(
         communication_state_callback: Callable,
         component_state_callback: Callable,
         update_rate: float = 5.0,
-        command_update_rate: float = 5.0,
+        command_update_rate: float = 15.0,
         _subrack_client: Any = None,
     ) -> None:
         """
@@ -639,8 +639,10 @@ class SubrackDriver(
 
         if self._command_poll_tick > self._command_max_tick:
             # with self._write_lock:
-            poll_request.add_commands(
-                ("get_health_status", ""),
+            self._commands_to_execute["get_health_status"] = (
+                "get_health_status",
+                "",
+                None,
             )
             self._command_poll_tick = 0
 

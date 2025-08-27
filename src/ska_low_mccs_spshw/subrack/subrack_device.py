@@ -21,7 +21,6 @@ from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
-    FastCommand,
     JsonValidator,
     ResultCode,
     SubmittedSlowCommand,

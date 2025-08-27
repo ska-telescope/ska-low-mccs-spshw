@@ -652,11 +652,6 @@ class SubrackDriver(
                 # "tpm_temperatures",
                 "tpm_voltages",
             )
-            self._commands_to_execute["get_health_status"] = (
-                "get_health_status",
-                "",
-                None,
-            )
             self._tick = 0
         return poll_request
 

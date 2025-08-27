@@ -51,7 +51,6 @@ class SubrackDriver(
         communication_state_callback: Callable,
         component_state_callback: Callable,
         update_rate: float = 5.0,
-        command_update_rate: float = 15.0,
         _subrack_client: Any = None,
     ) -> None:
         """
@@ -75,20 +74,15 @@ class SubrackDriver(
             However, if the `update_rate` is 5.0, then routine reads of
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
-        :param command_update_rate: similar to update_rate but for health
-            state values. Health State is polled as a command and it is
-            helpful to be able to vary the polling rate independently.
         :param _subrack_client: an optional subrack client to use.
         """
         self._client = _subrack_client or WebHardwareClient(host, port)
         self._poll_rate: Final = 0.1
         self._max_tick: Final = int(update_rate / self._poll_rate)
-        self._command_max_tick: Final = int(command_update_rate / self._poll_rate)
 
         # We'll count ticks upwards, but start at the maximum so that
         # our initial update request occurs as soon as possible.
         self._tick = self._max_tick
-        self._command_poll_tick = self._command_max_tick
         # Whether the board is busy running a command. Let's be
         # extremely conservative here and assume that it is until we
         # know that it isn't.
@@ -611,7 +605,6 @@ class SubrackDriver(
             poll.
         """
         self._tick += 1
-        self._command_poll_tick += 1
 
         poll_request = HttpPollRequest()
 
@@ -636,11 +629,6 @@ class SubrackDriver(
                 self.logger.debug(f"Adding write request setop: {name}={value}.")
                 poll_request.add_setattribute(name, value)
             self._attributes_to_write.clear()
-
-        # if self._command_poll_tick > self._command_max_tick:
-        #     # with self._write_lock:
-
-        #     self._command_poll_tick = 0
 
         if self._tick > self._max_tick:
             poll_request.add_getattributes(
@@ -854,7 +842,6 @@ class SubrackDriver(
                 # This means that an attribute  poll is likely overdue and anyway
                 # useful, as the hardware status could have been changed. Force it
                 self._tick = self._max_tick + 1
-                self._command_poll_tick = self._command_max_tick + 1
             self._board_is_busy = False
             if self._active_callback is not None:
                 self.logger.debug("Command completed")
@@ -881,7 +868,6 @@ class SubrackDriver(
         # Set to max here so that if/when polling restarts, an update is
         # requested as soon as possible.
         self._tick = self._max_tick
-        self._command_poll_tick = self._command_max_tick
 
         # Clear all hardware state.
         self.__clear_hardware_state()

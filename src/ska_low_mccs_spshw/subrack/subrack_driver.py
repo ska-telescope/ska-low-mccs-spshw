@@ -76,7 +76,7 @@ class SubrackDriver(
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
         :param command_update_rate: similar to update_rate but for polled
-            commands. 
+            commands.
         :param _subrack_client: an optional subrack client to use.
         """
         self._client = _subrack_client or WebHardwareClient(host, port)
@@ -659,7 +659,7 @@ class SubrackDriver(
                 "tpm_voltages",
             )
             self._tick = 0
-        
+
         if self._command_tick > self._command_max_tick:
             for command, args in [
                 ("get_health_status", ""),

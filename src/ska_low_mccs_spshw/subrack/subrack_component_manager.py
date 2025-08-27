@@ -498,6 +498,20 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             SubrackDriver, self._hardware_component_manager
         ).read_health_status()
 
+    def change_command_polling(
+        self: SubrackComponentManager, command_polling_on: bool
+    ) -> tuple[TaskStatus, str]:
+        """
+        Change weather or not subrack polls health_status.
+
+        :param command_polling_on: desired state of command polling
+
+        :return: the task status and a human-readable status message
+        """
+        return cast(
+            SubrackDriver, self._hardware_component_manager
+        ).change_command_polling(command_polling_on)
+
     @check_communicating
     def pdu_health_state(
         self: SubrackComponentManager,

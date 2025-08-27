@@ -263,6 +263,7 @@ def test_get_health_status(
     callbacks["communication_status"].assert_not_called()
     callbacks["component_state"].assert_not_called()
 
+    subrack_driver.change_command_polling(True)
     subrack_driver.start_communicating()
 
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)

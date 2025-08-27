@@ -21,6 +21,7 @@ from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
+    FastCommand,
     JsonValidator,
     ResultCode,
     SubmittedSlowCommand,
@@ -308,16 +309,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_voltages": "tpmVoltages",
     }
 
-    # plls, temperatures, and pings are easier to define than derive
+    # Used for mapping tango attributes to the corresponding value in the
+    # health_status dictionary that is polled from the subrack.
     _HEALTH_STATUS_MAP = {
-        # "board1Temperature": ["temperatures", "SMM1"],
-        # "board2Temperature": ["temperatures", "SMM2"],
-        # "backplane1Temperature": ["temperatures", "BKPLN1"],
-        # "backplane2Temperature": ["temperatures", "BKPLN2"],
-        # "boardPllLocked": ["plls", "BoardPllLock"],
-        # "cpldPllLocked": ["plls", "CPLDPllLock"],
-        # "pllSource": ["plls", "PllSource"],
-        # "cpldPings": ["pings", "pings_CPLD"],
         "internalVoltagesPOWERIN": ["internal_voltages", "V_POWERIN"],
         "internalVoltagesSOC": ["internal_voltages", "V_SOC"],
         "internalVoltagesARM": ["internal_voltages", "V_ARM"],
@@ -331,69 +325,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltages3V": ["internal_voltages", "V_3V"],
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
     }
-
-    # _translate_dict = {
-    #     "psus": {
-    #         "name": "powerSupply",
-    #         "measurements": {
-    #             "present": "Presence",
-    #             "busy": "Busy",
-    #             "off": "PowerState",
-    #             # "vout_ov_fault": "",
-    #             # "iout_oc_fault": "",
-    #             # "vin_uv_fault": "",
-    #             # "temp_fault": "",
-    #             # "cml_fault": "",
-    #             # "vout_fault": "",
-    #             # "iout_fault": "",
-    #             # "input_fault": "",
-    #             # "pwr_gd": "PwrGd",
-    #             "fan_fault": "FanState",
-    #             # "other": "OtherEvent",
-    #             # "unknown": "UnknownEvent",
-    #             "voltage_out": "OutputVoltage",
-    #             "power_out": "OutputPower",
-    #             "voltage_in": "InputVoltage",
-    #             "power_in": "InputPower",
-    #             "fan_speed": "FanSpeed",
-    #             "temp_inlet": "InletTemperature",
-    #             "temp_fet": "FetTemperature",
-    #         },
-    #         "range": range(1, 3),
-    #     },
-    #     "slots": {
-    #         "name": "tpm",
-    #         "measurements": {
-    #             "presence": "Presence",
-    #             "on": "PowerState",
-    #             "voltages": "Voltage",
-    #             "powers": "Power",
-    #             "pings": "Pings",
-    #         },
-    #         "range": range(1, 9),
-    #     },
-    #     "fans": {
-    #         "name": "subrackFan",
-    #         "measurements": {
-    #             "speed": "Speed",
-    #             "pwm_duty": "SpeedsPercent",
-    #             "mode": "Mode",
-    #         },
-    #         "range": range(1, 5),
-    #     }
-    # }
-
-    # for category, details in _translate_dict.items():
-    #     measurements = details["measurements"]
-    #     device_range = details["range"]
-    #     dev_name = details["name"]
-    #     for path, measurement in measurements.items():
-    #         for i in device_range:
-    #             # attr name is device name + index + measurement name
-    #             attr_name = dev_name + str(i) + measurement
-    #             # Remove trailing s + capitalize + number
-    #             device = f"{category[:-1].upper()}{i}"
-    #             _HEALTH_STATUS_MAP[attr_name] = [category, path, device]
 
     # --------------
     # Initialization
@@ -527,14 +458,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     def init_command_objects(self: MccsSubrack) -> None:
         """Initialise the command handlers for this device."""
         super().init_command_objects()
-
-        # for command_name, command_object in [
-        #     ("UpdateHealthAttributes", self.UpdateHealthAttributesCommand),
-        # ]:
-        #     self.register_command_object(
-        #         command_name, command_object(self.component_manager, self.logger)
-        #     )
-
+        for command_name, command_object in [
+            ("ChangeHealthStatusPolling", self.ChangeHealthStatusPollingCommand),
+        ]:
+            self.register_command_object(
+                command_name, command_object(self.component_manager, self.logger)
+            )
         #
         # Long running commands
         #
@@ -591,65 +520,63 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # Commands
     # ----------
 
-    # class UpdateHealthAttributesCommand(FastCommand):
-    #     """Class for handling the UpdateHealthAttributes command."""
+    class ChangeHealthStatusPollingCommand(FastCommand):
+        """Class for handling the ChangeHealthStatusPolling command."""
 
-    #     def __init__(
-    #         self: MccsSubrack.UpdateHealthAttributesCommand,
-    #         component_manager: SubrackComponentManager,
-    #         logger: logging.Logger,
-    #     ) -> None:
-    #         """
-    #         Initialise a new UpdateHealthAttributesCommand instance.
+        def __init__(
+            self: MccsSubrack.ChangeHealthStatusPollingCommand,
+            component_manager: SubrackComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new ChangeHealthStatusPollingCommand instance.
 
-    #         :param component_manager: the device to which this command belongs.
-    #         :param logger: the logger to be used by this Command. If not
-    #             provided, then a default module logger will be used.
-    #         """
-    #         self._component_manager = component_manager
-    #         super().__init__(logger)
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
 
-    #     SUCCEEDED_MESSAGE = "UpdateHealthAttributes command completed OK"
+        SUCCEEDED_MESSAGE = "ChangeHealthStatusPolling command completed OK"
 
-    #     def do(  # type: ignore[override]
-    #         self: MccsSubrack.UpdateHealthAttributesCommand,
-    #         *args: Any,
-    #         **kwargs: Any,
-    #     ) -> tuple[ResultCode, str]:
-    #         """
-    #         Implement :py:meth:`.MccsSubrack.UpdateHealthAttributes` command.
+        def do(  # type: ignore[override]
+            self: MccsSubrack.ChangeHealthStatusPollingCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsSubrack.ChangeHealthStatusPolling` command.
 
-    #         :param args: unspecified positional arguments. This should be empty and is
-    #             provided for type hinting only
-    #         :param kwargs: unspecified keyword arguments. This should be empty and is
-    #             provided for type hinting only
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
-    #         :return: A tuple containing a return code and a string
-    #             message indicating status. The message is for
-    #             information purpose only.
-    #         """
-    #         self._component_manager.get_health_status()
-    #         return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            task_status, message = self._component_manager.change_command_polling(*args)
+            return (ResultCode.OK, message)
 
-    # @command(dtype_out="DevVarLongStringArray")
-    # def UpdateHealthAttributes(
-    #     self: MccsSubrack,
-    # ) -> tuple[ResultCode, str]:
-    #     """
-    #     Request the subrack driver to poll the health status attributes.
+    @command(dtype_out="DevVarLongStringArray")
+    def ChangeHealthStatusPolling(
+        self: MccsSubrack,
+        argin: bool,
+    ) -> tuple[ResultCode, str]:
+        """
+        Change weather or not subrack polls health_status.
 
-    #     :return: A tuple containing a return code and a string
-    #         message indicating status. The message is for
-    #         information purpose only.
-    #     :raises:
+        :param argin: a bool stating weather to poll or not health status
 
-    #     :example:
-
-    #     >>>
-    #     """
-    #     handler = self.get_command_object("UpdateHealthAttributes")
-    #     (return_code, message) = handler()
-    #     return (return_code, message)
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("ChangeHealthStatusPolling")
+        (return_code, message) = handler(argin)
+        return (return_code, message)
 
     # ----------------------
     # Long running commands

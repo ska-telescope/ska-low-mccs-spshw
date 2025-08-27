@@ -87,7 +87,10 @@ class SubrackDriver(
         # We'll count ticks upwards, but start at the maximum so that
         # our initial update request occurs as soon as possible.
         self._tick = self._max_tick
+
+        # Polling commands works like attributes, but with an additional switch
         self._command_tick = self._command_max_tick
+        self._poll_commands = False
         # Whether the board is busy running a command. Let's be
         # extremely conservative here and assume that it is until we
         # know that it isn't.
@@ -466,6 +469,23 @@ class SubrackDriver(
         """
         return self.health_status
 
+    def change_command_polling(
+        self: SubrackDriver, command_polling_on: bool
+    ) -> tuple[TaskStatus, str]:
+        """
+        Change weather or not commands are polled.
+
+        :param command_polling_on: weather or not to poll commands
+
+        :return: the task status and a human-readable status message
+        """
+        self._poll_commands = command_polling_on
+        # make sure to start reading next poll
+        self._command_tick = self._command_max_tick + 1
+        cmd_state = "on" if command_polling_on else "off"
+        message = f"Command polling in subrack driver has been turned {cmd_state}"
+        return (TaskStatus.COMPLETED, message)
+
     def set_subrack_fan_speed(
         self: SubrackDriver,
         fan_number: int,
@@ -661,10 +681,11 @@ class SubrackDriver(
             self._tick = 0
 
         if self._command_tick > self._command_max_tick:
-            for command, args in [
-                ("get_health_status", ""),
-            ]:
-                poll_request.add_command(command, *args)
+            if self._poll_commands:
+                for command, args in [
+                    ("get_health_status", ""),
+                ]:
+                    poll_request.add_command(command, *args)
             self._command_tick = 0
         return poll_request
 

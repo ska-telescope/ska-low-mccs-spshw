@@ -155,6 +155,8 @@ class _TileProxy(DeviceComponentManager):
             "staticTimeDelays": self._on_attribute_change,
             "preaduLevels": self._on_attribute_change,
             "ppsDelay": self._on_attribute_change,
+            "beamformerTable": self._on_attribute_change,
+            "beamformerRegions": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -599,8 +601,9 @@ class SpsStationComponentManager(
         self._lmc_port = self._destination_port
         self._lmc_payload_length = 8192
 
-        self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
+        self._beamformer_table = np.zeros(shape=(48, 7), dtype=int)
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
+        self._beamformer_regions = np.zeros(shape=(48, 8), dtype=int)
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
@@ -943,9 +946,43 @@ class SpsStationComponentManager(
                     self._component_state_callback(
                         ppsDelaySpread=self._pps_delay_spread
                     )
+            case "beamformertable":
+                if logical_tile_id == len(self._tile_proxies) - 1:
+                    reshaped_table = np.reshape(
+                        np.pad(attribute_value, (0, (48 * 7 - len(attribute_value)))),
+                        (48, 7),
+                    )
+                    if not np.array_equal(reshaped_table, self._beamformer_table):
+                        filtered_old = self._beamformer_table[
+                            ~np.all(self._beamformer_table == 0, axis=1)
+                        ]
+                        filtered_new = reshaped_table[
+                            ~np.all(reshaped_table == 0, axis=1)
+                        ]
+                        self.logger.warning(
+                            "Received HW readback of beamformer "
+                            "table which doesn't match local cache. "
+                            "Overwritting local cache with HW table. "
+                            f"\nNew table: \n{filtered_new} "
+                            f"\nOld table: \n{filtered_old}"
+                        )
+                    self._beamformer_table = reshaped_table
+                    if self._component_state_callback:
+                        self._component_state_callback(beamformerTable=attribute_value)
+            case "beamformerregions":
+                if logical_tile_id == len(self._tile_proxies) - 1:
+                    reshaped_table = np.reshape(
+                        np.pad(attribute_value, (0, (48 * 8 - len(attribute_value)))),
+                        (48, 8),
+                    )
+                    self._beamformer_regions = reshaped_table
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            beamformerRegions=attribute_value
+                        )
             case _:
                 self.logger.error(
-                    f"Unrecognised tile attribute changing {attribute_name}"
+                    f"Unrecognised tile attribute changing {attribute_name} "
                     "Nothing is updated."
                 )
 
@@ -2358,7 +2395,50 @@ class SpsStationComponentManager(
 
         :return: list of up to 7*48 values
         """
-        return copy.deepcopy(self._beamformer_table)
+        return copy.deepcopy(self._beamformer_table.tolist())
+
+    @property
+    def beamformer_regions(self: SpsStationComponentManager) -> list[list[int]]:
+        """
+        Get beamformer region table.
+
+        Bidimensional array of one row for each 8 channels, with elements:
+        0. start physical channel
+        1. number of channels
+        2. beam index
+        3. subarray ID
+        4. subarray_logical_channel
+        5. subarray_beam_id
+        6. substation_id
+        8. aperture_id
+
+        Each row is a set of 8 consecutive elements in the list.
+
+        :return: list of up to 8*48 values
+        """
+        return copy.deepcopy(self._beamformer_regions.tolist())
+
+    @beamformer_regions.setter
+    def beamformer_regions(
+        self: SpsStationComponentManager, regions: np.ndarray
+    ) -> None:
+        """
+        Set beamformer region table.
+
+        :param regions: bidimensional array of one row for each 8 channels,
+            with elements:
+            0. start physical channel
+            1. number of channels
+            2. beam index
+            3. subarray ID
+            4. subarray_logical_channel
+            5. subarray_beam_id
+            6. substation_id
+            7. aperture_id
+
+        Each row is a set of 8 consecutive elements in the list.
+        """
+        self._beamformer_regions = regions
 
     @property
     def forty_gb_network_address(self: SpsStationComponentManager) -> str:

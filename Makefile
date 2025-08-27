@@ -61,7 +61,6 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 
 helm-pre-build:
 	helm repo add skao https://artefact.skao.int/repository/helm-internal
-	helm repo add bitnami https://charts.bitnami.com/bitnami
 
 
 ########################################################################

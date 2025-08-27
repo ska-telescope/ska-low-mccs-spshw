@@ -259,6 +259,81 @@ class StationBeamformer:
         """
         return copy.deepcopy(self._channel_table)
 
+    def get_regions(self: StationBeamformer) -> list[list[int]]:
+        """
+        Get frequency regions.
+
+        Regions are defined in a 2-d array, for a maximum of 16 (48) regions.
+        Each element in the array defines a region, with the form
+        ``[start_ch, nof_ch, beam_index]``
+
+        - ``start_ch``:    region starting channel (currently must be a
+                       multiple of 2, LS bit discarded)
+        - ``nof_ch``:      size of the region: must be multiple of 8 chans
+        - ``beam_index``:  beam used for this region, range [0:8)
+        - ``subarray_id``: ID of the subarray [1:48]
+        - ``subarray_logical_channel``: Logical channel in the subarray
+                it is the same for all (sub)stations in the subarray
+                Defaults to station logical channel
+        - ``subarray_beam_id``: ID of the subarray beam
+                Defaults to beam index
+        -  ``substation_ID``: ID of the substation
+                Defaults to 0 (no substation)
+        -  ``aperture_id``:  ID of the aperture (station*100+substation?)
+                Defaults to antenna ID = 1,  substation ID
+
+        :return: Bidimensional array of regions
+        """
+        channel_table = self.get_channel_table()
+
+        nof_ch = []
+        chan_tab_idx = [0]
+        region_array = []
+        tmp_beam_index = channel_table[0][1]
+        reg_cnt = 0
+
+        # Find nof_ch
+        # Find beam_index transitions which depict start of new region
+        for i, row in enumerate(channel_table):
+            beam_index = row[1]
+            if tmp_beam_index != beam_index:
+                nof_ch.append(reg_cnt)
+                tmp_beam_index = beam_index
+                reg_cnt = 0
+            reg_cnt += 8
+
+        nof_ch.append(reg_cnt)
+
+        # Find the channel table indexes where start of regions are located
+        for i in range(1, len(nof_ch)):
+            region_start = sum(nof_ch[j] // 8 for j in range(i))
+            chan_tab_idx.append(region_start)
+
+        # Find region_array information from channel_table
+        for nof_ch_idx, i in enumerate(chan_tab_idx):
+            (
+                start_ch,
+                beam_index,
+                subarray_id,
+                subarray_logical_channel,
+                subarray_beam_id,
+                substation_id,
+                aperture_id,
+            ) = channel_table[i]
+            region_array.append(
+                [
+                    start_ch,
+                    nof_ch[nof_ch_idx],
+                    beam_index,
+                    subarray_id,
+                    subarray_logical_channel,
+                    subarray_beam_id,
+                    substation_id,
+                    aperture_id,
+                ]
+            )
+        return region_array
+
     def start(
         self: StationBeamformer,
         channel_groups: Optional[list[int]],
@@ -1339,6 +1414,38 @@ class TileSimulator:
         """
         assert self.tpm
         return self.tpm.station_beamf[fpga_id].get_channel_table()
+
+    @connected
+    def get_beamformer_regions(self: TileSimulator) -> list[list[int]]:
+        """
+        Get frequency regions.
+
+        Read the beamformer regions in the channelizer, with all the
+        parameters for each region.
+        Only FPGA1 tables are read because the same region_array is written to FPGA2.
+        Regions are defined in a 2-d array, for a maximum of 16 (48) regions.
+        Each element in the array defines a region, with the form
+        ``[start_ch, nof_ch, beam_index]``
+
+        - ``start_ch``:    region starting channel (currently must be a
+                       multiple of 2, LS bit discarded)
+        - ``nof_ch``:      size of the region: must be multiple of 8 chans
+        - ``beam_index``:  beam used for this region, range [0:8)
+        - ``subarray_id``: ID of the subarray [1:48]
+        - ``subarray_logical_channel``: Logical channel in the subarray
+                it is the same for all (sub)stations in the subarray
+                Defaults to station logical channel
+        - ``subarray_beam_id``: ID of the subarray beam
+                Defaults to beam index
+        -  ``substation_ID``: ID of the substation
+                Defaults to 0 (no substation)
+        -  ``aperture_id``:  ID of the aperture (station*100+substation?)
+                Defaults to antenna ID = 1,  substation ID
+
+        :return: Bidimensional array of regions
+        """
+        assert self.tpm
+        return self.tpm.station_beamf[0].get_regions()
 
     @connected
     def define_channel_table(

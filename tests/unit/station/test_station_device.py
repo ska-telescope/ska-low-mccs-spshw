@@ -1373,6 +1373,32 @@ def test_beamformerTable(
     )
 
 
+def test_beamformerRegions(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test the beamformerRegions attribute.
+
+    :param station_device: The station device to use
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    """
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    for _, tile in enumerate(mock_tile_device_proxies):
+        tile.tileProgrammingState = "Synchronised"
+    time.sleep(0.5)
+    station_device.SetBeamFormerRegions(
+        [64, 16, 1, 1, 8, 1, 1, 101, 128, 64, 1, 1, 72, 1, 1, 102]
+    )
+    assert np.all(
+        station_device.beamformerRegions[0:16]
+        == np.array([64, 16, 1, 1, 8, 1, 1, 101, 128, 64, 1, 1, 72, 1, 1, 102])
+    ), station_device.beamformerRegions
+
+
 @pytest.mark.parametrize(
     [
         "attribute_name",

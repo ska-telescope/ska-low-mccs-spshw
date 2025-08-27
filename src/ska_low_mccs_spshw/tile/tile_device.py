@@ -308,6 +308,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "beamformer_running": "isBeamformerRunning",
             "is_programmed": "isProgrammed",
             "beamformer_table": "beamformerTable",
+            "beamformer_regions": "beamformerRegions",
             "io": "io",
             "dsp": "dsp",
             "voltages": "voltages",
@@ -443,6 +444,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_beamformer_flagged_count": _serialise_object,
             "adcs": _serialise_object,
             "beamformerTable": _flatten_list,
+            "beamformerRegions": _flatten_list,
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -2796,6 +2798,27 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: list of up to 7*48 values
         """
         return self._attribute_state["beamformerTable"].read()
+
+    @attribute(dtype=("DevLong",), max_dim_x=384, abs_change=1)
+    def beamformerRegions(self: MccsTile) -> list[int] | None:
+        """
+        Get beamformer region table.
+
+        Bidimensional array of one row for each 8 channels, with elements:
+        0. start physical channel
+        1. number of channels
+        2. beam index
+        3. subarray ID
+        4. subarray_logical_channel
+        5. subarray_beam_id
+        6. substation_id
+        8. aperture_id
+
+        Each row is a set of 8 consecutive elements in the list.
+
+        :return: list of up to 8*48 values
+        """
+        return self._attribute_state["beamformerRegions"].read()
 
     @attribute(
         dtype="DevString",

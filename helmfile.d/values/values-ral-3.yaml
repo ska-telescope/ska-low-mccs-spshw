@@ -35,7 +35,31 @@ helm_values:
       SpsStation:
         low-mccs/spsstation/stfc-ral-3:
           ParentTRL: ""
-  
+      MccsTile:
+        low-mccs/tile/stfc-ral-3-tpm17:
+          BiosVersion: 0.6.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm18:
+          BiosVersion: 0.6.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm19:
+          BiosVersion: 0.6.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm20:
+          BiosVersion: 0.6.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm21:
+          BiosVersion: 0.5.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm22:
+          BiosVersion: 0.5.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm23:
+          BiosVersion: 0.5.0
+          PreAduFitted: [true, true]
+        low-mccs/tile/stfc-ral-3-tpm24:
+          BiosVersion: 0.5.0
+          PreAduFitted: [true, true]
     # deviceServerTypes:
     #   spshw:
     #     image:

@@ -808,3 +808,61 @@ def test_pps_delay_spread(
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
     assert station_component_manager._pps_delay_spread == 12
+
+
+def test_beamformer_table(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    mock_tile_proxy: MccsDeviceProxy,
+    tile_initial_beamformer_table: list[int],
+    tile_initial_beamformer_regions: list[int],
+) -> None:
+    """
+    Test the method to run commands async.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param mock_tile_proxy: mock tile which the component manager has been given.
+    :param tile_initial_beamformer_table: an initial beamformer table for a tile.
+    :param tile_initial_beamformer_regions: an initial beamformer regions for a tile.
+    """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # Component manager stores these in np.ndarrays of dims (48, 7 or 8)
+    # Should we be converting the tango atttribute to do the same?
+    expected_initial_beamformer_regions = np.reshape(
+        np.pad(
+            tile_initial_beamformer_regions,
+            (0, (48 * 8 - len(tile_initial_beamformer_regions))),
+        ),
+        (48, 8),
+    )
+    expected_initial_beamformer_table = np.reshape(
+        np.pad(
+            tile_initial_beamformer_table,
+            (0, (48 * 7 - len(tile_initial_beamformer_table))),
+        ),
+        (48, 7),
+    )
+
+    # Component state callback is getting called by many many sources.
+    callbacks["component_state"].assert_call(
+        beamformerTable=tile_initial_beamformer_table,
+        lookahead=25,
+        consume_nonmatches=True,
+    )
+    callbacks["component_state"].assert_call(
+        beamformerRegions=tile_initial_beamformer_regions,
+        lookahead=10,
+    )
+    np.testing.assert_array_equal(
+        station_component_manager._beamformer_regions,
+        expected_initial_beamformer_regions,
+    )
+    np.testing.assert_array_equal(
+        station_component_manager._beamformer_table,
+        expected_initial_beamformer_table,
+    )

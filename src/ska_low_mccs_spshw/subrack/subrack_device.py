@@ -21,7 +21,6 @@ from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
-    FastCommand,
     JsonValidator,
     ResultCode,
     SubmittedSlowCommand,
@@ -458,12 +457,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     def init_command_objects(self: MccsSubrack) -> None:
         """Initialise the command handlers for this device."""
         super().init_command_objects()
-        for command_name, command_object in [
-            ("ChangeHealthStatusPolling", self.ChangeHealthStatusPollingCommand),
-        ]:
-            self.register_command_object(
-                command_name, command_object(self.component_manager, self.logger)
-            )
+
         #
         # Long running commands
         #
@@ -478,6 +472,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("ScheduleOn", "schedule_on"),
             ("ScheduleOff", "schedule_off"),
             ("UpdateHealthAttributes", "get_health_status"),
+            ("ChangeHealthStatusPolling", "change_command_polling"),
         ]:
             self.register_command_object(
                 command_name,
@@ -519,64 +514,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # ----------
     # Commands
     # ----------
-
-    class ChangeHealthStatusPollingCommand(FastCommand):
-        """Class for handling the ChangeHealthStatusPolling command."""
-
-        def __init__(
-            self: MccsSubrack.ChangeHealthStatusPollingCommand,
-            component_manager: SubrackComponentManager,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new ChangeHealthStatusPollingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "ChangeHealthStatusPolling command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.ChangeHealthStatusPollingCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsSubrack.ChangeHealthStatusPolling` command.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            task_status, message = self._component_manager.change_command_polling(*args)
-            return (ResultCode.OK, message)
-
-    @command(dtype_out="DevVarLongStringArray")
-    def ChangeHealthStatusPolling(
-        self: MccsSubrack,
-        argin: bool,
-    ) -> tuple[ResultCode, str]:
-        """
-        Change weather or not subrack polls health_status.
-
-        :param argin: a bool stating weather to poll or not health status
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("ChangeHealthStatusPolling")
-        (return_code, message) = handler(argin)
-        return (return_code, message)
 
     # ----------------------
     # Long running commands
@@ -779,6 +716,24 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         handler = self.get_command_object("UpdateHealthAttributes")
         result_code, message = handler()
+        return ([result_code], [message])
+
+    @command(dtype_in="DevBoolean", dtype_out="DevVarLongStringArray")
+    def ChangeHealthStatusPolling(
+        self: MccsSubrack,
+        argin: bool,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Change weather or not subrack polls health_status.
+
+        :param argin: a bool stating weather to poll or not health status
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("ChangeHealthStatusPolling")
+        (result_code, message) = handler(argin)
         return ([result_code], [message])
 
     # ----------

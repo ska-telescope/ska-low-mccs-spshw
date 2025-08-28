@@ -1460,7 +1460,7 @@ def test_beamformerTable(
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
     station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
-    for _, tile in enumerate(mock_tile_device_proxies, start=1):
+    for _, tile in enumerate(mock_tile_device_proxies):
         tile.SetBeamformerRegions.assert_last_call(
             [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102]
         )
@@ -1471,7 +1471,7 @@ def test_beamformerTable(
     station_device.MockBeamformerTableChange(
         json.dumps(
             {
-                "tile_id": len(mock_tile_device_proxies),
+                "tile_id": len(mock_tile_device_proxies) - 1,
                 "value": [4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102]
                 + [0] * 46 * 7,
             }

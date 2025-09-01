@@ -90,6 +90,7 @@ class SubrackDriver(
 
         # Polling commands works like attributes, but with an additional switch
         self._command_tick = self._command_max_tick
+        self._checked_bios = False
         self._poll_commands = False
         # Whether the board is busy running a command. Let's be
         # extremely conservative here and assume that it is until we
@@ -132,6 +133,7 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
+            api_version=None,
         )
 
         self.logger.info(
@@ -469,22 +471,6 @@ class SubrackDriver(
         """
         return self.health_status
 
-    def change_command_polling(
-        self: SubrackDriver, command_polling_on: bool
-    ) -> tuple[TaskStatus, str]:
-        """
-        Change weather or not commands are polled.
-
-        :param command_polling_on: weather or not to poll commands
-
-        :return: the task status and a human-readable status message
-        """
-        self._poll_commands = command_polling_on
-        # make sure to start reading next poll
-        self._command_tick = self._command_max_tick + 1
-        cmd_state = "on" if command_polling_on else "off"
-        message = f"Command polling in subrack driver has been turned {cmd_state}"
-        return (TaskStatus.COMPLETED, message)
 
     def set_subrack_fan_speed(
         self: SubrackDriver,
@@ -622,6 +608,23 @@ class SubrackDriver(
         with self._write_lock:
             self._attributes_to_write.update(kwargs)
 
+    def _check_api_version(self: SubrackDriver) -> bool:
+        """
+        Check that the api version is new enough to poll health_status.
+
+        :return: True if bios api is newer than 1.6.0
+        """
+        if self._checked_bios:
+            # Bypass the check if we know the answer
+            return self._poll_commands
+        api_v_string: str = self._component_state["api_version"]
+        if api_v_string:
+            major, minor, patch = api_v_string[1:].split(".")
+            self._checked_bios = True
+            if int(major) >= 1 and int(minor) >= 6:
+                self._poll_commands = True
+        return self._poll_commands
+
     def get_request(self: SubrackDriver) -> HttpPollRequest:
         """
         Return the reads, writes and commands to be executed in the next poll.
@@ -677,11 +680,12 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
+                "api_version",
             )
             self._tick = 0
 
         if self._command_tick > self._command_max_tick:
-            if self._poll_commands:
+            if self._check_api_version():
                 for command, args in [
                     ("get_health_status", ""),
                 ]:
@@ -933,6 +937,7 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
+            api_version=kwargs.get("api_version"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

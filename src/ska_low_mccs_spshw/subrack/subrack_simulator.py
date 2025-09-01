@@ -157,6 +157,11 @@ class SubrackSimulator(SubrackProtocol):
             "default": [5.0] * 8,
             "writable": False,
         },
+        "api_version": {
+            "length": None,
+            "default": "v1.6.0",
+            "writable": False,
+        },
     }
 
     def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:

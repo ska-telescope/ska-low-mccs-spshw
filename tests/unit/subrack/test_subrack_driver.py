@@ -249,31 +249,59 @@ def test_tpm_power_commands(
 
 
 def test_get_health_status(
+    subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
+    subrack_simulator_attribute_values: dict[str, Any],
     health_status: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
     Test that the subrack driver pushes a full set of attribute values.
 
+    :param subrack_simulator: the subrack simulator backend that the
+        subrack driver drives through its server interface
     :param subrack_driver: the subrack driver under test
+    :param subrack_simulator_attribute_values: key-value dictionary of
+        the expected subrack simulator attribute values
     :param health_status: the values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
     callbacks["component_state"].assert_not_called()
 
-    subrack_driver.change_command_polling(True)
     subrack_driver.start_communicating()
 
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_not_called()
+
+    # Case 1: bios is too old, health status is not polled
+
+    subrack_simulator.simulate_attribute("api_version", "v1.5.0")
+    callbacks["component_state"].assert_call(
+        api_version=pytest.approx("v1.5.0"),
+    )
+
     status, message = subrack_driver.get_health_status()
     assert status == TaskStatus.QUEUED
 
-    assert health_status == subrack_driver.read_health_status()
+    assert subrack_driver.read_health_status() == {}
+
+    # Case 2: bios is current enough, health status is polled
+
+    subrack_simulator.simulate_attribute("api_version", "v1.6.0")
+    callbacks["component_state"].assert_call(
+        api_version=pytest.approx("v1.6.0"),
+    )
+
+    status, message = subrack_driver.get_health_status()
+    assert status == TaskStatus.QUEUED
+
+    assert subrack_driver.read_health_status() == health_status
 
 
 def test_other_commands(

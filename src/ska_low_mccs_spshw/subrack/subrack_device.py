@@ -306,6 +306,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
+        "api_version": "subrackAPIVersion",
     }
 
     # Used for mapping tango attributes to the corresponding value in the
@@ -472,7 +473,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("ScheduleOn", "schedule_on"),
             ("ScheduleOff", "schedule_off"),
             ("UpdateHealthAttributes", "get_health_status"),
-            ("ChangeHealthStatusPolling", "change_command_polling"),
         ]:
             self.register_command_object(
                 command_name,
@@ -718,23 +718,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         result_code, message = handler()
         return ([result_code], [message])
 
-    @command(dtype_in="DevBoolean", dtype_out="DevVarLongStringArray")
-    def ChangeHealthStatusPolling(
-        self: MccsSubrack,
-        argin: bool,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
-        """
-        Change weather or not subrack polls health_status.
-
-        :param argin: a bool stating weather to poll or not health status
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("ChangeHealthStatusPolling")
-        (result_code, message) = handler(argin)
-        return ([result_code], [message])
 
     # ----------
     # Attributes
@@ -1447,6 +1430,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the TPM voltages
         """
         return self._hardware_attributes.get("tpmVoltages", None) or []
+
+    @attribute(dtype=str, label="Subrack BIOS Version")
+    def subrackAPIVersion(self: MccsSubrack) -> str | None:
+        """
+        Handle a Tango attribute read of the Subrack BIOS version.
+
+        :return: the subrack bios version
+        """
+        return self._hardware_attributes.get("subrackAPIVersion", None)
 
     def _clear_hardware_attributes(self: MccsSubrack) -> None:
         # TODO: It should would be nice to push change events here,

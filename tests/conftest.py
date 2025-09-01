@@ -88,6 +88,7 @@ def subrack_simulator_config_fixture() -> dict[str, Any]:
         "tpm_currents": [0.4] * 8,
         # "tpm_temperatures": [40.0] * 8,  # Not implemented on SMB
         "tpm_voltages": [12.0] * 8,
+        "api_version": "v1.6.0",
     }
 
 
@@ -358,6 +359,7 @@ def subrack_simulator_attribute_values_fixture(
                 subrack_simulator_config["tpm_voltages"],
             )
         ],
+        "api_version": "v1.6.0",
     }
 
 
@@ -424,6 +426,7 @@ def subrack_device_attribute_values_fixture(
                 subrack_simulator_config["tpm_voltages"],
             )
         ],
+        "SubrackAPIVersion": "v1.6.0",
     }
 
 

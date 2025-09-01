@@ -718,7 +718,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         result_code, message = handler()
         return ([result_code], [message])
 
-
     # ----------
     # Attributes
     # ----------

@@ -471,7 +471,6 @@ class SubrackDriver(
         """
         return self.health_status
 
-
     def set_subrack_fan_speed(
         self: SubrackDriver,
         fan_number: int,

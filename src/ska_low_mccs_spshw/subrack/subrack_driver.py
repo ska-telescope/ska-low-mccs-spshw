@@ -133,7 +133,6 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
-            api_version=None,
             board_info=None,
         )
 
@@ -608,21 +607,19 @@ class SubrackDriver(
         with self._write_lock:
             self._attributes_to_write.update(kwargs)
 
-    def _check_api_version(self: SubrackDriver) -> bool:
+    def _check_bios_version(self: SubrackDriver) -> None:
         """
         Check that the api version is new enough to poll health_status.
-
-        :return: True if bios api is newer than 1.6.0
         """
         if self._checked_bios:
             # Bypass the check if we know the answer
-            return self._poll_commands
-        api_v_string: str = self._component_state["api_version"]
-        if api_v_string:
-            if [int(x) for x in api_v_string.lstrip("v").split(".")] > [1, 6, 0]:
-                self._checked_bios = True
+            return
+        board_info: dict = self._component_state["board_info"]
+        if board_info:
+            bios_version = board_info["SMM"]["bios"]
+            if [int(x) for x in bios_version.lstrip("v").split(".")] > [1, 6, 0]:
                 self._poll_commands = True
-        return self._poll_commands
+            self._checked_bios = True
 
     def get_request(self: SubrackDriver) -> HttpPollRequest:
         """
@@ -679,13 +676,15 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
-                "api_version",
                 "board_info",
             )
             self._tick = 0
 
+            # we only need to read board info once
+
         if self._command_tick > self._command_max_tick:
-            if self._check_api_version():
+            self._check_bios_version()
+            if self._poll_commands:
                 for command, args in [
                     ("get_health_status", ""),
                 ]:
@@ -937,7 +936,6 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
-            api_version=kwargs.get("api_version"),
             board_info=kwargs.get("board_info"),
         )
 

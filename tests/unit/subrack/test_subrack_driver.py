@@ -280,10 +280,10 @@ def test_get_health_status(
     callbacks["component_state"].assert_not_called()
 
     # Case 1: bios is too old, health status is not polled
-
-    subrack_simulator.simulate_attribute("api_version", "v1.5.0")
+    old_bios_board = {"SMM": {"bios": "v1.5.0"}}
+    subrack_simulator.simulate_attribute("board_info", old_bios_board)
     callbacks["component_state"].assert_call(
-        api_version=pytest.approx("v1.5.0"),
+        board_info=old_bios_board,
     )
 
     status, message = subrack_driver.get_health_status()
@@ -292,10 +292,10 @@ def test_get_health_status(
     assert subrack_driver.read_health_status() == {}
 
     # Case 2: bios is current enough, health status is polled
-
-    subrack_simulator.simulate_attribute("api_version", "v1.6.0")
+    new_bios_board = {"SMM": {"bios": "v1.6.0"}}
+    subrack_simulator.simulate_attribute("board_info", new_bios_board)
     callbacks["component_state"].assert_call(
-        api_version=pytest.approx("v1.6.0"),
+        board_info=new_bios_board,
     )
 
     status, message = subrack_driver.get_health_status()

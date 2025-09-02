@@ -306,7 +306,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
-        "api_version": "subrackAPIVersion",
         "board_info": "subrackBoardInfo",
     }
 
@@ -1430,15 +1429,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the TPM voltages
         """
         return self._hardware_attributes.get("tpmVoltages", None) or []
-
-    @attribute(dtype=str, label="Subrack BIOS Version")
-    def subrackAPIVersion(self: MccsSubrack) -> str | None:
-        """
-        Handle a Tango attribute read of the Subrack BIOS version.
-
-        :return: the subrack bios version
-        """
-        return self._hardware_attributes.get("subrackAPIVersion", None)
 
     @attribute(dtype=str, label="Subrack Board Info")
     def subrackBoardInfo(self: MccsSubrack) -> str | None:

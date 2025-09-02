@@ -330,7 +330,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
-            api_version=None,
             board_info=None,
         )
         self.pdu_proxy = (

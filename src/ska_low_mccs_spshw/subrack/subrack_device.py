@@ -307,6 +307,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
         "api_version": "subrackAPIVersion",
+        "board_info": "subrackBoardInfo",
     }
 
     # Used for mapping tango attributes to the corresponding value in the
@@ -1438,6 +1439,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the subrack bios version
         """
         return self._hardware_attributes.get("subrackAPIVersion", None)
+
+    @attribute(dtype=str, label="Subrack Board Info")
+    def subrackBoardInfo(self: MccsSubrack) -> str | None:
+        """
+        Handle a Tango attribute read of the Subrack board info.
+
+        :return: the subrack board info as a dict
+        """
+        return json.dumps(self._hardware_attributes.get("subrackBoardInfo", None))
 
     def _clear_hardware_attributes(self: MccsSubrack) -> None:
         # TODO: It should would be nice to push change events here,

@@ -89,6 +89,7 @@ def subrack_simulator_config_fixture() -> dict[str, Any]:
         # "tpm_temperatures": [40.0] * 8,  # Not implemented on SMB
         "tpm_voltages": [12.0] * 8,
         "api_version": "v1.6.0",
+        "board_info": {"SMM": {"bios": "v1.6.0"}, "SUBRACK": {}, "PSM": {}},
     }
 
 
@@ -360,6 +361,7 @@ def subrack_simulator_attribute_values_fixture(
             )
         ],
         "api_version": "v1.6.0",
+        "board_info": {"SMM": {"bios": "v1.6.0"}, "SUBRACK": {}, "PSM": {}},
     }
 
 

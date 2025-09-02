@@ -162,6 +162,11 @@ class SubrackSimulator(SubrackProtocol):
             "default": "v1.6.0",
             "writable": False,
         },
+        "board_info": {
+            "length": None,
+            "default": {"SMM": {"bios": "v1.6.0"}, "SUBRACK": {}, "PSM": {}},
+            "writable": False,
+        },
     }
 
     def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:

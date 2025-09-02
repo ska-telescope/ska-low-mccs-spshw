@@ -608,9 +608,7 @@ class SubrackDriver(
             self._attributes_to_write.update(kwargs)
 
     def _check_bios_version(self: SubrackDriver) -> None:
-        """
-        Check that the api version is new enough to poll health_status.
-        """
+        """Check that the api version is new enough to poll health_status."""
         if self._checked_bios:
             # Bypass the check if we know the answer
             return

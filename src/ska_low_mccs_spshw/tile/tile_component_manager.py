@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import ipaddress
-import itertools
 import json
 import logging
 import threading
@@ -41,7 +40,6 @@ from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
 from .exception_codes import HardwareVerificationError
-from .tile_data import TileData
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -60,7 +58,14 @@ __all__ = ["TileComponentManager"]
 # all to use the name in ska_low_sps_tpm_api.Tile. Multiple maps like this increase
 # the risk of mapping errors.
 _ATTRIBUTE_MAP: Final = {
-    "HEALTH_STATUS": "tile_health_structure",
+    "TEMPERATURES": "tile_health_structure",
+    "VOLTAGES": "tile_health_structure",
+    "CURRENTS": "tile_health_structure",
+    "ALARMS": "tile_health_structure",
+    "ADCS": "tile_health_structure",
+    "TIMING": "tile_health_structure",
+    "IO": "tile_health_structure",
+    "DSP": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
     "PLL_LOCKED": "pll_locked",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
@@ -263,7 +268,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
-        self._health_iterator = itertools.cycle(TileData.TILE_MONITORING_POINTS.keys())
 
         self._event_serialiser = event_serialiser
 
@@ -381,12 +385,61 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.is_programmed,
                     publish=True,
                 )
-            case "HEALTH_STATUS":
+            case "TEMPERATURES":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_health_status,
                     publish=True,
-                    group=next(self._health_iterator),
+                    group="temperatures",
+                )
+            case "VOLTAGES":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="voltages",
+                )
+            case "CURRENTS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="currents",
+                )
+            case "ALARMS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="alarms",
+                )
+            case "ADCS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="adcs",
+                )
+            case "TIMING":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="timing",
+                )
+            case "IO":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="io",
+                )
+            case "DSP":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="dsp",
                 )
             case "ADC_RMS":
                 request = TileRequest(

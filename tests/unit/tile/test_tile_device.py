@@ -1109,7 +1109,7 @@ class TestMccsTile:
             what tile_device is observing.
         """
         tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value="HEALTH_STATUS"
+            return_value="TEMPERATURES"
         )
         # This sleep is to ensure a poll has occured
         time.sleep(0.1)

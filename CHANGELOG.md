@@ -1,7 +1,11 @@
 # Version History
 
-
 ## Unreleased
+
+## 7.5.0
+
+* [SKB-872] MccsTile now only polls a subset of health values on each poll.
+* [SKB-872] MccsTile attributes which do a hardware read are now only allowed if the TPM is programmed.
 
 ## 7.4.0
 

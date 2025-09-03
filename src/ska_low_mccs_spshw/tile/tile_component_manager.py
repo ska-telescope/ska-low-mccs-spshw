@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import ipaddress
+import itertools
 import json
 import logging
 import threading
@@ -40,6 +41,7 @@ from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
 from .exception_codes import HardwareVerificationError
+from .tile_data import TileData
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -261,6 +263,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
+        self._health_iterator = itertools.cycle(TileData.TILE_MONITORING_POINTS.keys())
 
         self._event_serialiser = event_serialiser
 
@@ -383,6 +386,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_health_status,
                     publish=True,
+                    group=next(self._health_iterator),
                 )
             case "ADC_RMS":
                 request = TileRequest(
@@ -637,7 +641,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     **{poll_response.command: poll_response.data},
                 )
         except Exception as e:  # pylint: disable=broad-except
-            self.logger.warning(f"Exception raised in attribute callback {e}")
+            self.logger.warning(
+                f"Exception raised in attribute callback {e}", exc_info=True
+            )
         super().poll_succeeded(poll_response)
         self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 

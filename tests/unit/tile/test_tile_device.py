@@ -424,6 +424,7 @@ class TestMccsTile:
             "stationBeamFlagEnabled",
             "rfiCount",
             "runningBeams",
+            "ppsDelay",
         ]
 
     def __check_attributes_invalid(
@@ -1208,10 +1209,15 @@ class TestMccsTile:
         with pytest.raises(DevFailed) as excinfo:
             _ = getattr(tile_device, attribute)
 
-        assert "Communication with component is not established" in str(
-            excinfo.value
-        ) or f"Read value for attribute {attribute} has not been updated" in str(
-            excinfo.value
+        assert (
+            "Communication with component is not established" in str(excinfo.value)
+            or f"Read value for attribute {attribute} has not been updated"
+            in str(excinfo.value)
+            or (
+                "To execute this command we must be in state "
+                "'Programmed', 'Initialised' or 'Synchronised'!"
+            )
+            in str(excinfo.value)
         )
 
         tile_device.subscribe_event(

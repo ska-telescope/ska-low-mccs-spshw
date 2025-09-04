@@ -645,14 +645,14 @@ class MockTpm:
         }
         return self._40g_configuration
 
-    def _get_src_mac(self: MockTpm) -> int:
-        return 107752315813889
+    def _get_src_mac(self: MockTpm) -> str:
+        return "62:00:0A:82:00:01"
 
-    def _get_src_ip(self: MockTpm) -> int:
-        return 167774722
+    def _get_src_ip(self: MockTpm) -> str:
+        return "10.0.10.2"
 
-    def _get_dst_ip(self: MockTpm) -> int:
-        return 167774723
+    def _get_dst_ip(self: MockTpm) -> str:
+        return "10.0.10.3"
 
     def _get_src_port(self: MockTpm) -> int:
         return 1234
@@ -660,11 +660,11 @@ class MockTpm:
     def _get_dst_port(self: MockTpm) -> int:
         return 5678
 
-    def _get_netmask(self: MockTpm) -> int:
-        return 4294967040
+    def _get_netmask(self: MockTpm) -> str:
+        return "255.255.255.0"
 
-    def _get_gateway_ip(self: MockTpm) -> int:
-        return 167774721
+    def _get_gateway_ip(self: MockTpm) -> str:
+        return "10.0.10.1"
 
     def find_register(
         self: MockTpm,
@@ -782,10 +782,7 @@ class MockTpm:
                 info["network"]["40g_ip_address_p1"] = IPv4Address(
                     config_40g_1["src_ip"]
                 )
-                mac = config_40g_1["src_mac"]
-                info["network"]["40g_mac_address_p1"] = ":".join(
-                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-                )
+                info["network"]["40g_mac_address_p1"] = config_40g_1["src_mac"]
                 info["network"]["40g_gateway_p1"] = IPv4Address(
                     config_40g_1["gateway_ip"]
                 )
@@ -795,10 +792,7 @@ class MockTpm:
                 info["network"]["40g_ip_address_p2"] = IPv4Address(
                     config_40g_2["src_ip"]
                 )
-                mac = config_40g_2["src_mac"]
-                info["network"]["40g_mac_address_p2"] = ":".join(
-                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-                )
+                info["network"]["40g_mac_address_p2"] = config_40g_2["src_mac"]
                 info["network"]["40g_gateway_p2"] = IPv4Address(
                     config_40g_2["gateway_ip"]
                 )
@@ -1261,14 +1255,11 @@ class TileSimulator:
         dst_ip_fpga2: str | None = None,
         src_port: int = 4661,
         dst_port: int = 4660,
-        dst_port_single_port_mode: int = 4662,
-        rx_port_single_port_mode: int = 4662,
         netmask_40g: str | None = None,
         gateway_ip_40g: str | None = None,
         active_40g_ports_setting: str = "port1-only",
         enable_adc: bool = True,
         enable_ada: bool = False,
-        enable_test: bool = False,
         use_internal_pps: bool = False,
         pps_delay: int = 0,
         time_delays: float | int | list = 0,
@@ -1277,6 +1268,7 @@ class TileSimulator:
         qsfp_detection: str = "auto",
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        adc_fullscale_voltage: float = 1.59,
         global_start_time: int | None = None,
     ) -> None:
         """
@@ -1301,11 +1293,8 @@ class TileSimulator:
         :param enable_ada: enable adc amplifier, Not present in most TPM versions
         :param enable_adc: Enable ADC
         :param active_40g_ports_setting: placeholder docstring
-        :param dst_port_single_port_mode: placeholder docstring
         :param gateway_ip_40g: placeholder docstring
         :param netmask_40g: placeholder docstring
-        :param rx_port_single_port_mode: placeholder docstring
-        :param enable_test: setup internal test signal generator instead of ADC
         :param use_internal_pps: use internal PPS generator synchronised across FPGAs
         :param pps_delay: PPS delay correction in 625ps units
         :param time_delays: time domain delays for 32 inputs
@@ -1324,6 +1313,7 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param adc_fullscale_voltage: Congiure ADC full-scale voltage (default 1.59 V)
         :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
@@ -1912,8 +1902,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         dst_port: int | None = None,
         rx_port_filter: int | None = None,
-        netmask: int | None = None,
-        gateway_ip: int | None = None,
+        netmask: str | None = None,
+        gateway_ip: str | None = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -2009,8 +1999,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
-        netmask_40g: int | None = None,
-        gateway_ip_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -2051,6 +2041,7 @@ class TileSimulator:
         dsp_core: bool = True,
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        adc_fullscale_voltage: float = 1.59,
     ) -> None:
         """
         Attempt to form a connection with TPM.
@@ -2062,6 +2053,7 @@ class TileSimulator:
         :param dsp_core: Enable loading of DSP core plugins
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param adc_fullscale_voltage: Congiure ADC full-scale voltage (default 1.59 V)
         """
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
@@ -2650,8 +2642,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: int | None = None,
-        gateway_ip_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
     ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.

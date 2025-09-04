@@ -578,8 +578,8 @@ class SpsStationComponentManager(
         self._destination_port: int = 4660
 
         self._sdn_first_address = sdn_first_interface.ip
-        self._sdn_netmask = int(sdn_first_interface.netmask)
-        self._sdn_gateway: int | None = int(sdn_gateway) if sdn_gateway else None
+        self._sdn_netmask = str(sdn_first_interface.netmask)
+        self._sdn_gateway: str | None = str(sdn_gateway) if sdn_gateway else None
 
         self._lmc_param: dict[str, str | int | None] = {
             "mode": "10G",

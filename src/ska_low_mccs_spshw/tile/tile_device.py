@@ -4265,8 +4265,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
-            * netmask_40g - (int) 40g (science data) subnet mask
-            * gateway_40g - (int) IP address of 40g (science) subnet gateway
+            * netmask_40g - (string) 40g (science data) subnet mask
+            * gateway_40g - (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4373,8 +4373,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * destination_ip - (string) Destination IP
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
-            * netmask_40g - (int) 40g (science data) subnet mask
-            * gateway_40g - (int) IP address of 40g (science) subnet gateway
+            * netmask_40g - (string) 40g (science data) subnet mask
+            * gateway_40g - (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

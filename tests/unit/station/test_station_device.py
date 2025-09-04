@@ -441,8 +441,8 @@ def test_On(
                 ),
                 "destination_port": csp_ingest_port,
                 "rx_port_filter": csp_ingest_port,
-                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
+                "netmask": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": sdn_gateway,
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -460,8 +460,8 @@ def test_On(
                 "destination_port": (
                     csp_ingest_port + 2 if not last_tile else csp_ingest_port
                 ),
-                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
+                "netmask": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": sdn_gateway,
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -485,10 +485,10 @@ def test_On(
                     "destination_ip": "10.244.170.166",
                     "destination_port": 4660,
                     "source_port": 61648,
-                    "netmask_40g": int(
+                    "netmask_40g": str(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
-                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                    "gateway_40g": sdn_gateway,
                 }
             )
         )
@@ -501,10 +501,10 @@ def test_On(
                     "destination_ip": "10.244.170.166",
                     "source_port": 61648,
                     "destination_port": 4660,
-                    "netmask_40g": int(
+                    "netmask_40g": str(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
-                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                    "gateway_40g": sdn_gateway,
                 }
             )
         )
@@ -739,8 +739,8 @@ def test_Initialise(
                 ),
                 "destination_port": csp_ingest_port,
                 "rx_port_filter": csp_ingest_port,
-                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
+                "netmask": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": sdn_gateway,
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -758,8 +758,8 @@ def test_Initialise(
                 "destination_port": (
                     csp_ingest_port + 2 if not last_tile else csp_ingest_port
                 ),
-                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
+                "netmask": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": sdn_gateway,
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -792,10 +792,10 @@ def test_Initialise(
                     "destination_ip": "10.244.170.166",
                     "destination_port": 4660,
                     "source_port": 61648,
-                    "netmask_40g": int(
+                    "netmask_40g": str(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
-                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                    "gateway_40g": sdn_gateway,
                 }
             )
         )
@@ -808,10 +808,10 @@ def test_Initialise(
                     "destination_ip": "10.244.170.166",
                     "source_port": 61648,
                     "destination_port": 4660,
-                    "netmask_40g": int(
+                    "netmask_40g": str(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
-                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                    "gateway_40g": sdn_gateway,
                 }
             )
         )
@@ -1054,8 +1054,8 @@ def test_Standby(
                     "destination_ip": "127.0.0.1",
                     "source_port": 0xF0D0,
                     "destination_port": 4660,
-                    "netmask_40g": 4294967168,  # /25
-                    "gateway_40g": 167772414,  # 10.0.0.254
+                    "netmask_40g": "255.255.255.128",  # /25
+                    "gateway_40g": "10.0.0.254",
                 }
             ),
         ),
@@ -1070,8 +1070,8 @@ def test_Standby(
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,
                     "source_port": 0xF0D0,
-                    "netmask_40g": 4294967168,  # /25
-                    "gateway_40g": 167772414,  # 10.0.0.254
+                    "netmask_40g": "255.255.255.128",  # /25
+                    "gateway_40g": "10.0.0.254",
                 }
             ),
         ),
@@ -1330,8 +1330,8 @@ def test_SetCspIngest(
                     "destination_ip": "123.123.234.234",
                     "destination_port": 1234,
                     "rx_port_filter": 1234,
-                    "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-                    "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
+                    "netmask": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+                    "gateway_ip": sdn_gateway,
                 }
                 assert json.loads(
                     tile.Configure40GCore.mock_calls[1 + (3 * core)].args[0]
@@ -1343,8 +1343,8 @@ def test_SetCspIngest(
                     "source_port": 61648,
                     "destination_ip": "123.123.234.234",
                     "destination_port": 1234,
-                    "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-                    "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
+                    "netmask": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+                    "gateway_ip": sdn_gateway,
                 }
                 assert json.loads(
                     tile.Configure40GCore.mock_calls[2 + (3 * core)].args[0]

@@ -18,7 +18,7 @@ Properties
 
 * **destination_port** (integer): Destination port for integrated data streams. Minimum: 0.
 
-* **netmask_40g** (integer): Integer netmask for the 40g (science data) subnet. Minimum: 0. Maximum: 4294967296.
+* **netmask_40g** (string, format: ipv4): Netmask for the 40g (science data) subnet.
 
-* **gateway_40g**: Integer IP address of the 40g (science data) subnet gateway. Minimum: 0. Maximum: 4294967296.
+* **gateway_40g** (string, format: ipv4): IP address of the 40g (science data) subnet gateway.
 

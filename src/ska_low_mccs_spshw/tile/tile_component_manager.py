@@ -8,7 +8,6 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import threading
@@ -2177,8 +2176,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: int | None = None,
-        gateway_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -3094,8 +3093,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         dst_ip: Optional[str] = None,
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
-        netmask_40g: int | None = None,
-        gateway_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -3172,11 +3171,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._forty_gb_core_list = [
                     self._get_40g_core_configuration(core_id, arp_table_entry)
                 ]
-        # convert in more readable format
-        for core in self._forty_gb_core_list:
-            self.logger.info(f"{core}")
-            core["src_ip"] = str(ipaddress.IPv4Address(core["src_ip"]))
-            core["dst_ip"] = str(ipaddress.IPv4Address(core["dst_ip"]))
         return self._forty_gb_core_list
 
     def _get_40g_core_configuration(
@@ -3212,8 +3206,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         destination_ip: Optional[str] = None,
         destination_port: Optional[int] = None,
         rx_port_filter: Optional[int] = None,
-        netmask: Optional[int] = None,
-        gateway_ip: Optional[int] = None,
+        netmask: Optional[str] = None,
+        gateway_ip: Optional[str] = None,
     ) -> tuple[ResultCode, str]:
         """
         Configure the 40G code.

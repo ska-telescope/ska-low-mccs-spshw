@@ -2831,29 +2831,6 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def load_beam_angle(self: TileSimulator, angle_coefficients: list[float]) -> None:
-        """
-        Load beam angle.
-
-        :param angle_coefficients: angle coefficients.
-        """
-        self.logger.error("load_beam_angle not implemented in simulator")
-
-    @check_mocked_overheating
-    @connected
-    def load_antenna_tapering(
-        self: TileSimulator, beam: int, tapering_coefficients: list[int]
-    ) -> None:
-        """
-        Load antenna tapering.
-
-        :param beam: beam
-        :param tapering_coefficients: tapering coefficients
-        """
-        self.logger.error("load_antenna_tapering not implemented in simulator")
-
-    @check_mocked_overheating
-    @connected
     def compute_calibration_coefficients(self: TileSimulator) -> None:
         """Compute calibration coefficients."""
         self.logger.error(

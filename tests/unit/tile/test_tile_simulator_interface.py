@@ -111,4 +111,4 @@ def test_interface() -> None:
             ):
                 pytest.fail(f"{tile_sim_method_name} parameters do not match.")
         else:
-            pytest.fail(f"{tile_sim_method_name} not in aavs tile")
+            pytest.fail(f"{tile_sim_method_name} not in ska-low-sps-tpm-api tile")

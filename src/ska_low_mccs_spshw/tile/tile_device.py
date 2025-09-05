@@ -685,6 +685,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("SetAttributeThresholds", self.SetAttributeThresholdsCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
+            ("SetCspDownload", self.SetCspDownloadCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
             ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
@@ -4389,6 +4390,104 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """
         handler = self.get_command_object("SetLmcIntegratedDownload")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class SetCspDownloadCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the SetCspDownload() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetCspDownload.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_SetCspDownload.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.SetCspDownloadCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new SetCspDownloadCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("SetCspDownload", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        SUCCEEDED_MESSAGE = "SetCspDownload command completed OK"
+
+        def do(
+            self: MccsTile.SetCspDownloadCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetCspDownload` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            src_port = kwargs["src_port"]
+            dst_ip_1 = kwargs["dst_ip_1"]
+            dst_ip_2 = kwargs["dst_ip_2"]
+            dst_port = kwargs["dst_port"]
+            is_last = kwargs["is_last"]
+            netmask = kwargs["netmask"]
+            gateway = kwargs["gateway"]
+
+            self._component_manager.set_csp_download(
+                src_port, dst_ip_1, dst_ip_2, dst_port, is_last, netmask, gateway
+            )
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetCspDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """
+        Set CSP Destination per tile.
+
+        :param argin: json dictionary with optional keywords:
+
+            * src_port - Source port
+            * dst_ip_1 - Destination IP FPGA1
+            * dst_ip_2 -  Destination IP FPGA2
+            * dst_port - Destination port
+            * is_last - True for last tile in beamforming chain
+            * netmask - Netmask
+            * gateway - Gateway IP
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"src_port": 4661, "dst_ip_1": "10.0.10.2", "dst_ip_2": 10.0.10.3",
+                    "dst_port" 4660, "is_last": False, "netmask": "255.255.255.0",
+                    "gateway": "10.0.10.1"}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SetCspDownload", jstr)
+        """
+        handler = self.get_command_object("SetCspDownload")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

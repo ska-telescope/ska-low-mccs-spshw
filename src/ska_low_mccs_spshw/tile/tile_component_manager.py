@@ -2567,6 +2567,55 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
         return (ResultCode.OK, "Stop integrated data completed OK")
 
+    @check_communicating
+    def set_csp_download(
+        self: TileComponentManager,
+        src_port: int,
+        dst_ip_1: str,
+        dst_ip_2: str,
+        dst_port: int,
+        is_last: bool,
+        netmask: str,
+        gateway: str,
+    ) -> None:
+        """
+        Set CSP Destination per tile.
+
+        :param src_port: Source port
+        :type src_port: int
+        :param dst_ip_1: Destination IP FPGA1
+        :type dst_ip_1: str
+        :param dst_ip_2: Destination IP FPGA2
+        :type dst_ip_2: str
+        :param dst_port: Destination port
+        :type dst_port: int
+        :param is_last: True for last tile in beamforming chain
+        :type is_last: bool
+        :param netmask: Netmask
+        :type netmask: str
+        :param gateway: Gateway IP
+        :type gateway: str
+        """
+        self.logger.debug("TileComponentManager: set_csp_download")
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.set_csp_download(
+                    src_port,
+                    dst_ip_1,
+                    dst_ip_2,
+                    dst_port,
+                    is_last,
+                    netmask,
+                    gateway,
+                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+
     def stop_beamformer(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,

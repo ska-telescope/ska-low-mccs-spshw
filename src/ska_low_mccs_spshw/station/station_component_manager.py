@@ -2764,28 +2764,12 @@ class SpsStationComponentManager(
             return (ResultCode.FAILED, f"{fqdn} is not in PowerState.ON")
         # Do not access an unprogrammed TPM
 
-        num_cores = 2
+        # Log IP source and destination, source IPs set in _set_tile_source_ips
         last_tile_id = len(self._tile_proxies) - 1
         src_ip1 = str(self._sdn_first_address + 2 * last_tile_id)
         src_ip2 = str(self._sdn_first_address + 2 * last_tile_id + 1)
-        src_ip_list = [src_ip1, src_ip2]
-        src_mac = self._base_mac_address + 2 * last_tile_id
-
         self.logger.debug(f"Tile {last_tile_id}: 40G#1: {src_ip1} -> {dst_ip}")
         self.logger.debug(f"Tile {last_tile_id}: 40G#2: {src_ip2} -> {dst_ip}")
-
-        for core in range(num_cores):
-            src_ip = src_ip_list[core]
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": core,
-                        "arp_table_entry": 0,
-                        "source_ip": src_ip,
-                        "source_mac": src_mac + core,
-                    }
-                )
-            )
 
         proxy._proxy.SetCspDownload(
             json.dumps(

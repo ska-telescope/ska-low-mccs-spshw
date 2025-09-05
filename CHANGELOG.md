@@ -3,6 +3,10 @@
 
 ## Unreleased
 
+## 7.4.1
+
+* [THORN-248] Update to new ska-low-mccs-common MccsCommandProxy interface.
+
 ## 7.4.0
 
 * [LOW-1593] Eliminate dependency on bitnami images / charts.

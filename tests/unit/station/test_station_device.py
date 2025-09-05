@@ -18,6 +18,7 @@ import time
 import unittest.mock
 from datetime import timezone
 from typing import Any, Callable, Iterator
+from unittest.mock import ANY, MagicMock, call, patch
 
 import numpy as np
 import pytest
@@ -909,57 +910,6 @@ def test_Standby(
             ),
         ),
         pytest.param(
-            "StopBeamformer",
-            None,
-            "StopBeamformer",
-            json.dumps(
-                {
-                    "channel_groups": None,
-                }
-            ),
-        ),
-        pytest.param(
-            "StopBeamformerForChannels",
-            "{}",
-            "StopBeamformer",
-            json.dumps(
-                {
-                    "channel_groups": None,
-                }
-            ),
-        ),
-        pytest.param(
-            "StopBeamformerForChannels",
-            json.dumps({"channel_groups": [1, 2, 4, 5]}),
-            "StopBeamformer",
-            json.dumps({"channel_groups": [1, 2, 4, 5]}),
-        ),
-        pytest.param(
-            "StartBeamformer",
-            "{}",
-            "StartBeamformer",
-            json.dumps(
-                {
-                    "start_time": None,
-                    "duration": -1,
-                    "scan_id": 0,
-                }
-            ),
-        ),
-        pytest.param(
-            "StartBeamformer",
-            json.dumps({"channel_groups": [1, 2, 4, 5]}),
-            "StartBeamformer",
-            json.dumps(
-                {
-                    "start_time": None,
-                    "duration": -1,
-                    "scan_id": 0,
-                    "channel_groups": [1, 2, 4, 5],
-                }
-            ),
-        ),
-        pytest.param(
             "BeamformerRunningForChannels",
             "{}",
             "BeamformerRunningForChannels",
@@ -1140,6 +1090,149 @@ def test_station_tile_commands(
         tile_command_mock.assert_next_call()
     else:
         tile_command_mock.assert_next_call(tile_command_args)
+
+
+@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCompositeCommandProxy")
+@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCommandProxy")
+@pytest.mark.parametrize(
+    (
+        "command",
+        "command_args",
+        "tile_command",
+        "tile_command_args",
+    ),
+    [
+        pytest.param(
+            "StopBeamformer",
+            None,
+            "StopBeamformer",
+            json.dumps(
+                {
+                    "channel_groups": None,
+                }
+            ),
+        ),
+        pytest.param(
+            "StopBeamformerForChannels",
+            "{}",
+            "StopBeamformer",
+            json.dumps(
+                {
+                    "channel_groups": None,
+                }
+            ),
+        ),
+        pytest.param(
+            "StopBeamformerForChannels",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+            "StopBeamformer",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+        ),
+        pytest.param(
+            "StartBeamformer",
+            "{}",
+            "StartBeamformer",
+            json.dumps(
+                {
+                    "start_time": None,
+                    "duration": -1,
+                    "scan_id": 0,
+                }
+            ),
+        ),
+        pytest.param(
+            "StartBeamformer",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+            "StartBeamformer",
+            json.dumps(
+                {
+                    "start_time": None,
+                    "duration": -1,
+                    "scan_id": 0,
+                    "channel_groups": [1, 2, 4, 5],
+                }
+            ),
+        ),
+    ],
+)
+def test_station_tile_commands_lrc(
+    mock_command_cls: unittest.mock.Mock,
+    mock_composite_cls: unittest.mock.Mock,
+    station_device: SpsStation,
+    command: str,
+    command_args: Any,
+    mock_tile_device_proxies: DeviceProxy,
+    tile_command: str,
+    tile_command_args: Any,
+) -> None:
+    """
+    Tests of station commands calling the corresponding command on Tile.
+
+    :param mock_command_cls: a patched MccsCommandProxy
+        class for to assert against.
+    :param mock_composite_cls: a patched MccsCompositeCommandProxy
+        class for to assert against.
+    :param station_device: The station device to use
+    :param command: The command to call on the station
+    :param command_args: The arguments to call the command with
+    :param mock_tile_device_proxies: The mock for the tiles to verify
+        commands being called
+    :param tile_command: The expected command to be called on the tile
+    :param tile_command_args: The expected arguments for the command on the tile.
+    """
+    # Mock composite command
+    mock_composite = MagicMock()
+    mock_composite_cls.return_value = mock_composite
+    mock_composite.__iadd__.return_value = mock_composite
+
+    # Mock result of calling the composite command
+    mock_composite.return_value = (ResultCode.OK, "Success")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+
+    # Some commands require tile programming state to be Initialised or Synchronised
+    for mock_tile_proxy in mock_tile_device_proxies:
+        mock_tile_proxy.tileProgrammingState = "Synchronised"
+
+    # The mock takes a non-negligible amount of time to write attributes
+    # Brief sleep needed to allow it to write the tileProgrammingState
+    time.sleep(0.2)
+
+    if command_args is None:
+        getattr(station_device, command)()
+    else:
+        getattr(station_device, command)(command_args)
+
+    time.sleep(0.2)
+    assert len(mock_tile_device_proxies) == 4
+    mock_command_cls.assert_has_calls(
+        [
+            call(
+                device_name=get_tile_name(1, "ci-1"),
+                command_name=tile_command,
+                logger=ANY,
+                default_args=ANY,
+            ),
+            call(
+                device_name=get_tile_name(2, "ci-1"),
+                command_name=tile_command,
+                logger=ANY,
+                default_args=ANY,
+            ),
+            call(
+                device_name=get_tile_name(3, "ci-1"),
+                command_name=tile_command,
+                logger=ANY,
+                default_args=ANY,
+            ),
+            call(
+                device_name=get_tile_name(4, "ci-1"),
+                command_name=tile_command,
+                logger=ANY,
+                default_args=ANY,
+            ),
+        ]
+    )
 
 
 def test_SetCspIngest(
@@ -1351,7 +1444,7 @@ def test_setting_cspRounding(
 
 def test_beamformerTable(
     station_device: SpsStation,
-    mock_tile_device_proxies: list[DeviceProxy],
+    mock_tile_device_proxies: list[unittest.mock.Mock],
     num_tiles: int,
 ) -> None:
     """
@@ -1367,6 +1460,23 @@ def test_beamformerTable(
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
     station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
+    for _, tile in enumerate(mock_tile_device_proxies):
+        tile.SetBeamformerRegions.assert_last_call(
+            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102]
+        )
+    assert not np.all(
+        station_device.beamformerTable[0:14]
+        == np.array([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
+    )
+    station_device.MockBeamformerTableChange(
+        json.dumps(
+            {
+                "tile_id": len(mock_tile_device_proxies) - 1,
+                "value": [4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102]
+                + [0] * 46 * 7,
+            }
+        )
+    )
     assert np.all(
         station_device.beamformerTable[0:14]
         == np.array([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])

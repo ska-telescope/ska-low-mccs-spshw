@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-## 7.5.0
+## 7.4.1
 
 * [SKB-872] MccsTile now only polls a subset of health values on each poll.
 * [SKB-872] MccsTile attributes which do a hardware read are now only allowed if the TPM is programmed.
+* [SPRTS-487] Move boardTemperature attribute higher up the list (workaround no longer necessary due to cppTango fix).
 
 ## 7.4.0
 

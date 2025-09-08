@@ -2542,7 +2542,7 @@ class TestMccsTileCommands:
         assert final_board_alarm_threshold == [20, 30]
         # The simulated overheating event should raise an ALARM on
         # the device.
-        change_event_callbacks["alarms"].assert_change_event(Anything)
+        change_event_callbacks["alarms"].assert_change_event(2, lookahead=2)
         assert on_tile_device.state() == tango.DevState.ALARM
 
     def test_get_voltage_warning_thresholds(

@@ -754,7 +754,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
-        subrack_off_command_proxy(self._subrack_tpm_id, task_callback=task_callback)
+        subrack_off_command_proxy(
+            arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
+        )
 
         return TaskStatus.QUEUED, ""
 
@@ -786,7 +788,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         # Do not pass the task_callback to command_proxy.
         # The on command is completed when initialisation has completed.
-        subrack_on_command_proxy(self._subrack_tpm_id)
+        subrack_on_command_proxy(is_lrc=False, arg=self._subrack_tpm_id)
 
         request = TileLRCRequest(
             name="initialise",

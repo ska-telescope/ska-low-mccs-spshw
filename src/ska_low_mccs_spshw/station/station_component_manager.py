@@ -601,6 +601,8 @@ class SpsStationComponentManager(
         self._lmc_port = self._destination_port
         self._lmc_payload_length = 8192
 
+        self._desired_beamformer_table = np.zeros(shape=(48, 7), dtype=int)
+        self._desired_beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._beamformer_table = np.zeros(shape=(48, 7), dtype=int)
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._beamformer_regions = np.zeros(shape=(48, 8), dtype=int)
@@ -2895,9 +2897,9 @@ class SpsStationComponentManager(
         """
         number_entries = len(beamformer_table)
         for i in range(number_entries):
-            self._beamformer_table[i] = beamformer_table[i]
+            self._desired_beamformer_table[i] = beamformer_table[i]
         for i in range(number_entries, 48):
-            self._beamformer_table[i] = [0, 0, 0, 0, 0, 0, 0]
+            self._desired_beamformer_table[i] = [0, 0, 0, 0, 0, 0, 0]
         return self._set_beamformer_table()
 
     def _set_beamformer_table(
@@ -2914,14 +2916,14 @@ class SpsStationComponentManager(
         # Entries with start channel & subarray ID = 0 are ignored in MccsTile
         if all(
             (entry[0] == 0 and entry[2] == 0)  # At least one region must exist
-            for entry in self._beamformer_table
+            for entry in self._desired_beamformer_table
         ):
-            self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
+            self._desired_beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
             self.logger.warning("No regions specified, providing a default one")
         last_entry = 0
         using_channel_0 = False
         # transmit only entries up to the last valid one
-        for index, entry in enumerate(self._beamformer_table):
+        for index, entry in enumerate(self._desired_beamformer_table):
             if entry[0] != 0 or entry[2] != 0:  # valid entry
                 last_entry = index
                 if entry[0] == 0:  # DC channel is not properly handled in HW
@@ -2929,7 +2931,7 @@ class SpsStationComponentManager(
         if using_channel_0:
             self.logger.warning("Using channel 0: DC channel not handled in hardware")
         beamformer_regions = []
-        for entry in self._beamformer_table[0 : last_entry + 1]:
+        for entry in self._desired_beamformer_table[0 : last_entry + 1]:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
         return self._execute_async_on_tiles(
             "SetBeamformerRegions",
@@ -3081,7 +3083,10 @@ class SpsStationComponentManager(
         start_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
             start_beamformer_commands += MccsCommandProxy(
-                tile_trl, "StartBeamformer", self.logger, default_args=json_argument
+                device_name=tile_trl,
+                command_name="StartBeamformer",
+                logger=self.logger,
+                default_args=json_argument,
             )
         result, message = start_beamformer_commands(
             command_evaluator=CompositeCommandResultEvaluator(),
@@ -3155,7 +3160,10 @@ class SpsStationComponentManager(
         stop_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
             stop_beamformer_commands += MccsCommandProxy(
-                tile_trl, "StopBeamformer", self.logger, default_args=json_argument
+                device_name=tile_trl,
+                command_name="StopBeamformer",
+                logger=self.logger,
+                default_args=json_argument,
             )
         result, message = stop_beamformer_commands(
             command_evaluator=CompositeCommandResultEvaluator()

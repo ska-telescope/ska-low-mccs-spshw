@@ -1,7 +1,8 @@
 # Version History
 
-
 ## Unreleased
+
+* [SPRTS-487] Move boardTemperature attribute higher up the list (workaround no longer necessary due to cppTango fix).
 
 ## 7.4.1
 

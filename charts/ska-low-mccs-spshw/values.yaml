@@ -31,10 +31,6 @@ resources:
     memory: 50Mi
 
 simulators: {} # e.g.
-  # daqs:
-  #   s8-1:
-  #     host: daq-simulator-s8-1
-  #     port: 50051
   # subracks:
   #   s8-1-1:
   #     srmb_host: subrack-simulator-s8-1

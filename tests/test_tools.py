@@ -212,9 +212,7 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
     Retry communication with the backend.
 
     NOTE: This is to be used for devices that do not know if the backend is available
-    at the time of the call. For example the daq_handler backend gRPC server
-    may not be ready when we try to start communicating.
-    In this case we will retry connection.
+    at the time of the call.
 
     :param device_proxy: A 'tango.DeviceProxy' to the backend device.
     :param timeout: A max time in seconds before we give up trying

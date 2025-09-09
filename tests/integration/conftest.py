@@ -26,8 +26,6 @@ from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulato
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
-    get_bandpass_daq_name,
-    get_lmc_daq_name,
     get_subrack_name,
 )
 
@@ -128,14 +126,9 @@ def integration_test_context_fixture(
         subrack_bay=subrack_bay,
         device_class=patched_tile_device_class,
     )
-    harness.set_daq_instance()
-    harness.set_lmc_daq_device(daq_id, address=None)
-    harness.set_bandpass_daq_device(daq_id, address=None)
     harness.set_sps_station_device(
         subrack_ids=[subrack_id],
         tile_ids=[tile_id],
-        lmc_daq_trl=get_lmc_daq_name(),
-        bandpass_daq_trl=get_bandpass_daq_name(),
     )
 
     with harness as context:

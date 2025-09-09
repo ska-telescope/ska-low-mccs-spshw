@@ -20,7 +20,6 @@ __version_info__ = (
 )
 
 __all__ = [
-    "MccsDaqReceiver",
     "MccsSubrack",
     "MccsTile",
     "SpsStation",
@@ -31,7 +30,6 @@ __all__ = [
 
 import tango.server
 
-from .daq_receiver import MccsDaqReceiver
 from .pdu import MccsPdu
 from .power_marshaller import PowerMarshaller
 from .station import SpsStation
@@ -53,7 +51,6 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     return tango.server.run(
         classes=(
-            MccsDaqReceiver,
             MccsPdu,
             PowerMarshaller,
             MccsSubrack,

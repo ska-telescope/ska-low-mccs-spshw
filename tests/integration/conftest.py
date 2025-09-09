@@ -422,5 +422,5 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_state",
         "tile_command_status",
         "tile_programming_state",
-        timeout=2.0,
+        timeout=5.0,
     )

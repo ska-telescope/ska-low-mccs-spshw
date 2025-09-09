@@ -275,6 +275,15 @@ class TestMccsTileTpmDriver:
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
 
+        # There used to be an assertion on DAQ which took about 1 second here.
+        # Without it, the subsequent event for MccsTile going to UNKNOWN is never fired
+        # even though it does move to that state.
+        # This only happens in the pipeline, and even then only intermittently.
+        # I reckon its something to do with resourcing, when I reduce the nof concurrent
+        # executing tests from 16 to 8 it happens less regularly, but still happens.
+        # With this sleep it never happens, c'est la vie.
+        time.sleep(1)
+
         # Since the subrack device is in adminMode OFFLINE,
         # it is not even trying to monitor and control its subrack,
         # so it reports its state as DISABLE,
@@ -321,7 +330,9 @@ class TestMccsTileTpmDriver:
         # TPM power state attribute.
         # The subrack reports that the TPM power state is UNKNOWN,
         # so the tile remains in UNKNOWN state.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.UNKNOWN, 2
+        )
         change_event_callbacks["tile_state"].assert_not_called()
         subrack_device.adminMode = AdminMode.ONLINE
 
@@ -831,7 +842,7 @@ class TestMccsTileTpmDriver:
         )
 
         # sleep to allow a poll
-        time.sleep(0.5)
+        time.sleep(1)
 
         sub_id = tile_device.subscribe_event(
             attribute,

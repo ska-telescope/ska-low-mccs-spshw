@@ -173,16 +173,22 @@ class RequestIterator:
     UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
     PROGRAMMED_POLLED_ATTRIBUTES = [
         "CHECK_CPLD_COMMS",
-        "HEALTH_STATUS",
         "IS_PROGRAMMED",
         "PLL_LOCKED",
+        "TEMPERATURES",
+        "VOLTAGES",
+        "CURRENTS",
+        "ALARMS",
+        "ADCS",
+        "TIMING",
+        "IO",
+        "DSP",
     ]
     INITIALISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
         "CHECK_CPLD_COMMS",
         "FPGA_REFERENCE_TIME",
-        "HEALTH_STATUS",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
         "PENDING_DATA_REQUESTS",
@@ -192,14 +198,20 @@ class RequestIterator:
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
         "PREADU_LEVELS",
+        "TEMPERATURES",
+        "VOLTAGES",
+        "CURRENTS",
+        "ALARMS",
+        "ADCS",
+        "TIMING",
+        "IO",
+        "DSP",
     ]
-
     SYNCHRONISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
         "CHECK_CPLD_COMMS",
         "FPGA_REFERENCE_TIME",
-        "HEALTH_STATUS",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
         "PENDING_DATA_REQUESTS",
@@ -211,6 +223,14 @@ class RequestIterator:
         "PREADU_LEVELS",
         "RFI_COUNT",
         "TILE_BEAMFORMER_FRAME",
+        "TEMPERATURES",
+        "VOLTAGES",
+        "CURRENTS",
+        "ALARMS",
+        "ADCS",
+        "TIMING",
+        "IO",
+        "DSP",
     ]
 
     def __init__(self: RequestIterator):

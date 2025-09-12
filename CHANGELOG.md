@@ -1,5 +1,10 @@
 # Version History
 
+## 8.0.1
+
+* [SKB-872] MccsTile now only polls a subset of health values on each poll.
+* [SKB-872] MccsTile attributes which do a hardware read are now only allowed if the TPM is programmed.
+
 ## 8.0.0
 
 * [THORN-172] The old two pod DAQ version has been removed.

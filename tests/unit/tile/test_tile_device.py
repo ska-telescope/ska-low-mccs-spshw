@@ -424,6 +424,7 @@ class TestMccsTile:
             "stationBeamFlagEnabled",
             "rfiCount",
             "runningBeams",
+            "ppsDelay",
         ]
 
     def __check_attributes_invalid(
@@ -1108,7 +1109,7 @@ class TestMccsTile:
             what tile_device is observing.
         """
         tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value="HEALTH_STATUS"
+            return_value="TEMPERATURES"
         )
         # This sleep is to ensure a poll has occured
         time.sleep(0.1)
@@ -1208,10 +1209,15 @@ class TestMccsTile:
         with pytest.raises(DevFailed) as excinfo:
             _ = getattr(tile_device, attribute)
 
-        assert "Communication with component is not established" in str(
-            excinfo.value
-        ) or f"Read value for attribute {attribute} has not been updated" in str(
-            excinfo.value
+        assert (
+            "Communication with component is not established" in str(excinfo.value)
+            or f"Read value for attribute {attribute} has not been updated"
+            in str(excinfo.value)
+            or (
+                "To execute this command we must be in state "
+                "'Programmed', 'Initialised' or 'Synchronised'!"
+            )
+            in str(excinfo.value)
         )
 
         tile_device.subscribe_event(
@@ -2536,7 +2542,7 @@ class TestMccsTileCommands:
         assert final_board_alarm_threshold == [20, 30]
         # The simulated overheating event should raise an ALARM on
         # the device.
-        change_event_callbacks["alarms"].assert_change_event(Anything)
+        change_event_callbacks["alarms"].assert_change_event(2, lookahead=2)
         assert on_tile_device.state() == tango.DevState.ALARM
 
     def test_get_voltage_warning_thresholds(

@@ -958,6 +958,15 @@ class TestMccsTileTpmDriver:
         )
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
+        tile_device.subscribe_event(
+            "tileprogrammingstate",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=2
+        )
+
         # Set the alarming value in backend TileSimulator
         tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
 
@@ -1061,6 +1070,15 @@ class TestMccsTileTpmDriver:
             change_event_callbacks["tile_state"],
         )
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        tile_device.subscribe_event(
+            "tileprogrammingstate",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=2
+        )
 
         # Set a max threshold below current temperature
         less_than_initial_value = initial_value - 1

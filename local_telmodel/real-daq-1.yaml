@@ -8,8 +8,6 @@ platform:
           - file://local_telmodel
           - real-daq-1.yaml
         sdn_first_interface: 10.1.0.152/25
-        daq:
-          two-pod-daq: false
         subracks:
           sr1:
             simulated: true

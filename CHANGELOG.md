@@ -1,6 +1,8 @@
 # Version History
 
-## Unreleased
+## 8.0.0
+
+* [THORN-172] The old two pod DAQ version has been removed.
 
 ## 7.4.2
 

@@ -39,6 +39,7 @@ scenarios("./features/bandpass_monitor.feature")
 def station_name_fixture(
     station: tango.DeviceProxy | None,
     station_label: str | None,
+    true_context: bool,
 ) -> str:
     """
     Return an available station to test against.
@@ -46,9 +47,12 @@ def station_name_fixture(
     :param station: the station we are testing against.
     :param station_label: a fixture returning the station label passed
         in from the environment.
+    :param true_context: whether to test against an existing Tango deployment
 
     :return: the station to test against.
     """
+    if not true_context:
+        pytest.skip("This needs to be run in a true-context")
     try:
         if station is None:
             pytest.skip("No station to test against.")

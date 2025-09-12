@@ -32,13 +32,7 @@ from ska_low_mccs_spshw.station import (
     SpsStationComponentManager,
     SpsStationSelfCheckManager,
 )
-from tests.harness import (
-    SpsTangoTestHarness,
-    get_bandpass_daq_name,
-    get_lmc_daq_name,
-    get_subrack_name,
-    get_tile_name,
-)
+from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
 @pytest.fixture(name="num_tiles_to_add")
@@ -89,10 +83,6 @@ def fixture_test_context(
     # Add 4 tiles.
     for i in range(0, num_tiles_to_add):
         harness.add_mock_tile_device(tile_id + i, mock_tile_device_proxy)
-    harness.set_daq_instance(receiver_ip="172.17.0.230")
-    harness.set_daq_instance(receiver_ip="172.17.0.231")
-    harness.set_lmc_daq_device(daq_id=daq_id, address=None)
-    harness.set_bandpass_daq_device(daq_id=daq_id, address=None)
     with harness:
         yield
 
@@ -171,8 +161,8 @@ def station_component_manager_fixture(
         1,
         [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
         [get_tile_name(tile_id + i) for i in range(0, num_tiles_to_add)],
-        get_lmc_daq_name(),
-        get_bandpass_daq_name(),
+        "",
+        "",
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
         None,  # csp_ingest_ip

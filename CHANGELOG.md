@@ -1,7 +1,23 @@
 # Version History
 
+## 8.0.1
 
-## Unreleased
+* [SKB-872] MccsTile now only polls a subset of health values on each poll.
+* [SKB-872] MccsTile attributes which do a hardware read are now only allowed if the TPM is programmed.
+
+## 8.0.0
+
+* [THORN-172] The old two pod DAQ version has been removed.
+
+## 7.4.2
+
+* [SKB-1033] Bumping TPM firmware to 6.6.1 to resolve bug with subarray ID and substation ID
+  Bug was introduced in TPM firmware 6.4.0
+* [SPRTS-487] Move boardTemperature attribute higher up the list (workaround no longer necessary due to cppTango fix).
+
+## 7.4.1
+
+* [THORN-248] Update to new ska-low-mccs-common MccsCommandProxy interface.
 
 ## 7.4.0
 

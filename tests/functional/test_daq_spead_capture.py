@@ -37,6 +37,7 @@ scenarios("./features/daq_spead_capture.feature")
 def station_context_fixture(
     expected_station: str,
     available_stations: list[str],
+    true_context: bool,
 ) -> str:
     """
     Return the name of the station under test.
@@ -44,9 +45,12 @@ def station_context_fixture(
     :param available_stations: a list of available stations in the
         context expected_station test is running.
     :param expected_station: the name of the station to test against.
+    :param true_context: whether to test against an existing Tango deployment
 
     :return: the name of the station under test
     """
+    if not true_context:
+        pytest.skip("This needs to be run in a true-context")
     if expected_station not in available_stations:
         pytest.skip(
             f"This test is designed for station {expected_station}. "

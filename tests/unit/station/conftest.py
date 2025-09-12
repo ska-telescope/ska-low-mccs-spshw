@@ -21,7 +21,7 @@ from tango.server import command
 from ska_low_mccs_spshw import SpsStation
 from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
-from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
+from tests.harness import get_subrack_name, get_tile_name
 
 
 @pytest.fixture(name="mock_subrack_device_proxy")
@@ -319,6 +319,26 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 ),
             )
 
+        @command()
+        def MockBeamformerTableChange(
+            self: PatchedSpsStationDevice, argin: str
+        ) -> None:
+            """
+            Mock a change in tile beamformerTable.
+
+            :param argin: contains the tile id we are mocking a change for
+                and the value
+
+            Mock a puched change event from a tile.
+            """
+            args = json.loads(argin)
+            self.component_manager._on_tile_attribute_change(
+                args["tile_id"],
+                "beamformertable",
+                np.array(args["value"]),
+                tango.AttrQuality.ATTR_VALID,
+            )
+
     return PatchedSpsStationDevice
 
 
@@ -428,14 +448,13 @@ def station_self_check_manager_fixture(
     """
     tile_trls = [get_tile_name(1)]
     subrack_trls = [get_subrack_name(1)]
-    daq_trl = get_lmc_daq_name()
     mock_component_manager = unittest.mock.Mock()
     station_self_check_manager = SpsStationSelfCheckManager(
         component_manager=mock_component_manager,
         logger=logger,
         tile_trls=tile_trls,
         subrack_trls=subrack_trls,
-        daq_trl=daq_trl,
+        daq_trl="",
     )
     # Jank to get around https://github.com/python/mypy/issues/3115 and
     # https://github.com/python/mypy/issues/16509
@@ -445,7 +464,7 @@ def station_self_check_manager_fixture(
             logger=logger,
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
-            daq_trl=daq_trl,
+            daq_trl="",
         )
         for tpm_test in [
             PassTest,
@@ -458,7 +477,7 @@ def station_self_check_manager_fixture(
             logger=logger,
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
-            daq_trl=daq_trl,
+            daq_trl="",
         )
         for tpm_test in [
             ErrorTest,

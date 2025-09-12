@@ -213,11 +213,13 @@ class TestAntennaBuffer(BaseDaqTest):
                 }
             )
             start_buffer = MccsCommandProxy(
-                tile.dev_name(), "StartAntennaBuffer", self.test_logger
+                device_name=tile.dev_name(),
+                command_name="StartAntennaBuffer",
+                logger=self.test_logger,
             )
 
             return_code, message = start_buffer(
-                arg=start_buffer_args, run_in_thread=False
+                arg=start_buffer_args, is_lrc=True, wait_for_result=True
             )
 
             self.test_logger.info(f"{return_code =} | {message =}")
@@ -251,10 +253,12 @@ class TestAntennaBuffer(BaseDaqTest):
             self.test_logger.info(f"Reading antenna buffer for {tile.dev_name()}")
 
             read_buffer = MccsCommandProxy(
-                tile.dev_name(), "ReadAntennaBuffer", self.test_logger
+                device_name=tile.dev_name(),
+                command_name="ReadAntennaBuffer",
+                logger=self.test_logger,
             )
 
-            return_code, message = read_buffer(run_in_thread=False)
+            return_code, message = read_buffer(is_lrc=True, wait_for_result=True)
 
             self.test_logger.info(f"{return_code =} | {message =}")
 

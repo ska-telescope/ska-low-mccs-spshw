@@ -13,8 +13,6 @@ from ska_tango_testing.harness import TangoTestHarness, TangoTestHarnessContext
 from tango.server import Device
 
 if TYPE_CHECKING:
-    from ska_low_mccs_daq_interface import DaqServerBackendProtocol
-
     from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 
 DEFAULT_STATION_LABEL = "ci-1"  # station 1 of cluster "ci"
@@ -199,17 +197,6 @@ class SpsTangoTestHarnessContext:
                     f"{repr(dev_failed)}."
                 )
         raise RuntimeError(f"Device {device_name} failed readiness.")
-
-    def get_daq_server_address(self: SpsTangoTestHarnessContext, daq_id: int) -> str:
-        """
-        Get the address of the DAQ server.
-
-        :param daq_id: the ID number of this DAQ instance.
-
-        :returns: the address (hostname and port) of the DAQ server.
-        """
-        port = self._tango_context.get_context("daq")
-        return f"localhost:{port}"
 
 
 class SpsTangoTestHarness:
@@ -479,139 +466,6 @@ class SpsTangoTestHarness:
         """
         self._tango_test_harness.add_mock_device(
             get_bandpass_daq_name(self._station_label), mock
-        )
-
-    def set_daq_instance(
-        self: SpsTangoTestHarness,
-        daq_instance: DaqServerBackendProtocol | None = None,
-        receiver_interface: str = "eth0",
-        receiver_ip: str = "172.17.0.230",
-        receiver_ports: int = 4660,
-    ) -> None:
-        """
-        And a DAQ instance to the test harness.
-
-        :param daq_instance:
-            the DAQ instance to be added to the test harness.
-        :param receiver_interface: The interface this DaqReceiver is to watch.
-        :param receiver_ip: The IP address of this DaqReceiver.
-        :param receiver_ports: The ports this DaqReceiver is to watch.
-        """
-        # Defer importing from any MCCS packages
-        # until we know we need to launch a DAQ instance to test against.
-        # This ensures that we can use this harness
-        # to run tests against a real cluster,
-        # from within a pod that does not have MCCS packages installed.
-        # pylint: disable-next=import-outside-toplevel
-        from ska_low_mccs_daq_interface.server import server_context
-
-        # pylint: disable-next=import-outside-toplevel
-        from ska_low_mccs_spshw.daq_receiver.daq_simulator import DaqSimulator
-
-        if daq_instance is None:
-            daq_instance = DaqSimulator(
-                receiver_interface=receiver_interface,
-                receiver_ip=receiver_ip,
-                receiver_ports=receiver_ports,
-            )
-
-        self._tango_test_harness.add_context_manager(
-            "daq",
-            server_context(daq_instance, 0),
-        )
-
-    def set_lmc_daq_device(  # pylint: disable=too-many-arguments
-        self: SpsTangoTestHarness,
-        daq_id: int,
-        address: tuple[str, int] | None,
-        consumers_to_start: list[str] | None = None,
-        logging_level: int = int(LoggingLevel.DEBUG),
-        device_class: type[Device] | str = "ska_low_mccs_spshw.MccsDaqReceiver",
-    ) -> None:
-        """
-        Add a DAQ Tango device to the test harness.
-
-        :param daq_id: An ID number for the DAQ.
-        :param address: address of the DAQ instance
-            to be monitored and controlled by this Tango device.
-            It is a tuple of hostname or IP address, and port.
-        :param consumers_to_start: list of consumers to start.
-        :param logging_level: the Tango device's default logging level.
-        :param device_class: The device class to use.
-            This may be used to override the usual device class,
-            for example with a patched subclass.
-        """
-        port: Callable[[dict[str, Any]], int] | int  # for the type checker
-
-        if consumers_to_start is None:
-            consumers_to_start = ["DaqModes.INTEGRATED_CHANNEL_DATA"]
-
-        if address is None:
-            server_id = "daq"
-            host = "localhost"
-
-            def port(context: dict[str, Any]) -> int:
-                return context[server_id]
-
-        else:
-            (host, port) = address
-
-        self._tango_test_harness.add_device(
-            get_lmc_daq_name(self._station_label),
-            device_class,
-            DaqId=daq_id,
-            Host=host,
-            Port=port,
-            ConsumersToStart=consumers_to_start,
-            LoggingLevelDefault=logging_level,
-            ParentTRL=get_sps_station_name(self._station_label),
-        )
-
-    def set_bandpass_daq_device(  # pylint: disable=too-many-arguments
-        self: SpsTangoTestHarness,
-        daq_id: int,
-        address: tuple[str, int] | None,
-        consumers_to_start: list[str] | None = None,
-        logging_level: int = int(LoggingLevel.DEBUG),
-        device_class: type[Device] | str = "ska_low_mccs_spshw.MccsDaqReceiver",
-    ) -> None:
-        """
-        Add a DAQ Tango device to the test harness.
-
-        :param daq_id: An ID number for the DAQ.
-        :param address: address of the DAQ instance
-            to be monitored and controlled by this Tango device.
-            It is a tuple of hostname or IP address, and port.
-        :param consumers_to_start: list of consumers to start.
-        :param logging_level: the Tango device's default logging level.
-        :param device_class: The device class to use.
-            This may be used to override the usual device class,
-            for example with a patched subclass.
-        """
-        port: Callable[[dict[str, Any]], int] | int  # for the type checker
-
-        if consumers_to_start is None:
-            consumers_to_start = ["DaqModes.INTEGRATED_CHANNEL_DATA"]
-
-        if address is None:
-            server_id = "daq"
-            host = "localhost"
-
-            def port(context: dict[str, Any]) -> int:
-                return context[server_id]
-
-        else:
-            (host, port) = address
-
-        self._tango_test_harness.add_device(
-            get_bandpass_daq_name(self._station_label),
-            device_class,
-            DaqId=daq_id,
-            Host=host,
-            Port=port,
-            ConsumersToStart=consumers_to_start,
-            LoggingLevelDefault=logging_level,
-            ParentTRL=get_sps_station_name(self._station_label),
         )
 
     def __enter__(

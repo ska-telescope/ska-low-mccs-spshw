@@ -223,8 +223,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.StationId,
             self.SubrackFQDNs,
             self.TileFQDNs,
-            self.LMCDaqTRL,
-            self.BandpassDaqTRL,
+            # It appears the test context inputs a space into empty strings.
+            self.LMCDaqTRL if self.LMCDaqTRL != " " else "",
+            self.BandpassDaqTRL if self.BandpassDaqTRL != " " else "",
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,

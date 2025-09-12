@@ -13,7 +13,8 @@ import json
 import logging
 import threading
 import time
-from typing import Any, Callable, Final, List, NoReturn, Optional, cast
+from contextlib import contextmanager
+from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
 import numpy as np
 import tango
@@ -58,7 +59,14 @@ __all__ = ["TileComponentManager"]
 # all to use the name in ska_low_sps_tpm_api.Tile. Multiple maps like this increase
 # the risk of mapping errors.
 _ATTRIBUTE_MAP: Final = {
-    "HEALTH_STATUS": "tile_health_structure",
+    "TEMPERATURES": "tile_health_structure",
+    "VOLTAGES": "tile_health_structure",
+    "CURRENTS": "tile_health_structure",
+    "ALARMS": "tile_health_structure",
+    "ADCS": "tile_health_structure",
+    "TIMING": "tile_health_structure",
+    "IO": "tile_health_structure",
+    "DSP": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
     "PLL_LOCKED": "pll_locked",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
@@ -261,6 +269,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
+        self._initialise_executing: bool = False
 
         self._event_serialiser = event_serialiser
 
@@ -378,11 +387,61 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.is_programmed,
                     publish=True,
                 )
-            case "HEALTH_STATUS":
+            case "TEMPERATURES":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_health_status,
                     publish=True,
+                    group="temperatures",
+                )
+            case "VOLTAGES":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="voltages",
+                )
+            case "CURRENTS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="currents",
+                )
+            case "ALARMS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="alarms",
+                )
+            case "ADCS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="adcs",
+                )
+            case "TIMING":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="timing",
+                )
+            case "IO":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="io",
+                )
+            case "DSP":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    group="dsp",
                 )
             case "ADC_RMS":
                 request = TileRequest(
@@ -637,7 +696,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     **{poll_response.command: poll_response.data},
                 )
         except Exception as e:  # pylint: disable=broad-except
-            self.logger.warning(f"Exception raised in attribute callback {e}")
+            self.logger.warning(
+                f"Exception raised in attribute callback {e}", exc_info=True
+            )
         super().poll_succeeded(poll_response)
         self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 
@@ -693,7 +754,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
-        subrack_off_command_proxy(self._subrack_tpm_id, task_callback=task_callback)
+        subrack_off_command_proxy(
+            arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
+        )
 
         return TaskStatus.QUEUED, ""
 
@@ -725,7 +788,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         # Do not pass the task_callback to command_proxy.
         # The on command is completed when initialisation has completed.
-        subrack_on_command_proxy(self._subrack_tpm_id)
+        subrack_on_command_proxy(is_lrc=False, arg=self._subrack_tpm_id)
 
         request = TileLRCRequest(
             name="initialise",
@@ -1062,6 +1125,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info("Initialise command placed initialise in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
+    @contextmanager
+    def _initialising(self: TileComponentManager) -> Iterator[None]:
+        self._initialise_executing = True
+        try:
+            yield
+        finally:
+            self._initialise_executing = False
+
     @check_communicating
     def _execute_initialise(
         self: TileComponentManager,
@@ -1076,93 +1147,97 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            if force_reprogramming:
-                self.logger.info("Forcing erasing of FPGA.")
-                self.tile.erase_fpgas()
-                self._tpm_status = TpmStatus.UNPROGRAMMED
-                self._update_attribute_callback(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
-                )
-            prog_status = False
-
-            if self.tile.is_programmed() is False:
-                self.logger.error(
-                    f"Programming tile with firmware {self._firmware_name}"
-                )
-
-                self.tile.program_fpgas(self._firmware_name)
-            prog_status = self.tile.is_programmed()
-
-            #
-            # Initialisation after programming the FPGA
-            #
-            if prog_status:
-                self._tpm_status = TpmStatus.PROGRAMMED
-                self._update_attribute_callback(
-                    programming_state=TpmStatus.PROGRAMMED.pretty_name()
-                )
-                #
-                # Base initialisation
-                #
-                self.logger.info(
-                    "initialising tile with: \n"
-                    f"* tile ID of {self._tile_id} \n"
-                    f"* pps correction of {pps_delay_correction} \n"
-                    f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
-                    f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
-                    f"* staticTimeDelays of {self._static_time_delays} \n"
-                    f"* PreAduLevels of {self._preadu_levels} \n"
-                )
-                self.tile.initialise(
-                    station_id=self._station_id,
-                    tile_id=self._tile_id,
-                    pps_delay=pps_delay_correction,
-                    active_40g_ports_setting="port1-only",
-                    src_ip_fpga1=self.src_ip_40g_fpga1,
-                    src_ip_fpga2=self.src_ip_40g_fpga2,
-                    time_delays=self._static_time_delays,
-                )
-                #
-                # extra steps required to have it working
-                #
-                self.logger.info(
-                    "TileComponentManager: reset_and_initialise_beamformer"
-                )
-                self.tile.initialise_beamformer(128, 8)
-
-                self.tile.set_first_last_tile(False, False)
-
-                # self.tile.post_synchronisation()
-
-                if self._preadu_levels.size != 0:
-                    self.logger.info(
-                        "TileComponentManager: setting PreADU attenuation..."
+        with self._initialising():
+            with acquire_timeout(
+                self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            ):
+                if force_reprogramming:
+                    self.logger.info("Forcing erasing of FPGA.")
+                    self.tile.erase_fpgas()
+                    self._tpm_status = TpmStatus.UNPROGRAMMED
+                    self._update_attribute_callback(
+                        programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                     )
-                    self.tile.set_preadu_levels(self._preadu_levels)
-                    if self.tile.get_preadu_levels() != self._preadu_levels.tolist():
-                        self.logger.warning(
-                            "TileComponentManager: set PreADU attenuation failed"
+                prog_status = False
+
+                if self.tile.is_programmed() is False:
+                    self.logger.error(
+                        f"Programming tile with firmware {self._firmware_name}"
+                    )
+
+                    self.tile.program_fpgas(self._firmware_name)
+                prog_status = self.tile.is_programmed()
+
+                #
+                # Initialisation after programming the FPGA
+                #
+                if prog_status:
+                    self._tpm_status = TpmStatus.PROGRAMMED
+                    self._update_attribute_callback(
+                        programming_state=TpmStatus.PROGRAMMED.pretty_name()
+                    )
+                    #
+                    # Base initialisation
+                    #
+                    self.logger.info(
+                        "initialising tile with: \n"
+                        f"* tile ID of {self._tile_id} \n"
+                        f"* pps correction of {pps_delay_correction} \n"
+                        f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
+                        f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
+                        f"* staticTimeDelays of {self._static_time_delays} \n"
+                        f"* PreAduLevels of {self._preadu_levels} \n"
+                    )
+                    self.tile.initialise(
+                        station_id=self._station_id,
+                        tile_id=self._tile_id,
+                        pps_delay=pps_delay_correction,
+                        active_40g_ports_setting="port1-only",
+                        src_ip_fpga1=self.src_ip_40g_fpga1,
+                        src_ip_fpga2=self.src_ip_40g_fpga2,
+                        time_delays=self._static_time_delays,
+                    )
+                    #
+                    # extra steps required to have it working
+                    #
+                    self.logger.info(
+                        "TileComponentManager: reset_and_initialise_beamformer"
+                    )
+                    self.tile.initialise_beamformer(128, 8)
+
+                    self.tile.set_first_last_tile(False, False)
+
+                    # self.tile.post_synchronisation()
+
+                    if self._preadu_levels.size != 0:
+                        self.logger.info(
+                            "TileComponentManager: setting PreADU attenuation..."
                         )
+                        self.tile.set_preadu_levels(self._preadu_levels)
+                        if (
+                            self.tile.get_preadu_levels()
+                            != self._preadu_levels.tolist()
+                        ):
+                            self.logger.warning(
+                                "TileComponentManager: set PreADU attenuation failed"
+                            )
 
-                self.logger.info("TileComponentManager: initialisation completed")
+                    self.logger.info("TileComponentManager: initialisation completed")
 
-                # Update configuration before we transition to INITIALISED.
-                self.__update_configuration_from_tile()
+                    # Update configuration before we transition to INITIALISED.
+                    self.__update_configuration_from_tile()
 
-                self._tpm_status = TpmStatus.INITIALISED
-                self._update_attribute_callback(
-                    programming_state=TpmStatus.INITIALISED.pretty_name()
-                )
-                # The initial pps_delay must be reset after initialisation.
-                self._initial_pps_delay = None
-                if self._global_reference_time:
-                    self.logger.info(
-                        "Global reference time specifed, starting acquisition"
+                    self._tpm_status = TpmStatus.INITIALISED
+                    self._update_attribute_callback(
+                        programming_state=TpmStatus.INITIALISED.pretty_name()
                     )
-                    self._start_acquisition()
+                    # The initial pps_delay must be reset after initialisation.
+                    self._initial_pps_delay = None
+                    if self._global_reference_time:
+                        self.logger.info(
+                            "Global reference time specifed, starting acquisition"
+                        )
+                        self._start_acquisition()
 
     @abort_task_on_exception
     @check_communicating

@@ -881,9 +881,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
-                self.tile_health_structure = dict(
-                    attribute_value if not mark_invalid else {}
-                )
+                if mark_invalid:
+                    self.tile_health_structure = {}
+                else:
+                    self.tile_health_structure.update(attribute_value)
                 self._health_model.update_state(
                     tile_health_structure=self.tile_health_structure
                 )
@@ -971,9 +972,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
 
-            attribute_value = reduce(
-                getitem, dictionary_path, self.tile_health_structure
-            )
+            try:
+                attribute_value = reduce(
+                    getitem, dictionary_path, self.tile_health_structure
+                )
+            except KeyError:
+                self.logger.debug(
+                    f"Failed to find attribute {attribute_name}, "
+                    "likely it hasn't been polled yet."
+                )
+                attribute_value = None
 
             if attribute_value is not None:
                 try:
@@ -1081,6 +1089,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevDouble",
+        abs_change=0.1,
+        min_value=15.0,
+        max_value=70.0,
+        min_alarm=16.0,
+        max_alarm=65.0,
+    )
+    def boardTemperature(
+        self: MccsTile,
+    ) -> tuple[float | None, float, tango.AttrQuality] | None:
+        """
+        Return the board temperature.
+
+        :return: the board temperature
+        """
+        return self._attribute_state["boardTemperature"].read()
 
     @attribute(
         dtype="DevString",
@@ -2205,7 +2231,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.logger.info(message)
         self.component_manager.set_station_id(value)
 
-    @attribute(dtype="DevString")
+    @attribute(dtype="DevString", fisallowed="_not_initialising")
     def firmwareTemperatureThresholds(
         self: MccsTile,
     ) -> str | dict[str, tuple[int, int]]:
@@ -2316,6 +2342,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         return is_engineering
 
+    def _not_initialising(self: MccsTile, *args: Any) -> bool:
+        """
+        Return a flag representing whether we are not in Initialising state.
+
+        :param args: The tango.AttReqType.
+
+        :return: True if Tile is not in Initialising state.
+        """
+        if self.component_manager._initialise_executing is False:
+            return True
+        reason = "CommandNotAllowed"
+        msg = "Cannot execute this command while initialise is executing!"
+        tango.Except.throw_exception(reason, msg, self.get_name())
+        return False
+
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
@@ -2352,7 +2393,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["fpga2Temperature"].read()
 
-    @attribute(dtype=("DevLong",), max_dim_x=2, abs_change=1)
+    @attribute(
+        dtype=("DevLong",), max_dim_x=2, abs_change=1, fisallowed="_not_initialising"
+    )
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
@@ -2361,7 +2404,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpgas_time
 
-    @attribute(dtype="DevString")
+    @attribute(dtype="DevString", fisallowed="_not_initialising")
     def fpgaTime(self: MccsTile) -> str:
         """
         Return the FPGA internal time.
@@ -2370,7 +2413,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_time
 
-    @attribute(dtype="DevString")
+    @attribute(dtype="DevString", fisallowed="_not_initialising")
     def fpgaReferenceTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -2379,7 +2422,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.formatted_fpga_reference_time
 
-    @attribute(dtype="DevString")
+    @attribute(dtype="DevString", fisallowed="_not_initialising")
     def fpgaFrameTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -2406,7 +2449,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self._antenna_ids = list(antenna_ids)
 
-    @attribute(dtype=("DevString",), max_dim_x=16)
+    @attribute(dtype=("DevString",), max_dim_x=16, fisallowed="_not_initialising")
     def fortyGbDestinationIps(self: MccsTile) -> list[str]:
         """
         Return the destination IPs for all 40Gb ports on the tile.
@@ -2417,7 +2460,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_ip"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1)
+    @attribute(
+        dtype=("DevLong",), max_dim_x=16, abs_change=1, fisallowed="_not_initialising"
+    )
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
         Return the destination ports for all 40Gb ports on the tile.
@@ -2441,7 +2486,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["adcPower"].read()
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", fisallowed="_not_initialising")
     def currentTileBeamformerFrame(self: MccsTile) -> int:
         """
         Return current frame.
@@ -2477,7 +2522,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["coreCommunicationStatus"].read()
 
-    @attribute(dtype="DevLong", abs_change=1)
+    @attribute(dtype="DevLong", abs_change=1, fisallowed="_not_initialising")
     def currentFrame(self: MccsTile) -> int:
         """
         Return current frame.
@@ -2489,7 +2534,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_current_frame
 
-    @attribute(dtype="DevBoolean")
+    @attribute(dtype="DevBoolean", fisallowed="_not_initialising")
     def pendingDataRequests(self: MccsTile) -> bool | None:
         """
         Check for pending data requests.
@@ -2498,7 +2543,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.pending_data_requests
 
-    @attribute(dtype="DevBoolean")
+    @attribute(dtype="DevBoolean", fisallowed="_not_initialising")
     def isBeamformerRunning(self: MccsTile) -> bool | None:
         """
         Check if beamformer is running.
@@ -2525,7 +2570,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_phase_terminal_count(value)
 
-    @attribute(dtype="DevLong", abs_change=1)
+    @attribute(dtype="DevLong", abs_change=1, fisallowed="_not_initialising")
     def ppsDelay(self: MccsTile) -> int | None:
         """
         Return the delay between PPS and 10 MHz clock.
@@ -2594,25 +2639,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         e.g. DevBoolean
 
-        NOTE: https://gitlab.com/tango-controls/pytango/-/issues/623.
-        The automated state analysis can segfault if an exception is
-        raised in a specific order of evaluation for attribute with min_max
-        alarms. The solutions are dire:
-        1. Live with a segfault until it is fixed in cpptango.
-        2. Dont allow reporting any attributes with min_max alarm until
-        you know none will raise an exception. This will obstruct critical
-        information.
-        3. Remove all min_max. This will remove critical functionality.
-        4. Give attributes a min_max alarm level a made up initial value in range.
-        this seems like the worst option as is making up data.
-        5. Re-order attributes such that the chance of a segfault is minimised.
-
-        Option 5 was chosen by placing boardTemperature at the bottom. I hate doing this
-        but all options seem dire. This seemed like the least destructive,
-        it reduces chance of segfault since it is the first attribute to be read.
-        Meaning it will have a value when the others have a value of NONE,
-        hence raise an exception.
-
         :return: the 'tango.DevState' calculated
         """
         automatic_state_analysis: tango.DevState = super().dev_state()
@@ -2659,9 +2685,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["pllLocked"].read()
 
     @attribute(
-        dtype=("DevLong",),
-        max_dim_x=512,
-        abs_change=1,
+        dtype=("DevLong",), max_dim_x=512, abs_change=1, fisallowed="_not_initialising"
     )
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
@@ -3067,9 +3091,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["rfiCount"].read()
 
     @attribute(
-        dtype=("DevBoolean",),
-        max_dim_x=2,  # fpgas
-    )
+        dtype=("DevBoolean",), max_dim_x=2, fisallowed="_not_initialising"
+    )  # fpgas
     def stationBeamFlagEnabled(
         self: MccsTile,
     ) -> list[bool]:
@@ -3113,32 +3136,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.integrated_data_transmission_mode
 
-    @attribute(
-        dtype="DevDouble",
-        abs_change=0.1,
-        min_value=15.0,
-        max_value=70.0,
-        min_alarm=16.0,
-        max_alarm=65.0,
-    )
-    def boardTemperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the board temperature.
-
-        NOTE: Do not move this attribute.
-        It is updated first of all the attributes with min_max alarms.
-        so must be evaluated last. see note in dev_state for more
-        info. This is a horrible solution, but a better one is
-        not immediatly avaliable or clear.
-        see https://gitlab.com/tango-controls/pytango/-/issues/623
-
-        :return: the board temperature
-        """
-        return self._attribute_state["boardTemperature"].read()
-
-    @attribute(dtype=("DevBoolean",), max_dim_x=48)
+    @attribute(dtype=("DevBoolean",), max_dim_x=48, fisallowed="_not_initialising")
     def runningBeams(self: MccsTile) -> list[bool]:
         """
         List running status for each SubarrayBeam.

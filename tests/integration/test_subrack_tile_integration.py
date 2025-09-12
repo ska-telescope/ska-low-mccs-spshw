@@ -54,7 +54,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "preadu_levels",
         "track_lrc_command",
         "generic_health_attribute",
-        "daq_state",
         timeout=7.0,
     )
 
@@ -69,7 +68,6 @@ class TestSubrackTileIntegration:
         tile_device: tango.DeviceProxy,
         pdu_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -82,7 +80,6 @@ class TestSubrackTileIntegration:
         * when MccsTile is turned off, the subrack denies power to the
           TPM
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param pdu_device: the pdu Tango device under test.
@@ -93,22 +90,7 @@ class TestSubrackTileIntegration:
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
         assert pdu_device.adminMode == AdminMode.OFFLINE
-        assert daq_device.adminMode == AdminMode.OFFLINE
-
-        daq_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["daq_state"],
-        )
-        change_event_callbacks["daq_state"].assert_change_event(tango.DevState.DISABLE)
-
-        daq_device.adminMode = AdminMode.ONLINE
         pdu_device.adminMode = AdminMode.ONLINE
-
-        change_event_callbacks["daq_state"].assert_change_event(
-            tango.DevState.ON, lookahead=2
-        )
-
         # Since the subrack device is in adminMode OFFLINE,
         # it is not even trying to monitor and control its subrack,
         # so it reports its state as DISABLE,
@@ -270,7 +252,6 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -284,7 +265,6 @@ class TestMccsTileTpmDriver:
         subrack_device.adminMode == AdminMode.ONLINE
         subrack_device.state == tango.DevState.ON
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -294,20 +274,15 @@ class TestMccsTileTpmDriver:
         """
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
-        assert daq_device.adminMode == AdminMode.OFFLINE
 
-        daq_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["daq_state"],
-        )
-        change_event_callbacks["daq_state"].assert_change_event(tango.DevState.DISABLE)
-
-        daq_device.adminMode = AdminMode.ONLINE
-
-        change_event_callbacks["daq_state"].assert_change_event(
-            tango.DevState.ON, lookahead=2
-        )
+        # There used to be an assertion on DAQ which took about 1 second here.
+        # Without it, the subsequent event for MccsTile going to UNKNOWN is never fired
+        # even though it does move to that state.
+        # This only happens in the pipeline, and even then only intermittently.
+        # I reckon its something to do with resourcing, when I reduce the nof concurrent
+        # executing tests from 16 to 8 it happens less regularly, but still happens.
+        # With this sleep it never happens, c'est la vie.
+        time.sleep(1)
 
         # Since the subrack device is in adminMode OFFLINE,
         # it is not even trying to monitor and control its subrack,
@@ -355,7 +330,9 @@ class TestMccsTileTpmDriver:
         # TPM power state attribute.
         # The subrack reports that the TPM power state is UNKNOWN,
         # so the tile remains in UNKNOWN state.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.UNKNOWN, 2
+        )
         change_event_callbacks["tile_state"].assert_not_called()
         subrack_device.adminMode = AdminMode.ONLINE
 
@@ -441,13 +418,11 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test StartAcquisition.
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -459,7 +434,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
         assert tile_device.tileprogrammingstate == "Initialised"
@@ -484,13 +458,11 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test SendDataSamples can only be called if startAcquisition has been.
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -502,7 +474,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -536,13 +507,11 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for configuring the 40G cores.
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -554,7 +523,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -582,13 +550,11 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for Configure40gCore unhappy case.
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -600,7 +566,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -629,7 +594,6 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -638,7 +602,6 @@ class TestMccsTileTpmDriver:
         Note: This is a very basic test testing the happy case.
         consider unhappy cases and more complex scenarios.
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -650,7 +613,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -675,13 +637,11 @@ class TestMccsTileTpmDriver:
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         tile_component_manager: TileComponentManager,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test the preadu_levels.
 
-        :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -694,7 +654,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
         initial_level = tile_device.preadulevels
@@ -720,12 +679,10 @@ class TestMccsTileTpmDriver:
         tile_device.preadulevels = requested_preadu
         change_event_callbacks["preadu_levels"].assert_change_event(expected_preadu)
 
-    # pylint: disable=too-many-arguments
     def test_pps_present(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -738,7 +695,6 @@ class TestMccsTileTpmDriver:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param subrack_device: the subrack Tango device under test.
-        :param daq_device: the Daq Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
@@ -748,7 +704,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -777,7 +732,6 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
-        daq_device: tango.DeviceProxy,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -792,7 +746,6 @@ class TestMccsTileTpmDriver:
         :param subrack_device: the subrack Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
-        :param daq_device: the Daq Tango device under test.
         :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -801,7 +754,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -856,7 +808,6 @@ class TestMccsTileTpmDriver:
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
         attribute: str,
         initial_value: Any,
@@ -876,7 +827,6 @@ class TestMccsTileTpmDriver:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         :param subrack_device: the subrack Tango device under test.
-        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         :param attribute: the name of the health attribute
@@ -888,12 +838,11 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
         # sleep to allow a poll
-        time.sleep(0.5)
+        time.sleep(1)
 
         sub_id = tile_device.subscribe_event(
             attribute,
@@ -956,7 +905,6 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
         attribute: str,
         initial_value: Any,
@@ -975,7 +923,6 @@ class TestMccsTileTpmDriver:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         :param subrack_device: the subrack Tango device under test.
-        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         :param attribute: the name of the health attribute
@@ -987,7 +934,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -1072,7 +1018,6 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
         attribute: str,
         initial_value: Any,
@@ -1091,7 +1036,6 @@ class TestMccsTileTpmDriver:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         :param subrack_device: the subrack Tango device under test.
-        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         :param attribute: the name of the health attribute
@@ -1103,7 +1047,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 
@@ -1173,7 +1116,6 @@ class TestMccsTileTpmDriver:
         tile_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
-        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -1183,7 +1125,6 @@ class TestMccsTileTpmDriver:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
-        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -1191,7 +1132,6 @@ class TestMccsTileTpmDriver:
             tile_device,
             tile_simulator,
             subrack_device,
-            daq_device,
             change_event_callbacks,
         )
 

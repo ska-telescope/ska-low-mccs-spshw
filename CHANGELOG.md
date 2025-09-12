@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
+
 ## 8.0.1
 
 * [SKB-872] MccsTile now only polls a subset of health values on each poll.

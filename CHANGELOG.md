@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 7.4.2
+
+* [SKB-1033] Bumping TPM firmware to 6.6.1 to resolve bug with subarray ID and substation ID
+  Bug was introduced in TPM firmware 6.4.0
 * [SPRTS-487] Move boardTemperature attribute higher up the list (workaround no longer necessary due to cppTango fix).
 
 ## 7.4.1

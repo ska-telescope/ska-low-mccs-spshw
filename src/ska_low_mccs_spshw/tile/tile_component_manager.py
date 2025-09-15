@@ -3385,8 +3385,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._update_attribute_callback(preadu_levels=_preadu_levels)
 
-        # create a 32-element mask based on preadu presence
-        preadu_mask = np.repeat(self._preadu_present * 2, 8)
+        # Create a 32-element mask based on preadu presence.
+        # The indexes in _preadu_present correspond to the preADU current measurements
+        # FE0 and FE1. However this happens to be reversed with respect to the ADCs,
+        # so we reverse it when generating the mask.
+        preadu_mask = np.repeat(self._preadu_present[::-1] * 2, 8)
 
         # multiply by the levels
         expected_readback = preadu_mask * levels

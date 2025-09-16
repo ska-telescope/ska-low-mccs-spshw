@@ -946,6 +946,7 @@ class PreAdu:
         self.logger = logger
         self.channel_filters: list[float] = [0.00] * 16
         self._nof_channels: int = 16
+        self.powered_on = True
 
     def set_attenuation(
         self: PreAdu, attenuation: float, channels: list[int] | None = None
@@ -981,6 +982,14 @@ class PreAdu:
         """Read configuration."""
         self.logger.info("Not yet implemented.")
         return
+
+    def switch_on(self: PreAdu) -> None:
+        """Switch on."""
+        self.powered_on = True
+
+    def switch_off(self: PreAdu) -> None:
+        """Switch off."""
+        self.powered_on = False
 
 
 class TileSimulator:
@@ -1277,6 +1286,7 @@ class TileSimulator:
         qsfp_detection: str = "auto",
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        adc_fullscale_voltage: float = 1.59,
         global_start_time: int | None = None,
     ) -> None:
         """
@@ -1324,6 +1334,7 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param adc_fullscale_voltage: ADC input full-scale voltage
         :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
@@ -2051,6 +2062,7 @@ class TileSimulator:
         dsp_core: bool = True,
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        adc_fullscale_voltage: float = 1.59,
     ) -> None:
         """
         Attempt to form a connection with TPM.
@@ -2062,6 +2074,7 @@ class TileSimulator:
         :param dsp_core: Enable loading of DSP core plugins
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param adc_fullscale_voltage: ADC input full-scale voltage
         """
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
@@ -2839,29 +2852,6 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def load_beam_angle(self: TileSimulator, angle_coefficients: list[float]) -> None:
-        """
-        Load beam angle.
-
-        :param angle_coefficients: angle coefficients.
-        """
-        self.logger.error("load_beam_angle not implemented in simulator")
-
-    @check_mocked_overheating
-    @connected
-    def load_antenna_tapering(
-        self: TileSimulator, beam: int, tapering_coefficients: list[int]
-    ) -> None:
-        """
-        Load antenna tapering.
-
-        :param beam: beam
-        :param tapering_coefficients: tapering coefficients
-        """
-        self.logger.error("load_antenna_tapering not implemented in simulator")
-
-    @check_mocked_overheating
-    @connected
     def compute_calibration_coefficients(self: TileSimulator) -> None:
         """Compute calibration coefficients."""
         self.logger.error(
@@ -3039,6 +3029,56 @@ class TileSimulator:
         if not self.is_programmed():
             return -1
         return self._station_id
+
+    @property
+    def has_preadu(self: TileSimulator) -> list[bool]:
+        """
+        Return a list representing presence of preadu.
+
+        :return: A list of bools. Index 0 represents the FE0 current
+            the index 0 represents the FE1 current.
+        """
+        assert self.tpm
+        return [True] * len(self.tpm.preadu)
+
+    @property
+    def preadu_power_enabled(self: TileSimulator) -> bool:
+        """
+        Check if tile is supplying power to preADUs.
+
+        Only checks one preADU as their power supply is not independent.
+        Note, this is possible even if a preADU is not fitted.
+
+        :return: True if a preADUs are being supplied power, else False
+        """
+        assert self.tpm
+        return self.tpm.tpm_preadu[0].powered_on
+
+    def power_on_preadus(self: TileSimulator) -> None:
+        """
+        Power on all preADUs.
+
+        The two preADUs cannot be powered on independently.
+        Note, this is possible even if one or more preADU is not fitted.
+        """
+        # Single CPLD register controls power to both preADUs so it's only
+        # necessary to issue the switch on command to one preADU object.
+        assert self.tpm
+        for preadu in self.tpm.tpm_preadu:
+            preadu.switch_on()
+
+    def power_off_preadus(self: TileSimulator) -> None:
+        """
+        Power off all preADUs.
+
+        The two preADUs cannot be powered off independently.
+        Note, this is possible even if one or more preADU is not fitted.
+        """
+        # Single CPLD register controls power to both preADUs so it's only
+        # necessary to issue the switch off command to one preADU object.
+        assert self.tpm
+        for preadu in self.tpm.tpm_preadu:
+            preadu.switch_off()
 
     @check_mocked_overheating
     @connected

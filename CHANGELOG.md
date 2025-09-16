@@ -3,6 +3,8 @@
 ## Unreleased
 
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
+* [SKB-999] Add configuration checks to configuration reads from hardware.
+* [SKB-999] Add configurationErrors and configurationErrorInfo attributes to MccsTile.
 
 ## 8.0.1
 

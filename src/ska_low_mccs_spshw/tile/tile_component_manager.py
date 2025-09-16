@@ -1484,6 +1484,27 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
+        has_preadu = self.tile.has_preadu
+
+        # Check for configuration discrepancies.
+        # TODO: Do we want to add HardwareVersion and
+        # BiosVersion here.
+        configuration_checks: dict[str, tuple[Any, Any]] = {
+            "PreAduFitted": (self._preadu_present, has_preadu)
+        }
+        configuration_faults: list[tuple[str, str]] = [
+            (name, f"(Configured value) {expected} != (Read value) {actual}")
+            for name, (expected, actual) in configuration_checks.items()
+            if expected != actual
+        ]
+
+        if configuration_faults:
+            self.logger.error(
+                "Configuration discrepency, moved to fault. "
+                f"{json.dumps(configuration_faults)}"
+            )
+            self.fault_state = True
+            self._update_component_state(fault=self.fault_state)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1493,6 +1514,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             channeliser_rounding=channeliser_rounding,
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
+            configuration_errors=len(configuration_faults),
+            configuration_error_info=json.dumps(configuration_faults),
         )
 
         self.logger.info("Configuration information read from TPM")

@@ -412,6 +412,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "antenna_buffer_mode": "antennaBufferMode",
             "data_transmission_mode": "dataTransmissionMode",
             "integrated_data_transmission_mode": "integratedDataTransmissionMode",
+            "configuration_errors": "configurationErrors",
+            "configuration_error_info": "configurationErrorInfo",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -1388,6 +1390,38 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the ddr reset count per FPGA.
         """
         return self._attribute_state["ddr_reset_counter"].read()
+
+    @attribute(dtype="DevShort", label="configurationErrors", min_alarm=-1, max_alarm=1)
+    def configurationErrors(self: MccsTile) -> int:
+        """
+        Return the number of configurationErrors.
+
+        Please view ``configurationErrorInfo`` for more information.
+
+        Expected: 0 if no configuration errors detected.
+
+        :example:
+            tile.configurationErrors
+            0
+
+        :return: An integer with number of configuration errors.
+        """
+        return self._attribute_state["configurationErrors"].read()
+
+    @attribute(dtype="DevString", label="configurationErrorInfo")
+    def configurationErrorInfo(self: MccsTile) -> str:
+        """
+        Return information about configuration errors.
+
+        Expected: "[]" if no errors detected.
+
+        :example:
+            tile.configurationErrorInfo
+            "[]"
+
+        :return: information about configuratin errors.
+        """
+        return self._attribute_state["configurationErrorInfo"].read()
 
     @attribute(dtype="DevShort", label="f2f_soft_errors", abs_change=1)
     def f2f_soft_errors(self: MccsTile) -> int:

@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes
+
 ## 8.0.1
 
 * [SKB-872] MccsTile now only polls a subset of health values on each poll.

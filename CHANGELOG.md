@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 9.0.0
+
+* [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0-rc1 - Simplified tile 40G ethernet configuration
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes
 

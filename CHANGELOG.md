@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 9.0.0
+
 * [THORN-298] Fix issue where last attribute was being marked as invalid
+* [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0-rc1 - Simplified tile 40G ethernet configuration
 * [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes

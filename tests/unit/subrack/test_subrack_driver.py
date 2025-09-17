@@ -9,7 +9,7 @@
 from typing import Any
 
 import pytest
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -246,6 +246,62 @@ def test_tpm_power_commands(
     subrack_driver.turn_on_tpm(tpm_to_power)
     tpm_on_off[tpm_to_power - 1] = True
     callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
+
+
+def test_get_health_status(
+    subrack_simulator: SubrackSimulator,
+    subrack_driver: SubrackDriver,
+    subrack_simulator_attribute_values: dict[str, Any],
+    health_status: dict[str, Any],
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test that the subrack driver pushes a full set of attribute values.
+
+    :param subrack_simulator: the subrack simulator backend that the
+        subrack driver drives through its server interface
+    :param subrack_driver: the subrack driver under test
+    :param subrack_simulator_attribute_values: key-value dictionary of
+        the expected subrack simulator attribute values
+    :param health_status: the values
+    :param callbacks: dictionary of driver callbacks.
+    """
+    callbacks["communication_status"].assert_not_called()
+    callbacks["component_state"].assert_not_called()
+
+    subrack_driver.start_communicating()
+
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    callbacks["communication_status"].assert_not_called()
+
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_not_called()
+
+    # Case 1: bios is too old, health status is not polled
+    old_bios_board = {"SMM": {"bios": "v1.5.0"}}
+    subrack_simulator.simulate_attribute("board_info", old_bios_board)
+    callbacks["component_state"].assert_call(
+        board_info=old_bios_board,
+    )
+
+    status, message = subrack_driver.get_health_status()
+    assert status == TaskStatus.QUEUED
+
+    assert subrack_driver.read_health_status() == {}
+
+    # Case 2: bios is current enough, health status is polled
+    new_bios_board = {"SMM": {"bios": "v1.6.0"}}
+    subrack_simulator.simulate_attribute("board_info", new_bios_board)
+    callbacks["component_state"].assert_call(
+        board_info=new_bios_board,
+    )
+
+    status, message = subrack_driver.get_health_status()
+    assert status == TaskStatus.QUEUED
+
+    assert subrack_driver.read_health_status() == health_status
 
 
 def test_other_commands(

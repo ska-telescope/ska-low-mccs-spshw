@@ -278,7 +278,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     PduPorts = device_property(dtype=(int,), default_value=[])
     SimulatedPDU = device_property(dtype=bool, default_value=True)
 
-    # A map from the compnent manager argument to the name of the Tango attribute.
+    # A map from the component manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
     # Attributes that don't map one-to-one are handled individually.
     # For example, tpm_on_off is not included here because it unpacks into eight
@@ -306,6 +306,24 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
+        "board_info": "subrackBoardInfo",
+    }
+
+    # Used for mapping tango attributes to the corresponding value in the
+    # health_status dictionary that is polled from the subrack.
+    _HEALTH_STATUS_MAP = {
+        "internalVoltagesPOWERIN": ["internal_voltages", "V_POWERIN"],
+        "internalVoltagesSOC": ["internal_voltages", "V_SOC"],
+        "internalVoltagesARM": ["internal_voltages", "V_ARM"],
+        "internalVoltagesDDR": ["internal_voltages", "V_DDR"],
+        "internalVoltages2V5": ["internal_voltages", "V_2V5"],
+        "internalVoltages1V1": ["internal_voltages", "V_1V1"],
+        "internalVoltagesCORE": ["internal_voltages", "V_CORE"],
+        "internalVoltages1V5": ["internal_voltages", "V_1V5"],
+        "internalVoltages3V3": ["internal_voltages", "V_3V3"],
+        "internalVoltages5V": ["internal_voltages", "V_5V"],
+        "internalVoltages3V": ["internal_voltages", "V_3V"],
+        "internalVoltages2V8": ["internal_voltages", "V_2V8"],
     }
 
     # --------------
@@ -441,6 +459,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """Initialise the command handlers for this device."""
         super().init_command_objects()
 
+        #
+        # Long running commands
+        #
+
         for command_name, method_name in [
             ("PowerOnTpm", "turn_on_tpm"),
             ("PowerOffTpm", "turn_off_tpm"),
@@ -450,6 +472,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("PowerPduPortOff", "power_pdu_port_off"),
             ("ScheduleOn", "schedule_on"),
             ("ScheduleOff", "schedule_off"),
+            ("UpdateHealthAttributes", "get_health_status"),
         ]:
             self.register_command_object(
                 command_name,
@@ -491,6 +514,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # ----------
     # Commands
     # ----------
+
+    # ----------------------
+    # Long running commands
+    # ----------------------
+
     @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
     def PowerOnTpm(  # pylint: disable=invalid-name
         self: MccsSubrack, argin: int
@@ -673,6 +701,21 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         handler = self.get_command_object("PowerPduPortOff")
         result_code, message = handler(argin)
+        return ([result_code], [message])
+
+    @command(dtype_out="DevVarLongStringArray")
+    def UpdateHealthAttributes(  # pylint: disable=invalid-name
+        self: MccsSubrack,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Request the subrack driver to poll the health status attributes.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes
+            only.
+        """
+        handler = self.get_command_object("UpdateHealthAttributes")
+        result_code, message = handler()
         return ([result_code], [message])
 
     # ----------
@@ -1100,6 +1143,123 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("subrackTimestamp", None)
 
+    @attribute(dtype=str, label="Health Status Dictionary")
+    def healthStatus(self: MccsSubrack) -> str | None:
+        """
+        Handle a dictionary of all available monitoring points.
+
+        :return: A dictionary containing all the monitoring points
+        """
+        return json.dumps(self.component_manager.read_health_status())
+
+    @attribute(dtype=float, label="internalVoltagesV_1V1")
+    def internalVoltages1V1(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_1V1 attribute.
+
+        :return: voltage value on 1V1 connector
+        """
+        return self._hardware_attributes.get("internalVoltages1V1", None)
+
+    @attribute(dtype=float, label="internalVoltagesV_1V5")
+    def internalVoltages1V5(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltagesV_1V5 attribute.
+
+        :return: internalVoltagesV_1V5
+        """
+        return self._hardware_attributes.get("internalVoltages1V5", None)
+
+    @attribute(dtype=float, label="internalVoltagesV_2V5")
+    def internalVoltages2V5(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_2V5 attribute.
+
+        :return: internalVoltages_2V5
+        """
+        return self._hardware_attributes.get("internalVoltages2V5", None)
+
+    @attribute(dtype=float, label="internalVoltages_2V8")
+    def internalVoltages2V8(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_2V8 attribute.
+
+        :return: internalVoltages_2V8
+        """
+        return self._hardware_attributes.get("internalVoltages2V8", None)
+
+    @attribute(dtype=float, label="internalVoltages_3V")
+    def internalVoltages3V(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_3V attribute.
+
+        :return: internalVoltages_3V
+        """
+        return self._hardware_attributes.get("internalVoltages3V", None)
+
+    @attribute(dtype=float, label="internalVoltages_3V3")
+    def internalVoltages3V3(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_3V3 attribute.
+
+        :return: internalVoltages_3V3
+        """
+        return self._hardware_attributes.get("internalVoltages3V3", None)
+
+    @attribute(dtype=float, label="internalVoltages_5V")
+    def internalVoltages5V(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages5V attribute.
+
+        :return: internalVoltages5V
+        """
+        return self._hardware_attributes.get("internalVoltages5V", None)
+
+    @attribute(dtype=float, label="internalVoltages_ARM")
+    def internalVoltagesARM(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_ARM attribute.
+
+        :return: internalVoltages_ARM
+        """
+        return self._hardware_attributes.get("internalVoltagesARM", None)
+
+    @attribute(dtype=float, label="internalVoltages_CORE")
+    def internalVoltagesCORE(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_CORE attribute.
+
+        :return: internalVoltages_CORE
+        """
+        return self._hardware_attributes.get("internalVoltagesCORE", None)
+
+    @attribute(dtype=float, label="internalVoltages_DDR")
+    def internalVoltagesDDR(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_DDR attribute.
+
+        :return: internalVoltages_DDR
+        """
+        return self._hardware_attributes.get("internalVoltagesDDR", None)
+
+    @attribute(dtype=float, label="internalVoltages_POWERIN")
+    def internalVoltagesPOWERIN(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_POWERIN attribute.
+
+        :return: internalVoltages_POWERIN
+        """
+        return self._hardware_attributes.get("internalVoltagesPOWERIN", None)
+
+    @attribute(dtype=float, label="internalVoltages_SOC")
+    def internalVoltagesSOC(self: MccsSubrack) -> float | None:
+        """
+        Handle a Tango attribute read of the internalVoltages_SOC attribute.
+
+        :return: internalVoltages_SOC
+        """
+        return self._hardware_attributes.get("internalVoltagesSOC", None)
+
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
     # Need to revisit
 
@@ -1270,6 +1430,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("tpmVoltages", None) or []
 
+    @attribute(dtype=str, label="Subrack Board Info")
+    def subrackBoardInfo(self: MccsSubrack) -> str | None:
+        """
+        Handle a Tango attribute read of the Subrack board info.
+
+        :return: the subrack board info as a dict
+        """
+        return json.dumps(self._hardware_attributes.get("subrackBoardInfo", None))
+
     def _clear_hardware_attributes(self: MccsSubrack) -> None:
         # TODO: It should would be nice to push change events here,
         # but it seems pytango does not permit pushing change events
@@ -1343,6 +1512,19 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
+
+        health_status: dict[str, dict] = self.component_manager.read_health_status()
+
+        if health_status is not None:
+            for key, dict_path in self._HEALTH_STATUS_MAP.items():
+                value = health_status
+                for path in dict_path:
+                    if value:
+                        value = value.get(path, None)
+                self._hardware_attributes[key] = value
+                self.push_change_event(key, value)
+                self.push_archive_event(key, value)
+
         self._update_health_data()
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:

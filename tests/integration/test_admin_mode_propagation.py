@@ -27,7 +27,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "station_adminMode",
         "tile_adminMode",
         "subrack_adminMode",
-        timeout=2.0,
+        "daq_adminMode",
+        timeout=10.0,
         assert_no_error=False,
     )
 

@@ -36,7 +36,7 @@ class RequestError(Exception):
     """Exception class for RequestExceptions."""
 
 
-# pylint: disable-next=too-many-instance-attributes
+# pylint: disable-next=too-many-instance-attributes, too-many-public-methods
 class SubrackDriver(
     MccsBaseComponentManager, PollingComponentManager[HttpPollRequest, HttpPollResponse]
 ):
@@ -51,6 +51,7 @@ class SubrackDriver(
         communication_state_callback: Callable,
         component_state_callback: Callable,
         update_rate: float = 5.0,
+        command_update_rate: float = 20.0,
         _subrack_client: Any = None,
     ) -> None:
         """
@@ -74,16 +75,23 @@ class SubrackDriver(
             However, if the `update_rate` is 5.0, then routine reads of
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
+        :param command_update_rate: similar to update_rate but for polled
+            commands.
         :param _subrack_client: an optional subrack client to use.
         """
         self._client = _subrack_client or WebHardwareClient(host, port)
         self._poll_rate: Final = 0.1
         self._max_tick: Final = int(update_rate / self._poll_rate)
+        self._command_max_tick: Final = int(command_update_rate / self._poll_rate)
 
         # We'll count ticks upwards, but start at the maximum so that
         # our initial update request occurs as soon as possible.
         self._tick = self._max_tick
 
+        # Polling commands works like attributes, but with an additional switch
+        self._command_tick = self._command_max_tick
+        self._checked_bios = False
+        self._poll_commands = False
         # Whether the board is busy running a command. Let's be
         # extremely conservative here and assume that it is until we
         # know that it isn't.
@@ -97,6 +105,7 @@ class SubrackDriver(
         ] = OrderedDict()
 
         self._attributes_to_write: dict[str, Any] = {}
+        self.health_status: dict[str, Any] = {}
 
         super().__init__(
             logger,
@@ -124,6 +133,7 @@ class SubrackDriver(
             pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
+            board_info=None,
         )
 
         self.logger.info(
@@ -398,6 +408,69 @@ class SubrackDriver(
                 message = f"TPM {tpm_number} will be turned {off_on} at next poll."
             return (TaskStatus.QUEUED, message)
 
+    def get_health_status(
+        self: SubrackDriver, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
+        """
+        Read all the monitoring points available in health status.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self._get_health_status(task_callback=task_callback)
+
+    def _get_health_status(
+        self: SubrackDriver,
+        monitoring_points: Optional[str] = None,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Read a group of monitoring points.
+
+        :param monitoring_points: the group monitoring points to read
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        # Using "" will return all monitoring points
+        if monitoring_points is None:
+            monitoring_points = ""
+
+        with self._write_lock:
+            command_name = "get_health_status"
+            command_arg = monitoring_points
+            self._commands_to_execute["get_health_status"] = (
+                command_name,
+                command_arg,
+                task_callback,
+            )
+
+            if task_callback is not None:
+                task_callback(status=TaskStatus.QUEUED)
+
+            if monitoring_points == "":
+                message = (
+                    "All monitoring points in health status will be read at next"
+                    " poll."
+                )
+            else:
+                message = (
+                    f"{monitoring_points} in health status will be read at next"
+                    " poll."
+                )
+            return (TaskStatus.QUEUED, message)
+
+    def read_health_status(self: SubrackDriver) -> dict:
+        """
+        Read all the monitoring points available in health status.
+
+        :return: the task status and a human-readable status message
+        """
+        return self.health_status
+
     def set_subrack_fan_speed(
         self: SubrackDriver,
         fan_number: int,
@@ -534,6 +607,18 @@ class SubrackDriver(
         with self._write_lock:
             self._attributes_to_write.update(kwargs)
 
+    def _check_bios_version(self: SubrackDriver) -> None:
+        """Check that the api version is new enough to poll health_status."""
+        if self._checked_bios:
+            # Bypass the check if we know the answer
+            return
+        board_info: dict = self._component_state["board_info"]
+        if board_info:
+            bios_version = board_info["SMM"]["bios"]
+            if [int(x) for x in bios_version.lstrip("v").split(".")] > [1, 6, 0]:
+                self._poll_commands = True
+            self._checked_bios = True
+
     def get_request(self: SubrackDriver) -> HttpPollRequest:
         """
         Return the reads, writes and commands to be executed in the next poll.
@@ -542,6 +627,7 @@ class SubrackDriver(
             poll.
         """
         self._tick += 1
+        self._command_tick += 1
 
         poll_request = HttpPollRequest()
 
@@ -588,8 +674,20 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
+                "board_info",
             )
             self._tick = 0
+
+            # we only need to read board info once
+
+        if self._command_tick > self._command_max_tick:
+            self._check_bios_version()
+            if self._poll_commands:
+                for command, args in [
+                    ("get_health_status", ""),
+                ]:
+                    poll_request.add_command(command, *args)
+            self._command_tick = 0
         return poll_request
 
     def poll(self: SubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:
@@ -774,6 +872,7 @@ class SubrackDriver(
                 # This means that an attribute  poll is likely overdue and anyway
                 # useful, as the hardware status could have been changed. Force it
                 self._tick = self._max_tick + 1
+                self._command_tick = self._command_max_tick + 1
             self._board_is_busy = False
             if self._active_callback is not None:
                 self.logger.debug("Command completed")
@@ -782,6 +881,8 @@ class SubrackDriver(
                     result=(ResultCode.OK, "Command completed."),
                 )
             self._active_callback = None
+            if "get_health_status" in retvalues.keys():
+                self.health_status = retvalues["get_health_status"]
 
         values = poll_response.query_responses
         self._update_component_state(power=PowerState.ON, fault=fault)
@@ -798,6 +899,7 @@ class SubrackDriver(
         # Set to max here so that if/when polling restarts, an update is
         # requested as soon as possible.
         self._tick = self._max_tick
+        self._command_tick = self._command_max_tick
 
         # Clear all hardware state.
         self.__clear_hardware_state()
@@ -832,6 +934,7 @@ class SubrackDriver(
             tpm_powers=kwargs.get("tpm_powers"),
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
+            board_info=kwargs.get("board_info"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

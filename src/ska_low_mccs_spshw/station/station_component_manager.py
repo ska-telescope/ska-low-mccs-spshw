@@ -1865,10 +1865,10 @@ class SpsStationComponentManager(
             proxy._proxy.SetCspDownload(
                 json.dumps(
                     {
-                        "src_port": self._source_port,
-                        "dst_ip_1": dst_ip1,
-                        "dst_ip_2": dst_ip2,
-                        "dst_port": self._destination_port,
+                        "source_port": self._source_port,
+                        "destination_ip_1": dst_ip1,
+                        "destination_ip_2": dst_ip2,
+                        "destination_port": self._destination_port,
                         "is_last": is_last_tile,
                         "netmask": self._sdn_netmask,
                         "gateway": self._sdn_gateway,
@@ -2774,10 +2774,10 @@ class SpsStationComponentManager(
         proxy._proxy.SetCspDownload(
             json.dumps(
                 {
-                    "src_port": self._csp_source_port,
-                    "dst_ip_1": self._csp_ingest_address,
-                    "dst_ip_2": self._csp_ingest_address,
-                    "dst_port": self._csp_ingest_port,
+                    "source_port": self._csp_source_port,
+                    "destination_ip_1": self._csp_ingest_address,
+                    "destination_ip_2": self._csp_ingest_address,
+                    "destination_port": self._csp_ingest_port,
                     "is_last": True,
                     "netmask": self._sdn_netmask,
                     "gateway": self._sdn_gateway,

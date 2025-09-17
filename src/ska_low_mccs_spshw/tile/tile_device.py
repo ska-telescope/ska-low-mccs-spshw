@@ -4446,13 +4446,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            src_port = kwargs["src_port"]
-            dst_ip_1 = kwargs["dst_ip_1"]
-            dst_ip_2 = kwargs["dst_ip_2"]
-            dst_port = kwargs["dst_port"]
+            src_port = kwargs.get("source_port", None)
+            dst_ip_1 = kwargs["destination_ip_1"]
+            dst_ip_2 = kwargs["destination_ip_2"]
+            dst_port = kwargs.get("destination_port", None)
             is_last = kwargs["is_last"]
-            netmask = kwargs["netmask"]
-            gateway = kwargs["gateway"]
+            netmask = kwargs.get("netmask", None)
+            gateway = kwargs.get("gateway", None)
 
             self._component_manager.set_csp_download(
                 src_port, dst_ip_1, dst_ip_2, dst_port, is_last, netmask, gateway
@@ -4466,10 +4466,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: json dictionary with optional keywords:
 
-            * src_port - Source port
-            * dst_ip_1 - Destination IP FPGA1
-            * dst_ip_2 -  Destination IP FPGA2
-            * dst_port - Destination port
+            * source_port - Source port
+            * destination_ip_1 - Destination IP FPGA1
+            * destination_ip_2 -  Destination IP FPGA2
+            * destination_port - Destination port
             * is_last - True for last tile in beamforming chain
             * netmask - Netmask
             * gateway - Gateway IP
@@ -4481,8 +4481,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"src_port": 4661, "dst_ip_1": "10.0.10.2", "dst_ip_2": 10.0.10.3",
-                    "dst_port" 4660, "is_last": False, "netmask": "255.255.255.0",
+        >>> dict = {"source_port": 4661, "destination_ip_1": "10.0.10.2",
+                    "destination_ip_2": 10.0.10.3", "destination_port" 4660,
+                    "is_last": False, "netmask": "255.255.255.0",
                     "gateway": "10.0.10.1"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetCspDownload", jstr)

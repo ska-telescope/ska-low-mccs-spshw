@@ -1,5 +1,10 @@
 # Version History
 
+## 9.0.0
+
+* [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0 - Simplified tile 40G ethernet configuration
+
+
 ## 8.0.2
 
 * [THORN-289] Add ResetCspIngest command to SpsStation. Improve message in SetCspIngest. Add cspIngestConfig attribute to SpsStation.

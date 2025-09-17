@@ -2217,9 +2217,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
-    def stop_integrated_data(self: TileComponentManager) -> None:
-        """Stop the integrated data."""
+    def stop_integrated_data(self: TileComponentManager) -> tuple[ResultCode, str]:
+        """
+        Stop the integrated data.
+
+        :return: Result code and message
+        """
         self.logger.debug("TileComponentManager: Stop integrated data")
+        success = True
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2234,15 +2239,24 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                success = False
+        if success:
+            return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
 
-    def stop_data_transmission(self: TileComponentManager) -> None:
-        """Stop data transmission for send_channelised_data_continuous."""
+    def stop_data_transmission(self: TileComponentManager) -> tuple[ResultCode, str]:
+        """
+        Stop data transmission for send_channelised_data_continuous.
+
+        :return: Result code and message
+        """
         self.logger.debug("TileComponentManager: stop_data_transmission")
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
+            success = True
             try:
                 self.tile.stop_data_transmission()
                 self.data_transmission_mode = "Not transmitting"
@@ -2251,6 +2265,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                success = False
+        if success:
+            return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
 
     @check_communicating
     def send_data_samples(  # pylint: disable=too-many-branches
@@ -2490,7 +2508,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         integration_time: float = 0.5,
         first_channel: int = 0,
         last_channel: int = 191,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2501,8 +2519,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
+
+        :return: Result code and message
         """
         self.logger.debug("TileComponentManager: configure_integrated_beam_data")
+        success = True
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2515,6 +2536,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                success = False
+        if success:
+            return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
 
     @check_communicating
     def configure_integrated_channel_data(
@@ -2522,7 +2547,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         integration_time: float = 0.5,
         first_channel: int = 0,
         last_channel: int = 511,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2533,8 +2558,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
+
+        :return: Result code and message
         """
         self.logger.debug("TileComponentManager: configure_integrated_channel_data")
+        success = True
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2547,6 +2575,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                success = False
+        if success:
+            return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
 
     def stop_beamformer(
         self: TileComponentManager,
@@ -2633,13 +2665,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
 
     @check_communicating
-    def apply_pointing_delays(self: TileComponentManager, load_time: str = "") -> None:
+    def apply_pointing_delays(
+        self: TileComponentManager, load_time: str = ""
+    ) -> tuple[ResultCode, str]:
         """
         Load the pointing delays at the specified time delay.
 
         :param load_time: switch time as ISO formatted time
 
         :raises ValueError: invalid time
+
+        :return: Result code and message
         """
         if load_time == "":
             load_frame = 0
@@ -2656,6 +2692,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
                 raise ValueError("Time too early")
 
+        success = True
+
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
             self._hardware_lock,
@@ -2667,11 +2705,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                success = False
+        if success:
+            return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
 
     @check_communicating
     def load_pointing_delays(
         self: TileComponentManager, delay_array: list[list[float]], beam_index: int
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -2681,6 +2723,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param delay_array: delay in seconds, and delay rate in seconds/second
         :param beam_index: the beam to which the pointing delay should
             be applied
+
+        :return: Result code and message
         """
         self.logger.debug("TileComponentManager: load_pointing_delays")
         nof_items = len(delay_array)
@@ -2700,8 +2744,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "LoadPointingDelays command completed OK")
 
     @check_communicating
     def apply_calibration(
@@ -2810,7 +2861,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def set_beamformer_regions(
         self: TileComponentManager, regions: list[list[int]]
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Set the frequency regions to be beamformed into a single beam.
 
@@ -2828,6 +2879,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param regions: a list encoding up to 48 regions
 
         :raises ValueError: if the tpm is value None.
+
+        :return: Result code and message
         """
         self.logger.debug("TileComponentManager: set_beamformer_regions")
         # legacy code for a region specification with only 3 entries per region
@@ -2840,9 +2893,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         nof_blocks = 0
         for region in regions:
             nof_blocks += region[1] // 8
-        if nof_blocks == 0:
-            self.logger.error("No valid beamformer regions specified")
-            raise ValueError("Empty channel table")
 
         self._nof_blocks = nof_blocks
         self.logger.info(f"Setting beamformer table for {self._nof_blocks} blocks")
@@ -2872,8 +2922,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "SetBeamFormerRegions command completed OK")
 
     @property
     @check_communicating
@@ -3055,7 +3112,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         dst_port: Optional[int] = 4660,
         netmask_40g: int | None = None,
         gateway_40g: int | None = None,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
@@ -3067,6 +3124,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
         :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
+
+        :return: Result code and message
         """
         self.logger.debug("TileComponentManager: set_lmc_download")
         with acquire_timeout(
@@ -3089,8 +3148,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "SetLmcDownload command completed OK")
 
     def get_40g_configuration(
         self: TileComponentManager, core_id: int = -1, arp_table_entry: int = 0
@@ -3164,7 +3230,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         rx_port_filter: Optional[int] = None,
         netmask: Optional[int] = None,
         gateway_ip: Optional[int] = None,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Configure the 40G code.
 
@@ -3178,6 +3244,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param rx_port_filter: Filter for incoming packets
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
+
+        :return: result code and message
         """
         self.logger.debug("TileComponentManager: configure_40g_core")
         with acquire_timeout(
@@ -3202,17 +3270,26 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "Configure40GCore command completed OK")
 
     def write_address(
         self: TileComponentManager, address: int, values: list[int]
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Write a list of values to a given address.
 
         :param address: address of start of read
         :param values: values to write
+
+        :return: Result code and message
         """
         current_address = int(address & 0xFFFFFFFC)
         if isinstance(values, int):
@@ -3226,8 +3303,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TileComponentManager: Tile access failed {e}")
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "WriteAddress command completed OK")
 
     def read_register(self: TileComponentManager, register_name: str) -> list[int]:
         """
@@ -3271,7 +3355,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def write_register(
         self: TileComponentManager, register_name: str, values: list[Any] | int
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Read the values in a register.
 
@@ -3279,6 +3363,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param values: values to write
 
         :raises ValueError: if the tpm is value None.
+
+        :return: Result code and message
         """
         if isinstance(values, int):
             values = [values]
@@ -3293,15 +3379,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     if len(self.tile.find_register(regname)) == 0:
                         self.logger.error("Register '" + regname + "' not present")
-                        return
+                        return (ResultCode.OK, "WriteRegister completed OK")
+
                     self.tile.write_register(register_name, values)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "WriteRegister command completed OK")
 
     def read_address(
         self: TileComponentManager, address: int, nvalues: int

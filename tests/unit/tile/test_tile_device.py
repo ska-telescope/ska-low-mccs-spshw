@@ -1849,7 +1849,6 @@ class TestMccsTileCommands:
         Test for WriteRegister.
 
         :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event

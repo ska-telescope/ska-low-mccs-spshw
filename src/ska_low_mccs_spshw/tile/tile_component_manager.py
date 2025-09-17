@@ -2570,13 +2570,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def set_csp_download(
         self: TileComponentManager,
-        src_port: int,
+        src_port: int | None,
         dst_ip_1: str,
         dst_ip_2: str,
-        dst_port: int,
+        dst_port: int | None,
         is_last: bool,
-        netmask: str,
-        gateway: str,
+        netmask: str | None,
+        gateway: str | None,
     ) -> None:
         """
         Set CSP Destination per tile.

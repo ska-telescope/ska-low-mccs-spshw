@@ -4,6 +4,7 @@
 
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes
+* [THORN-298] Fix state issue. Device was not transitioning to Alarm correctly. Due to attribute being prematurely marked as INVALID.
 
 ## 8.0.1
 

@@ -82,6 +82,7 @@ def test_context_fixture(
     tile_id: int,
     patched_tile_device_class: type[MccsTile],
     mock_subrack_device_proxy: unittest.mock.Mock,
+    mock_station_device_proxy: unittest.mock.Mock,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which a tile Tango device is running.
@@ -92,6 +93,7 @@ def test_context_fixture(
         behaviours.
     :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
         device.
+    :param mock_station_device_proxy: A mock procy to the spsstation device.
 
     :yields: a test context.
     """
@@ -102,6 +104,9 @@ def test_context_fixture(
         device_class=patched_tile_device_class,
         logging_level=2,
     )
+    # SpsStation added for adminMode inheritance, without this
+    # our test logs are filled with noise.
+    harness.add_mock_station_device(mock_station_device_proxy)
     with harness as context:
         yield context
 

@@ -385,6 +385,19 @@ class SpsTangoTestHarness:
             get_subrack_name(subrack_id, station_label=self._station_label), mock
         )
 
+    def add_mock_station_device(
+        self: SpsTangoTestHarness,
+        mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Add a mock spsstation Tango device to this test harness.
+
+        :param mock: the mock to be used as a mock station device.
+        """
+        self._tango_test_harness.add_mock_device(
+            get_sps_station_name(self._station_label), mock
+        )
+
     def add_tile_device(  # pylint: disable=too-many-arguments
         self: SpsTangoTestHarness,
         tile_id: int,

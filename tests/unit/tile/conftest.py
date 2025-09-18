@@ -15,7 +15,13 @@ from typing import Callable, Final, Iterator
 
 import pytest
 import tango
-from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
+from ska_control_model import (
+    AdminMode,
+    PowerState,
+    ResultCode,
+    SimulationMode,
+    TestMode,
+)
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_tango_testing.mock import MockCallable, MockCallableGroup
 from tango.server import command
@@ -129,10 +135,26 @@ def mock_subrack_device_proxy_fixture(
     return builder()
 
 
+@pytest.fixture(name="mock_station_device_proxy")
+def mock_station_device_proxy_fixture() -> unittest.mock.Mock:
+    """
+    Fixture that provides a mock station device proxy.
+
+    This is needed for subscription to adminMode for adminMode
+    inheritance feature.
+
+    :return: a mock station device.
+    """
+    builder = MockDeviceBuilder()
+    builder.add_attribute("adminmode", AdminMode.ONLINE)
+    return builder()
+
+
 @pytest.fixture(name="test_context")
 def test_context_fixture(
     subrack_id: int,
     mock_subrack_device_proxy: unittest.mock.Mock,
+    mock_station_device_proxy: unittest.mock.Mock,
 ) -> Iterator[None]:
     """
     Yield into a context in which Tango is running, with a mock subrack device.
@@ -140,12 +162,16 @@ def test_context_fixture(
     :param subrack_id: ID of the subrack Tango device to be mocked
     :param mock_subrack_device_proxy: a mock subrack device proxy that
         has been configured with the required subrack behaviours.
+    :param mock_station_device_proxy: A mock procy to the spsstation device.
 
     :yields: into a context in which Tango is running, with a mock
         subrack device.
     """
     harness = SpsTangoTestHarness()
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
+    # SpsStation added for adminMode inheritance, without this
+    # our test logs are filled with noise.
+    harness.add_mock_station_device(mock_station_device_proxy)
     with harness:
         yield
 

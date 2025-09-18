@@ -1128,6 +1128,10 @@ class TileSimulator:
 
         :return: mocked fetch of health.
         """
+        if kwargs.get("group") == "alarms":
+            # The alarm group will ask for information from
+            # the CPLD. It is an alias for check_global_status_alarms
+            return self.check_global_status_alarms()
         if any([value == 2 for value in self._global_status_alarms.values()]):
             # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.

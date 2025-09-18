@@ -167,18 +167,17 @@ class TileResponse:
 class RequestIterator:
     """A class that returns attributes allowed given a TpmStatus."""
 
-    UNCONNECTED_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
+    UNCONNECTED_POLLED_ATTRIBUTES = ["CONNECT", "ALARMS"]
     OFF_POLLED_ATTRIBUTES = ["CONNECT"]
-    UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
-    UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
+    UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT", "ALARMS"]
+    UNPROGRAMMED_POLLED_ATTRIBUTES = ["ALARMS"]
     PROGRAMMED_POLLED_ATTRIBUTES = [
-        "CHECK_CPLD_COMMS",
+        "ALARMS",
         "IS_PROGRAMMED",
         "PLL_LOCKED",
         "TEMPERATURES",
         "VOLTAGES",
         "CURRENTS",
-        "ALARMS",
         "ADCS",
         "TIMING",
         "IO",
@@ -187,7 +186,7 @@ class RequestIterator:
     INITIALISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
-        "CHECK_CPLD_COMMS",
+        "ALARMS",
         "FPGA_REFERENCE_TIME",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
@@ -201,7 +200,6 @@ class RequestIterator:
         "TEMPERATURES",
         "VOLTAGES",
         "CURRENTS",
-        "ALARMS",
         "ADCS",
         "TIMING",
         "IO",
@@ -210,7 +208,7 @@ class RequestIterator:
     SYNCHRONISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
-        "CHECK_CPLD_COMMS",
+        "ALARMS",
         "FPGA_REFERENCE_TIME",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
@@ -226,7 +224,6 @@ class RequestIterator:
         "TEMPERATURES",
         "VOLTAGES",
         "CURRENTS",
-        "ALARMS",
         "ADCS",
         "TIMING",
         "IO",

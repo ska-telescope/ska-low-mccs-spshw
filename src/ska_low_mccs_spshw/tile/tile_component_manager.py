@@ -62,7 +62,6 @@ _ATTRIBUTE_MAP: Final = {
     "TEMPERATURES": "tile_health_structure",
     "VOLTAGES": "tile_health_structure",
     "CURRENTS": "tile_health_structure",
-    "ALARMS": "tile_health_structure",
     "ADCS": "tile_health_structure",
     "TIMING": "tile_health_structure",
     "IO": "tile_health_structure",
@@ -79,7 +78,7 @@ _ATTRIBUTE_MAP: Final = {
     "IS_PROGRAMMED": "is_programmed",
     "PENDING_DATA_REQUESTS": "pending_data_requests",
     "BEAMFORMER_TABLE": "beamformer_table",
-    "CHECK_CPLD_COMMS": "global_status_alarms",
+    "ALARMS": "global_status_alarms",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
 }
@@ -356,12 +355,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
-            case "CHECK_CPLD_COMMS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.check_global_status_alarms,
-                    publish=True,
-                )
             case "READ_CONFIGURATION":
                 request = TileRequest(
                     "read_config",

@@ -2224,7 +2224,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: Result code and message
         """
         self.logger.debug("TileComponentManager: Stop integrated data")
-        success = True
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2239,10 +2238,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                success = False
-        if success:
-            return (ResultCode.OK, "Stop integrated data completed OK")
-        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+        return (ResultCode.OK, "Stop integrated data completed OK")
 
     def stop_data_transmission(self: TileComponentManager) -> tuple[ResultCode, str]:
         """
@@ -3379,7 +3376,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     if len(self.tile.find_register(regname)) == 0:
                         self.logger.error("Register '" + regname + "' not present")
-                        return (ResultCode.OK, "WriteRegister completed OK")
+                        return (
+                            ResultCode.FAILED,
+                            "Register '" + regname + "' not present",
+                        )
 
                     self.tile.write_register(register_name, values)
                 # pylint: disable=broad-except

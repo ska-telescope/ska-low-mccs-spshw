@@ -2253,7 +2253,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            success = True
             try:
                 self.tile.stop_data_transmission()
                 self.data_transmission_mode = "Not transmitting"
@@ -2262,10 +2261,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                success = False
-        if success:
-            return (ResultCode.OK, "Stop integrated data completed OK")
-        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+        return (ResultCode.OK, "Stop integrated data completed OK")
 
     @check_communicating
     def send_data_samples(  # pylint: disable=too-many-branches
@@ -2520,7 +2517,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: Result code and message
         """
         self.logger.debug("TileComponentManager: configure_integrated_beam_data")
-        success = True
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2533,10 +2529,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                success = False
-        if success:
-            return (ResultCode.OK, "Stop integrated data completed OK")
-        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+        return (ResultCode.OK, "Stop integrated data completed OK")
 
     @check_communicating
     def configure_integrated_channel_data(
@@ -2559,7 +2553,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: Result code and message
         """
         self.logger.debug("TileComponentManager: configure_integrated_channel_data")
-        success = True
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2572,10 +2565,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                success = False
-        if success:
-            return (ResultCode.OK, "Stop integrated data completed OK")
-        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+        return (ResultCode.OK, "Stop integrated data completed OK")
 
     def stop_beamformer(
         self: TileComponentManager,
@@ -2689,8 +2680,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
                 raise ValueError("Time too early")
 
-        success = True
-
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
             self._hardware_lock,
@@ -2702,10 +2691,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                success = False
-        if success:
-            return (ResultCode.OK, "Stop integrated data completed OK")
-        return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
+        return (ResultCode.OK, "Stop integrated data completed OK")
 
     @check_communicating
     def load_pointing_delays(

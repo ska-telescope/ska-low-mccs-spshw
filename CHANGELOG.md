@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
+
 ## 8.0.1
 
 * [SKB-872] MccsTile now only polls a subset of health values on each poll.
@@ -167,7 +171,7 @@
 * [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
   optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
   property is used.
-  
+
 ## 3.1.1
 
 * [THORN-110] Updated daq refs after repo reorganisation, updated imports.

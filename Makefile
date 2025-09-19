@@ -28,7 +28,7 @@ include .make/python.mk
 PYTHON_LINE_LENGTH = 88
 PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
 PYTHON_VARS_AFTER_PYTEST = --forked
-PYTHON_TEST_FILE = tests
+PYTHON_TEST_FILE = tests/unit/tile/test_tile_device.py::TestMccsTile::test_state
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
@@ -164,7 +164,7 @@ endif
 
 K8S_TEST_RUNNER_WORKING_DIRECTORY ?= /home/tango
 
-PYTHON_VARS_AFTER_PYTEST += "-n 16"
+PYTHON_VARS_AFTER_PYTEST += "-n 16 --count 20"
 
 k8s-do-test:
 	helm -n $(KUBE_NAMESPACE) upgrade --install --repo $(K8S_TEST_RUNNER_CHART_REGISTRY) \

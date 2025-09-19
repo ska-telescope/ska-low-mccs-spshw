@@ -218,6 +218,7 @@ def on_tile_device_fixture(
     assert tile_device.tileProgrammingState == "Initialised"
     for subscription_id in subscription_ids:
         tile_device.unsubscribe_event(subscription_id)
+    change_event_callbacks["state"]._callable._call_queue.empty()
     wait_for_completed_command_to_clear_from_queue(tile_device)
     yield tile_device
 

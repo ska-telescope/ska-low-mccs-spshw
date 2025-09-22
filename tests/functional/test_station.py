@@ -20,10 +20,12 @@ from typing import Any
 
 import pytest
 import tango
-from pytest_bdd import given, scenario, then, when
-from ska_control_model import AdminMode
+from pytest_bdd import given, parsers, scenario, then, when
+from ska_control_model import AdminMode, HealthState
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+
+from tests.test_tools import AttributeWaiter, TpmStatus
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -42,6 +44,21 @@ def command_info_fixture() -> dict[str, Any]:
 def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station_health.feature",
+    "Station health is failed when Tiles are not synchronized",
+)
+def test_health_failed(stations_devices_exported: list[tango.DeviceProxy]) -> None:
+    """
+    Run a test scenario that tests the station device health.
 
     :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
         for all exported sps devices.
@@ -186,3 +203,72 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
             break
     else:
         pytest.fail("Timeout in waiting for tiles to Synchronise")
+
+
+@when(
+    parsers.cfparse(
+        "Device Tile {tile_id:Number} is restarted", extra_types={"Number": int}
+    )
+)
+def restart_device(exported_tiles: list[tango.DeviceProxy], tile_id: int) -> None:
+    """
+    Check the station are synced.
+
+    :param exported_tiles: the tiles
+    :param tile_id: the name of the device to restart
+    """
+    tile_device = exported_tiles[tile_id - 1]
+    tile_device.init()
+
+
+@then(
+    parsers.cfparse(
+        "the Tile {tile_id:Number} is not in {programming_state:string} state",
+        extra_types={"Number": int, "string": str},
+    )
+)
+def check_tile_sync_state(
+    exported_tiles: list[tango.DeviceProxy],
+    tile_id: int,
+    programming_state: str,
+) -> None:
+    """
+    Verify that a tile is in a desired syncronized state.
+
+    :param exported_tiles: the tiles
+    :param tile_id: the name of the device to restart
+    :param programming_state: the seried Sync state
+    """
+    tile_device = exported_tiles[tile_id - 1]
+    sync_state = TpmStatus.SYNCHRONISED
+    AttributeWaiter(timeout=15).wait_for_value(
+        tile_device,
+        "tileProgrammingState",
+        sync_state,
+        lookahead=2,  # UNKNOWN first hence lookahead == 2
+    )
+
+
+@then(
+    parsers.cfparse(
+        "SpsStation is in {health_state:string} state",
+        extra_types={"Number": int, "string": str},
+    )
+)
+def check_station_health_state(
+    station: tango.DeviceProxy,
+    health_state: str,
+) -> None:
+    """
+    Verify that a tile is in a desired syncronized state.
+
+    :param station: the tiles
+    :param health_state: the seried Sync state
+    """
+    health_state_value = HealthState.FAILED
+    AttributeWaiter(timeout=15).wait_for_value(
+        station,
+        "healthState",
+        health_state_value,
+        lookahead=2,  # UNKNOWN first hence lookahead == 2
+    )

@@ -240,7 +240,7 @@ def check_tile_sync_state(
     :param programming_state: the seried Sync state
     """
     tile_device = exported_tiles[tile_id - 1]
-    sync_state = TpmStatus.SYNCHRONISED
+    sync_state = TpmStatus.UNKNOWN
     AttributeWaiter(timeout=15).wait_for_value(
         tile_device,
         "tileProgrammingState",

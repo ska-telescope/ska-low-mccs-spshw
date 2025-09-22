@@ -22,5 +22,5 @@ Properties
 
 * **netmask_40g** (string, format: ipv4): Netmask for the 40g (science data) subnet.
 
-* **gateway_40g** (string, format: ipv4): IP address of the 40g (science data) subnet gateway.
+* **gateway_40g** (['string', 'null'], format: ipv4): IP address of the 40g (science data) subnet gateway.
 

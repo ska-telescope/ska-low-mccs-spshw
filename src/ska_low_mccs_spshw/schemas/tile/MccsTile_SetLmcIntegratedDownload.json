@@ -47,7 +47,7 @@
         },
         "gateway_40g": {
             "description": "IP address of the 40g (science data) subnet gateway",
-            "type": "string",
+            "type": ["string", "null"],
             "format": "ipv4"
         }
     },

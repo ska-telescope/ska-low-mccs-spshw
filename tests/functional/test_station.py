@@ -223,7 +223,7 @@ def restart_device(exported_tiles: list[tango.DeviceProxy], tile_id: int) -> Non
 
 @then(
     parsers.cfparse(
-        "the Tile {tile_id:Number} is not in {programming_state:string} state",
+        "Tile {tile_id:Number} is not in {programming_state:string} state",
         extra_types={"Number": int, "string": str},
     )
 )

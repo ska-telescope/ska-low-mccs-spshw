@@ -3824,10 +3824,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._component_manager.write_register(
+            return self._component_manager.write_register(
                 kwargs["register_name"], kwargs["values"]
             )
-            return (ResultCode.OK, "WriteRegister completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def WriteRegister(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -3965,8 +3964,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if len(argin) < 2:
                 self.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
-            self._component_manager.write_address(argin[0], argin[1:])
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.write_address(argin[0], argin[1:])
 
     @command(dtype_in="DevVarULongArray", dtype_out="DevVarLongStringArray")
     def WriteAddress(self: MccsTile, argin: list[int]) -> DevVarLongStringArrayType:
@@ -4044,8 +4042,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._component_manager.configure_40g_core(**kwargs)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.configure_40g_core(**kwargs)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def Configure40GCore(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -4246,7 +4243,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask_40g = kwargs.get("netmask_40g", None)
             gateway_40g = kwargs.get("gateway_40g", None)
 
-            self._component_manager.set_lmc_download(
+            return self._component_manager.set_lmc_download(
                 mode,
                 payload_length,
                 dst_ip,
@@ -4255,7 +4252,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 netmask_40g=netmask_40g,
                 gateway_40g=gateway_40g,
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetLmcDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -4464,6 +4460,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     )
                     message += f"Attribute {attribute_name} failed to update {e}"
 
+            if message != "":
+                return (ResultCode.FAILED, message)
+
             return (ResultCode.OK, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -4625,8 +4624,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if total_chan < 8:
                 self.logger.error("No channels specified")
                 raise ValueError("No channels specified")
-            self._component_manager.set_beamformer_regions(regions)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            nof_blocks = 0
+            for region in regions:
+                nof_blocks += region[1] // 8
+            if nof_blocks == 0:
+                self.logger.error("No valid beamformer regions specified")
+                raise ValueError("Empty channel table")
+            return self._component_manager.set_beamformer_regions(regions)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetBeamFormerRegions(
@@ -4999,8 +5003,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             for i in range(self._antennas_per_tile):
                 delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
 
-            self._component_manager.load_pointing_delays(delay_array, beam_index)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.load_pointing_delays(delay_array, beam_index)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadPointingDelays(
@@ -5074,8 +5077,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             load_time = args[0]
 
-            self._component_manager.apply_pointing_delays(load_time)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.apply_pointing_delays(load_time)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ApplyPointingDelays(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -5290,10 +5292,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             first_channel = kwargs.get("first_channel", 0)
             last_channel = kwargs.get("last_channel", 511)
 
-            self._component_manager.configure_integrated_channel_data(
+            return self._component_manager.configure_integrated_channel_data(
                 integration_time, first_channel, last_channel
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureIntegratedChannelData(
@@ -5385,10 +5386,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             first_channel = kwargs.get("first_channel", 0)
             last_channel = kwargs.get("last_channel", 191)
 
-            self._component_manager.configure_integrated_beam_data(
+            return self._component_manager.configure_integrated_beam_data(
                 integration_time, first_channel, last_channel
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureIntegratedBeamData(
@@ -5455,8 +5455,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._component_manager.stop_integrated_data()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.stop_integrated_data()
 
     @command(dtype_out="DevVarLongStringArray")
     def StopIntegratedData(self: MccsTile) -> DevVarLongStringArrayType:
@@ -5628,8 +5627,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            self._component_manager.stop_data_transmission()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return self._component_manager.stop_data_transmission()
 
     @command(dtype_out="DevVarLongStringArray")
     def StopDataTransmission(self: MccsTile) -> DevVarLongStringArrayType:

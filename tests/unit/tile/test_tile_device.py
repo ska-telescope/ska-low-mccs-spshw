@@ -1840,7 +1840,7 @@ class TestMccsTileCommands:
         values = on_tile_device.ReadRegister(register_name)
         assert list(values) == [MockTpm.REGISTER_MAP_DEFAULTS[register_name]]
 
-    def test_WriteRegister(
+    def test_WriteRegister_missing_register(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
@@ -1848,7 +1848,6 @@ class TestMccsTileCommands:
         """
         Test for WriteRegister.
 
-        :param on_tile_device: fixture that provides a
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -1858,6 +1857,29 @@ class TestMccsTileCommands:
         arg = {
             "register_name": "test-reg1",
             "values": [0, 1, 2, 3],
+        }
+        json_arg = json.dumps(arg)
+        [[result_code], [message]] = on_tile_device.WriteRegister(json_arg)
+        assert result_code == ResultCode.FAILED
+        assert message == "Register 'test-reg1' not present"
+
+    def test_WriteRegister_correct(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for WriteRegister.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        arg = {
+            "register_name": "fpga1.test_generator.delay_1",
+            "values": [0],
         }
         json_arg = json.dumps(arg)
         [[result_code], [message]] = on_tile_device.WriteRegister(json_arg)

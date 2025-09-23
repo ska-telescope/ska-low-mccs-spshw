@@ -221,13 +221,41 @@ def restart_device(exported_tiles: list[tango.DeviceProxy], tile_id: int) -> Non
     tile_device.init()
 
 
-@then(
+@when(
     parsers.cfparse(
-        "Tile {tile_id:Number} is not in {programming_state:string} state",
+        "Tile {tile_id:Number} is turned OFF",
         extra_types={"Number": int, "string": str},
     )
 )
-def check_tile_sync_state(
+def change_tile_state(
+    exported_tiles: list[tango.DeviceProxy],
+    tile_id: int,
+) -> None:
+    """
+    Turn a tile off.
+
+    :param exported_tiles: the tiles
+    :param tile_id: the name of the device to restart
+    """
+    tile_device = exported_tiles[tile_id - 1]
+
+    tile_device.adminMode = AdminMode.OFFLINE
+
+    AttributeWaiter(timeout=15).wait_for_value(
+        tile_device,
+        "state",
+        AdminMode.OFFLINE,
+        lookahead=2,
+    )
+
+
+@then(
+    parsers.cfparse(
+        "Tile {tile_id:Number} is in programming state Unknown",
+        extra_types={"Number": int, "string": str},
+    )
+)
+def check_tile_programming_state(
     exported_tiles: list[tango.DeviceProxy],
     tile_id: int,
     programming_state: str,
@@ -240,30 +268,23 @@ def check_tile_sync_state(
     :param programming_state: the seried Sync state
     """
     tile_device = exported_tiles[tile_id - 1]
-    sync_state = TpmStatus.UNKNOWN
+
     AttributeWaiter(timeout=15).wait_for_value(
         tile_device,
-        "tileProgrammingState",
-        sync_state,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        "state",
+        TpmStatus.UNKNOWN,
+        lookahead=2,
     )
 
 
-@then(
-    parsers.cfparse(
-        "SpsStation is in {health_state:string} state",
-        extra_types={"Number": int, "string": str},
-    )
-)
+@then("SPS station is not in a healthy state")
 def check_station_health_state(
     station: tango.DeviceProxy,
-    health_state: str,
 ) -> None:
     """
     Verify that a tile is in a desired syncronized state.
 
     :param station: the tiles
-    :param health_state: the seried Sync state
     """
     health_state_value = HealthState.FAILED
     AttributeWaiter(timeout=15).wait_for_value(

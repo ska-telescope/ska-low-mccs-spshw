@@ -1,8 +1,8 @@
- Feature: Test Station Health
-     Test the station health roll up
+Feature: Test station health
+    Test the station device
 
-     Scenario: Station health is failed when Tiles are not synchronized
-         Given the SpsStation is ON
-         When Device Tile 1 is restarted
-         Then Tile 1 is not in synchronized state
-         And an SPS station is in Healthy state
+    Scenario: Rebooting Tile device causes health state failure
+        Given SpsStation is ON
+        When Tile 1 is turned OFF
+        Then Tile 1 is in programming state Unknown
+        Then SPS station is not in a healthy state

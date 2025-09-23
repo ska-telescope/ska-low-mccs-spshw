@@ -21,7 +21,7 @@ from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
 from typing import Any, Callable, Final, NoReturn
-
+from .firmware_threshold_interface import FirmwareThresholds
 import numpy as np
 import tango
 from ska_control_model import (
@@ -422,17 +422,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "discarded_or_flagged_packet_count",
             ],
         }
+        self.firmware_thresholds = FirmwareThresholds()
+        self.firmware_thresholds = tango.Database().get_device_attribute_property(self.get_name(), self.firmware_thresholds.to_device_property_keys_only())
+        # fp1temp = self.get_attribute_config_3("fpga1Temperature")[0]
+        # pllLocked = self.get_attribute_config_3("pllLocked")[0]
+        # self.logger.error(f"{fp1temp.att_alarm.max_alarm=}")
+        # self.logger.error(f"{pllLocked.att_alarm.max_alarm=}")
+        # fp1temp.description="I have read the default and updated it"
+        # updatedfp1temp = self.set_attribute_config_3(fp1temp)
+        # self.logger.error(f"{updatedfp1temp=}")
 
-        fp1temp = self.get_attribute_config_3("fpga1Temperature")[0]
-        pllLocked = self.get_attribute_config_3("pllLocked")[0]
-        self.logger.error(f"{fp1temp.att_alarm.max_alarm=}")
-        self.logger.error(f"{pllLocked.att_alarm.max_alarm=}")
-        fp1temp.description="I have read the default and updated it"
-        updatedfp1temp = self.set_attribute_config_3(fp1temp)
-        self.logger.error(f"{updatedfp1temp=}")
+
+
         for attr_name in self._attribute_state:
-            self.set_change_event(attr_name, True, False)
-            self.set_archive_event(attr_name, True, False)
+            if attr_name == "temperature_alm":
+                self.set_change_event(attr_name, True, True)
+                self.set_archive_event(attr_name, True, True)
+            else:
+                self.set_change_event(attr_name, True, False)
+                self.set_archive_event(attr_name, True, False)
 
     def server_init_hook(self):
         self.logger.error("Server init hook called")
@@ -448,7 +456,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         time.sleep(10)
         self.logger.error("Done pretending!")
         self._self_proxy = MccsDeviceProxy(self.get_name(), self.logger)
-        self._self_proxy.subscribe_event("fpga1Temperature", tango.EventType.ATTR_CONF_EVENT, self.logger.error)
+        self._self_proxy.subscribe_event("temperature_alm", tango.EventType.ALARM_EVENT, self.logger.error)
+        self._self_proxy.subscribe_event("temperature_alm", tango.EventType.ATTR_CONF_EVENT, self._hack_tango_push)
+
+
+    def _hack_tango_push(self: MccsTile, e) -> None:
+        self.logger.error(f"I am pushing becuase TANGO does not. {e}")
+        attribute_name = e.attr_name.split("/")[-1]
+        self.logger.error(f"I am pushing {attribute_name} becuase TANGO does not.")
+        value_cache = self._attribute_state[attribute_name].read()
+        if value_cache is not None:
+            self.push_change_event(attribute_name, value_cache[0])
+            self.logger.error("I just pushed")
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -855,6 +874,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # it seems that fire_change_event will consume the
         # value set meaning a check_alarm has a nullptr.
         self._multi_attr.get_attr_by_name(name).set_value(attr_value)
+        if name == "fpga1Temperature":
+            # self.logger.error("Trying to read the write and read values")
+            # w_val = self._multi_attr.get_attr_by_name("firmwareTemperatureThresholds").get_properties().write_value
+            # self.logger.error(f"wval is {w_val}")
+            # self.logger.error(f"rval is {attr_value}")
+            # if w_val!=attr_value:
+            #     self.logger.error("Different values detected, doing something.")
+
+            try:
+                w_val= tango.Database().get_device_attribute_property(self.get_name(), {"write_value": {"fpga1_temperature_threshold"}})
+                if not self._is_firmware_matching_database(self.firmware_thresholds.to_device_property_dict(), self.component_manager.get_tpm_temperature_thresholds()):
+                    self.logger.error("Not matching")
+                self.logger.error(f"wval is {w_val}")
+                self.logger.error(f"rval is {attr_value}")
+                if w_val != attr_value:
+                    self.logger.error("Different values detected, doing something.")
+            except Exception as e:
+                self.logger.error(f"{e=}")
         try:
             # Update the attribute ALARM status.
             self._multi_attr.check_alarm(name)
@@ -862,6 +899,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # no alarm defined
             pass
 
+    def _is_firmware_matching_database(
+        self: MccsTile,
+        database_firmware_thresholds: dict[str, dict[str, str | list[int]]],
+        read_firmware_thresholds: dict[str, dict[str, list[int]]]
+    ) -> bool:
+        """
+        Compare firmware thresholds from the database against read values.
+        Ignores any thresholds marked as 'Undefined' in the database.
+        Returns True if all defined DB values match the read values, else False.
+        """
+        db_thresholds = database_firmware_thresholds.get("firmware_thresholds", {})
+        read_thresholds = read_firmware_thresholds
+
+        for key, db_value in db_thresholds.items():
+            self.logger.error("Investigating if key is undefined")
+            if db_value == "Undefined":
+                continue  # Skip undefined thresholds
+            self.logger.error(f"Investigating {key=} with {db_value=}")
+            read_value = read_thresholds.get(key)
+            self.logger.error(f"{read_value=}")
+            if read_value is None or db_value != read_value:
+                return False
+
+        return True
+    
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
         Convert IPAddresses to str in (possibly nested) dict.
@@ -1816,7 +1878,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["tileProgrammingState"].read()
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", delta_val="1", delta_t=1, memorized=True)
     def stationId(self: MccsTile) -> int:
         """
         Return the id of the station to which this tile is assigned.
@@ -1839,8 +1901,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.logger.info(message)
         self.component_manager.station_id = value
 
-    @attribute(dtype="DevString")
-    def firmwareTemperatureThresholds(
+    @attribute(dtype="DevString", fisallowed="is_engineering")
+    def firmwareThresholds(
         self: MccsTile,
     ) -> str | dict[str, tuple[int, int]]:
         """
@@ -1850,6 +1912,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             or a null string.
         """
         return json.dumps(self.component_manager.get_tpm_temperature_thresholds())
+    
+    @firmwareThresholds.write
+    def firmwareThresholds(
+        self: MccsTile, argin: str
+    ) -> None:
+        """
+        Return the temperature thresholds set in firmware.
+
+        :return: A serialised dictionary containing the thresholds.
+            or a null string.
+        """
+        kwargs = json.loads(argin)
+        board_temperature_threshold = kwargs.get("board_temperature_threshold", "Undefined")
+        fpga1_temperature_threshold = kwargs.get("fpga1_temperature_threshold", "Undefined")
+        fpga2_temperature_threshold = kwargs.get("fpga2_temperature_threshold", "Undefined")
+
+        self.component_manager.set_tpm_temperature_thresholds(
+            board_alarm_threshold=board_temperature_threshold,
+            fpga1_alarm_threshold=fpga1_temperature_threshold,
+            fpga2_alarm_threshold=fpga2_temperature_threshold,
+        )
+        self.firmware_thresholds.board_temperature_threshold = board_temperature_threshold
+        self.firmware_thresholds.fpga1_temperature_threshold = fpga1_temperature_threshold
+        self.firmware_thresholds.fpga2_temperature_threshold = fpga2_temperature_threshold
+
+        tango.Database().put_device_attribute_property(self.get_name(), self.firmware_thresholds.to_device_property_dict())
 
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
@@ -1930,7 +2018,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    def is_engineering(self: MccsTile) -> bool:
+    def is_engineering(self: MccsTile, req_type: tango.AttReqType) -> bool:
         """
         Return a flag representing whether we are in Engineering mode.
 

@@ -87,7 +87,7 @@ class AttributeManager:
             # Check for quality or value changes!
             if self._update_quality(new_value) or self._value_changed(new_value):
                 is_event_required = True
-
+            is_event_required = True
             self._value = new_value
 
         if post and is_event_required:

@@ -1373,7 +1373,7 @@ class TileSimulator:
         :param station_id: station_id
         """
         self._tile_id = tile_id
-        self._station_id = station_id
+        # self._station_id = station_id
 
     @check_mocked_overheating
     @connected

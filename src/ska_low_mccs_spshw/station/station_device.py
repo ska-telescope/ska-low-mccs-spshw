@@ -722,6 +722,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         if self._use_new_health_model:
             self._health_state = health
+
+            # Make sure states are correct
+            for state in self.component_manager.tile_programming_state():
+                if state in ["Unknown", "Off", "Unconnected"]:
+                    self.healthState = HealthState.FAILED
+
             self.push_change_event("healthState", health)
 
     def _old_health_changed(self: SpsStation, health: HealthState) -> None:

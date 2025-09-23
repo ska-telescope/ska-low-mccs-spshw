@@ -1829,7 +1829,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def get_tpm_temperature_thresholds(
         self: TileComponentManager,
-    ) -> None | dict[str, tuple[float, float]]:
+    ) -> None | dict[str, float]:
         """
         Return the temperature thresholds in firmware.
 
@@ -3795,23 +3795,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def set_tpm_temperature_thresholds(
         self: TileComponentManager,
-        board_alarm_threshold: tuple[float, float] | None = None,
-        fpga1_alarm_threshold: tuple[float, float] | None = None,
-        fpga2_alarm_threshold: tuple[float, float] | None = None,
+        max_board_alarm_threshold: float | None = None,
+        max_fpga1_alarm_threshold: float | None = None,
+        max_fpga2_alarm_threshold: float | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Set the temperature thresholds.
 
         NOTE: Warning this method can configure the shutdown temperature of
-        components and must be used with care. This method is capped to a minimum
-        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+        components and must be used with care. This method is capped to a
+        maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
 
-        :param board_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the board (unit: Degree Celsius)
-        :param fpga1_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
-        :param fpga2_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        :param max_board_alarm_threshold: The maximum alarm thresholds
+            for the board (unit: Degree Celsius)
+        :param max_fpga1_alarm_threshold: The maximum alarm thresholds
+            for the fpga1 (unit: Degree Celsius)
+        :param max_fpga2_alarm_threshold: The maximum alarm thresholds
+            for the fpga2 (unit: Degree Celsius)
 
         :return: a tuple containing a ``ResultCode`` and string with information about
             the execution outcome.
@@ -3822,9 +3822,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 try:
                     self.tile.set_tpm_temperature_thresholds(
-                        board_alarm_threshold=board_alarm_threshold,
-                        fpga1_alarm_threshold=fpga1_alarm_threshold,
-                        fpga2_alarm_threshold=fpga2_alarm_threshold,
+                        max_board_alarm_threshold=max_board_alarm_threshold,
+                        max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
+                        max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
                     )
                 except ValueError as ve:
                     value_error_message = (

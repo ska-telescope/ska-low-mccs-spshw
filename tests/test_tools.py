@@ -431,10 +431,12 @@ class _ProgrammingStateAccess:
                         lookahead=5,
                     )
                 # trigger a overheating event.
-                obj._tile_device.adminMode = 2
+                cached_adminmode = obj._tile_device.adminMode
+                obj._tile_device.adminMode = AdminMode.ENGINEERING
                 obj._tile_device.SetFirmwareTemperatureThresholds(
-                    json.dumps({"board_temperature_threshold": [22.0, 32.0]})
+                    json.dumps({"board_temperature_threshold": 32.0})
                 )
+                obj._tile_device.adminMode = cached_adminmode
 
             case TpmStatus.INITIALISED:
                 obj._tile_device.globalReferenceTime = ""

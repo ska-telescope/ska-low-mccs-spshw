@@ -5,35 +5,17 @@
     "description": "Schema for MccsTile's SetTemperatureThresholds command",
     "type": "object",
     "properties": {
-        "board_temperature_threshold": {
-            "type": "array",
-            "items": {
-                "type": "number",
-                "minimum": 20,
-                "maximum": 50
-            },
-            "minItems": 2,
-            "maxItems": 2
+        "max_board_temperature_threshold": {
+            "type": "number",
+            "maximum": 50
         },
-        "fpga1_temperature_threshold": {
-            "type": "array",
-            "items": {
-                "type": "number",
-                "minimum": 20,
-                "maximum": 50
-            },
-            "minItems": 2,
-            "maxItems": 2
+        "max_fpga1_temperature_threshold": {
+            "type": "number",
+            "maximum": 50
         },
-        "fpga2_temperature_threshold": {
-            "type": "array",
-            "items": {
-                "type": "number",
-                "minimum": 20,
-                "maximum": 50
-            },
-            "minItems": 2,
-            "maxItems": 2
+        "max_fpga2_temperature_threshold": {
+            "type": "number",
+            "maximum": 50
         }
     }
 }

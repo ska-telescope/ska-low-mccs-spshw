@@ -2235,7 +2235,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(dtype="DevString", fisallowed="_not_initialising")
     def firmwareTemperatureThresholds(
         self: MccsTile,
-    ) -> str | dict[str, tuple[int, int]]:
+    ) -> str | dict[str, float]:
         """
         Return the temperature thresholds set in firmware.
 
@@ -6549,14 +6549,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            board_temperature_threshold = kwargs.get("board_temperature_threshold")
-            fpga1_temperature_threshold = kwargs.get("fpga1_temperature_threshold")
-            fpga2_temperature_threshold = kwargs.get("fpga2_temperature_threshold")
+            max_board_temperature_threshold = kwargs.get(
+                "max_board_temperature_threshold"
+            )
+            max_fpga1_temperature_threshold = kwargs.get(
+                "max_fpga1_temperature_threshold"
+            )
+            max_fpga2_temperature_threshold = kwargs.get(
+                "max_fpga2_temperature_threshold"
+            )
 
             return self._component_manager.set_tpm_temperature_thresholds(
-                board_alarm_threshold=board_temperature_threshold,
-                fpga1_alarm_threshold=fpga1_temperature_threshold,
-                fpga2_alarm_threshold=fpga2_temperature_threshold,
+                max_board_alarm_threshold=max_board_temperature_threshold,
+                max_fpga1_alarm_threshold=max_fpga1_temperature_threshold,
+                max_fpga2_alarm_threshold=max_fpga2_temperature_threshold,
             )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -6571,15 +6577,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: a json serialised dictionary containing the following keys:
 
-            * board_temperature_threshold - an array containing
-                a minimum and maximum value for the board temperature threshold.
-                Must be in range (20 - 50 (Degree Celcius))
-            * fpga1_temperature_threshold - an array containing
-                a minimum and maximum value for the fpga1 temperature threshold.
-                Must be in range (20 - 50 (Degree Celcius))
-            * fpga2_temperature_threshold - an array containing
-                a minimum and maximum value for the fpga2 temperature threshold.
-                Must be in range (20 - 50 (Degree Celcius))
+            * max_board_temperature_threshold: The maximum alarm thresholds
+                for the board (unit: Degree Celsius)
+            * max_fpga1_temperature_threshold: The maximum alarm thresholds
+                for the fpga1 (unit: Degree Celsius)
+            * max_fpga2_temperature_threshold: The maximum alarm thresholds
+                for the fpga2 (unit: Degree Celsius)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -6589,7 +6592,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
 
-        >>> thresholds = {"board_temperature_threshold": [30, 45]}
+        >>> thresholds = {"max_board_temperature_threshold": 45}
         >>> json_thresholds = json.loads(thresholds)
         >>> tile_device.SetFirmwareTemperatureThresholds(json_thresholds)
         """

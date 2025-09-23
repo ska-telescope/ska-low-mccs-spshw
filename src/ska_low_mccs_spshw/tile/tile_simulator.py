@@ -1007,12 +1007,12 @@ class TileSimulator:
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 2
     TPM_TEMPERATURE_THRESHOLDS = {
-        "board_warning_threshold": (-273.0, 90.0),
-        "board_alarm_threshold": (-273.0, 90.0),
-        "fpga1_warning_threshold": (-273.0, 90.0),
-        "fpga1_alarm_threshold": (-273.0, 90.0),
-        "fpga2_warning_threshold": (-273.0, 90.0),
-        "fpga2_alarm_threshold": (-273.0, 90.0),
+        "board_warning_threshold": 90.0,
+        "board_alarm_threshold": 90.0,
+        "fpga1_warning_threshold": 90.0,
+        "fpga1_alarm_threshold": 90.0,
+        "fpga2_warning_threshold": 90.0,
+        "fpga2_alarm_threshold": 90.0,
     }
 
     FIRMWARE_NAME = "tpm_firmware.bit"
@@ -1213,12 +1213,12 @@ class TileSimulator:
             raise LibraryError("bitfile is None type")
         # Every time we reprogram the temperature thresholds get reset.
         self._tpm_temperature_thresholds = {
-            "board_warning_threshold": (-273.0, 90.0),
-            "board_alarm_threshold": (-273.0, 90.0),
-            "fpga1_warning_threshold": (-273.0, 90.0),
-            "fpga1_alarm_threshold": (-273.0, 90.0),
-            "fpga2_warning_threshold": (-273.0, 90.0),
-            "fpga2_alarm_threshold": (-273.0, 90.0),
+            "board_warning_threshold": 90.0,
+            "board_alarm_threshold": 90.0,
+            "fpga1_warning_threshold": 90.0,
+            "fpga1_alarm_threshold": 90.0,
+            "fpga2_warning_threshold": 90.0,
+            "fpga2_alarm_threshold": 90.0,
         }
         self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
@@ -1491,18 +1491,18 @@ class TileSimulator:
     @connected
     def get_tpm_temperature_thresholds(
         self: TileSimulator,
-    ) -> dict[str, tuple[float, float]]:
+    ) -> dict[str, float]:
         """
         Return a dictionary of temperature thresholds.
 
         return structure looks like:
         >>{
-        >>    "board_warning_threshold": (min, max),
-        >>    "board_alarm_threshold"  : (min, max),
-        >>    "fpga1_warning_threshold": (min, max),
-        >>    "fpga1_alarm_threshold": (min, max),
-        >>    "fpga2_warning_threshold": (min, max),
-        >>    "fpga2_alarm_threshold": (min, max),
+        >>    "board_warning_threshold": max,
+        >>    "board_alarm_threshold"  : max,
+        >>    "fpga1_warning_threshold": max,
+        >>    "fpga1_alarm_threshold": max,
+        >>    "fpga2_warning_threshold": max,
+        >>    "fpga2_alarm_threshold": max,
         >>}
 
         :return: A dictionary containing the temperature thresholds.
@@ -2865,74 +2865,68 @@ class TileSimulator:
 
     def set_tpm_temperature_thresholds(
         self: TileSimulator,
-        board_alarm_threshold: tuple[float, float] | None = None,
-        fpga1_alarm_threshold: tuple[float, float] | None = None,
-        fpga2_alarm_threshold: tuple[float, float] | None = None,
+        max_board_alarm_threshold: float | None = None,
+        max_fpga1_alarm_threshold: float | None = None,
+        max_fpga2_alarm_threshold: float | None = None,
     ) -> None:
         """
         Set the temperature thresholds.
 
         NOTE: Warning this method can configure the shutdown temperature of
-        components and must be used with care. This method is capped to a minimum
-        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+        components and must be used with care. This method is capped to a
+        maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
 
-        :param board_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the board (unit: Degree Celsius)
-        :param fpga1_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
-        :param fpga2_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        :param max_board_alarm_threshold: The maximum alarm thresholds
+            for the board (unit: Degree Celsius)
+        :param max_fpga1_alarm_threshold: The maximum alarm thresholds
+            for the fpga1 (unit: Degree Celsius)
+        :param max_fpga2_alarm_threshold: The maximum alarm thresholds
+            for the fpga2 (unit: Degree Celsius)
 
         :raises ValueError: is the value set is not in the set range.
         """
 
-        def _is_in_range_20_50(value: float) -> bool:
+        def _is_less_than_50(value: float) -> bool:
             """
-            Return True if value is larger than 20 and less than 50.
+            Return True if value is less than 50.
 
             :param value: value under test
 
             :return: True when test value in range.
             """
-            min_settable = 20
             max_settable = 50
-            if min_settable <= value <= max_settable:
+            if value <= max_settable:
                 return True
             return False
 
-        if board_alarm_threshold is not None:
-            if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
-                board_alarm_threshold[1]
-            ):
+        if max_board_alarm_threshold is not None:
+            if _is_less_than_50(max_board_alarm_threshold):
                 self._tpm_temperature_thresholds[
                     "board_alarm_threshold"
-                ] = board_alarm_threshold
+                ] = max_board_alarm_threshold
             else:
                 raise ValueError(
-                    f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                    f"{max_board_alarm_threshold=} not larger than 50. Doing nothing"
                 )
-        if fpga1_alarm_threshold is not None:
-            if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
-                fpga1_alarm_threshold[1]
-            ):
+        if max_fpga1_alarm_threshold is not None:
+            if _is_less_than_50(max_fpga1_alarm_threshold):
                 self._tpm_temperature_thresholds[
                     "fpga1_alarm_threshold"
-                ] = fpga1_alarm_threshold
+                ] = max_fpga1_alarm_threshold
             else:
                 raise ValueError(
-                    f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                    f"{max_fpga1_alarm_threshold=} not larger than 50. Doing nothing"
                 )
-        if fpga2_alarm_threshold is not None:
-            if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
-                fpga2_alarm_threshold[1]
-            ):
+        if max_fpga2_alarm_threshold is not None:
+            if _is_less_than_50(max_fpga2_alarm_threshold):
                 self._tpm_temperature_thresholds[
                     "fpga2_alarm_threshold"
-                ] = fpga2_alarm_threshold
+                ] = max_fpga2_alarm_threshold
             else:
                 raise ValueError(
-                    f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                    f"{max_fpga2_alarm_threshold=} not larger than 50. Doing nothing"
                 )
+
         self.evaluate_mcu_action()
 
     def evaluate_mcu_action(self: TileSimulator) -> None:
@@ -2944,11 +2938,11 @@ class TileSimulator:
         """
         if (
             self._tile_health_structure["temperatures"]["board"]
-            > self._tpm_temperature_thresholds["board_alarm_threshold"][1]
+            > self._tpm_temperature_thresholds["board_alarm_threshold"]
             or self._tile_health_structure["temperatures"]["FPGA0"]
-            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"][1]
+            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"]
             or self._tile_health_structure["temperatures"]["FPGA1"]
-            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"][1]
+            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"]
         ):
             self.logger.warning(
                 "We are overheating, CPLD is turning the overheating components OFF!"

@@ -2173,7 +2173,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: Optional[str] = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
         netmask_40g: str | None = None,
@@ -2187,7 +2187,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated
             beam data
-        :param dst_ip: Destination IP, defaults to None
+        :param dst_ip: Destination IP, defaults to "10.0.10.1"
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
@@ -3139,7 +3139,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         mode: str,
         payload_length: int = 1024,
-        dst_ip: Optional[str] = None,
+        dst_ip: str = "10.0.10.1",
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
         netmask_40g: str | None = None,
@@ -3151,7 +3151,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param mode: "1G" or "10G"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
-        :param dst_ip: destination IP, defaults to None
+        :param dst_ip: destination IP, defaults to "10.0.10.1"
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet

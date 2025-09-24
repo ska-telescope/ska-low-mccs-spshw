@@ -1249,6 +1249,8 @@ class TileSimulator:
         lmc_dst_ip: str | None = None,
         lmc_dst_port: int = 4660,
         lmc_integrated_use_40g: bool = False,
+        lmc_integrated_dst_ip: str | None = None,
+        lmc_integrated_dst_port: int = 4660,
         src_ip_fpga1: str | None = None,
         src_ip_fpga2: str | None = None,
         dst_ip_fpga1: str | None = None,
@@ -1282,6 +1284,8 @@ class TileSimulator:
         :param lmc_dst_port: destination UDP port for LMC data packets
         :param lmc_integrated_use_40g: if True use 40G interface to transmit LMC
             integrated data, otherwise use 1G
+        :param lmc_integrated_dst_ip: the destingation ip for lmc integrated data.
+        :param lmc_integrated_dst_port: the destingation port for lmc integrated data.
         :param src_ip_fpga1: source IP address for FPGA1 40G interface
         :param src_ip_fpga2: source IP address for FPGA2 40G interface
         :param dst_ip_fpga1: destination IP address for beamformed data from
@@ -1996,7 +2000,7 @@ class TileSimulator:
         self: TileSimulator,
         mode: str,
         payload_length: int = 1024,
-        dst_ip: str | None = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
         netmask_40g: str | None = None,
@@ -2639,7 +2643,7 @@ class TileSimulator:
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: str | None = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
         netmask_40g: str | None = None,

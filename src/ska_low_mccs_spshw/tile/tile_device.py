@@ -4238,7 +4238,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     payload_length = 8192
                 else:
                     payload_length = 1024
-            dst_ip = kwargs.get("destination_ip", None)
+            dst_ip = kwargs.get("destination_ip", "10.0.10.1")
             src_port = kwargs.get("source_port", 0xF0D0)
             dst_port = kwargs.get("destination_port", 4660)
             netmask_40g = kwargs.get("netmask_40g", None)
@@ -4340,7 +4340,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             mode = kwargs["mode"]
             channel_payload_length = kwargs.get("channel_payload_length", 1024)
             beam_payload_length = kwargs.get("beam_payload_length", 1024)
-            dst_ip = kwargs.get("destination_ip", None)
+            dst_ip = kwargs.get("destination_ip", "10.0.10.1")
             src_port = kwargs.get("source_port", 0xF0D0)
             dst_port = kwargs.get("destination_port", 4660)
             netmask_40g = kwargs.get("netmask_40g", None)

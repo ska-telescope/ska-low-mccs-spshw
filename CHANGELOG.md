@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-249] Add attribute pfb_version to MccsTile.
+* [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
 * [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes

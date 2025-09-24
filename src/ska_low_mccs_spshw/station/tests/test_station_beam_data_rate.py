@@ -68,9 +68,7 @@ class TestStationBeamDataRate(BaseDaqTest):
         self.component_manager.set_beamformer_table(beamformer_table)
 
     def _reset(self: TestStationBeamDataRate) -> None:
-        self.component_manager.stop_beamformer()
-        if self.daq_proxy is not None:
-            self.daq_proxy.StopDataRateMonitor()
+        self.component_manager._stop_beamformer(None)
 
     def test(self: TestStationBeamDataRate) -> None:
         """
@@ -84,17 +82,16 @@ class TestStationBeamDataRate(BaseDaqTest):
         self._configure_beamformer_all_regions()
         self._configure_csp_ingest()
         assert self.daq_proxy is not None
-        self.daq_proxy.StartDataRateMonitor(1)
 
         with self.reset_context():
             for iteration in test_iterations:
                 beamformer_start_time = datetime.strftime(
-                    datetime.fromtimestamp(int(time.time()) + 5), TileTime.RFC_FORMAT
+                    datetime.fromtimestamp(int(time.time()) + 3), TileTime.RFC_FORMAT
                 )
-                self.component_manager.start_beamformer(
+                self.component_manager._start_beamformer(
                     start_time=beamformer_start_time,
                     duration=-1,
-                    # channel_groups = [0,1,2],
+                    channel_groups=None,
                     scan_id=0,
                 )
                 time.sleep(5)
@@ -123,6 +120,6 @@ class TestStationBeamDataRate(BaseDaqTest):
                     time.sleep(1)
 
                 self.test_logger.info(f"Test passed for iteration {iteration + 1}")
-                self.component_manager.stop_beamformer()
+                self.component_manager._stop_beamformer(None)
 
         self.test_logger.info("Test station beamformer data rate passed!")

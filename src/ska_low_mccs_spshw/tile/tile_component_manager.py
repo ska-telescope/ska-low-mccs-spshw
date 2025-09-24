@@ -1473,9 +1473,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Read configuration information from the TPM."""
         self.logger.info("Updating attribute configuration from TPM")
 
-        # NOTE: THORN-207: There is no API to read channeliser_truncation and
-        # csp_rounding from TPM.
         channeliser_rounding = self.channeliser_truncation
+        # NOTE: THORN-207: There is no API to read csp_rounding from TPM.
         csp_rounding = self.csp_rounding
         # hardware methods recuire a lock
         static_delays = self._with_hardware_lock(self.get_static_delays)
@@ -1483,6 +1482,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
+        pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1492,6 +1492,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             channeliser_rounding=channeliser_rounding,
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
+            pfb_version=pfb_version,
         )
 
         self.logger.info("Configuration information read from TPM")

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 8.0.2
+
+* [THORN-289] Add ResetCspIngest command to SpsStation. Improve message in SetCspIngest. Add cspIngestConfig attribute to SpsStation.
 * [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes

@@ -164,7 +164,7 @@ endif
 
 K8S_TEST_RUNNER_WORKING_DIRECTORY ?= /home/tango
 
-PYTHON_VARS_AFTER_PYTEST += "-n 16"
+PYTHON_VARS_AFTER_PYTEST += "-n 4"
 
 k8s-do-test:
 	helm -n $(KUBE_NAMESPACE) upgrade --install --repo $(K8S_TEST_RUNNER_CHART_REGISTRY) \

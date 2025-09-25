@@ -2789,13 +2789,15 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int,
         dst_port: int,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Configure link for CSP ingest channel.
 
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+
+        :return: Resultcode and message.
         """
         self._csp_ingest_address = dst_ip
         self._csp_ingest_port = dst_port
@@ -2804,7 +2806,8 @@ class SpsStationComponentManager(
         (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
-            return  # Do not access an unprogrammed TPM
+            return (ResultCode.FAILED, f"{fqdn} is not in PowerState.ON")
+        # Do not access an unprogrammed TPM
 
         num_cores = 2
         last_tile = len(self._tile_proxies) - 1
@@ -2869,6 +2872,7 @@ class SpsStationComponentManager(
                     }
                 )
             )
+        return (ResultCode.OK, "SetCspIngest command completed OK")
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]

@@ -34,7 +34,7 @@ class TileRequest:
     def __init__(
         self: TileRequest,
         name: str,
-        command_object: Any,
+        command_object: Callable,
         *args: Any,
         publish: bool = False,
         **kwargs: Any,
@@ -64,10 +64,7 @@ class TileRequest:
 
         :return: the returned value from the command
         """
-        if callable(self._command_object):
-            result = self._command_object(*self._args, **self._kwargs)
-        else:
-            result = self._command_object
+        result = self._command_object(*self._args, **self._kwargs)
         return result
 
 

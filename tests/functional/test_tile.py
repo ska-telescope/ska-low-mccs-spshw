@@ -189,7 +189,10 @@ def check_spsstation_state(
                 "state",
                 tango.DevState.ON,
             )
-    if _initial_station_state != tango.DevState.ON:
+    if (
+        _initial_station_state != tango.DevState.ON
+        and station.state() != tango.DevState.ON
+    ):
         AttributeWaiter(timeout=60).wait_for_value(
             station, "state", tango.DevState.ON, lookahead=3
         )

@@ -504,7 +504,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             case "FPGA_REFERENCE_TIME":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
-                    self.formatted_fpga_reference_time,
+                    lambda: self.formatted_fpga_reference_time,
                 )
             case "TILE_BEAMFORMER_FRAME":
                 request = TileRequest(
@@ -588,12 +588,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Update command tracker if defined in request.
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_failed(f"Exception: {repr(exception)}")
-            self.active_request = None
         elif isinstance(self.active_request, TileRequest):
             if self.active_request.publish:
                 self._update_attribute_callback(
                     mark_invalid=True, **{self.active_request.name: None}
                 )
+        self.active_request = None
 
         self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
@@ -685,7 +685,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_completed()
-            self.active_request = None
+        self.active_request = None
 
         self.update_fault_state(poll_success=True)
 

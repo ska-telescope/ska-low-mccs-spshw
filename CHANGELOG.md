@@ -6,6 +6,7 @@
 * [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes
+* [LOW-1745] Bump ska-tango-devices to 0.10.0, with support for suppressing the deployment of check-dependencies initContainers that wait for databaseDS, when deploying to a persistent platform.
 
 ## 8.0.1
 

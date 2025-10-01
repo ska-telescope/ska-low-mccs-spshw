@@ -1934,6 +1934,65 @@ def test_health(
     assert station_device.healthState == HealthState.OK
 
 
+def test_programingstate_rollup(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test station health rollup.
+
+    :param station_device: The station device to use.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+
+    for tile in mock_tile_device_proxies:
+        tile.tileProgrammingState = "Synchronised"
+
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.OK, lookahead=2, consume_nonmatches=True
+    )
+    assert station_device.healthState == HealthState.OK
+
+    # Change the programing state of a tile and see how it influences health
+
+    first_tile = mock_tile_device_proxies[0]
+    first_tile.tileProgrammingState = "Unknown"
+
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.FAILED, lookahead=2
+    )
+    assert station_device.healthState == HealthState.FAILED
+
+    # Reset Tile Programming state.
+
+    first_tile.tileProgrammingState = "Synchronised"
+
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.OK, lookahead=2
+    )
+    assert station_device.healthState == HealthState.OK
+
+
 @pytest.mark.parametrize(
     ("expected_init_params", "new_params"),
     [
@@ -1945,6 +2004,7 @@ def test_health(
                 "tile_failed": 0.2,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
+                # "tile_programing_state": 1,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
             },
@@ -1955,6 +2015,7 @@ def test_health(
                 "tile_failed": 0.2,
                 "pps_delta_degraded": 6,
                 "pps_delta_failed": 10,
+                # "tile_programing_state": 1,
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",

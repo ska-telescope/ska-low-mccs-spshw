@@ -960,7 +960,7 @@ class SpsStationComponentManager(
                     sync_state = False
 
                 if self._component_state_callback:
-                    self._component_state_callback(tileProgrammingStateGood=sync_state)
+                    self._component_state_callback(TilesSyncState=sync_state)
 
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:

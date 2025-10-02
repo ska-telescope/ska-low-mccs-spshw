@@ -708,7 +708,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 self._health_rollup.health_changed("pps_delay", HealthState.OK)
 
-        tile_programming_state = state_change.get("tileProgrammingStateGood")
+        tile_programming_state = state_change.get("TilesSyncState")
         if tile_programming_state is not None:
             if tile_programming_state:
                 self._health_rollup.health_changed(

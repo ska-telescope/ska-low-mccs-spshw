@@ -1991,7 +1991,7 @@ def test_programingstate_rollup(
         json.dumps(
             {
                 "tile_id": 1,
-                "value": "Syncronised",
+                "value": "Synchronised",
             }
         )
     )

@@ -952,14 +952,16 @@ class SpsStationComponentManager(
                         ppsDelaySpread=self._pps_delay_spread
                     )
             case "tileprogrammingstate":
-                if logical_tile_id > (int(len(self._tile_programming_state)) - 1):
-                    self._tile_programming_state.append(attribute_value)
-                else:
-                    self._tile_programming_state[logical_tile_id] = attribute_value
+                states = self.tile_programming_state()
+                sync_state = True
+                if any(
+                    state != TpmStatus.SYNCHRONISED.pretty_name() for state in states
+                ):
+                    sync_state = False
+
                 if self._component_state_callback:
-                    self._component_state_callback(
-                        tileProgrammingState=self._tile_programming_state
-                    )
+                    self._component_state_callback(tileProgrammingStateGood=sync_state)
+
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:
                     reshaped_table = np.reshape(

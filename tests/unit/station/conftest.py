@@ -339,6 +339,26 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 tango.AttrQuality.ATTR_VALID,
             )
 
+        @command()
+        def MockTileProgrammingStateChange(
+            self: PatchedSpsStationDevice, argin: str
+        ) -> None:
+            """
+            Mock a change in tile programming state.
+
+            :param argin: contains the tile id we are mocking a change for
+                and the value
+
+            Mock a puched change event from a tile.
+            """
+            args = json.loads(argin)
+            self.component_manager._on_tile_attribute_change(
+                args["tile_id"],
+                "tileprogrammingstate",
+                args["value"],
+                tango.AttrQuality.ATTR_VALID,
+            )
+
     return PatchedSpsStationDevice
 
 

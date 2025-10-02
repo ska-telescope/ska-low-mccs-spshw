@@ -1973,19 +1973,28 @@ def test_programingstate_rollup(
     )
     assert station_device.healthState == HealthState.OK
 
-    # Change the programing state of a tile and see how it influences health
-
-    first_tile = mock_tile_device_proxies[0]
-    first_tile.tileProgrammingState = "Unknown"
+    station_device.MockTileProgrammingStateChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "value": "Unknown",
+            }
+        )
+    )
 
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.FAILED, lookahead=2
+        HealthState.DEGRADED, lookahead=2
     )
-    assert station_device.healthState == HealthState.FAILED
+    assert station_device.healthState == HealthState.DEGRADED
 
-    # Reset Tile Programming state.
-
-    first_tile.tileProgrammingState = "Synchronised"
+    station_device.MockTileProgrammingStateChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "value": "Syncronised",
+            }
+        )
+    )
 
     change_event_callbacks["health_state"].assert_change_event(
         HealthState.OK, lookahead=2
@@ -2004,7 +2013,6 @@ def test_programingstate_rollup(
                 "tile_failed": 0.2,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
-                # "tile_programing_state": 1,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
             },
@@ -2015,7 +2023,6 @@ def test_programingstate_rollup(
                 "tile_failed": 0.2,
                 "pps_delta_degraded": 6,
                 "pps_delta_failed": 10,
-                # "tile_programing_state": 1,
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",

@@ -552,7 +552,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements
-    def _component_state_changed(  # type: ignore[override]
+    def _component_state_changed(  # noqa: C901
         self: SpsStation,
         *,
         fault: Optional[bool] = None,
@@ -708,20 +708,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 self._health_rollup.health_changed("pps_delay", HealthState.OK)
 
-        tile_programming_state = state_change.get("tileProgrammingState")
+        tile_programming_state = state_change.get("tileProgrammingStateGood")
         if tile_programming_state is not None:
-            # self.push_change_event("tileProgrammingState", tile_programming_state)
-            # self.push_archive_event("tileProgrammingState", tile_programming_state)
-            self._health_model.update_state(
-                tile_programming_state=tile_programming_state
-            )
-            if not all([tile == "Synchronised" for tile in tile_programming_state]):
+            if tile_programming_state:
                 self._health_rollup.health_changed(
-                    "tile_programming_state", HealthState.DEGRADED
+                    "tile_programming_state", HealthState.OK
                 )
             else:
                 self._health_rollup.health_changed(
-                    "tile_programming_state", HealthState.OK
+                    "tile_programming_state", HealthState.DEGRADED
                 )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:

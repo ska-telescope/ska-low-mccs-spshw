@@ -551,8 +551,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         ]
 
     # TODO: Upstream this interface change to SKABaseDevice
-    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements
-    def _component_state_changed(  # noqa: C901
+    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements, too-many-locals # noqa
+    def _component_state_changed(  # type: ignore[override] # noqa: C901
         self: SpsStation,
         *,
         fault: Optional[bool] = None,

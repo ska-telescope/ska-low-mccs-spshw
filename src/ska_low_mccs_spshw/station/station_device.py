@@ -391,6 +391,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
             self._device.set_change_event("ppsDelaySpread", True, False)
+            self._device.set_change_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_change_event("beamformerTable", True, False)
@@ -451,7 +452,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         # Here the "self" entry represets SpsStation specific health changes
         # such as ppsSpread.
-        rollup_members = ["self"]
+        rollup_members = ["self", "pps_delay", "tile_programming_state"]
         # TODO: Make these thresholds fully dynamic based on deployment.
         thresholds = {"self": (1, 1, 1)}
         if len(self.SubrackFQDNs) > 0:
@@ -689,7 +690,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
-
         # TODO: Refactor this into an extensible health related method.
         pps_delay_spread = state_change.get("ppsDelaySpread")
         if pps_delay_spread is not None:
@@ -702,12 +702,27 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 <= pps_delay_spread
                 <= self._health_thresholds["pps_delta_failed"]
             ):
-                self._health_rollup.health_changed("self", HealthState.DEGRADED)
+                self._health_rollup.health_changed("pps_delay", HealthState.DEGRADED)
             elif pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
-                self._health_rollup.health_changed("self", HealthState.FAILED)
+                self._health_rollup.health_changed("pps_delay", HealthState.FAILED)
             else:
-                # This only works because we have no other health params
-                self._health_rollup.health_changed("self", HealthState.OK)
+                self._health_rollup.health_changed("pps_delay", HealthState.OK)
+
+        tile_programming_state = state_change.get("tileProgrammingState")
+        if tile_programming_state is not None:
+            # self.push_change_event("tileProgrammingState", tile_programming_state)
+            # self.push_archive_event("tileProgrammingState", tile_programming_state)
+            self._health_model.update_state(
+                tile_programming_state=tile_programming_state
+            )
+            if not all([tile == "Synchronised" for tile in tile_programming_state]):
+                self._health_rollup.health_changed(
+                    "tile_programming_state", HealthState.DEGRADED
+                )
+            else:
+                self._health_rollup.health_changed(
+                    "tile_programming_state", HealthState.OK
+                )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """

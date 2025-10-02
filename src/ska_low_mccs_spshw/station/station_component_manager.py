@@ -155,6 +155,7 @@ class _TileProxy(DeviceComponentManager):
             "staticTimeDelays": self._on_attribute_change,
             "preaduLevels": self._on_attribute_change,
             "ppsDelay": self._on_attribute_change,
+            "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
         }
@@ -572,6 +573,7 @@ class SpsStationComponentManager(
             "staticTimeDelays",
             "preaduLevels",
             "ppsDelay",
+            "tileProgrammingState",
         ]
 
         self._source_port = 0xF0D0
@@ -609,6 +611,7 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
+        self._tile_programming_state: list[str] = []
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [csp_rounding] * 384
         self._desired_static_delays: None | list[float] = None
@@ -947,6 +950,15 @@ class SpsStationComponentManager(
                 if self._component_state_callback:
                     self._component_state_callback(
                         ppsDelaySpread=self._pps_delay_spread
+                    )
+            case "tileprogrammingstate":
+                if logical_tile_id > (int(len(self._tile_programming_state)) - 1):
+                    self._tile_programming_state.append(attribute_value)
+                else:
+                    self._tile_programming_state[logical_tile_id] = attribute_value
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        tileProgrammingState=self._tile_programming_state
                     )
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:
@@ -2520,11 +2532,13 @@ class SpsStationComponentManager(
 
         :return: list of programming state for all TPMs
         """
-        result = []
+        self._tile_programming_state = []
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
-            result.append(tile._proxy.tileProgrammingState)
-        return result
+            assert tile._proxy.tileProgrammingState is not None
+            self._tile_programming_state.append(tile._proxy.tileProgrammingState)
+
+        return self._tile_programming_state.copy()
 
     def adc_power(self: SpsStationComponentManager) -> list[float]:
         """

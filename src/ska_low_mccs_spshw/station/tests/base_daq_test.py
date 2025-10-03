@@ -340,7 +340,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._pattern = None
         self._stop_directory_watch()
         if self.daq_proxy is not None:
-            self.daq_proxy.Stop()
+            self.daq_proxy.Init()
             # Sleep to allow time to stop.
             time.sleep(1)
         # self._delete_data()

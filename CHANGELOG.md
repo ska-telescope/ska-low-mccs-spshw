@@ -7,6 +7,7 @@
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes
 * [LOW-1745] Bump ska-tango-devices to 0.10.0, with support for suppressing the deployment of check-dependencies initContainers that wait for databaseDS, when deploying to a persistent platform.
+* [THORN-307] Small bug fix for station_component_manager set_lmc_download and set_lmc_integrated_download
 
 ## 8.0.1
 

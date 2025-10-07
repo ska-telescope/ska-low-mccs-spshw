@@ -77,8 +77,8 @@ def engineering_mode_required(func: Callable) -> Callable:
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
 
-    DEFAULT_CSP_SRC_PORT = 0xF0D0
-    DEFAULT_CSP_DST_PORT = 4660
+    DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
+    DEFAULT_CSP_DST_PORT: Final = 4660
     # -----------------
     # Device Properties
     # -----------------

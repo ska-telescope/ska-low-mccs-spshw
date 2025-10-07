@@ -166,7 +166,7 @@ def on_station_device_fixture(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
 
-    :yield: the station Tango device under test.
+    :returns: the station Tango device under test.
     """
     sps_station = test_context.get_sps_station_device()
     sps_station.subscribe_event(
@@ -180,7 +180,7 @@ def on_station_device_fixture(
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-    yield sps_station
+    return sps_station
 
 
 @pytest.fixture(name="daq_device")
@@ -2037,11 +2037,9 @@ def test_csp_set_reset(
         }
     )
     rc, _ = on_station_device.SetCspIngest(csp_ingest_config)
-    time.sleep(1)
     assert rc == ResultCode.OK
     assert csp_ingest_config == on_station_device.cspIngestConfig
 
     rc, _ = on_station_device.ResetCspIngest()
-    time.sleep(1)
     assert rc == ResultCode.OK
     assert initial_csp_config == on_station_device.cspIngestConfig

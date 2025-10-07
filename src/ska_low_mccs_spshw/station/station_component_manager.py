@@ -1403,7 +1403,17 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
-
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            self.logger.debug("End initialisation")
+            task_status = TaskStatus.COMPLETED
+            message = "Initialisation Complete"
+        else:
+            self.logger.error("Initialisation failed")
+            task_status = TaskStatus.FAILED
+            message = "Initialisation Failed"
+        if task_callback:
+            task_callback(status=task_status, result=(result_code, message))
+            return
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
             result_code = self._initialise_tile_parameters(
@@ -1524,7 +1534,17 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code = self._reinitialise_tiles(task_callback, task_abort_event)
-
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            self.logger.debug("End initialisation")
+            task_status = TaskStatus.COMPLETED
+            message = "Initialisation Complete"
+        else:
+            self.logger.error("Initialisation failed")
+            task_status = TaskStatus.FAILED
+            message = "Initialisation Failed"
+        if task_callback:
+            task_callback(status=task_status, result=(result_code, message))
+            return
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
             result_code = self._initialise_tile_parameters(

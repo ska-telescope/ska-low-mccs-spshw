@@ -479,6 +479,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # Tile Default Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
             health_rollup.define("tiles", self.TileFQDNs, thresholds["tiles"])
 
+        health_rollup.define(
+            "tile_programming_state",
+            ["tile_programming_state"],
+            thresholds["tile_programming_state"],
+        )
+
         return health_rollup
 
     def _redefine_health_rollup(self: SpsStation) -> None:

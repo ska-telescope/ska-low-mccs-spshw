@@ -953,7 +953,9 @@ class SpsStationComponentManager(
                     )
             case "tileprogrammingstate":
                 if self._component_state_callback:
-                    self._component_state_callback(TileProgrammingState=self.tile_programming_state())
+                    self._component_state_callback(
+                        TileProgrammingState=self.tile_programming_state()
+                    )
 
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:

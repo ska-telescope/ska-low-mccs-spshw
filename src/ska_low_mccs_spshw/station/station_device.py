@@ -452,9 +452,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         # Here the "self" entry represets SpsStation specific health changes
         # such as ppsSpread.
-        rollup_members = ["self", "pps_delay", "tile_programming_state"]
+        rollup_members = ["self", "tile_programming_state"]
         # TODO: Make these thresholds fully dynamic based on deployment.
-        thresholds = {"self": (1, 1, 1)}
+        thresholds = {
+            "self": (1, 1, 1),
+            "tile_programming_state": (1, 1, 1),
+        }
         if len(self.SubrackFQDNs) > 0:
             rollup_members.append("subracks")
             thresholds["subracks"] = self._health_thresholds["subracks"]
@@ -702,15 +705,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 <= pps_delay_spread
                 <= self._health_thresholds["pps_delta_failed"]
             ):
-                self._health_rollup.health_changed("pps_delay", HealthState.DEGRADED)
+                self._health_rollup.health_changed("self", HealthState.DEGRADED)
             elif pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
-                self._health_rollup.health_changed("pps_delay", HealthState.FAILED)
+                self._health_rollup.health_changed("self", HealthState.FAILED)
             else:
-                self._health_rollup.health_changed("pps_delay", HealthState.OK)
+                self._health_rollup.health_changed("self", HealthState.OK)
 
-        tile_programming_state = state_change.get("TilesSyncState")
+        tile_programming_state = state_change.get("TileProgrammingState")
         if tile_programming_state is not None:
-            if tile_programming_state:
+            if all(
+                [tpm_state == "Synchronised" for tpm_state in tile_programming_state]
+            ):
                 self._health_rollup.health_changed(
                     "tile_programming_state", HealthState.OK
                 )

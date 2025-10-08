@@ -77,6 +77,8 @@ def engineering_mode_required(func: Callable) -> Callable:
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
 
+    DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
+    DEFAULT_CSP_DST_PORT: Final = 4660
     # -----------------
     # Device Properties
     # -----------------
@@ -89,7 +91,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # e.g. "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25"
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
-    CspIngestIp = device_property(dtype=str, default_value="")
+    CspIngestIp = device_property(dtype=str, default_value="0.0.0.0")
     ChanneliserRounding = device_property(dtype=(int,), default_value=[])
     CspRounding = device_property(dtype=int, default_value=4)
 
@@ -758,6 +760,21 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(dtype=str)
+    def cspIngestConfig(self: SpsStation) -> str:
+        """
+        Report the CspIngest configuration in use for this station.
+
+        :return: json string with CspIngest configuration.
+        """
+        return json.dumps(
+            {
+                "destination_ip": self.component_manager.csp_ingest_address,
+                "source_port": self.component_manager.csp_source_port,
+                "destination_port": self.component_manager.csp_ingest_port,
+            }
+        )
 
     @attribute(
         dtype=(("DevFloat",),),
@@ -1847,8 +1864,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 payload_length = 1024
         dst_ip = params.get("destination_ip", None)
-        src_port = params.get("source_port", 0xF0D0)
-        dst_port = params.get("destination_port", 4660)
+        src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
+        dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
         return self.component_manager.set_lmc_download(
             mode, payload_length, dst_ip, src_port, dst_port
@@ -1894,8 +1911,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         channel_payload_length = params.get("channel_payload_length", 1024)
         beam_payload_length = params.get("beam_payload_length", 1024)
         dst_ip = params.get("destination_ip", None)
-        src_port = params.get("source_port", 0xF0D0)
-        dst_port = params.get("destination_port", 4660)
+        src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
+        dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
         return self.component_manager.set_lmc_integrated_download(
             mode,
@@ -1933,15 +1950,33 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         params = json.loads(argin)
         dst_ip = params.get("destination_ip", None)
-        src_port = params.get("source_port", 0xF0D0)
-        dst_port = params.get("destination_port", 4660)
+        src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
+        dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
-        self.component_manager.set_csp_ingest(
+        rc, msg = self.component_manager.set_csp_ingest(
             dst_ip,
             src_port,
             dst_port,
         )
-        return ([ResultCode.OK], ["SetCspIngest command completed OK"])
+        return ([rc], [msg])
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def ResetCspIngest(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Reset link for beam data packets to CSP to defaults.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        rc, msg = self.component_manager.set_csp_ingest(
+            dst_ip=self.CspIngestIp,
+            src_port=self.DEFAULT_CSP_SRC_PORT,
+            dst_port=self.DEFAULT_CSP_DST_PORT,
+        )
+        return ([rc], [msg])
 
     @command(
         dtype_in="DevVarLongArray",

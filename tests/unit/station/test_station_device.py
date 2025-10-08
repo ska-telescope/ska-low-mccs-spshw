@@ -151,6 +151,38 @@ def station_device_fixture(
     yield test_context.get_sps_station_device()
 
 
+@pytest.fixture(name="on_station_device")
+def on_station_device_fixture(
+    test_context: SpsTangoTestHarnessContext,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> DeviceProxy:
+    """
+    Fixture that returns the SPS station Tango device under test.
+
+    Makes sure the device is ONLINE and ON.
+
+    :param test_context: a Tango test context
+        containing an SPS station and mock subservient devices.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    :returns: the station Tango device under test.
+    """
+    sps_station = test_context.get_sps_station_device()
+    sps_station.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    if sps_station.adminMode != AdminMode.ONLINE:
+        sps_station.adminMode = AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    return sps_station
+
+
 @pytest.fixture(name="daq_device")
 def daq_device_fixture(
     test_context: SpsTangoTestHarnessContext,
@@ -1978,3 +2010,36 @@ def test_healthParams(
     new_params_json = json.dumps(new_params)
     station_device.healthModelParams = new_params_json  # type: ignore[assignment]
     assert station_device.healthModelParams == new_params_json
+
+
+def test_csp_set_reset(
+    on_station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the SetCspIngest and ResetCspIngest commands.
+
+    :param on_station_device: The station device to use.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    assert on_station_device.state() == DevState.ON
+    initial_csp_config = on_station_device.cspIngestConfig
+
+    csp_ingest_config = json.dumps(
+        {
+            "destination_ip": "123.234.345.456",
+            "source_port": 1234,
+            "destination_port": 2345,
+        }
+    )
+    rc, _ = on_station_device.SetCspIngest(csp_ingest_config)
+    assert rc == ResultCode.OK
+    assert csp_ingest_config == on_station_device.cspIngestConfig
+
+    rc, _ = on_station_device.ResetCspIngest()
+    assert rc == ResultCode.OK
+    assert initial_csp_config == on_station_device.cspIngestConfig

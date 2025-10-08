@@ -2741,7 +2741,7 @@ class SpsStationComponentManager(
         self._lmc_param["payload_length"] = payload_length
         self._lmc_param["destination_ip"] = dst_ip
         self._lmc_param["source_port"] = src_port
-        self._lmc_param["destination_port"] = dst_port
+        self._lmc_param["destination_port"] = int(dst_port)
         self._lmc_param["netmask_40g"] = self._sdn_netmask
         self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
@@ -2786,7 +2786,7 @@ class SpsStationComponentManager(
                 "beam_payload_length": beam_payload_length,
                 "destination_ip": dst_ip,
                 "source_port": src_port,
-                "destination_port": dst_port,
+                "destination_port": int(dst_port),
                 "netmask_40g": self._sdn_netmask,
                 "gateway_40g": self._sdn_gateway,
             }

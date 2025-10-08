@@ -2744,7 +2744,7 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int,
         dst_port: int,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure last tile link for CSP ingest channel.
 
@@ -2752,7 +2752,7 @@ class SpsStationComponentManager(
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
 
-        :return: Resultcode and message.
+        :return: tuple containing Resultcode and message.
         """
         self._csp_ingest_address = dst_ip
         self._csp_ingest_port = dst_port
@@ -2761,17 +2761,9 @@ class SpsStationComponentManager(
         (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
-            return (ResultCode.FAILED, f"{fqdn} is not in PowerState.ON")
-        # Do not access an unprogrammed TPM
+            return ([ResultCode.FAILED], [f"{fqdn} is not in PowerState.ON"])
 
-        # Log IP source and destination, source IPs set in _set_tile_source_ips
-        last_tile_id = len(self._tile_proxies) - 1
-        src_ip1 = str(self._sdn_first_address + 2 * last_tile_id)
-        src_ip2 = str(self._sdn_first_address + 2 * last_tile_id + 1)
-        self.logger.debug(f"Tile {last_tile_id}: 40G#1: {src_ip1} -> {dst_ip}")
-        self.logger.debug(f"Tile {last_tile_id}: 40G#2: {src_ip2} -> {dst_ip}")
-
-        proxy._proxy.SetCspDownload(
+        return proxy._proxy.SetCspDownload(
             json.dumps(
                 {
                     "source_port": self._csp_source_port,
@@ -2784,7 +2776,6 @@ class SpsStationComponentManager(
                 }
             )
         )
-        return (ResultCode.OK, "SetCspIngest command completed OK")
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]

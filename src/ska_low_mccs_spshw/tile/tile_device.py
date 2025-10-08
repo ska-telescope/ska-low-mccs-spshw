@@ -4454,10 +4454,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask = kwargs.get("netmask", None)
             gateway = kwargs.get("gateway", None)
 
-            self._component_manager.set_csp_download(
+            return self._component_manager.set_csp_download(
                 src_port, dst_ip_1, dst_ip_2, dst_port, is_last, netmask, gateway
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetCspDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

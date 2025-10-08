@@ -2577,7 +2577,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_last: bool,
         netmask: str | None,
         gateway: str | None,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Set CSP Destination per tile.
 
@@ -2595,8 +2595,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :type netmask: str
         :param gateway: Gateway IP
         :type gateway: str
+
+        :return: Result code and message for information.
         """
-        self.logger.debug("TileComponentManager: set_csp_download")
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -2615,6 +2616,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                return (
+                    ResultCode.FAILED,
+                    f"TileComponentManager: Tile access failed {e}",
+                )
+
+        return (ResultCode.OK, "set csp download completed OK")
 
     def stop_beamformer(
         self: TileComponentManager,

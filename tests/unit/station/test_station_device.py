@@ -1965,37 +1965,38 @@ def test_programingstate_rollup(
 
     change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
 
+    tile_trls = [get_tile_name(i + 1) for i in range(4)]
+    subrack_trls = [get_subrack_name(1)]
+    devices = subrack_trls + tile_trls
+
+    # Set all device healths to OK. Station should be OK.
+    for device in devices:
+        station_device.MockSubdeviceHealth(
+            json.dumps({"device": device, "health": HealthState.OK})
+        )
+
+    time.sleep(0.5)
     for tile in mock_tile_device_proxies:
         tile.tileProgrammingState = "Synchronised"
+    time.sleep(0.5)
 
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=2, consume_nonmatches=True
+        HealthState.OK, lookahead=6, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
-    station_device.MockTileProgrammingStateChange(
-        json.dumps(
-            {
-                "tile_id": 1,
-                "value": "Unknown",
-            }
-        )
-    )
+    tile1 = mock_tile_device_proxies[0]
+    tile1.tileProgrammingState = "Unknown"
 
     change_event_callbacks["health_state"].assert_change_event(
         HealthState.DEGRADED, lookahead=2
     )
     assert station_device.healthState == HealthState.DEGRADED
 
-    station_device.MockTileProgrammingStateChange(
-        json.dumps(
-            {
-                "tile_id": 1,
-                "value": "Synchronised",
-            }
-        )
-    )
-
+    time.sleep(0.5)
+    tile1 = mock_tile_device_proxies[0]
+    tile1.tileProgrammingState = "Synchronised"
+    time.sleep(0.5)
     change_event_callbacks["health_state"].assert_change_event(
         HealthState.OK, lookahead=2
     )

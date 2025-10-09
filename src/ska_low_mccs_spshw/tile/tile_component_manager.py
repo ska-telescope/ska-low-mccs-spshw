@@ -8,7 +8,6 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import threading
@@ -1830,7 +1829,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def get_tpm_temperature_thresholds(
         self: TileComponentManager,
-    ) -> None | dict[str, tuple[float, float]]:
+    ) -> None | dict[str, float]:
         """
         Return the temperature thresholds in firmware.
 
@@ -2174,11 +2173,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: Optional[str] = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: int | None = None,
-        gateway_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -2188,7 +2187,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated
             beam data
-        :param dst_ip: Destination IP, defaults to None
+        :param dst_ip: Destination IP, defaults to "10.0.10.1"
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
@@ -2567,6 +2566,62 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
         return (ResultCode.OK, "Stop integrated data completed OK")
+
+    @check_communicating
+    def set_csp_download(
+        self: TileComponentManager,
+        src_port: int | None,
+        dst_ip_1: str,
+        dst_ip_2: str,
+        dst_port: int | None,
+        is_last: bool,
+        netmask: str | None,
+        gateway: str | None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Set CSP Destination per tile.
+
+        :param src_port: Source port
+        :type src_port: int
+        :param dst_ip_1: Destination IP FPGA1
+        :type dst_ip_1: str
+        :param dst_ip_2: Destination IP FPGA2
+        :type dst_ip_2: str
+        :param dst_port: Destination port
+        :type dst_port: int
+        :param is_last: True for last tile in beamforming chain
+        :type is_last: bool
+        :param netmask: Netmask
+        :type netmask: str
+        :param gateway: Gateway IP
+        :type gateway: str
+
+        :return: Result code and message for information.
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.set_csp_download(
+                    src_port,
+                    dst_ip_1,
+                    dst_ip_2,
+                    dst_port,
+                    is_last,
+                    netmask,
+                    gateway,
+                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                return (
+                    ResultCode.FAILED,
+                    f"TileComponentManager: Tile access failed {e}",
+                )
+
+        return (ResultCode.OK, "set csp download completed OK")
 
     def stop_beamformer(
         self: TileComponentManager,
@@ -3091,11 +3146,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         mode: str,
         payload_length: int = 1024,
-        dst_ip: Optional[str] = None,
+        dst_ip: str = "10.0.10.1",
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
-        netmask_40g: int | None = None,
-        gateway_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -3103,7 +3158,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param mode: "1G" or "10G"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
-        :param dst_ip: destination IP, defaults to None
+        :param dst_ip: destination IP, defaults to "10.0.10.1"
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
@@ -3172,11 +3227,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._forty_gb_core_list = [
                     self._get_40g_core_configuration(core_id, arp_table_entry)
                 ]
-        # convert in more readable format
-        for core in self._forty_gb_core_list:
-            self.logger.info(f"{core}")
-            core["src_ip"] = str(ipaddress.IPv4Address(core["src_ip"]))
-            core["dst_ip"] = str(ipaddress.IPv4Address(core["dst_ip"]))
         return self._forty_gb_core_list
 
     def _get_40g_core_configuration(
@@ -3212,8 +3262,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         destination_ip: Optional[str] = None,
         destination_port: Optional[int] = None,
         rx_port_filter: Optional[int] = None,
-        netmask: Optional[int] = None,
-        gateway_ip: Optional[int] = None,
+        netmask: Optional[str] = None,
+        gateway_ip: Optional[str] = None,
     ) -> tuple[ResultCode, str]:
         """
         Configure the 40G code.
@@ -3752,23 +3802,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def set_tpm_temperature_thresholds(
         self: TileComponentManager,
-        board_alarm_threshold: tuple[float, float] | None = None,
-        fpga1_alarm_threshold: tuple[float, float] | None = None,
-        fpga2_alarm_threshold: tuple[float, float] | None = None,
+        max_board_alarm_threshold: float | None = None,
+        max_fpga1_alarm_threshold: float | None = None,
+        max_fpga2_alarm_threshold: float | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Set the temperature thresholds.
 
         NOTE: Warning this method can configure the shutdown temperature of
-        components and must be used with care. This method is capped to a minimum
-        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+        components and must be used with care. This method is capped to a
+        maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
 
-        :param board_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the board (unit: Degree Celsius)
-        :param fpga1_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
-        :param fpga2_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        :param max_board_alarm_threshold: The maximum alarm thresholds
+            for the board (unit: Degree Celsius)
+        :param max_fpga1_alarm_threshold: The maximum alarm thresholds
+            for the fpga1 (unit: Degree Celsius)
+        :param max_fpga2_alarm_threshold: The maximum alarm thresholds
+            for the fpga2 (unit: Degree Celsius)
 
         :return: a tuple containing a ``ResultCode`` and string with information about
             the execution outcome.
@@ -3779,9 +3829,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 try:
                     self.tile.set_tpm_temperature_thresholds(
-                        board_alarm_threshold=board_alarm_threshold,
-                        fpga1_alarm_threshold=fpga1_alarm_threshold,
-                        fpga2_alarm_threshold=fpga2_alarm_threshold,
+                        max_board_alarm_threshold=max_board_alarm_threshold,
+                        max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
+                        max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
                     )
                 except ValueError as ve:
                     value_error_message = (

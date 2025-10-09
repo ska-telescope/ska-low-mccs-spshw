@@ -578,8 +578,8 @@ class SpsStationComponentManager(
         self._destination_port: int = 4660
 
         self._sdn_first_address = sdn_first_interface.ip
-        self._sdn_netmask = int(sdn_first_interface.netmask)
-        self._sdn_gateway: int | None = int(sdn_gateway) if sdn_gateway else None
+        self._sdn_netmask = str(sdn_first_interface.netmask)
+        self._sdn_gateway: str | None = str(sdn_gateway) if sdn_gateway else None
 
         self._lmc_param: dict[str, str | int | None] = {
             "mode": "10G",
@@ -1836,8 +1836,6 @@ class SpsStationComponentManager(
 
         Set parameters in individual tiles which depend on the whole station.
 
-        :TODO: MCCS-1257
-
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :return: a result code
@@ -1851,75 +1849,33 @@ class SpsStationComponentManager(
         #
         # ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
         # base_ip3 = int(ip_tail)
-        last_tile = len(tiles) - 1
-        tile = 0
-        num_cores = 2
-        for proxy in tiles:
+        last_tile_id = len(tiles) - 1
+        for tile_id, proxy in enumerate(tiles):
             assert proxy._proxy is not None
-            dst_ip1 = str(self._sdn_first_address + 2 * tile + 2)
-            dst_ip2 = str(self._sdn_first_address + 2 * tile + 3)
-            dst_ip_list = [dst_ip1, dst_ip2]
-            dst_port_1 = self._destination_port
-            dst_port_2 = dst_port_1 + 2
 
-            for core in range(num_cores):
-                dst_ip = dst_ip_list[core]
+            if tile_id == last_tile_id:
+                is_last_tile = True
+                dst_ip1 = self._csp_ingest_address
+                dst_ip2 = self._csp_ingest_address
+            else:
+                is_last_tile = False
+                dst_ip1 = str(self._sdn_first_address + 2 * tile_id + 2)
+                dst_ip2 = str(self._sdn_first_address + 2 * tile_id + 3)
 
-                if tile == last_tile:
-                    dst_ip = self._csp_ingest_address
-                    dst_port_1 = self._csp_ingest_port
-                    dst_port_2 = dst_port_1
+            proxy._proxy.SetCspDownload(
+                json.dumps(
+                    {
+                        "source_port": self._source_port,
+                        "destination_ip_1": dst_ip1,
+                        "destination_ip_2": dst_ip2,
+                        "destination_port": self._destination_port,
+                        "is_last": is_last_tile,
+                        "netmask": self._sdn_netmask,
+                        "gateway": self._sdn_gateway,
+                    }
+                )
+            )
 
-                # ARP Table Entry 0 of each 40G core specifies destination
-                # for station beam packets
-                proxy._proxy.Configure40GCore(
-                    json.dumps(
-                        {
-                            "core_id": core,
-                            "arp_table_entry": 0,
-                            "source_port": self._source_port,
-                            "destination_ip": dst_ip,
-                            "destination_port": dst_port_1,
-                            "rx_port_filter": dst_port_1,
-                            "netmask": self._sdn_netmask,
-                            "gateway_ip": self._sdn_gateway,
-                        }
-                    )
-                )
-                # Also configure entry 2 with the same settings
-                # Required for operation with single 40G connection to each TPM
-                # With two connections, each core uses arp table entry 0
-                # for station beam transmission to the next tile in the chain
-                # and lastly to CSP.
-                # Two FPGAs = Two Simultaneous Daisy chains
-                # (a chain of FPGA1s and a chain of FPGA2s)
-                # With one 40G connection, Master FPGA uses arp table entry 0,
-                # Slave FPGA uses arp table entry 2 to achieve the same functionality
-                # but with a single core.
-                proxy._proxy.Configure40GCore(
-                    json.dumps(
-                        {
-                            "core_id": core,
-                            "arp_table_entry": 2,
-                            "source_port": self._source_port,
-                            "destination_ip": dst_ip,
-                            "destination_port": dst_port_2,
-                            "netmask": self._sdn_netmask,
-                            "gateway_ip": self._sdn_gateway,
-                        }
-                    )
-                )
-                # Set RX port filter for RX channel 1
-                # Required for operation with single 40G connection to each TPM
-                proxy._proxy.Configure40GCore(
-                    json.dumps(
-                        {
-                            "core_id": core,
-                            "arp_table_entry": 1,
-                            "rx_port_filter": dst_port_1 + 2,
-                        }
-                    )
-                )
             proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
             proxy._proxy.SetLmcIntegratedDownload(
                 json.dumps(
@@ -1933,7 +1889,6 @@ class SpsStationComponentManager(
                     }
                 )
             )
-            tile = tile + 1
         return ResultCode.OK
 
     @check_communicating
@@ -2789,15 +2744,15 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int,
         dst_port: int,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Configure link for CSP ingest channel.
+        Configure last tile link for CSP ingest channel.
 
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
 
-        :return: Resultcode and message.
+        :return: tuple containing Resultcode and message.
         """
         self._csp_ingest_address = dst_ip
         self._csp_ingest_port = dst_port
@@ -2806,73 +2761,21 @@ class SpsStationComponentManager(
         (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
-            return (ResultCode.FAILED, f"{fqdn} is not in PowerState.ON")
-        # Do not access an unprogrammed TPM
+            return ([ResultCode.FAILED], [f"{fqdn} is not in PowerState.ON"])
 
-        num_cores = 2
-        last_tile = len(self._tile_proxies) - 1
-        src_ip1 = str(self._sdn_first_address + 2 * last_tile)
-        src_ip2 = str(self._sdn_first_address + 2 * last_tile + 1)
-        dst_port = self._csp_ingest_port
-        src_ip_list = [src_ip1, src_ip2]
-        src_mac = self._base_mac_address + 2 * last_tile
-        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip}")
-        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip}")
-        for core in range(num_cores):
-            src_ip = src_ip_list[core]
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": core,
-                        "arp_table_entry": 0,
-                        "source_ip": src_ip,
-                        "source_mac": src_mac + core,
-                        "source_port": self._source_port,
-                        "destination_ip": dst_ip,
-                        "destination_port": dst_port,
-                        "rx_port_filter": dst_port,
-                        "netmask": self._sdn_netmask,
-                        "gateway_ip": self._sdn_gateway,
-                    }
-                )
+        return proxy._proxy.SetCspDownload(
+            json.dumps(
+                {
+                    "source_port": self._csp_source_port,
+                    "destination_ip_1": self._csp_ingest_address,
+                    "destination_ip_2": self._csp_ingest_address,
+                    "destination_port": self._csp_ingest_port,
+                    "is_last": True,
+                    "netmask": self._sdn_netmask,
+                    "gateway": self._sdn_gateway,
+                }
             )
-            # Also configure entry 2 with the same settings
-            # Required for operation with single 40G connection to each TPM
-            # With two connections, each core uses arp table entry 0
-            # for station beam transmission to the next tile in the chain
-            # and lastly to CSP.
-            # Two FPGAs = Two Simultaneous Daisy chains
-            # (a chain of FPGA1s and a chain of FPGA2s)
-            # With one 40G connection, Master FPGA uses arp table entry 0,
-            # Slave FPGA uses arp table entry 2 to achieve the same functionality
-            # but with a single core.
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": core,
-                        "arp_table_entry": 2,
-                        "source_ip": src_ip,
-                        "source_mac": src_mac + core,
-                        "source_port": self._source_port,
-                        "destination_ip": dst_ip,
-                        "destination_port": dst_port,
-                        "netmask": self._sdn_netmask,
-                        "gateway_ip": self._sdn_gateway,
-                    }
-                )
-            )
-            # Set RX port filter for RX channel 1
-            # Required for operation with single 40G connection to each TPM
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": core,
-                        "arp_table_entry": 1,
-                        "rx_port_filter": dst_port + 2,
-                    }
-                )
-            )
-        return (ResultCode.OK, "SetCspIngest command completed OK")
+        )
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]

@@ -1953,12 +1953,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
         dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
-        rc, msg = self.component_manager.set_csp_ingest(
+        return self.component_manager.set_csp_ingest(
             dst_ip,
             src_port,
             dst_port,
         )
-        return ([rc], [msg])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1971,12 +1970,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        rc, msg = self.component_manager.set_csp_ingest(
+        return self.component_manager.set_csp_ingest(
             dst_ip=self.CspIngestIp,
             src_port=self.DEFAULT_CSP_SRC_PORT,
             dst_port=self.DEFAULT_CSP_DST_PORT,
         )
-        return ([rc], [msg])
 
     @command(
         dtype_in="DevVarLongArray",

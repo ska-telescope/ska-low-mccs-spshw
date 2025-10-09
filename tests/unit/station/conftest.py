@@ -107,6 +107,7 @@ def mock_tile_builder_fixture(
         "StartBeamformer",
         "ConfigureIntegratedChannelData",
         "StartAcquisition",
+        "SetCspDownload",
         "StopDataTransmission",
         "StopIntegratedData",
         "StopBeamformer",

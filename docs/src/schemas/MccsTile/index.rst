@@ -17,6 +17,7 @@ These schemas are for use with MccsTile commands
   MccsTile_ConfigureTestGenerator
   MccsTile_Get40gCoreConfiguration
   MccsTile_SendDataSamples
+  MccsTile_SetCspDownload
   MccsTile_SetCurrentWarningThresholds
   MccsTile_SetLmcDownload
   MccsTile_SetLmcIntegratedDownload

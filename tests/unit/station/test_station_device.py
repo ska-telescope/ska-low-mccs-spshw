@@ -1856,8 +1856,20 @@ def test_health(
         station_device.MockSubdeviceHealth(
             json.dumps({"device": device, "health": HealthState.OK})
         )
+
+    for tile_id in range(len(tile_trls)):
+        station_device.MockTileProgrammingStateChange(
+            json.dumps(
+                {
+                    "tile_id": tile_id,
+                    "value": "Synchronised",
+                }
+            )
+        )
+
+    # needs looksahead >= 5 because each tile change updates the state
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=2, consume_nonmatches=True
+        HealthState.OK, lookahead=5, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
@@ -1934,7 +1946,7 @@ def test_health(
     assert station_device.healthState == HealthState.OK
 
 
-def test_programingstate_rollup(
+def test_programing_state_health_rollup(
     station_device: SpsStation,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     change_event_callbacks: MockTangoEventCallbackGroup,
@@ -1975,30 +1987,45 @@ def test_programingstate_rollup(
             json.dumps({"device": device, "health": HealthState.OK})
         )
 
-    time.sleep(0.5)
-    for tile in mock_tile_device_proxies:
-        tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.5)
+    # needs looksahead >= 5 because each tile change updates the state
+    for tile_id in range(len(tile_trls)):
+        station_device.MockTileProgrammingStateChange(
+            json.dumps(
+                {
+                    "tile_id": tile_id,
+                    "value": "Synchronised",
+                }
+            )
+        )
 
     change_event_callbacks["health_state"].assert_change_event(
         HealthState.OK, lookahead=6, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
-    tile1 = mock_tile_device_proxies[0]
-    tile1.tileProgrammingState = "Unknown"
-
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.DEGRADED, lookahead=2
+    station_device.MockTileProgrammingStateChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "value": "Unknown",
+            }
+        )
     )
-    assert station_device.healthState == HealthState.DEGRADED
 
-    time.sleep(0.5)
-    tile1 = mock_tile_device_proxies[0]
-    tile1.tileProgrammingState = "Synchronised"
-    time.sleep(0.5)
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=2
+        HealthState.DEGRADED, lookahead=5
+    )
+
+    station_device.MockTileProgrammingStateChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "value": "Synchronised",
+            }
+        )
+    )
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.OK, lookahead=5
     )
     assert station_device.healthState == HealthState.OK
 

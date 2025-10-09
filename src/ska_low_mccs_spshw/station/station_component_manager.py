@@ -611,7 +611,7 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
-        self._tile_programming_state: list[str] = []
+        self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [csp_rounding] * 384
         self._desired_static_delays: None | list[float] = None
@@ -952,9 +952,11 @@ class SpsStationComponentManager(
                         ppsDelaySpread=self._pps_delay_spread
                     )
             case "tileprogrammingstate":
+                self._tile_programming_state[logical_tile_id] = attribute_value
+
                 if self._component_state_callback:
                     self._component_state_callback(
-                        TileProgrammingState=self.tile_programming_state()
+                        TileProgrammingState=self._tile_programming_state
                     )
 
             case "beamformertable":

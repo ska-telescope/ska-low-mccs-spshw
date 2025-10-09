@@ -412,6 +412,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "antenna_buffer_mode": "antennaBufferMode",
             "data_transmission_mode": "dataTransmissionMode",
             "integrated_data_transmission_mode": "integratedDataTransmissionMode",
+            "pfb_version": "pfbVersion",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -3478,6 +3479,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: VGA DC-DC voltage
         """
         return self._attribute_state["voltageVM_SW_AMP"].read()
+
+    @attribute(dtype="DevString", label="Polyphase Filter Version")
+    def pfbVersion(self: MccsTile) -> str:
+        """
+        Return the version of the polyphase filter firmware.
+
+        :return: the version of the polyphase filter firmware
+        """
+        return self._attribute_state["pfbVersion"].read()
 
     # --------
     # Commands

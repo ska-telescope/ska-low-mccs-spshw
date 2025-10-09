@@ -1,5 +1,11 @@
 # Version History
 
+
+## Unreleased
+
+* [THORN-249] Add attribute pfb_version to MccsTile.
+* [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
+
 ## 9.0.0
 
 * [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0 - Simplified tile 40G ethernet configuration

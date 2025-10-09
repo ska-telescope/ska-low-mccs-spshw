@@ -375,6 +375,9 @@ class TestMccsTile:
             "logicalTileId",
             "staticTimeDelays",
             "stationId",
+            "pfbVersion",
+            "beamformerTable",
+            "beamformerRegions",
         ]
 
     @pytest.fixture(name="software_configuration_attributes")

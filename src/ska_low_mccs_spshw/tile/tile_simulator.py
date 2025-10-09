@@ -2498,6 +2498,15 @@ class TileSimulator:
         self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_raw_data(1)
 
+    @connected
+    def read_polyfilter_name(self: TileSimulator) -> str:
+        """
+        Return the polyfilter name.
+
+        :return: string filter name
+        """
+        return "filter_name"
+
     @check_mocked_overheating
     @connected
     def send_channelised_data(

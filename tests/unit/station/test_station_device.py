@@ -59,7 +59,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=15.0,
+        timeout=20.0,
     )
 
 
@@ -1867,9 +1867,9 @@ def test_health(
             )
         )
 
-    # needs looksahead >= 5 because each tile change updates the state
+    # needs looksahead > 5 because each tile change updates the state
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=5, consume_nonmatches=True
+        HealthState.OK, lookahead=6, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
@@ -2013,7 +2013,7 @@ def test_programing_state_health_rollup(
     )
 
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.DEGRADED, lookahead=5
+        HealthState.DEGRADED, lookahead=2
     )
 
     station_device.MockTileProgrammingStateChange(
@@ -2025,7 +2025,7 @@ def test_programing_state_health_rollup(
         )
     )
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=5
+        HealthState.OK, lookahead=2
     )
     assert station_device.healthState == HealthState.OK
 

@@ -2531,12 +2531,10 @@ class SpsStationComponentManager(
 
         :return: list of programming state for all TPMs
         """
-        self._tile_programming_state = []
-        for tile in self._tile_proxies.values():
+        for tile_id, tile in enumerate(self._tile_proxies.values()):
             assert tile._proxy is not None  # for the type checker
             assert tile._proxy.tileProgrammingState is not None
-            self._tile_programming_state.append(tile._proxy.tileProgrammingState)
-
+            self._tile_programming_state[tile_id] = tile._proxy.tileProgrammingState
         return self._tile_programming_state.copy()
 
     def adc_power(self: SpsStationComponentManager) -> list[float]:

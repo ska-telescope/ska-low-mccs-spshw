@@ -412,6 +412,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "antenna_buffer_mode": "antennaBufferMode",
             "data_transmission_mode": "dataTransmissionMode",
             "integrated_data_transmission_mode": "integratedDataTransmissionMode",
+            "pfb_version": "pfbVersion",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -685,6 +686,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("SetAttributeThresholds", self.SetAttributeThresholdsCommand),
             ("SetLmcDownload", self.SetLmcDownloadCommand),
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
+            ("SetCspDownload", self.SetCspDownloadCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
             ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
@@ -2234,7 +2236,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(dtype="DevString", fisallowed="_not_initialising")
     def firmwareTemperatureThresholds(
         self: MccsTile,
-    ) -> str | dict[str, tuple[int, int]]:
+    ) -> str | dict[str, float]:
         """
         Return the temperature thresholds set in firmware.
 
@@ -3478,6 +3480,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_SW_AMP"].read()
 
+    @attribute(dtype="DevString", label="Polyphase Filter Version")
+    def pfbVersion(self: MccsTile) -> str:
+        """
+        Return the version of the polyphase filter firmware.
+
+        :return: the version of the polyphase filter firmware
+        """
+        return self._attribute_state["pfbVersion"].read()
+
     # --------
     # Commands
     # --------
@@ -4237,7 +4248,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     payload_length = 8192
                 else:
                     payload_length = 1024
-            dst_ip = kwargs.get("destination_ip", None)
+            dst_ip = kwargs.get("destination_ip", "10.0.10.1")
             src_port = kwargs.get("source_port", 0xF0D0)
             dst_port = kwargs.get("destination_port", 4660)
             netmask_40g = kwargs.get("netmask_40g", None)
@@ -4265,8 +4276,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
-            * netmask_40g - (int) 40g (science data) subnet mask
-            * gateway_40g - (int) IP address of 40g (science) subnet gateway
+            * netmask_40g - (string) 40g (science data) subnet mask
+            * gateway_40g - (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4339,7 +4350,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             mode = kwargs["mode"]
             channel_payload_length = kwargs.get("channel_payload_length", 1024)
             beam_payload_length = kwargs.get("beam_payload_length", 1024)
-            dst_ip = kwargs.get("destination_ip", None)
+            dst_ip = kwargs.get("destination_ip", "10.0.10.1")
             src_port = kwargs.get("source_port", 0xF0D0)
             dst_port = kwargs.get("destination_port", 4660)
             netmask_40g = kwargs.get("netmask_40g", None)
@@ -4373,8 +4384,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * destination_ip - (string) Destination IP
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
-            * netmask_40g - (int) 40g (science data) subnet mask
-            * gateway_40g - (int) IP address of 40g (science) subnet gateway
+            * netmask_40g - (string) 40g (science data) subnet mask
+            * gateway_40g - (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4389,6 +4400,104 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """
         handler = self.get_command_object("SetLmcIntegratedDownload")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class SetCspDownloadCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the SetCspDownload() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetCspDownload.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_SetCspDownload.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.SetCspDownloadCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new SetCspDownloadCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("SetCspDownload", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        SUCCEEDED_MESSAGE = "SetCspDownload command completed OK"
+
+        def do(
+            self: MccsTile.SetCspDownloadCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetCspDownload` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            src_port = kwargs.get("source_port", None)
+            dst_ip_1 = kwargs["destination_ip_1"]
+            dst_ip_2 = kwargs["destination_ip_2"]
+            dst_port = kwargs.get("destination_port", None)
+            is_last = kwargs["is_last"]
+            netmask = kwargs.get("netmask", None)
+            gateway = kwargs.get("gateway", None)
+
+            return self._component_manager.set_csp_download(
+                src_port, dst_ip_1, dst_ip_2, dst_port, is_last, netmask, gateway
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetCspDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """
+        Set CSP Destination per tile.
+
+        :param argin: json dictionary with optional keywords:
+
+            * source_port - Source port
+            * destination_ip_1 - Destination IP FPGA1
+            * destination_ip_2 -  Destination IP FPGA2
+            * destination_port - Destination port
+            * is_last - True for last tile in beamforming chain
+            * netmask - Netmask
+            * gateway - Gateway IP
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"source_port": 4661, "destination_ip_1": "10.0.10.2",
+                    "destination_ip_2": 10.0.10.3", "destination_port" 4660,
+                    "is_last": False, "netmask": "255.255.255.0",
+                    "gateway": "10.0.10.1"}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SetCspDownload", jstr)
+        """
+        handler = self.get_command_object("SetCspDownload")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
@@ -6449,14 +6558,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            board_temperature_threshold = kwargs.get("board_temperature_threshold")
-            fpga1_temperature_threshold = kwargs.get("fpga1_temperature_threshold")
-            fpga2_temperature_threshold = kwargs.get("fpga2_temperature_threshold")
+            max_board_temperature_threshold = kwargs.get(
+                "max_board_temperature_threshold"
+            )
+            max_fpga1_temperature_threshold = kwargs.get(
+                "max_fpga1_temperature_threshold"
+            )
+            max_fpga2_temperature_threshold = kwargs.get(
+                "max_fpga2_temperature_threshold"
+            )
 
             return self._component_manager.set_tpm_temperature_thresholds(
-                board_alarm_threshold=board_temperature_threshold,
-                fpga1_alarm_threshold=fpga1_temperature_threshold,
-                fpga2_alarm_threshold=fpga2_temperature_threshold,
+                max_board_alarm_threshold=max_board_temperature_threshold,
+                max_fpga1_alarm_threshold=max_fpga1_temperature_threshold,
+                max_fpga2_alarm_threshold=max_fpga2_temperature_threshold,
             )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -6471,15 +6586,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: a json serialised dictionary containing the following keys:
 
-            * board_temperature_threshold - an array containing
-                a minimum and maximum value for the board temperature threshold.
-                Must be in range (20 - 50 (Degree Celcius))
-            * fpga1_temperature_threshold - an array containing
-                a minimum and maximum value for the fpga1 temperature threshold.
-                Must be in range (20 - 50 (Degree Celcius))
-            * fpga2_temperature_threshold - an array containing
-                a minimum and maximum value for the fpga2 temperature threshold.
-                Must be in range (20 - 50 (Degree Celcius))
+            * max_board_temperature_threshold: The maximum alarm thresholds
+                for the board (unit: Degree Celsius)
+            * max_fpga1_temperature_threshold: The maximum alarm thresholds
+                for the fpga1 (unit: Degree Celsius)
+            * max_fpga2_temperature_threshold: The maximum alarm thresholds
+                for the fpga2 (unit: Degree Celsius)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -6489,7 +6601,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
 
-        >>> thresholds = {"board_temperature_threshold": [30, 45]}
+        >>> thresholds = {"max_board_temperature_threshold": 45}
         >>> json_thresholds = json.loads(thresholds)
         >>> tile_device.SetFirmwareTemperatureThresholds(json_thresholds)
         """

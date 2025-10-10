@@ -375,6 +375,9 @@ class TestMccsTile:
             "logicalTileId",
             "staticTimeDelays",
             "stationId",
+            "pfbVersion",
+            "beamformerTable",
+            "beamformerRegions",
         ]
 
     @pytest.fixture(name="software_configuration_attributes")
@@ -2527,9 +2530,9 @@ class TestMccsTileCommands:
             on_tile_device.SetFirmwareTemperatureThresholds(
                 json.dumps(
                     {
-                        "board_temperature_threshold": [20, 30],
-                        "fpga1_temperature_threshold": [20, 30],
-                        "fpga2_temperature_threshold": [20, 30],
+                        "max_fpga1_temperature_threshold": 30,
+                        "max_fpga2_temperature_threshold": 30,
+                        "max_board_temperature_threshold": 30,
                     }
                 )
             )
@@ -2546,18 +2549,18 @@ class TestMccsTileCommands:
             on_tile_device.SetFirmwareTemperatureThresholds(
                 json.dumps(
                     {
-                        "board_temperature_threshold": [20, 60],
-                        "fpga1_temperature_threshold": [20, 60],
-                        "fpga2_temperature_threshold": [20, 60],
+                        "max_board_temperature_threshold": 60,
+                        "max_fpga1_temperature_threshold": 60,
+                        "max_fpga2_temperature_threshold": 60,
                     }
                 )
             )
         on_tile_device.SetFirmwareTemperatureThresholds(
             json.dumps(
                 {
-                    "board_temperature_threshold": [20, 30],
-                    "fpga1_temperature_threshold": [20, 30],
-                    "fpga2_temperature_threshold": [20, 30],
+                    "max_board_temperature_threshold": 30,
+                    "max_fpga1_temperature_threshold": 30,
+                    "max_fpga2_temperature_threshold": 30,
                 }
             )
         )
@@ -2566,7 +2569,7 @@ class TestMccsTileCommands:
         )["board_alarm_threshold"]
 
         assert final_board_alarm_threshold != board_alarm_threshold
-        assert final_board_alarm_threshold == [20, 30]
+        assert final_board_alarm_threshold == 30
         # The simulated overheating event should raise an ALARM on
         # the device.
         change_event_callbacks["alarms"].assert_change_event(2, lookahead=2)

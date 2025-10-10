@@ -645,14 +645,14 @@ class MockTpm:
         }
         return self._40g_configuration
 
-    def _get_src_mac(self: MockTpm) -> int:
-        return 107752315813889
+    def _get_src_mac(self: MockTpm) -> str:
+        return "62:00:0A:82:00:01"
 
-    def _get_src_ip(self: MockTpm) -> int:
-        return 167774722
+    def _get_src_ip(self: MockTpm) -> str:
+        return "10.0.10.2"
 
-    def _get_dst_ip(self: MockTpm) -> int:
-        return 167774723
+    def _get_dst_ip(self: MockTpm) -> str:
+        return "10.0.10.3"
 
     def _get_src_port(self: MockTpm) -> int:
         return 1234
@@ -660,11 +660,11 @@ class MockTpm:
     def _get_dst_port(self: MockTpm) -> int:
         return 5678
 
-    def _get_netmask(self: MockTpm) -> int:
-        return 4294967040
+    def _get_netmask(self: MockTpm) -> str:
+        return "255.255.255.0"
 
-    def _get_gateway_ip(self: MockTpm) -> int:
-        return 167774721
+    def _get_gateway_ip(self: MockTpm) -> str:
+        return "10.0.10.1"
 
     def find_register(
         self: MockTpm,
@@ -782,10 +782,7 @@ class MockTpm:
                 info["network"]["40g_ip_address_p1"] = IPv4Address(
                     config_40g_1["src_ip"]
                 )
-                mac = config_40g_1["src_mac"]
-                info["network"]["40g_mac_address_p1"] = ":".join(
-                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-                )
+                info["network"]["40g_mac_address_p1"] = config_40g_1["src_mac"]
                 info["network"]["40g_gateway_p1"] = IPv4Address(
                     config_40g_1["gateway_ip"]
                 )
@@ -795,10 +792,7 @@ class MockTpm:
                 info["network"]["40g_ip_address_p2"] = IPv4Address(
                     config_40g_2["src_ip"]
                 )
-                mac = config_40g_2["src_mac"]
-                info["network"]["40g_mac_address_p2"] = ":".join(
-                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-                )
+                info["network"]["40g_mac_address_p2"] = config_40g_2["src_mac"]
                 info["network"]["40g_gateway_p2"] = IPv4Address(
                     config_40g_2["gateway_ip"]
                 )
@@ -1013,12 +1007,12 @@ class TileSimulator:
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 2
     TPM_TEMPERATURE_THRESHOLDS = {
-        "board_warning_threshold": (-273.0, 90.0),
-        "board_alarm_threshold": (-273.0, 90.0),
-        "fpga1_warning_threshold": (-273.0, 90.0),
-        "fpga1_alarm_threshold": (-273.0, 90.0),
-        "fpga2_warning_threshold": (-273.0, 90.0),
-        "fpga2_alarm_threshold": (-273.0, 90.0),
+        "board_warning_threshold": 90.0,
+        "board_alarm_threshold": 90.0,
+        "fpga1_warning_threshold": 90.0,
+        "fpga1_alarm_threshold": 90.0,
+        "fpga2_warning_threshold": 90.0,
+        "fpga2_alarm_threshold": 90.0,
     }
 
     FIRMWARE_NAME = "tpm_firmware.bit"
@@ -1219,12 +1213,12 @@ class TileSimulator:
             raise LibraryError("bitfile is None type")
         # Every time we reprogram the temperature thresholds get reset.
         self._tpm_temperature_thresholds = {
-            "board_warning_threshold": (-273.0, 90.0),
-            "board_alarm_threshold": (-273.0, 90.0),
-            "fpga1_warning_threshold": (-273.0, 90.0),
-            "fpga1_alarm_threshold": (-273.0, 90.0),
-            "fpga2_warning_threshold": (-273.0, 90.0),
-            "fpga2_alarm_threshold": (-273.0, 90.0),
+            "board_warning_threshold": 90.0,
+            "board_alarm_threshold": 90.0,
+            "fpga1_warning_threshold": 90.0,
+            "fpga1_alarm_threshold": 90.0,
+            "fpga2_warning_threshold": 90.0,
+            "fpga2_alarm_threshold": 90.0,
         }
         self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
@@ -1255,20 +1249,19 @@ class TileSimulator:
         lmc_dst_ip: str | None = None,
         lmc_dst_port: int = 4660,
         lmc_integrated_use_40g: bool = False,
+        lmc_integrated_dst_ip: str | None = None,
+        lmc_integrated_dst_port: int = 4660,
         src_ip_fpga1: str | None = None,
         src_ip_fpga2: str | None = None,
         dst_ip_fpga1: str | None = None,
         dst_ip_fpga2: str | None = None,
         src_port: int = 4661,
         dst_port: int = 4660,
-        dst_port_single_port_mode: int = 4662,
-        rx_port_single_port_mode: int = 4662,
         netmask_40g: str | None = None,
         gateway_ip_40g: str | None = None,
         active_40g_ports_setting: str = "port1-only",
         enable_adc: bool = True,
         enable_ada: bool = False,
-        enable_test: bool = False,
         use_internal_pps: bool = False,
         pps_delay: int = 0,
         time_delays: float | int | list = 0,
@@ -1277,6 +1270,7 @@ class TileSimulator:
         qsfp_detection: str = "auto",
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        adc_fullscale_voltage: float = 1.59,
         global_start_time: int | None = None,
     ) -> None:
         """
@@ -1290,6 +1284,8 @@ class TileSimulator:
         :param lmc_dst_port: destination UDP port for LMC data packets
         :param lmc_integrated_use_40g: if True use 40G interface to transmit LMC
             integrated data, otherwise use 1G
+        :param lmc_integrated_dst_ip: the destingation ip for lmc integrated data.
+        :param lmc_integrated_dst_port: the destingation port for lmc integrated data.
         :param src_ip_fpga1: source IP address for FPGA1 40G interface
         :param src_ip_fpga2: source IP address for FPGA2 40G interface
         :param dst_ip_fpga1: destination IP address for beamformed data from
@@ -1301,11 +1297,8 @@ class TileSimulator:
         :param enable_ada: enable adc amplifier, Not present in most TPM versions
         :param enable_adc: Enable ADC
         :param active_40g_ports_setting: placeholder docstring
-        :param dst_port_single_port_mode: placeholder docstring
         :param gateway_ip_40g: placeholder docstring
         :param netmask_40g: placeholder docstring
-        :param rx_port_single_port_mode: placeholder docstring
-        :param enable_test: setup internal test signal generator instead of ADC
         :param use_internal_pps: use internal PPS generator synchronised across FPGAs
         :param pps_delay: PPS delay correction in 625ps units
         :param time_delays: time domain delays for 32 inputs
@@ -1324,6 +1317,7 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param adc_fullscale_voltage: Congiure ADC full-scale voltage (default 1.59 V)
         :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
@@ -1501,18 +1495,18 @@ class TileSimulator:
     @connected
     def get_tpm_temperature_thresholds(
         self: TileSimulator,
-    ) -> dict[str, tuple[float, float]]:
+    ) -> dict[str, float]:
         """
         Return a dictionary of temperature thresholds.
 
         return structure looks like:
         >>{
-        >>    "board_warning_threshold": (min, max),
-        >>    "board_alarm_threshold"  : (min, max),
-        >>    "fpga1_warning_threshold": (min, max),
-        >>    "fpga1_alarm_threshold": (min, max),
-        >>    "fpga2_warning_threshold": (min, max),
-        >>    "fpga2_alarm_threshold": (min, max),
+        >>    "board_warning_threshold": max,
+        >>    "board_alarm_threshold"  : max,
+        >>    "fpga1_warning_threshold": max,
+        >>    "fpga1_alarm_threshold": max,
+        >>    "fpga2_warning_threshold": max,
+        >>    "fpga2_alarm_threshold": max,
         >>}
 
         :return: A dictionary containing the temperature thresholds.
@@ -1912,8 +1906,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         dst_port: int | None = None,
         rx_port_filter: int | None = None,
-        netmask: int | None = None,
-        gateway_ip: int | None = None,
+        netmask: str | None = None,
+        gateway_ip: str | None = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -2006,11 +2000,11 @@ class TileSimulator:
         self: TileSimulator,
         mode: str,
         payload_length: int = 1024,
-        dst_ip: str | None = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
-        netmask_40g: int | None = None,
-        gateway_ip_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -2051,6 +2045,7 @@ class TileSimulator:
         dsp_core: bool = True,
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        adc_fullscale_voltage: float = 1.59,
     ) -> None:
         """
         Attempt to form a connection with TPM.
@@ -2062,6 +2057,7 @@ class TileSimulator:
         :param dsp_core: Enable loading of DSP core plugins
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param adc_fullscale_voltage: Congiure ADC full-scale voltage (default 1.59 V)
         """
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
@@ -2502,6 +2498,15 @@ class TileSimulator:
         self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_raw_data(1)
 
+    @connected
+    def read_polyfilter_name(self: TileSimulator) -> str:
+        """
+        Return the polyfilter name.
+
+        :return: string filter name
+        """
+        return "filter_name"
+
     @check_mocked_overheating
     @connected
     def send_channelised_data(
@@ -2647,11 +2652,11 @@ class TileSimulator:
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: str | None = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: int | None = None,
-        gateway_ip_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
     ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.
@@ -2839,29 +2844,6 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def load_beam_angle(self: TileSimulator, angle_coefficients: list[float]) -> None:
-        """
-        Load beam angle.
-
-        :param angle_coefficients: angle coefficients.
-        """
-        self.logger.error("load_beam_angle not implemented in simulator")
-
-    @check_mocked_overheating
-    @connected
-    def load_antenna_tapering(
-        self: TileSimulator, beam: int, tapering_coefficients: list[int]
-    ) -> None:
-        """
-        Load antenna tapering.
-
-        :param beam: beam
-        :param tapering_coefficients: tapering coefficients
-        """
-        self.logger.error("load_antenna_tapering not implemented in simulator")
-
-    @check_mocked_overheating
-    @connected
     def compute_calibration_coefficients(self: TileSimulator) -> None:
         """Compute calibration coefficients."""
         self.logger.error(
@@ -2896,74 +2878,68 @@ class TileSimulator:
 
     def set_tpm_temperature_thresholds(
         self: TileSimulator,
-        board_alarm_threshold: tuple[float, float] | None = None,
-        fpga1_alarm_threshold: tuple[float, float] | None = None,
-        fpga2_alarm_threshold: tuple[float, float] | None = None,
+        max_board_alarm_threshold: float | None = None,
+        max_fpga1_alarm_threshold: float | None = None,
+        max_fpga2_alarm_threshold: float | None = None,
     ) -> None:
         """
         Set the temperature thresholds.
 
         NOTE: Warning this method can configure the shutdown temperature of
-        components and must be used with care. This method is capped to a minimum
-        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+        components and must be used with care. This method is capped to a
+        maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
 
-        :param board_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the board (unit: Degree Celsius)
-        :param fpga1_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
-        :param fpga2_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        :param max_board_alarm_threshold: The maximum alarm thresholds
+            for the board (unit: Degree Celsius)
+        :param max_fpga1_alarm_threshold: The maximum alarm thresholds
+            for the fpga1 (unit: Degree Celsius)
+        :param max_fpga2_alarm_threshold: The maximum alarm thresholds
+            for the fpga2 (unit: Degree Celsius)
 
         :raises ValueError: is the value set is not in the set range.
         """
 
-        def _is_in_range_20_50(value: float) -> bool:
+        def _is_less_than_50(value: float) -> bool:
             """
-            Return True if value is larger than 20 and less than 50.
+            Return True if value is less than 50.
 
             :param value: value under test
 
             :return: True when test value in range.
             """
-            min_settable = 20
             max_settable = 50
-            if min_settable <= value <= max_settable:
+            if value <= max_settable:
                 return True
             return False
 
-        if board_alarm_threshold is not None:
-            if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
-                board_alarm_threshold[1]
-            ):
+        if max_board_alarm_threshold is not None:
+            if _is_less_than_50(max_board_alarm_threshold):
                 self._tpm_temperature_thresholds[
                     "board_alarm_threshold"
-                ] = board_alarm_threshold
+                ] = max_board_alarm_threshold
             else:
                 raise ValueError(
-                    f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                    f"{max_board_alarm_threshold=} not larger than 50. Doing nothing"
                 )
-        if fpga1_alarm_threshold is not None:
-            if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
-                fpga1_alarm_threshold[1]
-            ):
+        if max_fpga1_alarm_threshold is not None:
+            if _is_less_than_50(max_fpga1_alarm_threshold):
                 self._tpm_temperature_thresholds[
                     "fpga1_alarm_threshold"
-                ] = fpga1_alarm_threshold
+                ] = max_fpga1_alarm_threshold
             else:
                 raise ValueError(
-                    f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                    f"{max_fpga1_alarm_threshold=} not larger than 50. Doing nothing"
                 )
-        if fpga2_alarm_threshold is not None:
-            if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
-                fpga2_alarm_threshold[1]
-            ):
+        if max_fpga2_alarm_threshold is not None:
+            if _is_less_than_50(max_fpga2_alarm_threshold):
                 self._tpm_temperature_thresholds[
                     "fpga2_alarm_threshold"
-                ] = fpga2_alarm_threshold
+                ] = max_fpga2_alarm_threshold
             else:
                 raise ValueError(
-                    f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                    f"{max_fpga2_alarm_threshold=} not larger than 50. Doing nothing"
                 )
+
         self.evaluate_mcu_action()
 
     def evaluate_mcu_action(self: TileSimulator) -> None:
@@ -2975,11 +2951,11 @@ class TileSimulator:
         """
         if (
             self._tile_health_structure["temperatures"]["board"]
-            > self._tpm_temperature_thresholds["board_alarm_threshold"][1]
+            > self._tpm_temperature_thresholds["board_alarm_threshold"]
             or self._tile_health_structure["temperatures"]["FPGA0"]
-            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"][1]
+            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"]
             or self._tile_health_structure["temperatures"]["FPGA1"]
-            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"][1]
+            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"]
         ):
             self.logger.warning(
                 "We are overheating, CPLD is turning the overheating components OFF!"

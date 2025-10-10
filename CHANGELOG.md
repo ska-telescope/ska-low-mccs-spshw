@@ -1,7 +1,19 @@
 # Version History
 
+
 ## Unreleased
 
+* [THORN-249] Add attribute pfb_version to MccsTile.
+* [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
+
+## 9.0.0
+
+* [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0 - Simplified tile 40G ethernet configuration
+
+
+## 8.0.2
+
+* [THORN-289] Add ResetCspIngest command to SpsStation. Improve message in SetCspIngest. Add cspIngestConfig attribute to SpsStation.
 * [THORN-298] Fix issue where last attribute was being marked as invalid
 * [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.

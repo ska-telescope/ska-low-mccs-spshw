@@ -2734,7 +2734,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
-                raise ValueError("Time too early")
+                raise ValueError(f"Time too early: {load_time=}, {load_frame=}")
 
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(

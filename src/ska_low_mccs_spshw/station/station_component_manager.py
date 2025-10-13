@@ -877,6 +877,7 @@ class SpsStationComponentManager(
         print(f"{locals()=}")
         print(f"{self._antenna_mapping=}")
         for antenna_no in range(len(antenna_order_delays) // 2):
+            print(f"{antenna_no=}")
             delay = antenna_order_delays[antenna_no * 2]
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 

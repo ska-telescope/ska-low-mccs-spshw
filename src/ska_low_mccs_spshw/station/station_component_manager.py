@@ -3718,6 +3718,9 @@ class SpsStationComponentManager(
     def trigger_adc_equalisation(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        *,
+        target_adc: float,
+        bias: float,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the trigger adc equalisation method.
@@ -3726,17 +3729,23 @@ class SpsStationComponentManager(
         `self._trigger_adc_equalisation` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
 
         :return: a task status and response message
         """
         return self.submit_task(
             self._trigger_adc_equalisation,
+            args=[target_adc, bias],
             task_callback=task_callback,
         )
 
     @check_communicating
     def _trigger_adc_equalisation(
         self: SpsStationComponentManager,
+        target_adc: float = 17,
+        bias: float = 0,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3745,13 +3754,15 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
         tpms = self._tile_proxies.values()
         num_samples = 20
-        target_adc = 17
 
         adc_data = np.empty([num_samples, 32 * len(tpms)])
         for i in range(num_samples):
@@ -3766,7 +3777,7 @@ class SpsStationComponentManager(
 
         # calculate ideal attenuation
         preadu_levels = np.concatenate([t.preadu_levels() for t in tpms])
-        desired_levels = preadu_levels + adc_deltas
+        desired_levels = preadu_levels + adc_deltas + bias * np.ones(32 * len(tpms))
 
         # quantise and clip to valid range
         sanitised_levels = (desired_levels * 4).round().clip(0, 127) / 4

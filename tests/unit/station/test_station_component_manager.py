@@ -225,9 +225,22 @@ def test_communication(
     callbacks["communication_status"].assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("desired_preadu_levels", "target_adc", "bias"),
+    [
+        (7.5, 17, 0),
+        (9.25, 14, 0),
+        (6.0, 20, 0),
+        (8.5, 17, 1),
+        (7.0, 20, 1),
+    ],
+)
 def test_trigger_adc_equalisation(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
+    desired_preadu_levels,
+    target_adc,
+    bias,
 ) -> None:
     """
     Test the adc triggering equalisation.
@@ -254,12 +267,11 @@ def test_trigger_adc_equalisation(
     # in a non deterministic way
     # assert station_component_manager.preadu_levels == []
 
-    station_component_manager._trigger_adc_equalisation()
+    station_component_manager._trigger_adc_equalisation(target_adc, bias)
 
     if station_component_manager._desired_preadu_levels is not None:
         for value in station_component_manager._desired_preadu_levels:
-            assert value < expected_preadu + 1
-            assert value > expected_preadu - 1
+            assert value == desired_preadu_levels
 
 
 def test_load_pointing_delays(

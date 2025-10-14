@@ -1702,6 +1702,48 @@ def test_AcquireDataForCalibration(
     assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
 
 
+def test_TriggerAdcEqualisation(
+    station_device: SpsStation,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the TriggerAdcEqualisation command.
+
+    :param station_device: The station device to use.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    station_device.MockSubracksOn()
+    station_device.MockTilesOn()
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    [_], [command_id] = station_device.TriggerAdcEqualisation(
+        json.dumps({"target_adc": 18, "bias": 0.1})
+    )
+
+    timeout = 20
+    current_time = 0
+    while current_time < timeout:
+        try:
+            assert (
+                station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
+            )
+            break
+        except AssertionError:
+            time.sleep(1)
+            current_time += 1
+    assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
+
+
 def test_health(
     station_device: SpsStation,
     mock_tile_device_proxies: list[unittest.mock.Mock],

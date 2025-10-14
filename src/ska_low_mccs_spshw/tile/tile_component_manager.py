@@ -2734,7 +2734,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
-                raise ValueError("Time too early")
+                raise ValueError(f"Time too early: {load_time=}, {load_frame=}")
 
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
@@ -2760,7 +2760,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param delay_array: delay in seconds, and delay rate in seconds/second
+        :param delay_array: list of [delay in seconds, and
+            delay rate in seconds/second] per antenna.
         :param beam_index: the beam to which the pointing delay should
             be applied
 

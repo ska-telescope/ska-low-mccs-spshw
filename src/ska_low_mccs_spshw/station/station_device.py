@@ -1739,7 +1739,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :param argin: a JSON-ified dictionary containing:
 
-            - target_adc: the adc value in ADU units. Defaults to 17.
+            - target_adc: the expected average power received by antennas in ADU units.
+                Defaults to 17.
             - bias: user specifed bias in dB added to the antenna preadu levels.
                 Defaults to 0. Note: since the result is rounded during sanitisation,
                 bias changes are also rounded and as a result they are only noticeable

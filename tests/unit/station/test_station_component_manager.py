@@ -238,16 +238,19 @@ def test_communication(
 def test_trigger_adc_equalisation(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    desired_preadu_levels,
-    target_adc,
-    bias,
+    desired_preadu_levels: float,
+    target_adc: float,
+    bias: float,
 ) -> None:
     """
-    Test the adc triggering equalisation.
+    Test the adc triggering equalization.
 
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
+    :param desired_preadu_levels: expected result after equalization
+    :param target_adc: the expected average power received by antennas in ADU units.
+    :param bias: user specified bias.
     """
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
 

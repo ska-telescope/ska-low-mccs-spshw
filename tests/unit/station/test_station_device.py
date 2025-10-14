@@ -1889,7 +1889,7 @@ def test_programing_state_health_rollup(
         )
 
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=6, consume_nonmatches=True
+        HealthState.OK, lookahead=5, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
@@ -1902,9 +1902,7 @@ def test_programing_state_health_rollup(
         )
     )
 
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.DEGRADED, lookahead=2
-    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.DEGRADED)
 
     station_device.MockTileProgrammingStateChange(
         json.dumps(
@@ -1914,9 +1912,7 @@ def test_programing_state_health_rollup(
             }
         )
     )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=2
-    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
     assert station_device.healthState == HealthState.OK
 
 

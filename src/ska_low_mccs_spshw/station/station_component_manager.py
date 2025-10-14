@@ -956,7 +956,7 @@ class SpsStationComponentManager(
 
                 if self._component_state_callback:
                     self._component_state_callback(
-                        TileProgrammingState=self._tile_programming_state
+                        tileProgrammingState=self._tile_programming_state
                     )
 
             case "beamformertable":

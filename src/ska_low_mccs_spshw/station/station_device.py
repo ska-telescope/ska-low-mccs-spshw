@@ -721,10 +721,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         tile_programming_state = state_change.get("tileProgrammingState")
         if tile_programming_state is not None:
-            if (any(tpm_state in ["Unknown", "Off"] for tpm_state in
-                    tile_programming_state)
-                and any(tpm_state == "Synchronised" for tpm_state in
-                        tile_programming_state)):
+            if any(
+                tpm_state in ["Unknown", "Off"] for tpm_state in tile_programming_state
+            ) and any(
+                tpm_state == "Synchronised" for tpm_state in tile_programming_state
+            ):
                 self._health_rollup.health_changed(
                     "tile_programming_state", HealthState.DEGRADED
                 )

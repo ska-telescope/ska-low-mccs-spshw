@@ -5,6 +5,7 @@
 
 * [THORN-249] Add attribute pfb_version to MccsTile.
 * [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
+* [THORN-311] Added target_adc and bias parameters to TriggerAdcEqualization
 
 ## 9.0.0
 

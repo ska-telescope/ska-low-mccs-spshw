@@ -32,7 +32,7 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs_common import MccsBaseDevice
+from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
@@ -46,6 +46,7 @@ from .attribute_managers import (
     AttributeManager,
     BoolAttributeManager,
     NpArrayAttributeManager,
+    StatusCountAttributeManager,
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
@@ -137,6 +138,111 @@ def _serialise_np_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
     return json.dumps(val, cls=NumpyEncoder)
 
 
+def _adc_pll_to_list(val: dict[str, tuple[bool, bool]]) -> np.ndarray:
+    """
+    Flatten adc indexed dictionary to list.
+
+    :param val: A dictionary indexed by ADC number.
+
+    :return: a flattened list.
+    """
+    flattened_list = []
+    for i in range(16):
+        v = val[f"ADC{i}"]
+        flattened_list.append((int(v[0]), int(v[1])))
+    arr = np.array(flattened_list).T  # Transpose to get shape (2, 16)
+    return arr
+
+
+def _adc_to_list(val: dict[str, bool]) -> list[int]:
+    """
+    Flatten adc indexed dictionary to list.
+
+    :param val: A dictionary indexed by ADC number.
+
+    :return: a flattened list.
+    """
+    flattened_list = []
+    for i in range(16):
+        v = val[f"ADC{i}"]
+        flattened_list.append(int(v))
+    return flattened_list
+
+
+def _udp_error_count_to_list(val: dict[str, dict[str, int]]) -> list[int]:
+    """
+    Flatten udp error count to 1d list.
+
+    :param val: A dictionary indexed by ADC number.
+
+    :return: a flattened list.
+    """
+    flattened_list: list[int] = []
+    for i in range(2):
+        v = val[f"FPGA{i}"]
+        for lane_idx in range(4):
+            flattened_list.append(int(v[f"lane{lane_idx}"]))
+    return flattened_list
+
+
+def _flatten_fpga_index(val: dict[str, int]) -> list[int]:
+    """
+    Flatten udp error count to 1d list.
+
+    :param val: A dictionary indexed by ADC number.
+
+    :return: a flattened list.
+    """
+    flattened_list: list[int] = []
+    for i in range(2):
+        v = val[f"FPGA{i}"]
+        if isinstance(v, tuple):
+            flattened_list.extend(v)
+        else:
+            flattened_list.append(v)
+    flattened_list = [int(v) for v in flattened_list]
+    return flattened_list
+
+
+def _lane_error_to_list(
+    val: dict[str, dict[str, dict[str, int | None]]]
+) -> list[int | None]:
+    """
+    Flatten udp error count to 1d list.
+
+    :param val: A dictionary indexed by ADC number.
+
+    :return: a flattened list.
+    """
+    flattened_list: list[int | None] = []
+    for i in range(2):
+        v = val[f"FPGA{i}"]
+        for core_idx in range(2):
+            for lane_idx in range(8):
+                flattened_list.append(v[f"Core{core_idx}"][f"lane{lane_idx}"])
+    return flattened_list
+
+
+def _clock_managers(val: dict[str, dict[str, tuple[int, bool]]]) -> np.ndarray:
+    flattened_list: list[tuple[int, int, int]] = []
+    for i in range(2):
+        v = val[f"FPGA{i}"]
+        flattened_list.append(
+            (int(v["C2C_MMCM"][1]), int(v["JESD_MMCM"][1]), int(v["DSP_MMCM"][1]))
+        )
+    arr = np.array(flattened_list).T
+    return arr
+
+
+def _clocks_to_list(val: dict[str, dict[str, bool]]) -> np.ndarray:
+    flattened_list: list[tuple[int, int, int]] = []
+    for i in range(2):
+        v = val[f"FPGA{i}"]
+        flattened_list.append((int(v["JESD"]), int(v["DDR"]), int(v["UDP"])))
+    arr = np.array(flattened_list).T
+    return arr
+
+
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
@@ -205,6 +311,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     DefaultLockTimeout = device_property(dtype=float, default_value=0.4)
     VerifyEvents = device_property(dtype=bool, default_value=True)
 
+    UseAttributesForHealth = device_property(
+        doc="Use the attribute quality factor in health. ADR-115.",
+        dtype=bool,
+        default_value=True,
+    )
+
     # ---------------
     # Initialisation
     # ---------------
@@ -228,6 +340,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
+        self._stopping = False
+        self._health_recorder: HealthRecorder | None = None
+        self._health_report = ""
 
     def delete_device(self: MccsTile) -> Any:
         """
@@ -238,6 +353,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: result from delete_device.
         """
+        self._stopping = True
+        if self._health_recorder is not None:
+            self._health_recorder.cleanup()
+            self._health_recorder = None
+
         try:
             # We do not want to raise a exception here
             # This can cause a segfault.
@@ -374,12 +494,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
             "adc_pll_status": "adc_pll_status",
-            "qpll_status": "qpll_status",
-            "f2f_pll_status": "f2f_pll_status",
             "f2f_soft_errors": "f2f_soft_errors",
             "f2f_hard_errors": "f2f_hard_errors",
-            "timing_pll_status": "timing_pll_status",
-            "timing_pll_40g_status": "timing_pll_40g_status",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
             "clocks": "clocks",
@@ -416,33 +532,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         attribute_converters: dict[str, Any] = {
-            "adc_pll_status": _serialise_object,
-            "station_beamformer_error_count": _serialise_object,
-            "crc_error_count": _serialise_object,
-            "bip_error_count": _serialise_object,
-            "decode_error_count": _serialise_object,
-            "linkup_loss_count": _serialise_object,
-            "ddr_reset_counter": _serialise_object,
-            "resync_count": _serialise_object,
-            "lane_error_count": _serialise_object,
-            "clock_managers": _serialise_object,
-            "clocks": _serialise_object,
-            "adc_sysref_counter": _serialise_object,
-            "adc_sysref_timing_requirements": _serialise_object,
+            "adc_pll_status": _adc_pll_to_list,
+            "bip_error_count": _udp_error_count_to_list,
+            "decode_error_count": _udp_error_count_to_list,
+            "linkup_loss_count": _flatten_fpga_index,
+            "data_router_status": _flatten_fpga_index,
+            "crc_error_count": _flatten_fpga_index,
+            "ddr_reset_counter": _flatten_fpga_index,
+            "resync_count": _flatten_fpga_index,
+            "lane_error_count": _lane_error_to_list,
+            "clock_managers": _clock_managers,
+            "station_beamformer_error_count": _flatten_fpga_index,
+            "station_beamformer_flagged_count": _flatten_fpga_index,
+            "clocks": _clocks_to_list,
+            "adc_sysref_counter": _adc_to_list,
+            "adc_sysref_timing_requirements": _adc_to_list,
             "coreCommunicationStatus": _serialise_object,
-            "qpll_status": _serialise_object,
-            "f2f_pll_status": _serialise_object,
-            "timing_pll_status": _serialise_object,
-            "timing_pll_40g_status": _serialise_object,
             "voltages": _serialise_object,
             "temperatures": _serialise_object,
             "currents": _serialise_object,
             "timing": _serialise_object,
             "io": _serialise_object,
             "dsp": _serialise_np_object,
-            "data_router_status": _serialise_object,
             "data_router_discarded_packets": _serialise_object,
-            "station_beamformer_flagged_count": _serialise_object,
             "adcs": _serialise_object,
             "beamformerTable": _flatten_list,
             "beamformerRegions": _flatten_list,
@@ -472,6 +584,36 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             {
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
+                    alarm_flag="LOW",
+                ),
+                "f2f_pll_status": StatusCountAttributeManager(
+                    functools.partial(self.post_change_event, "f2f_pll_status"),
+                    converter=_serialise_object,
+                ),
+                "fpga0_qpll_status": StatusCountAttributeManager(
+                    functools.partial(self.post_change_event, "fpga0_qpll_status"),
+                    converter=_serialise_object,
+                ),
+                "fpga1_qpll_status": StatusCountAttributeManager(
+                    functools.partial(self.post_change_event, "fpga1_qpll_status"),
+                    converter=_serialise_object,
+                ),
+                "timing_pll_status": StatusCountAttributeManager(
+                    functools.partial(self.post_change_event, "timing_pll_status"),
+                    converter=_serialise_object,
+                ),
+                "timing_pll_40g_status": StatusCountAttributeManager(
+                    functools.partial(self.post_change_event, "timing_pll_40g_status"),
+                    converter=_serialise_object,
+                ),
+                "station_beamformer_status": BoolAttributeManager(
+                    functools.partial(
+                        self.post_change_event, "station_beamformer_status"
+                    ),
+                    alarm_flag="LOW",
+                ),
+                "tile_beamformer_status": BoolAttributeManager(
+                    functools.partial(self.post_change_event, "tile_beamformer_status"),
                     alarm_flag="LOW",
                 ),
                 "tileProgrammingState": AttributeManager(
@@ -576,7 +718,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageVM_PLL": ["voltages", "VM_PLL"],
             "voltageVM_SW_AMP": ["voltages", "VM_SW_AMP"],
             "adc_pll_status": ["adcs", "pll_status"],
-            "qpll_status": ["io", "jesd_interface", "qpll_status"],
+            # "adc_pll_status": ["adcs", "pll_status", "ADC0"], ??
+            "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
+            "fpga1_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA1"],
             "f2f_pll_status": ["io", "f2f_interface", "pll_status"],
             "f2f_soft_errors": ["io", "f2f_interface", "soft_error"],
             "f2f_hard_errors": ["io", "f2f_interface", "hard_error"],
@@ -620,6 +764,65 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         for attr_name in self._attribute_state:
             self.set_change_event(attr_name, True, self.VerifyEvents)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
+
+        healful_attrs = set(self._attribute_state.keys())
+        if not self.BiosVersion:
+            healful_attrs = set(healful_attrs) - {"timing_pll_40g_status"}
+
+        healful_attrs = healful_attrs - {
+            "dataTransmissionMode",
+            "tileProgrammingState",
+            "integratedDataTransmissionMode",
+            "antennaBufferMode",
+            "coreCommunicationStatus",
+        }
+
+        print(f"{healful_attrs=}")
+        self._health_recorder = HealthRecorder(
+            self.get_name(),
+            logger=self.logger,
+            attributes=list(healful_attrs),
+            health_callback=self._health_changed_new,
+            attr_conf_callback=self._attr_conf_changed,
+        )
+
+    def _health_changed_new(
+        self: MccsTile, health: HealthState, health_report: str
+    ) -> None:
+        """
+        Handle change in health from new health Model.
+
+        :param health: the new health value
+        :param health_report: the health report
+        """
+        if self.UseAttributesForHealth:
+            self.logger.error(f"change = {health=}, {health_report=}")
+            if self._stopping:
+                return
+
+            if self._health_state != health:
+                self._health_state = health
+                self._health_report = health_report
+                self.push_change_event("healthState", health)
+                self.push_archive_event("healthState", health)
+
+    def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
+        """
+        Handle change in attribute configuration.
+
+        This is a workaround as if you configure an attribute
+        which is not alarming to have alarm/warning thresholds
+        such that it would be alarming, Tango does not push an event
+        until the attribute value changes.
+
+        :param attribute_name: the name of the attribute whose
+            configuration has changed.
+        """
+        self.logger.error(f"attr = {attribute_name=}")
+        value_cache = self._attribute_state[attribute_name].read()
+        if value_cache is not None:
+            self.push_change_event(attribute_name, value_cache[0])
+            self.push_archive_event(attribute_name, value_cache[0])
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -1011,10 +1214,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param health: the new health value
         """
-        if self._health_state != health:
-            self._health_state = health
-            self.push_change_event("healthState", health)
-            self.push_archive_event("healthState", health)
+        if not self.UseAttributesForHealth:
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
+                self.push_archive_event("healthState", health)
 
     def shutdown_on_max_alarm(self: MccsTile, attr_name: str) -> None:
         """
@@ -1111,28 +1315,33 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["boardTemperature"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=(("DevShort",),),
+        max_dim_x=16,
+        max_dim_y=2,
         label="adc_pll_status",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def adc_pll_status(self: MccsTile) -> str:
+    def adc_pll_status(self: MccsTile) -> list[bool]:
         """
         Return the pll status of all 16 ADCs.
 
-        Expected: `True` if PLL locked and loss of lock flag is low
+        The first list represents the pll status of the ADCs in order.
+        The second list represents the lock lost counter for ADCs in order.
+
+        Expected: `1` if PLL locked and loss of lock flag is low
             (lock has not fallen).
 
         :example:
             >>> tile.adc_pll_status
-            '{"ADC0": [true, true], "ADC1": [true, true], ..., "ADC15": [true, true]}'
+            [[1]*16,[1]*16]
 
         :return: the pll status of all ADCs
         """
         return self._attribute_state["adc_pll_status"].read()
 
-    @attribute(
-        dtype="DevBoolean",
-        label="tile_beamformer_status",
-    )
+    @attribute(dtype="DevBoolean", label="tile_beamformer_status")
     def tile_beamformer_status(self: MccsTile) -> bool:
         """
         Return the status of the tile beamformer.
@@ -1148,10 +1357,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["tile_beamformer_status"].read()
 
-    @attribute(
-        dtype="DevBoolean",
-        label="station_beamformer_status",
-    )
+    @attribute(dtype="DevBoolean", label="station_beamformer_status")
     def station_beamformer_status(self: MccsTile) -> bool:
         """
         Return the status of the station beamformer.
@@ -1167,10 +1373,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["station_beamformer_status"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="station_beamformer_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def station_beamformer_error_count(self: MccsTile) -> str:
+    def station_beamformer_error_count(self: MccsTile) -> list[int]:
         """
         Return the station beamformer error count per FPGA.
 
@@ -1178,17 +1388,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.station_beamformer_error_count
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the station beamformer error count per FPGA.
+            index 0->FPGA1, index 1->FPGA2
         """
         return self._attribute_state["station_beamformer_error_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="station_beamformer_flagged_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def station_beamformer_flagged_count(self: MccsTile) -> str:
+    def station_beamformer_flagged_count(self: MccsTile) -> list[int]:
         """
         Return the station beamformer error count per FPGA.
 
@@ -1201,17 +1416,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.station_beamformer_flagged_count
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the station beamformer error count per FPGA.
+            index 0->FPGA1, index 1->FPGA2
         """
         return self._attribute_state["station_beamformer_flagged_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="crc_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def crc_error_count(self: MccsTile) -> str:
+    def crc_error_count(self: MccsTile) -> list[int]:
         """
         Return the crc error count per FPGA.
 
@@ -1219,17 +1439,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.crc_error_count
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the crc error count per FPGA.
+            index 0->FPGA1, index 1->FPGA2
         """
         return self._attribute_state["crc_error_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=8,
         label="bip_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def bip_error_count(self: MccsTile) -> str:
+    def bip_error_count(self: MccsTile) -> list[int]:
         """
         Return the bip error count per FPGA.
 
@@ -1237,16 +1462,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.bip_error_count
-            '{"FPGA0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0},
-            "FPGA1": {"lane0": 6, "lane1": 6, "lane2": 5, "lane3": 7}}'
+            [0, 0, 0, 0, 0, 0, 0, 0]
 
         :return: the bip error count per FPGA.
+            index 0->fpga0lane0, 1->fpga0lane1, 2->fpga0lane2, 3->fpga0lane3
+            index 4->fpga1lane0, 5->fpga1lane1, 6->fpga1lane2, 7->fpga1lane3
         """
         return self._attribute_state["bip_error_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=8,
         label="decode_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def decode_error_count(self: MccsTile) -> str:
         """
@@ -1258,18 +1488,23 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.decode_error_count
-            '{"FPGA0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0},
-            "FPGA1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0}}'
+            [0, 0, 0, 0, 0, 0, 0, 0]
 
         :return: the decode error count per FPGA.
+            index 0->fpga0lane0, 1->fpga0lane1, 2->fpga0lane2, 3->fpga0lane3
+            index 4->fpga1lane0, 5->fpga1lane1, 6->fpga1lane2, 7->fpga1lane3
         """
         return self._attribute_state["decode_error_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="linkup_loss_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def linkup_loss_count(self: MccsTile) -> str:
+    def linkup_loss_count(self: MccsTile) -> list[int]:
         """
         Return the linkup loss count per FPGA.
 
@@ -1277,17 +1512,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.linkup_loss_count
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the linkup loss count per FPGA.
+            index0->FPGA0, index1->FPGA1
         """
         return self._attribute_state["linkup_loss_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="data_router_status",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
-    def data_router_status(self: MccsTile) -> str:
+    def data_router_status(self: MccsTile) -> list[int]:
         """
         Return the status of the data router.
 
@@ -1295,9 +1535,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.data_router_status
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the linkup loss count per FPGA.
+            index0->FPGA0, index1->FPGA1
         """
         return self._attribute_state["data_router_status"].read()
 
@@ -1374,8 +1615,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["ddr_initialisation"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="ddr_reset_counter",
+        max_alarm=1,
+        abs_change=1,
     )
     def ddr_reset_counter(self: MccsTile) -> str:
         """
@@ -1385,9 +1629,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.ddr_reset_counter
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the ddr reset count per FPGA.
+            index0->FPGA0, index1->FPGA1
         """
         return self._attribute_state["ddr_reset_counter"].read()
 
@@ -1424,8 +1669,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["f2f_hard_errors"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=2,
         label="resync_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def resync_count(self: MccsTile) -> str:
         """
@@ -1435,9 +1684,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.resync_count
-            '{"FPGA0": 0, "FPGA1": 0}'
+            [0, 0]
 
         :return: the resync count per FPGA.
+            index0->FPGA0, index1->FPGA1
         """
         return self._attribute_state["resync_count"].read()
 
@@ -1478,8 +1728,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["link_status"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=32,
         label="lane_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def lane_error_count(self: MccsTile) -> str:
         """
@@ -1489,22 +1743,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.lane_error_count
-            '{"FPGA0": {"Core0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
-            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0},
-            "Core1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
-            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0}},
-            "FPGA1": {"Core0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
-            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0},
-            "Core1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
-            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0}}}'
+            [0] * 32
 
         :return: the error count per lane, per core, per FPGA.
+            idx0->FPGA0Core0Lane0, idx2->FPGA0Core0Lane1,
+            idx3->FPGA0Core0Lane2, idx4->FPGA0Core0Lane3
+            idx4->FPGA0Core0Lane4, idx5->FPGA0Core0Lane5,
+            idx6->FPGA0Core0Lane6, idx7->FPGA0Core0Lane7
+            idx8->FPGA0Core1Lane0, idx9->FPGA0Core1Lane1,
+            idx10->FPGA1Core0Lane2, idx11->FPGA0Core1Lane3
+            idx12->FPGA0Core1Lane4, idx13->FPGA0Core1Lane5,
+            idx14->FPGA0Core1Lane6, idx15->FPGA0Core1Lane7
         """
         return self._attribute_state["lane_error_count"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=(("DevShort",),),
+        max_dim_x=2,  # fpga
+        max_dim_y=3,  # clock
         label="clock_managers",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def clock_managers(self: MccsTile) -> str:
         """
@@ -1514,12 +1774,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.clock_managers
-            '{"FPGA0": {"C2C_MMCM": [true, 0], "JESD_MMCM": [true, 0],
-            "DSP_MMCM": [true, 0]},
-            "FPGA1": {"C2C_MMCM": [true, 0], "JESD_MMCM": [true, 0],
-            "DSP_MMCM": [true, 0]}}'
+            [[0, 0, 0], [0, 0, 0]]
 
         :return: the PLL lock status and lock loss counter for C2C, JESD and DSP.
+            [[0, 0, 0], [0, 0, 0]] == [[FPGA0_clock_managers],[FPGA1_clock_managers]]
+            FPGAx_clock_managers = C2C_MMCM, JESD_MMCM, DSP_MMCM
         """
         return self._attribute_state["clock_managers"].read()
 
@@ -1598,8 +1857,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     return self._attribute_state["ddr_rd_dat_cnt"].read())
 
     @attribute(
-        dtype="DevString",
+        dtype=(("DevShort",),),
+        max_dim_x=2,  # fpga
+        max_dim_y=3,  # clock
         label="clocks",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def clocks(self: MccsTile) -> str:
         """
@@ -1609,16 +1873,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.clocks
-            '{"FPGA0": {"JESD": true, "DDR": true, "UDP": true},
-            "FPGA1": {"JESD": true, "DDR": true, "UDP": true}}'
+            [[1, 1, 1],[1, 1, 1]]
 
         :return: the status of clocks for the interfaces of both FPGAs.
+            [[1, 1, 1], [1, 1, 1]] == [[FPGA0_clocks],[FPGA1_clocks]]
+            FPGAx_clocks = JESD, DDR, UDP
         """
         return self._attribute_state["clocks"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=16,  # Channels
         label="adc_sysref_counter",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def adc_sysref_counter(self: MccsTile) -> str:
         """
@@ -1628,15 +1897,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.adc_sysref_counter
-            '{"ADC0": true, "ADC1": true, "ADC2": true, ..., "ADC15": true}'
+            [1]*16
 
         :return: the sysref_counter of all ADCs
         """
         return self._attribute_state["adc_sysref_counter"].read()
 
     @attribute(
-        dtype="DevString",
+        dtype=("DevShort",),
+        max_dim_x=16,  # Channels
         label="adc_sysref_timing_requirements",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
     )
     def adc_sysref_timing_requirements(self: MccsTile) -> str:
         """
@@ -1646,7 +1919,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.adc_sysref_timing_requirements
-            '{"ADC0": true, "ADC1": true, "ADC2": true, ..., "ADC15": true}'
+            [1]*16
 
         :return: the sysref_timing_requirements of all ADCs
         """
@@ -1654,9 +1927,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="qpll_status",
+        label="fpga0_qpll_status",
     )
-    def qpll_status(self: MccsTile) -> str:
+    def fpga0_qpll_status(self: MccsTile) -> str:
         """
         Return the QPLL lock status and lock loss counter.
 
@@ -1664,12 +1937,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
 
         :example:
-            >>> tile.qpll_status
-            '{"FPGA0": [true, 0], "FPGA1": [true, 0]}'
+            >>> tile.fpga0_qpll_status
+            [true, 0]
 
         :return: the QPLL lock status and lock loss counter.
         """
-        return self._attribute_state["qpll_status"].read()
+        return self._attribute_state["fpga0_qpll_status"].read()
+
+    @attribute(
+        dtype="DevString",
+        label="fpga1_qpll_status",
+    )
+    def fpga1_qpll_status(self: MccsTile) -> str:
+        """
+        Return the QPLL lock status and lock loss counter.
+
+        Expected: `True, 0` if QPLL locked and no lock loss events detected.
+        Increments for each lock loss event.
+
+        :example:
+            >>> tile.fpga1_qpll_status
+            '[true, 0]'
+
+        :return: the QPLL lock status and lock loss counter.
+        """
+        return self._attribute_state["fpga1_qpll_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1792,7 +2084,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatures"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 0", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 0", unit="Celsius", abs_change=1)
     def temperatureADC0(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 0 temperature.
@@ -1801,7 +2093,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC0"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 1", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 1", unit="Celsius", abs_change=1)
     def temperatureADC1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 1 temperature.
@@ -1810,7 +2102,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC1"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 2", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 2", unit="Celsius", abs_change=1)
     def temperatureADC2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 2 temperature.
@@ -1819,7 +2111,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC2"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 3", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 3", unit="Celsius", abs_change=1)
     def temperatureADC3(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 3 temperature.
@@ -1828,7 +2120,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC3"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 4", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 4", unit="Celsius", abs_change=1)
     def temperatureADC4(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 4 temperature.
@@ -1837,7 +2129,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC4"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 5", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 5", unit="Celsius", abs_change=1)
     def temperatureADC5(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 5 temperature.
@@ -1846,7 +2138,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC5"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 6", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 6", unit="Celsius", abs_change=1)
     def temperatureADC6(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 6 temperature.
@@ -1855,7 +2147,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC6"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 7", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 7", unit="Celsius", abs_change=1)
     def temperatureADC7(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 7 temperature.
@@ -1864,7 +2156,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC7"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 8", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 8", unit="Celsius", abs_change=1)
     def temperatureADC8(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 8 temperature.
@@ -1873,7 +2165,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC8"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 9", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 9", unit="Celsius", abs_change=1)
     def temperatureADC9(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 9 temperature.
@@ -1882,7 +2174,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC9"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 10", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 10", unit="Celsius", abs_change=1)
     def temperatureADC10(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 10 temperature.
@@ -1891,7 +2183,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC10"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 11", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 11", unit="Celsius", abs_change=1)
     def temperatureADC11(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 11 temperature.
@@ -1900,7 +2192,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC11"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 12", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 12", unit="Celsius", abs_change=1)
     def temperatureADC12(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 12 temperature.
@@ -1909,7 +2201,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC12"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 13", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 13", unit="Celsius", abs_change=1)
     def temperatureADC13(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 13 temperature.
@@ -1918,7 +2210,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC13"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 14", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 14", unit="Celsius", abs_change=1)
     def temperatureADC14(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 14 temperature.
@@ -1927,7 +2219,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperatureADC14"].read()
 
-    @attribute(dtype="DevDouble", label="ADC 15", unit="Celsius")
+    @attribute(dtype="DevDouble", label="ADC 15", unit="Celsius", abs_change=1)
     def temperatureADC15(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ADC 15 temperature.
@@ -2488,7 +2780,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["adcPower"].read()
 
-    @attribute(dtype="DevLong", fisallowed="_not_initialising")
+    @attribute(dtype="DevLong", fisallowed="_not_initialising", abs_change=1)
     def currentTileBeamformerFrame(self: MccsTile) -> int:
         """
         Return current frame.
@@ -2645,12 +2937,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         automatic_state_analysis: tango.DevState = super().dev_state()
         force_alarm: bool = False
-        if (
-            self._attribute_state["ppsPresent"].read() is not None
-            and self._attribute_state["ppsPresent"].read()[0] is False
-        ):
-            self.logger.warning("no PPS signal present, raising ALARM")
-            force_alarm = True
+        for _, attr_manager in self._attribute_state.items():
+            if isinstance(attr_manager, BoolAttributeManager):
+                value = attr_manager.read()
+                if (
+                    value is not None
+                    and isinstance(value, (list, tuple))
+                    and len(value) > 0
+                ):
+                    if value[0] is False:
+                        force_alarm = True
         if force_alarm:
             return tango.DevState.ALARM
         return automatic_state_analysis
@@ -2855,7 +3151,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Get the health params from the health model.
 
         :return: the health params
+
+        :raises NotImplementedError: if we are calling when
+            using the attributeForHealth feature
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError(
+                "healthModelParams are derived from attribute "
+                "quality factors. To modify the threhold values, "
+                "please look at the attribute of "
+                "interest and its configuration."
+            )
         return json.dumps(self._health_model.health_params)
 
     @healthModelParams.write  # type: ignore[no-redef]
@@ -2864,7 +3170,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Set the params for health transition rules.
 
         :param argin: JSON-string of dictionary of health states
+
+        :raises NotImplementedError: if we are calling when
+            using the attributeForHealth feature
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError(
+                "healthModelParams are derived from attribute "
+                "quality factors. To modify the threhold values, "
+                "please look at the attribute of "
+                "interest and its configuration."
+            )
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
@@ -2979,6 +3295,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the health report.
         """
+        if self.UseAttributesForHealth:
+            return self._health_report
         self._health_model.set_logger(self.logger)
         return self._health_model.health_report
 
@@ -3147,7 +3465,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.running_beams
 
-    @attribute(dtype="DevDouble", label="FE0 current", unit="Amp")
+    @attribute(dtype="DevDouble", label="FE0 current", unit="Amp", abs_change=1)
     def currentFE0(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the FE0 current.
@@ -3156,7 +3474,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["currentFE0"].read()
 
-    @attribute(dtype="DevDouble", label="FE1 current", unit="Amp")
+    @attribute(dtype="DevDouble", label="FE1 current", unit="Amp", abs_change=1)
     def currentFE1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the FE1 current.
@@ -3165,7 +3483,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["currentFE1"].read()
 
-    @attribute(dtype="DevDouble", label="Analog 2.5 V", unit="Volt")
+    @attribute(dtype="DevDouble", label="Analog 2.5 V", unit="Volt", abs_change=1)
     def voltageAVDD3(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the Analog 2.5 V voltage.
@@ -3174,7 +3492,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageAVDD3"].read()
 
-    @attribute(dtype="DevDouble", label="Vref voltage for DDR0", unit="Volt")
+    @attribute(
+        dtype="DevDouble", label="Vref voltage for DDR0", unit="Volt", abs_change=1
+    )
     def voltageVrefDDR0(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the Vref voltage for DDR0.
@@ -3183,7 +3503,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVrefDDR0"].read()
 
-    @attribute(dtype="DevDouble", label="Vref voltage for DDR1", unit="Volt")
+    @attribute(
+        dtype="DevDouble", label="Vref voltage for DDR1", unit="Volt", abs_change=1
+    )
     def voltageVrefDDR1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the Vref voltage for DDR1.
@@ -3202,7 +3524,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     """
     #     return self._attribute_state["voltageVref2V5"].read()
 
-    @attribute(dtype="DevDouble", label="Management 1.2V", unit="Volt")
+    @attribute(dtype="DevDouble", label="Management 1.2V", unit="Volt", abs_change=1)
     def voltageMan1V2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the Management 1.2V voltage.
@@ -3211,7 +3533,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageMan1V2"].read()
 
-    @attribute(dtype="DevDouble", label="FPGA MGT AV", unit="Volt")
+    @attribute(dtype="DevDouble", label="FPGA MGT AV", unit="Volt", abs_change=1)
     def voltageMGT_AVCC(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the FPGA MGT AV voltage.
@@ -3220,7 +3542,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageMGT_AVCC"].read()
 
-    @attribute(dtype="DevDouble", label="FPGA MGT AVTT", unit="Volt")
+    @attribute(dtype="DevDouble", label="FPGA MGT AVTT", unit="Volt", abs_change=1)
     def voltageMGT_AVTT(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the FPGA MGT AVTT voltage.
@@ -3229,7 +3551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageMGT_AVTT"].read()
 
-    @attribute(dtype="DevDouble", label="Management 5V0", unit="Volt")
+    @attribute(dtype="DevDouble", label="Management 5V0", unit="Volt", abs_change=1)
     def voltageMon5V0(self: MccsTile) -> float | None:
         """
         Return the Management 5V supply of the TPM.
@@ -3238,7 +3560,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageMon5V0"].read()
 
-    @attribute(dtype="DevDouble", label="Management 3V3", unit="Volt")
+    @attribute(dtype="DevDouble", label="Management 3V3", unit="Volt", abs_change=1)
     def voltageMon3V3(self: MccsTile) -> float | None:
         """
         Return the Management 3.3 V supply of the TPM.
@@ -3249,7 +3571,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageMon3V3"].read()
 
-    @attribute(dtype="DevDouble", label="Management 1V8", unit="Volt")
+    @attribute(dtype="DevDouble", label="Management 1V8", unit="Volt", abs_change=1)
     def voltageMon1V8(self: MccsTile) -> float | None:
         """
         Return the Management 1.8 V supply of the TPM.
@@ -3260,7 +3582,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageMon1V8"].read()
 
-    @attribute(dtype="DevDouble", label="SW Analog 1.1 V", unit="Volt")
+    @attribute(dtype="DevDouble", label="SW Analog 1.1 V", unit="Volt", abs_change=1)
     def voltageSW_AVDD1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the SW Analog 1.1 V voltage.
@@ -3269,7 +3591,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageSW_AVDD1"].read()
 
-    @attribute(dtype="DevDouble", label="SW Analog 2.3 V", unit="Volt")
+    @attribute(dtype="DevDouble", label="SW Analog 2.3 V", unit="Volt", abs_change=1)
     def voltageSW_AVDD2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the SW Analog 2.3 V voltage.
@@ -3278,7 +3600,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageSW_AVDD2"].read()
 
-    @attribute(dtype="DevDouble", label="input supply", unit="Volt")
+    @attribute(dtype="DevDouble", label="input supply", unit="Volt", abs_change=1)
     def voltageVIN(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the input supply voltage.
@@ -3287,7 +3609,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVIN"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 0", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 0", unit="Volt", abs_change=1)
     def voltageVM_AGP0(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 0 Voltage Monitor.
@@ -3296,7 +3618,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP0"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 1", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 1", unit="Volt", abs_change=1)
     def voltageVM_AGP1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 1 Voltage Monitor.
@@ -3305,7 +3627,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP1"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 2", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 2", unit="Volt", abs_change=1)
     def voltageVM_AGP2(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 2 Voltage Monitor.
@@ -3314,7 +3636,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP2"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 3", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 3", unit="Volt", abs_change=1)
     def voltageVM_AGP3(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 3 Voltage Monitor.
@@ -3323,7 +3645,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP3"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 4", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 4", unit="Volt", abs_change=1)
     def voltageVM_AGP4(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 4 Voltage Monitor.
@@ -3332,7 +3654,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP4"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 5", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 5", unit="Volt", abs_change=1)
     def voltageVM_AGP5(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 5 Voltage Monitor.
@@ -3341,7 +3663,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP5"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 6", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 6", unit="Volt", abs_change=1)
     def voltageVM_AGP6(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 6 Voltage Monitor.
@@ -3350,7 +3672,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP6"].read()
 
-    @attribute(dtype="DevDouble", label="AD AGP group 7", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD AGP group 7", unit="Volt", abs_change=1)
     def voltageVM_AGP7(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the AD AGP group 7 Voltage Monitor.
@@ -3359,7 +3681,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_AGP7"].read()
 
-    @attribute(dtype="DevDouble", label="Clock Buffer0 3.3V", unit="Volt")
+    @attribute(dtype="DevDouble", label="Clock Buffer0 3.3V", unit="Volt", abs_change=1)
     def voltageVM_CLK0B(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of Clock Buffer0 3.3V Voltage Monitor.
@@ -3368,7 +3690,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_CLK0B"].read()
 
-    @attribute(dtype="DevDouble", label="Clock Buffer1 3.3V", unit="Volt")
+    @attribute(dtype="DevDouble", label="Clock Buffer1 3.3V", unit="Volt", abs_change=1)
     def voltageVM_CLK1B(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of Clock Buffer1 3.3V Voltage Monitor.
@@ -3377,7 +3699,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_CLK1B"].read()
 
-    @attribute(dtype="DevDouble", label="DDR FPGA0 Vtt", unit="Volt")
+    @attribute(dtype="DevDouble", label="DDR FPGA0 Vtt", unit="Volt", abs_change=1)
     def voltageVM_DDR0_VTT(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of DDR FPGA0 Vtt Voltage Monitor.
@@ -3386,7 +3708,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_DDR0_VTT"].read()
 
-    @attribute(dtype="DevDouble", label="DDR4", unit="Volt")
+    @attribute(dtype="DevDouble", label="DDR4", unit="Volt", abs_change=1)
     def voltageVM_DDR1_VDD(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of DDR4 Voltage Monitor.
@@ -3395,7 +3717,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_DDR1_VDD"].read()
 
-    @attribute(dtype="DevDouble", label="DDR FPGA1 Vtt", unit="Volt")
+    @attribute(dtype="DevDouble", label="DDR FPGA1 Vtt", unit="Volt", abs_change=1)
     def voltageVM_DDR1_VTT(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of DDR FPGA1 Vtt Voltage Monitor.
@@ -3404,7 +3726,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_DDR1_VTT"].read()
 
-    @attribute(dtype="DevDouble", label="SW DRVDD 1.8V", unit="Volt")
+    @attribute(dtype="DevDouble", label="SW DRVDD 1.8V", unit="Volt", abs_change=1)
     def voltageVM_DRVDD(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the SW DRVDD 1.8V voltage.
@@ -3413,7 +3735,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_DRVDD"].read()
 
-    @attribute(dtype="DevDouble", label="AD DVDD", unit="Volt")
+    @attribute(dtype="DevDouble", label="AD DVDD", unit="Volt", abs_change=1)
     def voltageVM_DVDD(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of AD DVDD Voltage Monitor.
@@ -3422,7 +3744,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_DVDD"].read()
 
-    @attribute(dtype="DevDouble", label="FE0", unit="Volt")
+    @attribute(dtype="DevDouble", label="FE0", unit="Volt", abs_change=1)
     def voltageVM_FE0(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of FE0 Voltage Monitor.
@@ -3433,7 +3755,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_FE0"].read()
 
-    @attribute(dtype="DevDouble", label="FE1", unit="Volt")
+    @attribute(dtype="DevDouble", label="FE1", unit="Volt", abs_change=1)
     def voltageVM_FE1(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of FE1 Voltage Monitor.
@@ -3444,7 +3766,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_FE1"].read()
 
-    @attribute(dtype="DevDouble", label="FPGA MGT0 AUX", unit="Volt")
+    @attribute(dtype="DevDouble", label="FPGA MGT0 AUX", unit="Volt", abs_change=1)
     def voltageVM_MGT0_AUX(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of FPGA MGT0 AUX Voltage Monitor.
@@ -3453,7 +3775,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_MGT0_AUX"].read()
 
-    @attribute(dtype="DevDouble", label="FPGA MGT1 AUX", unit="Volt")
+    @attribute(dtype="DevDouble", label="FPGA MGT1 AUX", unit="Volt", abs_change=1)
     def voltageVM_MGT1_AUX(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of FPGA MGT1 AUX Voltage Monitor.
@@ -3462,7 +3784,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_MGT1_AUX"].read()
 
-    @attribute(dtype="DevDouble", label="ANALOG PLL", unit="Volt")
+    @attribute(dtype="DevDouble", label="ANALOG PLL", unit="Volt", abs_change=1)
     def voltageVM_PLL(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of the ANALOG PLL Voltage Monitor.
@@ -3471,7 +3793,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["voltageVM_PLL"].read()
 
-    @attribute(dtype="DevDouble", label="VGA DC-DC", unit="Volt")
+    @attribute(dtype="DevDouble", label="VGA DC-DC", unit="Volt", abs_change=1)
     def voltageVM_SW_AMP(self: MccsTile) -> float | None:
         """
         Handle a Tango attribute read of VGA DC-DC Voltage Monitor.

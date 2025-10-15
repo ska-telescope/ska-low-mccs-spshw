@@ -855,6 +855,7 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+        change_event_callbacks["health_state"].assert_not_called()
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -874,6 +875,7 @@ class TestMccsTile:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        change_event_callbacks["health_state"].assert_not_called()
         assert tile_device.healthState == HealthState.OK
         time.sleep(time_to_poll_attributes)
 

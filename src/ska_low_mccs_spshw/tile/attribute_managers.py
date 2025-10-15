@@ -63,6 +63,8 @@ class AttributeManager:
 
         :returns: whether or not the value has changed.
         """
+        if isinstance(value, np.ndarray):
+            return not np.array_equal(value, self._value)
         return value != self._value
 
     def update(self: AttributeManager, value: Any, post: bool = True) -> None:
@@ -85,7 +87,7 @@ class AttributeManager:
                 is_event_required = True
         else:
             # Check for quality or value changes!
-            if self._update_quality(new_value) or self._value_changed(new_value):
+            if self._update_quality(value) or self._value_changed(new_value):
                 is_event_required = True
 
             self._value = new_value
@@ -134,6 +136,35 @@ class AttributeManager:
         self._value_time_quality_callback(self._value, self._last_update, self._quality)
         if self.alarm_handler is not None:
             self.alarm_handler()
+
+
+class StatusCountAttributeManager(AttributeManager):
+    """An AttributeManager for a status/count attribute."""
+
+    def _update_quality(self: AttributeManager, new_value: tuple[bool, int]) -> bool:
+        """
+        Update the attribute quality factor.
+
+        These attributes are formed of a tuple with first index being status
+        and second index being count.
+
+        :param new_value: the value we are checking.
+
+        :return: True if there was a change in quality.
+            False if there was no change.
+        """
+        if new_value is None:
+            evaluated_quality = tango.AttrQuality.ATTR_INVALID
+        else:
+            if new_value[0] is False or (new_value[1] is not None and new_value[1] > 0):
+                evaluated_quality = tango.AttrQuality.ATTR_ALARM
+            else:
+                evaluated_quality = tango.AttrQuality.ATTR_VALID
+        if self._quality != evaluated_quality:
+            self._quality = evaluated_quality
+            return True
+
+        return False
 
 
 class BoolAttributeManager(AttributeManager):

@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 9.0.1
 
 * [THORN-313] Loop over antennas present in mapping in station_component_manager._calculate_delays_per_tile instead of looping over delays. Improved some messages/docstrings.
 * [THORN-249] Add attribute pfb_version to MccsTile.

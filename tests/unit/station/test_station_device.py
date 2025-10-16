@@ -1726,22 +1726,14 @@ def test_TriggerAdcEqualisation(
     change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-    [_], [command_id] = station_device.TriggerAdcEqualisation(
-        json.dumps({"target_adc": 18, "bias": 0.1})
-    )
+    args = json.dumps({"target_adc": 18, "bias": 0.5})
 
-    timeout = 20
-    current_time = 0
-    while current_time < timeout:
-        try:
-            assert (
-                station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
-            )
-            break
-        except AssertionError:
-            time.sleep(1)
-            current_time += 1
-    assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
+    execute_lrc_to_completion(
+        station_device,
+        command_name="TriggerAdcEqualisation",
+        command_arguments=args,
+        timeout=20,  # 20 measurements of 1 second each
+    )
 
 
 def test_health(

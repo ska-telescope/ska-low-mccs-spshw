@@ -273,7 +273,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "required": ["first_channel", "last_channel"],
         }
 
-        trigger_adc_equalization_schema = {
+        trigger_adc_equalisation_schema = {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
@@ -321,7 +321,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             (
                 "TriggerAdcEqualisation",
                 "trigger_adc_equalisation",
-                trigger_adc_equalization_schema,
+                trigger_adc_equalisation_schema,
             ),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),

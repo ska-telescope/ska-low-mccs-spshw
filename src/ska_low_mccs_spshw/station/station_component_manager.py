@@ -3744,8 +3744,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _trigger_adc_equalisation(
         self: SpsStationComponentManager,
-        target_adc: float = 17,
-        bias: float = 0,
+        target_adc: float = 17.0,
+        bias: float = 0.0,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:

@@ -243,12 +243,12 @@ def test_trigger_adc_equalisation(
     bias: float,
 ) -> None:
     """
-    Test the adc triggering equalization.
+    Test the adc triggering equalisation.
 
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
-    :param desired_preadu_levels: expected result after equalization
+    :param desired_preadu_levels: expected result after equalisation
     :param target_adc: the expected average power received by antennas in ADU units.
     :param bias: user specified bias.
     """
@@ -272,9 +272,9 @@ def test_trigger_adc_equalisation(
 
     station_component_manager._trigger_adc_equalisation(target_adc, bias)
 
-    if station_component_manager._desired_preadu_levels is not None:
-        for value in station_component_manager._desired_preadu_levels:
-            assert value == desired_preadu_levels
+    assert station_component_manager._desired_preadu_levels is not None
+    for value in station_component_manager._desired_preadu_levels:
+        assert value == desired_preadu_levels
 
 
 def test_load_pointing_delays(

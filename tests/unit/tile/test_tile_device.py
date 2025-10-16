@@ -303,6 +303,7 @@ class TestMccsTile:
             "healthReport",
             "inheritModes",
             "eventHistory",
+            "attributeUsedForHealth",
         ]
 
     @pytest.fixture(name="tango_attributes")

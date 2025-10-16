@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, PowerState, ResultCode
+from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
@@ -1083,14 +1084,18 @@ class TestMccsTileTpmDriver:
         # Set a max threshold below current temperature
         less_than_initial_value = initial_value - 1
 
-        tile_device.SetAttributeThresholds(
-            json.dumps({attribute: {"max_alarm": str(less_than_initial_value)}})
-        )
+        conf = tile_device.get_attribute_config(attribute)
+        conf.alarms.max_alarm = str(less_than_initial_value)
+        tile_device.set_attribute_config(conf)
 
-        assert (
-            tile_device.read_attribute(attribute).quality
-            == tango.AttrQuality.ATTR_ALARM
-        )
+        # NOTE: A call to read_attribute immediatly after set_attribute_config
+        # has been seen to cause a segfault. This is believed to be a race condition
+        # between pushing an attribute and reading an attribute. This seems to be
+        # present in the MultiDeviceTestContext. Was unable to replicate in a real
+        # environment.
+        change_event_callbacks["generic_health_attribute"].assert_change_event(Anything)
+        assert tile_device[attribute].quality == tango.AttrQuality.ATTR_ALARM
+
         tile_device.unsubscribe_event(sub_id)
         tile_device.SetHealthStructureInBackend(
             json.dumps({attribute: less_than_initial_value + 2})

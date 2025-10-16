@@ -353,16 +353,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: result from delete_device.
         """
-        self._stopping = True
-        if self._health_recorder is not None:
-            self._health_recorder.cleanup()
-            self._health_recorder = None
-
         try:
             # We do not want to raise a exception here
             # This can cause a segfault.
             self.component_manager.stop_communicating()
             del self.component_manager
+            self._stopping = True
+            if self._health_recorder is not None:
+                self._health_recorder.cleanup()
+                self._health_recorder = None
         except Exception:  # pylint: disable=broad-except
             pass
         return super().delete_device()
@@ -399,6 +398,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"\tPollRate: {self.PollRate}\n"
             f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
             f"\tStaticDelays: {self.StaticDelays}\n"
+            f"\tUseAttributesForHealth: {self.UseAttributesForHealth}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -2424,6 +2424,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: Return the current simulation mode
         """
         return self.SimulationConfig
+
+    @attribute(dtype=bool)
+    def attributeUsedForHealth(self: MccsTile) -> bool:
+        """
+        Report the health evaluation used.
+
+        :return: True if we are ising attribute quality to
+            evaluate health ADR-115.
+        """
+        return self.UseAttributesForHealth
 
     @simulationMode.write  # type: ignore[no-redef]
     def simulationMode(  # pylint: disable=arguments-differ

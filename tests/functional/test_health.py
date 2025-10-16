@@ -44,7 +44,15 @@ def test_failed_when_tile_monitoring_point_is_out_of_bounds(
     :param station_devices: dictionary of proxies with device name as a key.
     """
     for tile in station_devices["Tiles"]:
-        tile.healthModelParams = "{}"
+        if tile.attributeUsedForHealth:
+            # The health is evaluated from the quality factor of the attribute
+            # We are modifying an attribute configuration here.
+            conf = tile.get_attribute_config("boardTemperature")
+            conf.alarms.min_alarm = "0"
+            conf.alarms.max_alarm = "90"
+            tile.set_attribute_config(conf)
+        else:
+            tile.healthModelParams = "{}"
 
 
 @scenario(
@@ -397,7 +405,15 @@ def set_tile_health_params(station_devices: dict[str, tango.DeviceProxy]) -> Non
     }
     tile_devices = station_devices["Tiles"]
     for tile_device in tile_devices:
-        tile_device.healthModelParams = json.dumps(new_board_params)
+        if tile_device.attributeUsedForHealth:
+            # The health is evaluated from the quality factor of the attribute
+            # We are modifying an attribute configuration here.
+            conf = tile_device.get_attribute_config("boardTemperature")
+            conf.alarms.min_alarm = "100"
+            conf.alarms.max_alarm = "170"
+            tile_device.set_attribute_config(conf)
+        else:
+            tile_device.healthModelParams = json.dumps(new_board_params)
 
 
 @when("the Subracks board temperature thresholds are adjusted")
@@ -454,8 +470,11 @@ def read_all_tile_attributes(
     time.sleep(10)
     tiles = station_devices["Tiles"]
     for tile in tiles:
+        extra_excludes = []
+        if tile.attributeUsedForHealth:
+            extra_excludes = ["healthModelParams"]
         for attr in tile.get_attribute_list():
-            if attr in excluded_tile_attributes:
+            if attr in excluded_tile_attributes + extra_excludes:
                 continue
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)

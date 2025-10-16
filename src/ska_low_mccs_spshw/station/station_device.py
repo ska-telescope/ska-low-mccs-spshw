@@ -277,8 +277,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
-                "target_adc": {"type": "number"},
-                "bias": {"type": "number"},
+                "target_adc": {"type": "number", "minimum": 1},
+                "bias": {"type": "number", "minimum": -32, "maximum": 32},
             },
             "required": [],
         }

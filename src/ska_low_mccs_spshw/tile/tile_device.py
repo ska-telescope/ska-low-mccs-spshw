@@ -1095,10 +1095,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
-        min_value=15.0,
-        max_value=70.0,
-        min_alarm=16.0,
-        max_alarm=65.0,
     )
     def boardTemperature(
         self: MccsTile,
@@ -1998,8 +1994,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        max_warning=1,
-        max_alarm=2,
         abs_change=1,
     )
     def I2C_access_alm(
@@ -2018,8 +2012,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        max_warning=1,
-        max_alarm=2,
         abs_change=1,
     )
     def temperature_alm(
@@ -2036,7 +2028,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["temperature_alm"].read()
 
-    @attribute(dtype="DevShort", max_warning=1, max_alarm=2, abs_change=1)
+    @attribute(dtype="DevShort", abs_change=1)
     def voltage_alm(
         self: MccsTile,
     ) -> int | None:
@@ -2053,8 +2045,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        max_warning=1,
-        max_alarm=2,
         abs_change=1,
     )
     def SEM_wd(
@@ -2073,8 +2063,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        max_warning=1,
-        max_alarm=2,
         abs_change=1,
     )
     def MCU_wd(
@@ -2284,10 +2272,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevDouble",
         abs_change=0.05,
-        min_value=4.5,
-        max_value=5.5,
-        min_alarm=4.55,
-        max_alarm=5.45,
     )
     def voltageMon(self: MccsTile) -> float | None:
         """
@@ -2362,10 +2346,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
-        min_value=15.0,
-        max_value=75.0,
-        min_alarm=16.0,
-        max_alarm=68.0,
     )
     def fpga1Temperature(
         self: MccsTile,
@@ -2379,11 +2359,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevDouble",
-        abs_change=0.2,
-        min_value=15.0,
-        max_value=75.0,
-        min_alarm=16.0,
-        max_alarm=68.0,
+        abs_change=0.1,
     )
     def fpga2Temperature(
         self: MccsTile,

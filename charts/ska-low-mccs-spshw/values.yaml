@@ -19,9 +19,9 @@ global:
 
 # Image to be used for simulators etc.
 image:
-  registry: artefact.skao.int
+  registry: docker.io/library # artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 9.0.0
+  tag: 9.0.0-dirty
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -45,12 +45,304 @@ ska-tango-devices:
   labels:
     app: ska-low-mccs-spshw
 
-  # deviceDefaults:
-  #   MccsTile:
-  #     TpmCpldPort: 10000
-  #     TpmVersion: tpm_v1_6
-  #     AntennasPerTile: 16
-  #     PollRate: 0.2
+  # Attribute alarm device defaults.
+  deviceDefaults:
+    MccsTile:
+      boardTemperature->max_alarm: 70.0
+      boardTemperature->max_warning: 65.0
+      boardTemperature->min_warning: 16.0
+      boardTemperature->min_alarm: 15.0
+
+      f2f_soft_errors->max_alarm: 10
+      f2f_soft_errors->max_warning: 1
+
+      f2f_hard_errors->max_alarm: 1
+
+      temperatureADC0->max_alarm: 70.0
+      temperatureADC0->max_warning: 65.0
+      temperatureADC0->min_warning: 16.0
+      temperatureADC0->min_alarm: 15.0
+
+      temperatureADC1->max_alarm: 70.0
+      temperatureADC1->max_warning: 65.0
+      temperatureADC1->min_warning: 16.0
+      temperatureADC1->min_alarm: 15.0
+
+      temperatureADC2->max_alarm: 70.0
+      temperatureADC2->max_warning: 65.0
+      temperatureADC2->min_warning: 16.0
+      temperatureADC2->min_alarm: 15.0
+
+      temperatureADC3->max_alarm: 70.0
+      temperatureADC3->max_warning: 65.0
+      temperatureADC3->min_warning: 16.0
+      temperatureADC3->min_alarm: 15.0
+
+      temperatureADC4->max_alarm: 70.0
+      temperatureADC4->max_warning: 65.0
+      temperatureADC4->min_warning: 16.0
+      temperatureADC4->min_alarm: 15.0
+
+      temperatureADC5->max_alarm: 70.0
+      temperatureADC5->max_warning: 65.0
+      temperatureADC5->min_warning: 16.0
+      temperatureADC5->min_alarm: 15.0
+
+      temperatureADC6->max_alarm: 70.0
+      temperatureADC6->max_warning: 65.0
+      temperatureADC6->min_warning: 16.0
+      temperatureADC6->min_alarm: 15.0
+
+      temperatureADC7->max_alarm: 70.0
+      temperatureADC7->max_warning: 65.0
+      temperatureADC7->min_warning: 16.0
+      temperatureADC7->min_alarm: 15.0
+
+      temperatureADC8->max_alarm: 70.0
+      temperatureADC8->max_warning: 65.0
+      temperatureADC8->min_warning: 16.0
+      temperatureADC8->min_alarm: 15.0
+
+      temperatureADC9->max_alarm: 70.0
+      temperatureADC9->max_warning: 65.0
+      temperatureADC9->min_warning: 16.0
+      temperatureADC9->min_alarm: 15.0
+
+      temperatureADC10->max_alarm: 70.0
+      temperatureADC10->max_warning: 65.0
+      temperatureADC10->min_warning: 16.0
+      temperatureADC10->min_alarm: 15.0
+
+      temperatureADC11->max_alarm: 70.0
+      temperatureADC11->max_warning: 65.0
+      temperatureADC11->min_warning: 16.0
+      temperatureADC11->min_alarm: 15.0
+
+      temperatureADC12->max_alarm: 70.0
+      temperatureADC12->max_warning: 65.0
+      temperatureADC12->min_warning: 16.0
+      temperatureADC12->min_alarm: 15.0
+
+      temperatureADC13->max_alarm: 70.0
+      temperatureADC13->max_warning: 65.0
+      temperatureADC13->min_warning: 16.0
+      temperatureADC13->min_alarm: 15.0
+
+      temperatureADC14->max_alarm: 70.0
+      temperatureADC14->max_warning: 65.0
+      temperatureADC14->min_warning: 16.0
+      temperatureADC14->min_alarm: 15.0
+
+      temperatureADC15->max_alarm: 70.0
+      temperatureADC15->max_warning: 65.0
+      temperatureADC15->min_warning: 16.0
+      temperatureADC15->min_alarm: 15.0
+
+      I2C_access_alm->max_alarm: 2
+      I2C_access_alm->max_warning: 1
+
+      temperature_alm->max_alarm: 2
+      temperature_alm->max_warning: 1
+
+      voltage_alm->max_alarm: 2
+      voltage_alm->max_warning: 1
+
+
+      SEM_wd->max_alarm: 2
+      SEM_wd->max_warning: 1
+
+      MCU_wd->max_alarm: 2
+      MCU_wd->max_warning: 1
+
+      voltageMon->max_alarm: 5.5
+      voltageMon->max_warning: 5.45
+      voltageMon->min_warning: 4.55
+      voltageMon->min_alarm: 4.5
+
+      fpga1Temperature->max_alarm: 75.0
+      fpga1Temperature->max_warning: 68.0
+      fpga1Temperature->min_warning: 16.0
+      fpga1Temperature->min_alarm: 15.0
+
+      fpga2Temperature->max_alarm: 75.0
+      fpga2Temperature->max_warning: 68.0
+      fpga2Temperature->min_warning: 16.0
+      fpga2Temperature->min_alarm: 15.0
+
+      currentFE0->max_alarm: 2.62
+      currentFE0->max_warning: 2.60
+      currentFE0->min_warning: 2.40
+      currentFE0->min_alarm: 2.37
+
+      currentFE1->max_alarm: 2.62
+      currentFE1->max_warning: 2.60
+      currentFE1->min_warning: 2.40
+      currentFE1->min_alarm: 2.37
+
+      voltageAVDD3->max_alarm: 2.6
+      voltageAVDD3->max_warning: 2.57
+      voltageAVDD3->min_warning: 2.40
+      voltageAVDD3->min_alarm: 2.37
+
+      voltageVrefDDR0->max_alarm: 0.63
+      voltageVrefDDR0->min_alarm: 0.57
+
+      voltageVrefDDR1->max_alarm: 0.63
+      voltageVrefDDR1->min_alarm: 0.57
+
+      voltageMan1V2->max_alarm: 1.26
+      voltageMan1V2->min_alarm: 1.14
+
+      voltageMGT_AVCC->max_alarm: 0.97
+      voltageMGT_AVCC->min_alarm: 0.83
+
+      voltageMGT_AVTT->max_alarm: 1.26
+      voltageMGT_AVTT->min_alarm: 1.14
+
+      voltageMon5V0->max_alarm: 5.19
+      voltageMon5V0->min_alarm: 4.69
+
+      voltageMon3V3->max_alarm: 3.88
+      voltageMon3V3->min_alarm: 3.51
+
+      voltageMon1V8->max_alarm: 2.10
+      voltageMon1V8->min_alarm: 1.90
+
+      voltageSW_AVDD1->max_alarm: 1.16
+      voltageSW_AVDD1->min_alarm: 1.04
+
+      voltageSW_AVDD2->max_alarm: 2.42
+      voltageSW_AVDD2->min_alarm: 2.18
+
+      voltageVIN->max_alarm: 12.6
+      voltageVIN->min_alarm: 11.4
+
+      voltageVM_AGP0->max_alarm: 0.99
+      voltageVM_AGP0->min_alarm: 0.84
+
+      voltageVM_AGP1->max_alarm: 0.99
+      voltageVM_AGP1->min_alarm: 0.84
+
+      voltageVM_AGP2->max_alarm: 0.99
+      voltageVM_AGP2->min_alarm: 0.84
+
+      voltageVM_AGP3->max_alarm: 0.99
+      voltageVM_AGP3->min_alarm: 0.84
+
+      voltageVM_AGP4->max_alarm: 0.99
+      voltageVM_AGP4->min_alarm: 0.84
+
+      voltageVM_AGP5->max_alarm: 0.99
+      voltageVM_AGP5->min_alarm: 0.84
+
+      voltageVM_AGP6->max_alarm: 0.99
+      voltageVM_AGP6->min_alarm: 0.84
+
+      voltageVM_AGP7->max_alarm: 0.99
+      voltageVM_AGP7->min_alarm: 0.84
+
+      voltageVM_CLK0B->max_alarm: 3.56
+      voltageVM_CLK0B->min_alarm: 3.04
+
+      voltageVM_CLK1B->max_alarm: 3.56
+      voltageVM_CLK1B->min_alarm: 3.04
+
+      voltageVM_DDR0_VTT->max_alarm: 0.65
+      voltageVM_DDR0_VTT->min_alarm: 0.55
+
+      voltageVM_DDR1_VDD->max_alarm: 1.30
+      voltageVM_DDR1_VDD->min_alarm: 1.10
+
+      voltageVM_DDR1_VTT->max_alarm: 0.65
+      voltageVM_DDR1_VTT->min_alarm: 0.55
+
+      voltageVM_DRVDD->max_alarm: 1.89
+      voltageVM_DRVDD->min_alarm: 1.71
+
+      voltageVM_DVDD->max_alarm: 1.19
+      voltageVM_DVDD->min_alarm: 1.01
+
+      voltageVM_FE0->max_alarm: 3.78
+      voltageVM_FE0->min_alarm: 3.22
+
+      voltageVM_FE1->max_alarm: 3.78
+      voltageVM_FE1->min_alarm: 3.22
+
+      voltageVM_MGT0_AUX->max_alarm: 1.94
+      voltageVM_MGT0_AUX->min_alarm: 1.66
+
+      voltageVM_MGT1_AUX->max_alarm: 1.94
+      voltageVM_MGT1_AUX->min_alarm: 1.66
+
+      voltageVM_PLL->max_alarm: 3.56
+      voltageVM_PLL->min_alarm: 3.04
+
+      voltageVM_SW_AMP->max_alarm: 3.78
+      voltageVM_SW_AMP->min_alarm: 3.22
+
+    MccsSubrack:
+      backplaneTemperatures->max_alarm: 50.0
+      backplaneTemperatures->max_warning: 45.0
+      backplaneTemperatures->min_warning: 15.0
+      backplaneTemperatures->min_alarm: 10.0
+
+      boardTemperatures->max_alarm: 50.0
+      boardTemperatures->max_warning: 45.0
+      boardTemperatures->min_warning: 15.0
+      boardTemperatures->min_alarm: 10.0
+
+      powerSupplyPowers->max_alarm: 600.0
+      powerSupplyPowers->max_warning: 550.0
+      powerSupplyPowers->min_warning: 50.0
+      powerSupplyPowers->min_alarm: 0.0
+
+      powerSupplyVoltages->max_alarm: 253.0
+      powerSupplyVoltages->max_warning: 250.0
+      powerSupplyVoltages->min_warning: 210.0
+      powerSupplyVoltages->min_alarm: 207.0
+
+      internalVoltages1V1->max_alarm: 1.13
+      internalVoltages1V1->min_alarm: 1.07
+
+      internalVoltages1V5->max_alarm: 1.54
+      internalVoltages1V5->min_alarm: 1.46
+
+      internalVoltages2V5->max_alarm: 2.62
+      internalVoltages2V5->min_alarm: 2.38
+
+      internalVoltages2V8->max_alarm: 2.94
+      internalVoltages2V8->min_alarm: 2.66
+
+      internalVoltages3V->max_alarm: 3.15
+      internalVoltages3V->min_alarm: 2.85
+
+      internalVoltages3V3->max_alarm: 3.46
+      internalVoltages3V3->min_alarm: 3.13
+
+      internalVoltages5V->max_alarm: 5.25
+      internalVoltages5V->min_alarm: 4.75
+
+      internalVoltagesARM->max_alarm: 1.42
+      internalVoltagesARM->min_alarm: 1.28
+
+      internalVoltagesCORE->max_alarm: 1.24
+      internalVoltagesCORE->min_alarm: 1.16
+
+      internalVoltagesDDR->max_alarm: 1.39
+      internalVoltagesDDR->min_alarm: 1.31
+
+      internalVoltagesPOWERIN->max_alarm: 12.60
+      internalVoltagesPOWERIN->min_alarm: 11.40
+
+      internalVoltagesSOC->max_alarm: 1.39
+      internalVoltagesSOC->min_alarm: 1.31
+      
+
+
+      attr->max_alarm: values
+      attr->max_warning: values
+      attr->min_warning: values
+      attr->min_alarm: values
 
   # devices:
   #   MccsTile:
@@ -66,9 +358,9 @@ ska-tango-devices:
       metadata:
         component: spshw
       image:
-        registry: artefact.skao.int
+        registry: docker.io/library # artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 9.0.0
+        tag: 9.0.0-dirty
         pullPolicy: IfNotPresent
       command: spshw
       resources:

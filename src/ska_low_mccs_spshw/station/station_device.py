@@ -1761,11 +1761,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :param argin: a JSON-ified dictionary containing:
 
             - target_adc: the expected average power received by antennas in ADU units.
+                Has an input minimum of 0, but in code its limited to 4.2e-7
+                (corresponds to the maxiumum output of 31.75 dB). There is no maximum
+                value, however, 40 ADUs will result in 0 dB with no bias and 1600 ADUs
+                will result in 0 dB with the maxiumum bias allowed of 32dB.
                 Defaults to 17.
             - bias: user specifed bias in dB added to the antenna preadu levels.
-                Defaults to 0. Note: since the result is rounded during sanitisation,
-                bias changes are also rounded and as a result they are only noticeable
-                in 0.25 increments.
+                Bias input value rounded as part of value sanitation and as a result
+                it increases in steps of 0.25. Ranges from -32 to 32 with default 0.
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.

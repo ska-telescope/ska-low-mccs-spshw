@@ -236,8 +236,9 @@ def test_communication(
         (8.5, 17, 1),
         (6.5, 17, -1),
         # testing limits
-        (31.75, 0, 32),
-        (0, 200, -32),
+        (31.75, 0, -32),
+        (0, 1600, 32),
+        (0, 40, 0),
     ],
 )
 def test_trigger_adc_equalisation(

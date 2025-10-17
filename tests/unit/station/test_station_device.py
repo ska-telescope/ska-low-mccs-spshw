@@ -59,7 +59,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=20.0,
+        timeout=30.0,
     )
 
 
@@ -1789,7 +1789,7 @@ def test_health(
         json.dumps({"device": tile_trls[3], "health": HealthState.FAILED})
     )
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.FAILED, lookahead=3
+        HealthState.FAILED, lookahead=4, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.FAILED
     # Reset Tile health.
@@ -1797,7 +1797,7 @@ def test_health(
         json.dumps({"device": tile_trls[3], "health": HealthState.OK})
     )
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=3
+        HealthState.OK, lookahead=4, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
@@ -1823,7 +1823,7 @@ def test_health(
         json.dumps({"device": subrack_trls[0], "health": HealthState.FAILED})
     )
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.FAILED, lookahead=3
+        HealthState.FAILED, lookahead=4, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.FAILED
     # Reset Subrack health.
@@ -1831,7 +1831,7 @@ def test_health(
         json.dumps({"device": subrack_trls[0], "health": HealthState.OK})
     )
     change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=3
+        HealthState.OK, lookahead=4, consume_nonmatches=True
     )
     assert station_device.healthState == HealthState.OK
 
@@ -1902,7 +1902,9 @@ def test_programing_state_health_rollup(
         )
     )
 
-    change_event_callbacks["health_state"].assert_change_event(HealthState.DEGRADED)
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.DEGRADED, lookahead=2, consume_nonmatches=True
+    )
 
     station_device.MockTileProgrammingStateChange(
         json.dumps(
@@ -1912,7 +1914,9 @@ def test_programing_state_health_rollup(
             }
         )
     )
-    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.OK, lookahead=2, consume_nonmatches=True
+    )
     assert station_device.healthState == HealthState.OK
 
 

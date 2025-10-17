@@ -3773,7 +3773,12 @@ class SpsStationComponentManager(
         adc_medians = np.median(adc_data, axis=0)
 
         # adc deltas
-        adc_deltas = 20 * np.log10(adc_medians / target_adc)
+        # The maximum attenuation is 127/4=31.75 dB
+        # 10^(-31.75/10) = 0.000668
+        # any target_adc < 0.000668 will be larger than the limit set.
+        # We allow a 32 dB bias range -> reduce to 4.2*10^(-7) from:
+        # 10^(-3.175-3.2) = 10^(-6.375)
+        adc_deltas = 20 * np.log10(adc_medians / max(target_adc, 4.2e-7))
 
         # calculate ideal attenuation
         preadu_levels = np.concatenate([t.preadu_levels() for t in tpms])

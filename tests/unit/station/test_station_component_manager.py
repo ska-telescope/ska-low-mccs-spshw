@@ -226,19 +226,24 @@ def test_communication(
 
 
 @pytest.mark.parametrize(
-    ("desired_preadu_levels", "target_adc", "bias"),
+    ("result", "target_adc", "bias"),
     [
         (7.5, 17, 0),
+        # testing target adc
         (9.25, 14, 0),
         (6.0, 20, 0),
+        # testing bias
         (8.5, 17, 1),
-        (7.0, 20, 1),
+        (6.5, 17, -1),
+        # testing limits
+        (31.75, 0, 32),
+        (0, 200, -32),
     ],
 )
 def test_trigger_adc_equalisation(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    desired_preadu_levels: float,
+    result: float,
     target_adc: float,
     bias: float,
 ) -> None:
@@ -248,7 +253,7 @@ def test_trigger_adc_equalisation(
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
-    :param desired_preadu_levels: expected result after equalisation
+    :param result: expected result after equalisation
     :param target_adc: the expected average power received by antennas in ADU units.
     :param bias: user specified bias.
     """
@@ -274,7 +279,7 @@ def test_trigger_adc_equalisation(
 
     assert station_component_manager._desired_preadu_levels is not None
     for value in station_component_manager._desired_preadu_levels:
-        assert value == desired_preadu_levels
+        assert value == result
 
 
 def test_load_pointing_delays(

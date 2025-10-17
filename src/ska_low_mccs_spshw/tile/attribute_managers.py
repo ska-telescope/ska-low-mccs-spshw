@@ -63,6 +63,8 @@ class AttributeManager:
 
         :returns: whether or not the value has changed.
         """
+        if isinstance(value, np.ndarray):
+            return not np.array_equal(value, self._value)
         return value != self._value
 
     def update(self: AttributeManager, value: Any, post: bool = True) -> None:
@@ -85,7 +87,7 @@ class AttributeManager:
                 is_event_required = True
         else:
             # Check for quality or value changes!
-            if self._update_quality(new_value) or self._value_changed(new_value):
+            if self._update_quality(value) or self._value_changed(new_value):
                 is_event_required = True
 
             self._value = new_value

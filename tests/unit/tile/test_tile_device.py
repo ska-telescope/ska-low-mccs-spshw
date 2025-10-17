@@ -72,6 +72,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "adc_power",
         "pps_present",
         "track_lrc_command",
+        "alarm_attribute",
         "attribute_state",
         timeout=9.0,
     )
@@ -884,6 +885,7 @@ class TestMccsTile:
             "coreCommunicationStatus",
             "ddr_write_size",
             "ddr_rd_cnt",
+            "timing_pll_40g_count",  # Not updated in simulated bios version
             "ddr_wr_cnt",
             "ddr_rd_dat_cnt",
         ]
@@ -1040,7 +1042,25 @@ class TestMccsTile:
 
     @pytest.mark.parametrize(
         "attribute_name",
-        ["adcPower", "preaduLevels", "tileProgrammingState", "linkup_loss_count"],
+        [
+            "adcPower",
+            "preaduLevels",
+            "tileProgrammingState",
+            "linkup_loss_count",
+            "timing_pll_count",
+            "voltageVM_SW_AMP",
+            "voltageVrefDDR0",
+            "currentTileBeamformerFrame",
+            "temperatureADC14",
+            "f2f_pll_status",
+            "clock_managers_status",
+            "clock_managers_count",
+            "lane_error_count",
+            "resync_count",
+            "station_beamformer_status",
+            "adc_pll_status",
+            "timing_pll_40g_status",
+        ],
     )
     def test_archive(
         self: TestMccsTile,
@@ -1095,10 +1115,38 @@ class TestMccsTile:
             == tile_simulator.tpm.info["fpga_firmware"]
         )
 
-    def test_ppsPresent(
+    @pytest.mark.parametrize(
+        ("attribute_name", "health_path", "write_value"),
+        [
+            (
+                "ppsPresent",
+                ["timing", "pps", "status"],
+                False,
+            ),
+            (
+                "f2f_pll_status",
+                ["io", "f2f_interface", "pll_status"],
+                (False, 0),
+            ),
+            (
+                "f2f_pll_counter",
+                ["io", "f2f_interface", "pll_status"],
+                (True, 1),
+            ),
+            (
+                "fpga0_qpll_counter",
+                ["io", "jesd_interface", "qpll_status", "FPGA0"],
+                (True, 1),
+            ),
+        ],
+    )
+    def test_alarmedAttribute(
         self: TestMccsTile,
         on_tile_device: MccsDeviceProxy,
         tile_component_manager: unittest.mock.Mock,
+        attribute_name: str,
+        health_path: list[str],
+        write_value: Any,
         tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -1109,6 +1157,11 @@ class TestMccsTile:
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param attribute_name: the name of the attribute under test
+        :param health_path: the path to the monitoring point
+            in the backend simulator.
+        :param write_value: A value to write that we
+            expect to cause an alarm.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         :param tile_component_manager: A component manager.
@@ -1116,31 +1169,40 @@ class TestMccsTile:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         """
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value="TEMPERATURES"
-        )
-        # This sleep is to ensure a poll has occured
-        time.sleep(0.1)
         on_tile_device.subscribe_event(
-            "ppsPresent",
+            attribute_name,
             EventType.CHANGE_EVENT,
-            change_event_callbacks["pps_present"],
+            change_event_callbacks["alarm_attribute"],
         )
-        change_event_callbacks["pps_present"].assert_change_event(True)
+        change_event_callbacks["alarm_attribute"].assert_change_event(Anything)
         assert (
-            on_tile_device.read_attribute("ppspresent").quality
+            on_tile_device.read_attribute(attribute_name).quality
             == AttrQuality.ATTR_VALID
         )
         tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
 
-        # Simulate disconnection the PPS.
-        tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
+        def set_nested_value(d: dict[str, Any], keys: list[str], value: Any) -> None:
+            """
+            Set a value in a dictionary.
 
-        change_event_callbacks["pps_present"].assert_change_event(False)
+            :param d: the dictionary of to add the new value.
+            :param keys: the path to plave a value.
+            :param value: the value to place at end of path.
+            """
+            for key in keys[:-1]:
+                d = d.setdefault(key, {})  # ensure the path exists
+            d[keys[-1]] = value
+
+        # Simulate an alarm event
+        set_nested_value(
+            tile_simulator._tile_health_structure, health_path, write_value
+        )
+
+        change_event_callbacks["alarm_attribute"].assert_change_event(Anything)
         assert (
-            on_tile_device.read_attribute("ppspresent").quality
+            on_tile_device.read_attribute(attribute_name).quality
             == AttrQuality.ATTR_ALARM
         )
         assert on_tile_device.state() == DevState.ALARM

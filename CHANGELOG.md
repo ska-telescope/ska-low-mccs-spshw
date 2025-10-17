@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+* [THORN-261] Alarms added to adc_pll_status, station_beamformer_error_count, station_beamformer_flagged_count, crc_error_count, bip_error_count, decode_error_count, linkup_loss_count, data_router_status, ddr_reset_counter, f2f_soft_errors, f2f_hard_errors, resync_count, lane_error_count, clock_managers_count, clock_managers_status, clocks, adc_sysref_counter, adc_sysref_timing_requirements, fpga0_qpll_status, fpga0_qpll_counter, fpga1_qpll_status, fpga1_qpll_counter, f2f_pll_status, f2f_pll_counter, timing_pll_status, timing_pll_count, timing_pll_40g_status, timing_pll_40g_count, station_beamformer_status, tile_beamformer_status, arp, udp_status, ddr_initialisation, lane_status, link_status
+* [THORN-261] attribute adc_pll_status converted from string to 2d array.
+* [THORN-261] attribute station_beamformer_error_count, station_beamformer_flagged_count, crc_error_count, bip_error_count, decode_error_count, linkup_loss_count, data_router_status, ddr_reset_counter, resync_count, linkup_loss_count, lane_error_count, adc_sysref_counter, adc_sysref_timing_requirements converted to a list of int.
+* [THORN-261] attribute clocks converted to a array of int
+* [THORN-261] Add abs_change and archive_abs_change configuration to
+attributes.
+* [THORN-261] Split attribute timing_pll_40g_status into timing_pll_40g_status and timing_pll_40g_count.
+* [THORN-261] Split attribute timing_pll_status into timing_pll_status and
+timing_pll_count
+* [THORN-261] Split attribute f2f_pll_status into f2f_pll_status and
+f2f_pll_counter
+* [THORN-261] Split attribute qll_status into fpga1_qpll_counter, fpga1_qpll_status, fpga0_qpll_status, fpga0_qpll_counter
+* [THORN-261] attribute clock_managers converted clock_managers_status and clock_managers_count, both being a list of ints.
+
 ## 9.1.0
 
 * [THORN-249] Add attribute pfb_version to MccsTile.
@@ -11,7 +25,6 @@
 ## 9.0.0
 
 * [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0 - Simplified tile 40G ethernet configuration
-
 
 ## 8.0.2
 

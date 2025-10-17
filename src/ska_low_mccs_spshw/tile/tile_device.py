@@ -47,9 +47,8 @@ from .attribute_converters import (
     clock_managers_count,
     clock_managers_status,
     clocks_to_list,
-    flatten_fpga_index,
     flatten_list,
-    lane_error_to_list,
+    lane_error_to_array,
     serialise_np_object,
     serialise_object,
     udp_error_count_to_list,
@@ -353,26 +352,47 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_count": "timing_pll_40g_count",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
-            "clocks": "clocks",
-            "clock_managers_count": "clock_managers_count",
-            "clock_managers_status": "clock_managers_status",
-            "lane_error_count": "lane_error_count",
-            "resync_count": "resync_count",
+            "fpga0_clocks": "fpga0_clocks",
+            "fpga1_clocks": "fpga1_clocks",
+            "fpga0_clock_managers_count": "fpga0_clock_managers_count",
+            "fpga0_clock_managers_status": "fpga0_clock_managers_status",
+            "fpga1_clock_managers_count": "fpga1_clock_managers_count",
+            "fpga1_clock_managers_status": "fpga1_clock_managers_status",
+            "fpga0_lane_error_count": "fpga0_lane_error_count",
+            "fpga1_lane_error_count": "fpga1_lane_error_count",
+            "fpga0_resync_count": "fpga0_resync_count",
+            "fpga1_resync_count": "fpga1_resync_count",
             "ddr_initialisation": "ddr_initialisation",
-            "ddr_reset_counter": "ddr_reset_counter",
+            "fpga0_ddr_reset_counter": "fpga0_ddr_reset_counter",
+            "fpga1_ddr_reset_counter": "fpga1_ddr_reset_counter",
             # "ddr_rd_cnt": "ddr_rd_cnt",
             # "ddr_wr_cnt": "ddr_wr_cnt",
             # "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
-            "crc_error_count": "crc_error_count",
-            "bip_error_count": "bip_error_count",
-            "decode_error_count": "decode_error_count",
-            "linkup_loss_count": "linkup_loss_count",
-            "data_router_status": "data_router_status",
+            "fpga0_crc_error_count": "fpga0_crc_error_count",
+            "fpga1_crc_error_count": "fpga1_crc_error_count",
+            "fpga0_bip_error_count": "fpga0_bip_error_count",
+            "fpga0_decode_error_count": "fpga0_decode_error_count",
+            "fpga1_bip_error_count": "fpga1_bip_error_count",
+            "fpga1_decode_error_count": "fpga1_decode_error_count",
+            "fpga0_linkup_loss_count": "fpga0_linkup_loss_count",
+            "fpga1_linkup_loss_count": "fpga1_linkup_loss_count",
+            "fpga0_data_router_status": "fpga0_data_router_status",
+            "fpga1_data_router_status": "fpga1_data_router_status",
             "data_router_discarded_packets": "data_router_discarded_packets",
             "tile_beamformer_status": "tile_beamformer_status",
             "station_beamformer_status": "station_beamformer_status",
-            "station_beamformer_error_count": "station_beamformer_error_count",
-            "station_beamformer_flagged_count": "station_beamformer_flagged_count",
+            "fpga0_station_beamformer_error_count": (
+                "fpga0_station_beamformer_error_count"
+            ),
+            "fpga1_station_beamformer_error_count": (
+                "fpga1_station_beamformer_error_count"
+            ),
+            "fpga0_station_beamformer_flagged_count": (
+                "fpga0_station_beamformer_flagged_count"
+            ),
+            "fpga1_station_beamformer_flagged_count": (
+                "fpga1_station_beamformer_flagged_count"
+            ),
             "core_communication": "coreCommunicationStatus",
             "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
             "board_temperature": "boardTemperature",
@@ -385,19 +405,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         attribute_converters: dict[str, Any] = {
             "adc_pll_status": adc_pll_to_list,
-            "bip_error_count": udp_error_count_to_list,
-            "decode_error_count": udp_error_count_to_list,
-            "linkup_loss_count": flatten_fpga_index,
-            "data_router_status": flatten_fpga_index,
-            "crc_error_count": flatten_fpga_index,
-            "ddr_reset_counter": flatten_fpga_index,
-            "resync_count": flatten_fpga_index,
-            "lane_error_count": lane_error_to_list,
-            "clock_managers_count": clock_managers_count,
-            "clock_managers_status": clock_managers_status,
-            "station_beamformer_error_count": flatten_fpga_index,
-            "station_beamformer_flagged_count": flatten_fpga_index,
-            "clocks": clocks_to_list,
+            "fpga0_bip_error_count": udp_error_count_to_list,
+            "fpga0_decode_error_count": udp_error_count_to_list,
+            "fpga1_bip_error_count": udp_error_count_to_list,
+            "fpga1_decode_error_count": udp_error_count_to_list,
+            "fpga0_lane_error_count": lane_error_to_array,
+            "fpga1_lane_error_count": lane_error_to_array,
+            "fpga0_clock_managers_count": clock_managers_count,
+            "fpga0_clock_managers_status": clock_managers_status,
+            "fpga1_clock_managers_count": clock_managers_count,
+            "fpga1_clock_managers_status": clock_managers_status,
+            "fpga0_clocks": clocks_to_list,
+            "fpga1_clocks": clocks_to_list,
             "adc_sysref_counter": adc_to_list,
             "adc_sysref_timing_requirements": adc_to_list,
             "timing_pll_status": lambda val: int(val[0])
@@ -617,39 +636,124 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_count": ["timing", "pll_40g"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
-            "clocks": ["timing", "clocks"],
+            "fpga0_clocks": ["timing", "clocks", "FPGA0"],
+            "fpga1_clocks": ["timing", "clocks", "FPGA1"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "clock_managers_count": ["timing", "clock_managers"],
-            "clock_managers_status": ["timing", "clock_managers"],
+            "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
+            "fpga0_clock_managers_status": ["timing", "clock_managers", "FPGA0"],
+            "fpga1_clock_managers_count": ["timing", "clock_managers", "FPGA1"],
+            "fpga1_clock_managers_status": ["timing", "clock_managers", "FPGA1"],
             # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
             # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
             # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
-            "lane_error_count": ["io", "jesd_interface", "lane_error_count"],
+            "fpga0_lane_error_count": [
+                "io",
+                "jesd_interface",
+                "lane_error_count",
+                "FPGA0",
+            ],
+            "fpga1_lane_error_count": [
+                "io",
+                "jesd_interface",
+                "lane_error_count",
+                "FPGA1",
+            ],
             "lane_status": ["io", "jesd_interface", "lane_status"],
             "link_status": ["io", "jesd_interface", "link_status"],
-            "resync_count": ["io", "jesd_interface", "resync_count"],
+            "fpga0_resync_count": ["io", "jesd_interface", "resync_count", "FPGA0"],
+            "fpga1_resync_count": ["io", "jesd_interface", "resync_count", "FPGA1"],
             "ddr_initialisation": ["io", "ddr_interface", "initialisation"],
-            "ddr_reset_counter": ["io", "ddr_interface", "reset_counter"],
+            "fpga0_ddr_reset_counter": [
+                "io",
+                "ddr_interface",
+                "reset_counter",
+                "FPGA0",
+            ],
+            "fpga1_ddr_reset_counter": [
+                "io",
+                "ddr_interface",
+                "reset_counter",
+                "FPGA1",
+            ],
             "arp": ["io", "udp_interface", "arp"],
             "udp_status": ["io", "udp_interface", "status"],
-            "crc_error_count": ["io", "udp_interface", "crc_error_count"],
-            "bip_error_count": ["io", "udp_interface", "bip_error_count"],
-            "decode_error_count": ["io", "udp_interface", "decode_error_count"],
-            "linkup_loss_count": ["io", "udp_interface", "linkup_loss_count"],
-            "data_router_status": ["io", "data_router", "status"],
+            "fpga0_crc_error_count": [
+                "io",
+                "udp_interface",
+                "crc_error_count",
+                "FPGA0",
+            ],
+            "fpga1_crc_error_count": [
+                "io",
+                "udp_interface",
+                "crc_error_count",
+                "FPGA1",
+            ],
+            "fpga0_bip_error_count": [
+                "io",
+                "udp_interface",
+                "bip_error_count",
+                "FPGA0",
+            ],
+            "fpga0_decode_error_count": [
+                "io",
+                "udp_interface",
+                "decode_error_count",
+                "FPGA0",
+            ],
+            "fpga1_bip_error_count": [
+                "io",
+                "udp_interface",
+                "bip_error_count",
+                "FPGA1",
+            ],
+            "fpga1_decode_error_count": [
+                "io",
+                "udp_interface",
+                "decode_error_count",
+                "FPGA1",
+            ],
+            "fpga0_linkup_loss_count": [
+                "io",
+                "udp_interface",
+                "linkup_loss_count",
+                "FPGA0",
+            ],
+            "fpga1_linkup_loss_count": [
+                "io",
+                "udp_interface",
+                "linkup_loss_count",
+                "FPGA1",
+            ],
+            "fpga0_data_router_status": ["io", "data_router", "status", "FPGA0"],
+            "fpga1_data_router_status": ["io", "data_router", "status", "FPGA1"],
             "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
-            "station_beamformer_error_count": [
+            "fpga0_station_beamformer_error_count": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
+                "FPGA0",
             ],
-            "station_beamformer_flagged_count": [
+            "fpga1_station_beamformer_error_count": [
+                "dsp",
+                "station_beamf",
+                "ddr_parity_error_count",
+                "FPGA1",
+            ],
+            "fpga0_station_beamformer_flagged_count": [
                 "dsp",
                 "station_beamf",
                 "discarded_or_flagged_packet_count",
+                "FPGA0",
+            ],
+            "fpga1_station_beamformer_flagged_count": [
+                "dsp",
+                "station_beamf",
+                "discarded_or_flagged_packet_count",
+                "FPGA1",
             ],
         }
 
@@ -1205,39 +1309,57 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["station_beamformer_status"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=2,
-        label="station_beamformer_error_count",
+        dtype="DevShort",
+        label="fpga0_station_beamformer_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def station_beamformer_error_count(self: MccsTile) -> list[int]:
+    def fpga0_station_beamformer_error_count(self: MccsTile) -> int:
         """
-        Return the station beamformer error count per FPGA.
+        Return the station beamformer error count for FPGA0.
 
         Expected: 0 if no parity errors detected.
 
         :example:
-            >>> tile.station_beamformer_error_count
-            [0, 0]
+            >>> tile.fpga0_station_beamformer_error_count
+            0
 
-        :return: the station beamformer error count per FPGA.
-            index 0->FPGA1, index 1->FPGA2
+        :return: the station beamformer error count for FPGA0.
         """
-        return self._attribute_state["station_beamformer_error_count"].read()
+        return self._attribute_state["fpga0_station_beamformer_error_count"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=2,
-        label="station_beamformer_flagged_count",
+        dtype="DevShort",
+        label="fpga1_station_beamformer_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def station_beamformer_flagged_count(self: MccsTile) -> list[int]:
+    def fpga1_station_beamformer_error_count(self: MccsTile) -> int:
         """
-        Return the station beamformer error count per FPGA.
+        Return the station beamformer error count for FPGA1.
+
+        Expected: 0 if no parity errors detected.
+
+        :example:
+            >>> tile.fpga1_station_beamformer_error_count
+            0
+
+        :return: the station beamformer error count for FPGA1.
+        """
+        return self._attribute_state["fpga1_station_beamformer_error_count"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga0_station_beamformer_flagged_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga0_station_beamformer_flagged_count(self: MccsTile) -> int:
+        """
+        Return the station beamformer error count for FPGA0.
 
         Note: When station beam flagging is enabled,
         this returns a count of packets flagged,
@@ -1247,70 +1369,134 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no parity errors detected.
 
         :example:
-            >>> tile.station_beamformer_flagged_count
-            [0, 0]
+            >>> tile.fpga0_station_beamformer_flagged_count
+            0
 
-        :return: the station beamformer error count per FPGA.
-            index 0->FPGA1, index 1->FPGA2
+        :return: the station beamformer error count for FPGA0.
         """
-        return self._attribute_state["station_beamformer_flagged_count"].read()
+        return self._attribute_state["fpga0_station_beamformer_flagged_count"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=2,
-        label="crc_error_count",
+        dtype="DevShort",
+        label="fpga1_station_beamformer_flagged_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def crc_error_count(self: MccsTile) -> list[int]:
+    def fpga1_station_beamformer_flagged_count(self: MccsTile) -> int:
         """
-        Return the crc error count per FPGA.
+        Return the station beamformer error count for FPGA1.
+
+        Note: When station beam flagging is enabled,
+        this returns a count of packets flagged,
+        but when station beam flagging is disabled,
+        this instead returns a count of packets discarded/dropped
+
+        Expected: 0 if no parity errors detected.
+
+        :example:
+            >>> tile.fpga1_station_beamformer_flagged_count
+            0
+
+        :return: the station beamformer error count for FPGA1.
+        """
+        return self._attribute_state["fpga1_station_beamformer_flagged_count"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga0_crc_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga0_crc_error_count(self: MccsTile) -> int:
+        """
+        Return the crc error count for FPGA0.
 
         Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
 
         :example:
-            >>> tile.crc_error_count
-            [0, 0]
+            >>> tile.fpga0_crc_error_count
+            0
 
-        :return: the crc error count per FPGA.
-            index 0->FPGA1, index 1->FPGA2
+        :return: the crc error count for FPGA0.
         """
-        return self._attribute_state["crc_error_count"].read()
+        return self._attribute_state["fpga0_crc_error_count"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=8,
-        label="bip_error_count",
+        dtype="DevShort",
+        label="fpga1_crc_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def bip_error_count(self: MccsTile) -> list[int]:
+    def fpga1_crc_error_count(self: MccsTile) -> int:
         """
-        Return the bip error count per FPGA.
+        Return the crc error count for FPGA1.
+
+        Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
+
+        :example:
+            >>> tile.fpga1_crc_error_count
+            0
+
+        :return: the crc error count for FPGA0.
+        """
+        return self._attribute_state["fpga1_crc_error_count"].read()
+
+    @attribute(
+        dtype=("DevShort",),
+        max_dim_x=4,
+        label="fpga0_bip_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga0_bip_error_count(self: MccsTile) -> list[int]:
+        """
+        Return the bip error count for FPGA0.
 
         Expected: 0 if no bit-interleaved parity (BIP) errors detected.
 
         :example:
-            >>> tile.bip_error_count
-            [0, 0, 0, 0, 0, 0, 0, 0]
+            >>> tile.fpga0_bip_error_count
+            [0, 0, 0, 0]
 
-        :return: the bip error count per FPGA.
-            index 0->fpga0lane0, 1->fpga0lane1, 2->fpga0lane2, 3->fpga0lane3
-            index 4->fpga1lane0, 5->fpga1lane1, 6->fpga1lane2, 7->fpga1lane3
+        :return: the bip error count for FPGA0.
         """
-        return self._attribute_state["bip_error_count"].read()
+        return self._attribute_state["fpga0_bip_error_count"].read()
 
     @attribute(
         dtype=("DevShort",),
-        max_dim_x=8,
-        label="decode_error_count",
+        max_dim_x=4,
+        label="fpga1_bip_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def decode_error_count(self: MccsTile) -> str:
+    def fpga1_bip_error_count(self: MccsTile) -> list[int]:
+        """
+        Return the bip error count for FPGA1.
+
+        Expected: 0 if no bit-interleaved parity (BIP) errors detected.
+
+        :example:
+            >>> tile.fpga1_bip_error_count
+            [0, 0, 0, 0]
+
+        :return: the bip error count for FPGA1.
+        """
+        return self._attribute_state["fpga1_bip_error_count"].read()
+
+    @attribute(
+        dtype=("DevShort",),
+        max_dim_x=4,
+        label="fpga1_decode_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_decode_error_count(self: MccsTile) -> list[int]:
         """
         Return the decode error count per FPGA.
 
@@ -1319,60 +1505,120 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             detected in a clock cycle.
 
         :example:
-            >>> tile.decode_error_count
-            [0, 0, 0, 0, 0, 0, 0, 0]
+            >>> tile.fpga1_decode_error_count
+            [0, 0, 0, 0]
 
         :return: the decode error count per FPGA.
-            index 0->fpga0lane0, 1->fpga0lane1, 2->fpga0lane2, 3->fpga0lane3
-            index 4->fpga1lane0, 5->fpga1lane1, 6->fpga1lane2, 7->fpga1lane3
         """
-        return self._attribute_state["decode_error_count"].read()
+        return self._attribute_state["fpga1_decode_error_count"].read()
 
     @attribute(
         dtype=("DevShort",),
-        max_dim_x=2,
-        label="linkup_loss_count",
+        max_dim_x=4,
+        label="fpga0_decode_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def linkup_loss_count(self: MccsTile) -> list[int]:
+    def fpga0_decode_error_count(self: MccsTile) -> list[int]:
         """
-        Return the linkup loss count per FPGA.
+        Return the decode error count per FPGA.
+
+        Expected: 0 if errors have not been detected.
+            Note: This counter increments when at least one error is
+            detected in a clock cycle.
+
+        :example:
+            >>> tile.fpga0_decode_error_count
+            [0, 0, 0, 0]
+
+        :return: the decode error count per FPGA.
+        """
+        return self._attribute_state["fpga0_decode_error_count"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga0_linkup_loss_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga0_linkup_loss_count(self: MccsTile) -> int:
+        """
+        Return the linkup loss count.
 
         Expected: 0 if no link loss events are detected.
 
         :example:
-            >>> tile.linkup_loss_count
-            [0, 0]
+            >>> tile.fpga0_linkup_loss_count
+            0
 
-        :return: the linkup loss count per FPGA.
-            index0->FPGA0, index1->FPGA1
+        :return: the linkup loss count.
         """
-        return self._attribute_state["linkup_loss_count"].read()
+        return self._attribute_state["fpga0_linkup_loss_count"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=2,  # FPGA count
-        label="data_router_status",
+        dtype="DevShort",
+        label="fpga1_linkup_loss_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def data_router_status(self: MccsTile) -> list[int]:
+    def fpga1_linkup_loss_count(self: MccsTile) -> int:
+        """
+        Return the linkup loss count.
+
+        Expected: 0 if no link loss events are detected.
+
+        :example:
+            >>> tile.fpga1_linkup_loss_count
+            0
+
+        :return: the linkup loss count.
+        """
+        return self._attribute_state["fpga1_linkup_loss_count"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga0_data_router_status",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga0_data_router_status(self: MccsTile) -> int:
         """
         Return the status of the data router.
 
         Expected: 0 if no status OK.
 
         :example:
-            >>> tile.data_router_status
-            [0, 0]
+            >>> tile.fpga0_data_router_status
+            0
 
         :return: the linkup loss count per FPGA.
-            index0->FPGA0, index1->FPGA1
         """
-        return self._attribute_state["data_router_status"].read()
+        return self._attribute_state["fpga0_data_router_status"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga1_data_router_status",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_data_router_status(self: MccsTile) -> int:
+        """
+        Return the status of the data router.
+
+        Expected: 0 if no status OK.
+
+        :example:
+            >>> tile.fpga1_data_router_status
+            0
+
+        :return: the linkup loss count per FPGA.
+        """
+        return self._attribute_state["fpga1_data_router_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1449,27 +1695,46 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["ddr_initialisation"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=2,  # FPGA count
-        label="ddr_reset_counter",
+        dtype="DevShort",
+        label="fpga0_ddr_reset_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def ddr_reset_counter(self: MccsTile) -> list[int]:
+    def fpga0_ddr_reset_counter(self: MccsTile) -> int:
         """
-        Return the ddr reset count per FPGA.
+        Return the ddr reset count.
 
         Expected: 0 if no reset events have occurred.
 
         :example:
-            >>> tile.ddr_reset_counter
-            [0, 0]
+            >>> tile.fpga0_ddr_reset_counter
+            0
 
-        :return: the ddr reset count per FPGA.
-            index0->FPGA0, index1->FPGA1
+        :return: the ddr reset count.
         """
-        return self._attribute_state["ddr_reset_counter"].read()
+        return self._attribute_state["fpga0_ddr_reset_counter"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga1_ddr_reset_counter",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_ddr_reset_counter(self: MccsTile) -> int:
+        """
+        Return the ddr reset count.
+
+        Expected: 0 if no reset events have occurred.
+
+        :example:
+            >>> tile.fpga1_ddr_reset_counter
+            0
+
+        :return: the ddr reset count.
+        """
+        return self._attribute_state["fpga1_ddr_reset_counter"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1518,27 +1783,46 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["f2f_hard_errors"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=2,  # FPGA count
-        label="resync_count",
+        dtype="DevShort",
+        label="fpga0_resync_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def resync_count(self: MccsTile) -> list[int]:
+    def fpga0_resync_count(self: MccsTile) -> int:
         """
-        Return the resync count per FPGA.
+        Return the resync count.
 
         Expected: 0 if no resync events have ocurred.
 
         :example:
-            >>> tile.resync_count
-            [0, 0]
+            >>> tile.fpga0_resync_count
+            0
 
-        :return: the resync count per FPGA.
-            index0->FPGA0, index1->FPGA1
+        :return: the resync count
         """
-        return self._attribute_state["resync_count"].read()
+        return self._attribute_state["fpga0_resync_count"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="fpga1_resync_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_resync_count(self: MccsTile) -> int:
+        """
+        Return the resync count.
+
+        Expected: 0 if no resync events have ocurred.
+
+        :example:
+            >>> tile.fpga1_resync_count
+            0
+
+        :return: the resync count
+        """
+        return self._attribute_state["fpga1_resync_count"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1577,88 +1861,151 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["link_status"].read()
 
     @attribute(
-        dtype=("DevShort",),
-        max_dim_x=32,
-        label="lane_error_count",
+        dtype=(("DevShort",),),
+        max_dim_x=8,  # lane
+        max_dim_y=2,  # core
+        label="fpga1_lane_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def lane_error_count(self: MccsTile) -> list[int]:
+    def fpga1_lane_error_count(self: MccsTile) -> list[int]:
         """
-        Return the error count per lane, per core, per FPGA.
+        Return the error count per lane, per core.
 
         Expected: 0 for all lanes.
 
         :example:
-            >>> tile.lane_error_count
-            [0] * 32
+            >>> tile.fpga1_lane_error_count
+            [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
 
-        :return: the error count per lane, per core, per FPGA.
-            idx0->FPGA0Core0Lane0, idx2->FPGA0Core0Lane1,
-            idx3->FPGA0Core0Lane2, idx4->FPGA0Core0Lane3
-            idx4->FPGA0Core0Lane4, idx5->FPGA0Core0Lane5,
-            idx6->FPGA0Core0Lane6, idx7->FPGA0Core0Lane7
-            idx8->FPGA0Core1Lane0, idx9->FPGA0Core1Lane1,
-            idx10->FPGA0Core0Lane2, idx11->FPGA0Core1Lane3
-            idx12->FPGA0Core1Lane4, idx13->FPGA0Core1Lane5,
-            idx14->FPGA0Core1Lane6, idx15->FPGA0Core1Lane7
+        :return: the error count per lane, per core
+            [[Core0],[Core1]]
         """
-        return self._attribute_state["lane_error_count"].read()
+        return self._attribute_state["fpga1_lane_error_count"].read()
 
     @attribute(
         dtype=(("DevShort",),),
-        max_dim_x=2,  # fpga
-        max_dim_y=3,  # clock
-        label="clock_managers_count",
+        max_dim_x=8,  # lane
+        max_dim_y=2,  # core
+        label="fpga0_lane_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def clock_managers_count(self: MccsTile) -> list[int]:
+    def fpga0_lane_error_count(self: MccsTile) -> list[int]:
         """
-        Return the PLL lock status and lock loss counter for C2C, JESD and DSP.
+        Return the error count per lane, per core.
+
+        Expected: 0 for all lanes.
+
+        :example:
+            >>> tile.fpga0_lane_error_count
+            [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
+
+
+        :return: the error count per lane, per core
+            [[Core0lanes],[Core1lanes]]
+        """
+        return self._attribute_state["fpga0_lane_error_count"].read()
+
+    @attribute(
+        dtype=("DevShort",),
+        max_dim_x=3,  # fpga
+        label="fpga0_clock_managers_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga0_clock_managers_count(self: MccsTile) -> list[int]:
+        """
+        Return the PLL lock loss counter for C2C, JESD and DSP.
 
         Expected: `0` per interface if no lock loss events.
 
         :example:
-            >>> tile.clock_managers_count
-            [[0, 0], [0, 0], [0, 0]]
-
+            >>> tile.fpga0_clock_managers_count
+            [0, 0, 0]
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
-        2 columns → one for each FPGA: ["FPGA0", "FPGA1"]
 
         :return: the lock loss counter for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
         """
-        return self._attribute_state["clock_managers_count"].read()
+        return self._attribute_state["fpga0_clock_managers_count"].read()
 
     @attribute(
-        dtype=(("DevShort",),),
-        max_dim_x=2,  # fpga
-        max_dim_y=3,  # clock
-        label="clock_managers_status",
+        dtype=("DevShort",),
+        max_dim_x=3,  # clock_managers
+        label="fpga0_clock_managers_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def clock_managers_status(self: MccsTile) -> list[int]:
+    def fpga0_clock_managers_status(self: MccsTile) -> list[int]:
         """
-        Return the PLL lock status and lock loss counter for C2C, JESD and DSP.
+        Return the PLL lock status C2C, JESD and DSP.
 
         Expected: `1` if MMCM clock locked `0` otherwise
 
         :example:
-            >>> tile.clock_managers_status
-            [[1, 1], [1, 1], [1, 1]]
+            >>> tile.fpga0_clock_managers_status
+            [0, 0, 0]
 
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
-        2 columns → one for each FPGA: ["FPGA0", "FPGA1"]
 
         :return: the clock status for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
         """
-        return self._attribute_state["clock_managers_status"].read()
+        return self._attribute_state["fpga0_clock_managers_status"].read()
+
+    @attribute(
+        dtype=("DevShort",),
+        max_dim_x=3,  # clock_managers
+        label="fpga1_clock_managers_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_clock_managers_count(self: MccsTile) -> list[int]:
+        """
+        Return the PLL lock loss counter for C2C, JESD and DSP.
+
+        Expected: `0` per interface if no lock loss events.
+
+        :example:
+            >>> tile.fpga1_clock_managers_count
+            [0, 0, 0]
+
+        3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
+
+        :return: the lock loss counter for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
+        """
+        return self._attribute_state["fpga1_clock_managers_count"].read()
+
+    @attribute(
+        dtype=("DevShort",),
+        max_dim_x=3,  # clock_managers
+        label="fpga1_clock_managers_status",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_clock_managers_status(self: MccsTile) -> list[int]:
+        """
+        Return the PLL lock status for C2C, JESD and DSP.
+
+        Expected: `1` if MMCM clock locked `0` otherwise
+
+        :example:
+            >>> tile.fpga1_clock_managers_status
+            [0, 0, 0]
+
+
+        3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
+
+        :return: the clock status for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
+        """
+        return self._attribute_state["fpga1_clock_managers_status"].read()
 
     @attribute(
         dtype="DevLong",
@@ -1735,15 +2082,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     return self._attribute_state["ddr_rd_dat_cnt"].read())
 
     @attribute(
-        dtype=(("DevShort",),),
-        max_dim_x=2,  # fpga
-        max_dim_y=3,  # clock
-        label="clocks",
+        dtype=("DevShort",),
+        max_dim_x=3,  # clocks
+        label="fpga0_clocks",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def clocks(self: MccsTile) -> str:
+    def fpga0_clocks(self: MccsTile) -> list[int]:
         """
         Return the status of clocks for the interfaces of both FPGAs.
 
@@ -1751,14 +2097,37 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         not OK.
 
         :example:
-            >>> tile.clocks
-            [[1, 1, 1],[1, 1, 1]]
+            >>> tile.fpga0_clocks
+            [1, 1, 1]
 
         :return: the status of clocks for the interfaces of both FPGAs.
-            [[1, 1, 1], [1, 1, 1]] == [[FPGA0_clocks],[FPGA1_clocks]]
-            FPGAx_clocks = JESD, DDR, UDP
+            [1, 1, 1] == [JESD, DDR, UDP]
         """
-        return self._attribute_state["clocks"].read()
+        return self._attribute_state["fpga0_clocks"].read()
+
+    @attribute(
+        dtype=("DevShort",),
+        max_dim_x=3,  # clocks
+        label="fpga1_clocks",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def fpga1_clocks(self: MccsTile) -> str:
+        """
+        Return the status of clocks for the interfaces of both FPGAs.
+
+        Expected: `1` per interface if status is OK. `0` if
+        not OK.
+
+        :example:
+            >>> tile.fpga1_clocks
+            [1, 1, 1]
+
+        :return: the status of clocks for the interfaces of both FPGAs.
+            [1, 1, 1] == [JESD, DDR, UDP]
+        """
+        return self._attribute_state["fpga1_clocks"].read()
 
     @attribute(
         dtype=("DevShort",),

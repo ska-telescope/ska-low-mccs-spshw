@@ -2,10 +2,19 @@
 
 ## Unreleased
 
-* [THORN-261] Alarms added to adc_pll_status, station_beamformer_error_count, station_beamformer_flagged_count, crc_error_count, bip_error_count, decode_error_count, linkup_loss_count, data_router_status, ddr_reset_counter, f2f_soft_errors, f2f_hard_errors, resync_count, lane_error_count, clock_managers_count, clock_managers_status, clocks, adc_sysref_counter, adc_sysref_timing_requirements, fpga0_qpll_status, fpga0_qpll_counter, fpga1_qpll_status, fpga1_qpll_counter, f2f_pll_status, f2f_pll_counter, timing_pll_status, timing_pll_count, timing_pll_40g_status, timing_pll_40g_count, station_beamformer_status, tile_beamformer_status, arp, udp_status, ddr_initialisation, lane_status, link_status
-* [THORN-261] attribute adc_pll_status converted from string to 2d array.
-* [THORN-261] attribute station_beamformer_error_count, station_beamformer_flagged_count, crc_error_count, bip_error_count, decode_error_count, linkup_loss_count, data_router_status, ddr_reset_counter, resync_count, linkup_loss_count, lane_error_count, adc_sysref_counter, adc_sysref_timing_requirements converted to a list of int.
-* [THORN-261] attribute clocks converted to a array of int
+* [THORN-261] Alarms added to adc_pll_status, fpga0_station_beamformer_error_count, fpga1_station_beamformer_error_count, fpga0_station_beamformer_flagged_count, fpga1_station_beamformer_flagged_count, fpga0_crc_error_count, fpga1_crc_error_count, fpga0_bip_error_count, fpga1_bip_error_count, fpga0_decode_error_count, fpga1_decode_error_count, fpga0_linkup_loss_count, fpga1_linkup_loss_count, fpga0_data_router_status, fpga1_data_router_status, fpga0_ddr_reset_counter, fpga1_ddr_reset_counter, f2f_soft_errors, f2f_hard_errors, fpga0_resync_count, fpga1_resync_count, fpga0_lane_error_count, fpga1_lane_error_count, fpga0_clock_managers_count, fpga1_clock_managers_count, fpga0_clock_managers_status, fpga1_clock_managers_status, fpga0_clocks, fpga1_clocks, adc_sysref_counter, adc_sysref_timing_requirements, fpga0_qpll_status, fpga0_qpll_counter, fpga1_qpll_status, fpga1_qpll_counter, f2f_pll_status, f2f_pll_counter, timing_pll_status, timing_pll_count, timing_pll_40g_status, timing_pll_40g_count, station_beamformer_status, tile_beamformer_status, arp, udp_status, ddr_initialisation, lane_status, link_status
+* [THORN-261] attribute adc_pll_status converted from string to 2d array. first list representing is the lock of pll is up the second list representing if no loss of pll lock has been observed per adc channel.
+* [THORN-261] station_beamformer_error_count converted to a fpga0_station_beamformer_error_count and fpga1_station_beamformer_error_count containing a int representing errors detected.
+* [THORN-261] station_beamformer_flagged_count converted to a fpga0_station_beamformer_flagged_count and fpga1_station_beamformer_flagged_count containing a int representing flag count.
+* [THORN-261] crc_error_count converted to a fpga0_crc_error_count and fpga1_crc_error_count containing a int representing errors detected.
+* [THORN-261] bip_error_count converted to a fpga0_bip_error_count and fpga1_bip_error_count containing a list of lane status
+* [THORN-261] decode_error_count converted to a fpga0_decode_error_count and fpga1_decode_error_count containing a int
+* [THORN-261] linkup_loss_count converted to a fpga0_linkup_loss_count and fpga1_linkup_loss_count containing a int
+* [THORN-261] data_router_status converted to a fpga0_data_router_status and fpga1_data_router_status containing a int
+* [THORN-261] ddr_reset_counter converted to a fpga0_ddr_reset_counter and fpga1_ddr_reset_counter containing a int
+* [THORN-261] resync_count converted to a fpga0_resync_count and fpga1_resync_count containing a int
+* [THORN-261] lane_error_count converted to a fpga0_lane_error_count and fpga1_lane_error_count containing a 2d array of count per lane per core.
+* [THORN-261] attribute clocks converted to fpga1_clocks and fpga1_clocks each containing the status of respective clocks
 * [THORN-261] Add abs_change and archive_abs_change configuration to
 attributes.
 * [THORN-261] Split attribute timing_pll_40g_status into timing_pll_40g_status and timing_pll_40g_count.
@@ -14,7 +23,8 @@ timing_pll_count
 * [THORN-261] Split attribute f2f_pll_status into f2f_pll_status and
 f2f_pll_counter
 * [THORN-261] Split attribute qll_status into fpga1_qpll_counter, fpga1_qpll_status, fpga0_qpll_status, fpga0_qpll_counter
-* [THORN-261] attribute clock_managers converted clock_managers_status and clock_managers_count, both being a list of ints.
+* [THORN-261] attribute clock_managers converted fpga0_clock_managers_status and fpga0_clock_managers_count,
+fpga1_clock_managers_status and fpga1_clock_managers_count countaining a list of the clocks. "C2C_MMCM", "JESD_MMCM", "DSP_MMCM"
 
 ## 9.1.0
 

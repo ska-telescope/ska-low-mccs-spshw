@@ -21,9 +21,8 @@ __all__ = [
     "clock_managers_count",
     "clock_managers_status",
     "clocks_to_list",
-    "flatten_fpga_index",
     "flatten_list",
-    "lane_error_to_list",
+    "lane_error_to_array",
     "serialise_np_object",
     "serialise_object",
     "udp_error_count_to_list",
@@ -115,7 +114,7 @@ def adc_to_list(val: dict[str, bool]) -> list[int]:
     return flattened_list
 
 
-def udp_error_count_to_list(val: dict[str, dict[str, int]]) -> list[int]:
+def udp_error_count_to_list(val: dict[str, int]) -> list[int]:
     """
     Flatten udp error count to 1d list.
 
@@ -124,14 +123,12 @@ def udp_error_count_to_list(val: dict[str, dict[str, int]]) -> list[int]:
     :return: a flattened list.
     """
     flattened_list: list[int] = []
-    for i in range(2):
-        v = val[f"FPGA{i}"]
-        for lane_idx in range(4):
-            flattened_list.append(int(v[f"lane{lane_idx}"]))
+    for lane_idx in range(4):
+        flattened_list.append(int(val[f"lane{lane_idx}"]))
     return flattened_list
 
 
-def flatten_fpga_index(val: dict[str, int | tuple | list]) -> list[int]:
+def lane_error_to_array(val: dict[str, dict[str, int | None]]) -> np.ndarray:
     """
     Flatten udp error count to 1d list.
 
@@ -139,59 +136,38 @@ def flatten_fpga_index(val: dict[str, int | tuple | list]) -> list[int]:
 
     :return: a flattened list.
     """
-    flattened_list: list[int] = []
-    for i in range(2):
-        v = val[f"FPGA{i}"]
-        if isinstance(v, tuple | list):
-            flattened_list.extend(v)
-        else:
-            flattened_list.append(v)
-    flattened_list = [int(v) for v in flattened_list]
-    return flattened_list
+    # [[Core0],[Core1]]
+    result = [
+        [core[f"lane{i}"] for i in range(8)]
+        for core in [val[f"Core{j}"] for j in range(2)]
+    ]
 
-
-def lane_error_to_list(
-    val: dict[str, dict[str, dict[str, int | None]]]
-) -> list[int | None]:
-    """
-    Flatten udp error count to 1d list.
-
-    :param val: A dictionary indexed by ADC number.
-
-    :return: a flattened list.
-    """
-    flattened_list: list[int | None] = []
-    for i in range(2):
-        v = val[f"FPGA{i}"]
-        for core_idx in range(2):
-            for lane_idx in range(8):
-                flattened_list.append(v[f"Core{core_idx}"][f"lane{lane_idx}"])
-    return flattened_list
+    # Convert to NumPy array if needed
+    return np.array(result)
 
 
 def _extract_mmcm_array(
-    val: dict[str, dict[str, tuple[bool, int]]],
+    val: dict[str, tuple[bool, int]],
     index: int,
 ) -> np.ndarray:
     """
     Extract MMCM fields into a NumPy array.
 
-    :param val: Dictionary of form {'FPGA0': {...}, 'FPGA1': {...}}
+    :param val: Dictionary.
     :param index: idx0 -> 'status' (bool), idx1 -> 'count' (int)
 
-    :returns: np.ndarray with shape (3, 2): 3 MMCM types × 2 FPGAs
+    :returns: np.ndarray with shape (3): 3 MMCM types
     """
     mmcm_keys = ("C2C_MMCM", "JESD_MMCM", "DSP_MMCM")
     data = []
     for mmcm in mmcm_keys:
-        row = [int(val[f"FPGA{i}"][mmcm][index]) for i in range(2)]
-        data.append(row)
+        data.append(val[mmcm][index])
     return np.array(data, dtype=int)
 
 
-def clock_managers_status(val: dict[str, dict[str, tuple[bool, int]]]) -> np.ndarray:
+def clock_managers_status(val: dict[str, tuple[bool, int]]) -> np.ndarray:
     """
-    Extract MMCM 'status' values into a (3, 2) NumPy array.
+    Extract MMCM 'status' values into a (3) NumPy array.
 
     :param val: the value
 
@@ -200,9 +176,9 @@ def clock_managers_status(val: dict[str, dict[str, tuple[bool, int]]]) -> np.nda
     return _extract_mmcm_array(val, index=0)
 
 
-def clock_managers_count(val: dict[str, dict[str, tuple[bool, int]]]) -> np.ndarray:
+def clock_managers_count(val: dict[str, tuple[bool, int]]) -> np.ndarray:
     """
-    Extract MMCM 'count' values into a (3, 2) NumPy array.
+    Extract MMCM 'count' values into a (3) NumPy array.
 
     :param val: the value
 
@@ -211,7 +187,7 @@ def clock_managers_count(val: dict[str, dict[str, tuple[bool, int]]]) -> np.ndar
     return _extract_mmcm_array(val, index=1)
 
 
-def clocks_to_list(val: dict[str, dict[str, bool]]) -> np.ndarray:
+def clocks_to_list(val: dict[str, bool]) -> list[int]:
     """
     Convert the clocks to a list.
 
@@ -219,9 +195,4 @@ def clocks_to_list(val: dict[str, dict[str, bool]]) -> np.ndarray:
 
     :returns: the clocks as a list
     """
-    flattened_list: list[tuple[int, int, int]] = []
-    for i in range(2):
-        v = val[f"FPGA{i}"]
-        flattened_list.append((int(v["JESD"]), int(v["DDR"]), int(v["UDP"])))
-    arr = np.array(flattened_list).T
-    return arr
+    return [int(val["JESD"]), int(val["DDR"]), int(val["UDP"])]

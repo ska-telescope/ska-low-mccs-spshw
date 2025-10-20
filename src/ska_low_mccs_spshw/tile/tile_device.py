@@ -167,7 +167,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     DefaultLockTimeout = device_property(dtype=float, default_value=0.4)
-    VerifyEvents = device_property(dtype=bool, default_value=False)
+    VerifyEvents = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # Initialisation
@@ -2091,7 +2091,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
     def fpga0_clocks(self: MccsTile) -> list[int]:
         """
-        Return the status of clocks for the interfaces of both FPGAs.
+        Return the status of clocks for the interfaces of FPGA0.
 
         Expected: `1` per interface if status is OK. `0` if
         not OK.
@@ -2100,7 +2100,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga0_clocks
             [1, 1, 1]
 
-        :return: the status of clocks for the interfaces of both FPGAs.
+        :return: the status of clocks for the interfaces of FPGA0.
             [1, 1, 1] == [JESD, DDR, UDP]
         """
         return self._attribute_state["fpga0_clocks"].read()
@@ -2115,7 +2115,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
     def fpga1_clocks(self: MccsTile) -> str:
         """
-        Return the status of clocks for the interfaces of both FPGAs.
+        Return the status of clocks for the interfaces of FPGA1.
 
         Expected: `1` per interface if status is OK. `0` if
         not OK.
@@ -2124,7 +2124,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga1_clocks
             [1, 1, 1]
 
-        :return: the status of clocks for the interfaces of both FPGAs.
+        :return: the status of clocks for the interfaces of FPGA1.
             [1, 1, 1] == [JESD, DDR, UDP]
         """
         return self._attribute_state["fpga1_clocks"].read()

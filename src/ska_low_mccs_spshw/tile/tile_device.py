@@ -3247,7 +3247,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["adcPower"].read()
 
-    @attribute(dtype="DevLong", fisallowed="_not_initialising", abs_change=1)
+    @attribute(
+        dtype="DevLong",
+        fisallowed="_not_initialising",
+        abs_change=1,
+        archive_abs_change=1,
+    )
     def currentTileBeamformerFrame(self: MccsTile) -> int:
         """
         Return current frame.

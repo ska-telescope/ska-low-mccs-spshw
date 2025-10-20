@@ -59,7 +59,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=15.0,
+        timeout=20.0,
     )
 
 

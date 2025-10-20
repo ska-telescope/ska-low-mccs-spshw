@@ -1192,10 +1192,8 @@ def test_SetCspIngest(
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    station_device.MockSubracksOn()
-    station_device.MockTilesOn()
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    # We have the initial mocked state to be ON.
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     station_device.SetCspIngest(
         json.dumps(

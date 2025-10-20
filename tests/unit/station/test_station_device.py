@@ -1890,9 +1890,7 @@ def test_programing_state_health_rollup(
             )
         )
 
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=5, consume_nonmatches=True
-    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
     assert station_device.healthState == HealthState.OK
     change_event_callbacks["health_state"].assert_not_called()
     station_device.MockTileProgrammingStateChange(

@@ -1043,6 +1043,7 @@ class TestMccsTile:
     @pytest.mark.parametrize(
         "attribute_name",
         [
+            "boardTemperature",
             "adcPower",
             "preaduLevels",
             "tileProgrammingState",

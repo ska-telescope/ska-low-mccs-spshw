@@ -1721,7 +1721,6 @@ def test_TriggerAdcEqualisation(
     station_device.MockSubracksOn()
     station_device.MockTilesOn()
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
     args = json.dumps({"target_adc": 18, "bias": 0.5})

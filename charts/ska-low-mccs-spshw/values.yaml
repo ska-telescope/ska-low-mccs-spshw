@@ -21,7 +21,7 @@ global:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 10.0.0
+  tag: 10.0.1
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -68,7 +68,7 @@ ska-tango-devices:
       image:
         registry: artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 10.0.0
+        tag: 10.0.1
         pullPolicy: IfNotPresent
       command: spshw
       resources:

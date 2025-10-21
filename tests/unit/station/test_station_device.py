@@ -1192,10 +1192,8 @@ def test_SetCspIngest(
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    station_device.MockSubracksOn()
-    station_device.MockTilesOn()
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    # We have the initial mocked state to be ON.
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     station_device.SetCspIngest(
         json.dumps(
@@ -1900,6 +1898,8 @@ def test_programing_state_health_rollup(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
     change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_not_called()
 
     tile_trls = [get_tile_name(i + 1) for i in range(4)]
     subrack_trls = [get_subrack_name(1)]
@@ -1922,11 +1922,9 @@ def test_programing_state_health_rollup(
             )
         )
 
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=5, consume_nonmatches=True
-    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
     assert station_device.healthState == HealthState.OK
-
+    change_event_callbacks["health_state"].assert_not_called()
     station_device.MockTileProgrammingStateChange(
         json.dumps(
             {
@@ -1936,8 +1934,8 @@ def test_programing_state_health_rollup(
         )
     )
 
-    change_event_callbacks["health_state"].assert_change_event(HealthState.DEGRADED)
-
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_not_called()
     station_device.MockTileProgrammingStateChange(
         json.dumps(
             {

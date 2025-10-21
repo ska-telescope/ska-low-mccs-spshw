@@ -743,7 +743,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 )
             else:
                 self._health_rollup.health_changed(
-                    "tile_programming_state", HealthState.DEGRADED
+                    "tile_programming_state", HealthState.FAILED
                 )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:

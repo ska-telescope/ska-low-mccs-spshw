@@ -263,9 +263,6 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             for name in self.component_manager._subrack_proxies:
                 self.component_manager._subrack_state_changed(name, power=PowerState.ON)
 
-            for name in self.component_manager._tile_proxies:
-                self.component_manager._tile_state_changed(name, power=PowerState.OFF)
-
         @command()
         def MockTilesOff(self: PatchedSpsStationDevice) -> None:
             """

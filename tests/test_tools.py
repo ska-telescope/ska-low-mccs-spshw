@@ -274,6 +274,10 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
                 Anything,
             )
             read_attr_value = getattr(device_proxy, attr_name)
+            if callable(read_attr_value):
+                # State/Status attributes are callable.
+                read_attr_value = read_attr_value()
+
             if not self._values_equal(read_attr_value, attr_value):
                 self._attr_callback["attr_callback"].assert_change_event(
                     attr_value if attr_value is not None else Anything,

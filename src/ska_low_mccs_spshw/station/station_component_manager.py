@@ -3729,6 +3729,9 @@ class SpsStationComponentManager(
     def trigger_adc_equalisation(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        *,
+        target_adc: float,
+        bias: float,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the trigger adc equalisation method.
@@ -3737,17 +3740,23 @@ class SpsStationComponentManager(
         `self._trigger_adc_equalisation` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
 
         :return: a task status and response message
         """
         return self.submit_task(
             self._trigger_adc_equalisation,
+            args=[target_adc, bias],
             task_callback=task_callback,
         )
 
     @check_communicating
     def _trigger_adc_equalisation(
         self: SpsStationComponentManager,
+        target_adc: float = 17.0,
+        bias: float = 0.0,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3756,13 +3765,15 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
         tpms = self._tile_proxies.values()
         num_samples = 20
-        target_adc = 17
 
         adc_data = np.empty([num_samples, 32 * len(tpms)])
         for i in range(num_samples):
@@ -3773,11 +3784,16 @@ class SpsStationComponentManager(
         adc_medians = np.median(adc_data, axis=0)
 
         # adc deltas
-        adc_deltas = 20 * np.log10(adc_medians / target_adc)
+        # The maximum attenuation is 127/4=31.75 dB
+        # 10^(-31.75/10) = 0.000668
+        # any target_adc < 0.000668 will be larger than the limit set.
+        # We allow a 32 dB bias range -> reduce to 4.2*10^(-7) from:
+        # 10^(-3.175-3.2) = 10^(-6.375)
+        adc_deltas = 20 * np.log10(adc_medians / max(target_adc, 4.2e-7))
 
         # calculate ideal attenuation
         preadu_levels = np.concatenate([t.preadu_levels() for t in tpms])
-        desired_levels = preadu_levels + adc_deltas
+        desired_levels = preadu_levels + adc_deltas + bias * np.ones(32 * len(tpms))
 
         # quantise and clip to valid range
         sanitised_levels = (desired_levels * 4).round().clip(0, 127) / 4

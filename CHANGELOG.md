@@ -6,6 +6,7 @@
 * [THORN-249] Add attribute pfb_version to MccsTile.
 * [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
 * [SKB-1035] Added tile programming state to the health rollup
+* [THORN-311] Added target_adc and bias parameters to TriggerAdcEqualisation
 
 ## 9.0.0
 

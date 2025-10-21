@@ -3,28 +3,42 @@
 ## Unreleased
 
 * [THORN-261] Alarms added to adc_pll_status, fpga0_station_beamformer_error_count, fpga1_station_beamformer_error_count, fpga0_station_beamformer_flagged_count, fpga1_station_beamformer_flagged_count, fpga0_crc_error_count, fpga1_crc_error_count, fpga0_bip_error_count, fpga1_bip_error_count, fpga0_decode_error_count, fpga1_decode_error_count, fpga0_linkup_loss_count, fpga1_linkup_loss_count, fpga0_data_router_status, fpga1_data_router_status, fpga0_ddr_reset_counter, fpga1_ddr_reset_counter, f2f_soft_errors, f2f_hard_errors, fpga0_resync_count, fpga1_resync_count, fpga0_lane_error_count, fpga1_lane_error_count, fpga0_clock_managers_count, fpga1_clock_managers_count, fpga0_clock_managers_status, fpga1_clock_managers_status, fpga0_clocks, fpga1_clocks, adc_sysref_counter, adc_sysref_timing_requirements, fpga0_qpll_status, fpga0_qpll_counter, fpga1_qpll_status, fpga1_qpll_counter, f2f_pll_status, f2f_pll_counter, timing_pll_status, timing_pll_count, timing_pll_40g_status, timing_pll_40g_count, station_beamformer_status, tile_beamformer_status, arp, udp_status, ddr_initialisation, lane_status, link_status
-* [THORN-261] attribute adc_pll_status converted from string to 2d array. first list representing is the lock of pll is up the second list representing if no loss of pll lock has been observed per adc channel.
-* [THORN-261] station_beamformer_error_count converted to a fpga0_station_beamformer_error_count and fpga1_station_beamformer_error_count containing a int representing errors detected.
-* [THORN-261] station_beamformer_flagged_count converted to a fpga0_station_beamformer_flagged_count and fpga1_station_beamformer_flagged_count containing a int representing flag count.
-* [THORN-261] crc_error_count converted to a fpga0_crc_error_count and fpga1_crc_error_count containing a int representing errors detected.
-* [THORN-261] bip_error_count converted to a fpga0_bip_error_count and fpga1_bip_error_count containing a list of lane status
-* [THORN-261] decode_error_count converted to a fpga0_decode_error_count and fpga1_decode_error_count containing a int
-* [THORN-261] linkup_loss_count converted to a fpga0_linkup_loss_count and fpga1_linkup_loss_count containing a int
-* [THORN-261] data_router_status converted to a fpga0_data_router_status and fpga1_data_router_status containing a int
-* [THORN-261] ddr_reset_counter converted to a fpga0_ddr_reset_counter and fpga1_ddr_reset_counter containing a int
-* [THORN-261] resync_count converted to a fpga0_resync_count and fpga1_resync_count containing a int
-* [THORN-261] lane_error_count converted to a fpga0_lane_error_count and fpga1_lane_error_count containing a 2d array of count per lane per core.
-* [THORN-261] attribute clocks converted to fpga1_clocks and fpga1_clocks each containing the status of respective clocks
-* [THORN-261] Add abs_change and archive_abs_change configuration to
-attributes.
-* [THORN-261] Split attribute timing_pll_40g_status into timing_pll_40g_status and timing_pll_40g_count.
-* [THORN-261] Split attribute timing_pll_status into timing_pll_status and
-timing_pll_count
-* [THORN-261] Split attribute f2f_pll_status into f2f_pll_status and
-f2f_pll_counter
-* [THORN-261] Split attribute qll_status into fpga1_qpll_counter, fpga1_qpll_status, fpga0_qpll_status, fpga0_qpll_counter
-* [THORN-261] attribute clock_managers converted fpga0_clock_managers_status and fpga0_clock_managers_count,
-fpga1_clock_managers_status and fpga1_clock_managers_count countaining a list of the clocks. "C2C_MMCM", "JESD_MMCM", "DSP_MMCM"
+
+* [THORN-261] attribute adc_pll_status converted from string of form '{"ADC0": [true, true], "ADC1": [true, true], ..., "ADC15": [true, true]}' to a 2d array of form [[1]*16,[1]*16]. first list representing if pll is locked, the second list representing the loss of pll lock count. Both are in ADC order.
+
+* [THORN-261] station_beamformer_error_count converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_station_beamformer_error_count and fpga1_station_beamformer_error_count attributes returning a single DevShort. i.e. fpga0_station_beamformer_error_count->0, fpga1_station_beamformer_error_count->0
+
+* [THORN-261] station_beamformer_flagged_count converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_station_beamformer_flagged_count and fpga1_station_beamformer_flagged_count attributes returning a single DevShort. i.e fpga0_station_beamformer_flagged_count->0, fpga1_station_beamformer_flagged_count->0
+
+* [THORN-261] crc_error_count converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_crc_error_count and fpga1_crc_error_count returning a single DevShort. i.e. fpga0_crc_error_count->0, fpga1_crc_error_count->0
+
+* [THORN-261] bip_error_count converted from the form '{"FPGA0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0}, "FPGA1": {"lane0": 6, "lane1": 6, "lane2": 5, "lane3": 7}}' to attributes fpga0_bip_error_count and fpga1_bip_error_count containing a list of lane status, i.e. tile.fpga0_bip_error_count -> [0, 0, 0, 0], tile.fpga1_bip_error_count -> [6, 6, 5, 7]
+
+* [THORN-261] decode_error_count converted from the form '{"FPGA0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0}, "FPGA1": {"lane0": 6, "lane1": 6, "lane2": 5, "lane3": 7}}' to attributes fpga0_decode_error_count and fpga1_decode_error_count containing a list of lane status. i.e. tile.fpga0_bip_error_count -> [0, 0, 0, 0], tile.fpga1_bip_error_count -> [6, 6, 5, 7]
+
+* [THORN-261] linkup_loss_count converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_linkup_loss_count and fpga1_linkup_loss_count returning a single DevShort. i.e. fpga0_linkup_loss_count->0, fpga1_linkup_loss_count->0
+
+* [THORN-261] data_router_status converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_data_router_status and fpga1_data_router_status returning a single DevShort. i.e fpga0_data_router_status-> 0, fpga1_data_router_status->0
+
+* [THORN-261] ddr_reset_counter converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_ddr_reset_counter and fpga1_ddr_reset_counter returning a single DevShort. i.e fpga0_ddr_reset_counter-> 0, fpga1_ddr_reset_counter->0
+
+* [THORN-261] resync_count converted from the form '{"FPGA0": 0, "FPGA1": 0}' to attributes fpga0_resync_count and fpga1_resync_count returning a single DevShort. i.e fpga0_resync_count-> 0, fpga1_resync_count->0
+
+* [THORN-261] lane_error_count converted from the form '{"FPGA0": {"Core0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,"lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0},"Core1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,"lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0}},"FPGA1": {"Core0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,"lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0},"Core1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,"lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0}}}' to attributes fpga0_lane_error_count and fpga1_lane_error_count returning a 2d array of count per lane per core. i.e tile.fpga1_lane_error_count->[ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ] being [[ Core0 ],[ Core1 ]]
+
+* [THORN-261] attribute clocks converted from the form '{"FPGA0": {"JESD": true, "DDR": true, "UDP": true},"FPGA1": {"JESD": true, "DDR": true, "UDP": true}}' to attributes fpga1_clocks and fpga1_clocks each containing the status of respective clocks. i.e. fpga0_clocks->[1, 1, 1], fpga1_clocks->[1, 1, 1] where [1, 1, 1] == [JESD, DDR, UDP].
+
+* [THORN-261] attribute clock_managers converted from the form  '{"FPGA0": {"C2C_MMCM": [true, 0], "JESD_MMCM": [true, 0],"DSP_MMCM": [true, 0]},"FPGA1": {"C2C_MMCM": [true, 0], "JESD_MMCM": [true, 0],"DSP_MMCM": [true, 0]}}' to attributes fpga0_clock_managers_status, fpga0_clock_managers_count, fpga1_clock_managers_status and fpga1_clock_managers_count. fpga0_clock_managers_status and fpga1_clock_managers_status contain a list of the clock status. i.e. tile.fpga0_clock_managers_status->[0, 0, 0], tile.fpga1_clock_managers_status->[0, 0, 0] where [0, 0, 0]->["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]. Attributes fpga0_clock_managers_count and fpga1_clock_managers_counta also contain a list of DevShort representing the count of each respective clock. i.e fpga0_clock_managers_count->[0, 0, 0], fpga1_clock_managers_count->[0, 0, 0], where [0, 0, 0]->["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
+
+* [THORN-261] attribute qpll_status converted from the form '{"FPGA0": [true, 0], "FPGA1": [true, 0]}' to attributes fpga1_qpll_counter, fpga1_qpll_status, fpga0_qpll_status, fpga0_qpll_counter. fpga1_qpll_counter, fpga0_qpll_counter return a DevShort containing the counter value. i.e fpga0_qpll_status->1, fpga1_qpll_status->1. fpga1_qpll_status and fpga0_qpll_status return a DevShort with the status value. i.e. fpga0_qpll_status->1, fpga1_qpll_status->1.
+
+* [THORN-261] attribute f2f_pll_status converted from the form '[true, 0]' into attributes f2f_pll_status and f2f_pll_counter. f2f_pll_status returns a DevShort i.e f2f_pll_status->1, f2f_pll_counter returns a DevSort i.e f2f_pll_counter->0
+
+* [THORN-261] attribute timing_pll_40g_status converted from the form '[true, 0]' into attributes timing_pll_40g_status and timing_pll_40g_count. timing_pll_40g_status returns a DevShort i.e timing_pll_40g_status->1, timing_pll_40g_count returns a DevShort i.e timing_pll_40g_count->0
+
+* [THORN-261] attribute timing_pll_status converted from the form '[true, 0]' into attributes timing_pll_status and timing_pll_count. timing_pll_status returns a DevShort i.e timing_pll_status->1. timing_pll_count returns a DevShort i.e timing_pll_count->0
+
+* [THORN-261] Add abs_change and archive_abs_change configuration to attributes.
 
 ## 9.1.0
 

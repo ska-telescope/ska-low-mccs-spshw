@@ -16,7 +16,7 @@ import sys
 from typing import Any, Callable, Final, Optional
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
-from ska_low_mccs_common import MccsBaseDevice
+from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
@@ -326,6 +326,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
     }
 
+    UseAttributesForHealth = device_property(
+        doc="Use the attribute quality factor in health. ADR-115.",
+        dtype=bool,
+        default_value=True,
+    )
+
     # --------------
     # Initialization
     # --------------
@@ -347,6 +353,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         self._health_model: SubrackHealthModel
         self._health_state: HealthState
+        self._stopping = False
+        self._health_recorder: HealthRecorder | None = None
+        self._health_report = ""
         self.component_manager: SubrackComponentManager
 
         self._tpm_present: list[bool] = []
@@ -380,15 +389,34 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             f"\tPduTrl: {self.PduTrl}\n"
             f"\tPduPorts: {self.PduPorts}\n"
             f"\tSimulatedPDU: {self.SimulatedPDU}\n"
+            f"\tUseAttributesForHealth: {self.UseAttributesForHealth}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+        )
+
+        healful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
+            self._ATTRIBUTE_MAP.values()
+        )
+
+        self._health_recorder = HealthRecorder(
+            self.get_name(),
+            logger=self.logger,
+            attributes=list(healful_attrs),
+            health_callback=self._health_changed_new,
+            attr_conf_callback=self._attr_conf_changed,
         )
 
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
         if self.component_manager.pdu_proxy:
             self.component_manager.pdu_proxy.cleanup()
+
+        self._stopping = True
+        if self._health_recorder:
+            self._health_recorder.cleanup()
+            self._health_recorder = None
+
         self.component_manager._task_executor._executor.shutdown()
         super().delete_device()
 
@@ -428,6 +456,44 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._device.logger.info(message)
             self._completed()
             return (ResultCode.OK, message)
+
+    def _health_changed_new(
+        self: MccsSubrack, health: HealthState, health_report: str
+    ) -> None:
+        """
+        Handle change in health from new health Model.
+
+        :param health: the new health value
+        :param health_report: the health report
+        """
+        if self.UseAttributesForHealth:
+            self.logger.error(f"change = {health=}, {health_report=}")
+            if self._stopping:
+                return
+
+            if self._health_state != health:
+                self._health_state = health
+                self._health_report = health_report
+                self.push_change_event("healthState", health)
+                self.push_archive_event("healthState", health)
+
+    def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
+        """
+        Handle change in attribute configuration.
+
+        This is a workaround as if you configure an attribute
+        which is not alarming to have alarm/warning thresholds
+        such that it would be alarming, Tango does not push an event
+        until the attribute value changes.
+
+        :param attribute_name: the name of the attribute whose
+            configuration has changed.
+        """
+        self.logger.error(f"attr = {attribute_name=}")
+        value_cache = self._attribute_state[attribute_name].read()
+        if value_cache is not None:
+            self.push_change_event(attribute_name, value_cache[0])
+            self.push_archive_event(attribute_name, value_cache[0])
 
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
@@ -1538,9 +1604,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :param health: the new health value
         """
-        if self._health_state != health:
-            self._health_state = health
-            self.push_change_event("healthState", health)
+        if not self.UseAttributesForHealth:
+            if self._health_state != health:
+                self._health_state = health
+                self.push_change_event("healthState", health)
 
     def _update_board_current(self: MccsSubrack, board_current: float) -> None:
         if board_current is None:

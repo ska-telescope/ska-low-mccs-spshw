@@ -1,10 +1,16 @@
 # Version History
 
-## 9.0.1
+## 9.1.1
 
 * [THORN-313] Loop over antennas present in mapping in station_component_manager._calculate_delays_per_tile instead of looping over delays. Improved some messages/docstrings.
+
+## Unreleased
+
+## 9.1.0
+
 * [THORN-249] Add attribute pfb_version to MccsTile.
 * [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
+* [SKB-1035] Added tile programming state to the health rollup
 
 ## 9.0.0
 

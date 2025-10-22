@@ -819,9 +819,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.set_archive_event("healthState", True, self.VerifyEvents)
 
         if self.UseAttributesForHealth:
-            healful_attrs = set(self._attribute_state.keys())
+            healthful_attrs = set(self._attribute_state.keys())
 
-            healful_attrs = healful_attrs - {
+            healthful_attrs = healthful_attrs - {
                 "dataTransmissionMode",
                 "tileProgrammingState",
                 "integratedDataTransmissionMode",
@@ -832,7 +832,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_recorder = HealthRecorder(
                 self.get_name(),
                 logger=self.logger,
-                attributes=list(healful_attrs),
+                attributes=list(healthful_attrs),
                 health_callback=self._health_changed_new,
                 attr_conf_callback=self._attr_conf_changed,
             )

@@ -2537,6 +2537,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatures"].read()
 
     @attribute(
+        dtype="DevBoolean",
+        label="useAttributesForHealth",
+    )
+    def useAttributesForHealth(self: MccsTile) -> bool:
+        """
+        Return if adr115 is in use.
+
+        :return: True if attributes quality is
+            being evaluated in health.
+        """
+        return self.UseAttributesForHealth
+
+    @attribute(
         dtype="DevDouble",
         label="ADC 0",
         unit="Celsius",

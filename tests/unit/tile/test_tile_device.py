@@ -305,6 +305,7 @@ class TestMccsTile:
         """
         return [
             "healthModelParams",
+            "useAttributesForHealth",
             "temperatureHealth",
             "voltageHealth",
             "currentHealth",
@@ -842,7 +843,8 @@ class TestMccsTile:
             (Using a TileSimulator)
         """
         # This latency represents the average time to process the results of a poll.
-        latency: float = 0.06
+        # ADR-115 increased this latency from 0.06 -> 0.13
+        latency: float = 0.13
         time_to_poll_attributes = (poll_rate + latency) * len(
             RequestIterator.INITIALISED_POLLED_ATTRIBUTES
         )

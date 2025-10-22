@@ -390,6 +390,36 @@ class TestMccsTile:
             "sysrefPresent",
         ]
 
+    @pytest.fixture(name="null_value_attributes")
+    def null_value_attributes_fixture(self) -> list[str]:
+        """
+        Return a list of tile attributes that None value.
+
+        None values typically represent the hardware or fimware not
+        supporting them.
+
+        :returns: a list of attributes that have None value.
+        """
+        return [
+            "timing_pll_40g_count",  # Not updated in simulated bios version
+            "temperatureADC0",  # Not updated in simulated hardware version
+            "temperatureADC1",  # Not updated in simulated hardware version
+            "temperatureADC2",  # Not updated in simulated hardware version
+            "temperatureADC3",  # Not updated in simulated hardware version
+            "temperatureADC4",  # Not updated in simulated hardware version
+            "temperatureADC5",  # Not updated in simulated hardware version
+            "temperatureADC6",  # Not updated in simulated hardware version
+            "temperatureADC7",  # Not updated in simulated hardware version
+            "temperatureADC8",  # Not updated in simulated hardware version
+            "temperatureADC9",  # Not updated in simulated hardware version
+            "temperatureADC10",  # Not updated in simulated hardware version
+            "temperatureADC11",  # Not updated in simulated hardware version
+            "temperatureADC12",  # Not updated in simulated hardware version
+            "temperatureADC13",  # Not updated in simulated hardware version
+            "temperatureADC14",  # Not updated in simulated hardware version
+            "temperatureADC15",  # Not updated in simulated hardware version
+        ]
+
     @pytest.fixture(name="tpm_configuration_attributes")
     def tpm_configuration_attributes_fixture(self) -> list[str]:
         """
@@ -813,6 +843,7 @@ class TestMccsTile:
         tango_attributes: list[str],
         ska_tango_base_attributes: list[str],
         not_implemented_attributes: list[str],
+        null_value_attributes: list[str],
         tpm_configuration_attributes: list[str],
         software_configuration_attributes: list[str],
         active_read_attributes: list[str],
@@ -849,6 +880,9 @@ class TestMccsTile:
             ska_tango_base attributes.
         :param not_implemented_attributes: a fixture containing a list of
             attributes not yet implemented in tile.
+        :param null_value_attributes: A fixture containing a list of attributes
+            that have a None value. Usually means hardware or firmware does not
+            support
         :param software_configuration_attributes: a fixture containing a list of tile
             configuration attributes (defined in software only)
         :param tpm_configuration_attributes: a fixture containing a list of tile
@@ -917,7 +951,6 @@ class TestMccsTile:
             "coreCommunicationStatus",
             "ddr_write_size",
             "ddr_rd_cnt",
-            "timing_pll_40g_count",  # Not updated in simulated bios version
             "ddr_wr_cnt",
             "ddr_rd_dat_cnt",
         ]
@@ -928,6 +961,7 @@ class TestMccsTile:
             + tango_attributes
             + ska_tango_base_attributes
             + not_implemented_attributes
+            + null_value_attributes
             + software_configuration_attributes
             + tpm_configuration_attributes
             + active_read_attributes
@@ -1084,7 +1118,6 @@ class TestMccsTile:
             "voltageVM_SW_AMP",
             "voltageVrefDDR0",
             "currentTileBeamformerFrame",
-            "temperatureADC14",
             "f2f_pll_status",
             "fpga0_clock_managers_status",
             "fpga1_clock_managers_count",

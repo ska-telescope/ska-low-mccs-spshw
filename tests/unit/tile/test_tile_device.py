@@ -8,6 +8,7 @@
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
+import copy
 import gc
 import itertools
 import json
@@ -36,6 +37,7 @@ from ska_low_mccs_spshw.tile import (
     MccsTile,
     MockTpm,
     TileComponentManager,
+    TileData,
     TileSimulator,
 )
 from ska_low_mccs_spshw.tile.tile_poll_management import RequestIterator
@@ -89,12 +91,24 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
+@pytest.fixture(name="use_attribute_for_health")
+def use_attribute_for_health_fixture() -> bool:
+    """
+    Return a bool representing is attributes are used in health.
+
+    :returns: True if we want to make use of attributes in
+        health
+    """
+    return True
+
+
 @pytest.fixture(name="test_context")
 def test_context_fixture(
     tile_id: int,
     patched_tile_device_class: type[MccsTile],
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_station_device_proxy: unittest.mock.Mock,
+    use_attribute_for_health: bool,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which a tile Tango device is running.
@@ -106,6 +120,8 @@ def test_context_fixture(
     :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
         device.
     :param mock_station_device_proxy: A mock procy to the spsstation device.
+    :param use_attribute_for_health: A bool representing if we are using the
+        attribute quality feature for health evaluation.
 
     :yields: a test context.
     """
@@ -115,7 +131,7 @@ def test_context_fixture(
         tile_id,
         device_class=patched_tile_device_class,
         logging_level=2,
-        use_attributes_for_health=True,
+        use_attributes_for_health=use_attribute_for_health,
     )
     # SpsStation added for adminMode inheritance, without this
     # our test logs are filled with noise.
@@ -870,6 +886,7 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+        change_event_callbacks["health_state"].assert_not_called()
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -889,6 +906,7 @@ class TestMccsTile:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        change_event_callbacks["health_state"].assert_not_called()
         assert tile_device.healthState == HealthState.OK
         time.sleep(time_to_poll_attributes)
 
@@ -3097,3 +3115,84 @@ class TestMccsTileCommands:
             "SetCurrentWarningThresholds command failed to complete. "
             "Check current name is valid."
         ]
+
+
+class TestOldHealth:
+    """Class containing tests for the old deprecated health model."""
+
+    @pytest.fixture(name="use_attribute_for_health")
+    def use_attribute_for_health_fixture(self: TestOldHealth) -> bool:
+        """
+        Return a bool representing is attributes are used in health.
+
+        :returns: True if we want to make use of attributes in
+            health
+        """
+        return False
+
+    @pytest.mark.parametrize(
+        ("expected_init_params", "new_params"),
+        [
+            pytest.param(
+                TileData.DEFAULT_MONITORING_POINTS,
+                {
+                    "temperatures": {"board": {"max": 70}},
+                    "timing": {"clocks": {"FPGA0": {"JESD": False}}},
+                },
+                id="Check temperature and timing values and check new values",
+            ),
+            pytest.param(
+                TileData.DEFAULT_MONITORING_POINTS,
+                {
+                    "currents": {"FE0_mVA": {"max": 25}},
+                    "io": {
+                        "jesd_interface": {
+                            "lane_error_count": {"FPGA0": {"Core0": {"lane3": 2}}}
+                        }
+                    },
+                },
+                id="Change current and io values and check new values",
+            ),
+            pytest.param(
+                TileData.DEFAULT_MONITORING_POINTS,
+                {
+                    "alarms": {"I2C_access_alm": 1},
+                    "adcs": {"pll_status": {"ADC0": (False, True)}},
+                    "dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA1": 1}}},
+                },
+                id="Change alarm, adc and dsp values and check new values",
+            ),
+        ],
+    )
+    def test_healthParams(
+        self: TestOldHealth,
+        tile_device: MccsDeviceProxy,
+        expected_init_params: dict[str, Any],
+        new_params: dict[str, Any],
+    ) -> None:
+        """
+        Test for healthParams attributes.
+
+        :param tile_device: the Tile Tango device under test.
+        :param expected_init_params: the initial values which the health model is
+            expected to have initially
+        :param new_params: the new health rule params to pass to the health model
+        """
+
+        def _merge_dicts(
+            dict_a: dict[str, Any], dict_b: dict[str, Any]
+        ) -> dict[str, Any]:
+            output = copy.deepcopy(dict_a)
+            for key in dict_b:
+                if isinstance(dict_b[key], dict):
+                    output[key] = _merge_dicts(dict_a[key], dict_b[key])
+                else:
+                    output[key] = dict_b[key]
+            return output
+
+        assert tile_device.healthModelParams == json.dumps(expected_init_params)
+        new_params_json = json.dumps(new_params)
+        tile_device.healthModelParams = new_params_json  # type: ignore[assignment]
+        expected_result = copy.deepcopy(expected_init_params)
+        expected_result = _merge_dicts(expected_result, new_params)
+        assert tile_device.healthModelParams == json.dumps(expected_result)

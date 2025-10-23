@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-261] bump ska-low-sps-tpm-api 1.0.0 -> 1.0.1 (<https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/-/releases/1.0.1>)
+
 ## 9.1.0
 
 * [THORN-249] Add attribute pfb_version to MccsTile.

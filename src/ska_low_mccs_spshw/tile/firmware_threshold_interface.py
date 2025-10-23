@@ -1,6 +1,23 @@
 from dataclasses import dataclass, field
 from typing import List, Union
 import tango
+from __future__ import annotations
+
+class FirmwareThresholdsDbInterface:
+    def __init__(self, device_name: str, thresholds: list[FirmwareThresholds], db_connection: tango.Database | None):
+        self._device_name = device_name
+        self._thresholds = thresholds
+        self._db_connection = db_connection or tango.Database()
+        self._sync_class_cache_with_db()
+
+    def _sync_class_cache_with_db(self):
+        firmware_thresholds = self._db_connection.get_device_attribute_property(self._device_name, self._thresholds.to_device_property_keys_only())
+        self._thresholds.update_from_dict(firmware_thresholds["firmware_thresholds"])
+
+    def write_threshold_to_db(self):
+        self._db_connection.put_device_attribute_property(self._device_name, self._thresholds.to_device_property_dict())
+
+
 
 @dataclass
 class FirmwareThresholds:
@@ -91,7 +108,6 @@ class FirmwareThresholds:
         self._board_alarm_threshold = value
 
 
-
     def to_device_property_dict(self) -> dict:
         """Return dict with keys and current values."""
         return {
@@ -109,12 +125,12 @@ class FirmwareThresholds:
         """Return dict with keys only, values replaced by None."""
         return {
             "firmware_thresholds": {
-                "board_alarm_threshold": "Undefined",
-                "board_warning_threshold": "Undefined",
-                "fpga2_warning_threshold": "Undefined",
-                "fpga2_alarm_threshold": "Undefined",
-                "fpga1_warning_threshold": "Undefined",
-                "fpga1_alarm_threshold": "Undefined"
+                "board_alarm_threshold": None,
+                "board_warning_threshold": None,
+                "fpga2_warning_threshold": None,
+                "fpga2_alarm_threshold": None,
+                "fpga1_warning_threshold": None,
+                "fpga1_alarm_threshold": None
             }
         }
     

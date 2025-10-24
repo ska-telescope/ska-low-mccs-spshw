@@ -25,6 +25,13 @@ Feature: Test tile
         When the Tile TANGO device is restarted
         Then the Tile comes up in the defined Initialised state
 
+    Scenario: Tile thresholds checked against db
+        Given an SPS deployment against a real context
+        And the SpsStation and tiles are ON
+        And we have modified the firmware thresholds
+        When the Tile TANGO device is restarted 
+        Then the Tile reports it has configuration missmatch
+
 # Scenario: Tile state recovered after dev_init
 #     Given an SPS deployment against HW
 #     And the SpsStation and tiles are ON

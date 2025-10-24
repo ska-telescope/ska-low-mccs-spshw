@@ -7,7 +7,7 @@
 # See LICENSE for more info.
 """This module implements the MCCS Tile device."""
 from __future__ import annotations
-from .firmware_threshold_interface import FirmwareThresholds
+from .firmware_threshold_interface import FirmwareThresholds, FirmwareThresholdsDbInterface
 
 import functools
 import importlib  # allow forward references in type hints
@@ -756,21 +756,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
         self._multi_attr = self.get_device_attr()
         super().init_device()
-        self.firmware_thresholds = FirmwareThresholds()
-        firmware_thresholds = tango.Database().get_device_attribute_property(self.get_name(), self.firmware_thresholds.to_device_property_keys_only())
-        firmware_thresholds2 = tango.Database().get_device_attribute_property(self.get_name(), "firmware_thresholds")
-        try:
-            self.logger.error(f"{firmware_thresholds=}")
-            self.logger.error(f"{firmware_thresholds2=}")
-            self.logger.error(f"{firmware_thresholds2['fpga1_alarm_threshold']=}")
-            self.logger.error(f"{type(firmware_thresholds2['fpga1_alarm_threshold'])=}")
-            self.logger.error(f"{firmware_thresholds2['board_alarm_threshold']=}")
-            self.logger.error(f"{type(firmware_thresholds2['board_alarm_threshold'])=}")
-        except Exception as e:
-            print(e)
-        self.firmware_thresholds.update_from_dict(firmware_thresholds["firmware_thresholds"])
-        
 
+        self.firmware_thresholds = FirmwareThresholds()
+        self.hw_thresholds = FirmwareThresholds()
+        self._firmware_threshold_db_interface = FirmwareThresholdsDbInterface(device_name=self.get_name(), thresholds=self.firmware_thresholds)
 
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -1123,6 +1112,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
+    def _is_firmware_matching_database_again(
+        self: MccsTile,
+        read_firmware_thresholds: dict[str, dict[str, list[int]]]
+    ) -> bool:
+        """
+        Compare firmware thresholds from the database against read values.
+        Ignores any thresholds marked as 'Undefined' in the database.
+        Returns True if all defined DB values match the read values, else False.
+        """
+        # Assumptions this class is synced with db.
+
+
+        db_thresholds = self.firmware_thresholds.to_device_property_dict().get("firmware_thresholds", {})
+        read_thresholds = read_firmware_thresholds.to_device_property_dict().get("firmware_thresholds", {})
+
+        for key, db_value in db_thresholds.items():
+            if db_value == "Undefined":
+                continue  # Skip undefined thresholds
+            self.logger.error(f"Investigating {key=} with {db_value=}")
+            read_value = read_thresholds.get(key)
+            self.logger.error(f"from hw {read_value=}")
+            if read_value is None or db_value != read_value:
+                return False
+
+        return True
+
     def _update_attribute_callback(
         self: MccsTile,
         mark_invalid: bool = False,
@@ -1139,6 +1154,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         tile_health_structure=self.tile_health_structure
                     )
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
+            elif attribute_name == "firmware_thresholds":
+                self.logger.error(f"hw read thresholds reporting {attribute_value.to_device_property_dict()}")
+                if not self._is_firmware_matching_database_again(attribute_value):
+                    self.logger.error("This is bad we failed correctly\n\n")
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             else:
@@ -1322,63 +1341,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # it seems that fire_change_event will consume the
         # value set meaning a check_alarm has a nullptr.
         self._multi_attr.get_attr_by_name(name).set_value(attr_value)
-        if name == "fpga1Temperature":
-            # self.logger.error("Trying to read the write and read values")
-            # w_val = self._multi_attr.get_attr_by_name("firmwareTemperatureThresholds").get_properties().write_value
-            # self.logger.error(f"wval is {w_val}")
-            # self.logger.error(f"rval is {attr_value}")
-            # if w_val!=attr_value:
-            #     self.logger.error("Different values detected, doing something.")
-
-            try:
-                w_val= tango.Database().get_device_attribute_property(self.get_name(), {"write_value": {"fpga1_alarm_threshold"}})
-                if not self._is_firmware_matching_database(self.firmware_thresholds.to_device_property_dict(), self.component_manager.get_tpm_temperature_thresholds()):
-                    self.logger.error("Not matching")
-                    self.logger.error("This is really bad.")
-                    import time
-                    time.sleep()
-                
-
-                self.logger.error(f"wval is {w_val}")
-                self.logger.error(f"rval is {attr_value}")
-                if w_val != attr_value:
-                    self.logger.error("Different values detected, doing something.")
-            except Exception as e:
-                self.logger.error(f"{e=}")
-
         try:
             # Update the attribute ALARM status.
             self._multi_attr.check_alarm(name)
         except tango.DevFailed:
             # no alarm defined
             pass
-
-    def _is_firmware_matching_database(
-        self: MccsTile,
-        database_firmware_thresholds: dict[str, dict[str, str | list[int]]],
-        read_firmware_thresholds: dict[str, dict[str, list[int]]]
-    ) -> bool:
-        """
-        Compare firmware thresholds from the database against read values.
-        Ignores any thresholds marked as 'Undefined' in the database.
-        Returns True if all defined DB values match the read values, else False.
-        """
-        db_thresholds = database_firmware_thresholds.get("firmware_thresholds", {})
-        read_thresholds = read_firmware_thresholds
-
-        for key, db_value in db_thresholds.items():
-            self.logger.error(f"Investigating if {key=} is undefined")
-            if db_value == "Undefined":
-                self.logger.error("It was!\n")
-                continue  # Skip undefined thresholds
-            self.logger.error(f"Investigating {key=} with {db_value=}")
-            read_value = read_thresholds.get(key)
-            self.logger.error(f"{read_value=}")
-            if read_value is None or db_value != read_value:
-                return False
-
-        return True
-    
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -1417,13 +1385,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
+        # This interfaces with the FirmwareThresholds dataclass. 
         kwargs = json.loads(argin)
-        board_warning_threshold = kwargs.get("board_warning_threshold", "Undefined")
-        board_alarm_threshold = kwargs.get("board_alarm_threshold", "Undefined")
-        fpga1_warning_threshold = kwargs.get("fpga1_warning_threshold", "Undefined")
-        fpga1_alarm_threshold = kwargs.get("fpga1_alarm_threshold", "Undefined")
-        fpga2_warning_threshold = kwargs.get("fpga2_warning_threshold", "Undefined")
-        fpga2_alarm_threshold = kwargs.get("fpga2_alarm_threshold", "Undefined")
+        board_warning_threshold = kwargs.get("board_warning_threshold")
+        board_alarm_threshold = kwargs.get("board_alarm_threshold")
+        fpga1_warning_threshold = kwargs.get("fpga1_warning_threshold")
+        fpga1_alarm_threshold = kwargs.get("fpga1_alarm_threshold")
+        fpga2_warning_threshold = kwargs.get("fpga2_warning_threshold")
+        fpga2_alarm_threshold = kwargs.get("fpga2_alarm_threshold")
 
 
         self.component_manager.set_tpm_temperature_thresholds(
@@ -1432,15 +1401,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             max_fpga2_alarm_threshold=fpga2_alarm_threshold,
         )
 
-        self.firmware_thresholds.board_warning_threshold = board_warning_threshold
-        self.firmware_thresholds.board_alarm_threshold = board_alarm_threshold
-        self.firmware_thresholds.fpga1_warning_threshold = fpga1_warning_threshold
-        self.firmware_thresholds.fpga1_alarm_threshold = fpga1_alarm_threshold
-        self.firmware_thresholds.fpga2_warning_threshold = fpga2_warning_threshold
-        self.firmware_thresholds.fpga2_alarm_threshold = fpga2_alarm_threshold
+        self.firmware_thresholds.board_warning_threshold = "Undefined" if board_warning_threshold is None else board_warning_threshold
+        self.firmware_thresholds.board_alarm_threshold ="Undefined" if board_alarm_threshold is None else board_alarm_threshold 
+        self.firmware_thresholds.fpga1_warning_threshold = "Undefined" if fpga1_warning_threshold is None else fpga1_warning_threshold 
+        self.firmware_thresholds.fpga1_alarm_threshold ="Undefined" if fpga1_alarm_threshold is None else fpga1_alarm_threshold 
+        self.firmware_thresholds.fpga2_warning_threshold = "Undefined" if fpga2_warning_threshold is None else fpga2_warning_threshold 
+        self.firmware_thresholds.fpga2_alarm_threshold ="Undefined" if fpga2_alarm_threshold is None else fpga2_alarm_threshold 
 
+        # Write the values to the database
+        self._firmware_threshold_db_interface.write_threshold_to_db()
 
-        tango.Database().put_device_attribute_property(self.get_name(), self.firmware_thresholds.to_device_property_dict())
+        if not self._is_firmware_matching_database_again(self.component_manager.read_firmware_thresholds()):
+            self.logger.error(f"firmware write {kwargs} failed, readback from firmware did not match database.")
 
     @attribute(
         dtype="DevDouble",

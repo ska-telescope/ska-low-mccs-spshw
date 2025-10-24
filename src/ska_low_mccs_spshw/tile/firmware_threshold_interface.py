@@ -1,20 +1,23 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Union
 import tango
-from __future__ import annotations
 
 class FirmwareThresholdsDbInterface:
-    def __init__(self, device_name: str, thresholds: list[FirmwareThresholds], db_connection: tango.Database | None):
+    def __init__(self, device_name: str, thresholds: list[FirmwareThresholds], db_connection: tango.Database | None= None):
         self._device_name = device_name
         self._thresholds = thresholds
         self._db_connection = db_connection or tango.Database()
         self._sync_class_cache_with_db()
 
     def _sync_class_cache_with_db(self):
+        print("syncing class cache with db...")
         firmware_thresholds = self._db_connection.get_device_attribute_property(self._device_name, self._thresholds.to_device_property_keys_only())
         self._thresholds.update_from_dict(firmware_thresholds["firmware_thresholds"])
+        print("thresholds synced with db")
 
     def write_threshold_to_db(self):
+        print("threshold sritten to db")
         self._db_connection.put_device_attribute_property(self._device_name, self._thresholds.to_device_property_dict())
 
 
@@ -133,7 +136,7 @@ class FirmwareThresholds:
                 "fpga1_alarm_threshold": None
             }
         }
-    
+
     def update_from_dict(self, thresholds: dict):
         """
         Update FirmwareThresholds properties from a Tango-style dict, e.g.:

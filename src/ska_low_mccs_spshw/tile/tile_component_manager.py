@@ -14,7 +14,7 @@ import threading
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
-
+from .firmware_threshold_interface import FirmwareThresholds
 import numpy as np
 import tango
 from ska_control_model import (
@@ -59,6 +59,7 @@ __all__ = ["TileComponentManager"]
 # the risk of mapping errors.
 _ATTRIBUTE_MAP: Final = {
     "TEMPERATURES": "tile_health_structure",
+    "FIRMWARE_THRESHOLDS": "firmware_thresholds",
     "VOLTAGES": "tile_health_structure",
     "CURRENTS": "tile_health_structure",
     "ALARMS": "tile_health_structure",
@@ -384,6 +385,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.is_programmed,
+                    publish=True,
+                )
+            case "FIRMWARE_THRESHOLDS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.read_firmware_thresholds,
                     publish=True,
                 )
             case "TEMPERATURES":
@@ -721,6 +728,24 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"Issue marking attribute {mapped_val} INVALID. {e}"
                     )
                     continue
+
+    def read_firmware_thresholds(self):
+
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            temperature_thresholds =  self.tile.get_tpm_temperature_thresholds()
+
+            thresholds = FirmwareThresholds()
+
+            thresholds.board_warning_threshold = temperature_thresholds["board_warning_threshold"]
+            thresholds.board_alarm_threshold = temperature_thresholds["board_alarm_threshold"]
+            thresholds.fpga1_warning_threshold = temperature_thresholds["fpga1_warning_threshold"]
+            thresholds.fpga1_alarm_threshold = temperature_thresholds["fpga1_alarm_threshold"]
+            thresholds.fpga2_warning_threshold = temperature_thresholds["fpga2_warning_threshold"]
+            thresholds.fpga2_alarm_threshold = temperature_thresholds["fpga2_alarm_threshold"]
+            
+            return thresholds
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
@@ -1483,6 +1508,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
         pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
+        firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1493,6 +1519,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
             pfb_version=pfb_version,
+            firmware_thresholds=firmware_thresholds,
         )
 
         self.logger.info("Configuration information read from TPM")

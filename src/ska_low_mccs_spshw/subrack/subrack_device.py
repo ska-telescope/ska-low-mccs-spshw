@@ -423,7 +423,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
                 self._device.set_change_event(attribute_name, True)
                 self._device.set_archive_event(attribute_name, True)
-            for attribute_name in MccsSubrack._HEALTH_STATUS_MAP.keys():
+            for attribute_name in MccsSubrack._HEALTH_STATUS_MAP:
                 self._device.set_change_event(attribute_name, True)
                 self._device.set_archive_event(attribute_name, True)
 
@@ -1470,6 +1470,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             communicating=(communication_state == CommunicationStatus.ESTABLISHED)
         )
 
+    # pylint: disable=too-many-arguments
     def _component_state_changed(
         self: MccsSubrack,
         fault: Optional[bool] = None,

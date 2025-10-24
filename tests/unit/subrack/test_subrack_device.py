@@ -70,7 +70,19 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
-        timeout=10.0,
+        "internalVoltagesPOWERIN",
+        "internalVoltagesSOC",
+        "internalVoltagesARM",
+        "internalVoltagesDDR",
+        "internalVoltages2V5",
+        "internalVoltages1V1",
+        "internalVoltagesCORE",
+        "internalVoltages1V5",
+        "internalVoltages3V3",
+        "internalVoltages5V",
+        "internalVoltages3V",
+        "internalVoltages2V8",
+        timeout=20.0,
         assert_no_error=False,
     )
 
@@ -680,3 +692,71 @@ def test_subrack_connection_lost(
     )
     change_event_callbacks["tpm1PowerState"].assert_not_called()
     assert subrack_device.tpm1PowerState == state_of_device_under_control_after_dropout
+
+
+def test_health_status_attributes(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test health state values.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    assert subrack_device.adminMode == AdminMode.OFFLINE
+
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    hs_map = {
+        "internalVoltagesPOWERIN": ["internal_voltages", "V_POWERIN"],
+        "internalVoltagesSOC": ["internal_voltages", "V_SOC"],
+        "internalVoltagesARM": ["internal_voltages", "V_ARM"],
+        "internalVoltagesDDR": ["internal_voltages", "V_DDR"],
+        "internalVoltages2V5": ["internal_voltages", "V_2V5"],
+        "internalVoltages1V1": ["internal_voltages", "V_1V1"],
+        "internalVoltagesCORE": ["internal_voltages", "V_CORE"],
+        "internalVoltages1V5": ["internal_voltages", "V_1V5"],
+        "internalVoltages3V3": ["internal_voltages", "V_3V3"],
+        "internalVoltages5V": ["internal_voltages", "V_5V"],
+        "internalVoltages3V": ["internal_voltages", "V_3V"],
+        "internalVoltages2V8": ["internal_voltages", "V_2V8"],
+    }
+    health_status = subrack_simulator._get_health_status("")
+    assert subrack_device.healthStatus == "{}"
+
+    for attribute_name, path_list in hs_map.items():
+        subrack_device.subscribe_event(
+            attribute_name,
+            EventType.CHANGE_EVENT,
+            change_event_callbacks[attribute_name],
+        )
+        change_event_callbacks[attribute_name].assert_change_event(None)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["state"].assert_not_called()
+
+    for attribute_name, path_list in hs_map.items():
+        subrack_device.subscribe_event(
+            attribute_name,
+            EventType.CHANGE_EVENT,
+            change_event_callbacks[attribute_name],
+        )
+        value = health_status
+        for path in path_list:
+            value = value[path]
+        change_event_callbacks[attribute_name].assert_change_event(
+            value, lookahead=2, consume_nonmatches=True
+        )

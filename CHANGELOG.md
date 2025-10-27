@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 10.1.0
 
 * [SKB-1089] Add workaround to corrupt XML during programming. This occured at an approximate ~4%. The workaround is to erase and reprogram the TPM. 
 * [THORN-261] Added property UseAttributesForHealth. A new feature toggle activating ADR-115 in MccsTile. By default this is True, when True the attribute

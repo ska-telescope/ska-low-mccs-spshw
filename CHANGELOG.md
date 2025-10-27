@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1089] Add workaround to corrupt XML during programming. This occured at an approximate ~4%. The workaround is to erase and reprogram the TPM. 
 * [THORN-261] Added property UseAttributesForHealth. A new feature toggle activating ADR-115 in MccsTile. By default this is True, when True the attribute
 quality factor will be used to inform health.
 * [THORN-261] bump ska-low-sps-tpm-api 1.0.0 -> 1.0.1 (<https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/-/releases/1.0.1>)

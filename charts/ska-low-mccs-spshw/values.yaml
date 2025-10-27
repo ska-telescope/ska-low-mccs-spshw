@@ -21,7 +21,7 @@ global:
 image:
   registry: docker.io/library # artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 9.0.0-dirty
+  tag: 10.0.0
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -360,7 +360,7 @@ ska-tango-devices:
       image:
         registry: docker.io/library # artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 9.0.0-dirty
+        tag: 10.0.0
         pullPolicy: IfNotPresent
       command: spshw
       resources:

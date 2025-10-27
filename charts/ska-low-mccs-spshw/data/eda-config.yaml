@@ -251,16 +251,13 @@ configuration:
         archive_period: 0
   - class: MccsTile
     attributes:
-      buildState:
-        code_push_event: true
-        archive_period: 0
-      versionId:
-        code_push_event: true
-        archive_period: 0
       healthState:
         code_push_event: true
         archive_period: 0
       adminMode:
+        code_push_event: true
+        archive_period: 0
+      controlMode:
         code_push_event: true
         archive_period: 0
       simulationMode:
@@ -269,10 +266,220 @@ configuration:
       testMode:
         code_push_event: true
         archive_period: 0
+      lrcFinished:
+        code_push_event: true
+        archive_period: 0
+      longRunningCommandResult:
+        code_push_event: true
+        archive_period: 0
+      commandedState:
+        code_push_event: true
+        archive_period: 0
+      boardTemperature:
+        code_push_event: true
+        archive_period: 0
+      adc_pll_status:
+        code_push_event: true
+        archive_period: 0
+      tile_beamformer_status:
+        code_push_event: true
+        archive_period: 0
+      station_beamformer_status:
+        code_push_event: true
+        archive_period: 0
+      fpga0_station_beamformer_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_station_beamformer_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_station_beamformer_flagged_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_station_beamformer_flagged_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_crc_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_crc_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_bip_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_bip_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_decode_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_decode_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_linkup_loss_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_linkup_loss_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_data_router_status:
+        code_push_event: true
+        archive_period: 0
+      fpga1_data_router_status:
+        code_push_event: true
+        archive_period: 0
+      data_router_discarded_packets:
+        code_push_event: true
+        archive_period: 0
+      arp:
+        code_push_event: true
+        archive_period: 0
+      udp_status:
+        code_push_event: true
+        archive_period: 0
+      ddr_initialisation:
+        code_push_event: true
+        archive_period: 0
+      fpga0_ddr_reset_counter:
+        code_push_event: true
+        archive_period: 0
+      fpga1_ddr_reset_counter:
+        code_push_event: true
+        archive_period: 0
+      f2f_soft_errors:
+        code_push_event: true
+        archive_period: 0
+      f2f_hard_errors:
+        code_push_event: true
+        archive_period: 0
+      fpga0_resync_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_resync_count:
+        code_push_event: true
+        archive_period: 0
+      lane_status:
+        code_push_event: true
+        archive_period: 0
+      link_status:
+        code_push_event: true
+        archive_period: 0
+      fpga1_lane_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_lane_error_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_clock_managers_count:
+        code_push_event: true
+        archive_period: 0
+      fpga0_clock_managers_status:
+        code_push_event: true
+        archive_period: 0
+      fpga1_clock_managers_count:
+        code_push_event: true
+        archive_period: 0
+      fpga1_clock_managers_status:
+        code_push_event: true
+        archive_period: 0
+      fpga0_clocks:
+        code_push_event: true
+        archive_period: 0
+      fpga1_clocks:
+        code_push_event: true
+        archive_period: 0
+      adc_sysref_counter:
+        code_push_event: true
+        archive_period: 0
+      adc_sysref_timing_requirements:
+        code_push_event: true
+        archive_period: 0
+      fpga0_qpll_status:
+        code_push_event: true
+        archive_period: 0
+      fpga0_qpll_counter:
+        code_push_event: true
+        archive_period: 0
+      fpga1_qpll_status:
+        code_push_event: true
+        archive_period: 0
+      fpga1_qpll_counter:
+        code_push_event: true
+        archive_period: 0
+      f2f_pll_status:
+        code_push_event: true
+        archive_period: 0
+      f2f_pll_counter:
+        code_push_event: true
+        archive_period: 0
+      timing_pll_status:
+        code_push_event: true
+        archive_period: 0
+      timing_pll_count:
+        code_push_event: true
+        archive_period: 0
+      timing_pll_40g_status:
+        code_push_event: true
+        archive_period: 0
+      timing_pll_40g_count:
+        code_push_event: true
+        archive_period: 0
+      tile_info:
+        code_push_event: true
+        archive_period: 0
       voltages:
         code_push_event: true
         archive_period: 0
       temperatures:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC0:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC1:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC2:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC3:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC4:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC5:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC6:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC7:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC8:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC9:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC10:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC11:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC12:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC13:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC14:
+        code_push_event: true
+        archive_period: 0
+      temperatureADC15:
         code_push_event: true
         archive_period: 0
       currents:
@@ -287,13 +494,22 @@ configuration:
       dsp:
         code_push_event: true
         archive_period: 0
-      cspDestinationIp:
+      adcs:
         code_push_event: true
         archive_period: 0
-      cspDestinationMac:
+      I2C_access_alm:
         code_push_event: true
         archive_period: 0
-      cspDestinationPort:
+      temperature_alm:
+        code_push_event: true
+        archive_period: 0
+      voltage_alm:
+        code_push_event: true
+        archive_period: 0
+      SEM_wd:
+        code_push_event: true
+        archive_period: 0
+      MCU_wd:
         code_push_event: true
         archive_period: 0
       logicalTileId:
@@ -305,19 +521,10 @@ configuration:
       stationId:
         code_push_event: true
         archive_period: 0
-      firmwareName:
-        code_push_event: true
-        archive_period: 0
-      firmwareVersion:
-        code_push_event: true
-        archive_period: 0
       voltageMon:
         code_push_event: true
         archive_period: 0
       isProgrammed:
-        code_push_event: true
-        archive_period: 0
-      boardTemperature:
         code_push_event: true
         archive_period: 0
       fpga1Temperature:
@@ -326,25 +533,7 @@ configuration:
       fpga2Temperature:
         code_push_event: true
         archive_period: 0
-      fpgasUnixTime:
-        code_push_event: true
-        archive_period: 0
-      fpgaTime:
-        code_push_event: true
-        archive_period: 0
       fpgaReferenceTime:
-        code_push_event: true
-        archive_period: 0
-      fpgaFrameTime:
-        code_push_event: true
-        archive_period: 0
-      antennaIds:
-        code_push_event: true
-        archive_period: 0
-      fortyGbDestinationIps:
-        code_push_event: true
-        archive_period: 0
-      fortyGbDestinationPorts:
         code_push_event: true
         archive_period: 0
       adcPower:
@@ -353,7 +542,7 @@ configuration:
       currentTileBeamformerFrame:
         code_push_event: true
         archive_period: 0
-      currentFrame:
+      coreCommunicationStatus:
         code_push_event: true
         archive_period: 0
       pendingDataRequests:
@@ -368,22 +557,13 @@ configuration:
       ppsDelay:
         code_push_event: true
         archive_period: 0
-      ppsDelayDrift:
+      ppsDrift:
         code_push_event: true
         archive_period: 0
       ppsDelayCorrection:
         code_push_event: true
         archive_period: 0
-      testGeneratorActive:
-        code_push_event: true
-        archive_period: 0
       ppsPresent:
-        code_push_event: true
-        archive_period: 0
-      clockPresent:
-        code_push_event: true
-        archive_period: 0
-      sysrefPresent:
         code_push_event: true
         archive_period: 0
       pllLocked:
@@ -404,106 +584,151 @@ configuration:
       beamformerTable:
         code_push_event: true
         archive_period: 0
-      healthModelParams:
+      beamformerRegions:
         code_push_event: true
         archive_period: 0
-      temperatureHealth:
+      rfiCount:
         code_push_event: true
         archive_period: 0
-      voltageHealth:
+      stationBeamFlagEnabled:
         code_push_event: true
         archive_period: 0
-      currentHealth:
+      antennaBufferMode:
         code_push_event: true
         archive_period: 0
-      alarmHealth:
+      dataTransmissionMode:
         code_push_event: true
         archive_period: 0
-      adcHealth:
+      integratedDataTransmissionMode:
         code_push_event: true
         archive_period: 0
-      timingHealth:
+      currentFE0:
         code_push_event: true
         archive_period: 0
-      ioHealth:
+      currentFE1:
         code_push_event: true
         archive_period: 0
-      dspHealth:
+      voltageAVDD3:
         code_push_event: true
         archive_period: 0
-      adc_pll_status:
+      voltageVrefDDR0:
         code_push_event: true
         archive_period: 0
-      tile_beamformer_status:
+      voltageVrefDDR1:
         code_push_event: true
         archive_period: 0
-      station_beamformer_status:
+      voltageMan1V2:
         code_push_event: true
         archive_period: 0
-      station_beamformer_error_count:
+      voltageMGT_AVCC:
         code_push_event: true
         archive_period: 0
-      crc_error_count:
+      voltageMGT_AVTT:
         code_push_event: true
         archive_period: 0
-      bip_error_count:
+      voltageMon5V0:
         code_push_event: true
         archive_period: 0
-      decode_error_count:
+      voltageMon3V3:
         code_push_event: true
         archive_period: 0
-      linkup_loss_count:
+      voltageMon1V8:
         code_push_event: true
         archive_period: 0
-      arp:
+      voltageSW_AVDD1:
         code_push_event: true
         archive_period: 0
-      udp_status:
+      voltageSW_AVDD2:
         code_push_event: true
         archive_period: 0
-      ddr_initialisation:
+      voltageVIN:
         code_push_event: true
         archive_period: 0
-      ddr_reset_counter:
+      voltageVM_AGP0:
         code_push_event: true
         archive_period: 0
-      f2f_soft_errors:
+      voltageVM_AGP1:
         code_push_event: true
         archive_period: 0
-      f2f_hard_errors:
+      voltageVM_AGP2:
         code_push_event: true
         archive_period: 0
-      resync_count:
+      voltageVM_AGP3:
         code_push_event: true
         archive_period: 0
-      lane_status:
+      voltageVM_AGP4:
         code_push_event: true
         archive_period: 0
-      link_status:
+      voltageVM_AGP5:
         code_push_event: true
         archive_period: 0
-      lane_error_count:
+      voltageVM_AGP6:
         code_push_event: true
         archive_period: 0
-      clock_managers:
+      voltageVM_AGP7:
         code_push_event: true
         archive_period: 0
-      clocks:
+      voltageVM_CLK0B:
         code_push_event: true
         archive_period: 0
-      adc_sysref_counter:
+      voltageVM_CLK1B:
         code_push_event: true
         archive_period: 0
-      adc_ssref_timing_requirements:
+      voltageVM_DDR0_VTT:
         code_push_event: true
         archive_period: 0
-      qpll_status:
+      voltageVM_DDR1_VDD:
         code_push_event: true
         archive_period: 0
-      f2f_pll_status:
+      voltageVM_DDR1_VTT:
         code_push_event: true
         archive_period: 0
-      timing_pll_status:
+      voltageVM_DRVDD:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_DVDD:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_FE0:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_FE1:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_MGT0_AUX:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_MGT1_AUX:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_PLL:
+        code_push_event: true
+        archive_period: 0
+      voltageVM_SW_AMP:
+        code_push_event: true
+        archive_period: 0
+      pfbVersion:
+        code_push_event: true
+        archive_period: 0
+      lrcQueue:
+        code_push_event: true
+        archive_period: 0
+      lrcExecuting:
+        code_push_event: true
+        archive_period: 0
+      longRunningCommandStatus:
+        code_push_event: true
+        archive_period: 0
+      longRunningCommandsInQueue:
+        code_push_event: true
+        archive_period: 0
+      longRunningCommandIDsInQueue:
+        code_push_event: true
+        archive_period: 0
+      longRunningCommandInProgress:
+        code_push_event: true
+        archive_period: 0
+      longRunningCommandProgress:
         code_push_event: true
         archive_period: 0
       State:

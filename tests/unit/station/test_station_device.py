@@ -59,7 +59,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=15.0,
+        timeout=20.0,
     )
 
 
@@ -1192,10 +1192,8 @@ def test_SetCspIngest(
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    station_device.MockSubracksOn()
-    station_device.MockTilesOn()
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    # We have the initial mocked state to be ON.
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     station_device.SetCspIngest(
         json.dumps(
@@ -1702,6 +1700,39 @@ def test_AcquireDataForCalibration(
     assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
 
 
+def test_TriggerAdcEqualisation(
+    station_device: SpsStation,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the TriggerAdcEqualisation command.
+
+    :param station_device: The station device to use.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    station_device.MockSubracksOn()
+    station_device.MockTilesOn()
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    args = json.dumps({"target_adc": 18, "bias": 0.5})
+
+    execute_lrc_to_completion(
+        station_device,
+        command_name="TriggerAdcEqualisation",
+        command_arguments=args,
+        timeout=20,  # 20 measurements of 1 second each
+    )
+
+
 def test_health(
     station_device: SpsStation,
     mock_tile_device_proxies: list[unittest.mock.Mock],
@@ -1722,8 +1753,106 @@ def test_health(
     # 1 Station, 1 Mock Subrack, 4 Mock Tiles.
     tile_trls = [get_tile_name(i + 1) for i in range(4)]
     subrack_trls = [get_subrack_name(1)]
-    devices = subrack_trls + tile_trls
 
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for mock in mock_tile_device_proxies:
+        # Mock the tileprogrammingstate to Synchronised
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    # The station holds a cache of Unknown for the Tilprogrammingstatus.
+    # Once the subscrption to the tile is made we identify each being in the
+    # Synchronised state, therefore we transition UNKNOWN->FAILED->OK.
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    assert station_device.healthState == HealthState.OK
+
+    # Set device health to trigger each degraded/failure.
+
+    # --- 2 Degraded Tiles = Degraded ---
+    for i in range(2):
+        station_device.MockSubdeviceHealth(
+            json.dumps({"device": tile_trls[i], "health": HealthState.DEGRADED})
+        )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.DEGRADED)
+    assert station_device.healthState == HealthState.DEGRADED
+    # Reset Tile health.
+    for i in range(2):
+        station_device.MockSubdeviceHealth(
+            json.dumps({"device": tile_trls[i], "health": HealthState.OK})
+        )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    assert station_device.healthState == HealthState.OK
+
+    # --- 1 Failed Tile = Failed ---
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": tile_trls[3], "health": HealthState.FAILED})
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    assert station_device.healthState == HealthState.FAILED
+    # Reset Tile health.
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": tile_trls[3], "health": HealthState.OK})
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    assert station_device.healthState == HealthState.OK
+
+    # --- 1 Subrack Degraded = Degraded ---
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": subrack_trls[0], "health": HealthState.DEGRADED})
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.DEGRADED)
+    assert station_device.healthState == HealthState.DEGRADED
+    # Reset Subrack health.
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": subrack_trls[0], "health": HealthState.OK})
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    assert station_device.healthState == HealthState.OK
+
+    # --- 1 Subrack Failed = Failed ---
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": subrack_trls[0], "health": HealthState.FAILED})
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    assert station_device.healthState == HealthState.FAILED
+    # Reset Subrack health.
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": subrack_trls[0], "health": HealthState.OK})
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    assert station_device.healthState == HealthState.OK
+
+
+def test_programing_state_health_rollup(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test station health rollup.
+
+    :param station_device: The station device to use.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
     station_device.subscribe_event(
         "healthState",
         EventType.CHANGE_EVENT,
@@ -1740,87 +1869,53 @@ def test_health(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
     change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_not_called()
+
+    tile_trls = [get_tile_name(i + 1) for i in range(4)]
+    subrack_trls = [get_subrack_name(1)]
+    devices = subrack_trls + tile_trls
 
     # Set all device healths to OK. Station should be OK.
     for device in devices:
         station_device.MockSubdeviceHealth(
             json.dumps({"device": device, "health": HealthState.OK})
         )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=2, consume_nonmatches=True
-    )
-    assert station_device.healthState == HealthState.OK
 
-    # Set device health to trigger each degraded/failure.
-
-    # --- 2 Degraded Tiles = Degraded ---
-    for i in range(2):
-        station_device.MockSubdeviceHealth(
-            json.dumps({"device": tile_trls[i], "health": HealthState.DEGRADED})
+    # needs looksahead >= 5 because each tile change updates the state
+    for tile_id in range(len(tile_trls)):
+        station_device.MockTileProgrammingStateChange(
+            json.dumps(
+                {
+                    "tile_id": tile_id,
+                    "value": "Synchronised",
+                }
+            )
         )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.DEGRADED, lookahead=1
-    )
-    assert station_device.healthState == HealthState.DEGRADED
-    # Reset Tile health.
-    for i in range(2):
-        station_device.MockSubdeviceHealth(
-            json.dumps({"device": tile_trls[i], "health": HealthState.OK})
+
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+    assert station_device.healthState == HealthState.OK
+    change_event_callbacks["health_state"].assert_not_called()
+    station_device.MockTileProgrammingStateChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "value": "Unknown",
+            }
         )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=1
     )
-    assert station_device.healthState == HealthState.OK
 
-    # --- 1 Failed Tile = Failed ---
-    station_device.MockSubdeviceHealth(
-        json.dumps({"device": tile_trls[3], "health": HealthState.FAILED})
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_not_called()
+    station_device.MockTileProgrammingStateChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "value": "Synchronised",
+            }
+        )
     )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.FAILED, lookahead=1
-    )
-    assert station_device.healthState == HealthState.FAILED
-    # Reset Tile health.
-    station_device.MockSubdeviceHealth(
-        json.dumps({"device": tile_trls[3], "health": HealthState.OK})
-    )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=1
-    )
-    assert station_device.healthState == HealthState.OK
-
-    # --- 1 Subrack Degraded = Degraded ---
-    station_device.MockSubdeviceHealth(
-        json.dumps({"device": subrack_trls[0], "health": HealthState.DEGRADED})
-    )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.DEGRADED, lookahead=1
-    )
-    assert station_device.healthState == HealthState.DEGRADED
-    # Reset Subrack health.
-    station_device.MockSubdeviceHealth(
-        json.dumps({"device": subrack_trls[0], "health": HealthState.OK})
-    )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=1
-    )
-    assert station_device.healthState == HealthState.OK
-
-    # --- 1 Subrack Failed = Failed ---
-    station_device.MockSubdeviceHealth(
-        json.dumps({"device": subrack_trls[0], "health": HealthState.FAILED})
-    )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.FAILED, lookahead=1
-    )
-    assert station_device.healthState == HealthState.FAILED
-    # Reset Subrack health.
-    station_device.MockSubdeviceHealth(
-        json.dumps({"device": subrack_trls[0], "health": HealthState.OK})
-    )
-    change_event_callbacks["health_state"].assert_change_event(
-        HealthState.OK, lookahead=1
-    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
     assert station_device.healthState == HealthState.OK
 
 

@@ -155,6 +155,7 @@ class _TileProxy(DeviceComponentManager):
             "staticTimeDelays": self._on_attribute_change,
             "preaduLevels": self._on_attribute_change,
             "ppsDelay": self._on_attribute_change,
+            "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
         }
@@ -572,6 +573,7 @@ class SpsStationComponentManager(
             "staticTimeDelays",
             "preaduLevels",
             "ppsDelay",
+            "tileProgrammingState",
         ]
 
         self._source_port = 0xF0D0
@@ -609,6 +611,7 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
+        self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [csp_rounding] * 384
         self._desired_static_delays: None | list[float] = None
@@ -948,6 +951,14 @@ class SpsStationComponentManager(
                     self._component_state_callback(
                         ppsDelaySpread=self._pps_delay_spread
                     )
+            case "tileprogrammingstate":
+                self._tile_programming_state[logical_tile_id] = attribute_value
+
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        tileProgrammingState=self._tile_programming_state
+                    )
+
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:
                     reshaped_table = np.reshape(
@@ -2475,11 +2486,11 @@ class SpsStationComponentManager(
 
         :return: list of programming state for all TPMs
         """
-        result = []
-        for tile in self._tile_proxies.values():
+        for tile_id, tile in enumerate(self._tile_proxies.values()):
             assert tile._proxy is not None  # for the type checker
-            result.append(tile._proxy.tileProgrammingState)
-        return result
+            assert tile._proxy.tileProgrammingState is not None
+            self._tile_programming_state[tile_id] = tile._proxy.tileProgrammingState
+        return self._tile_programming_state.copy()
 
     def adc_power(self: SpsStationComponentManager) -> list[float]:
         """
@@ -3718,6 +3729,9 @@ class SpsStationComponentManager(
     def trigger_adc_equalisation(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        *,
+        target_adc: float,
+        bias: float,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the trigger adc equalisation method.
@@ -3726,17 +3740,23 @@ class SpsStationComponentManager(
         `self._trigger_adc_equalisation` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
 
         :return: a task status and response message
         """
         return self.submit_task(
             self._trigger_adc_equalisation,
+            args=[target_adc, bias],
             task_callback=task_callback,
         )
 
     @check_communicating
     def _trigger_adc_equalisation(
         self: SpsStationComponentManager,
+        target_adc: float = 17.0,
+        bias: float = 0.0,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3745,13 +3765,15 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
         tpms = self._tile_proxies.values()
         num_samples = 20
-        target_adc = 17
 
         adc_data = np.empty([num_samples, 32 * len(tpms)])
         for i in range(num_samples):
@@ -3762,11 +3784,16 @@ class SpsStationComponentManager(
         adc_medians = np.median(adc_data, axis=0)
 
         # adc deltas
-        adc_deltas = 20 * np.log10(adc_medians / target_adc)
+        # The maximum attenuation is 127/4=31.75 dB
+        # 10^(-31.75/10) = 0.000668
+        # any target_adc < 0.000668 will be larger than the limit set.
+        # We allow a 32 dB bias range -> reduce to 4.2*10^(-7) from:
+        # 10^(-3.175-3.2) = 10^(-6.375)
+        adc_deltas = 20 * np.log10(adc_medians / max(target_adc, 4.2e-7))
 
         # calculate ideal attenuation
         preadu_levels = np.concatenate([t.preadu_levels() for t in tpms])
-        desired_levels = preadu_levels + adc_deltas
+        desired_levels = preadu_levels + adc_deltas + bias * np.ones(32 * len(tpms))
 
         # quantise and clip to valid range
         sanitised_levels = (desired_levels * 4).round().clip(0, 127) / 4

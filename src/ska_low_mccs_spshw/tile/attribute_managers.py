@@ -7,6 +7,7 @@
 """A collection of AttributeManagers to serve the TANGO attribute."""
 from __future__ import annotations
 
+import math
 import time
 from typing import Any, Callable
 
@@ -63,6 +64,8 @@ class AttributeManager:
 
         :returns: whether or not the value has changed.
         """
+        if isinstance(value, np.ndarray):
+            return not np.array_equal(value, self._value)
         return value != self._value
 
     def update(self: AttributeManager, value: Any, post: bool = True) -> None:
@@ -72,20 +75,28 @@ class AttributeManager:
         :param value: the value we want to update attribute with.
         :param post: Optional flag to post an update.
         """
+
+        def _is_none_type(val: Any) -> bool:
+            if val is None or (isinstance(val, float) and math.isnan(val)):
+                return True
+            return False
+
         is_event_required = False
         self._last_update = time.time()
-        new_value: Any = (
-            self._converter(value) if self._converter and value is not None else value
+        new_value = (
+            self._converter(value)
+            if self._converter and not _is_none_type(value)
+            else value
         )
 
-        if new_value is None:
+        if _is_none_type(new_value):
             # Move to invalid and require event!
             if self._quality != tango.AttrQuality.ATTR_INVALID:
                 self._quality = tango.AttrQuality.ATTR_INVALID
                 is_event_required = True
         else:
             # Check for quality or value changes!
-            if self._update_quality(new_value) or self._value_changed(new_value):
+            if self._update_quality(value) or self._value_changed(new_value):
                 is_event_required = True
 
             self._value = new_value

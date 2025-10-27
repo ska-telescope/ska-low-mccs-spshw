@@ -1214,7 +1214,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     except zlib.error as e:
                         self._decompression_error += 1
                         total = self._decompression_error + self._decompression_success
-                        self.logger.error(
+                        self.logger.warning(
                             "XML data is corrupt. "
                             "This is a known issue in BIOS 0.6.0 (see SKB-1089). "
                             "We have seen this issue %d / %d times. Error: %s",
@@ -1224,7 +1224,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
 
                         if not final_try:
-                            self.logger.error(
+                            self.logger.warning(
                                 "Reprogramming FPGA for "
                                 "station %s tile %s to workaround SKB-1089.",
                                 self._station_id,

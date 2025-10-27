@@ -273,6 +273,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "required": ["first_channel", "last_channel"],
         }
 
+        trigger_adc_equalisation_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "target_adc": {"type": "number", "minimum": 0},
+                "bias": {"type": "number", "minimum": -32, "maximum": 32},
+            },
+            "required": [],
+        }
+
         start_beamformer_schema: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.schemas.station",
@@ -308,7 +318,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "configure_station_for_calibration",
                 None,
             ),
-            ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
+            (
+                "TriggerAdcEqualisation",
+                "trigger_adc_equalisation",
+                trigger_adc_equalisation_schema,
+            ),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
             ("RunTest", "run_test", run_test_schema),
@@ -1734,25 +1748,38 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         (return_code, message) = handler(**json.loads(argin))
         return ([return_code], [message])
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    def TriggerAdcEqualisation(self: SpsStation) -> DevVarLongStringArrayType:
+    @command(dtype_out="DevVarLongStringArray", dtype_in="DevString")
+    def TriggerAdcEqualisation(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Get the equalised ADC values.
 
         Getting the equalised values takes up to 20 seconds (to get an average to
         avoid spikes). So we trigger the collection and publish to dbmPowers
 
+        :param argin: a JSON-ified dictionary containing:
+
+            - target_adc: the expected average power received by antennas in ADU units.
+                Has an input minimum of 0, but in code its limited to 4.2e-7
+                (corresponds to the maxiumum output of 31.75 dB). There is no maximum
+                value, however, 40 ADUs will result in 0 dB with no bias and 1600 ADUs
+                will result in 0 dB with the maxiumum bias allowed of 32dB.
+                Defaults to 17.
+            - bias: user specifed bias in dB added to the antenna preadu levels.
+                Bias input value rounded as part of value sanitation and as a result
+                it increases in steps of 0.25. Ranges from -32 to 32 with default 0.
+
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("TriggerAdcEqualisation")
+            >>> json_arg = json.dumps({"target_adc" : "18"})
+            >>> dp.command_inout("TriggerAdcEqualisation", json_arg)
         """
         handler = self.get_command_object("TriggerAdcEqualisation")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @engineering_mode_required

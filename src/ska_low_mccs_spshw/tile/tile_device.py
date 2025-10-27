@@ -31,7 +31,7 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs_common import MccsBaseDevice
+from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
@@ -168,6 +168,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     DefaultLockTimeout = device_property(dtype=float, default_value=0.4)
     VerifyEvents = device_property(dtype=bool, default_value=True)
+    UseAttributesForHealth = device_property(
+        doc="Use the attribute quality factor in health. ADR-115.",
+        dtype=bool,
+        default_value=True,
+    )
 
     # ---------------
     # Initialisation
@@ -192,6 +197,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
+        self._stopping = False
+        self._health_recorder: HealthRecorder | None = None
+        self._health_report = ""
 
     def delete_device(self: MccsTile) -> Any:
         """
@@ -207,6 +215,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # This can cause a segfault.
             self.component_manager.stop_communicating()
             del self.component_manager
+            self._stopping = True
+            if self._health_recorder is not None:
+                self._health_recorder.cleanup()
+                self._health_recorder = None
         except Exception:  # pylint: disable=broad-except
             pass
         return super().delete_device()
@@ -218,36 +230,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises TypeError: when attributes have a converter
             that is not callable.
         """
-        self._multi_attr = self.get_device_attr()
-        super().init_device()
-
-        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
-        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
-        version = f"{device_name} Software Version: {self._version_id}"
-        properties = (
-            f"Initialised {device_name} device with properties:\n"
-            f"\tSubrackFQDN: {self.SubrackFQDN}\n"
-            f"\tSubrackBay: {self.SubrackBay}\n"
-            f"\tTileId: {self.TileId}\n"
-            f"\tStationId: {self.StationID}\n"
-            f"\tTpmIp: {self.TpmIp}\n"
-            f"\tTpmCpldPort: {self.TpmCpldPort}\n"
-            f"\tTpmVersion (deprecated by HardwareVersion): {self.TpmVersion}\n"
-            f"\tHardwareVersion: {self.HardwareVersion}\n"
-            f"\tBiosVersion: {self.BiosVersion}\n"
-            f"\tAntennasPerTile: {self.AntennasPerTile}\n"
-            f"\tPreAduFitted: {self.PreAduFitted}\n"
-            f"\tSimulationConfig: {self.SimulationConfig}\n"
-            f"\tTestConfig: {self.TestConfig}\n"
-            f"\tPollRate: {self.PollRate}\n"
-            f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
-            f"\tStaticDelays: {self.StaticDelays}\n"
-        )
-        self.logger.info(
-            "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
-        )
-
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
@@ -756,23 +738,111 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "FPGA1",
             ],
         }
+        self._multi_attr = self.get_device_attr()
+        super().init_device()
+
+        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
+        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        version = f"{device_name} Software Version: {self._version_id}"
+        properties = (
+            f"Initialised {device_name} device with properties:\n"
+            f"\tSubrackFQDN: {self.SubrackFQDN}\n"
+            f"\tSubrackBay: {self.SubrackBay}\n"
+            f"\tTileId: {self.TileId}\n"
+            f"\tStationId: {self.StationID}\n"
+            f"\tTpmIp: {self.TpmIp}\n"
+            f"\tTpmCpldPort: {self.TpmCpldPort}\n"
+            f"\tTpmVersion (deprecated by HardwareVersion): {self.TpmVersion}\n"
+            f"\tHardwareVersion: {self.HardwareVersion}\n"
+            f"\tBiosVersion: {self.BiosVersion}\n"
+            f"\tAntennasPerTile: {self.AntennasPerTile}\n"
+            f"\tPreAduFitted: {self.PreAduFitted}\n"
+            f"\tSimulationConfig: {self.SimulationConfig}\n"
+            f"\tTestConfig: {self.TestConfig}\n"
+            f"\tPollRate: {self.PollRate}\n"
+            f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
+            f"\tStaticDelays: {self.StaticDelays}\n"
+            f"\tUseAttributesForHealth: {self.UseAttributesForHealth}\n"
+        )
+        self.logger.info(
+            "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+        )
 
         for attr_name in self._attribute_state:
             self.set_change_event(attr_name, True, self.VerifyEvents)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
 
+    def _health_changed_new(
+        self: MccsTile, health: HealthState, health_report: str
+    ) -> None:
+        """
+        Handle change in health from new health Model.
+
+        :param health: the new health value
+        :param health_report: the health report
+        """
+        if self._stopping:
+            return
+        if self.UseAttributesForHealth:
+            self._health_report = health_report
+
+            if self._health_state != health:
+                self.logger.info(f"Health changed ==> {health=}, {health_report=}")
+                self._health_state = health
+                self.push_change_event("healthState", health)
+                self.push_archive_event("healthState", health)
+
+    def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
+        """
+        Handle change in attribute configuration.
+
+        This is a workaround as if you configure an attribute
+        which is not alarming to have alarm/warning thresholds
+        such that it would be alarming, Tango does not push an event
+        until the attribute value changes.
+
+        :param attribute_name: the name of the attribute whose
+            configuration has changed.
+        """
+        if self.UseAttributesForHealth:
+            value_cache = self._attribute_state[attribute_name].read()
+            if value_cache is not None:
+                self.push_change_event(attribute_name, value_cache[0])
+                self.push_archive_event(attribute_name, value_cache[0])
+
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
 
-        self._health_model = TileHealthModel(
-            self._health_changed,
-            self.HardwareVersion,
-            self.BiosVersion,
-            self.PreAduFitted,
-        )
         self.set_change_event("healthState", True, self.VerifyEvents)
         self.set_archive_event("healthState", True, self.VerifyEvents)
+
+        if self.UseAttributesForHealth:
+            healthful_attrs = set(self._attribute_state.keys())
+
+            healthful_attrs = healthful_attrs - {
+                "dataTransmissionMode",
+                "tileProgrammingState",
+                "integratedDataTransmissionMode",
+                "antennaBufferMode",
+                "coreCommunicationStatus",
+            }
+
+            self._health_recorder = HealthRecorder(
+                self.get_name(),
+                logger=self.logger,
+                attributes=list(healthful_attrs),
+                health_callback=self._health_changed_new,
+                attr_conf_callback=self._attr_conf_changed,
+            )
+        else:
+            self._health_model = TileHealthModel(
+                self._health_changed,
+                self.HardwareVersion,
+                self.BiosVersion,
+                self.PreAduFitted,
+            )
 
     def create_component_manager(
         self: MccsTile,
@@ -1012,9 +1082,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             between the component manager and its component.
         """
         super()._communication_state_changed(communication_state)
-        self._health_model.update_state(
-            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
-        )
+        if not self.UseAttributesForHealth:
+            self._health_model.update_state(
+                communicating=(communication_state == CommunicationStatus.ESTABLISHED)
+            )
 
     def _update_attribute_callback(
         self: MccsTile,
@@ -1027,9 +1098,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.tile_health_structure = {}
                 else:
                     self.tile_health_structure.update(attribute_value)
-                self._health_model.update_state(
-                    tile_health_structure=self.tile_health_structure
-                )
+                if not self.UseAttributesForHealth:
+                    self._health_model.update_state(
+                        tile_health_structure=self.tile_health_structure
+                    )
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
@@ -1071,10 +1143,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             for attr in self._attribute_state.values():
                 attr.mark_stale()
         super()._component_state_changed(fault=fault, power=power)
-        if power is not None:
-            self._health_model.update_state(fault=fault, power=power)
-        else:
-            self._health_model.update_state(fault=fault)
+        if not self.UseAttributesForHealth:
+            if power is not None:
+                self._health_model.update_state(fault=fault, power=power)
+            else:
+                self._health_model.update_state(fault=fault)
 
     def unpack_alarms(
         self: MccsTile,
@@ -2315,6 +2388,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         max_value=2,
         min_value=-1,
+        abs_change=1,
         archive_abs_change=1,
     )
     def timing_pll_status(self: MccsTile) -> int:
@@ -2461,6 +2535,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: temperatures available
         """
         return self._attribute_state["temperatures"].read()
+
+    @attribute(
+        dtype="DevBoolean",
+        label="useAttributesForHealth",
+    )
+    def useAttributesForHealth(self: MccsTile) -> bool:
+        """
+        Return if adr115 is in use.
+
+        :return: True if attributes quality is
+            being evaluated in health.
+        """
+        return self.UseAttributesForHealth
 
     @attribute(
         dtype="DevDouble",
@@ -3686,6 +3773,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the health params
         """
+        if self.UseAttributesForHealth:
+            return ""
         return json.dumps(self._health_model.health_params)
 
     @healthModelParams.write  # type: ignore[no-redef]
@@ -3694,7 +3783,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Set the params for health transition rules.
 
         :param argin: JSON-string of dictionary of health states
+
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
@@ -3708,7 +3802,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: temperature Health State of the device
+
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["temperatures"][0]
 
     @attribute(dtype=HealthState)
@@ -3721,7 +3820,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: voltage Health State of the device
+
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["voltages"][0]
 
     @attribute(dtype=HealthState)
@@ -3734,7 +3838,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: current Health State of the device
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["currents"][0]
 
     @attribute(dtype=HealthState)
@@ -3747,7 +3855,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: alarm Health State of the device
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["alarms"][0]
 
     @attribute(dtype=HealthState)
@@ -3760,7 +3872,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: ADC Health State of the device
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["adcs"][0]
 
     @attribute(dtype=HealthState)
@@ -3773,7 +3889,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: timing Health State of the device
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["timing"][0]
 
     @attribute(dtype=HealthState)
@@ -3786,7 +3906,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: io Health State of the device
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["io"][0]
 
     @attribute(dtype=HealthState)
@@ -3799,7 +3923,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: dsp Health State of the device
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
         """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
         return self._health_model.intermediate_healths["dsp"][0]
 
     @attribute(dtype="DevString")
@@ -3809,6 +3937,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the health report.
         """
+        if self.UseAttributesForHealth:
+            return self._health_report
         self._health_model.set_logger(self.logger)
         return self._health_model.health_report
 
@@ -7826,7 +7956,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        self._health_model._ignore_power_state = True
+        if not self.UseAttributesForHealth:
+            self._health_model._ignore_power_state = True
         return super().Off()
 
     @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
@@ -7843,7 +7974,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        self._health_model._ignore_power_state = False
+        if not self.UseAttributesForHealth:
+            self._health_model._ignore_power_state = False
         return super().On()
 
     class GetVoltageWarningThresholdsCommand(FastCommand):

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 10.0.1
+## 10.1.0
 
 * [THORN-313] Loop over antennas present in mapping in station_component_manager._calculate_delays_per_tile instead of looping over delays. Improved some messages/docstrings.
 * [THORN-261] Added property UseAttributesForHealth. A new feature toggle activating ADR-115 in MccsTile. By default this is True, when True the attribute

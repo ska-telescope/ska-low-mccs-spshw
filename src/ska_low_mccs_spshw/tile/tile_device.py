@@ -203,6 +203,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     DefaultLockTimeout = device_property(dtype=float, default_value=0.4)
+    PollLockTimeout = device_property(
+        doc="The time a poll waits to claim a lock before giving up.",
+        dtype=float,
+        default_value=6.0,
+    )
+    PowerCallbackLockTimeout = device_property(
+        doc=(
+            "The time a power callback waits to claim a lock. "
+            "This is used to connect if not already "
+            "to determine if initialisation is required."
+        ),
+        dtype=float,
+        default_value=6.0,
+    )
     VerifyEvents = device_property(dtype=bool, default_value=True)
 
     # ---------------
@@ -662,6 +676,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # self._tile_device_state_callback,
             event_serialiser=self._event_serialiser,
             default_lock_timeout=self.DefaultLockTimeout,
+            poll_timeout=self.PollLockTimeout,
+            power_callback_timeout=self.PowerCallbackLockTimeout,
         )
 
     def init_command_objects(self: MccsTile) -> None:

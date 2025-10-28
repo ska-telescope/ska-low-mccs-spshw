@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-261] bump ska-low-sps-tpm-api 1.0.0 -> 1.0.1 (<https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/-/releases/1.0.1>)
+* [THORN-317] fixed bios version read bug and health status value update bug
 
 ## 10.0.0
 

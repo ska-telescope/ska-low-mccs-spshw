@@ -5,6 +5,8 @@
 ## 10.1.0
 
 * [THORN-313] Loop over antennas present in mapping in station_component_manager._calculate_delays_per_tile instead of looping over delays. Improved some messages/docstrings.
+* [SKB-1086] Increase hardware serialisation lock for power_callback and poll_timeout.
+Expose these as configurable properties PollLockTimeout and PowerCallbackLockTimeout.
 * [SKB-1089] Add workaround to corrupt XML during programming. This occured at an approximate ~4%. The workaround is to erase and reprogram the TPM.
 * [THORN-261] Added property UseAttributesForHealth. A new feature toggle activating ADR-115 in MccsTile. By default this is True, when True the attribute
 quality factor will be used to inform health.

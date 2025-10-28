@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-* [SKB-1089] Add workaround to corrupt XML during programming. This occured at an approximate ~4%. The workaround is to erase and reprogram the TPM. 
+* [SKB-1086] Increase hardware serialisation lock for power_callback and poll_timeout.
+Expose these as configurable properties PollLockTimeout and PowerCallbackLockTimeout.
+* [SKB-1089] Add workaround to corrupt XML during programming. This occured at an approximate ~4%. The workaround is to erase and reprogram the TPM.
 * [THORN-261] bump ska-low-sps-tpm-api 1.0.0 -> 1.0.1 (<https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/-/releases/1.0.1>)
 
 ## 9.1.0

@@ -749,13 +749,12 @@ def test_health_status_attributes(
     change_event_callbacks["state"].assert_not_called()
 
     for attribute_name, path_list in hs_map.items():
-        subrack_device.subscribe_event(
-            attribute_name,
-            EventType.CHANGE_EVENT,
-            change_event_callbacks[attribute_name],
-        )
         value = health_status
         for path in path_list:
+            # health status here is a nested dictionary, so to reach the expected
+            # value we take a key, find the dictionary that key leads to and save
+            # that dictionary as the default. Repeat until the list of keys is done
+            # and we arrive at the desired value.
             value = value[path]
         change_event_callbacks[attribute_name].assert_change_event(
             value, lookahead=2, consume_nonmatches=True

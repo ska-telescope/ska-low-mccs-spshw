@@ -1522,6 +1522,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if health_status is not None:
             for key, dict_path in self._HEALTH_STATUS_MAP.items():
                 value = health_status
+                # health status here is a nested dictionary, so to reach the expected
+                # value we take a key, find the dictionary that key leads to and save
+                # that dictionary as the default. Repeat until the list of keys is done
+                # and we arrive at the desired value.
                 for path in dict_path:
                     if value:
                         value = value.get(path, None)

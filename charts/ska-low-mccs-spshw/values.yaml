@@ -19,7 +19,7 @@ global:
 
 # Image to be used for simulators etc.
 image:
-  registry: docker.io/library # artefact.skao.int
+  registry: artefact.skao.int
   name: ska-low-mccs-spshw
   tag: 10.0.0
   pullPolicy: IfNotPresent
@@ -53,10 +53,80 @@ ska-tango-devices:
       boardTemperature->min_warning: 16.0
       boardTemperature->min_alarm: 15.0
 
-      f2f_soft_errors->max_alarm: 10
-      f2f_soft_errors->max_warning: 1
+      adc_pll_status->min_alarm: 0
+
+      fpga0_station_beamformer_error_count->max_alarm: 1
+      fpga1_station_beamformer_error_count->max_alarm: 1
+
+      fpga0_station_beamformer_flagged_count->max_alarm: 1
+      fpga1_station_beamformer_flagged_count->max_alarm: 1
+
+      fpga0_crc_error_count->max_alarm: 1
+      fpga1_crc_error_count->max_alarm: 1
+
+      fpga0_bip_error_count->max_alarm: 1
+      fpga1_bip_error_count->max_alarm: 1
+
+      fpga0_decode_error_count->max_alarm: 1
+      fpga1_decode_error_count->max_alarm: 1
+
+      fpga0_linkup_loss_count->max_alarm: 1
+      fpga1_linkup_loss_count->max_alarm: 1
+
+      fpga0_data_router_status->max_alarm: 1
+      fpga1_data_router_status->max_alarm: 1
+
+      fpga0_ddr_reset_counter->max_alarm: 1
+      fpga1_ddr_reset_counter->max_alarm: 1
+
+      f2f_soft_errors->max_alarm: 1
+      f2f_soft_errors->min_alarm: -1
 
       f2f_hard_errors->max_alarm: 1
+      f2f_hard_errors->min_alarm: -1
+
+      fpga0_resync_count->max_alarm: 1
+      fpga1_resync_count->max_alarm: 1
+
+      fpga0_lane_error_count->max_alarm: 1
+      fpga1_lane_error_count->max_alarm: 1
+
+      fpga0_clock_managers_count->max_alarm: 1
+      fpga1_clock_managers_count->max_alarm: 1
+
+      fpga0_clock_managers_status->min_alarm: 0
+      fpga1_clock_managers_status->min_alarm: 0
+
+      fpga0_clocks->min_alarm: 0
+      fpga1_clocks->min_alarm: 0
+
+      adc_sysref_counter->min_alarm: 0
+
+      adc_sysref_timing_requirements->min_alarm: 0
+
+      fpga0_qpll_status->min_alarm: 0
+      fpga1_qpll_status->min_alarm: 0
+
+      fpga0_qpll_counter->max_alarm: 1
+      fpga1_qpll_counter->max_alarm: 1
+
+      f2f_pll_status->min_alarm: 0
+
+      f2f_pll_counter->max_alarm: 1
+
+      timing_pll_status->min_alarm: 0
+
+      timing_pll_count->max_alarm: 1
+
+      timing_pll_40g_status->min_alarm: 0
+
+      timing_pll_40g_count->max_alarm: 1
+
+      ppsDelay->max_alarm: 10
+      ppsDelay->max_warning: 4
+
+      ppsDrift->max_alarm: 4
+      ppsDrift->max_warning: 2
 
       temperatureADC0->max_alarm: 70.0
       temperatureADC0->max_warning: 65.0
@@ -146,7 +216,6 @@ ska-tango-devices:
 
       voltage_alm->max_alarm: 2
       voltage_alm->max_warning: 1
-
 
       SEM_wd->max_alarm: 2
       SEM_wd->max_warning: 1
@@ -336,13 +405,6 @@ ska-tango-devices:
 
       internalVoltagesSOC->max_alarm: 1.39
       internalVoltagesSOC->min_alarm: 1.31
-      
-
-
-      attr->max_alarm: values
-      attr->max_warning: values
-      attr->min_warning: values
-      attr->min_alarm: values
 
   # devices:
   #   MccsTile:
@@ -358,7 +420,7 @@ ska-tango-devices:
       metadata:
         component: spshw
       image:
-        registry: docker.io/library # artefact.skao.int
+        registry: artefact.skao.int
         name: ska-low-mccs-spshw
         tag: 10.0.0
         pullPolicy: IfNotPresent

@@ -904,6 +904,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=(float,),
         label="Board current",
+        unit="Ampere",
         abs_change=0.1,
     )
     def boardCurrent(self: MccsSubrack) -> list[float]:
@@ -1332,7 +1333,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_number_of_ports()
 
-    @attribute(dtype=(int,), label="pdu port statess")
+    @attribute(dtype=(int,), label="pdu port states")
     def pduPortStates(self: MccsSubrack) -> list[int] | None:
         """
         Handle a Tango attribute read of the state of pdu port.

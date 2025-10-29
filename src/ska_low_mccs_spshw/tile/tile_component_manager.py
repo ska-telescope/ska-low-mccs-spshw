@@ -173,6 +173,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         _tile: Optional[TileSimulator] = None,
         event_serialiser: Optional[EventSerialiser] = None,
         default_lock_timeout: float = 0.4,
+        poll_timeout: float = 6.0,
+        power_callback_timeout: float = 6.0,
     ) -> None:
         """
         Initialise a new instance.
@@ -216,6 +218,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param event_serialiser: serialiser for events
         :param _tile: Optional tile to inject.
         :param default_lock_timeout: default timeout for hardware serialisation lock.
+        :param poll_timeout: max time for a poll to wait on hardware serialisation lock
+            before giving up.
+        :param power_callback_timeout: max time for power callback to wait
+            for hardware serialisation lock to determine if initialisation is required.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
@@ -270,6 +276,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
         self._initialise_executing: bool = False
+        self._poll_timeout: float = poll_timeout
+        self._power_callback_timeout: float = power_callback_timeout
 
         # ==========================================================
         # Added as part of SKB-1089, to keep track of frequency this
@@ -551,7 +559,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock, self._poll_timeout, raise_exception=True
         ):
             result = poll_request()
         return TileResponse(
@@ -896,7 +904,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.power_state = event_value
         # Connect if not already.
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock, self._power_callback_timeout, raise_exception=True
         ):
             __is_connected = self.is_connected
             # Connect if not already.
@@ -2781,7 +2789,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
-                raise ValueError("Time too early")
+                raise ValueError(f"Time too early: {load_time=}, {load_frame=}")
 
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
@@ -2807,7 +2815,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param delay_array: delay in seconds, and delay rate in seconds/second
+        :param delay_array: list of [delay in seconds, and
+            delay rate in seconds/second] per antenna.
         :param beam_index: the beam to which the pointing delay should
             be applied
 

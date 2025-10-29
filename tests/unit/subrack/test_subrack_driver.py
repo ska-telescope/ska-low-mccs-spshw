@@ -281,26 +281,38 @@ def test_get_health_status(
 
     # Case 1: bios is too old, health status is not polled
     old_bios_board = {"SMM": {"bios": "v1.5.0"}}
+    # reset bios checked flag
+    subrack_driver._checked_bios = False
     subrack_simulator.simulate_attribute("board_info", old_bios_board)
     callbacks["component_state"].assert_call(
         board_info=old_bios_board,
+        lookahead=2,
     )
+    # Expect the bios check to fail
+    subrack_driver._check_bios_version()
+    assert not subrack_driver._poll_commands
 
+    # and the health status to be empty
     status, message = subrack_driver.get_health_status()
     assert status == TaskStatus.QUEUED
-
     assert subrack_driver.read_health_status() == {}
 
     # Case 2: bios is current enough, health status is polled
     new_bios_board = {"SMM": {"bios": "v1.6.0"}}
+    # reset bios checked flag
+    subrack_driver._checked_bios = False
     subrack_simulator.simulate_attribute("board_info", new_bios_board)
     callbacks["component_state"].assert_call(
         board_info=new_bios_board,
+        lookahead=2,
     )
 
+    # expect bios to pass
+    subrack_driver._check_bios_version()
+    assert subrack_driver._poll_commands
+    # and for the health status to have all the values
     status, message = subrack_driver.get_health_status()
     assert status == TaskStatus.QUEUED
-
     assert subrack_driver.read_health_status() == health_status
 
 

@@ -840,10 +840,10 @@ class SpsStationComponentManager(
                 continue
             tile_delays[tile_logical_id][
                 antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
+            ] = antenna_config.get("delay_x", antenna_config["delay"])
             tile_delays[tile_logical_id][
                 antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            ] = antenna_config.get("delay_y", antenna_config["delay"])
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -876,8 +876,9 @@ class SpsStationComponentManager(
         # delay/delay rates
         assert len(antenna_order_delays) % 2 == 0
 
-        # Loop through each pair of delay/delay rates
-        for antenna_no in range(len(antenna_order_delays) // 2):
+        for antenna_id in self._antenna_mapping:
+            antenna_no = antenna_id - 1  # Keep it zero-based
+
             delay = antenna_order_delays[antenna_no * 2]
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 

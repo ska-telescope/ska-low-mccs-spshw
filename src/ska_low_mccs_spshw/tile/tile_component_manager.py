@@ -12,6 +12,7 @@ import json
 import logging
 import threading
 import time
+import zlib
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
@@ -172,6 +173,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         _tile: Optional[TileSimulator] = None,
         event_serialiser: Optional[EventSerialiser] = None,
         default_lock_timeout: float = 0.4,
+        poll_timeout: float = 6.0,
+        power_callback_timeout: float = 6.0,
     ) -> None:
         """
         Initialise a new instance.
@@ -215,6 +218,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param event_serialiser: serialiser for events
         :param _tile: Optional tile to inject.
         :param default_lock_timeout: default timeout for hardware serialisation lock.
+        :param poll_timeout: max time for a poll to wait on hardware serialisation lock
+            before giving up.
+        :param power_callback_timeout: max time for power callback to wait
+            for hardware serialisation lock to determine if initialisation is required.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
@@ -269,6 +276,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
         self._initialise_executing: bool = False
+        self._poll_timeout: float = poll_timeout
+        self._power_callback_timeout: float = power_callback_timeout
+
+        # ==========================================================
+        # Added as part of SKB-1089, to keep track of frequency this
+        # issus is seen in production.
+        self._decompression_success: int = 0
+        self._decompression_error: int = 0
+        # ==========================================================
 
         self._event_serialiser = event_serialiser
 
@@ -543,7 +559,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock, self._poll_timeout, raise_exception=True
         ):
             result = poll_request()
         return TileResponse(
@@ -888,7 +904,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.power_state = event_value
         # Connect if not already.
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock, self._power_callback_timeout, raise_exception=True
         ):
             __is_connected = self.is_connected
             # Connect if not already.
@@ -1137,6 +1153,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         force_reprogramming: bool,
         pps_delay_correction: int,
+        final_try: bool = False,
     ) -> None:
         """
         Initialise the TPM.
@@ -1145,6 +1162,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
+        :param final_try: A flag to work around SKB-1089.
+
+        :raises zlib.error: If workaround implemented in SKB-1089
+            did not work first time.
         """
         with self._initialising():
             with acquire_timeout(
@@ -1187,15 +1208,49 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"* staticTimeDelays of {self._static_time_delays} \n"
                         f"* PreAduLevels of {self._preadu_levels} \n"
                     )
-                    self.tile.initialise(
-                        station_id=self._station_id,
-                        tile_id=self._tile_id,
-                        pps_delay=pps_delay_correction,
-                        active_40g_ports_setting="port1-only",
-                        src_ip_fpga1=self.src_ip_40g_fpga1,
-                        src_ip_fpga2=self.src_ip_40g_fpga2,
-                        time_delays=self._static_time_delays,
-                    )
+                    try:
+                        self.tile.initialise(
+                            station_id=self._station_id,
+                            tile_id=self._tile_id,
+                            pps_delay=pps_delay_correction,
+                            active_40g_ports_setting="port1-only",
+                            src_ip_fpga1=self.src_ip_40g_fpga1,
+                            src_ip_fpga2=self.src_ip_40g_fpga2,
+                            time_delays=self._static_time_delays,
+                        )
+                        self._decompression_success += 1
+                    except zlib.error as e:
+                        self._decompression_error += 1
+                        total = self._decompression_error + self._decompression_success
+                        self.logger.warning(
+                            "XML data is corrupt. "
+                            "This is a known issue in BIOS 0.6.0 (see SKB-1089). "
+                            "We have seen this issue %d / %d times. Error: %s",
+                            self._decompression_error,
+                            total,
+                            e,
+                        )
+
+                        if not final_try:
+                            self.logger.warning(
+                                "Reprogramming FPGA for "
+                                "station %s tile %s to workaround SKB-1089.",
+                                self._station_id,
+                                self._tile_id,
+                            )
+                            self._execute_initialise(
+                                force_reprogramming=True,
+                                pps_delay_correction=pps_delay_correction,
+                                final_try=True,
+                            )
+                        else:
+                            self.logger.error(
+                                "Workaround already attempted for "
+                                "station %s tile %s. Giving up.",
+                                self._station_id,
+                                self._tile_id,
+                            )
+                            raise
                     #
                     # extra steps required to have it working
                     #

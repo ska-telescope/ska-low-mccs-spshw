@@ -61,7 +61,6 @@ __all__ = ["TileComponentManager"]
 # the risk of mapping errors.
 _ATTRIBUTE_MAP: Final = {
     "TEMPERATURES": "tile_health_structure",
-    "FIRMWARE_THRESHOLDS": "firmware_thresholds",
     "VOLTAGES": "tile_health_structure",
     "CURRENTS": "tile_health_structure",
     "ALARMS": "tile_health_structure",
@@ -404,12 +403,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.is_programmed,
                     publish=True,
                 )
-            case "FIRMWARE_THRESHOLDS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.read_firmware_thresholds,
-                    publish=True,
-                )
             case "TEMPERATURES":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -746,213 +739,27 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     continue
 
-    def read_firmware_current_thresholds(
-        self: TileComponentManager,
-    ) -> FirmwareThresholds:
-        """
-        Read current thresholds fron firmware.
-
-        :return: the firmwareThesholds.
-        """
-        self.logger.error("reading firmware voltage thresholds.")
-        t1 = time.time()
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            current_thresholds = self.tile.get_current_warning_thresholds()
-            tc = time.time()
-            self.logger.error(f"Current read : {tc-t1}")
-        self.logger.error("packaging into a threshold structure")
-        thresholds = FirmwareThresholds()
-
-        if current_thresholds is not None:
-            # Currents
-            thresholds.FE0_mVA_min_alarm_threshold = current_thresholds["FE0_mVA"][
-                "min"
-            ]
-            thresholds.FE0_mVA_max_alarm_threshold = current_thresholds["FE0_mVA"][
-                "max"
-            ]
-
-            thresholds.FE1_mVA_min_alarm_threshold = current_thresholds["FE1_mVA"][
-                "min"
-            ]
-            thresholds.FE1_mVA_max_alarm_threshold = current_thresholds["FE1_mVA"][
-                "max"
-            ]
-        t2 = time.time()
-        self.logger.error(f"Time takes == {t2-t1}")
-        return thresholds
-
-    def read_firmware_voltage_thresholds(
-        self: TileComponentManager,
-    ) -> FirmwareThresholds:
+    def _read_firmware_thresholds(self) -> FirmwareThresholds:
         """
         Read voltage thresholds fron firmware.
 
         :return: the firmwareThesholds.
         """
-        self.logger.error("reading firmware voltage thresholds.")
-        t1 = time.time()
+        t1: float = time.time()
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            voltage_thresholds = self.tile.get_voltage_warning_thresholds()
-            tv = time.time()
-            self.logger.error(f"Voltage read : {tv-t1}")
-        self.logger.error("packaging into a threshold structure")
-        thresholds = FirmwareThresholds()
-
-        if voltage_thresholds is not None:
-            # Voltages
-            thresholds.MGT_AVCC_min_alarm_threshold = voltage_thresholds["MGT_AVCC"][
-                "min"
-            ]
-            thresholds.MGT_AVCC_max_alarm_threshold = voltage_thresholds["MGT_AVCC"][
-                "max"
-            ]
-
-            thresholds.MGT_AVTT_min_alarm_threshold = voltage_thresholds["MGT_AVTT"][
-                "min"
-            ]
-            thresholds.MGT_AVTT_max_alarm_threshold = voltage_thresholds["MGT_AVTT"][
-                "max"
-            ]
-
-            thresholds.SW_AVDD1_min_alarm_threshold = voltage_thresholds["SW_AVDD1"][
-                "min"
-            ]
-            thresholds.SW_AVDD1_max_alarm_threshold = voltage_thresholds["SW_AVDD1"][
-                "max"
-            ]
-
-            thresholds.SW_AVDD2_min_alarm_threshold = voltage_thresholds["SW_AVDD2"][
-                "min"
-            ]
-            thresholds.SW_AVDD2_max_alarm_threshold = voltage_thresholds["SW_AVDD2"][
-                "max"
-            ]
-
-            thresholds.AVDD3_min_alarm_threshold = voltage_thresholds["AVDD3"]["min"]
-            thresholds.AVDD3_max_alarm_threshold = voltage_thresholds["AVDD3"]["max"]
-
-            thresholds.MAN_1V2_min_alarm_threshold = voltage_thresholds["MAN_1V2"][
-                "min"
-            ]
-            thresholds.MAN_1V2_max_alarm_threshold = voltage_thresholds["MAN_1V2"][
-                "max"
-            ]
-
-            thresholds.DDR0_VREF_min_alarm_threshold = voltage_thresholds["DDR0_VREF"][
-                "min"
-            ]
-            thresholds.DDR0_VREF_max_alarm_threshold = voltage_thresholds["DDR0_VREF"][
-                "max"
-            ]
-
-            thresholds.DDR1_VREF_min_alarm_threshold = voltage_thresholds["DDR1_VREF"][
-                "min"
-            ]
-            thresholds.DDR1_VREF_max_alarm_threshold = voltage_thresholds["DDR1_VREF"][
-                "max"
-            ]
-
-            thresholds.VM_DRVDD_min_alarm_threshold = voltage_thresholds["VM_DRVDD"][
-                "min"
-            ]
-            thresholds.VM_DRVDD_max_alarm_threshold = voltage_thresholds["VM_DRVDD"][
-                "max"
-            ]
-
-            thresholds.VIN_min_alarm_threshold = voltage_thresholds["VIN"]["min"]
-            thresholds.VIN_max_alarm_threshold = voltage_thresholds["VIN"]["max"]
-
-            thresholds.MON_3V3_min_alarm_threshold = voltage_thresholds["MON_3V3"][
-                "min"
-            ]
-            thresholds.MON_3V3_max_alarm_threshold = voltage_thresholds["MON_3V3"][
-                "max"
-            ]
-
-            thresholds.MON_1V8_min_alarm_threshold = voltage_thresholds["MON_1V8"][
-                "min"
-            ]
-            thresholds.MON_1V8_max_alarm_threshold = voltage_thresholds["MON_1V8"][
-                "max"
-            ]
-
-            thresholds.MON_5V0_min_alarm_threshold = voltage_thresholds["MON_5V0"][
-                "min"
-            ]
-            thresholds.MON_5V0_max_alarm_threshold = voltage_thresholds["MON_5V0"][
-                "max"
-            ]
-
-        t2 = time.time()
-        self.logger.error(f"Time takes == {t2-t1}")
-        return thresholds
-
-    def read_firmware_temperature_thresholds(self) -> FirmwareThresholds:
-        """
-        Read voltage thresholds fron firmware.
-
-        :return: the firmwareThesholds.
-        """
-        t1 = time.time()
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            lock=self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
         ):
             temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
-            tt = time.time()
-            self.logger.error(f"Temperatured read : {tt-t1}")
-        self.logger.error("packaging into a threshold structure")
-        thresholds = FirmwareThresholds()
-
-        # Temperatures
-        thresholds.board_warning_threshold = temperature_thresholds[
-            "board_warning_threshold"
-        ]
-        thresholds.board_alarm_threshold = temperature_thresholds[
-            "board_alarm_threshold"
-        ]
-
-        thresholds.fpga1_warning_threshold = temperature_thresholds[
-            "fpga1_warning_threshold"
-        ]
-        thresholds.fpga1_alarm_threshold = temperature_thresholds[
-            "fpga1_alarm_threshold"
-        ]
-
-        thresholds.fpga2_warning_threshold = temperature_thresholds[
-            "fpga2_warning_threshold"
-        ]
-        thresholds.fpga2_alarm_threshold = temperature_thresholds[
-            "fpga2_alarm_threshold"
-        ]
-
-        t2 = time.time()
-        self.logger.error(f"Time takes == {t2-t1}")
-        return thresholds
-
-    def read_firmware_thresholds(self) -> FirmwareThresholds:
-        """
-        Read voltage thresholds fron firmware.
-
-        :return: the firmwareThesholds.
-        """
-        t1 = time.time()
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
-            tt = time.time()
-            self.logger.error(f"Temperatured read : {tt-t1}")
+            t2 = time.time()
+            self.logger.error(f"Temperatured read : {t2-t1}")
             current_thresholds = self.tile.get_current_warning_thresholds()
-            tc = time.time()
-            self.logger.error(f"Currents read : {tc-t1}")
+            t3 = time.time()
+            self.logger.error(f"Currents read : {t3-t2}")
             voltage_thresholds = self.tile.get_voltage_warning_thresholds()
-            tv = time.time()
-            self.logger.error(f"Voltage read : {tv-t1}")
+            t4 = time.time()
+            self.logger.error(f"Voltage read : {t4-t3}")
         self.logger.error("packaging into a threshold structure")
         thresholds = FirmwareThresholds()
 
@@ -1078,8 +885,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             thresholds.FE1_mVA_max_alarm_threshold = current_thresholds["FE1_mVA"][
                 "max"
             ]
-        t2 = time.time()
-        self.logger.error(f"Time takes == {t2-t1}")
+        t5: float = time.time()
+        self.logger.error(f"Time takes == {t5-t4}")
         return thresholds
 
     def polling_started(self: TileComponentManager) -> None:
@@ -1882,7 +1689,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
         pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
-        firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
+        firmware_thresholds = self._with_hardware_lock(self._read_firmware_thresholds)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -4208,7 +4015,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         max_board_alarm_threshold: float | None = None,
         max_fpga1_alarm_threshold: float | None = None,
         max_fpga2_alarm_threshold: float | None = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> dict[str, Any]:
         """
         Set the temperature thresholds.
 
@@ -4223,38 +4030,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param max_fpga2_alarm_threshold: The maximum alarm thresholds
             for the fpga2 (unit: Degree Celsius)
 
-        :return: a tuple containing a ``ResultCode`` and string with information about
-            the execution outcome.
+        :return: The set temperature thresholds if successful else None
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.set_tpm_temperature_thresholds(
-                        max_board_alarm_threshold=max_board_alarm_threshold,
-                        max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
-                        max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
-                    )
-                except ValueError as ve:
-                    value_error_message = (
-                        f"Failed to set the tpm temperature thresholds {ve}"
-                    )
-                    self.logger.error(value_error_message)
-                    return (ResultCode.FAILED, value_error_message)
-                except Exception as e:  # pylint: disable=broad-except
-                    message = f"Unexpected exception raised {repr(e)}"
-                    self.logger.error(message)
-                    return (ResultCode.FAILED, message)
-
-            else:
-                lock_failed_message = (
-                    "Failed to acquire lock for set_tpm_temperature_thresholds."
-                )
-                self.logger.warning(lock_failed_message)
-                return (ResultCode.FAILED, lock_failed_message)
-
-        return (ResultCode.OK, "Command executed.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_tpm_temperature_thresholds(
+                max_board_alarm_threshold=max_board_alarm_threshold,
+                max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
+                max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
+            )
+            return self.tile.get_tpm_temperature_thresholds()
 
     # -----------------------------
     # Test generator methods
@@ -4542,7 +4330,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         voltage: str,
         min_thr: float,
         max_thr: float,
-    ) -> bool | None:
+    ) -> dict[str, Any] | None:
         """
         Set the voltage warning thresholds.
 
@@ -4551,13 +4339,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param min_thr: The minimum threshold value.
         :param max_thr: The maximum threshold value.
 
-        :return: True if the thresholds were set successfully,
-            or None if the voltage type is not recognized.
+        :return: The set voltage thresholds if successful else None
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+            set_correctly = self.tile.set_voltage_warning_thresholds(
+                voltage, min_thr, max_thr
+            )
+            if set_correctly:
+                return self.tile.get_voltage_warning_thresholds(voltage)
+            return None
 
     def get_current_warning_thresholds(
         self: TileComponentManager,
@@ -4587,7 +4379,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         current: str,
         min_thr: float,
         max_thr: float,
-    ) -> bool | None:
+    ) -> dict[str, Any] | None:
         """
         Set the current warning thresholds.
 
@@ -4596,13 +4388,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param min_thr: The minimum threshold value.
         :param max_thr: The maximum threshold value.
 
-        :return: True if the thresholds were set successfully,
-            or None if the current type is not recognized.
+        :return: The set current thresholds if successful else None
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return self.tile.set_current_warning_thresholds(current, min_thr, max_thr)
+            set_correctly = self.tile.set_current_warning_thresholds(
+                current, min_thr, max_thr
+            )
+            if set_correctly:
+                return self.tile.get_current_warning_thresholds(current)
+            return None
 
     @property
     @check_communicating

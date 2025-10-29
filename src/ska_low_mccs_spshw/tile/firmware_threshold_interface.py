@@ -15,6 +15,8 @@ from typing import Any, Union
 
 import tango
 
+__all__: list[str] = ["FirmwareThresholdsDbInterface", "FirmwareThresholds"]
+
 
 # pylint: disable=too-few-public-methods
 class FirmwareThresholdsDbInterface:
@@ -323,9 +325,7 @@ class FirmwareThresholds:
         print(f"putting {data=}")
         return data
 
-    def update_from_dict(
-        self, thresholds: dict[str, tango._tango.StdStringVector]
-    ) -> None:
+    def update_from_dict(self, thresholds: dict[str, tango.StdStringVector]) -> None:
         """
         Update FirmwareThresholds properties from a Tango-style dict.
 
@@ -352,7 +352,7 @@ class FirmwareThresholds:
             if isinstance(raw_value, (list, tuple)):
                 value = raw_value[0] if raw_value else "Undefined"
             elif hasattr(raw_value, "__iter__") and not isinstance(raw_value, str):
-                # handles Tango _tango.StdStringVector
+                # handles Tango tango.StdStringVector
                 value = next(iter(raw_value), "Undefined")
             else:
                 value = raw_value

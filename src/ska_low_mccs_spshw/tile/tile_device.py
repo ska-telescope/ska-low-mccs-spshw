@@ -757,9 +757,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
-        self.firmware_thresholds = FirmwareThresholds()
-        self.hw_thresholds = FirmwareThresholds()
-        self._firmware_threshold_db_interface = FirmwareThresholdsDbInterface(device_name=self.get_name(), thresholds=self.firmware_thresholds)
+        self.db_firmware_thresholds = FirmwareThresholds()
+        self._firmware_threshold_db_interface = FirmwareThresholdsDbInterface(device_name=self.get_name(), thresholds=self.db_firmware_thresholds)
 
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -1124,7 +1123,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Assumptions this class is synced with db.
 
 
-        db_thresholds = self.firmware_thresholds.to_device_property_dict().get("firmware_thresholds", {})
+        db_thresholds = self.db_firmware_thresholds.to_device_property_dict().get("firmware_thresholds", {})
         read_thresholds = read_firmware_thresholds.to_device_property_dict().get("firmware_thresholds", {})
 
         for key, db_value in db_thresholds.items():
@@ -1373,7 +1372,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
-        return json.dumps(self.component_manager.get_tpm_temperature_thresholds())
+        return json.dumps(self.component_manager.read_firmware_thresholds().to_device_property_dict())
 
     @firmwareThresholds.write
     def firmwareThresholds(
@@ -1385,7 +1384,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
-        # This interfaces with the FirmwareThresholds dataclass. 
+        # This interfaces with the FirmwareThresholds dataclass.
         kwargs = json.loads(argin)
         board_warning_threshold = kwargs.get("board_warning_threshold")
         board_alarm_threshold = kwargs.get("board_alarm_threshold")
@@ -1400,13 +1399,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             max_fpga1_alarm_threshold=fpga1_alarm_threshold,
             max_fpga2_alarm_threshold=fpga2_alarm_threshold,
         )
-
-        self.firmware_thresholds.board_warning_threshold = "Undefined" if board_warning_threshold is None else board_warning_threshold
-        self.firmware_thresholds.board_alarm_threshold ="Undefined" if board_alarm_threshold is None else board_alarm_threshold 
-        self.firmware_thresholds.fpga1_warning_threshold = "Undefined" if fpga1_warning_threshold is None else fpga1_warning_threshold 
-        self.firmware_thresholds.fpga1_alarm_threshold ="Undefined" if fpga1_alarm_threshold is None else fpga1_alarm_threshold 
-        self.firmware_thresholds.fpga2_warning_threshold = "Undefined" if fpga2_warning_threshold is None else fpga2_warning_threshold 
-        self.firmware_thresholds.fpga2_alarm_threshold ="Undefined" if fpga2_alarm_threshold is None else fpga2_alarm_threshold 
+    
+        self.db_firmware_thresholds.board_warning_threshold = "Undefined" if board_warning_threshold is None else board_warning_threshold
+        self.db_firmware_thresholds.board_alarm_threshold ="Undefined" if board_alarm_threshold is None else board_alarm_threshold 
+        self.db_firmware_thresholds.fpga1_warning_threshold = "Undefined" if fpga1_warning_threshold is None else fpga1_warning_threshold 
+        self.db_firmware_thresholds.fpga1_alarm_threshold ="Undefined" if fpga1_alarm_threshold is None else fpga1_alarm_threshold 
+        self.db_firmware_thresholds.fpga2_warning_threshold = "Undefined" if fpga2_warning_threshold is None else fpga2_warning_threshold 
+        self.db_firmware_thresholds.fpga2_alarm_threshold ="Undefined" if fpga2_alarm_threshold is None else fpga2_alarm_threshold 
 
         # Write the values to the database
         self._firmware_threshold_db_interface.write_threshold_to_db()
@@ -7848,11 +7847,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "max_fpga2_temperature_threshold"
             )
 
-            return self._component_manager.set_tpm_temperature_thresholds(
+            self._component_manager.set_tpm_temperature_thresholds(
                 max_board_alarm_threshold=max_board_temperature_threshold,
                 max_fpga1_alarm_threshold=max_fpga1_temperature_threshold,
                 max_fpga2_alarm_threshold=max_fpga2_temperature_threshold,
             )
+
+            self.db_firmware_thresholds.board_alarm_threshold ="Undefined" if max_board_temperature_threshold is None else max_board_temperature_threshold 
+            self.db_firmware_thresholds.fpga1_alarm_threshold ="Undefined" if max_fpga1_temperature_threshold is None else max_fpga1_temperature_threshold 
+            self.db_firmware_thresholds.fpga2_alarm_threshold ="Undefined" if max_fpga2_temperature_threshold is None else max_fpga2_temperature_threshold 
+
+            # Write the values to the database
+            self._firmware_threshold_db_interface.write_threshold_to_db()
+
+            if not self._is_firmware_matching_database_again(self.component_manager.read_firmware_thresholds()):
+                self.logger.error(f"firmware write {kwargs} failed, readback from firmware did not match database.")
+
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetFirmwareTemperatureThresholds(
@@ -8207,6 +8217,83 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             rc = self._component_manager.set_voltage_warning_thresholds(
                 voltage=voltage.upper(), min_thr=min_thr, max_thr=max_thr
             )
+            # Update firmware thresholds
+            targets = {
+                "MGT_AVCC": (
+                    "MGT_AVCC_min_alarm_threshold",
+                    "MGT_AVCC_max_alarm_threshold",
+                ),
+                "MGT_AVTT": (
+                    "MGT_AVTT_min_alarm_threshold",
+                    "MGT_AVTT_max_alarm_threshold",
+                ),
+                "SW_AVDD1": (
+                    "SW_AVDD1_min_alarm_threshold",
+                    "SW_AVDD1_max_alarm_threshold",
+                ),
+                "SW_AVDD2": (
+                    "SW_AVDD2_min_alarm_threshold",
+                    "SW_AVDD2_max_alarm_threshold",
+                ),
+                "AVDD3": (
+                    "AVDD3_min_alarm_threshold",
+                    "AVDD3_max_alarm_threshold",
+                ),
+                "MAN_1V2": (
+                    "MAN_1V2_min_alarm_threshold",
+                    "MAN_1V2_max_alarm_threshold",
+                ),
+                "DDR0_VREF": (
+                    "DDR0_VREF_min_alarm_threshold",
+                    "DDR0_VREF_max_alarm_threshold",
+                ),
+                "DDR1_VREF": (
+                    "DDR1_VREF_min_alarm_threshold",
+                    "DDR1_VREF_max_alarm_threshold",
+                ),
+                "VM_DRVDD": (
+                    "VM_DRVDD_min_alarm_threshold",
+                    "VM_DRVDD_max_alarm_threshold",
+                ),
+                "VIN": (
+                    "VIN_min_alarm_threshold",
+                    "VIN_max_alarm_threshold",
+                ),
+                "MON_3V3": (
+                    "MON_3V3_min_alarm_threshold",
+                    "MON_3V3_max_alarm_threshold",
+                ),
+                "MON_1V8": (
+                    "MON_1V8_min_alarm_threshold",
+                    "MON_1V8_max_alarm_threshold",
+                ),
+                "MON_5V0": (
+                    "MON_5V0_min_alarm_threshold",
+                    "MON_5V0_max_alarm_threshold",
+                ),
+            }
+
+            if not voltage or not isinstance(voltage, dict):
+                # Apply thresholds to all if current is empty or invalid
+                for min_attr, max_attr in targets.values():
+                    setattr(self.db_firmware_thresholds, min_attr, "Undefined" if min_thr is None else min_thr)
+                    setattr(self.db_firmware_thresholds, max_attr, "Undefined" if max_thr is None else max_thr)
+            else:
+                # Apply thresholds selectively based on keys in 'current'
+                for key, (min_attr, max_attr) in targets.items():
+                    if key in voltage:
+                        setattr(self.db_firmware_thresholds, min_attr, "Undefined" if min_thr is None else min_thr)
+                        setattr(self.db_firmware_thresholds, max_attr, "Undefined" if max_thr is None else max_thr)
+
+            # Write the values to the database
+            self._firmware_threshold_db_interface.write_threshold_to_db()
+
+            # Verify firmware consistency
+            if not self._is_firmware_matching_database_again(self.component_manager.read_firmware_thresholds()):
+                self.logger.error(
+                    f"Firmware write {kwargs} failed — readback from firmware did not match database."
+                )
+
             if rc:
                 return (
                     [ResultCode.OK],
@@ -8360,6 +8447,39 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             rc = self._component_manager.set_current_warning_thresholds(
                 current=current, min_thr=min_thr, max_thr=max_thr
             )
+            # Update firmware thresholds
+            targets = {
+                "FE0_mVA": (
+                    "FE0_mVA_min_alarm_threshold",
+                    "FE0_mVA_max_alarm_threshold",
+                ),
+                "FE1_mVA": (
+                    "FE1_mVA_min_alarm_threshold",
+                    "FE1_mVA_max_alarm_threshold",
+                ),
+            }
+
+            if not current or not isinstance(current, dict):
+                # Apply thresholds to all if current is empty or invalid
+                for min_attr, max_attr in targets.values():
+                    setattr(self.db_firmware_thresholds, min_attr, "Undefined" if min_thr is None else min_thr)
+                    setattr(self.db_firmware_thresholds, max_attr, "Undefined" if max_thr is None else max_thr)
+            else:
+                # Apply thresholds selectively based on keys in 'current'
+                for key, (min_attr, max_attr) in targets.items():
+                    if key in current:
+                        setattr(self.db_firmware_thresholds, min_attr, "Undefined" if min_thr is None else min_thr)
+                        setattr(self.db_firmware_thresholds, max_attr, "Undefined" if max_thr is None else max_thr)
+
+            # Write the values to the database
+            self._firmware_threshold_db_interface.write_threshold_to_db()
+
+            # Verify firmware consistency
+            if not self._is_firmware_matching_database_again(self.component_manager.read_firmware_thresholds()):
+                self.logger.error(
+                    f"Firmware write {kwargs} failed — readback from firmware did not match database."
+                )
+
             if rc:
                 return (
                     [ResultCode.OK],

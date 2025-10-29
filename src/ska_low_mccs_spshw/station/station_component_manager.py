@@ -221,6 +221,7 @@ class _LMCDaqProxy(DeviceComponentManager):
         self: _LMCDaqProxy,
         fqdn: str,
         station_id: int,
+        station_name: str,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
@@ -232,6 +233,7 @@ class _LMCDaqProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the device
         :param station_id: the id of the station to which this daq
             is to be assigned
+        :param station_name: The name of the station, e.g. `s8-1`
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
             called when the component state changes
@@ -243,6 +245,7 @@ class _LMCDaqProxy(DeviceComponentManager):
         :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
+        self._station_name = station_name
         super().__init__(
             fqdn,
             logger,
@@ -259,7 +262,9 @@ class _LMCDaqProxy(DeviceComponentManager):
 
     def _configure_station_id(self: _LMCDaqProxy) -> None:
         assert self._proxy is not None
-        cfg = json.dumps({"station_id": self._station_id})
+        cfg = json.dumps(
+            {"station_id": self._station_id, "station_name": self._station_name}
+        )
         self._proxy.Configure(cfg)
 
     def _device_state_changed(
@@ -308,6 +313,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
         self: _BandpassDaqProxy,
         fqdn: str,
         station_id: int,
+        station_name: str,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
@@ -319,6 +325,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
         :param fqdn: the FQDN of the device
         :param station_id: the id of the station to which this daq
             is to be assigned
+        :param station_name: The name of the station, e.g. `s8-1`
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
             called when the component state changes
@@ -330,6 +337,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
         :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
+        self._station_name = station_name
         super().__init__(
             fqdn,
             logger,
@@ -403,6 +411,7 @@ class SpsStationComponentManager(
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,
+        station_name: str,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         lmc_daq_trl: str,
@@ -426,6 +435,7 @@ class SpsStationComponentManager(
         Initialise a new instance.
 
         :param station_id: the id of this station
+        :param station_name: The name of the station, e.g. `s8-1`
         :param subrack_fqdns: FQDNs of the Tango devices which manage this
             station's subracks
         :param tile_fqdns: FQDNs of the Tango devices which manage this
@@ -471,6 +481,7 @@ class SpsStationComponentManager(
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
         self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
+        self._station_name = station_name
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
@@ -531,6 +542,7 @@ class SpsStationComponentManager(
             self._lmc_daq_proxy = _LMCDaqProxy(
                 self._lmc_daq_trl,
                 station_id,
+                station_name,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, self._lmc_daq_trl
@@ -544,6 +556,7 @@ class SpsStationComponentManager(
             self._bandpass_daq_proxy = _BandpassDaqProxy(
                 self._bandpass_daq_trl,
                 station_id,
+                station_name,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, self._bandpass_daq_trl

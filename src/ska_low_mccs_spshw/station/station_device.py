@@ -221,8 +221,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: a component manager for this device.
         """
+        station_name = self.get_name().split("/")[-1]
         return SpsStationComponentManager(
             self.StationId,
+            station_name,
             self.SubrackFQDNs,
             self.TileFQDNs,
             # It appears the test context inputs a space into empty strings.

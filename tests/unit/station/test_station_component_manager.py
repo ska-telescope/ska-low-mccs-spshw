@@ -135,6 +135,7 @@ def mock_tile_proxy_fixture(
 def station_component_manager_fixture(
     test_context: None,
     subrack_id: int,
+    station_label: str,
     tile_id: int,
     logger: logging.Logger,
     callbacks: MockCallableGroup,
@@ -148,6 +149,7 @@ def station_component_manager_fixture(
     :param test_context: a Tango test context running the required
         mock subservient devices
     :param subrack_id: ID of the subservient subrack Tango device
+    :param station_label: name of the station.
     :param tile_id: ID of the subservient subrack Tango device
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
@@ -159,6 +161,7 @@ def station_component_manager_fixture(
     """
     sps_station_component_manager = SpsStationComponentManager(
         1,
+        station_label,
         [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
         [get_tile_name(tile_id + i) for i in range(0, num_tiles_to_add)],
         "",

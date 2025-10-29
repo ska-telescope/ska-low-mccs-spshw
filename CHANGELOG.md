@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 10.1.0
 
 * [SKB-1086] Increase hardware serialisation lock for power_callback and poll_timeout.
 Expose these as configurable properties PollLockTimeout and PowerCallbackLockTimeout.

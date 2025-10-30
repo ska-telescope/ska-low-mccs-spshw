@@ -3302,7 +3302,7 @@ class TpmMonitor:
     def get_voltage_warning_thresholds(
         self: TpmMonitor,
         voltage: str | None = None,
-    ) -> dict[str, dict[str, float]] | None:
+    ) -> dict[str, dict[str, float]] | dict[str, float] | None:
         """
         Return a dictionary of voltage warning thresholds.
 
@@ -3315,7 +3315,7 @@ class TpmMonitor:
         if voltage is not None:
             requested_voltage = self._voltage_warning_thresholds.get(voltage, {})
             if requested_voltage:
-                return {voltage: requested_voltage}
+                return requested_voltage
             self.logger.error(
                 f"Requested voltage {voltage} not found in thresholds. "
                 f"Available: {[k for k in self._voltage_warning_thresholds.keys()]}"
@@ -3353,7 +3353,7 @@ class TpmMonitor:
     def get_current_warning_thresholds(
         self: TpmMonitor,
         current: str | None = None,
-    ) -> dict[str, dict[str, float]] | None:
+    ) -> dict[str, dict[str, float]] | dict[str, float] | None:
         """
         Return a dictionary of current warning thresholds.
 
@@ -3366,7 +3366,7 @@ class TpmMonitor:
         if current is not None:
             requested_current = self._current_warning_thresholds.get(current, {})
             if requested_current:
-                return {current: requested_current}
+                return requested_current
             self.logger.error(
                 f"Requested current {current} not found in thresholds. "
                 f"Available: {[k for k in self._current_warning_thresholds.keys()]}"

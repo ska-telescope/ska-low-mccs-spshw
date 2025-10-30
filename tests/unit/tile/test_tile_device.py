@@ -352,6 +352,7 @@ class TestMccsTile:
             "ioHealth",
             "dspHealth",
             "healthReport",
+            "faultReport",
             "inheritModes",
             "eventHistory",
         ]

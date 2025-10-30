@@ -3217,8 +3217,9 @@ class TestDataBaseInteraction:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
+        tile_mon = tile_simulator.tpm_monitor
         # Simulate drift. Hypothetical to test UpdateThresholdCache
-        tile_simulator.get_current_warning_thresholds = (  # type: ignore[assignment]
+        tile_mon.get_current_warning_thresholds = (  # type: ignore[assignment]
             unittest.mock.Mock(
                 return_value={
                     "FE0_mVA": {"min": 1, "max": 5},
@@ -3275,8 +3276,9 @@ class TestDataBaseInteraction:
         )
         change_event_callbacks["state"].assert_not_called()
 
+        tile_mon = tile_simulator.tpm_monitor
         # lets say we have unexpected fw rounding
-        tile_simulator.get_current_warning_thresholds = (  # type: ignore[assignment]
+        tile_mon.get_current_warning_thresholds = (  # type: ignore[assignment]
             unittest.mock.Mock(return_value={"FE0_mVA": {"min": 1, "max": 5}})
         )
 
@@ -3322,21 +3324,22 @@ class TestDataBaseInteraction:
         change_event_callbacks["state"].assert_not_called()
         tile_device.adminMode = 2
 
+        tpm_mon = tile_simulator.tpm_monitor
         # mocking method to assert not called when unsetting.
-        tile_simulator.set_current_warning_thresholds = (  # type: ignore[assignment]
+        tpm_mon.set_current_warning_thresholds = (  # type: ignore[assignment]
             unittest.mock.Mock()
         )
-        tile_simulator.set_voltage_warning_thresholds = (  # type: ignore[assignment]
+        tpm_mon.set_voltage_warning_thresholds = (  # type: ignore[assignment]
             unittest.mock.Mock()
         )
-        tile_simulator.set_tpm_temperature_thresholds = (  # type: ignore[assignment]
+        tpm_mon.set_tpm_temperature_thresholds = (  # type: ignore[assignment]
             unittest.mock.Mock()
         )
 
         tile_device.firmwareTemperatureThresholds = json.dumps(
             {"fpga1_alarm_threshold": "Undefined"}
         )
-        tile_simulator.set_tpm_temperature_thresholds.assert_not_called()
+        tile_simulator.tpm_monitor.set_tpm_temperature_thresholds.assert_not_called()
         change_event_callbacks["state"].assert_not_called()
         tile_device.firmwareVoltageThresholds = json.dumps(
             {
@@ -3344,7 +3347,7 @@ class TestDataBaseInteraction:
                 "MGT_AVCC_max_alarm_threshold": "Undefined",
             }
         )
-        tile_simulator.set_voltage_warning_thresholds.assert_not_called()
+        tile_simulator.tpm_monitor.set_voltage_warning_thresholds.assert_not_called()
         change_event_callbacks["state"].assert_not_called()
 
         tile_device.firmwareCurrentThresholds = json.dumps(
@@ -3353,7 +3356,7 @@ class TestDataBaseInteraction:
                 "FE0_mVA_max_alarm_threshold": "Undefined",
             }
         )
-        tile_simulator.set_current_warning_thresholds.assert_not_called()
+        tile_simulator.tpm_monitor.set_current_warning_thresholds.assert_not_called()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
 

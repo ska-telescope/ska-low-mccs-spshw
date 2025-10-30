@@ -29,11 +29,6 @@ SIMULATOR_ONLY_METHODS = [
 METHODS_TO_OMIT = [
     "__init__",
     "_convert_ip_to_str",
-    # Get/set voltage/current methods are plugins, not direct Tile methods.
-    "get_voltage_warning_thresholds",
-    "set_voltage_warning_thresholds",
-    "get_current_warning_thresholds",
-    "set_current_warning_thresholds",
 ]
 
 

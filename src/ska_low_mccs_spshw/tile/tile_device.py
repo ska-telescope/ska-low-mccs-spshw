@@ -1288,11 +1288,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "firmware_configuration_status"
             ] = self.db_configuration_fault[1]
 
-        if self.component_manager_fault or self.db_configuration_fault[0]:
-            self.logger.error(json.dumps(self.status_information))
-            self.set_status(status=json.dumps(self.status_information))
-            return True
-        return False
+        has_fault = bool(self.component_manager_fault or self.db_configuration_fault[0])
+
+        # Log and update component status if a fault is detected
+        if has_fault:
+            fault_json = json.dumps(self.status_information)
+            self.logger.error(fault_json)
+            self.set_status(status=fault_json)
+
+        return has_fault
 
     def unpack_alarms(
         self: MccsTile,
@@ -5191,15 +5195,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(dtype_out="DevBoolean", fisallowed="is_engineering")
     def UpdateThresholdCache(self: MccsTile) -> bool:
         """
-        Re-evaluate the TileProgrammingState.
+        Re-sync the threshold caches.
 
-        Evaluate and update the TileProgrammingState.
-        Return True is the re-evaluation returned a different value to
-        the value from automatic detection.
-        (A value of True could signify a race condition,
-        or that there is a bug in the automatic evaluation.)
+        Re-sync the db thresholds and the firmware thresholds
+        and compare the two, transitioning to fault when they do not match.
 
-        :return: True is the re-evaluation of TpmStatus returns a different value.
+        NOTE: this command is deprecated, it has been put in to alleviate
+        potential issues with ADR-115 firmware threshold work, in the case
+        of bugs.
+
+        :return: True if the database matches the firmware, False otherwise.
         """
         handler = self.get_command_object("UpdateThresholdCache")
         return handler()

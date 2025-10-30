@@ -59,6 +59,9 @@ from .attribute_managers import (
     NpArrayAttributeManager,
 )
 from .firmware_threshold_interface import (
+    CURRENT_KEYS,
+    TEMPERATURE_KEYS,
+    VOLTAGE_KEYS,
     FirmwareThresholds,
     FirmwareThresholdsDbInterface,
 )
@@ -3282,7 +3285,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param value: A json serialised string with the thresholds.
         """
-        temperature_keys: list[str] = ["board", "fpga1", "fpga2"]
+        temperature_keys: list[str] = TEMPERATURE_KEYS
 
         thresholds: dict[str, Any] = json.loads(value)
 
@@ -3354,21 +3357,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises ValueError: When only one threshold is defined,
             you must define min and max.
         """
-        voltage_keys: list[str] = [
-            "MGT_AVCC",
-            "MGT_AVTT",
-            "SW_AVDD1",
-            "SW_AVDD2",
-            "AVDD3",
-            "MAN_1V2",
-            "DDR0_VREF",
-            "DDR1_VREF",
-            "VM_DRVDD",
-            "VIN",
-            "MON_3V3",
-            "MON_1V8",
-            "MON_5V0",
-        ]
+        voltage_keys: list[str] = VOLTAGE_KEYS
 
         # Flatten allowed voltage keys into full threshold names
         allowed_keys = {f"{v}_min_alarm_threshold" for v in voltage_keys} | {
@@ -3466,7 +3455,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises ValueError: When only one threshold is defined,
             you must define min and max.
         """
-        current_keys = ["FE0_mVA", "FE1_mVA"]
+        current_keys = CURRENT_KEYS
         thresholds: dict[str, Any] = json.loads(value)
 
         # Build the set of valid threshold keys

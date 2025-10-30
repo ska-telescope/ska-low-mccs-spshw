@@ -807,6 +807,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.set_change_event(attr_name, True, self.VerifyEvents)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
 
+        for attr_name in [
+            "firmwareVoltageThresholds",
+            "firmwareCurrentThresholds",
+            "firmwareTemperatureThresholds",
+        ]:
+            self.set_change_event(attr_name, True, self.VerifyEvents)
+            self.set_archive_event(attr_name, True, self.VerifyEvents)
+
     def _health_changed_new(
         self: MccsTile, health: HealthState, health_report: str
     ) -> None:
@@ -1153,6 +1161,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     error_msgs.append(
                         f"[{group}.{threshold}] DB={db_value!r}, HW={read_value!r}"
                     )
+            group_attribute_map = {
+                "voltages": "firmwareVoltageThresholds",
+                "currents": "firmwareCurrentThresholds",
+                "temperatures": "firmwareTemperatureThresholds",
+            }
+            attr_value = json.dumps(read_threshold_group)
+            self.push_change_event(group_attribute_map[group], attr_value)
+            self.push_archive_event(group_attribute_map[group], attr_value)
 
         if error_msgs:
             joined_msg = "; ".join(error_msgs)

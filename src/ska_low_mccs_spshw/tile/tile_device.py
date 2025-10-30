@@ -1278,8 +1278,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.component_manager_fault = polling_fault
             self.status_information["polling_fault"] = (
                 "No fault"
-                if self.component_manager_fault is True
-                else "Reported power from smartbox in dissagreement with polling"
+                if self.component_manager_fault is False
+                else "Reported power from subrack in dissagreement with polling"
             )
 
         if db_configuration_fault is not None:

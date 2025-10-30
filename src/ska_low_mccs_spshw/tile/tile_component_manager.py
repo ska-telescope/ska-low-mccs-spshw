@@ -4349,15 +4349,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             set_correctly = self.tile.tpm_monitor.set_voltage_warning_thresholds(
                 voltage, min_thr, max_thr
             )
-            read_voltage: dict[
-                str, dict[str, float]
-            ] | None | Any = self.tile.tpm_monitor.get_voltage_warning_thresholds(
-                voltage
-            )
-            if read_voltage is None:
-                return None
-            if set_correctly and read_voltage is not None:
-                return read_voltage.get(voltage)
+            if set_correctly:
+                return self.tile.tpm_monitor.get_voltage_warning_thresholds(voltage)
             return None
 
     def get_current_warning_thresholds(
@@ -4407,15 +4400,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             set_correctly = self.tile.tpm_monitor.set_current_warning_thresholds(
                 current, min_thr, max_thr
             )
-            read_current: dict[
-                str, dict[str, float]
-            ] | None | Any = self.tile.tpm_monitor.get_current_warning_thresholds(
-                current
-            )
-            if read_current is None:
-                return None
-            if set_correctly and read_current is not None:
-                return read_current.get(current)
+            if set_correctly:
+                return self.tile.tpm_monitor.get_current_warning_thresholds(current)
             return None
 
     @property

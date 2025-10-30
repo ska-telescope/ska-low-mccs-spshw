@@ -3279,7 +3279,7 @@ class TestDataBaseInteraction:
         tile_mon = tile_simulator.tpm_monitor
         # lets say we have unexpected fw rounding
         tile_mon.get_current_warning_thresholds = (  # type: ignore[assignment]
-            unittest.mock.Mock(return_value={"FE0_mVA": {"min": 1, "max": 5}})
+            unittest.mock.Mock(return_value={"min": 1, "max": 5})
         )
 
         tile_device.firmwareCurrentThresholds = json.dumps(

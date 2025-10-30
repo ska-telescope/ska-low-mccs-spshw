@@ -1,5 +1,12 @@
 # Version History
 
+### THORN-275
+
+* [THORN-275] Added MccsTile.UpdateThresholdCache
+* [THORN-275] Replace SetFirmwareTemperatureThresholds with firmwareTemperatureThresholds
+* [THORN-275] Replace SetVoltageWarningThresholds/GetVoltageWarningThresholds with firmwareVoltageThresholds
+* [THORN-275] Replace SetCurrentWarningThresholds/GetCurrentWarningThresholds with firmwareCurrentThresholds
+
 ## Unreleased
 
 * [SKB-1086] Increase hardware serialisation lock for power_callback and poll_timeout.

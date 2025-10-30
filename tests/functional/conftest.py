@@ -16,7 +16,8 @@ import time
 import warnings
 from datetime import datetime
 from time import sleep
-from typing import Any, Callable, Iterator
+from typing import Any, Iterator
+from unittest.mock import patch
 
 import _pytest
 import pytest
@@ -406,40 +407,6 @@ def available_tiles_fixture(true_context: bool) -> list[str]:
     return [DEFAULT_STATION_LABEL]
 
 
-@pytest.fixture(name="functional_test_context_generator", scope="module")
-def functional_test_context_generator_fixture(
-    true_context: bool,
-    subrack_id: int,
-    subrack_address: tuple[str, int] | None,
-    daq_id: int,
-) -> Callable:
-    """
-    Return a callable to generate a context containing the device/s under test.
-
-    :param true_context: whether to test against an existing Tango
-        deployment
-    :param subrack_id: ID of the subrack Tango device.
-    :param subrack_address: the address of a subrack server if one is
-        already running; otherwise None.
-    :param daq_id: the ID of the daq receiver
-
-    :return: a callable to generate context containing the devices under test
-    """
-
-    def _generate(station_label: str) -> Iterator[SpsTangoTestHarnessContext]:
-        harness = SpsTangoTestHarness(station_label)
-
-        if not true_context:
-            if subrack_address is None:
-                harness.add_subrack_simulator(subrack_id)
-            harness.add_subrack_device(subrack_id, subrack_address)
-
-        with harness as context:
-            yield context
-
-    return _generate
-
-
 @pytest.fixture(name="true_context", scope="session")
 def true_context_fixture(request: pytest.FixtureRequest) -> bool:
     """
@@ -507,6 +474,7 @@ def station_label_fixture() -> str | None:
     return os.environ.get("STATION_LABEL")
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="functional_test_context", scope="module")
 def functional_test_context_fixture(
     true_context: bool,
@@ -514,6 +482,9 @@ def functional_test_context_fixture(
     subrack_id: int,
     subrack_address: tuple[str, int] | None,
     daq_id: int,
+    db_temperature_thresholds: dict[str, Any],
+    db_voltage_thresholds: dict[str, Any],
+    db_current_thresholds: dict[str, Any],
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Yield a Tango context containing the device/s under test.
@@ -525,20 +496,36 @@ def functional_test_context_fixture(
     :param subrack_address: the address of a subrack server if one is
         already running; otherwise None.
     :param daq_id: the ID of the daq receiver
+    :param db_temperature_thresholds: fixture containing the mocked temperature
+        thresholds in db at point of startup.
+    :param db_voltage_thresholds: fixture containing the mocked voltage
+        thresholds in db at point of startup.
+    :param db_current_thresholds: fixture containing the mocked current
+        thresholds in db at point of startup.
 
     :yields: a Tango context containing the devices under test
     """
-    harness = SpsTangoTestHarness(station_label)
+    with patch(
+        "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
+    ) as mock_tango_db:
+        mock_tango_db.return_value.get_device_attribute_property.return_value = {
+            "temperatures": db_temperature_thresholds,
+            "voltages": db_voltage_thresholds,
+            "currents": db_current_thresholds,
+        }
+        harness = SpsTangoTestHarness(station_label)
 
-    if not true_context:
-        if subrack_address is None:
-            harness.add_subrack_simulator(subrack_id)
-        harness.add_subrack_device(subrack_id, subrack_address)
-        harness.add_tile_device(1)
-        harness.set_sps_station_device(subrack_ids=range(1, 2), tile_ids=range(1, 2))
+        if not true_context:
+            if subrack_address is None:
+                harness.add_subrack_simulator(subrack_id)
+            harness.add_subrack_device(subrack_id, subrack_address)
+            harness.add_tile_device(1)
+            harness.set_sps_station_device(
+                subrack_ids=range(1, 2), tile_ids=range(1, 2)
+            )
 
-    with harness as context:
-        yield context
+        with harness as context:
+            yield context
 
 
 @pytest.fixture(name="change_event_callbacks")

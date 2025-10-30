@@ -42,6 +42,36 @@ class FanMode(enum.IntEnum):  # type: ignore[no-redef]
     AUTO = 1
 
 
+@pytest.fixture(name="db_temperature_thresholds", scope="module")
+def db_temperature_thresholds_fixture() -> dict[str, tango.StdStringVector]:
+    """
+    Return a dictionary containing the db values.
+
+    :returns: a dictionary containing the db values.
+    """
+    return {}
+
+
+@pytest.fixture(name="db_voltage_thresholds", scope="module")
+def db_voltage_thresholds_fixture() -> dict[str, tango.StdStringVector]:
+    """
+    Return a dictionary containing the db values.
+
+    :returns: a dictionary containing the db values.
+    """
+    return {}
+
+
+@pytest.fixture(name="db_current_thresholds", scope="module")
+def db_current_thresholds_fixture() -> dict[str, tango.StdStringVector]:
+    """
+    Return a dictionary containing the db values.
+
+    :returns: a dictionary containing the db values.
+    """
+    return {}
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     """
     Pytest hook; prints info about tango version.

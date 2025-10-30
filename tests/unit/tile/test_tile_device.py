@@ -103,36 +103,6 @@ def use_attribute_for_health_fixture() -> bool:
     return True
 
 
-@pytest.fixture(name="db_temperature_thresholds")
-def db_temperature_thresholds_fixture() -> dict[str, tango.StdStringVector]:
-    """
-    Return a dictionary containing the db values.
-
-    :returns: a dictionary containing the db values.
-    """
-    return {}
-
-
-@pytest.fixture(name="db_voltage_thresholds")
-def db_voltage_thresholds_fixture() -> dict[str, tango.StdStringVector]:
-    """
-    Return a dictionary containing the db values.
-
-    :returns: a dictionary containing the db values.
-    """
-    return {}
-
-
-@pytest.fixture(name="db_current_thresholds")
-def db_current_thresholds_fixture() -> dict[str, tango.StdStringVector]:
-    """
-    Return a dictionary containing the db values.
-
-    :returns: a dictionary containing the db values.
-    """
-    return {}
-
-
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="test_context")
 def test_context_fixture(
@@ -516,6 +486,9 @@ class TestMccsTile:
             "antennaBufferMode",
             "dataTransmissionMode",
             "integratedDataTransmissionMode",
+            "firmwareTemperatureThresholds",
+            "firmwareVoltageThresholds",
+            "firmwareCurrentThresholds",
         ]
 
     @pytest.fixture(name="active_read_attributes")
@@ -528,7 +501,6 @@ class TestMccsTile:
         """
         return [
             "tile_info",
-            "firmwareTemperatureThresholds",
             "firmwareVersion",
             "fpgasUnixTime",
             "fpgaTime",
@@ -1315,11 +1287,6 @@ class TestMccsTile:
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [
-            (
-                "firmwareTemperatureThresholds",
-                TileSimulator.TPM_TEMPERATURE_THRESHOLDS,
-                None,
-            ),
             (
                 "boardTemperature",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
@@ -2910,10 +2877,15 @@ class TestMccsTileCommands:
         """
         # This method mut be used in ENGINEERING MODE
         assert on_tile_device.adminMode == AdminMode.ONLINE
+        board_alarm_threshold = json.loads(
+            on_tile_device.firmwareTemperatureThresholds
+        )["board_alarm_threshold"]
+        assert board_alarm_threshold == 90.0
+
         with pytest.raises(DevFailed):
-            board_alarm_threshold = json.loads(
-                on_tile_device.firmwareTemperatureThresholds
-            )["board_alarm_threshold"]
+            on_tile_device.firmwareTemperatureThresholds = json.dumps(
+                {"board_alarm_threshold": 92.0}
+            )
 
         on_tile_device.adminMode = AdminMode.ENGINEERING
         time.sleep(1)
@@ -2925,24 +2897,22 @@ class TestMccsTileCommands:
         change_event_callbacks["alarms"].assert_change_event(Anything)
         with pytest.raises(DevFailed):
             # Setting a threshold to high
-            on_tile_device.SetFirmwareTemperatureThresholds(
-                json.dumps(
-                    {
-                        "max_board_temperature_threshold": 60,
-                        "max_fpga1_temperature_threshold": 60,
-                        "max_fpga2_temperature_threshold": 60,
-                    }
-                )
-            )
-        on_tile_device.SetFirmwareTemperatureThresholds(
-            json.dumps(
+            on_tile_device.firmwareTemperatureThresholds = json.dumps(
                 {
-                    "max_board_temperature_threshold": 30,
-                    "max_fpga1_temperature_threshold": 30,
-                    "max_fpga2_temperature_threshold": 30,
+                    "board_alarm_threshold": 60,
+                    "fpga1_alarm_threshold": 60,
+                    "fpga2_alarm_threshold": 60,
                 }
             )
+
+        on_tile_device.firmwareTemperatureThresholds = json.dumps(
+            {
+                "board_alarm_threshold": 30,
+                "fpga1_alarm_threshold": 30,
+                "fpga2_alarm_threshold": 30,
+            }
         )
+
         final_board_alarm_threshold = json.loads(
             on_tile_device.firmwareTemperatureThresholds
         )["board_alarm_threshold"]

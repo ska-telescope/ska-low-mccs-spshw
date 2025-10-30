@@ -333,7 +333,7 @@ def available_station_daqs(
     if not station_label:
         station_label = DEFAULT_STATION_LABEL
 
-    daq_pattern = rf"low-mccs/daqreciever/{re.escape(station_label)}(?:-bandpass)?"
+    daq_pattern = rf"low-mccs/daqreceiver/{re.escape(station_label)}(?:-bandpass)?"
 
     if true_context:
         _available_station_daqs = []

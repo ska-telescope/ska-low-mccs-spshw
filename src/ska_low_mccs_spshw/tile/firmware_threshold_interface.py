@@ -11,12 +11,36 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Union
+from typing import Any, Final, Union
 
 import tango
 from tango import Database
 
-__all__: list[str] = ["FirmwareThresholdsDbInterface", "FirmwareThresholds"]
+__all__: list[str] = [
+    "FirmwareThresholdsDbInterface",
+    "FirmwareThresholds",
+    "TEMPERATURE_KEYS",
+    "VOLTAGE_KEYS",
+    "CURRENT_KEYS",
+]
+
+TEMPERATURE_KEYS: Final[list[str]] = ["fpga1", "fpga2", "board"]
+VOLTAGE_KEYS: Final[list[str]] = [
+    "MGT_AVCC",
+    "MGT_AVTT",
+    "SW_AVDD1",
+    "SW_AVDD2",
+    "AVDD3",
+    "MAN_1V2",
+    "DDR0_VREF",
+    "DDR1_VREF",
+    "VM_DRVDD",
+    "VIN",
+    "MON_3V3",
+    "MON_1V8",
+    "MON_5V0",
+]
+CURRENT_KEYS: Final[list[str]] = ["FE0_mVA", "FE1_mVA"]
 
 
 class FirmwareThresholdsDbInterface:
@@ -218,27 +242,13 @@ class FirmwareThresholds:
     # Utility
     # --------------------------
     def _get_temperature_keys(self: FirmwareThresholds) -> list[str]:
-        return ["fpga1", "fpga2", "board"]
+        return TEMPERATURE_KEYS
 
     def _get_voltage_keys(self: FirmwareThresholds) -> list[str]:
-        return [
-            "MGT_AVCC",
-            "MGT_AVTT",
-            "SW_AVDD1",
-            "SW_AVDD2",
-            "AVDD3",
-            "MAN_1V2",
-            "DDR0_VREF",
-            "DDR1_VREF",
-            "VM_DRVDD",
-            "VIN",
-            "MON_3V3",
-            "MON_1V8",
-            "MON_5V0",
-        ]
+        return VOLTAGE_KEYS
 
     def _get_current_keys(self: FirmwareThresholds) -> list[str]:
-        return ["FE0_mVA", "FE1_mVA"]
+        return CURRENT_KEYS
 
     def _get_suffixes_for(self: FirmwareThresholds, key: str) -> list[str]:
         if key in self._get_temperature_keys():
@@ -302,8 +312,6 @@ class FirmwareThresholds:
         :returns: a dictionary with structure required
             for loading into database
         """
-        # TODO: Really why does a threshold know a database exists,
-        # Does this type of method belong in an interface class.
         data = {}
         for group_name, field_names in self.group_map.items():
             group_data = {}
@@ -326,7 +334,6 @@ class FirmwareThresholds:
             for field_name in field_names:
                 group_data[field_name] = None
             data[group_name] = group_data
-        print(f"putting {data=}")
         return data
 
     def update_from_dict(self, thresholds: dict[str, tango.StdStringVector]) -> None:

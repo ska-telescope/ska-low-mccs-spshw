@@ -506,7 +506,7 @@ def subrack_device_attribute_values_fixture(
                 subrack_simulator_config["tpm_voltages"],
             )
         ],
-        "SubrackAPIVersion": "v1.6.0",
+        "subrackBoardInfo": "v1.6.0",
     }
 
 

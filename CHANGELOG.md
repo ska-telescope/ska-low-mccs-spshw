@@ -3,6 +3,11 @@
 ## Unreleased
 
 * [THORN-254] Added default attribute alarm configuration for Tile and Subrack to `values.yaml`
+* [THORN-317] fixed bios version read bug and health status value update bug
+
+## 10.1.1
+
+* [THORN-313] Loop over antennas present in mapping in station_component_manager._calculate_delays_per_tile instead of looping over delays. Improved some messages/docstrings.
 
 ## 10.1.0
 

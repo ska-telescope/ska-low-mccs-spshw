@@ -2,6 +2,7 @@
 
 ### THORN-275
 
+* [THORN-275] Added faultReport attribute to assist with fault diognosis.
 * [THORN-275] Added MccsTile.UpdateThresholdCache
 * [THORN-275] Replace SetFirmwareTemperatureThresholds with firmwareTemperatureThresholds
 * [THORN-275] Replace SetVoltageWarningThresholds/GetVoltageWarningThresholds with firmwareVoltageThresholds

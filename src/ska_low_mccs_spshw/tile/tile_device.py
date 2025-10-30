@@ -4378,6 +4378,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.health_report
 
     @attribute(dtype="DevString")
+    def faultReport(self: MccsTile) -> str:
+        """
+        Get the fault report.
+
+        :return: the fault report.
+        """
+        return json.dumps(self.status_information)
+
+    @attribute(dtype="DevString")
     def srcip40gfpga1(self: MccsTile) -> str:
         """
         Return source IP for FPGA1, to be set by SpsStation.

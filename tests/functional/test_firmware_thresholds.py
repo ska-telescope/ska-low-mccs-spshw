@@ -27,35 +27,6 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tests.test_tools import AttributeWaiter
 
 
-def _cleanup_thresholds(tile_device: tango.DeviceProxy) -> None:
-    """
-    Cleanup thresholds.
-
-    :param tile_device: tile device under test.
-    """
-    if tile_device.adminMode != AdminMode.ENGINEERING:
-        tile_device.adminMode = AdminMode.ENGINEERING
-
-    # Set the voltages to Undefined
-    tile_device.FirmwareVoltageThresholds = json.dumps(
-        {
-            "MGT_AVCC_min_alarm_threshold": "Undefined",
-            "MGT_AVCC_max_alarm_threshold": "Undefined",
-        }
-    )
-    # Set the currents to Undefined
-    tile_device.FirmwareCurrentThresholds = json.dumps(
-        {
-            "FE0_mVA_min_alarm_threshold": "Undefined",
-            "FE0_mVA_max_alarm_threshold": "Undefined",
-        }
-    )
-    # Set the temperatures to Undefined
-    tile_device.FirmwareTemperatureThresholds = json.dumps(
-        {"fpga1_alarm_threshold": "Undefined"}
-    )
-
-
 @pytest.fixture(name="tile_device")
 def tile_device_fixture(
     station_tiles: list[tango.DeviceProxy],
@@ -117,9 +88,9 @@ def device_threshold_updated_fixture(
     tile_device: tango.DeviceProxy,
     initial_db_thresholds: dict[str, dict[str, Any]],
     revert_db_thresholds: dict[str, dict[str, Any]],
-) -> Generator:
+) -> Generator[None, None, None]:
     """
-    Fixture to store command ID.
+    Fixture to orchestrate the altering of thresholds in db.
 
     :param tile_device: the tile under test.
     :param initial_db_thresholds: the values initially populated
@@ -137,6 +108,17 @@ def device_threshold_updated_fixture(
 
     # Revert by ignoring in database
     db_connection.put_device_attribute_property(device_trl, revert_db_thresholds)
+
+    # restart admin device, and wait to rediscover state
+    tango.DeviceProxy(tile_device.adm_name()).restartserver()
+    # Sleep to allow time for device to come up.
+    time.sleep(6)
+    AttributeWaiter(timeout=45).wait_for_value(
+        tile_device,
+        "tileProgrammingState",
+        "Initialised",
+        lookahead=2,  # UNKNOWN first hence lookahead == 2
+    )
 
 
 @scenario(
@@ -277,19 +259,17 @@ def check_spsstation_state(
 
 @given("we reached into the database and altered a threshold")
 def database_threshold_altered(
-    tile_device: tango.DeviceProxy, initial_db_thresholds: dict[str, dict[str, Any]]
+    device_threshold_updated: Generator[None, None, None]
 ) -> None:
     """
     Alter the database thresholds.
 
-    :param initial_db_thresholds: the values initially populated
-        in database
-    :param tile_device: the tile under test
+    :param device_threshold_updated: a fixture with setup teardown logic for
+        altering thresholds.
     """
-    # Note the fixture contains the set up tear down logic here.
-    device_trl = tile_device.dev_name()
-    db_connection = tango.Database()
-    db_connection.put_device_attribute_property(device_trl, initial_db_thresholds)
+    # Note the device_threshold_updated
+    # fixture contains the set up tear down logic here.
+    print("Setting initial DB thresholds")
 
 
 @when("the Tile TANGO device is restarted")
@@ -306,7 +286,7 @@ def tile_is_restarted(tile_device: tango.DeviceProxy) -> None:
 @given("we have resynced with db")
 def tile_is_resynced_with_db(tile_device: tango.DeviceProxy) -> None:
     """
-    Restart the device.
+    Resynced the device with the db.
 
     :param tile_device: tile device under test.
     """
@@ -368,7 +348,7 @@ def write_thresholds_to_match(
     tile_device: tango.DeviceProxy,
 ) -> None:
     """
-    Write threshold to Undefined.
+    Write threshold to match the database.
 
     :param tile_device: the tile under test
 
@@ -425,7 +405,6 @@ def check_for_configuration_missmatch(
     change_event_callbacks["device_state"].assert_not_called()
 
     tile_device.unsubscribe_event(sub_id)
-    _cleanup_thresholds(tile_device)
 
 
 @then("the Tile reports it has no configuration mismatch")
@@ -456,5 +435,3 @@ def tile_reports_on(
     change_event_callbacks["device_state"].assert_not_called()
 
     tile_device.unsubscribe_event(sub_id)
-
-    _cleanup_thresholds(tile_device)

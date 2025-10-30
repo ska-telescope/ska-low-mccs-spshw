@@ -41,7 +41,12 @@ from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
 from .exception_codes import HardwareVerificationError
-from .firmware_threshold_interface import FirmwareThresholds
+from .firmware_threshold_interface import (
+    CURRENT_KEYS,
+    TEMPERATURE_KEYS,
+    VOLTAGE_KEYS,
+    FirmwareThresholds,
+)
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -745,148 +750,64 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: the firmwareThesholds.
         """
-        t1: float = time.time()
         with acquire_timeout(
             lock=self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
+            t1 = time.time()
             temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
             t2 = time.time()
-            self.logger.error(f"Temperatured read : {t2-t1}")
+            self.logger.debug(f"Temperatures read took {t2-t1} (s)")
             current_thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
             t3 = time.time()
-            self.logger.error(f"Currents read : {t3-t2}")
+            self.logger.debug(f"Currents read took {t3-t2} (s)")
             voltage_thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
             t4 = time.time()
-            self.logger.error(f"Voltage read : {t4-t3}")
-        self.logger.error("packaging into a threshold structure")
+            self.logger.debug(f"Voltage read took {t4-t3} (s)")
+
+        # Package values read into class.
         thresholds = FirmwareThresholds()
 
         # Temperatures
-        thresholds.board_warning_threshold = temperature_thresholds[
-            "board_warning_threshold"
-        ]
-        thresholds.board_alarm_threshold = temperature_thresholds[
-            "board_alarm_threshold"
-        ]
+        for temperature in TEMPERATURE_KEYS:
+            setattr(
+                thresholds,
+                f"{temperature}_warning_threshold",
+                temperature_thresholds[f"{temperature}_warning_threshold"],
+            )
+            setattr(
+                thresholds,
+                f"{temperature}_alarm_threshold",
+                temperature_thresholds[f"{temperature}_alarm_threshold"],
+            )
 
-        thresholds.fpga1_warning_threshold = temperature_thresholds[
-            "fpga1_warning_threshold"
-        ]
-        thresholds.fpga1_alarm_threshold = temperature_thresholds[
-            "fpga1_alarm_threshold"
-        ]
+        # Voltages
+        for voltage in VOLTAGE_KEYS:
+            setattr(
+                thresholds,
+                f"{voltage}_min_alarm_threshold",
+                voltage_thresholds[voltage]["min"],
+            )
+            setattr(
+                thresholds,
+                f"{voltage}_max_alarm_threshold",
+                voltage_thresholds[voltage]["max"],
+            )
 
-        thresholds.fpga2_warning_threshold = temperature_thresholds[
-            "fpga2_warning_threshold"
-        ]
-        thresholds.fpga2_alarm_threshold = temperature_thresholds[
-            "fpga2_alarm_threshold"
-        ]
+        # Currents
+        for current in CURRENT_KEYS:
+            setattr(
+                thresholds,
+                f"{current}_min_alarm_threshold",
+                current_thresholds[current]["min"],
+            )
+            setattr(
+                thresholds,
+                f"{current}_max_alarm_threshold",
+                current_thresholds[current]["max"],
+            )
 
-        if voltage_thresholds is not None:
-            # Voltages
-            thresholds.MGT_AVCC_min_alarm_threshold = voltage_thresholds["MGT_AVCC"][
-                "min"
-            ]
-            thresholds.MGT_AVCC_max_alarm_threshold = voltage_thresholds["MGT_AVCC"][
-                "max"
-            ]
-
-            thresholds.MGT_AVTT_min_alarm_threshold = voltage_thresholds["MGT_AVTT"][
-                "min"
-            ]
-            thresholds.MGT_AVTT_max_alarm_threshold = voltage_thresholds["MGT_AVTT"][
-                "max"
-            ]
-
-            thresholds.SW_AVDD1_min_alarm_threshold = voltage_thresholds["SW_AVDD1"][
-                "min"
-            ]
-            thresholds.SW_AVDD1_max_alarm_threshold = voltage_thresholds["SW_AVDD1"][
-                "max"
-            ]
-
-            thresholds.SW_AVDD2_min_alarm_threshold = voltage_thresholds["SW_AVDD2"][
-                "min"
-            ]
-            thresholds.SW_AVDD2_max_alarm_threshold = voltage_thresholds["SW_AVDD2"][
-                "max"
-            ]
-
-            thresholds.AVDD3_min_alarm_threshold = voltage_thresholds["AVDD3"]["min"]
-            thresholds.AVDD3_max_alarm_threshold = voltage_thresholds["AVDD3"]["max"]
-
-            thresholds.MAN_1V2_min_alarm_threshold = voltage_thresholds["MAN_1V2"][
-                "min"
-            ]
-            thresholds.MAN_1V2_max_alarm_threshold = voltage_thresholds["MAN_1V2"][
-                "max"
-            ]
-
-            thresholds.DDR0_VREF_min_alarm_threshold = voltage_thresholds["DDR0_VREF"][
-                "min"
-            ]
-            thresholds.DDR0_VREF_max_alarm_threshold = voltage_thresholds["DDR0_VREF"][
-                "max"
-            ]
-
-            thresholds.DDR1_VREF_min_alarm_threshold = voltage_thresholds["DDR1_VREF"][
-                "min"
-            ]
-            thresholds.DDR1_VREF_max_alarm_threshold = voltage_thresholds["DDR1_VREF"][
-                "max"
-            ]
-
-            thresholds.VM_DRVDD_min_alarm_threshold = voltage_thresholds["VM_DRVDD"][
-                "min"
-            ]
-            thresholds.VM_DRVDD_max_alarm_threshold = voltage_thresholds["VM_DRVDD"][
-                "max"
-            ]
-
-            thresholds.VIN_min_alarm_threshold = voltage_thresholds["VIN"]["min"]
-            thresholds.VIN_max_alarm_threshold = voltage_thresholds["VIN"]["max"]
-
-            thresholds.MON_3V3_min_alarm_threshold = voltage_thresholds["MON_3V3"][
-                "min"
-            ]
-            thresholds.MON_3V3_max_alarm_threshold = voltage_thresholds["MON_3V3"][
-                "max"
-            ]
-
-            thresholds.MON_1V8_min_alarm_threshold = voltage_thresholds["MON_1V8"][
-                "min"
-            ]
-            thresholds.MON_1V8_max_alarm_threshold = voltage_thresholds["MON_1V8"][
-                "max"
-            ]
-
-            thresholds.MON_5V0_min_alarm_threshold = voltage_thresholds["MON_5V0"][
-                "min"
-            ]
-            thresholds.MON_5V0_max_alarm_threshold = voltage_thresholds["MON_5V0"][
-                "max"
-            ]
-
-        if current_thresholds is not None:
-            # Currents
-            thresholds.FE0_mVA_min_alarm_threshold = current_thresholds["FE0_mVA"][
-                "min"
-            ]
-            thresholds.FE0_mVA_max_alarm_threshold = current_thresholds["FE0_mVA"][
-                "max"
-            ]
-
-            thresholds.FE1_mVA_min_alarm_threshold = current_thresholds["FE1_mVA"][
-                "min"
-            ]
-            thresholds.FE1_mVA_max_alarm_threshold = current_thresholds["FE1_mVA"][
-                "max"
-            ]
-        t5: float = time.time()
-        self.logger.error(f"Time takes == {t5-t4}")
         return thresholds
 
     def polling_started(self: TileComponentManager) -> None:

@@ -754,10 +754,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
             t2 = time.time()
             self.logger.error(f"Temperatured read : {t2-t1}")
-            current_thresholds = self.tile.get_current_warning_thresholds()
+            current_thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
             t3 = time.time()
             self.logger.error(f"Currents read : {t3-t2}")
-            voltage_thresholds = self.tile.get_voltage_warning_thresholds()
+            voltage_thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
             t4 = time.time()
             self.logger.error(f"Voltage read : {t4-t3}")
         self.logger.error("packaging into a threshold structure")
@@ -4318,9 +4318,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             if voltage:
-                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds(
+                    voltage
+                )
             else:
-                thresholds = self.tile.get_voltage_warning_thresholds()
+                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
             if thresholds is None:
                 return f"Specified voltage '{voltage}' not recognized."
             return json.dumps(thresholds)
@@ -4344,12 +4346,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            set_correctly = self.tile.set_voltage_warning_thresholds(
+            set_correctly = self.tile.tpm_monitor.set_voltage_warning_thresholds(
                 voltage, min_thr, max_thr
             )
             read_voltage: dict[
                 str, dict[str, float]
-            ] | None | Any = self.tile.get_voltage_warning_thresholds(voltage)
+            ] | None | Any = self.tile.tpm_monitor.get_voltage_warning_thresholds(
+                voltage
+            )
             if read_voltage is None:
                 return None
             if set_correctly and read_voltage is not None:
@@ -4372,9 +4376,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             if current:
-                thresholds = self.tile.get_current_warning_thresholds(current)
+                thresholds = self.tile.tpm_monitor.get_current_warning_thresholds(
+                    current
+                )
             else:
-                thresholds = self.tile.get_current_warning_thresholds()
+                thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
             if thresholds is None:
                 return f"Specified current '{current}' not recognized."
             return json.dumps(thresholds)
@@ -4398,12 +4404,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            set_correctly = self.tile.set_current_warning_thresholds(
+            set_correctly = self.tile.tpm_monitor.set_current_warning_thresholds(
                 current, min_thr, max_thr
             )
             read_current: dict[
                 str, dict[str, float]
-            ] | None | Any = self.tile.get_current_warning_thresholds(current)
+            ] | None | Any = self.tile.tpm_monitor.get_current_warning_thresholds(
+                current
+            )
             if read_current is None:
                 return None
             if set_correctly and read_current is not None:

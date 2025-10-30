@@ -505,17 +505,17 @@ def functional_test_context_fixture(
 
     :yields: a Tango context containing the devices under test
     """
-    with patch(
-        "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
-    ) as mock_tango_db:
-        mock_tango_db.return_value.get_device_attribute_property.return_value = {
-            "temperatures": db_temperature_thresholds,
-            "voltages": db_voltage_thresholds,
-            "currents": db_current_thresholds,
-        }
-        harness = SpsTangoTestHarness(station_label)
+    if not true_context:
+        with patch(
+            "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
+        ) as mock_tango_db:
+            mock_tango_db.return_value.get_device_attribute_property.return_value = {
+                "temperatures": db_temperature_thresholds,
+                "voltages": db_voltage_thresholds,
+                "currents": db_current_thresholds,
+            }
 
-        if not true_context:
+            harness = SpsTangoTestHarness(station_label)
             if subrack_address is None:
                 harness.add_subrack_simulator(subrack_id)
             harness.add_subrack_device(subrack_id, subrack_address)
@@ -523,7 +523,10 @@ def functional_test_context_fixture(
             harness.set_sps_station_device(
                 subrack_ids=range(1, 2), tile_ids=range(1, 2)
             )
-
+            with harness as context:
+                yield context
+    else:
+        harness = SpsTangoTestHarness(station_label)
         with harness as context:
             yield context
 

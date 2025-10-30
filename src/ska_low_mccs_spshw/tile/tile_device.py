@@ -220,6 +220,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_report = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds
+        self.db_configuration_fault: tuple[bool, str] = (
+            False,
+            "No information gathered",
+        )
+        self.component_manager_fault: bool | None = None
+        self.power_state: PowerState | None = None
+        self.status_information: dict[str, str] = {}
 
     def delete_device(self: MccsTile) -> Any:
         """
@@ -764,7 +771,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         self.db_firmware_thresholds = FirmwareThresholds()
         self.hw_firmware_thresholds = FirmwareThresholds()
-        self._firmware_threshold_db_interface = FirmwareThresholdsDbInterface(
+        self.firmware_threshold_db_interface = FirmwareThresholdsDbInterface(
             device_name=self.get_name(), thresholds=self.db_firmware_thresholds
         )
 
@@ -912,10 +919,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
             ("EvaluateTileProgrammingState", self.EvaluateTileProgrammingStateCommand),
-            (
-                "SetFirmwareTemperatureThresholds",
-                self.SetFirmwareTemperatureThresholdsCommand,
-            ),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
             ("WriteRegister", self.WriteRegisterCommand),
@@ -953,10 +956,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
             ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
             ("StopAntennaBuffer", self.StopAntennaBufferCommand),
-            ("GetVoltageWarningThresholds", self.GetVoltageWarningThresholdsCommand),
-            ("SetVoltageWarningThresholds", self.SetVoltageWarningThresholdsCommand),
-            ("GetCurrentWarningThresholds", self.GetCurrentWarningThresholdsCommand),
-            ("SetCurrentWarningThresholds", self.SetCurrentWarningThresholdsCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -1016,6 +1015,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self._command_tracker,
                 self.component_manager,
                 callback=None,
+                logger=self.logger,
+            ),
+        )
+        self.register_command_object(
+            command_name="UpdateThresholdCache",
+            command_object=MccsTile.UpdateThresholdCacheCommand(
+                device=self,
+                component_manager=self.component_manager,
                 logger=self.logger,
             ),
         )
@@ -1118,42 +1125,48 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
-    def _is_firmware_matching_database(
-        self: MccsTile, read_firmware_thresholds: FirmwareThresholds
-    ) -> bool:
+    def _check_database_match(self: MccsTile) -> bool:
         """
         Compare firmware thresholds from the database against read values.
 
         Ignores any thresholds marked as 'Undefined' in the database.
-        Returns True if all defined DB values match the read values, else False.
 
-        :param read_firmware_thresholds: the firmware thresholds read.
-
-        :return: True if we have a match.
+        :returns: True if all defined DB values match the read values, else False.
         """
-        # Assumptions this class is synced with db.
+        db_thresholds_cache = self.db_firmware_thresholds.to_device_property_dict()
+        hw_threshold_cache = self.hw_firmware_thresholds.to_device_property_dict()
 
-        db_thresholds = self.db_firmware_thresholds.to_device_property_dict()
-        read_thresholds = read_firmware_thresholds.to_device_property_dict()
-        print(f"{db_thresholds=}")
-        print(f"{read_thresholds=}")
-        for key, thresholds in db_thresholds.items():
-            read_threshold_group = read_thresholds.get(key, {})
-            for threshold, value in thresholds.items():
-                if value == "Undefined":
-                    continue  # Skip undefined thresholds
-                self.logger.error(f"Investigating {threshold=} with {value=}")
+        self.logger.debug(f"{db_thresholds_cache=}")
+        self.logger.debug(f"{hw_threshold_cache=}")
+
+        error_msgs: list[str] = []
+
+        for group, db_thresholds in db_thresholds_cache.items():
+            read_threshold_group = hw_threshold_cache.get(group, {})
+
+            for threshold, db_value in db_thresholds.items():
+                if db_value == "Undefined":
+                    continue  # Skip undefined thresholds in db
+
                 read_value = read_threshold_group.get(threshold)
-                if read_value == "Undefined":
-                    # We can read a subset.
-                    continue
-                self.logger.error(f"from hw {read_value=}")
-                if read_value is None or value != read_value:
-                    return False
+                if read_value is None or db_value != read_value:
+                    error_msgs.append(
+                        f"[{group}.{threshold}] DB={db_value!r}, HW={read_value!r}"
+                    )
 
+        if error_msgs:
+            joined_msg = "; ".join(error_msgs)
+            self.logger.error(f"Database mismatch detected: {joined_msg}")
+            self._component_state_changed(
+                db_configuration_fault=(True, f"Configuration mismatch: {joined_msg}")
+            )
+            return False
+
+        self._component_state_changed(
+            db_configuration_fault=(False, "Configuration match")
+        )
         return True
 
-    # pylint: disable=too-many-branches
     def _update_attribute_callback(
         self: MccsTile,
         mark_invalid: bool = False,
@@ -1176,8 +1189,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     f"{attribute_value.to_device_property_dict()}"
                 )
                 self.hw_firmware_thresholds = attribute_value
-                if not self._is_firmware_matching_database(attribute_value):
-                    self.logger.error("This is bad we failed correctly\n\n")
+                self._check_database_match()
+
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             else:
@@ -1202,6 +1215,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         *,
         fault: bool | None = None,
         power: PowerState | None = None,
+        db_configuration_fault: tuple[bool, str] | None = None,
         **state_change: Any,
     ) -> None:
         """
@@ -1213,16 +1227,53 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param fault: whether the component is in fault or not
         :param power: the power state of the component
         :param state_change: other state updates
+        :param db_configuration_fault: a tuple with status and information
+            about whether we are experiencing a configuration fault.
         """
         if power in [PowerState.OFF, PowerState.UNKNOWN]:
             for attr in self._attribute_state.values():
                 attr.mark_stale()
-        super()._component_state_changed(fault=fault, power=power)
+
+        if power is not None:
+            self.power_state = power
+        super()._component_state_changed(power=power)
+        if self.power_state == PowerState.ON:
+            super()._component_state_changed(
+                fault=self._evaluate_fault(
+                    db_configuration_fault=db_configuration_fault, polling_fault=fault
+                )
+            )
+
         if not self.UseAttributesForHealth:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power)
             else:
                 self._health_model.update_state(fault=fault)
+
+    def _evaluate_fault(
+        self: MccsTile,
+        db_configuration_fault: tuple[bool, str] | None = None,
+        polling_fault: bool | None = None,
+    ) -> bool:
+        if polling_fault is not None:
+            self.component_manager_fault = polling_fault
+            self.status_information["polling_fault"] = (
+                "No fault"
+                if self.component_manager_fault is True
+                else "Reported power from smartbox in dissagreement with polling"
+            )
+
+        if db_configuration_fault is not None:
+            self.db_configuration_fault = db_configuration_fault
+            self.status_information[
+                "firmware_configuration_status"
+            ] = self.db_configuration_fault[1]
+
+        if self.component_manager_fault or self.db_configuration_fault[0]:
+            self.logger.error(json.dumps(self.status_information))
+            self.set_status(status=json.dumps(self.status_information))
+            return True
+        return False
 
     def unpack_alarms(
         self: MccsTile,
@@ -3186,7 +3237,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.logger.info(message)
         self.component_manager.set_station_id(value)
 
-    @attribute(dtype="DevString", fisallowed="is_engineering")
+    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
     def firmwareTemperatureThresholds(
         self: MccsTile,
     ) -> str | dict[str, float]:
@@ -3217,52 +3268,47 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         temperature_keys: list[str] = ["board", "fpga1", "fpga2"]
 
-        argin = json.loads(value)
+        thresholds: dict[str, Any] = json.loads(value)
 
-        for temperature in temperature_keys:
-            temperature_thr = argin.get(f"{temperature}_alarm_threshold")
-            temperature_defined = temperature_thr is not None
-            if temperature_defined:
-                if temperature_defined == "Undefined":
-                    setattr(
-                        self.db_firmware_thresholds,
-                        f"{temperature}_alarm_threshold",
-                        "Undefined",
-                    )
-                else:
-                    match temperature:
-                        case "board":
-                            set_values: dict[
-                                str, Any
-                            ] = self.component_manager.set_tpm_temperature_thresholds(
-                                max_board_alarm_threshold=temperature_thr,
-                            )
-                        case "fpga1":
-                            set_values = (
-                                self.component_manager.set_tpm_temperature_thresholds(
-                                    max_fpga1_alarm_threshold=temperature_thr,
-                                )
-                            )
-                        case "fpga2":
-                            set_values = (
-                                self.component_manager.set_tpm_temperature_thresholds(
-                                    max_fpga2_alarm_threshold=temperature_thr,
-                                )
-                            )
-                        case _:
-                            set_values = None
+        arg_map = {
+            "board": "max_board_alarm_threshold",
+            "fpga1": "max_fpga1_alarm_threshold",
+            "fpga2": "max_fpga2_alarm_threshold",
+        }
 
-                    if set_values:
-                        setattr(
-                            self.db_firmware_thresholds,
-                            f"{temperature}_alarm_threshold",
-                            set_values[f"{temperature}_alarm_threshold"],
-                        )
+        for temp in temperature_keys:
+            thr_name = f"{temp}_alarm_threshold"
+            thr_val = thresholds.get(thr_name)
 
-        # Write the values to the database
-        self._firmware_threshold_db_interface.write_threshold_to_db()
+            # Skip missing values
+            if thr_val is None:
+                continue
 
-    @attribute(dtype="DevString", fisallowed="is_engineering")
+            # Handle undefined threshold
+            if thr_val == "Undefined":
+                self.logger.debug(f"{temp}: threshold explicitly undefined")
+                setattr(self.db_firmware_thresholds, thr_name, "Undefined")
+                continue
+
+            # Apply to firmware
+            self.logger.debug(f"Setting {temp}: threshold={thr_val}")
+            set_values = self.component_manager.set_tpm_temperature_thresholds(
+                **{arg_map[temp]: thr_val}
+            )
+
+            if not set_values:
+                self.logger.warning(f"{temp}: no temperature threshold values returned")
+                continue
+
+            # Update caches
+            for target in (self.hw_firmware_thresholds, self.db_firmware_thresholds):
+                setattr(target, thr_name, set_values[thr_name])
+
+        # Commit changes and validate
+        self.firmware_threshold_db_interface.write_threshold_to_db()
+        self._check_database_match()
+
+    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
     def firmwareVoltageThresholds(
         self: MccsTile,
     ) -> str | dict[str, float]:
@@ -3307,52 +3353,73 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "MON_1V8",
             "MON_5V0",
         ]
-        argin = json.loads(value)
+
+        # Flatten allowed voltage keys into full threshold names
+        allowed_keys = {f"{v}_min_alarm_threshold" for v in voltage_keys} | {
+            f"{v}_max_alarm_threshold" for v in voltage_keys
+        }
+
+        thresholds: dict[str, Any] = json.loads(value)
+
+        # Validate threshold keys
+        for key in thresholds.keys():
+            if key not in allowed_keys:
+                raise ValueError(
+                    f"Invalid threshold key: {key}. "
+                    f"Must be one of {sorted(allowed_keys)}"
+                )
 
         for voltage in voltage_keys:
-            min_voltage = argin.get(f"{voltage}_min_alarm_threshold")
-            max_voltage = argin.get(f"{voltage}_max_alarm_threshold")
-            if (min_voltage is None) ^ (
-                max_voltage is None
-            ):  # XOR: True if only one is None
+            min_name = f"{voltage}_min_alarm_threshold"
+            max_name = f"{voltage}_max_alarm_threshold"
+            min_val = thresholds.get(min_name)
+            max_val = thresholds.get(max_name)
+
+            # Validate consistency
+            if (min_val is None) ^ (max_val is None):  # only one defined
                 raise ValueError(
                     f"Inconsistent voltage thresholds for {voltage}: "
-                    f"min={min_voltage}, max={max_voltage}. "
-                    "Both must be defined or both must be None."
+                    f"min={min_val}, max={max_val}. Both must be defined or both None."
                 )
-            voltage_defined = min_voltage is not None and max_voltage is not None
-            if voltage_defined:
-                self.logger.error(f"We are defined {voltage}_min_alarm_threshold")
-                if min_voltage == "Undefined" or max_voltage == "Undefined":
-                    setattr(self.db_firmware_thresholds, min_voltage, "Undefined")
-                    setattr(self.db_firmware_thresholds, max_voltage, "Undefined")
-                else:
-                    self.logger.error(f"Setting to {min_voltage=}, {max_voltage=}")
-                    set_values: dict[
-                        str, Any
-                    ] | None = self.component_manager.set_voltage_warning_thresholds(
-                        voltage=voltage.upper(),
-                        min_thr=min_voltage,
-                        max_thr=max_voltage,
-                    )
-                    if set_values:
-                        self.logger.error("Setting in db")
-                        setattr(
-                            self.db_firmware_thresholds,
-                            f"{voltage}_min_alarm_threshold",
-                            set_values["min"],
-                        )
-                        setattr(
-                            self.db_firmware_thresholds,
-                            f"{voltage}_max_alarm_threshold",
-                            set_values["max"],
-                        )
-                        self.logger.error("set in db")
 
-        # Write the values to the database
-        self._firmware_threshold_db_interface.write_threshold_to_db()
+            # Skip undefined voltages
+            if min_val is None:
+                continue
 
-    @attribute(dtype="DevString", fisallowed="is_engineering")
+            # Handle "Undefined" explicitly
+            if min_val == "Undefined" or max_val == "Undefined":
+                self.logger.debug(f"{voltage}: thresholds explicitly undefined")
+                for name in (min_name, max_name):
+                    setattr(self.db_firmware_thresholds, name, "Undefined")
+                continue
+
+            # Set thresholds in firmware and caches
+            self.logger.debug(f"Setting {voltage}: min={min_val}, max={max_val}")
+            set_values = self.component_manager.set_voltage_warning_thresholds(
+                voltage=voltage.upper(),
+                min_thr=min_val,
+                max_thr=max_val,
+            )
+
+            if not set_values:
+                self.logger.warning(
+                    f"{voltage}: no threshold values returned from firmware"
+                )
+                continue
+
+            # Update firmware and DB caches
+            for name, src, val_key in (
+                (min_name, self.hw_firmware_thresholds, "min"),
+                (max_name, self.hw_firmware_thresholds, "max"),
+            ):
+                setattr(src, name, set_values[val_key])
+                setattr(self.db_firmware_thresholds, name, thresholds[name])
+
+        # Commit updates
+        self.firmware_threshold_db_interface.write_threshold_to_db()
+        self._check_database_match()
+
+    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
     def firmwareCurrentThresholds(
         self: MccsTile,
     ) -> str | dict[str, float]:
@@ -3372,6 +3439,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.logger.info(f"hw reads: {hw_currents}")
         return hw_currents
 
+    # pylint: disable=too-many-locals
     @firmwareCurrentThresholds.write  # type: ignore[no-redef]
     def firmwareCurrentThresholds(self: MccsTile, value: str) -> None:
         """
@@ -3383,47 +3451,65 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             you must define min and max.
         """
         current_keys = ["FE0_mVA", "FE1_mVA"]
-        argin = json.loads(value)
+        thresholds: dict[str, Any] = json.loads(value)
+
+        # Build the set of valid threshold keys
+        valid_keys = {f"{current}_min_alarm_threshold" for current in current_keys} | {
+            f"{current}_max_alarm_threshold" for current in current_keys
+        }
+
+        # Check for invalid keys in the input
+        invalid_keys = set(thresholds.keys()) - valid_keys
+        if invalid_keys:
+            raise ValueError(f"Invalid threshold keys provided: {invalid_keys}")
 
         for current in current_keys:
-            min_current = argin.get(f"{current}_min_alarm_threshold")
-            max_current = argin.get(f"{current}_max_alarm_threshold")
-            if (min_current is None) ^ (
-                max_current is None
-            ):  # XOR: True if only one is None
-                raise ValueError(
-                    f"Inconsistent voltage thresholds for {current}: "
-                    f"min={min_current}, max={max_current}. "
-                    "Both must be defined or both must be None."
-                )
-            current_defined = min_current is not None and max_current is not None
-            if current_defined:
-                if min_current == "Undefined" or max_current == "Undefined":
-                    setattr(self.db_firmware_thresholds, min_current, "Undefined")
-                    setattr(self.db_firmware_thresholds, max_current, "Undefined")
-                else:
-                    set_values: dict[
-                        str, Any
-                    ] | None = self.component_manager.set_current_warning_thresholds(
-                        current=current.upper(),
-                        min_thr=min_current,
-                        max_thr=max_current,
-                    )
-                    # TODO: Validate the set_values
-                    if set_values:
-                        setattr(
-                            self.db_firmware_thresholds,
-                            f"{current}_min_alarm_threshold",
-                            set_values["min"],
-                        )
-                        setattr(
-                            self.db_firmware_thresholds,
-                            f"{current}_max_alarm_threshold",
-                            set_values["max"],
-                        )
+            min_key = f"{current}_min_alarm_threshold"
+            max_key = f"{current}_max_alarm_threshold"
+            min_val = thresholds.get(min_key)
+            max_val = thresholds.get(max_key)
 
-        # Write the values to the database
-        self._firmware_threshold_db_interface.write_threshold_to_db()
+            # Validate completeness
+            if (min_val is None) ^ (max_val is None):
+                raise ValueError(
+                    f"Inconsistent current thresholds for {current}: "
+                    f"min={min_val}, max={max_val}. Both must be defined or both None."
+                )
+
+            if min_val is None:  # skip undefined
+                continue
+
+            # Handle "Undefined"
+            if min_val == "Undefined" or max_val == "Undefined":
+                self.logger.debug(f"{current}: thresholds explicitly undefined")
+                for key in (min_key, max_key):
+                    setattr(self.db_firmware_thresholds, key, "Undefined")
+                continue
+
+            # Apply thresholds to firmware
+            self.logger.debug(f"Setting {current}: min={min_val}, max={max_val}")
+            set_values = self.component_manager.set_current_warning_thresholds(
+                current=current,
+                min_thr=min_val,
+                max_thr=max_val,
+            )
+
+            if not set_values:
+                self.logger.warning(
+                    f"{current}: firmware did not return threshold values"
+                )
+                continue
+
+            # Update caches
+            for name, src, val_key in (
+                (min_key, self.hw_firmware_thresholds, "min"),
+                (max_key, self.hw_firmware_thresholds, "max"),
+            ):
+                setattr(src, name, set_values[val_key])
+                setattr(self.db_firmware_thresholds, name, thresholds[name])
+
+        self.firmware_threshold_db_interface.write_threshold_to_db()
+        self._check_database_match()
 
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
@@ -3508,11 +3594,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    def is_engineering(self: MccsTile, req_type: tango.AttReqType) -> bool:
+    def is_engineering(self: MccsTile) -> bool:
         """
         Return a flag representing whether we are in Engineering mode.
-
-        :param req_type: the request type
 
         :return: True if Tile is in Engineering Mode.
         """
@@ -3526,6 +3610,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             tango.Except.throw_exception(reason, msg, self.get_name())
 
         return is_engineering
+
+    def is_firmware_threshold_allowed(
+        self: MccsTile, req_type: tango.AttReqType
+    ) -> bool:
+        """
+        Return a flag representing whether we are in Engineering mode.
+
+        :param req_type: the request type
+
+        :return: True if Tile is in Engineering Mode.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        if self.component_manager._initialise_executing is True:
+            reason = "CommandNotAllowed"
+            msg = "Cannot execute this command while initialise is executing!"
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+        is_engineering = self._admin_mode == AdminMode.ENGINEERING
+        if not is_engineering:
+            reason = "CommandNotAllowed"
+            msg = (
+                "To execute this command we must be in adminMode Engineering "
+                f"Tile is currently in adminMode {AdminMode(self._admin_mode).name}"
+            )
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+        return True
 
     def _not_initialising(self: MccsTile, *args: Any) -> bool:
         """
@@ -5014,6 +5126,69 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("Initialise")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
+
+    class UpdateThresholdCacheCommand(FastCommand):
+        """Class for handling the UpdateThresholdCacheCommand() command."""
+
+        def __init__(
+            self: MccsTile.UpdateThresholdCacheCommand,
+            device: MccsTile,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new UpdateThresholdCacheCommand instance.
+
+            :param device: the device this command belongs.
+            :param component_manager: the device component manager
+                to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._device = device
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.UpdateThresholdCacheCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.UpdateThresholdCache` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: True if the re-evaluated TpmStatus differs from the
+                automated evaluation.
+            """
+            # Update db firmware threshold cache from database.
+            self._device.firmware_threshold_db_interface.resync_with_db()
+
+            # Update hw firmware threshold cache from read.
+            self._device.hw_firmware_thresholds = (
+                self._component_manager._read_firmware_thresholds()
+            )
+
+            return self._device._check_database_match()
+
+    @command(dtype_out="DevBoolean", fisallowed="is_engineering")
+    def UpdateThresholdCache(self: MccsTile) -> bool:
+        """
+        Re-evaluate the TileProgrammingState.
+
+        Evaluate and update the TileProgrammingState.
+        Return True is the re-evaluation returned a different value to
+        the value from automatic detection.
+        (A value of True could signify a race condition,
+        or that there is a bug in the automatic evaluation.)
+
+        :return: True is the re-evaluation of TpmStatus returns a different value.
+        """
+        handler = self.get_command_object("UpdateThresholdCache")
+        return handler()
 
     class EvaluateTileProgrammingStateCommand(FastCommand):
         """Class for handling the EvaluateTileProgrammingStateCommand() command."""

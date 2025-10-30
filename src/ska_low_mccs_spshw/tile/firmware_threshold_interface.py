@@ -14,11 +14,11 @@ from dataclasses import dataclass, field
 from typing import Any, Union
 
 import tango
+from tango import Database
 
 __all__: list[str] = ["FirmwareThresholdsDbInterface", "FirmwareThresholds"]
 
 
-# pylint: disable=too-few-public-methods
 class FirmwareThresholdsDbInterface:
     """Tango DB interface for reading/writing FirmwareThresholds."""
 
@@ -26,7 +26,7 @@ class FirmwareThresholdsDbInterface:
         self: FirmwareThresholdsDbInterface,
         device_name: str,
         thresholds: FirmwareThresholds,
-        db_connection: tango.Database | None = None,
+        db_connection: Database | None = None,
     ) -> None:
         """
         Initialise an interface to database.
@@ -38,7 +38,7 @@ class FirmwareThresholdsDbInterface:
         """
         self._device_name = device_name
         self._thresholds = thresholds
-        self._db_connection = db_connection or tango.Database()
+        self._db_connection = db_connection or Database()
         self._sync_class_cache_with_db()
 
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbInterface) -> None:
@@ -59,6 +59,10 @@ class FirmwareThresholdsDbInterface:
         self._db_connection.put_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_dict()
         )
+
+    def resync_with_db(self: FirmwareThresholdsDbInterface) -> None:
+        """Resync class with db values."""
+        self._sync_class_cache_with_db()
 
 
 # pylint: disable=too-many-instance-attributes

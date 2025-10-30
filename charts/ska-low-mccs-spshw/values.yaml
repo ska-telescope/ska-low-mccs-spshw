@@ -122,91 +122,56 @@ ska-tango-devices:
 
       timing_pll_40g_count->max_alarm: 1
 
-      ppsDelay->max_alarm: 10
-      ppsDelay->max_warning: 4
-
       ppsDrift->max_alarm: 4
       ppsDrift->max_warning: 2
 
-      temperatureADC0->max_alarm: 70.0
-      temperatureADC0->max_warning: 65.0
-      temperatureADC0->min_warning: 16.0
-      temperatureADC0->min_alarm: 15.0
+      temperatureADC0->max_alarm: 90.0
+      temperatureADC0->min_alarm: 10.0
 
-      temperatureADC1->max_alarm: 70.0
-      temperatureADC1->max_warning: 65.0
-      temperatureADC1->min_warning: 16.0
-      temperatureADC1->min_alarm: 15.0
+      temperatureADC1->max_alarm: 90.0
+      temperatureADC1->min_alarm: 10.0
 
-      temperatureADC2->max_alarm: 70.0
-      temperatureADC2->max_warning: 65.0
-      temperatureADC2->min_warning: 16.0
-      temperatureADC2->min_alarm: 15.0
+      temperatureADC2->max_alarm: 90.0
+      temperatureADC2->min_alarm: 10.0
 
-      temperatureADC3->max_alarm: 70.0
-      temperatureADC3->max_warning: 65.0
-      temperatureADC3->min_warning: 16.0
-      temperatureADC3->min_alarm: 15.0
+      temperatureADC3->max_alarm: 90.0
+      temperatureADC3->min_alarm: 10.0
 
-      temperatureADC4->max_alarm: 70.0
-      temperatureADC4->max_warning: 65.0
-      temperatureADC4->min_warning: 16.0
-      temperatureADC4->min_alarm: 15.0
+      temperatureADC4->max_alarm: 90.0
+      temperatureADC4->min_alarm: 10.0
 
-      temperatureADC5->max_alarm: 70.0
-      temperatureADC5->max_warning: 65.0
-      temperatureADC5->min_warning: 16.0
-      temperatureADC5->min_alarm: 15.0
+      temperatureADC5->max_alarm: 90.0
+      temperatureADC5->min_alarm: 10.0
 
-      temperatureADC6->max_alarm: 70.0
-      temperatureADC6->max_warning: 65.0
-      temperatureADC6->min_warning: 16.0
-      temperatureADC6->min_alarm: 15.0
+      temperatureADC6->max_alarm: 90.0
+      temperatureADC6->min_alarm: 10.0
 
-      temperatureADC7->max_alarm: 70.0
-      temperatureADC7->max_warning: 65.0
-      temperatureADC7->min_warning: 16.0
-      temperatureADC7->min_alarm: 15.0
+      temperatureADC7->max_alarm: 90.0
+      temperatureADC7->min_alarm: 10.0
 
-      temperatureADC8->max_alarm: 70.0
-      temperatureADC8->max_warning: 65.0
-      temperatureADC8->min_warning: 16.0
-      temperatureADC8->min_alarm: 15.0
+      temperatureADC8->max_alarm: 90.0
+      temperatureADC8->min_alarm: 10.0
 
-      temperatureADC9->max_alarm: 70.0
-      temperatureADC9->max_warning: 65.0
-      temperatureADC9->min_warning: 16.0
-      temperatureADC9->min_alarm: 15.0
+      temperatureADC9->max_alarm: 90.0
+      temperatureADC9->min_alarm: 10.0
 
-      temperatureADC10->max_alarm: 70.0
-      temperatureADC10->max_warning: 65.0
-      temperatureADC10->min_warning: 16.0
-      temperatureADC10->min_alarm: 15.0
+      temperatureADC10->max_alarm: 90.0
+      temperatureADC10->min_alarm: 10.0
 
-      temperatureADC11->max_alarm: 70.0
-      temperatureADC11->max_warning: 65.0
-      temperatureADC11->min_warning: 16.0
-      temperatureADC11->min_alarm: 15.0
+      temperatureADC11->max_alarm: 90.0
+      temperatureADC11->min_alarm: 10.0
 
-      temperatureADC12->max_alarm: 70.0
-      temperatureADC12->max_warning: 65.0
-      temperatureADC12->min_warning: 16.0
-      temperatureADC12->min_alarm: 15.0
+      temperatureADC12->max_alarm: 90.0
+      temperatureADC12->min_alarm: 10.0
 
-      temperatureADC13->max_alarm: 70.0
-      temperatureADC13->max_warning: 65.0
-      temperatureADC13->min_warning: 16.0
-      temperatureADC13->min_alarm: 15.0
+      temperatureADC13->max_alarm: 90.0
+      temperatureADC13->min_alarm: 10.0
 
-      temperatureADC14->max_alarm: 70.0
-      temperatureADC14->max_warning: 65.0
-      temperatureADC14->min_warning: 16.0
-      temperatureADC14->min_alarm: 15.0
+      temperatureADC14->max_alarm: 90.0
+      temperatureADC14->min_alarm: 10.0
 
-      temperatureADC15->max_alarm: 70.0
-      temperatureADC15->max_warning: 65.0
-      temperatureADC15->min_warning: 16.0
-      temperatureADC15->min_alarm: 15.0
+      temperatureADC15->max_alarm: 90.0
+      temperatureADC15->min_alarm: 10.0
 
       I2C_access_alm->max_alarm: 2
       I2C_access_alm->max_warning: 1
@@ -223,10 +188,8 @@ ska-tango-devices:
       MCU_wd->max_alarm: 2
       MCU_wd->max_warning: 1
 
-      voltageMon->max_alarm: 5.5
-      voltageMon->max_warning: 5.45
-      voltageMon->min_warning: 4.55
-      voltageMon->min_alarm: 4.5
+      voltageMon->max_alarm: 5.19
+      voltageMon->min_alarm: 4.69
 
       fpga1Temperature->max_alarm: 75.0
       fpga1Temperature->max_warning: 68.0

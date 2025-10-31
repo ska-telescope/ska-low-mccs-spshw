@@ -1327,8 +1327,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         min_value=15.0,
         max_value=70.0,
-        min_alarm=16.0,
-        max_alarm=65.0,
+        min_alarm=15.0,
+        max_alarm=70.0,
+        min_warning=16.0,
+        max_warning=65.0,
     )
     def boardTemperature(
         self: MccsTile,
@@ -2571,6 +2573,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC0(self: MccsTile) -> float | None:
         """
@@ -2586,6 +2590,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC1(self: MccsTile) -> float | None:
         """
@@ -2601,6 +2607,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC2(self: MccsTile) -> float | None:
         """
@@ -2616,6 +2624,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC3(self: MccsTile) -> float | None:
         """
@@ -2631,6 +2641,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC4(self: MccsTile) -> float | None:
         """
@@ -2646,6 +2658,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC5(self: MccsTile) -> float | None:
         """
@@ -2661,6 +2675,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC6(self: MccsTile) -> float | None:
         """
@@ -2676,6 +2692,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC7(self: MccsTile) -> float | None:
         """
@@ -2691,6 +2709,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC8(self: MccsTile) -> float | None:
         """
@@ -2706,6 +2726,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC9(self: MccsTile) -> float | None:
         """
@@ -2721,6 +2743,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC10(self: MccsTile) -> float | None:
         """
@@ -2736,6 +2760,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC11(self: MccsTile) -> float | None:
         """
@@ -2751,6 +2777,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC12(self: MccsTile) -> float | None:
         """
@@ -2766,6 +2794,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC13(self: MccsTile) -> float | None:
         """
@@ -2781,6 +2811,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC14(self: MccsTile) -> float | None:
         """
@@ -2796,6 +2828,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=90.0,
+        min_alarm=10.0,
     )
     def temperatureADC15(self: MccsTile) -> float | None:
         """
@@ -2867,6 +2901,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
     )
@@ -2886,6 +2922,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
     )
@@ -2922,6 +2960,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
     )
@@ -2941,6 +2981,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
     )
@@ -3170,8 +3212,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.05,
         min_value=4.5,
         max_value=5.5,
-        min_alarm=4.55,
-        max_alarm=5.45,
+        min_alarm=4.69,
+        max_alarm=5.19,
     )
     def voltageMon(self: MccsTile) -> float | None:
         """
@@ -3249,8 +3291,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         min_value=15.0,
         max_value=75.0,
-        min_alarm=16.0,
-        max_alarm=68.0,
+        min_alarm=15.0,
+        max_alarm=75.0,
+        min_warning=16.0,
+        max_warning=68.0,
     )
     def fpga1Temperature(
         self: MccsTile,
@@ -3268,8 +3312,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.2,
         min_value=15.0,
         max_value=75.0,
-        min_alarm=16.0,
-        max_alarm=68.0,
+        min_alarm=15.0,
+        max_alarm=75.0,
+        min_warning=16.0,
+        max_warning=68.0,
     )
     def fpga2Temperature(
         self: MccsTile,
@@ -3499,7 +3545,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._attribute_state["ppsDelay"].update(power, post=False)
         return self._attribute_state["ppsDelay"].read()
 
-    @attribute(dtype="DevLong", archive_abs_change=1, abs_change=1)
+    @attribute(
+        dtype="DevLong",
+        archive_abs_change=1,
+        abs_change=1,
+        max_alarm=4,
+        max_warning=2,
+    )
     def ppsDrift(self: MccsTile) -> int:
         """
         Return the observed drift in the ppsDelay of this Tile.
@@ -4122,6 +4174,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Amp",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=2.62,
+        max_warning=2.60,
+        min_warning=2.40,
+        min_alarm=2.37,
     )
     def currentFE0(self: MccsTile) -> float | None:
         """
@@ -4137,6 +4193,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Amp",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=2.62,
+        max_warning=2.60,
+        min_warning=2.40,
+        min_alarm=2.37,
     )
     def currentFE1(self: MccsTile) -> float | None:
         """
@@ -4152,6 +4212,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=2.6,
+        max_warning=2.57,
+        min_warning=2.40,
+        min_alarm=2.37,
     )
     def voltageAVDD3(self: MccsTile) -> float | None:
         """
@@ -4167,6 +4231,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.63,
+        min_alarm=0.57,
     )
     def voltageVrefDDR0(self: MccsTile) -> float | None:
         """
@@ -4182,6 +4248,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.63,
+        min_alarm=0.57,
     )
     def voltageVrefDDR1(self: MccsTile) -> float | None:
         """
@@ -4207,6 +4275,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.26,
+        min_alarm=1.14,
     )
     def voltageMan1V2(self: MccsTile) -> float | None:
         """
@@ -4222,6 +4292,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.97,
+        min_alarm=0.83,
     )
     def voltageMGT_AVCC(self: MccsTile) -> float | None:
         """
@@ -4237,6 +4309,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.26,
+        min_alarm=1.14,
     )
     def voltageMGT_AVTT(self: MccsTile) -> float | None:
         """
@@ -4252,6 +4326,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=5.19,
+        min_alarm=4.69,
     )
     def voltageMon5V0(self: MccsTile) -> float | None:
         """
@@ -4267,6 +4343,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.88,
+        min_alarm=3.51,
     )
     def voltageMon3V3(self: MccsTile) -> float | None:
         """
@@ -4284,6 +4362,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=2.10,
+        min_alarm=1.90,
     )
     def voltageMon1V8(self: MccsTile) -> float | None:
         """
@@ -4301,6 +4381,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.16,
+        min_alarm=1.04,
     )
     def voltageSW_AVDD1(self: MccsTile) -> float | None:
         """
@@ -4316,6 +4398,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=2.42,
+        min_alarm=2.18,
     )
     def voltageSW_AVDD2(self: MccsTile) -> float | None:
         """
@@ -4331,6 +4415,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=12.6,
+        min_alarm=11.4,
     )
     def voltageVIN(self: MccsTile) -> float | None:
         """
@@ -4346,6 +4432,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP0(self: MccsTile) -> float | None:
         """
@@ -4361,6 +4449,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP1(self: MccsTile) -> float | None:
         """
@@ -4376,6 +4466,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP2(self: MccsTile) -> float | None:
         """
@@ -4391,6 +4483,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP3(self: MccsTile) -> float | None:
         """
@@ -4406,6 +4500,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP4(self: MccsTile) -> float | None:
         """
@@ -4421,6 +4517,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP5(self: MccsTile) -> float | None:
         """
@@ -4436,6 +4534,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP6(self: MccsTile) -> float | None:
         """
@@ -4451,6 +4551,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.99,
+        min_alarm=0.84,
     )
     def voltageVM_AGP7(self: MccsTile) -> float | None:
         """
@@ -4466,6 +4568,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.56,
+        min_alarm=3.04,
     )
     def voltageVM_CLK0B(self: MccsTile) -> float | None:
         """
@@ -4481,6 +4585,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.56,
+        min_alarm=3.04,
     )
     def voltageVM_CLK1B(self: MccsTile) -> float | None:
         """
@@ -4496,6 +4602,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.65,
+        min_alarm=0.55,
     )
     def voltageVM_DDR0_VTT(self: MccsTile) -> float | None:
         """
@@ -4511,6 +4619,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.30,
+        min_alarm=1.10,
     )
     def voltageVM_DDR1_VDD(self: MccsTile) -> float | None:
         """
@@ -4526,6 +4636,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=0.65,
+        min_alarm=0.55,
     )
     def voltageVM_DDR1_VTT(self: MccsTile) -> float | None:
         """
@@ -4541,6 +4653,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.89,
+        min_alarm=1.71,
     )
     def voltageVM_DRVDD(self: MccsTile) -> float | None:
         """
@@ -4556,6 +4670,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.19,
+        min_alarm=1.01,
     )
     def voltageVM_DVDD(self: MccsTile) -> float | None:
         """
@@ -4571,6 +4687,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.78,
+        min_alarm=3.22,
     )
     def voltageVM_FE0(self: MccsTile) -> float | None:
         """
@@ -4588,6 +4706,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.78,
+        min_alarm=3.22,
     )
     def voltageVM_FE1(self: MccsTile) -> float | None:
         """
@@ -4605,6 +4725,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.94,
+        min_alarm=1.66,
     )
     def voltageVM_MGT0_AUX(self: MccsTile) -> float | None:
         """
@@ -4620,6 +4742,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=1.94,
+        min_alarm=1.66,
     )
     def voltageVM_MGT1_AUX(self: MccsTile) -> float | None:
         """
@@ -4635,6 +4759,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.56,
+        min_alarm=3.04,
     )
     def voltageVM_PLL(self: MccsTile) -> float | None:
         """
@@ -4650,6 +4776,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        max_alarm=3.78,
+        min_alarm=3.22,
     )
     def voltageVM_SW_AMP(self: MccsTile) -> float | None:
         """

@@ -223,8 +223,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_report = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds
-        self.db_configuration_fault: tuple[bool, str] = (
-            False,
+        self.db_configuration_fault: tuple[bool | None, str] = (
+            None,
             "No information gathered",
         )
         self.component_manager_fault: bool | None = None
@@ -1257,7 +1257,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if power is not None:
             self.power_state = power
+        if fault is not None:
+            self.component_manager_fault = fault
+        if db_configuration_fault is not None:
+            self.db_configuration_fault = db_configuration_fault
+
+        # Propagate power state to base implementation
         super()._component_state_changed(power=power)
+
+        # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(
                 fault=self._evaluate_fault(
@@ -1275,7 +1283,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
         db_configuration_fault: tuple[bool, str] | None = None,
         polling_fault: bool | None = None,
-    ) -> bool:
+    ) -> bool | None:
         if polling_fault is not None:
             self.component_manager_fault = polling_fault
             self.status_information["polling_fault"] = (
@@ -1290,12 +1298,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "firmware_configuration_status"
             ] = self.db_configuration_fault[1]
 
-        has_fault = bool(self.component_manager_fault or self.db_configuration_fault[0])
+        # Extract current effective flags
+        cm_fault = self.component_manager_fault
+        db_fault_flag = (
+            self.db_configuration_fault[0] if self.db_configuration_fault else None
+        )
+        # Fault evaluation logic.
+        # Case 1: Both None → insufficient info
+        if cm_fault is None and db_fault_flag is None:
+            self.logger.debug(
+                f"Incomplete fault information: "
+                f"{self.db_configuration_fault=}, {self.component_manager_fault=}"
+            )
+            return None
+
+        # Case 2: Any True → overall True
+        if cm_fault is True or db_fault_flag is True:
+            has_fault = True
+        # Case 3: Both explicitly False → overall False
+        elif cm_fault is False and db_fault_flag is False:
+            has_fault = False
+        # Case 4: One None, one False → still uncertain → None
+        else:
+            has_fault = None
 
         # Log and update component status if a fault is detected
-        if has_fault:
+        if has_fault is True:
             fault_json = json.dumps(self.status_information)
-            self.logger.error(fault_json)
+            self.logger.error(f"Fault detected: {fault_json}")
             self.set_status(status=fault_json)
 
         return has_fault

@@ -234,7 +234,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
         self._update_attribute_callback = update_attribute_callback
-        self.fault_state: Optional[bool] = None
+        # Faulty until we are not
+        self.fault_state: Optional[bool] = True
         self._preadu_present: list[bool] = preadu_present
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
@@ -644,55 +645,32 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_success: a bool representing if the poll was a success
         :param exception_code: the exception code raised in last poll.
         """
-        is_faulty: bool = False
-        match poll_success:
-            case False:
-                with acquire_timeout(
-                    self._hardware_lock,
-                    self._default_lock_timeout,
-                    raise_exception=True,
+        with acquire_timeout(
+            self._hardware_lock,
+            self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not poll_success:
+                # Poll failed: check if subrack incorrectly reports TPM as ON
+                if (
+                    not self.is_connected
+                    and self._subrack_says_tpm_power == PowerState.ON
                 ):
-                    if (
-                        not self.is_connected
-                        and self._subrack_says_tpm_power == PowerState.ON
-                    ):
-                        self.logger.error(
-                            "Unable to connect to TPM, "
-                            "however subrack reports it as ON. "
-                        )
-                        is_faulty = True
-                    if (
-                        not self.is_connected
-                        and self._subrack_says_tpm_power == PowerState.OFF
-                    ):
-                        # ============================================
-                        # OpStateModel raises an error:
-                        # "Action component_no_fault is not
-                        # allowed in op_state OFF."
-                        #
-                        # We need to reset the base classes cached
-                        # fault_state to allow a change event
-                        # when ON, therefore
-                        # we update the fault state to None.
-                        self.fault_state = None
-                        return
-            case True:
-                if self._subrack_says_tpm_power != PowerState.ON:
-                    # This is an inconsistent state, we can connect with the
-                    # TPM but the subrack is NOT reporting the TPM ON.
-                    is_faulty = True
                     self.logger.error(
-                        "Tpm is connectable but subrack says power is "
-                        f"{PowerState(self._subrack_says_tpm_power).name}"
+                        "Unable to connect to TPM, but subrack reports it as ON."
                     )
-        if is_faulty:
-            self.fault_state = is_faulty
+                    self.fault_state = True
+                    return
+
+        # If polling succeeded but subrack disagrees about power state
+        if poll_success and self._subrack_says_tpm_power != PowerState.ON:
+            self.logger.error(
+                "TPM is connectable but subrack reports power as "
+                f"{PowerState(self._subrack_says_tpm_power).name}."
+            )
+            self.fault_state = True
         else:
-            if self.fault_state is True:
-                # We have stopped experiencing the fault.
-                self.fault_state = False
-            else:
-                self.fault_state = None
+            self.fault_state = False
 
     def poll_succeeded(self: TileComponentManager, poll_response: TileResponse) -> None:
         """
@@ -758,13 +736,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             t1 = time.time()
             temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
             t2 = time.time()
-            self.logger.debug(f"Temperatures read took {t2-t1} (s)")
+            self.logger.info(f"Temperatures read took {t2-t1} (s)")
             current_thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
             t3 = time.time()
-            self.logger.debug(f"Currents read took {t3-t2} (s)")
+            self.logger.info(f"Currents read took {t3-t2} (s)")
             voltage_thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
             t4 = time.time()
-            self.logger.debug(f"Voltage read took {t4-t3} (s)")
+            self.logger.info(f"Voltage read took {t4-t3} (s)")
 
         # Package values read into class.
         thresholds = FirmwareThresholds()
@@ -825,9 +803,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
         self.power_state = PowerState.UNKNOWN
-        if self._subrack_proxy:
-            self._subrack_proxy.unsubscribe_all_change_events()
-            self._subrack_proxy = None
         super().polling_stopped()
 
     def off(

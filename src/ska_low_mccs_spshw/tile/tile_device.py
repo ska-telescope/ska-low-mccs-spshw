@@ -242,6 +242,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
+        self._stopping: bool
 
     def delete_device(self: MccsTile) -> Any:
         """
@@ -257,6 +258,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # This can cause a segfault.
             self.component_manager.stop_communicating()
             del self.component_manager
+            self._stopping = True
         except Exception:  # pylint: disable=broad-except
             pass
         return super().delete_device()
@@ -268,6 +270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises TypeError: when attributes have a converter
             that is not callable.
         """
+        self._stopping = False
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
@@ -1027,6 +1030,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param health: the new health value
         """
+        if self._stopping:
+            return
         if self._health_state != health:
             self._health_state = health
             self.push_change_event("healthState", health)
@@ -1071,6 +1076,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
+        if self._stopping:
+            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:

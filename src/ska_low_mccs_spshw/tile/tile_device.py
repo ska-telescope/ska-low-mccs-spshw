@@ -244,6 +244,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # We do not want to raise a exception here
             # This can cause a segfault.
             self.component_manager.stop_communicating()
+            if self.component_manager._subrack_proxy:
+                self.component_manager._subrack_proxy.unsubscribe_all_change_events()
             del self.component_manager
             self._stopping = True
             if self._health_recorder is not None:

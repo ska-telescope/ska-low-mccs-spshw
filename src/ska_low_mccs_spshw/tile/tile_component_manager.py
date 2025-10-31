@@ -825,6 +825,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
         self.power_state = PowerState.UNKNOWN
+        if self._subrack_proxy:
+            self._subrack_proxy.unsubscribe_all_change_events()
+            self._subrack_proxy = None
         super().polling_stopped()
 
     def off(

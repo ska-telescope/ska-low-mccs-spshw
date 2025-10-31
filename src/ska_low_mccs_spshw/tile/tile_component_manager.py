@@ -786,7 +786,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 current_thresholds[current]["max"],
             )
 
-        self.logger.error("I ddi get there")
         return thresholds
 
     def polling_started(self: TileComponentManager) -> None:

@@ -277,6 +277,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     PduTrl = device_property(dtype=str, default_value="")
     PduPorts = device_property(dtype=(int,), default_value=[])
     SimulatedPDU = device_property(dtype=bool, default_value=True)
+    UseAttributesForHealth = device_property(
+        doc="Use the attribute quality factor in health. ADR-115.",
+        dtype=bool,
+        default_value=True,
+    )
 
     # A map from the component manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
@@ -325,12 +330,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltages3V": ["internal_voltages", "V_3V"],
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
     }
-
-    UseAttributesForHealth = device_property(
-        doc="Use the attribute quality factor in health. ADR-115.",
-        dtype=bool,
-        default_value=True,
-    )
 
     # --------------
     # Initialization
@@ -395,25 +394,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
-        healful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
-            self._ATTRIBUTE_MAP.values()
-        )
-
-        self._health_recorder = HealthRecorder(
-            self.get_name(),
-            logger=self.logger,
-            attributes=list(healful_attrs),
-            health_callback=self._health_changed_new,
-            attr_conf_callback=self._attr_conf_changed,
-        )
-
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
         if self.component_manager.pdu_proxy:
             self.component_manager.pdu_proxy.cleanup()
 
         self._stopping = True
-        if self._health_recorder:
+        if self._health_recorder is not None:
             self._health_recorder.cleanup()
             self._health_recorder = None
 
@@ -469,14 +456,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param health: the new health value
         :param health_report: the health report
         """
-        if self.UseAttributesForHealth:
-            self.logger.error(f"change = {health=}, {health_report=}")
-            if self._stopping:
-                return
+        if self._stopping:
+            return
 
+        if self.UseAttributesForHealth:
+            self._health_report = health_report
             if self._health_state != health:
+                self.logger.error(f"change = {health=}, {health_report=}")
                 self._health_state = health
-                self._health_report = health_report
                 self.push_change_event("healthState", health)
                 self.push_archive_event("healthState", health)
 
@@ -492,16 +479,33 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param attribute_name: the name of the attribute whose
             configuration has changed.
         """
-        self.logger.error(f"attr = {attribute_name=}")
-        value_cache = self._attribute_state[attribute_name].read()
-        if value_cache is not None:
-            self.push_change_event(attribute_name, value_cache[0])
-            self.push_archive_event(attribute_name, value_cache[0])
+        if self.UseAttributesForHealth:
+            self.logger.error(f"attr = {attribute_name}")
+            if attribute_name in self._hardware_attributes:
+                value_cache = self._hardware_attributes[attribute_name]
+
+            if value_cache is not None:
+                self.push_change_event(attribute_name, value_cache)
+                self.push_archive_event(attribute_name, value_cache)
 
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self._health_changed)
+
+        if self.UseAttributesForHealth:
+            healthful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
+                self._ATTRIBUTE_MAP.values()
+            )
+
+            self._health_recorder = HealthRecorder(
+                self.get_name(),
+                logger=self.logger,
+                attributes=list(healthful_attrs),
+                health_callback=self._health_changed_new,
+                attr_conf_callback=self._attr_conf_changed,
+            )
+        else:
+            self._health_model = SubrackHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
@@ -800,6 +804,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the health params
         """
+        if self.UseAttributesForHealth:
+            return ""
         return json.dumps(self._health_model.health_params)
 
     @healthModelParams.write  # type: ignore[no-redef]
@@ -809,6 +815,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :param argin: JSON-string of dictionary of health states
         """
+        if self.UseAttributesForHealth:
+            return
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
@@ -1532,11 +1540,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._clear_hardware_attributes()
 
         super()._communication_state_changed(communication_state)
-        self._health_model.update_state(
-            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
-        )
+        if not self.UseAttributesForHealth:
+            self._health_model.update_state(
+                communicating=(communication_state == CommunicationStatus.ESTABLISHED)
+            )
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-branches
     def _component_state_changed(
         self: MccsSubrack,
         fault: Optional[bool] = None,
@@ -1560,10 +1569,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param kwargs: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
-        if power is not None:
-            self._health_model.update_state(fault=fault, power=power, health=health)
-        else:
-            self._health_model.update_state(fault=fault, health=health)
+        if not self.UseAttributesForHealth:
+            if power is not None:
+                self._health_model.update_state(fault=fault, power=power, health=health)
+            else:
+                self._health_model.update_state(fault=fault, health=health)
 
         for key, value in kwargs.items():
             special_update_method = getattr(self, f"_update_{key}", None)
@@ -1667,6 +1677,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def _update_health_data(self: MccsSubrack) -> None:
         """Update the data points for the health model."""
+        if self.UseAttributesForHealth:
+            return
         data = {
             "board_temps": self._board_temperatures(),
             "backplane_temps": self._backplane_temperatures(),
@@ -1690,6 +1702,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the health report.
         """
+        if self.UseAttributesForHealth:
+            return self._health_report
         return self._health_model.health_report
 
 

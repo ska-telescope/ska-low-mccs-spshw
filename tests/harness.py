@@ -293,7 +293,7 @@ class SpsTangoTestHarness:
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsSubrack",
         simulated_pdu: bool = True,
-        use_attribute_for_health: bool = True,
+        use_attribute_for_health: bool = False,
     ) -> None:
         """
         Add a subrack Tango device to the test harness.

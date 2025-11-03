@@ -1,6 +1,7 @@
 # Version History
 
-## Unreleased
+## 9.2.0
+
 * [SKB-1086] Correct segfault during dev_init in MccsTile.
 * [SKB-1086] Increase hardware serialisation lock for power_callback and poll_timeout.
 Expose these as configurable properties PollLockTimeout and PowerCallbackLockTimeout.

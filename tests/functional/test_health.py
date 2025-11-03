@@ -44,7 +44,7 @@ def test_failed_when_tile_monitoring_point_is_out_of_bounds(
     :param station_devices: dictionary of proxies with device name as a key.
     """
     for tile in station_devices["Tiles"]:
-        if not tile.useAttributesForHealth:
+        if not tile.UseAttributesForHealth:
             tile.healthModelParams = "{}"
         else:
             conf = tile.get_attribute_config("boardTemperature")
@@ -69,7 +69,7 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     :param station_devices: dictionary of proxies with device name as a key.
     """
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
+        if not subrack.UseAttributesForHealth:
             subrack.healthModelParams = json.dumps(
                 {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
             )
@@ -412,7 +412,7 @@ def set_tile_health_params(station_devices: dict[str, tango.DeviceProxy]) -> Non
     }
     tile_devices = station_devices["Tiles"]
     for tile_device in tile_devices:
-        if not tile_device.useAttributesForHealth:
+        if not tile_device.UseAttributesForHealth:
             tile_device.healthModelParams = json.dumps(new_board_params)
         else:
             conf = tile_device.get_attribute_config("boardTemperature")
@@ -436,7 +436,7 @@ def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
         "degraded_min_board_temp": 120.0,
     }
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
+        if not subrack.UseAttributesForHealth:
             subrack.healthModelParams = json.dumps(new_board_params)
         else:
             conf = subrack.get_attribute_config("boardTemperature")
@@ -483,7 +483,7 @@ def read_all_tile_attributes(
     time.sleep(10)
     tiles = station_devices["Tiles"]
     for tile in tiles:
-        if tile.useAttributesForHealth:
+        if tile.UseAttributesForHealth:
             all_excluded_tile_attributes = excluded_tile_attributes + [
                 "dspHealth",
                 "ioHealth",

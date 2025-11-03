@@ -69,9 +69,15 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     :param station_devices: dictionary of proxies with device name as a key.
     """
     for subrack in station_devices["Subracks"]:
-        subrack.healthModelParams = json.dumps(
-            {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
-        )
+        if not subrack.useAttributesForHealth:
+            subrack.healthModelParams = json.dumps(
+                {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+            )
+        else:
+            conf = subrack.get_attribute_config("boardTemperatures")
+            conf.alarms.min_alarm = "10.0"
+            conf.alarms.max_alarm = "50.0"
+            subrack.set_attribute_config(conf)
 
 
 @pytest.fixture(name="command_info")
@@ -430,7 +436,15 @@ def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
         "degraded_min_board_temp": 120.0,
     }
     for subrack in station_devices["Subracks"]:
-        subrack.healthModelParams = json.dumps(new_board_params)
+        if not subrack.useAttributesForHealth:
+            subrack.healthModelParams = json.dumps(new_board_params)
+        else:
+            conf = subrack.get_attribute_config("boardTemperature")
+            conf.alarms.min_alarm = "110"
+            conf.alarms.min_warning = "120"
+            conf.alarms.max_alarm = "170"
+            conf.alarms.max_warning = "160"
+            subrack.set_attribute_config(conf)
 
 
 @when("the Station healthThresholds are adjusted")

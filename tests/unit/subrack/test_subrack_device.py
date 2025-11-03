@@ -87,10 +87,22 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
+@pytest.fixture(name="use_attribute_for_health")
+def use_attribute_for_health_fixture() -> bool:
+    """
+    Return a bool representing is attributes are used in health.
+
+    :returns: True if we want to make use of attributes in
+        health
+    """
+    return True
+
+
 @pytest.fixture(name="test_context")
 def test_context_fixture(
     subrack_id: int,
     subrack_simulator: SubrackSimulator,
+    use_attribute_for_health: bool,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which both subrack simulator and Tango device are running.
@@ -98,12 +110,17 @@ def test_context_fixture(
     :param subrack_id: the ID of the subrack under test
     :param subrack_simulator: the backend simulator that the Tango
         device will monitor and control
+    :param use_attribute_for_health: A bool representing if we are using the
+        attribute quality feature for health evaluation.
 
     :yields: a test context.
     """
     harness = SpsTangoTestHarness()
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
-    harness.add_subrack_device(subrack_id)
+    harness.add_subrack_device(
+        subrack_id,
+        use_attribute_for_health=use_attribute_for_health,
+    )
 
     with harness as context:
         yield context

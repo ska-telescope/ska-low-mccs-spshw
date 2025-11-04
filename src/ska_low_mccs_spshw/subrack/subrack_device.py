@@ -462,7 +462,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if self.UseAttributesForHealth:
             self._health_report = health_report
             if self._health_state != health:
-                self.logger.error(f"change = {health=}, {health_report=}")
                 self._health_state = health
                 self.push_change_event("healthState", health)
                 self.push_archive_event("healthState", health)
@@ -480,7 +479,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             configuration has changed.
         """
         if self.UseAttributesForHealth:
-            self.logger.error(f"attr = {attribute_name}")
             if attribute_name in self._hardware_attributes:
                 value_cache = self._hardware_attributes[attribute_name]
 
@@ -496,6 +494,24 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             healthful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
                 self._ATTRIBUTE_MAP.values()
             )
+            healthful_attrs = healthful_attrs - {
+                "boardCurrent",
+                "cpldPllLocked",
+                "powerSupplyCurrents",
+                "powerSupplyFanSpeeds",
+                "subrackFanSpeeds",
+                "subrackFanSpeedsPercent",
+                "subrackFanModes",
+                "subrackPllLocked",
+                "subrackTimestamp",
+                "tpmCurrents",
+                "pduHealth",
+                "pduModel",
+                "pduPortStates",
+                "pduPortCurrents",
+                "pduPortVoltages",
+                "subrackBoardInfo",
+            }
 
             self._health_recorder = HealthRecorder(
                 self.get_name(),
@@ -819,7 +835,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the health params
         """
         if self.UseAttributesForHealth:
-            return ""
+            self.logger.warning(
+                "Health Model Parameters are not available in the new health model"
+            )
+            return "Using attributes for health, parameters not available"
         return json.dumps(self._health_model.health_params)
 
     @healthModelParams.write  # type: ignore[no-redef]

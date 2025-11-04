@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-254] Added default attribute alarm configuration for Tile and Subrack to `values.yaml`
+* [SKB-1086] Correct segfault during dev_init in MccsTile.
 * [THORN-317] fixed bios version read bug and health status value update bug
 
 ## 10.1.1

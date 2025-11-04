@@ -211,7 +211,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
-        self._stopping = False
+        self._stopping: bool
         self._health_recorder: HealthRecorder | None = None
         self._health_report = ""
 
@@ -244,6 +244,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises TypeError: when attributes have a converter
             that is not callable.
         """
+        self._stopping = False
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
@@ -819,6 +820,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attribute_name: the name of the attribute whose
             configuration has changed.
         """
+        if self._stopping:
+            return
         if self.UseAttributesForHealth:
             value_cache = self._attribute_state[attribute_name].read()
             if value_cache is not None:
@@ -1240,6 +1243,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param health: the new health value
         """
+        if self._stopping:
+            return
         if self._health_state != health:
             self._health_state = health
             self.push_change_event("healthState", health)
@@ -1284,6 +1289,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
+        if self._stopping:
+            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:

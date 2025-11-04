@@ -439,7 +439,7 @@ def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
         if not subrack.useAttributesForHealth:
             subrack.healthModelParams = json.dumps(new_board_params)
         else:
-            conf = subrack.get_attribute_config("boardTemperature")
+            conf = subrack.get_attribute_config("boardTemperatures")
             conf.alarms.min_alarm = "110"
             conf.alarms.min_warning = "120"
             conf.alarms.max_alarm = "170"

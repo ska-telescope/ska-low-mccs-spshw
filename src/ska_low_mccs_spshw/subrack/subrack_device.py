@@ -481,10 +481,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if self.UseAttributesForHealth:
             if attribute_name in self._hardware_attributes:
                 value_cache = self._hardware_attributes[attribute_name]
-
-            if value_cache is not None:
-                self.push_change_event(attribute_name, value_cache)
-                self.push_archive_event(attribute_name, value_cache)
+                if value_cache is not None:
+                    self.push_change_event(attribute_name, value_cache)
+                    self.push_archive_event(attribute_name, value_cache)
 
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()

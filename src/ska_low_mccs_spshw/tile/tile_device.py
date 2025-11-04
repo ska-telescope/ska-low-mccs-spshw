@@ -3289,12 +3289,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevDouble",
         abs_change=0.1,
         archive_abs_change=0.1,
-        min_value=15.0,
-        max_value=75.0,
-        min_alarm=15.0,
-        max_alarm=75.0,
-        min_warning=16.0,
-        max_warning=68.0,
+        min_alarm=10.0,
+        max_alarm=95.0,
     )
     def fpga1Temperature(
         self: MccsTile,
@@ -3310,12 +3306,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevDouble",
         abs_change=0.2,
         archive_abs_change=0.2,
-        min_value=15.0,
-        max_value=75.0,
-        min_alarm=15.0,
-        max_alarm=75.0,
-        min_warning=16.0,
-        max_warning=68.0,
+        min_alarm=10.0,
+        max_alarm=95.0,
     )
     def fpga2Temperature(
         self: MccsTile,
@@ -3549,8 +3541,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         archive_abs_change=1,
         abs_change=1,
-        max_alarm=4,
-        max_warning=2,
+        max_alarm=10,
+        max_warning=4,
     )
     def ppsDrift(self: MccsTile) -> int:
         """

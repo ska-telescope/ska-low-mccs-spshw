@@ -114,12 +114,12 @@ class SubrackSimulator(SubrackProtocol):
         },
         "power_supply_currents": {
             "length": 2,
-            "default": [2.2, 2.8],
+            "default": [2.2, 2.4],
             "writable": False,
         },
         "power_supply_voltages": {
             "length": 2,
-            "default": [12.0, 12.1],
+            "default": [227.0, 229.1],
             "writable": False,
         },
         "subrack_fan_speeds_percent": {
@@ -647,7 +647,7 @@ class SubrackSimulator(SubrackProtocol):
                 "V_1V1": 1.1,
                 "V_CORE": 1.2,
                 "V_1V5": 1.5,
-                "V_3V3": 2.3,
+                "V_3V3": 3.3,
                 "V_5V": 5.0,
                 "V_3V": 3.0,
                 "V_2V8": 2.8,

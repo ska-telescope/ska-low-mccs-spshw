@@ -794,6 +794,20 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevBoolean",
+        label="useAttributesForHealth",
+    )
+    def useAttributesForHealth(self: MccsSubrack) -> bool:
+        """
+        Return if adr115 is in use.
+
+        :return: True if attributes quality is
+            being evaluated in health.
+        """
+        return self.UseAttributesForHealth
+
     @attribute(
         dtype="DevString",
         format="%s",

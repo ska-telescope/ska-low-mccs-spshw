@@ -2,8 +2,9 @@
 
 ## Unreleased
 
+* [THORN-317] Fixed bios version read bug and health status value update bug
+* [THORN-292] Added SpsStation.daqPath which returns the directory DAQ is currently configured to.
 * [SKB-1086] Correct segfault during dev_init in MccsTile.
-* [THORN-317] fixed bios version read bug and health status value update bug
 
 ## 10.1.1
 

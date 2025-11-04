@@ -77,6 +77,8 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
             conf = subrack.get_attribute_config("boardTemperatures")
             conf.alarms.min_alarm = "10.0"
             conf.alarms.max_alarm = "50.0"
+            conf.alarms.min_warning = "15"
+            conf.alarms.max_warning = "45"
             subrack.set_attribute_config(conf)
 
 

@@ -243,6 +243,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         try:
             # We do not want to raise a exception here
             # This can cause a segfault.
+            self.component_manager.cleanup_subscriptions()
             self.component_manager.stop_communicating()
             self.component_manager.wait_until_stopped()
             del self.component_manager

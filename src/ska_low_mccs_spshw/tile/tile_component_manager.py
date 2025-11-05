@@ -827,6 +827,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Wait for the polling to stop."""
         self._event.wait(10.0)
 
+    def cleanup_subscriptions(self: TileComponentManager) -> None:
+        """Clean up subscriptions."""
+        if self._subrack_proxy:
+            self._subrack_proxy.unsubscribe_all_change_events()
+            self._subrack_proxy = None
+
     def off(
         self: TileComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:

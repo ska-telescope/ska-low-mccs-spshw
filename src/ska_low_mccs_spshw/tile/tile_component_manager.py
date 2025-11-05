@@ -8,6 +8,7 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
+import gc
 import json
 import logging
 import threading
@@ -285,7 +286,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._initialise_executing: bool = False
         self._poll_timeout: float = poll_timeout
         self._power_callback_timeout: float = power_callback_timeout
-
+        self._event = threading.Event()
         # ==========================================================
         # Added as part of SKB-1089, to keep track of frequency this
         # issus is seen in production.
@@ -804,6 +805,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
+        self._event.clear()
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
         self._request_provider.desire_configuration_read()
@@ -812,12 +814,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
         self._request_provider = None
+        gc.collect()  # force garbage collection
         self._tpm_status = TpmStatus.UNKNOWN
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
         self.power_state = PowerState.UNKNOWN
         super().polling_stopped()
+        self._event.set()
+
+    def wait_until_stopped(self: TileComponentManager) -> None:
+        """Wait for the polling to stop."""
+        self._event.wait(10.0)
 
     def off(
         self: TileComponentManager, task_callback: Optional[Callable] = None

@@ -119,7 +119,7 @@ class SubrackSimulator(SubrackProtocol):
         },
         "power_supply_voltages": {
             "length": 2,
-            "default": [227.0, 229.1],
+            "default": [12.0, 12.1],
             "writable": False,
         },
         "subrack_fan_speeds_percent": {
@@ -154,7 +154,7 @@ class SubrackSimulator(SubrackProtocol):
         # },
         "tpm_voltages": {
             "length": 8,
-            "default": [5.0] * 8,
+            "default": [12.0] * 8,
             "writable": False,
         },
         "board_info": {

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Final, Union
 
@@ -51,6 +52,7 @@ class FirmwareThresholdsDbAdapter:
         device_name: str,
         thresholds: FirmwareThresholds,
         db_connection: Database | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         """
         Initialise an interface to database.
@@ -59,22 +61,28 @@ class FirmwareThresholdsDbAdapter:
         :param thresholds: A class containing the FirmwareThresholds.
         :param db_connection: An optional database connection to inject for
             testing.
+        :param logger: an optional logger for information.
         """
         self._device_name = device_name
         self._thresholds = thresholds
         self._db_connection = db_connection or Database()
         self._sync_class_cache_with_db()
+        self._logger = logger
 
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Update threshold cache from database."""
-        print("Syncing class cache with DB...")
+        if self._logger:
+            self._logger.debug("Syncing class cache with DB...")
         firmware_thresholds = self._db_connection.get_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_keys_only()
         )
-        self._thresholds.update_from_dict(firmware_thresholds["temperatures"])
-        self._thresholds.update_from_dict(firmware_thresholds["voltages"])
-        self._thresholds.update_from_dict(firmware_thresholds["currents"])
-        print("Thresholds synced with DB.")
+        self._thresholds.update_from_dict(
+            firmware_thresholds["temperatures"], self._logger
+        )
+        self._thresholds.update_from_dict(firmware_thresholds["voltages"], self._logger)
+        self._thresholds.update_from_dict(firmware_thresholds["currents"], self._logger)
+        if self._logger:
+            self._logger.debug("Thresholds synced with DB.")
 
     def write_threshold_to_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Put thresholds into database."""
@@ -334,7 +342,11 @@ class FirmwareThresholds:
             data[group_name] = group_data
         return data
 
-    def update_from_dict(self, thresholds: dict[str, tango.StdStringVector]) -> None:
+    def update_from_dict(
+        self,
+        thresholds: dict[str, tango.StdStringVector],
+        logger: logging.Logger | None,
+    ) -> None:
         """
         Update FirmwareThresholds properties from a Tango-style dict.
 
@@ -345,13 +357,15 @@ class FirmwareThresholds:
 
 
         :param thresholds: the tango dictionary.
+        :param logger: an optional logger for information.
 
         :raises ValueError: In the case value was not
             Undefined or a numeric value.
         """
         for key, raw_value in thresholds.items():
             if not hasattr(self, key):
-                print(f"Unrecognised {key=}, skipping!")
+                if logger is not None:
+                    logger.warning(f"Unrecognised {key=}, skipping!")
                 continue
 
             # For typehint
@@ -376,5 +390,6 @@ class FirmwareThresholds:
                     ) from ex
 
             # Set the value using property setter for validation
-            print(f"Updating {key} = {value}")
+            if logger is not None:
+                logger.debug(f"Updating {key} = {value}")
             setattr(self, key, value)

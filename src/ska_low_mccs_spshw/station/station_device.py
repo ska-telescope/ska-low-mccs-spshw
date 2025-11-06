@@ -77,6 +77,8 @@ def engineering_mode_required(func: Callable) -> Callable:
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
 
+    DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
+    DEFAULT_CSP_DST_PORT: Final = 4660
     # -----------------
     # Device Properties
     # -----------------
@@ -89,7 +91,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # e.g. "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25"
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
-    CspIngestIp = device_property(dtype=str, default_value="")
+    CspIngestIp = device_property(dtype=str, default_value="0.0.0.0")
     ChanneliserRounding = device_property(dtype=(int,), default_value=[])
     CspRounding = device_property(dtype=int, default_value=4)
 
@@ -271,6 +273,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "required": ["first_channel", "last_channel"],
         }
 
+        trigger_adc_equalisation_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "target_adc": {"type": "number", "minimum": 0},
+                "bias": {"type": "number", "minimum": -32, "maximum": 32},
+            },
+            "required": [],
+        }
+
         start_beamformer_schema: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.schemas.station",
@@ -306,7 +318,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "configure_station_for_calibration",
                 None,
             ),
-            ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
+            (
+                "TriggerAdcEqualisation",
+                "trigger_adc_equalisation",
+                trigger_adc_equalisation_schema,
+            ),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
             ("RunTest", "run_test", run_test_schema),
@@ -391,6 +407,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
             self._device.set_change_event("ppsDelaySpread", True, False)
+            self._device.set_change_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_change_event("beamformerTable", True, False)
@@ -451,9 +468,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         # Here the "self" entry represets SpsStation specific health changes
         # such as ppsSpread.
-        rollup_members = ["self"]
+        rollup_members = ["self", "tile_programming_state"]
         # TODO: Make these thresholds fully dynamic based on deployment.
-        thresholds = {"self": (1, 1, 1)}
+        thresholds = {
+            "self": (1, 1, 1),
+            "tile_programming_state": (1, 1, 1),
+        }
         if len(self.SubrackFQDNs) > 0:
             rollup_members.append("subracks")
             thresholds["subracks"] = self._health_thresholds["subracks"]
@@ -474,6 +494,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         if "tiles" in rollup_members:
             # Tile Default Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
             health_rollup.define("tiles", self.TileFQDNs, thresholds["tiles"])
+
+        health_rollup.define(
+            "tile_programming_state",
+            ["tile_programming_state"],
+            thresholds["tile_programming_state"],
+        )
 
         return health_rollup
 
@@ -550,8 +576,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         ]
 
     # TODO: Upstream this interface change to SKABaseDevice
-    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements
-    def _component_state_changed(  # type: ignore[override]
+    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements, too-many-locals # noqa
+    def _component_state_changed(  # type: ignore[override] # noqa: C901
         self: SpsStation,
         *,
         fault: Optional[bool] = None,
@@ -689,7 +715,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
-
         # TODO: Refactor this into an extensible health related method.
         pps_delay_spread = state_change.get("ppsDelaySpread")
         if pps_delay_spread is not None:
@@ -706,8 +731,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             elif pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
                 self._health_rollup.health_changed("self", HealthState.FAILED)
             else:
-                # This only works because we have no other health params
                 self._health_rollup.health_changed("self", HealthState.OK)
+
+        tile_programming_state = state_change.get("tileProgrammingState")
+        if tile_programming_state is not None:
+            if all(tpm_state == "Off" for tpm_state in tile_programming_state) or all(
+                tpm_state == "Synchronised" for tpm_state in tile_programming_state
+            ):
+                self._health_rollup.health_changed(
+                    "tile_programming_state", HealthState.OK
+                )
+            else:
+                self._health_rollup.health_changed(
+                    "tile_programming_state", HealthState.FAILED
+                )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -758,6 +795,21 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(dtype=str)
+    def cspIngestConfig(self: SpsStation) -> str:
+        """
+        Report the CspIngest configuration in use for this station.
+
+        :return: json string with CspIngest configuration.
+        """
+        return json.dumps(
+            {
+                "destination_ip": self.component_manager.csp_ingest_address,
+                "source_port": self.component_manager.csp_source_port,
+                "destination_port": self.component_manager.csp_ingest_port,
+            }
+        )
 
     @attribute(
         dtype=(("DevFloat",),),
@@ -1554,6 +1606,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self._use_new_health_model = argin
 
+    @attribute(dtype="DevString")
+    def daqPath(self: SpsStation) -> str:
+        """
+        Get DAQ data path.
+
+        :return: Path where DAQ data files are stored.
+        """
+        if (
+            self.component_manager._lmc_daq_proxy is None
+            or self.component_manager._lmc_daq_proxy._proxy is None
+        ):
+            return ""
+        return json.loads(
+            self.component_manager._lmc_daq_proxy._proxy.getconfiguration()
+        )["directory"]
+
     # -------------
     # Slow Commands
     # -------------
@@ -1696,25 +1764,38 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         (return_code, message) = handler(**json.loads(argin))
         return ([return_code], [message])
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    def TriggerAdcEqualisation(self: SpsStation) -> DevVarLongStringArrayType:
+    @command(dtype_out="DevVarLongStringArray", dtype_in="DevString")
+    def TriggerAdcEqualisation(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Get the equalised ADC values.
 
         Getting the equalised values takes up to 20 seconds (to get an average to
         avoid spikes). So we trigger the collection and publish to dbmPowers
 
+        :param argin: a JSON-ified dictionary containing:
+
+            - target_adc: the expected average power received by antennas in ADU units.
+                Has an input minimum of 0, but in code its limited to 4.2e-7
+                (corresponds to the maxiumum output of 31.75 dB). There is no maximum
+                value, however, 40 ADUs will result in 0 dB with no bias and 1600 ADUs
+                will result in 0 dB with the maxiumum bias allowed of 32dB.
+                Defaults to 17.
+            - bias: user specifed bias in dB added to the antenna preadu levels.
+                Bias input value rounded as part of value sanitation and as a result
+                it increases in steps of 0.25. Ranges from -32 to 32 with default 0.
+
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("TriggerAdcEqualisation")
+            >>> json_arg = json.dumps({"target_adc" : "18"})
+            >>> dp.command_inout("TriggerAdcEqualisation", json_arg)
         """
         handler = self.get_command_object("TriggerAdcEqualisation")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @engineering_mode_required
@@ -1847,8 +1928,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 payload_length = 1024
         dst_ip = params.get("destination_ip", None)
-        src_port = params.get("source_port", 0xF0D0)
-        dst_port = params.get("destination_port", 4660)
+        src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
+        dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
         return self.component_manager.set_lmc_download(
             mode, payload_length, dst_ip, src_port, dst_port
@@ -1894,8 +1975,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         channel_payload_length = params.get("channel_payload_length", 1024)
         beam_payload_length = params.get("beam_payload_length", 1024)
         dst_ip = params.get("destination_ip", None)
-        src_port = params.get("source_port", 0xF0D0)
-        dst_port = params.get("destination_port", 4660)
+        src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
+        dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
         return self.component_manager.set_lmc_integrated_download(
             mode,
@@ -1933,15 +2014,31 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         params = json.loads(argin)
         dst_ip = params.get("destination_ip", None)
-        src_port = params.get("source_port", 0xF0D0)
-        dst_port = params.get("destination_port", 4660)
+        src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
+        dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
-        self.component_manager.set_csp_ingest(
+        return self.component_manager.set_csp_ingest(
             dst_ip,
             src_port,
             dst_port,
         )
-        return ([ResultCode.OK], ["SetCspIngest command completed OK"])
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def ResetCspIngest(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Reset link for beam data packets to CSP to defaults.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self.component_manager.set_csp_ingest(
+            dst_ip=self.CspIngestIp,
+            src_port=self.DEFAULT_CSP_SRC_PORT,
+            dst_port=self.DEFAULT_CSP_DST_PORT,
+        )
 
     @command(
         dtype_in="DevVarLongArray",

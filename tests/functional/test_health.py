@@ -44,7 +44,13 @@ def test_failed_when_tile_monitoring_point_is_out_of_bounds(
     :param station_devices: dictionary of proxies with device name as a key.
     """
     for tile in station_devices["Tiles"]:
-        tile.healthModelParams = "{}"
+        if not tile.useAttributesForHealth:
+            tile.healthModelParams = "{}"
+        else:
+            conf = tile.get_attribute_config("boardTemperature")
+            conf.alarms.min_alarm = "16.0"
+            conf.alarms.max_alarm = "65.0"
+            tile.set_attribute_config(conf)
 
 
 @scenario(
@@ -102,7 +108,10 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
         "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
         "_lrcEvent",  # Requires more setup than the test performs.
-    ]
+        "timing_pll_40g_count",  # This is only available in specific bios versions
+        # (the simulator is configured to be on a version > 0.6.0 hence
+        # this attibute has value None and is never updated)
+    ] + [f"temperatureADC{i}" for i in range(16)]
 
 
 @pytest.fixture(name="station_name")
@@ -397,7 +406,13 @@ def set_tile_health_params(station_devices: dict[str, tango.DeviceProxy]) -> Non
     }
     tile_devices = station_devices["Tiles"]
     for tile_device in tile_devices:
-        tile_device.healthModelParams = json.dumps(new_board_params)
+        if not tile_device.useAttributesForHealth:
+            tile_device.healthModelParams = json.dumps(new_board_params)
+        else:
+            conf = tile_device.get_attribute_config("boardTemperature")
+            conf.alarms.min_alarm = "100"
+            conf.alarms.max_alarm = "170"
+            tile_device.set_attribute_config(conf)
 
 
 @when("the Subracks board temperature thresholds are adjusted")
@@ -454,8 +469,19 @@ def read_all_tile_attributes(
     time.sleep(10)
     tiles = station_devices["Tiles"]
     for tile in tiles:
+        if tile.useAttributesForHealth:
+            all_excluded_tile_attributes = excluded_tile_attributes + [
+                "dspHealth",
+                "ioHealth",
+                "timingHealth",
+                "adcHealth",
+                "alarmHealth",
+                "currentHealth",
+                "voltageHealth",
+                "temperatureHealth",
+            ]
         for attr in tile.get_attribute_list():
-            if attr in excluded_tile_attributes:
+            if attr in all_excluded_tile_attributes:
                 continue
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)

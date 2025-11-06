@@ -1,0 +1,49 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_SetCspDownload.json",
+    "title": "MccsTile SetCspDownload schema",
+    "description": "Schema for MccsTile's SetCspDownload command",
+    "type": "object",
+    "properties": {
+        "source_port": {
+            "description": "Source port for data streams",
+            "type": "integer",
+            "minimum": 0
+        },
+        "destination_ip_1": {
+            "description": "Destination IP address FPGA1",
+            "type": "string",
+            "format": "ipv4"
+        },
+        "destination_ip_2": {
+            "description": "Destination IP address FPGA2",
+            "type": "string",
+            "format": "ipv4"
+        },
+        "destination_port": {
+            "description": "Destination port for data streams",
+            "type": "integer",
+            "minimum": 0
+        },
+        "is_last": {
+            "type": "boolean",
+            "description": "True for last tile in beamforming chain"
+        },
+        "netmask": {
+            "description": "Integer netmask for the 40g (science data) subnet",
+            "type": "string",
+            "format": "ipv4"
+        },
+        "gateway": {
+            "description": "Integer IP address of the 40g (science data) subnet gateway",
+            "type": ["string", "null"],
+            "format": "ipv4"
+        }
+    },
+    "required": [
+        "destination_ip_1",
+        "destination_ip_2",
+        "is_last"
+    ],
+    "additionalProperties": false
+}

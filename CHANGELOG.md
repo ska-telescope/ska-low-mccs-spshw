@@ -2,12 +2,159 @@
 
 ## Unreleased
 
+* [THORN-317] Fixed bios version read bug and health status value update bug
+* [THORN-292] Added SpsStation.daqPath which returns the directory DAQ is currently configured to.
+* [SKB-1086] Correct segfault during dev_init in MccsTile.
+* [LOW-1787] Remove deprecated voltageMon attribute
+
+## 10.1.1
+
+* [THORN-313] Loop over antennas present in mapping in station_component_manager._calculate_delays_per_tile instead of looping over delays. Improved some messages/docstrings.
+
+## 10.1.0
+
+* [SKB-1086] Increase hardware serialisation lock for power_callback and poll_timeout.
+Expose these as configurable properties PollLockTimeout and PowerCallbackLockTimeout.
+* [SKB-1089] Add workaround to corrupt XML during programming. This occured at an approximate ~4%. The workaround is to erase and reprogram the TPM.
+* [THORN-261] Added property UseAttributesForHealth. A new feature toggle activating ADR-115 in MccsTile. By default this is True, when True the attribute
+quality factor will be used to inform health.
+* [THORN-261] bump ska-low-sps-tpm-api 1.0.0 -> 1.0.1 (<https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/-/releases/1.0.1>)
+* [LOW-1801] Make SpsStation `UpdateStaticDelays` use `delay_x` and `delay_y` instead of the deprecated `delay`.
+
+## 10.0.0
+
+* [THORN-261] Alarms added to adc_pll_status, fpga0_station_beamformer_error_count, fpga1_station_beamformer_error_count, fpga0_station_beamformer_flagged_count, fpga1_station_beamformer_flagged_count, fpga0_crc_error_count, fpga1_crc_error_count, fpga0_bip_error_count, fpga1_bip_error_count, fpga0_decode_error_count, fpga1_decode_error_count, fpga0_linkup_loss_count, fpga1_linkup_loss_count, fpga0_data_router_status, fpga1_data_router_status, fpga0_ddr_reset_counter, fpga1_ddr_reset_counter, f2f_soft_errors, f2f_hard_errors, fpga0_resync_count, fpga1_resync_count, fpga0_lane_error_count, fpga1_lane_error_count, fpga0_clock_managers_count, fpga1_clock_managers_count, fpga0_clock_managers_status, fpga1_clock_managers_status, fpga0_clocks, fpga1_clocks, adc_sysref_counter, adc_sysref_timing_requirements, fpga0_qpll_status, fpga0_qpll_counter, fpga1_qpll_status, fpga1_qpll_counter, f2f_pll_status, f2f_pll_counter, timing_pll_status, timing_pll_count, timing_pll_40g_status, timing_pll_40g_count, station_beamformer_status, tile_beamformer_status, arp, udp_status, ddr_initialisation, lane_status, link_status
+
+* [THORN-261] `adc_pll_status` converted from a JSON string of the form:  
+  `{"ADC0": [true, true], ..., "ADC15": [true, true]}`  
+  → Now a 2D array: `[[1]*16, [1]*16]`  
+  * First list: PLL lock status per ADC  
+  * Second list: Loss of PLL lock count per ADC  
+
+* [THORN-261] `station_beamformer_error_count` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_station_beamformer_error_count -> 0`  
+  * `fpga1_station_beamformer_error_count -> 0`  
+
+* [THORN-261] `station_beamformer_flagged_count` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_station_beamformer_flagged_count -> 0`  
+  * `fpga1_station_beamformer_flagged_count -> 0`  
+
+* [THORN-261] `crc_error_count` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_crc_error_count -> 0`  
+  * `fpga1_crc_error_count -> 0`  
+
+* [THORN-261] `bip_error_count` converted from:  
+  `{"FPGA0": {"lane0": 0, ..., "lane3": 0}, "FPGA1": {"lane0": 6, ..., "lane3": 7}}`  
+  → Now:  
+  * `fpga0_bip_error_count -> [0, 0, 0, 0]`  
+  * `fpga1_bip_error_count -> [6, 6, 5, 7]`  
+
+* [THORN-261] `decode_error_count` converted from same format as above  
+  → Now:  
+  * `fpga0_decode_error_count -> [0, 0, 0, 0]`  
+  * `fpga1_decode_error_count -> [6, 6, 5, 7]`  
+
+* [THORN-261] `linkup_loss_count` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_linkup_loss_count -> 0`  
+  * `fpga1_linkup_loss_count -> 0`  
+
+* [THORN-261] `data_router_status` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_data_router_status -> 0`  
+  * `fpga1_data_router_status -> 0`  
+
+* [THORN-261] `ddr_reset_counter` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_ddr_reset_counter -> 0`  
+  * `fpga1_ddr_reset_counter -> 0`  
+
+* [THORN-261] `resync_count` converted from:  
+  `{"FPGA0": 0, "FPGA1": 0}`  
+  → Now:  
+  * `fpga0_resync_count -> 0`  
+  * `fpga1_resync_count -> 0`  
+
+* [THORN-261] `lane_error_count` converted from nested JSON:  
+  `{"FPGA0": {"Core0": {"lane0": 0, ..., "lane7": 0}, "Core1": {...}}, "FPGA1": {...}}`  
+  → Now:  
+  * `fpga0_lane_error_count -> [[0, ..., 0], [0, ..., 0]]`  
+  * `fpga1_lane_error_count -> [[0, ..., 0], [0, ..., 0]]`  
+  * Each sub-list represents `[Core0], [Core1]`
+
+* [THORN-261] `clocks` converted from:  
+  `{"FPGA0": {"JESD": true, "DDR": true, "UDP": true}, "FPGA1": {...}}`  
+  → Now:  
+  * `fpga0_clocks -> [1, 1, 1]`  
+  * `fpga1_clocks -> [1, 1, 1]`  
+  * Mapping: `[JESD, DDR, UDP]`
+
+* [THORN-261] `clock_managers` converted from:  
+  `{"FPGA0": {"C2C_MMCM": [true, 0], ...}, "FPGA1": {...}}`  
+  → Now includes:  
+  * `fpga0_clock_managers_status -> [1, 1, 1]`  
+  * `fpga0_clock_managers_count  -> [0, 0, 0]`  
+  * `fpga1_clock_managers_status -> [1, 1, 1]`  
+  * `fpga1_clock_managers_count  -> [0, 0, 0]`  
+  * Order: `[C2C_MMCM, JESD_MMCM, DSP_MMCM]`
+
+* [THORN-261] `qpll_status` converted from:  
+  `{"FPGA0": [true, 0], "FPGA1": [true, 0]}`  
+  → Now:  
+  * `fpga0_qpll_status -> 1`  
+  * `fpga0_qpll_counter -> 0`  
+  * `fpga1_qpll_status -> 1`  
+  * `fpga1_qpll_counter -> 0`
+
+* [THORN-261] `f2f_pll_status` converted from:  
+  `[true, 0]`  
+  → Now:  
+  * `f2f_pll_status -> 1`  
+  * `f2f_pll_counter -> 0`
+
+* [THORN-261] `timing_pll_40g_status` converted from:  
+  `[true, 0]`  
+  → Now:  
+  * `timing_pll_40g_status -> 1`  
+  * `timing_pll_40g_count -> 0`
+
+* [THORN-261] `timing_pll_status` converted from:  
+  `[true, 0]`  
+  → Now:  
+  * `timing_pll_status -> 1`  
+  * `timing_pll_count -> 0`
+
+* [THORN-261] Add abs_change and archive_abs_change configuration to attributes.
+
+## 9.1.0
+
+* [THORN-249] Add attribute pfb_version to MccsTile.
+* [THORN-249] Bump firmware version 6.6.1 -> 6.7.1
+* [SKB-1035] Added tile programming state to the health rollup
+* [THORN-311] Added target_adc and bias parameters to TriggerAdcEqualisation
+
+## 9.0.0
+
+* [JANUS-38] Adopting changes made in ska-low-sps-tpm-api 1.0.0 - Simplified tile 40G ethernet configuration
+
+## 8.0.2
+
+* [THORN-289] Add ResetCspIngest command to SpsStation. Improve message in SetCspIngest. Add cspIngestConfig attribute to SpsStation.
 * [THORN-298] Fix issue where last attribute was being marked as invalid
 * [SKB-872] Fix the response code for a number of commands that we incorrectly reporting ResultCode.OK when failing
 * [SKB-999] fix the mapping of fitted preADUs to ADC channels when verifying preADU attenuation hardware readback.
 * [THORN-239] MccsSubrack now has internal voltage attributes and actively polls health status attributes
 * [LOW-1745] Bump ska-tango-devices to 0.10.0, with support for suppressing the deployment of check-dependencies initContainers that wait for databaseDS, when deploying to a persistent platform.
-* [LOW-1787] Remove deprecated voltageMon attribute
+* [THORN-307] Small bug fix for station_component_manager set_lmc_download and set_lmc_integrated_download
 
 ## 8.0.1
 

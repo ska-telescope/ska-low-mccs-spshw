@@ -8,11 +8,11 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import threading
 import time
+import zlib
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
@@ -173,6 +173,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         _tile: Optional[TileSimulator] = None,
         event_serialiser: Optional[EventSerialiser] = None,
         default_lock_timeout: float = 0.4,
+        poll_timeout: float = 6.0,
+        power_callback_timeout: float = 6.0,
     ) -> None:
         """
         Initialise a new instance.
@@ -216,6 +218,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param event_serialiser: serialiser for events
         :param _tile: Optional tile to inject.
         :param default_lock_timeout: default timeout for hardware serialisation lock.
+        :param poll_timeout: max time for a poll to wait on hardware serialisation lock
+            before giving up.
+        :param power_callback_timeout: max time for power callback to wait
+            for hardware serialisation lock to determine if initialisation is required.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
@@ -270,6 +276,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
         self._initialise_executing: bool = False
+        self._poll_timeout: float = poll_timeout
+        self._power_callback_timeout: float = power_callback_timeout
+
+        # ==========================================================
+        # Added as part of SKB-1089, to keep track of frequency this
+        # issus is seen in production.
+        self._decompression_success: int = 0
+        self._decompression_error: int = 0
+        # ==========================================================
 
         self._event_serialiser = event_serialiser
 
@@ -544,7 +559,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock, self._poll_timeout, raise_exception=True
         ):
             result = poll_request()
         return TileResponse(
@@ -889,7 +904,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.power_state = event_value
         # Connect if not already.
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock, self._power_callback_timeout, raise_exception=True
         ):
             __is_connected = self.is_connected
             # Connect if not already.
@@ -1138,6 +1153,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         force_reprogramming: bool,
         pps_delay_correction: int,
+        final_try: bool = False,
     ) -> None:
         """
         Initialise the TPM.
@@ -1146,6 +1162,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
+        :param final_try: A flag to work around SKB-1089.
+
+        :raises zlib.error: If workaround implemented in SKB-1089
+            did not work first time.
         """
         with self._initialising():
             with acquire_timeout(
@@ -1188,15 +1208,49 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"* staticTimeDelays of {self._static_time_delays} \n"
                         f"* PreAduLevels of {self._preadu_levels} \n"
                     )
-                    self.tile.initialise(
-                        station_id=self._station_id,
-                        tile_id=self._tile_id,
-                        pps_delay=pps_delay_correction,
-                        active_40g_ports_setting="port1-only",
-                        src_ip_fpga1=self.src_ip_40g_fpga1,
-                        src_ip_fpga2=self.src_ip_40g_fpga2,
-                        time_delays=self._static_time_delays,
-                    )
+                    try:
+                        self.tile.initialise(
+                            station_id=self._station_id,
+                            tile_id=self._tile_id,
+                            pps_delay=pps_delay_correction,
+                            active_40g_ports_setting="port1-only",
+                            src_ip_fpga1=self.src_ip_40g_fpga1,
+                            src_ip_fpga2=self.src_ip_40g_fpga2,
+                            time_delays=self._static_time_delays,
+                        )
+                        self._decompression_success += 1
+                    except zlib.error as e:
+                        self._decompression_error += 1
+                        total = self._decompression_error + self._decompression_success
+                        self.logger.warning(
+                            "XML data is corrupt. "
+                            "This is a known issue in BIOS 0.6.0 (see SKB-1089). "
+                            "We have seen this issue %d / %d times. Error: %s",
+                            self._decompression_error,
+                            total,
+                            e,
+                        )
+
+                        if not final_try:
+                            self.logger.warning(
+                                "Reprogramming FPGA for "
+                                "station %s tile %s to workaround SKB-1089.",
+                                self._station_id,
+                                self._tile_id,
+                            )
+                            self._execute_initialise(
+                                force_reprogramming=True,
+                                pps_delay_correction=pps_delay_correction,
+                                final_try=True,
+                            )
+                        else:
+                            self.logger.error(
+                                "Workaround already attempted for "
+                                "station %s tile %s. Giving up.",
+                                self._station_id,
+                                self._tile_id,
+                            )
+                            raise
                     #
                     # extra steps required to have it working
                     #
@@ -1474,9 +1528,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Read configuration information from the TPM."""
         self.logger.info("Updating attribute configuration from TPM")
 
-        # NOTE: THORN-207: There is no API to read channeliser_truncation and
-        # csp_rounding from TPM.
         channeliser_rounding = self.channeliser_truncation
+        # NOTE: THORN-207: There is no API to read csp_rounding from TPM.
         csp_rounding = self.csp_rounding
         # hardware methods recuire a lock
         static_delays = self._with_hardware_lock(self.get_static_delays)
@@ -1484,6 +1537,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
+        pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1493,6 +1547,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             channeliser_rounding=channeliser_rounding,
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
+            pfb_version=pfb_version,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -1830,7 +1885,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def get_tpm_temperature_thresholds(
         self: TileComponentManager,
-    ) -> None | dict[str, tuple[float, float]]:
+    ) -> None | dict[str, float]:
         """
         Return the temperature thresholds in firmware.
 
@@ -2174,11 +2229,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: Optional[str] = None,
+        dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: int | None = None,
-        gateway_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -2188,7 +2243,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated
             beam data
-        :param dst_ip: Destination IP, defaults to None
+        :param dst_ip: Destination IP, defaults to "10.0.10.1"
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
@@ -2568,6 +2623,62 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
         return (ResultCode.OK, "Stop integrated data completed OK")
 
+    @check_communicating
+    def set_csp_download(
+        self: TileComponentManager,
+        src_port: int | None,
+        dst_ip_1: str,
+        dst_ip_2: str,
+        dst_port: int | None,
+        is_last: bool,
+        netmask: str | None,
+        gateway: str | None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Set CSP Destination per tile.
+
+        :param src_port: Source port
+        :type src_port: int
+        :param dst_ip_1: Destination IP FPGA1
+        :type dst_ip_1: str
+        :param dst_ip_2: Destination IP FPGA2
+        :type dst_ip_2: str
+        :param dst_port: Destination port
+        :type dst_port: int
+        :param is_last: True for last tile in beamforming chain
+        :type is_last: bool
+        :param netmask: Netmask
+        :type netmask: str
+        :param gateway: Gateway IP
+        :type gateway: str
+
+        :return: Result code and message for information.
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.set_csp_download(
+                    src_port,
+                    dst_ip_1,
+                    dst_ip_2,
+                    dst_port,
+                    is_last,
+                    netmask,
+                    gateway,
+                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                return (
+                    ResultCode.FAILED,
+                    f"TileComponentManager: Tile access failed {e}",
+                )
+
+        return (ResultCode.OK, "set csp download completed OK")
+
     def stop_beamformer(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -2678,7 +2789,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
-                raise ValueError("Time too early")
+                raise ValueError(f"Time too early: {load_time=}, {load_frame=}")
 
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
@@ -2704,7 +2815,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param delay_array: delay in seconds, and delay rate in seconds/second
+        :param delay_array: list of [delay in seconds, and
+            delay rate in seconds/second] per antenna.
         :param beam_index: the beam to which the pointing delay should
             be applied
 
@@ -3091,11 +3203,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         mode: str,
         payload_length: int = 1024,
-        dst_ip: Optional[str] = None,
+        dst_ip: str = "10.0.10.1",
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
-        netmask_40g: int | None = None,
-        gateway_40g: int | None = None,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -3103,7 +3215,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param mode: "1G" or "10G"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
-        :param dst_ip: destination IP, defaults to None
+        :param dst_ip: destination IP, defaults to "10.0.10.1"
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
@@ -3172,11 +3284,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._forty_gb_core_list = [
                     self._get_40g_core_configuration(core_id, arp_table_entry)
                 ]
-        # convert in more readable format
-        for core in self._forty_gb_core_list:
-            self.logger.info(f"{core}")
-            core["src_ip"] = str(ipaddress.IPv4Address(core["src_ip"]))
-            core["dst_ip"] = str(ipaddress.IPv4Address(core["dst_ip"]))
         return self._forty_gb_core_list
 
     def _get_40g_core_configuration(
@@ -3212,8 +3319,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         destination_ip: Optional[str] = None,
         destination_port: Optional[int] = None,
         rx_port_filter: Optional[int] = None,
-        netmask: Optional[int] = None,
-        gateway_ip: Optional[int] = None,
+        netmask: Optional[str] = None,
+        gateway_ip: Optional[str] = None,
     ) -> tuple[ResultCode, str]:
         """
         Configure the 40G code.
@@ -3752,23 +3859,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def set_tpm_temperature_thresholds(
         self: TileComponentManager,
-        board_alarm_threshold: tuple[float, float] | None = None,
-        fpga1_alarm_threshold: tuple[float, float] | None = None,
-        fpga2_alarm_threshold: tuple[float, float] | None = None,
+        max_board_alarm_threshold: float | None = None,
+        max_fpga1_alarm_threshold: float | None = None,
+        max_fpga2_alarm_threshold: float | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Set the temperature thresholds.
 
         NOTE: Warning this method can configure the shutdown temperature of
-        components and must be used with care. This method is capped to a minimum
-        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+        components and must be used with care. This method is capped to a
+        maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
 
-        :param board_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the board (unit: Degree Celsius)
-        :param fpga1_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
-        :param fpga2_alarm_threshold: A tuple containing the minimum and
-            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        :param max_board_alarm_threshold: The maximum alarm thresholds
+            for the board (unit: Degree Celsius)
+        :param max_fpga1_alarm_threshold: The maximum alarm thresholds
+            for the fpga1 (unit: Degree Celsius)
+        :param max_fpga2_alarm_threshold: The maximum alarm thresholds
+            for the fpga2 (unit: Degree Celsius)
 
         :return: a tuple containing a ``ResultCode`` and string with information about
             the execution outcome.
@@ -3779,9 +3886,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 try:
                     self.tile.set_tpm_temperature_thresholds(
-                        board_alarm_threshold=board_alarm_threshold,
-                        fpga1_alarm_threshold=fpga1_alarm_threshold,
-                        fpga2_alarm_threshold=fpga2_alarm_threshold,
+                        max_board_alarm_threshold=max_board_alarm_threshold,
+                        max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
+                        max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
                     )
                 except ValueError as ve:
                     value_error_message = (

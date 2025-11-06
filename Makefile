@@ -41,7 +41,7 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 6.6.1
+FIRMWARE_VERSION = 6.7.1
 DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
 
 install-firmware:
@@ -105,6 +105,10 @@ K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
 
 ifdef HW_DEPLOYMENT
 K8S_TEST_RUNNER_PYTEST_OPTIONS += --hw-deployment
+endif
+
+ifdef K8S_PYTEST_EXTRA_ARGUMENTS
+K8S_TEST_RUNNER_PYTEST_OPTIONS += $(K8S_PYTEST_EXTRA_ARGUMENTS)
 endif
 
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional

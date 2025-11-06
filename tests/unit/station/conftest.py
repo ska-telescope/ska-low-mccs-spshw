@@ -97,6 +97,7 @@ def mock_tile_builder_fixture(
     builder.add_attribute("pendingDataRequests", False)
     builder.add_attribute("beamformerTable", tile_initial_beamformer_table)
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
+    builder.add_attribute("tileProgrammingState", "Unknown")
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
@@ -107,6 +108,7 @@ def mock_tile_builder_fixture(
         "StartBeamformer",
         "ConfigureIntegratedChannelData",
         "StartAcquisition",
+        "SetCspDownload",
         "StopDataTransmission",
         "StopIntegratedData",
         "StopBeamformer",
@@ -261,9 +263,6 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             for name in self.component_manager._subrack_proxies:
                 self.component_manager._subrack_state_changed(name, power=PowerState.ON)
 
-            for name in self.component_manager._tile_proxies:
-                self.component_manager._tile_state_changed(name, power=PowerState.OFF)
-
         @command()
         def MockTilesOff(self: PatchedSpsStationDevice) -> None:
             """
@@ -336,6 +335,26 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 args["tile_id"],
                 "beamformertable",
                 np.array(args["value"]),
+                tango.AttrQuality.ATTR_VALID,
+            )
+
+        @command()
+        def MockTileProgrammingStateChange(
+            self: PatchedSpsStationDevice, argin: str
+        ) -> None:
+            """
+            Mock a change in tile programming state.
+
+            :param argin: contains the tile id we are mocking a change for
+                and the value
+
+            Mock a puched change event from a tile.
+            """
+            args = json.loads(argin)
+            self.component_manager._on_tile_attribute_change(
+                args["tile_id"],
+                "tileprogrammingstate",
+                args["value"],
                 tango.AttrQuality.ATTR_VALID,
             )
 

@@ -385,6 +385,19 @@ class SpsTangoTestHarness:
             get_subrack_name(subrack_id, station_label=self._station_label), mock
         )
 
+    def add_mock_station_device(
+        self: SpsTangoTestHarness,
+        mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Add a mock spsstation Tango device to this test harness.
+
+        :param mock: the mock to be used as a mock station device.
+        """
+        self._tango_test_harness.add_mock_device(
+            get_sps_station_name(self._station_label), mock
+        )
+
     def add_tile_device(  # pylint: disable=too-many-arguments
         self: SpsTangoTestHarness,
         tile_id: int,
@@ -392,6 +405,7 @@ class SpsTangoTestHarness:
         subrack_bay: int = 1,
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsTile",
+        use_attributes_for_health: bool = False,
     ) -> None:
         """
         Add a tile Tango device to the test harness.
@@ -403,6 +417,7 @@ class SpsTangoTestHarness:
         :param device_class: The device class to use.
             This may be used to override the usual device class,
             for example with a patched subclass.
+        :param use_attributes_for_health: True to use new healthModel.
         """
         self._tango_test_harness.add_device(
             get_tile_name(tile_id, station_label=self._station_label),
@@ -421,6 +436,7 @@ class SpsTangoTestHarness:
             BiosVersion="0.5.0",
             PreAduFitted=[True, True],
             ParentTRL=get_sps_station_name(self._station_label),
+            UseAttributesForHealth=use_attributes_for_health,
         )
 
     def add_mock_tile_device(

@@ -8,7 +8,6 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import gc
 import json
 import logging
 import threading
@@ -813,8 +812,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
+        if self._request_provider is not None:
+            self._request_provider.cleanup()
         self._request_provider = None
-        gc.collect()  # force garbage collection
         self._tpm_status = TpmStatus.UNKNOWN
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
@@ -825,7 +825,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def wait_until_stopped(self: TileComponentManager) -> None:
         """Wait for the polling to stop."""
-        self._event.wait(10.0)
+        # self._event.wait(10.0)
 
     def cleanup_subscriptions(self: TileComponentManager) -> None:
         """Clean up subscriptions."""

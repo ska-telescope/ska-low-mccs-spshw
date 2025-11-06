@@ -12,7 +12,4 @@ RUN apt-get update && apt-get install -y git
 
 RUN pip install -e .
 
-ENV OPENBLAS_NUM_THREADS=1
-ENV OMP_NUM_THREADS=1
-
 USER tango

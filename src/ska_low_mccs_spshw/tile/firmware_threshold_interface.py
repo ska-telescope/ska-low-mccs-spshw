@@ -66,8 +66,8 @@ class FirmwareThresholdsDbAdapter:
         self._device_name = device_name
         self._thresholds = thresholds
         self._db_connection = db_connection or Database()
-        self._sync_class_cache_with_db()
         self._logger = logger
+        self._sync_class_cache_with_db()
 
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Update threshold cache from database."""

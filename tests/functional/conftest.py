@@ -685,6 +685,7 @@ def poll_until_state_change(
         return
 
     if no_of_iters == 1:
+        print(f"{device.healthreport=}")
         pytest.fail(
             f"device not in desired state, \
         wanted: {wanted_state}, actual: {device.state()}"

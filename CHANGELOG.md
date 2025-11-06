@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-254] Added default attribute alarm configuration for Tile and Subrack to `values.yaml`
+
 ## 10.2.0
 
 * [THORN-275] Added faultReport attribute to assist with fault diognosis.

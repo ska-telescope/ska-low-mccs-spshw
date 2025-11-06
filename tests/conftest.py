@@ -336,7 +336,7 @@ def health_status_fixture() -> dict[str, Any]:
             "V_1V1": 1.1,
             "V_CORE": 1.2,
             "V_1V5": 1.5,
-            "V_3V3": 2.3,
+            "V_3V3": 3.3,
             "V_5V": 5.0,
             "V_3V": 3.0,
             "V_2V8": 2.8,

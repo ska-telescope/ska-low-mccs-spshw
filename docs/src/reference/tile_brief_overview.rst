@@ -132,14 +132,14 @@ the maximum representable time at 13.74 days after the `globalReferenceTime`. Th
 implies that the TPMS must be reinitialised and synchronised at most every 13 days. 
 
 
-Firmware Thresholds – Engineering Mode Command
-==============================================
+Firmware Thresholds – Engineering Mode Attributes
+=================================================
 
 Overview
 --------
 
-Firmware thresholds are **EngineeringMode-only** commands used to configure and validate 
-firmware-level safety and operational limits for voltage, current, and temperature.
+Firmware thresholds are attributes which are **writeable only in EngineeringMode**, to configure
+and validate firmware-level safety and operational limits for voltage, current, and temperature.
 
 The following attributes are available:
 

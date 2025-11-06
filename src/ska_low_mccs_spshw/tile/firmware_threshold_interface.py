@@ -17,7 +17,7 @@ import tango
 from tango import Database
 
 __all__: list[str] = [
-    "FirmwareThresholdsDbInterface",
+    "FirmwareThresholdsDbAdapter",
     "FirmwareThresholds",
     "TEMPERATURE_KEYS",
     "VOLTAGE_KEYS",
@@ -43,11 +43,11 @@ VOLTAGE_KEYS: Final[list[str]] = [
 CURRENT_KEYS: Final[list[str]] = ["FE0_mVA", "FE1_mVA"]
 
 
-class FirmwareThresholdsDbInterface:
+class FirmwareThresholdsDbAdapter:
     """Tango DB interface for reading/writing FirmwareThresholds."""
 
     def __init__(
-        self: FirmwareThresholdsDbInterface,
+        self: FirmwareThresholdsDbAdapter,
         device_name: str,
         thresholds: FirmwareThresholds,
         db_connection: Database | None = None,
@@ -65,7 +65,7 @@ class FirmwareThresholdsDbInterface:
         self._db_connection = db_connection or Database()
         self._sync_class_cache_with_db()
 
-    def _sync_class_cache_with_db(self: FirmwareThresholdsDbInterface) -> None:
+    def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Update threshold cache from database."""
         print("Syncing class cache with DB...")
         firmware_thresholds = self._db_connection.get_device_attribute_property(
@@ -76,13 +76,13 @@ class FirmwareThresholdsDbInterface:
         self._thresholds.update_from_dict(firmware_thresholds["currents"])
         print("Thresholds synced with DB.")
 
-    def write_threshold_to_db(self: FirmwareThresholdsDbInterface) -> None:
+    def write_threshold_to_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Put thresholds into database."""
         self._db_connection.put_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_dict()
         )
 
-    def resync_with_db(self: FirmwareThresholdsDbInterface) -> None:
+    def resync_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Resync class with db values."""
         self._sync_class_cache_with_db()
 

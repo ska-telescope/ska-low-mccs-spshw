@@ -63,7 +63,7 @@ from .firmware_threshold_interface import (
     TEMPERATURE_KEYS,
     VOLTAGE_KEYS,
     FirmwareThresholds,
-    FirmwareThresholdsDbInterface,
+    FirmwareThresholdsDbAdapter,
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
@@ -776,7 +776,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         self.db_firmware_thresholds = FirmwareThresholds()
         self.hw_firmware_thresholds = FirmwareThresholds()
-        self.firmware_threshold_db_interface = FirmwareThresholdsDbInterface(
+        self.firmware_threshold_db_interface = FirmwareThresholdsDbAdapter(
             device_name=self.get_name(), thresholds=self.db_firmware_thresholds
         )
 

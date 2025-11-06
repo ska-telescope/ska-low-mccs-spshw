@@ -5,12 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""
-This file contains a test for the tile dropped packets test.
-
-Depending on your exact deployment the individual tests may or may not be run.
-This test just checks that anything which can run passes.
-"""
+"""This file contains a test for setting of firmware thresholds."""
 from __future__ import annotations
 
 import json

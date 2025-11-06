@@ -3238,7 +3238,7 @@ class TestDataBaseInteraction:
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test by setting the hardware back to db values we recover state.
+        Test fault when firmware missmatch db due to firmware rounding.
 
         :param tile_device: the Tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
@@ -3294,7 +3294,7 @@ class TestDataBaseInteraction:
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test by setting the hardware back to db values we recover state.
+        Test db/firmware missmatched are ignored by unsetting db.
 
         :param tile_device: the Tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is

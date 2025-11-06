@@ -325,7 +325,7 @@ def test_off_on(
         EventType.CHANGE_EVENT,
         change_event_callbacks["boardCurrent"],
     )
-    change_event_callbacks["boardCurrent"].assert_change_event([])
+    change_event_callbacks["boardCurrent"].assert_change_event(None)
 
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
@@ -379,7 +379,8 @@ def test_off_on(
     )
 
     change_event_callbacks["boardCurrent"].assert_change_event([])
-    assert not list(subrack_device.boardCurrent)
+    with pytest.raises(tango.DevFailed):
+        _ = subrack_device.boardCurrent
 
     # Okay, let's turn it back on again,
     # but we can't be bothered tracking the command status this time.
@@ -445,24 +446,25 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("tpm6PowerState", PowerState.UNKNOWN),
         ("tpm7PowerState", PowerState.UNKNOWN),
         ("tpm8PowerState", PowerState.UNKNOWN),
-        ("backplaneTemperatures", []),
-        ("boardTemperatures", []),
-        ("boardCurrent", []),
+        ("backplaneTemperatures", None),
+        ("boardTemperatures", None),
+        ("boardCurrent", None),
         ("cpldPllLocked", None),
-        ("powerSupplyCurrents", []),
-        ("powerSupplyFanSpeeds", []),
-        ("powerSupplyPowers", []),
-        ("powerSupplyVoltages", []),
-        ("subrackFanSpeeds", []),
-        ("subrackFanSpeedsPercent", []),
-        ("subrackFanModes", []),
+        ("powerSupplyCurrents", None),
+        ("powerSupplyFanSpeeds", None),
+        ("powerSupplyPowers", None),
+        ("powerSupplyVoltages", None),
+        ("subrackFanSpeeds", None),
+        ("subrackFanSpeedsPercent", None),
+        ("subrackFanModes", None),
         ("subrackPllLocked", None),
         ("subrackTimestamp", None),
-        ("tpmCurrents", []),
-        ("tpmPowers", []),
-        # ("tpmTemperatures", []),  # Not implemented on SMB
-        ("tpmVoltages", []),
+        ("tpmCurrents", None),
+        ("tpmPowers", None),
+        # ("tpmTemperatures", None),  # Not implemented on SMB
+        ("tpmVoltages", None),
     ]:
+        print(f"Asserting on {attribute_name}")
         subrack_device.subscribe_event(
             attribute_name,
             EventType.CHANGE_EVENT,

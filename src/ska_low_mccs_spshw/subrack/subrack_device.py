@@ -353,7 +353,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._health_model: SubrackHealthModel
         self._health_state: HealthState
         self._stopping = False
-        self._health_recorder: HealthRecorder | None = None
+        self._health_recorder: HealthRecorder | None
         self._health_report = ""
         self.component_manager: SubrackComponentManager
 
@@ -872,7 +872,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
-        return self._tpm_present or []
+        return self._tpm_present
 
     @attribute(dtype=PowerState, label="TPM 1 power state")
     def tpm1PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
@@ -953,7 +953,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         unit="Celsius",
         abs_change=0.1,
     )
-    def backplaneTemperatures(self: MccsSubrack) -> list[float]:
+    def backplaneTemperatures(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack backplane temperature.
 
@@ -962,11 +962,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the backplane temperatures.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._backplane_temperatures()
 
-    def _backplane_temperatures(self: MccsSubrack) -> list[float]:
+    def _backplane_temperatures(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack backplane temperature.
 
@@ -975,9 +975,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the backplane temperatures.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("backplaneTemperatures", None) or []
+        return self._hardware_attributes.get("backplaneTemperatures", None)
 
     @attribute(
         dtype=(float,),
@@ -986,7 +986,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         unit="Celsius",
         abs_change=0.1,
     )
-    def boardTemperatures(self: MccsSubrack) -> list[float]:
+    def boardTemperatures(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack board temperature.
 
@@ -994,11 +994,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the board temperatures.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._board_temperatures()
 
-    def _board_temperatures(self: MccsSubrack) -> list[float]:
+    def _board_temperatures(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack board temperature.
 
@@ -1006,16 +1006,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the board temperatures.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("boardTemperatures", None) or []
+        return self._hardware_attributes.get("boardTemperatures", None)
 
     @attribute(
         dtype=(float,),
         label="Board current",
         abs_change=0.1,
     )
-    def boardCurrent(self: MccsSubrack) -> list[float]:
+    def boardCurrent(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of subrack management board current.
 
@@ -1023,11 +1023,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: total board current, in a list of length 1.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._board_current()
 
-    def _board_current(self: MccsSubrack) -> list[float]:
+    def _board_current(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of subrack management board current.
 
@@ -1035,9 +1035,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: total board current, in a list of length 1.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("boardCurrent", None) or []
+        return self._hardware_attributes.get("boardCurrent", None)
 
     @attribute(dtype=bool, label="CPLD PLL locked")
     def cpldPllLocked(self: MccsSubrack) -> bool | None:
@@ -1059,30 +1059,30 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=(float,), max_dim_x=2, label="power supply currents", abs_change=0.1
     )
-    def powerSupplyCurrents(self: MccsSubrack) -> list[float]:
+    def powerSupplyCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply currents.
 
         :return: the power supply currents.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._power_supply_currents()
 
-    def _power_supply_currents(self: MccsSubrack) -> list[float]:
+    def _power_supply_currents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply currents.
 
         :return: the power supply currents.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("powerSupplyCurrents", None) or []
+        return self._hardware_attributes.get("powerSupplyCurrents", None)
 
     @attribute(
         dtype=(float,), max_dim_x=3, label="power supply fan speeds", abs_change=0.1
     )
-    def powerSupplyFanSpeeds(self: MccsSubrack) -> list[float]:
+    def powerSupplyFanSpeeds(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply fan speeds.
 
@@ -1090,11 +1090,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the power supply fan speeds.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._powersupply_fan_speeds()
 
-    def _powersupply_fan_speeds(self: MccsSubrack) -> list[float]:
+    def _powersupply_fan_speeds(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply fan speeds.
 
@@ -1102,79 +1102,79 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the power supply fan speeds.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("powerSupplyFanSpeeds", None) or []
+        return self._hardware_attributes.get("powerSupplyFanSpeeds", None)
 
     @attribute(dtype=(float,), max_dim_x=2, label="power supply powers", abs_change=0.1)
-    def powerSupplyPowers(self: MccsSubrack) -> list[float]:
+    def powerSupplyPowers(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply powers.
 
         :return: the power supply powers.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._power_supply_powers()
 
-    def _power_supply_powers(self: MccsSubrack) -> list[float]:
+    def _power_supply_powers(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply powers.
 
         :return: the power supply powers.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("powerSupplyPowers", None) or []
+        return self._hardware_attributes.get("powerSupplyPowers", None)
 
     @attribute(
         dtype=(float,), max_dim_x=2, label="power supply voltages", abs_change=0.1
     )
-    def powerSupplyVoltages(self: MccsSubrack) -> list[float]:
+    def powerSupplyVoltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply voltages.
 
         :return: the power supply voltages.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._power_supply_voltages()
 
-    def _power_supply_voltages(self: MccsSubrack) -> list[float]:
+    def _power_supply_voltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply voltages.
 
         :return: the power supply voltages.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("powerSupplyVoltages", None) or []
+        return self._hardware_attributes.get("powerSupplyVoltages", None)
 
     @attribute(dtype=(float,), max_dim_x=4, label="subrack fan speeds", abs_change=0.1)
-    def subrackFanSpeeds(self: MccsSubrack) -> list[float]:
+    def subrackFanSpeeds(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack fan speeds, in RPM.
 
         :return: the subrack fan speeds.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._subrack_fan_speeds()
 
-    def _subrack_fan_speeds(self: MccsSubrack) -> list[float]:
+    def _subrack_fan_speeds(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack fan speeds, in RPM.
 
         :return: the subrack fan speeds.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("subrackFanSpeeds", None) or []
+        return self._hardware_attributes.get("subrackFanSpeeds", None)
 
     @attribute(
         dtype=(float,), max_dim_x=4, label="subrack fan speeds (%)", abs_change=0.1
     )
-    def subrackFanSpeedsPercent(self: MccsSubrack) -> list[float]:
+    def subrackFanSpeedsPercent(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack fan speeds, in percent.
 
@@ -1187,32 +1187,32 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the subrack fan speed setpoints in percent.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._subrack_fan_speeds_percent()
 
-    def _subrack_fan_speeds_percent(self: MccsSubrack) -> list[float]:
+    def _subrack_fan_speeds_percent(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack fan speeds, in percent.
 
         :return: the subrack fan speeds.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("subrackFanSpeedsPercent", None) or []
+        return self._hardware_attributes.get("subrackFanSpeedsPercent", None)
 
     # TODO: https://gitlab.com/tango-controls/pytango/-/issues/483
     # Once this is fixed, we can use dtype=(FanMode,).
     @attribute(dtype=(int,), max_dim_x=4, label="subrack fan modes", abs_change=1)
-    def subrackFanModes(self: MccsSubrack) -> list[int]:
+    def subrackFanModes(self: MccsSubrack) -> list[int] | None:
         """
         Handle a Tango attribute read of the subrack fan modes.
 
         :return: the subrack fan modes.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("subrackFanModes", None) or []
+        return self._hardware_attributes.get("subrackFanModes", None)
 
     @attribute(dtype=bool, label="PLL locked")
     def subrackPllLocked(self: MccsSubrack) -> bool | None:
@@ -1469,46 +1469,46 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_port_voltages()
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
-    def tpmCurrents(self: MccsSubrack) -> list[float]:
+    def tpmCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM currents.
 
         :return: the TPM currents.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._tpm_currents()
 
-    def _tpm_currents(self: MccsSubrack) -> list[float]:
+    def _tpm_currents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM currents.
 
         :return: the TPM currents.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("tpmCurrents", None) or []
+        return self._hardware_attributes.get("tpmCurrents", None)
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM powers", abs_change=0.1)
-    def tpmPowers(self: MccsSubrack) -> list[float]:
+    def tpmPowers(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM powers.
 
         :return: the TPM powers.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
         return self._tpm_powers()
 
-    def _tpm_powers(self: MccsSubrack) -> list[float]:
+    def _tpm_powers(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM powers.
 
         :return: the TPM powers.
             When communication with the subrack is not established,
-            this returns an empty list.
+            this returns none.
         """
-        return self._hardware_attributes.get("tpmPowers", None) or []
+        return self._hardware_attributes.get("tpmPowers", None)
 
     # Not implemented on SMB
     # @attribute(dtype=(float,), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
@@ -1518,12 +1518,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     #     :return: the TPM temperatures.
     #         When communication with the subrack is not established,
-    #         this returns an empty list.
+    #         this returns none.
     #     """
     #     return self._hardware_attributes.get("tpmTemperatures", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM voltages", abs_change=0.1)
-    def tpmVoltages(self: MccsSubrack) -> list[float]:
+    def tpmVoltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM voltages.
 
@@ -1531,13 +1531,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_voltages()
 
-    def _tpm_voltages(self: MccsSubrack) -> list[float]:
+    def _tpm_voltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM voltages.
 
         :return: the TPM voltages
         """
-        return self._hardware_attributes.get("tpmVoltages", None) or []
+        return self._hardware_attributes.get("tpmVoltages", None)
 
     @attribute(dtype=str, label="Subrack Board Info")
     def subrackBoardInfo(self: MccsSubrack) -> str | None:
@@ -1569,7 +1569,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
-            self._clear_hardware_attributes()
+            if self._health_recorder is not None:
+                self._health_recorder.clear_attribute_state()
 
         super()._communication_state_changed(communication_state)
         if not self.UseAttributesForHealth:

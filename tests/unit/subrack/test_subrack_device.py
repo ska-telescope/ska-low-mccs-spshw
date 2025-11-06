@@ -943,6 +943,7 @@ def test_attribute_alarm_health_model(
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+    change_event_callbacks["healthState"].assert_not_called()
 
     # Change attribute limits
     try:
@@ -976,7 +977,5 @@ def test_attribute_alarm_health_model(
             }
         )
     )
-    change_event_callbacks["healthState"].assert_change_event(
-        HealthState.OK, lookahead=5, consume_nonmatches=True
-    )
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
     assert subrack_device.state() == DevState.ON

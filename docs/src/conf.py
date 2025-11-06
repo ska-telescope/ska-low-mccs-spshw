@@ -132,6 +132,8 @@ nitpick_ignore = [
     ("py:class", "ResultCode"),
     ("py:class", "ska_snmp_device.snmp_types.SNMPAttrInfo"),
     ("py:class", "ska_tango_base.base.CommunicationStatusCallbackType"),
+    ("py:class", "tango.StdStringVector"),
+    ("py:class", "Database"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

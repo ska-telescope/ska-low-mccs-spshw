@@ -16,6 +16,7 @@ import random
 import time
 import unittest.mock
 from typing import Any, Iterator, Optional
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -102,6 +103,7 @@ def use_attribute_for_health_fixture() -> bool:
     return True
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="test_context")
 def test_context_fixture(
     tile_id: int,
@@ -109,6 +111,9 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_station_device_proxy: unittest.mock.Mock,
     use_attribute_for_health: bool,
+    db_temperature_thresholds: dict[str, Any],
+    db_voltage_thresholds: dict[str, Any],
+    db_current_thresholds: dict[str, Any],
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which a tile Tango device is running.
@@ -122,22 +127,36 @@ def test_context_fixture(
     :param mock_station_device_proxy: A mock procy to the spsstation device.
     :param use_attribute_for_health: A bool representing if we are using the
         attribute quality feature for health evaluation.
+    :param db_temperature_thresholds: fixture containing the mocked temperature
+        thresholds in db at point of startup.
+    :param db_voltage_thresholds: fixture containing the mocked voltage
+        thresholds in db at point of startup.
+    :param db_current_thresholds: fixture containing the mocked current
+        thresholds in db at point of startup.
 
     :yields: a test context.
     """
-    harness = SpsTangoTestHarness()
-    harness.add_mock_subrack_device(1, mock_subrack_device_proxy)
-    harness.add_tile_device(
-        tile_id,
-        device_class=patched_tile_device_class,
-        logging_level=2,
-        use_attributes_for_health=use_attribute_for_health,
-    )
-    # SpsStation added for adminMode inheritance, without this
-    # our test logs are filled with noise.
-    harness.add_mock_station_device(mock_station_device_proxy)
-    with harness as context:
-        yield context
+    with patch(
+        "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
+    ) as mock_tango_db:
+        mock_tango_db.return_value.get_device_attribute_property.return_value = {
+            "temperatures": db_temperature_thresholds,
+            "voltages": db_voltage_thresholds,
+            "currents": db_current_thresholds,
+        }
+
+        harness = SpsTangoTestHarness()
+        harness.add_mock_subrack_device(1, mock_subrack_device_proxy)
+        harness.add_tile_device(
+            tile_id,
+            device_class=patched_tile_device_class,
+            logging_level=2,
+            use_attributes_for_health=use_attribute_for_health,
+        )
+        harness.add_mock_station_device(mock_station_device_proxy)
+
+        with harness as context:
+            yield context
 
 
 @pytest.fixture(name="tile_device")
@@ -228,7 +247,9 @@ def on_tile_device_fixture(
     tile_device.adminMode = AdminMode.ONLINE
 
     change_event_callbacks["state"].assert_change_event(
-        OneOf(DevState.OFF, DevState.ON), lookahead=2, consume_nonmatches=True
+        attribute_value=OneOf(DevState.OFF, DevState.ON),
+        lookahead=2,
+        consume_nonmatches=True,
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
@@ -331,6 +352,7 @@ class TestMccsTile:
             "ioHealth",
             "dspHealth",
             "healthReport",
+            "faultReport",
             "inheritModes",
             "eventHistory",
         ]
@@ -465,6 +487,9 @@ class TestMccsTile:
             "antennaBufferMode",
             "dataTransmissionMode",
             "integratedDataTransmissionMode",
+            "firmwareTemperatureThresholds",
+            "firmwareVoltageThresholds",
+            "firmwareCurrentThresholds",
         ]
 
     @pytest.fixture(name="active_read_attributes")
@@ -477,7 +502,6 @@ class TestMccsTile:
         """
         return [
             "tile_info",
-            "firmwareTemperatureThresholds",
             "firmwareVersion",
             "fpgasUnixTime",
             "fpgaTime",
@@ -1265,11 +1289,6 @@ class TestMccsTile:
         ("attribute", "initial_value", "write_value"),
         [
             (
-                "firmwareTemperatureThresholds",
-                TileSimulator.TPM_TEMPERATURE_THRESHOLDS,
-                None,
-            ),
-            (
                 "boardTemperature",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 None,
@@ -1398,7 +1417,7 @@ class TestMccsTile:
         ("attribute", "initial_value", "write_value"),
         [
             (
-                "voltageMon",
+                "voltageMon5V0",
                 TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
                 None,
             ),
@@ -2857,22 +2876,18 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        # This method mut be used in ENGINEERING MODE
+        assert on_tile_device.adminMode == AdminMode.ONLINE
         board_alarm_threshold = json.loads(
             on_tile_device.firmwareTemperatureThresholds
         )["board_alarm_threshold"]
+        assert board_alarm_threshold == 90.0
 
-        # This method mut be used in ENGINEERING MODE
-        assert on_tile_device.adminMode == AdminMode.ONLINE
         with pytest.raises(DevFailed):
-            on_tile_device.SetFirmwareTemperatureThresholds(
-                json.dumps(
-                    {
-                        "max_fpga1_temperature_threshold": 30,
-                        "max_fpga2_temperature_threshold": 30,
-                        "max_board_temperature_threshold": 30,
-                    }
-                )
+            on_tile_device.firmwareTemperatureThresholds = json.dumps(
+                {"board_alarm_threshold": 92.0}
             )
+
         on_tile_device.adminMode = AdminMode.ENGINEERING
         time.sleep(1)
         on_tile_device.subscribe_event(
@@ -2883,24 +2898,22 @@ class TestMccsTileCommands:
         change_event_callbacks["alarms"].assert_change_event(Anything)
         with pytest.raises(DevFailed):
             # Setting a threshold to high
-            on_tile_device.SetFirmwareTemperatureThresholds(
-                json.dumps(
-                    {
-                        "max_board_temperature_threshold": 60,
-                        "max_fpga1_temperature_threshold": 60,
-                        "max_fpga2_temperature_threshold": 60,
-                    }
-                )
-            )
-        on_tile_device.SetFirmwareTemperatureThresholds(
-            json.dumps(
+            on_tile_device.firmwareTemperatureThresholds = json.dumps(
                 {
-                    "max_board_temperature_threshold": 30,
-                    "max_fpga1_temperature_threshold": 30,
-                    "max_fpga2_temperature_threshold": 30,
+                    "board_alarm_threshold": 60,
+                    "fpga1_alarm_threshold": 60,
+                    "fpga2_alarm_threshold": 60,
                 }
             )
+
+        on_tile_device.firmwareTemperatureThresholds = json.dumps(
+            {
+                "board_alarm_threshold": 30,
+                "fpga1_alarm_threshold": 30,
+                "fpga2_alarm_threshold": 30,
+            }
         )
+
         final_board_alarm_threshold = json.loads(
             on_tile_device.firmwareTemperatureThresholds
         )["board_alarm_threshold"]
@@ -2931,23 +2944,13 @@ class TestMccsTileCommands:
             voltage warning thresholds.
         """
         # Happy paths.
-        thresholds = json.loads(on_tile_device.GetVoltageWarningThresholds(""))
+        thresholds = json.loads(on_tile_device.firmwareVoltageThresholds)
         assert thresholds == voltage_warning_thresholds
-        for voltage_name, threshold_values in voltage_warning_thresholds.items():
-            assert {voltage_name: threshold_values} == json.loads(
-                on_tile_device.GetVoltageWarningThresholds(voltage_name)
-            )
-
-        # Unhappy paths.
-        assert (
-            "Specified voltage 'INVALID_VOLTAGE_NAME' not recognized."
-            == on_tile_device.GetVoltageWarningThresholds("invalid_voltage_name")
-        )
 
     def test_set_voltage_warning_thresholds(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
-        updated_voltage_warning_thresholds: dict[str, dict[str, float]],
+        updated_voltage_warning_thresholds: dict[str, float],
     ) -> None:
         """
         Test we can get the voltage thresholds.
@@ -2963,72 +2966,42 @@ class TestMccsTileCommands:
             updated voltage warning thresholds.
         """
         # Happy paths.
-        for (
-            voltage_name,
-            threshold_values,
-        ) in updated_voltage_warning_thresholds.items():
-            _, msg = on_tile_device.SetVoltageWarningThresholds(
-                json.dumps(
-                    {
-                        "voltage": voltage_name,
-                        "min_thr": threshold_values["min"],
-                        "max_thr": threshold_values["max"],
-                    }
-                )
-            )
-            assert msg == ["SetVoltageWarningThresholds command completed OK"]
-            assert {voltage_name: threshold_values} == json.loads(
-                on_tile_device.GetVoltageWarningThresholds(voltage_name)
+        on_tile_device.adminMode = 2
+        # Happy paths.
+        on_tile_device.firmwareVoltageThresholds = json.dumps(
+            updated_voltage_warning_thresholds
+        )
+        assert on_tile_device.firmwareVoltageThresholds == json.dumps(
+            updated_voltage_warning_thresholds
+        )
+
+        # Unhappy paths.
+        # Incorrect key
+        with pytest.raises(expected_exception=DevFailed):
+            on_tile_device.firmwareVoltageThresholds = json.dumps(
+                {
+                    "FOO_min_alarm_threshold": 0.0,
+                    "FOO_max_alarm_threshold": 65.535,
+                    "BAR_min_alarm_threshold": 0.0,
+                    "BAR_max_alarm_threshold": 65.535,
+                }
             )
 
         # Unhappy paths.
-        # No voltage supplied.
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
-            _, msg = on_tile_device.SetVoltageWarningThresholds(
-                json.dumps(
-                    {
-                        "min_thr": 12.3,
-                        "max_thr": 23.4,
-                    }
-                )
-            )
-
         # No min thr supplied
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
-            _, msg = on_tile_device.SetVoltageWarningThresholds(
-                json.dumps(
-                    {
-                        "voltage": "VIN",
-                        "max_thr": 23.4,
-                    }
-                )
-            )
-
-        # No max thr supplied
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
-            _, msg = on_tile_device.SetVoltageWarningThresholds(
-                json.dumps(
-                    {
-                        "voltage": "VIN",
-                        "min_thr": 12.3,
-                    }
-                )
-            )
-
-        # Invalid voltage name supplied.
-        _, msg = on_tile_device.SetVoltageWarningThresholds(
-            json.dumps(
+        with pytest.raises(DevFailed):
+            on_tile_device.firmwareVoltageThresholds = json.dumps(
                 {
-                    "voltage": "VI",
-                    "min_thr": 12.3,
-                    "max_thr": 23.4,
+                    "MGT_AVCC_max_alarm_threshold": 65.535,
                 }
             )
-        )
-        assert msg == [
-            "SetVoltageWarningThresholds command failed to complete. "
-            "Check voltage name is valid."
-        ]
+        # No max thr supplied
+        with pytest.raises(DevFailed):
+            on_tile_device.firmwareVoltageThresholds = json.dumps(
+                {
+                    "MGT_AVCC_min_alarm_threshold": 0.0,
+                }
+            )
 
     # current v
     def test_get_current_warning_thresholds(
@@ -3050,18 +3023,8 @@ class TestMccsTileCommands:
             current warning thresholds.
         """
         # Happy paths.
-        thresholds = json.loads(on_tile_device.GetCurrentWarningThresholds(""))
+        thresholds = json.loads(on_tile_device.firmwareCurrentThresholds)
         assert thresholds == current_warning_thresholds
-        for current_name, threshold_values in current_warning_thresholds.items():
-            assert {current_name: threshold_values} == json.loads(
-                on_tile_device.GetCurrentWarningThresholds(current_name)
-            )
-
-        # Unhappy paths.
-        assert (
-            "Specified current 'invalid_current_name' not recognized."
-            == on_tile_device.GetCurrentWarningThresholds("invalid_current_name")
-        )
 
     def test_set_current_warning_thresholds(
         self: TestMccsTileCommands,
@@ -3081,73 +3044,320 @@ class TestMccsTileCommands:
         :param updated_current_warning_thresholds: A dictionary with the
             updated current warning thresholds.
         """
+        on_tile_device.adminMode = 2
         # Happy paths.
-        for (
-            current_name,
-            threshold_values,
-        ) in updated_current_warning_thresholds.items():
-            _, msg = on_tile_device.SetCurrentWarningThresholds(
-                json.dumps(
-                    {
-                        "current": current_name,
-                        "min_thr": threshold_values["min"],
-                        "max_thr": threshold_values["max"],
-                    }
-                )
-            )
-            assert msg == ["SetCurrentWarningThresholds command completed OK"]
-            assert {current_name: threshold_values} == json.loads(
-                on_tile_device.GetCurrentWarningThresholds(current_name)
-            )
+        on_tile_device.firmwareCurrentThresholds = json.dumps(
+            updated_current_warning_thresholds
+        )
+        assert on_tile_device.firmwareCurrentThresholds == json.dumps(
+            updated_current_warning_thresholds
+        )
 
         # Unhappy paths.
-        # No current supplied.
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
-            _, msg = on_tile_device.SetCurrentWarningThresholds(
-                json.dumps(
-                    {
-                        "min_thr": 12.3,
-                        "max_thr": 23.4,
-                    }
-                )
+        # Incorrect key
+        with pytest.raises(expected_exception=DevFailed):
+            on_tile_device.firmwareCurrentThresholds = json.dumps(
+                {
+                    "FOO1_min_alarm_threshold": 0.0,
+                    "FOO1_max_alarm_threshold": 65.535,
+                    "FOO2_min_alarm_threshold": 0.0,
+                    "FOO3_max_alarm_threshold": 65.535,
+                }
             )
 
         # No min thr supplied
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
-            _, msg = on_tile_device.SetCurrentWarningThresholds(
-                json.dumps(
-                    {
-                        "current": "FE0_mVA",
-                        "max_thr": 23.4,
-                    }
-                )
-            )
-
-        # No max thr supplied
-        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
-            _, msg = on_tile_device.SetCurrentWarningThresholds(
-                json.dumps(
-                    {
-                        "current": "FE0_mVA",
-                        "min_thr": 12.3,
-                    }
-                )
-            )
-
-        # Invalid current name supplied.
-        _, msg = on_tile_device.SetCurrentWarningThresholds(
-            json.dumps(
+        with pytest.raises(DevFailed):
+            on_tile_device.firmwareCurrentThresholds = json.dumps(
                 {
-                    "current": "VI",
-                    "min_thr": 12.3,
-                    "max_thr": 23.4,
+                    "FE0_mVA_max_alarm_threshold": 65.535,
+                }
+            )
+        # No max thr supplied
+        with pytest.raises(DevFailed):
+            on_tile_device.firmwareCurrentThresholds = json.dumps(
+                {
+                    "FE0_mVA_min_alarm_threshold": 0.0,
+                }
+            )
+
+
+class TestDataBaseInteraction:
+    """
+    Class containing tests for interactions with the database.
+
+    By overriding fixtures:
+
+    - db_temperature_thresholds
+    - db_voltage_thresholds
+    - db_current_thresholds
+
+    to have some initial value different from the simulator,
+    we ensure that we are entering a fault due to threshold
+    configuration missmatch.
+    """
+
+    @pytest.fixture(name="db_temperature_thresholds")
+    def db_temperature_thresholds_fixture(
+        self: TestDataBaseInteraction,
+    ) -> dict[str, list[str]]:
+        """
+        Return a dictionary containing the db values.
+
+        :returns: a dictionary containing the db values.
+        """
+        return {"fpga1_alarm_threshold": ["49.5"]}
+
+    @pytest.fixture(name="db_voltage_thresholds")
+    def db_voltage_thresholds_fixture(
+        self: TestDataBaseInteraction,
+    ) -> dict[str, list[str]]:
+        """
+        Return a dictionary containing the db values.
+
+        :returns: a dictionary containing the db values.
+        """
+        return {
+            "MGT_AVCC_min_alarm_threshold": ["0.1"],
+            "MGT_AVCC_max_alarm_threshold": ["60.8"],
+        }
+
+    @pytest.fixture(name="db_current_thresholds")
+    def db_current_thresholds_fixture(
+        self: TestDataBaseInteraction,
+    ) -> dict[str, list[str]]:
+        """
+        Return a dictionary containing the db values.
+
+        :returns: a dictionary containing the db values.
+        """
+        return {
+            "FE0_mVA_min_alarm_threshold": ["1.1"],
+            "FE0_mVA_max_alarm_threshold": ["4.8"],
+        }
+
+    def test_tile_enters_fault_on_startup(
+        self: TestDataBaseInteraction,
+        tile_device: MccsDeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for healthParams attributes.
+
+        :param tile_device: the Tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.DISABLE
+        )
+        tile_device.adminMode = 0
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.OFF,
+            lookahead=2,
+            consume_nonmatches=True,
+        )
+        tile_device.on()
+        tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.FAULT, lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["state"].assert_not_called()
+
+    def test_we_can_recover_from_fault(
+        self: TestDataBaseInteraction,
+        tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test by setting the hardware back to db values we recover state.
+
+        :param tile_device: the Tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.DISABLE
+        )
+        tile_device.adminMode = 0
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.OFF,
+            lookahead=2,
+            consume_nonmatches=True,
+        )
+        tile_device.on()
+        tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.FAULT, lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.adminMode = 2
+        tile_device.firmwareTemperatureThresholds = json.dumps(
+            {"fpga1_alarm_threshold": 49.5}
+        )
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.firmwareVoltageThresholds = json.dumps(
+            {"MGT_AVCC_min_alarm_threshold": 0.1, "MGT_AVCC_max_alarm_threshold": 60.8}
+        )
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.firmwareCurrentThresholds = json.dumps(
+            {"FE0_mVA_min_alarm_threshold": 1.1, "FE0_mVA_max_alarm_threshold": 4.8}
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        tile_mon = tile_simulator.tpm_monitor
+        # Simulate drift. Hypothetical to test UpdateThresholdCache
+        tile_mon.get_current_warning_thresholds = (  # type: ignore[assignment]
+            unittest.mock.Mock(
+                return_value={
+                    "FE0_mVA": {"min": 1, "max": 5},
+                    "FE1_mVA": {"min": 1, "max": 5},
                 }
             )
         )
-        assert msg == [
-            "SetCurrentWarningThresholds command failed to complete. "
-            "Check current name is valid."
-        ]
+        tile_device.UpdateThresholdCache()
+        change_event_callbacks["state"].assert_change_event(DevState.FAULT)
+        change_event_callbacks["state"].assert_not_called()
+
+    def test_inablity_to_recover_from_fault_due_to_rounding_error(
+        self: TestDataBaseInteraction,
+        tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test fault when firmware missmatch db due to firmware rounding.
+
+        :param tile_device: the Tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.DISABLE
+        )
+        tile_device.adminMode = 0
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.OFF,
+            lookahead=2,
+            consume_nonmatches=True,
+        )
+        tile_device.on()
+        tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.FAULT, lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.adminMode = 2
+        tile_device.firmwareTemperatureThresholds = json.dumps(
+            {"fpga1_alarm_threshold": 49.5}
+        )
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.firmwareVoltageThresholds = json.dumps(
+            {"MGT_AVCC_min_alarm_threshold": 0.1, "MGT_AVCC_max_alarm_threshold": 60.8}
+        )
+        change_event_callbacks["state"].assert_not_called()
+
+        tile_mon = tile_simulator.tpm_monitor
+        # lets say we have unexpected fw rounding
+        tile_mon.get_current_warning_thresholds = (  # type: ignore[assignment]
+            unittest.mock.Mock(return_value={"min": 1, "max": 5})
+        )
+
+        tile_device.firmwareCurrentThresholds = json.dumps(
+            {"FE0_mVA_min_alarm_threshold": 1.1, "FE0_mVA_max_alarm_threshold": 4.8}
+        )
+        change_event_callbacks["state"].assert_not_called()
+
+    def test_recover_by_unsetting_database(
+        self: TestDataBaseInteraction,
+        tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test db/firmware missmatched are ignored by unsetting db.
+
+        :param tile_device: the Tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.DISABLE
+        )
+        tile_device.adminMode = 0
+        change_event_callbacks["state"].assert_change_event(
+            attribute_value=DevState.OFF,
+            lookahead=2,
+            consume_nonmatches=True,
+        )
+        tile_device.on()
+        tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(
+            DevState.FAULT, lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.adminMode = 2
+
+        tpm_mon = tile_simulator.tpm_monitor
+        # mocking method to assert not called when unsetting.
+        tpm_mon.set_current_warning_thresholds = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
+        tpm_mon.set_voltage_warning_thresholds = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
+        tpm_mon.set_tpm_temperature_thresholds = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
+
+        tile_device.firmwareTemperatureThresholds = json.dumps(
+            {"fpga1_alarm_threshold": "Undefined"}
+        )
+        tile_simulator.tpm_monitor.set_tpm_temperature_thresholds.assert_not_called()
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.firmwareVoltageThresholds = json.dumps(
+            {
+                "MGT_AVCC_min_alarm_threshold": "Undefined",
+                "MGT_AVCC_max_alarm_threshold": "Undefined",
+            }
+        )
+        tile_simulator.tpm_monitor.set_voltage_warning_thresholds.assert_not_called()
+        change_event_callbacks["state"].assert_not_called()
+
+        tile_device.firmwareCurrentThresholds = json.dumps(
+            {
+                "FE0_mVA_min_alarm_threshold": "Undefined",
+                "FE0_mVA_max_alarm_threshold": "Undefined",
+            }
+        )
+        tile_simulator.tpm_monitor.set_current_warning_thresholds.assert_not_called()
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
 
 
 class TestOldHealth:

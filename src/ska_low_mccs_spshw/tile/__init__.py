@@ -28,11 +28,17 @@ __all__ = [
     "demo_tile_device",
     "MockTpm",
     "TileRequestProvider",
+    "FirmwareThresholds",
+    "FirmwareThresholdsDbAdapter",
     # "plugins",
 ]
 
 from .demo_tile_device import DemoTile
 from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
+from .firmware_threshold_interface import (
+    FirmwareThresholds,
+    FirmwareThresholdsDbAdapter,
+)
 from .tile_component_manager import TileComponentManager
 from .tile_data import TileData
 from .tile_device import MccsTile

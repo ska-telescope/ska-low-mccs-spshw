@@ -311,7 +311,7 @@ configuration:
       firmwareVersion:
         code_push_event: true
         archive_period: 0
-      voltageMon:
+      voltageMon5V0:
         code_push_event: true
         archive_period: 0
       isProgrammed:

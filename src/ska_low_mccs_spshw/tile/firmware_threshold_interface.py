@@ -71,7 +71,6 @@ class FirmwareThresholdsDbInterface:
         firmware_thresholds = self._db_connection.get_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_keys_only()
         )
-        print(f"{firmware_thresholds=}")
         self._thresholds.update_from_dict(firmware_thresholds["temperatures"])
         self._thresholds.update_from_dict(firmware_thresholds["voltages"])
         self._thresholds.update_from_dict(firmware_thresholds["currents"])
@@ -79,7 +78,6 @@ class FirmwareThresholdsDbInterface:
 
     def write_threshold_to_db(self: FirmwareThresholdsDbInterface) -> None:
         """Put thresholds into database."""
-        print("Thresholds written to DB.")
         self._db_connection.put_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_dict()
         )
@@ -283,7 +281,7 @@ class FirmwareThresholds:
 
         :param name: the name of the threshold.
 
-        :returns: the threhold value.
+        :returns: the threshold value.
         :raises AttributeError: when the attribute is not defined.
         """
         attr = f"_{name}"

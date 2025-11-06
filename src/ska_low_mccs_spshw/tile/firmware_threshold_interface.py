@@ -228,9 +228,9 @@ class FirmwareThresholds:
         self.group_map = {}
 
         raw_groups = {
-            "temperatures": self._get_temperature_keys(),
-            "voltages": self._get_voltage_keys(),
-            "currents": self._get_current_keys(),
+            "temperatures": TEMPERATURE_KEYS,
+            "voltages": VOLTAGE_KEYS,
+            "currents": CURRENT_KEYS,
         }
 
         for group_name, keys in raw_groups.items():
@@ -247,17 +247,8 @@ class FirmwareThresholds:
     # --------------------------
     # Utility
     # --------------------------
-    def _get_temperature_keys(self: FirmwareThresholds) -> list[str]:
-        return TEMPERATURE_KEYS
-
-    def _get_voltage_keys(self: FirmwareThresholds) -> list[str]:
-        return VOLTAGE_KEYS
-
-    def _get_current_keys(self: FirmwareThresholds) -> list[str]:
-        return CURRENT_KEYS
-
     def _get_suffixes_for(self: FirmwareThresholds, key: str) -> list[str]:
-        if key in self._get_temperature_keys():
+        if key in TEMPERATURE_KEYS:
             return ["warning_threshold", "alarm_threshold"]
         return ["min_alarm_threshold", "max_alarm_threshold"]
 

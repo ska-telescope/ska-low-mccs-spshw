@@ -777,7 +777,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.db_firmware_thresholds = FirmwareThresholds()
         self.hw_firmware_thresholds = FirmwareThresholds()
         self.firmware_threshold_db_interface = FirmwareThresholdsDbAdapter(
-            device_name=self.get_name(), thresholds=self.db_firmware_thresholds, logger=self.logger
+            device_name=self.get_name(),
+            thresholds=self.db_firmware_thresholds,
+            logger=self.logger,
         )
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__

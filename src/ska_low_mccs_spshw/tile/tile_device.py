@@ -3429,8 +3429,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # Handle "Undefined" explicitly
             if min_val == "Undefined" or max_val == "Undefined":
                 self.logger.debug(f"{voltage}: thresholds explicitly undefined")
-                for name in (min_name, max_name):
-                    setattr(self.db_firmware_thresholds, name, "Undefined")
+
+                if min_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, min_name, "Undefined")
+
+                if max_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, max_name, "Undefined")
+
                 continue
 
             # Set thresholds in firmware and caches
@@ -3518,8 +3523,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # Handle "Undefined"
             if min_val == "Undefined" or max_val == "Undefined":
                 self.logger.debug(f"{current}: thresholds explicitly undefined")
-                for key in (min_key, max_key):
-                    setattr(self.db_firmware_thresholds, key, "Undefined")
+
+                if min_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, min_key, "Undefined")
+
+                if max_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, max_key, "Undefined")
+
                 continue
 
             # Apply thresholds to firmware

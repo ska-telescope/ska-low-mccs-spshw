@@ -4211,7 +4211,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
-        max_alarm=2.6,
+        max_alarm=2.62,
         max_warning=2.57,
         min_warning=2.40,
         min_alarm=2.37,

@@ -1213,7 +1213,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     )
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
             elif attribute_name == "firmware_thresholds":
-                self.logger.error(
+                self.logger.debug(
                     "hw read thresholds reporting "
                     f"{attribute_value.to_device_property_dict()}"
                 )
@@ -1319,10 +1319,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 f"Incomplete fault information: "
                 f"{self.db_configuration_fault=}, {self.component_manager_fault=}"
             )
-            return None
-
+            has_fault = None
         # Case 2: Any True → overall True
-        if cm_fault is True or db_fault_flag is True:
+        elif cm_fault is True or db_fault_flag is True:
             has_fault = True
         # Case 3: Both explicitly False → overall False
         elif cm_fault is False and db_fault_flag is False:
@@ -3316,11 +3315,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "temperatures", {}
             )
         )
-        db_thresholds = self.db_firmware_thresholds.to_device_property_dict()
-        self.logger.info(
-            "Database reads: " f'{json.dumps(db_thresholds.get("temperatures", {}))}'
-        )
-        self.logger.info(f"hw reads: {hw_temperatures}")
         return hw_temperatures
 
     @firmwareTemperatureThresholds.write  # type: ignore[no-redef]
@@ -3361,7 +3355,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
             if not set_values:
-                self.logger.warning(f"{temp}: no temperature threshold values returned")
+                self.logger.error(f"{temp}: no temperature threshold values returned")
                 continue
 
             # Update caches
@@ -3378,7 +3372,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
     ) -> str | dict[str, float]:
         """
-        Return the temperature thresholds set in firmware.
+        Return the voltage thresholds set in firmware.
 
         :return: A serialised dictionary containing the thresholds.
             or a null string.
@@ -3386,11 +3380,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         hw_voltages: str = json.dumps(
             self.hw_firmware_thresholds.to_device_property_dict().get("voltages", {})
         )
-        db_thresholds = self.db_firmware_thresholds.to_device_property_dict()
-        self.logger.info(
-            f'Database reads: {json.dumps(db_thresholds.get("voltages", {}))}'
-        )
-        self.logger.info(f"hw reads: {hw_voltages}")
         return hw_voltages
 
     @firmwareVoltageThresholds.write  # type: ignore[no-redef]
@@ -3453,7 +3442,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
             if not set_values:
-                self.logger.warning(
+                self.logger.error(
                     f"{voltage}: no threshold values returned from firmware"
                 )
                 continue
@@ -3476,7 +3465,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
     ) -> str | dict[str, float]:
         """
-        Return the temperature thresholds set in firmware.
+        Return the current thresholds set in firmware.
 
         :return: A serialised dictionary containing the thresholds.
             or a null string.
@@ -3484,11 +3473,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         hw_currents = json.dumps(
             self.hw_firmware_thresholds.to_device_property_dict().get("currents", {})
         )
-        db_thresholds = self.db_firmware_thresholds.to_device_property_dict()
-        self.logger.info(
-            f'Database reads: {json.dumps(db_thresholds.get("currents", {}))}'
-        )
-        self.logger.info(f"hw reads: {hw_currents}")
         return hw_currents
 
     # pylint: disable=too-many-locals
@@ -3547,7 +3531,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
             if not set_values:
-                self.logger.warning(
+                self.logger.error(
                     f"{current}: firmware did not return threshold values"
                 )
                 continue
@@ -3668,11 +3652,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile, req_type: tango.AttReqType
     ) -> bool:
         """
-        Return a flag representing whether we are in Engineering mode.
+        Return a flag representing whether we are allowed to access the attribute.
 
         :param req_type: the request type
 
-        :return: True if Tile is in Engineering Mode.
+        :return: True if access is allowed.
         """
         if req_type == tango.AttReqType.READ_REQ:
             return True
@@ -5223,15 +5207,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :param kwargs: unspecified keyword arguments. This should be empty and is
                 provided for type hinting only
 
-            :return: True if the re-evaluated TpmStatus differs from the
-                automated evaluation.
+            :return: True if the firmware thresholds in the
+                database match the thresholds read from firmware.
             """
             # Update db firmware threshold cache from database.
             self._device.firmware_threshold_db_interface.resync_with_db()
 
             # Update hw firmware threshold cache from read.
             self._device.hw_firmware_thresholds = (
-                self._component_manager._read_firmware_thresholds()
+                self._component_manager.read_firmware_thresholds()
             )
             self._device._handle_firmware_read()
             is_match: bool = self._device._check_database_match()

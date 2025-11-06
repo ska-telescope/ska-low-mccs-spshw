@@ -122,8 +122,8 @@ ska-tango-devices:
 
       timing_pll_40g_count->max_alarm: 1
 
-      ppsDrift->max_alarm: 4
-      ppsDrift->max_warning: 2
+      ppsDrift->max_alarm: 10
+      ppsDrift->max_warning: 4
 
       temperatureADC0->max_alarm: 90.0
       temperatureADC0->min_alarm: 10.0
@@ -201,15 +201,8 @@ ska-tango-devices:
       fpga2Temperature->min_warning: 16.0
       fpga2Temperature->min_alarm: 15.0
 
-      currentFE0->max_alarm: 2.62
-      currentFE0->max_warning: 2.60
-      currentFE0->min_warning: 2.40
-      currentFE0->min_alarm: 2.37
-
-      currentFE1->max_alarm: 2.62
-      currentFE1->max_warning: 2.60
-      currentFE1->min_warning: 2.40
-      currentFE1->min_alarm: 2.37
+      currentFE0->max_alarm: 3.0
+      currentFE1->max_alarm: 3.0
 
       voltageAVDD3->max_alarm: 2.6
       voltageAVDD3->max_warning: 2.57
@@ -325,13 +318,9 @@ ska-tango-devices:
 
       powerSupplyPowers->max_alarm: 600.0
       powerSupplyPowers->max_warning: 550.0
-      powerSupplyPowers->min_warning: 50.0
-      powerSupplyPowers->min_alarm: 0.0
 
-      powerSupplyVoltages->max_alarm: 253.0
-      powerSupplyVoltages->max_warning: 250.0
-      powerSupplyVoltages->min_warning: 210.0
-      powerSupplyVoltages->min_alarm: 207.0
+      powerSupplyVoltages->max_alarm: 12.6
+      powerSupplyVoltages->min_alarm: 11.4
 
       internalVoltages1V1->max_alarm: 1.13
       internalVoltages1V1->min_alarm: 1.07
@@ -368,6 +357,11 @@ ska-tango-devices:
 
       internalVoltagesSOC->max_alarm: 1.39
       internalVoltagesSOC->min_alarm: 1.31
+
+      tpmVoltages->max_alarm: 12.6
+      tpmVoltages->min_alarm: 11.4
+
+      tpmPowers->max_alarm: 120.0
 
   # devices:
   #   MccsTile:

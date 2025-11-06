@@ -13,6 +13,7 @@ import json
 import logging
 import unittest
 from typing import Any, Iterator
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -98,6 +99,9 @@ def integration_test_context_fixture(
     subrack_bay: int,
     patched_tile_device_class: MccsTile,
     daq_id: int,
+    db_temperature_thresholds: dict[str, Any],
+    db_voltage_thresholds: dict[str, Any],
+    db_current_thresholds: dict[str, Any],
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which both subrack simulator and Tango device are running.
@@ -110,29 +114,43 @@ def integration_test_context_fixture(
     :param patched_tile_device_class: A MccsTile class patched with
         some command to help testing.
     :param daq_id: the ID number of the DAQ receiver.
+    :param db_temperature_thresholds: fixture containing the mocked temperature
+        thresholds in db at point of startup.
+    :param db_voltage_thresholds: fixture containing the mocked voltage
+        thresholds in db at point of startup.
+    :param db_current_thresholds: fixture containing the mocked current
+        thresholds in db at point of startup.
 
     :yields: a test context.
     """
-    harness = SpsTangoTestHarness()
-    harness.add_subrack_simulator(subrack_id, subrack_simulator)
-    harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
-    harness.add_pdu_device(
-        "ENLOGIC", "10.135.253.170", "public", logging_level=int(LoggingLevel.ERROR)
-    )
-    harness.add_power_marshaller_device()
-    harness.add_tile_device(
-        tile_id,
-        subrack_id,
-        subrack_bay=subrack_bay,
-        device_class=patched_tile_device_class,
-    )
-    harness.set_sps_station_device(
-        subrack_ids=[subrack_id],
-        tile_ids=[tile_id],
-    )
+    with patch(
+        "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
+    ) as mock_tango_db:
+        mock_tango_db.return_value.get_device_attribute_property.return_value = {
+            "temperatures": db_temperature_thresholds,
+            "voltages": db_voltage_thresholds,
+            "currents": db_current_thresholds,
+        }
+        harness = SpsTangoTestHarness()
+        harness.add_subrack_simulator(subrack_id, subrack_simulator)
+        harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
+        harness.add_pdu_device(
+            "ENLOGIC", "10.135.253.170", "public", logging_level=int(LoggingLevel.ERROR)
+        )
+        harness.add_power_marshaller_device()
+        harness.add_tile_device(
+            tile_id,
+            subrack_id,
+            subrack_bay=subrack_bay,
+            device_class=patched_tile_device_class,
+        )
+        harness.set_sps_station_device(
+            subrack_ids=[subrack_id],
+            tile_ids=[tile_id],
+        )
 
-    with harness as context:
-        yield context
+        with harness as context:
+            yield context
 
 
 @pytest.fixture(name="patched_tile_device_class")

@@ -58,6 +58,13 @@ from .attribute_managers import (
     BoolAttributeManager,
     NpArrayAttributeManager,
 )
+from .firmware_threshold_interface import (
+    CURRENT_KEYS,
+    TEMPERATURE_KEYS,
+    VOLTAGE_KEYS,
+    FirmwareThresholds,
+    FirmwareThresholdsDbAdapter,
+)
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
 from .tpm_status import TpmStatus
@@ -214,6 +221,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._stopping: bool
         self._health_recorder: HealthRecorder | None = None
         self._health_report = ""
+        self.hw_firmware_thresholds: FirmwareThresholds
+        self.db_firmware_thresholds: FirmwareThresholds
+        self.db_configuration_fault: tuple[bool | None, str] = (
+            None,
+            "No information gathered",
+        )
+        self.component_manager_fault: bool | None = None
+        self.power_state: PowerState | None = None
+        self.status_information: dict[str, str] = {}
 
     def delete_device(self: MccsTile) -> Any:
         """
@@ -228,6 +244,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # We do not want to raise a exception here
             # This can cause a segfault.
             self.component_manager.stop_communicating()
+            if self.component_manager._subrack_proxy:
+                self.component_manager._subrack_proxy.unsubscribe_all_change_events()
             del self.component_manager
             self._stopping = True
             if self._health_recorder is not None:
@@ -415,30 +433,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_clocks": clocks_to_list,
             "adc_sysref_counter": adc_to_list,
             "adc_sysref_timing_requirements": adc_to_list,
-            "timing_pll_status": lambda val: int(val[0])
-            if val[0] is not None
-            else None,
-            "timing_pll_40g_status": lambda val: int(val[0])
-            if val[0] is not None
-            else None,
-            "fpga0_qpll_status": lambda val: int(val[0])
-            if val[0] is not None
-            else None,
-            "fpga1_qpll_status": lambda val: int(val[0])
-            if val[0] is not None
-            else None,
+            "timing_pll_status": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
+            "timing_pll_40g_status": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
+            "fpga0_qpll_status": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
+            "fpga1_qpll_status": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
             "f2f_pll_status": lambda val: int(val[0]) if val[0] is not None else None,
             "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
             "f2f_pll_counter": lambda val: int(val[1]) if val[1] is not None else None,
-            "timing_pll_40g_count": lambda val: int(val[1])
-            if val[1] is not None
-            else None,
-            "fpga0_qpll_counter": lambda val: int(val[1])
-            if val[1] is not None
-            else None,
-            "fpga1_qpll_counter": lambda val: int(val[1])
-            if val[1] is not None
-            else None,
+            "timing_pll_40g_count": lambda val: (
+                int(val[1]) if val[1] is not None else None
+            ),
+            "fpga0_qpll_counter": lambda val: (
+                int(val[1]) if val[1] is not None else None
+            ),
+            "fpga1_qpll_counter": lambda val: (
+                int(val[1]) if val[1] is not None else None
+            ),
             "coreCommunicationStatus": serialise_object,
             "voltages": serialise_object,
             "temperatures": serialise_object,
@@ -754,6 +772,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
+        self.db_firmware_thresholds = FirmwareThresholds()
+        self.hw_firmware_thresholds = FirmwareThresholds()
+        self.firmware_threshold_db_interface = FirmwareThresholdsDbAdapter(
+            device_name=self.get_name(),
+            thresholds=self.db_firmware_thresholds,
+            logger=self.logger,
+        )
+
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
@@ -783,6 +809,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
         for attr_name in self._attribute_state:
+            self.set_change_event(attr_name, True, self.VerifyEvents)
+            self.set_archive_event(attr_name, True, self.VerifyEvents)
+
+        for attr_name in [
+            "firmwareVoltageThresholds",
+            "firmwareCurrentThresholds",
+            "firmwareTemperatureThresholds",
+        ]:
             self.set_change_event(attr_name, True, self.VerifyEvents)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
 
@@ -898,10 +932,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
             ("EvaluateTileProgrammingState", self.EvaluateTileProgrammingStateCommand),
-            (
-                "SetFirmwareTemperatureThresholds",
-                self.SetFirmwareTemperatureThresholdsCommand,
-            ),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
             ("WriteRegister", self.WriteRegisterCommand),
@@ -939,10 +969,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
             ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
             ("StopAntennaBuffer", self.StopAntennaBufferCommand),
-            ("GetVoltageWarningThresholds", self.GetVoltageWarningThresholdsCommand),
-            ("SetVoltageWarningThresholds", self.SetVoltageWarningThresholdsCommand),
-            ("GetCurrentWarningThresholds", self.GetCurrentWarningThresholdsCommand),
-            ("SetCurrentWarningThresholds", self.SetCurrentWarningThresholdsCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -1002,6 +1028,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self._command_tracker,
                 self.component_manager,
                 callback=None,
+                logger=self.logger,
+            ),
+        )
+        self.register_command_object(
+            command_name="UpdateThresholdCache",
+            command_object=MccsTile.UpdateThresholdCacheCommand(
+                device=self,
+                component_manager=self.component_manager,
                 logger=self.logger,
             ),
         )
@@ -1104,6 +1138,62 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
+    def _handle_firmware_read(self: MccsTile) -> None:
+        """Handle a firmware read by pushing appropriate attribute events."""
+        hw_threshold_cache = self.hw_firmware_thresholds.to_device_property_dict()
+
+        for group, attr_value in hw_threshold_cache.items():
+            group_attribute_map = {
+                "voltages": "firmwareVoltageThresholds",
+                "currents": "firmwareCurrentThresholds",
+                "temperatures": "firmwareTemperatureThresholds",
+            }
+            serialised_value = json.dumps(attr_value)
+            self.push_change_event(group_attribute_map[group], serialised_value)
+            self.push_archive_event(group_attribute_map[group], serialised_value)
+
+    def _check_database_match(self: MccsTile) -> bool:
+        """
+        Compare firmware thresholds from the database against read values.
+
+        Ignores any thresholds marked as 'Undefined' in the database.
+
+        :returns: True if all defined DB values match the read values, else False.
+        """
+        db_thresholds_cache = self.db_firmware_thresholds.to_device_property_dict()
+        hw_threshold_cache = self.hw_firmware_thresholds.to_device_property_dict()
+
+        self.logger.debug(f"{db_thresholds_cache=}")
+        self.logger.debug(f"{hw_threshold_cache=}")
+
+        error_msgs: list[str] = []
+
+        for group, db_thresholds in db_thresholds_cache.items():
+            read_threshold_group = hw_threshold_cache.get(group, {})
+
+            for threshold, db_value in db_thresholds.items():
+                if db_value == "Undefined":
+                    continue  # Skip undefined thresholds in db
+
+                read_value = read_threshold_group.get(threshold)
+                if read_value is None or db_value != read_value:
+                    error_msgs.append(
+                        f"[{group}.{threshold}] DB={db_value!r}, HW={read_value!r}"
+                    )
+
+        if error_msgs:
+            joined_msg = "; ".join(error_msgs)
+            self.logger.error(f"Database mismatch detected: {joined_msg}")
+            self._component_state_changed(
+                db_configuration_fault=(True, f"Configuration mismatch: {joined_msg}")
+            )
+            return False
+
+        self._component_state_changed(
+            db_configuration_fault=(False, "Configuration match")
+        )
+        return True
+
     def _update_attribute_callback(
         self: MccsTile,
         mark_invalid: bool = False,
@@ -1120,6 +1210,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         tile_health_structure=self.tile_health_structure
                     )
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
+            elif attribute_name == "firmware_thresholds":
+                self.logger.debug(
+                    "hw read thresholds reporting "
+                    f"{attribute_value.to_device_property_dict()}"
+                )
+                self.hw_firmware_thresholds = attribute_value
+                self._check_database_match()
+                self._handle_firmware_read()
+
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             else:
@@ -1144,6 +1243,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         *,
         fault: bool | None = None,
         power: PowerState | None = None,
+        db_configuration_fault: tuple[bool, str] | None = None,
         **state_change: Any,
     ) -> None:
         """
@@ -1155,16 +1255,86 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param fault: whether the component is in fault or not
         :param power: the power state of the component
         :param state_change: other state updates
+        :param db_configuration_fault: a tuple with status and information
+            about whether we are experiencing a configuration fault.
         """
         if power in [PowerState.OFF, PowerState.UNKNOWN]:
             for attr in self._attribute_state.values():
                 attr.mark_stale()
-        super()._component_state_changed(fault=fault, power=power)
+
+        if power is not None:
+            self.power_state = power
+        if fault is not None:
+            self.component_manager_fault = fault
+        if db_configuration_fault is not None:
+            self.db_configuration_fault = db_configuration_fault
+
+        # Propagate power state to base implementation
+        super()._component_state_changed(power=power)
+
+        # Only evaluate and propagate fault if the tile is ON
+        if self.power_state == PowerState.ON:
+            super()._component_state_changed(
+                fault=self._evaluate_fault(
+                    db_configuration_fault=db_configuration_fault, polling_fault=fault
+                )
+            )
+
         if not self.UseAttributesForHealth:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power)
             else:
                 self._health_model.update_state(fault=fault)
+
+    def _evaluate_fault(
+        self: MccsTile,
+        db_configuration_fault: tuple[bool, str] | None = None,
+        polling_fault: bool | None = None,
+    ) -> bool | None:
+        if polling_fault is not None:
+            self.component_manager_fault = polling_fault
+            self.status_information["polling_fault"] = (
+                "No fault"
+                if self.component_manager_fault is False
+                else "Reported power from subrack in dissagreement with polling"
+            )
+
+        if db_configuration_fault is not None:
+            self.db_configuration_fault = db_configuration_fault
+            self.status_information[
+                "firmware_configuration_status"
+            ] = self.db_configuration_fault[1]
+
+        # Extract current effective flags
+        cm_fault = self.component_manager_fault
+        db_fault_flag = (
+            self.db_configuration_fault[0] if self.db_configuration_fault else None
+        )
+        # Fault evaluation logic.
+        # Case 1: Both None → insufficient info
+        if cm_fault is None and db_fault_flag is None:
+            self.logger.debug(
+                f"Incomplete fault information: "
+                f"{self.db_configuration_fault=}, {self.component_manager_fault=}"
+            )
+            has_fault = None
+        # Case 2: Any True → overall True
+        elif cm_fault is True or db_fault_flag is True:
+            has_fault = True
+        # Case 3: Both explicitly False → overall False
+        elif cm_fault is False and db_fault_flag is False:
+            has_fault = False
+        # Case 4: One None, one False → still uncertain → None
+        else:
+            has_fault = None
+
+        # Log and update component status if a fault is detected
+        if has_fault is True:
+            fault_json = json.dumps(self.status_information)
+            self.logger.error(f"Fault detected: {fault_json}")
+            self.set_status(status=fault_json)
+
+        return has_fault
 
     def unpack_alarms(
         self: MccsTile,
@@ -1325,7 +1495,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
@@ -3129,7 +3298,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.logger.info(message)
         self.component_manager.set_station_id(value)
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
     def firmwareTemperatureThresholds(
         self: MccsTile,
     ) -> str | dict[str, float]:
@@ -3139,7 +3308,253 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
-        return json.dumps(self.component_manager.get_tpm_temperature_thresholds())
+        hw_temperatures: str = json.dumps(
+            self.hw_firmware_thresholds.to_device_property_dict().get(
+                "temperatures", {}
+            )
+        )
+        return hw_temperatures
+
+    @firmwareTemperatureThresholds.write  # type: ignore[no-redef]
+    def firmwareTemperatureThresholds(self: MccsTile, value: str) -> None:
+        """
+        Write the temperature thresholds in firmware.
+
+        :param value: A json serialised string with the thresholds.
+        """
+        temperature_keys: list[str] = TEMPERATURE_KEYS
+
+        thresholds: dict[str, Any] = json.loads(value)
+
+        arg_map = {
+            "board": "max_board_alarm_threshold",
+            "fpga1": "max_fpga1_alarm_threshold",
+            "fpga2": "max_fpga2_alarm_threshold",
+        }
+
+        for temp in temperature_keys:
+            thr_name = f"{temp}_alarm_threshold"
+            thr_val = thresholds.get(thr_name)
+
+            # Skip missing values
+            if thr_val is None:
+                continue
+
+            # Handle undefined threshold
+            if thr_val == "Undefined":
+                self.logger.debug(f"{temp}: threshold explicitly undefined")
+                setattr(self.db_firmware_thresholds, thr_name, "Undefined")
+                continue
+
+            # Apply to firmware
+            self.logger.debug(f"Setting {temp}: threshold={thr_val}")
+            set_values = self.component_manager.set_tpm_temperature_thresholds(
+                **{arg_map[temp]: thr_val}
+            )
+
+            if not set_values:
+                self.logger.error(f"{temp}: no temperature threshold values returned")
+                continue
+
+            # Update caches
+            for target in (self.hw_firmware_thresholds, self.db_firmware_thresholds):
+                setattr(target, thr_name, set_values[thr_name])
+
+        # Commit changes and validate
+        self.firmware_threshold_db_interface.write_threshold_to_db()
+        self._check_database_match()
+        self._handle_firmware_read()
+
+    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
+    def firmwareVoltageThresholds(
+        self: MccsTile,
+    ) -> str | dict[str, float]:
+        """
+        Return the voltage thresholds set in firmware.
+
+        :return: A serialised dictionary containing the thresholds.
+            or a null string.
+        """
+        hw_voltages: str = json.dumps(
+            self.hw_firmware_thresholds.to_device_property_dict().get("voltages", {})
+        )
+        return hw_voltages
+
+    @firmwareVoltageThresholds.write  # type: ignore[no-redef]
+    def firmwareVoltageThresholds(self: MccsTile, value: str) -> None:
+        """
+        Set the voltage thresholds in the firmware.
+
+        :param value: A json serialised string with the thresholds.
+
+        :raises ValueError: When only one threshold is defined,
+            you must define min and max.
+        """
+        voltage_keys: list[str] = VOLTAGE_KEYS
+
+        # Flatten allowed voltage keys into full threshold names
+        allowed_keys = {f"{v}_min_alarm_threshold" for v in voltage_keys} | {
+            f"{v}_max_alarm_threshold" for v in voltage_keys
+        }
+
+        thresholds: dict[str, Any] = json.loads(value)
+
+        # Validate threshold keys
+        for key in thresholds.keys():
+            if key not in allowed_keys:
+                raise ValueError(
+                    f"Invalid threshold key: {key}. "
+                    f"Must be one of {sorted(allowed_keys)}"
+                )
+
+        for voltage in voltage_keys:
+            min_name = f"{voltage}_min_alarm_threshold"
+            max_name = f"{voltage}_max_alarm_threshold"
+            min_val = thresholds.get(min_name)
+            max_val = thresholds.get(max_name)
+
+            # Validate consistency
+            if (min_val is None) ^ (max_val is None):  # only one defined
+                raise ValueError(
+                    f"Inconsistent voltage thresholds for {voltage}: "
+                    f"min={min_val}, max={max_val}. Both must be defined or both None."
+                )
+
+            # Skip undefined voltages
+            if min_val is None:
+                continue
+
+            # Handle "Undefined" explicitly
+            if min_val == "Undefined" or max_val == "Undefined":
+                self.logger.debug(f"{voltage}: thresholds explicitly undefined")
+
+                if min_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, min_name, "Undefined")
+
+                if max_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, max_name, "Undefined")
+
+                continue
+
+            # Set thresholds in firmware and caches
+            self.logger.debug(f"Setting {voltage}: min={min_val}, max={max_val}")
+            set_values = self.component_manager.set_voltage_warning_thresholds(
+                voltage=voltage.upper(),
+                min_thr=min_val,
+                max_thr=max_val,
+            )
+
+            if not set_values:
+                self.logger.error(
+                    f"{voltage}: no threshold values returned from firmware"
+                )
+                continue
+
+            # Update firmware and DB caches
+            for name, src, val_key in (
+                (min_name, self.hw_firmware_thresholds, "min"),
+                (max_name, self.hw_firmware_thresholds, "max"),
+            ):
+                setattr(src, name, set_values[val_key])
+                setattr(self.db_firmware_thresholds, name, thresholds[name])
+
+        # Commit updates
+        self.firmware_threshold_db_interface.write_threshold_to_db()
+        self._check_database_match()
+        self._handle_firmware_read()
+
+    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
+    def firmwareCurrentThresholds(
+        self: MccsTile,
+    ) -> str | dict[str, float]:
+        """
+        Return the current thresholds set in firmware.
+
+        :return: A serialised dictionary containing the thresholds.
+            or a null string.
+        """
+        hw_currents = json.dumps(
+            self.hw_firmware_thresholds.to_device_property_dict().get("currents", {})
+        )
+        return hw_currents
+
+    # pylint: disable=too-many-locals
+    @firmwareCurrentThresholds.write  # type: ignore[no-redef]
+    def firmwareCurrentThresholds(self: MccsTile, value: str) -> None:
+        """
+        Set the Current thresholds in firmware.
+
+        :param value: A json serialised string with the thresholds.
+
+        :raises ValueError: When only one threshold is defined,
+            you must define min and max.
+        """
+        current_keys = CURRENT_KEYS
+        thresholds: dict[str, Any] = json.loads(value)
+
+        # Build the set of valid threshold keys
+        valid_keys = {f"{current}_min_alarm_threshold" for current in current_keys} | {
+            f"{current}_max_alarm_threshold" for current in current_keys
+        }
+
+        # Check for invalid keys in the input
+        invalid_keys = set(thresholds.keys()) - valid_keys
+        if invalid_keys:
+            raise ValueError(f"Invalid threshold keys provided: {invalid_keys}")
+
+        for current in current_keys:
+            min_key = f"{current}_min_alarm_threshold"
+            max_key = f"{current}_max_alarm_threshold"
+            min_val = thresholds.get(min_key)
+            max_val = thresholds.get(max_key)
+
+            # Validate completeness
+            if (min_val is None) ^ (max_val is None):
+                raise ValueError(
+                    f"Inconsistent current thresholds for {current}: "
+                    f"min={min_val}, max={max_val}. Both must be defined or both None."
+                )
+
+            if min_val is None:  # skip undefined
+                continue
+
+            # Handle "Undefined"
+            if min_val == "Undefined" or max_val == "Undefined":
+                self.logger.debug(f"{current}: thresholds explicitly undefined")
+
+                if min_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, min_key, "Undefined")
+
+                if max_val == "Undefined":
+                    setattr(self.db_firmware_thresholds, max_key, "Undefined")
+
+                continue
+
+            # Apply thresholds to firmware
+            self.logger.debug(f"Setting {current}: min={min_val}, max={max_val}")
+            set_values = self.component_manager.set_current_warning_thresholds(
+                current=current,
+                min_thr=min_val,
+                max_thr=max_val,
+            )
+
+            if not set_values:
+                self.logger.error(
+                    f"{current}: firmware did not return threshold values"
+                )
+                continue
+
+            # Update caches
+            for name, src, val_key in (
+                (min_key, self.hw_firmware_thresholds, "min"),
+                (max_key, self.hw_firmware_thresholds, "max"),
+            ):
+                setattr(src, name, set_values[val_key])
+                setattr(self.db_firmware_thresholds, name, thresholds[name])
+
+        self.firmware_threshold_db_interface.write_threshold_to_db()
+        self._check_database_match()
+        self._handle_firmware_read()
 
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
@@ -3222,6 +3637,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             tango.Except.throw_exception(reason, msg, self.get_name())
 
         return is_engineering
+
+    def is_firmware_threshold_allowed(
+        self: MccsTile, req_type: tango.AttReqType
+    ) -> bool:
+        """
+        Return a flag representing whether we are allowed to access the attribute.
+
+        :param req_type: the request type
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        if self.component_manager._initialise_executing is True:
+            reason = "CommandNotAllowed"
+            msg = "Cannot execute this command while initialise is executing!"
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+        is_engineering = self._admin_mode == AdminMode.ENGINEERING
+        if not is_engineering:
+            reason = "CommandNotAllowed"
+            msg = (
+                "To execute this command we must be in adminMode Engineering "
+                f"Tile is currently in adminMode {AdminMode(self._admin_mode).name}"
+            )
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+        return True
 
     def _not_initialising(self: MccsTile, *args: Any) -> bool:
         """
@@ -3944,6 +4387,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._health_report
         self._health_model.set_logger(self.logger)
         return self._health_model.health_report
+
+    @attribute(dtype="DevString")
+    def faultReport(self: MccsTile) -> str:
+        """
+        Get the fault report.
+
+        :return: the fault report.
+        """
+        return json.dumps(self.status_information)
 
     @attribute(dtype="DevString")
     def srcip40gfpga1(self: MccsTile) -> str:
@@ -4710,6 +5162,71 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("Initialise")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
+
+    class UpdateThresholdCacheCommand(FastCommand):
+        """Class for handling the UpdateThresholdCacheCommand() command."""
+
+        def __init__(
+            self: MccsTile.UpdateThresholdCacheCommand,
+            device: MccsTile,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new UpdateThresholdCacheCommand instance.
+
+            :param device: the device this command belongs.
+            :param component_manager: the device component manager
+                to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._device = device
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.UpdateThresholdCacheCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.UpdateThresholdCache` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: True if the firmware thresholds in the
+                database match the thresholds read from firmware.
+            """
+            # Update db firmware threshold cache from database.
+            self._device.firmware_threshold_db_interface.resync_with_db()
+
+            # Update hw firmware threshold cache from read.
+            self._device.hw_firmware_thresholds = (
+                self._component_manager.read_firmware_thresholds()
+            )
+            self._device._handle_firmware_read()
+            is_match: bool = self._device._check_database_match()
+            return is_match
+
+    @command(dtype_out="DevBoolean", fisallowed="is_engineering")
+    def UpdateThresholdCache(self: MccsTile) -> bool:
+        """
+        Re-sync the threshold caches.
+
+        Re-sync the db thresholds and the firmware thresholds
+        and compare the two, transitioning to fault when they do not match.
+
+        NOTE: this command is deprecated, it has been put in to alleviate
+        potential issues with ADR-115 firmware threshold work, in the case
+        of bugs.
+
+        :return: True if the database matches the firmware, False otherwise.
+        """
+        handler = self.get_command_object("UpdateThresholdCache")
+        return handler()
 
     class EvaluateTileProgrammingStateCommand(FastCommand):
         """Class for handling the EvaluateTileProgrammingStateCommand() command."""
@@ -7687,104 +8204,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f" \n"
         )
 
-    class SetFirmwareTemperatureThresholdsCommand(FastCommand):
-        """Class for handling the SetFirmwareTemperatureThresholds(argin) command."""
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_SetTemperatureThresholds.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.SetFirmwareTemperatureThresholdsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new SetFirmwareTemperatureThresholdsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "SetFirmwareTemperatureThresholds", self.SCHEMA, logger
-            )
-            super().__init__(logger, validator)
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetFirmwareTemperatureThresholdsCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetFirmwareTemperatureThresholds` command.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            max_board_temperature_threshold = kwargs.get(
-                "max_board_temperature_threshold"
-            )
-            max_fpga1_temperature_threshold = kwargs.get(
-                "max_fpga1_temperature_threshold"
-            )
-            max_fpga2_temperature_threshold = kwargs.get(
-                "max_fpga2_temperature_threshold"
-            )
-
-            return self._component_manager.set_tpm_temperature_thresholds(
-                max_board_alarm_threshold=max_board_temperature_threshold,
-                max_fpga1_alarm_threshold=max_fpga1_temperature_threshold,
-                max_fpga2_alarm_threshold=max_fpga2_temperature_threshold,
-            )
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetFirmwareTemperatureThresholds(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Specify the temperature thresholds in the firmware.
-
-        NOTE: This method may only be used in ENGINEERING mode.
-
-
-        :param argin: a json serialised dictionary containing the following keys:
-
-            * max_board_temperature_threshold: The maximum alarm thresholds
-                for the board (unit: Degree Celsius)
-            * max_fpga1_temperature_threshold: The maximum alarm thresholds
-                for the fpga1 (unit: Degree Celsius)
-            * max_fpga2_temperature_threshold: The maximum alarm thresholds
-                for the fpga2 (unit: Degree Celsius)
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :raises PermissionError: If this command is executed when not in
-            ENGINEERING mode.
-
-        :example:
-
-        >>> thresholds = {"max_board_temperature_threshold": 45}
-        >>> json_thresholds = json.loads(thresholds)
-        >>> tile_device.SetFirmwareTemperatureThresholds(json_thresholds)
-        """
-        if self._admin_mode != AdminMode.ENGINEERING:
-            raise PermissionError("Must be in engineering mode to use this command.")
-        handler = self.get_command_object("SetFirmwareTemperatureThresholds")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
     # -------------
     # AntennaBuffer
     # -------------
@@ -7980,312 +8399,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
         return super().On()
-
-    class GetVoltageWarningThresholdsCommand(FastCommand):
-        """Class for handling the GetVoltageWarningThresholds() command."""
-
-        def __init__(
-            self: MccsTile.GetVoltageWarningThresholdsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new GetVoltageWarningThresholds instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.GetVoltageWarningThresholdsCommand,
-            *args: Any,
-            voltage: str = "",
-            **kwargs: Any,
-        ) -> str:
-            """
-            Implement :py:meth:`.MccsTile.GetVoltageWarningThresholds` command.
-
-            :param voltage: the voltage for which to get the warning thresholds.
-            :param args: unspecified arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A dictionary containing the warning thresholds for the specified
-                voltage, or for all voltages if no voltage is specified.
-            """
-            if voltage:
-                res = self._component_manager.get_voltage_warning_thresholds(voltage)
-                return res
-            res = self._component_manager.get_voltage_warning_thresholds()
-            return res
-
-    @command(dtype_in="DevString", dtype_out="DevString")
-    def GetVoltageWarningThresholds(self: MccsTile, voltage: str = "") -> str:
-        """
-        Return the voltage warning thresholds.
-
-        Note: Voltage names will be uppercased.
-
-        :param voltage: voltage to get thresholds for. If not specified,
-            the method will return thresholds for all voltages.
-        :return: a list of register values
-
-        """
-        handler = self.get_command_object("GetVoltageWarningThresholds")
-        return handler(voltage=voltage.upper())
-
-    class SetVoltageWarningThresholdsCommand(FastCommand):
-        """Class for handling the SetVoltageWarningThresholds() command."""
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_SetVoltageWarningThresholds.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.SetVoltageWarningThresholdsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetVoltageWarningThresholds instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "SetVoltageWarningThresholds", self.SCHEMA, logger
-            )
-            super().__init__(logger, validator)
-
-        def do(
-            self: MccsTile.SetVoltageWarningThresholdsCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> DevVarLongStringArrayType:
-            """
-            Implement :py:meth:`.MccsTile.SetVoltageWarningThresholds` command.
-
-            :param kwargs: A json string containing a dict with the following keys:
-                * voltage: the voltage for which to set the warning thresholds.
-                * min_thr: the minimum threshold for the specified voltage.
-                * max_thr: the maximum threshold for the specified voltage.
-            :param args: unspecified arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            voltage: str = kwargs.get("voltage", "")
-            min_thr: float = kwargs.get("min_thr", 0.0)
-            max_thr: float = kwargs.get("max_thr", 0.0)
-            if not all([voltage, min_thr, max_thr]):
-                self.logger.error(
-                    "All parameters must be supplied. Expected 'voltage', "
-                    "'min_thr', and 'max_thr'."
-                )
-                return (
-                    [ResultCode.REJECTED],
-                    [
-                        "All parameters must be supplied. Expected 'voltage', "
-                        "'min_thr', and 'max_thr'."
-                    ],
-                )
-            rc = self._component_manager.set_voltage_warning_thresholds(
-                voltage=voltage.upper(), min_thr=min_thr, max_thr=max_thr
-            )
-            if rc:
-                return (
-                    [ResultCode.OK],
-                    ["SetVoltageWarningThresholds command completed OK"],
-                )
-            return (
-                [ResultCode.FAILED],
-                [
-                    "SetVoltageWarningThresholds command failed to complete. "
-                    "Check voltage name is valid."
-                ],
-            )
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetVoltageWarningThresholds(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Set voltage warning thresholds in firmware.
-
-        Note: Voltage names will be uppercased.
-
-        :param argin: A json string containing a dictionary with the following keys:
-                * voltage: the voltage for which to set the warning thresholds.
-                * min_thr: the minimum threshold for the specified voltage.
-                * max_thr: the maximum threshold for the specified voltage.
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("SetVoltageWarningThresholds")
-        return handler(argin)
-
-    class GetCurrentWarningThresholdsCommand(FastCommand):
-        """Class for handling the GetCurrentWarningThresholds() command."""
-
-        def __init__(
-            self: MccsTile.GetCurrentWarningThresholdsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new GetCurrentWarningThresholds instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.GetCurrentWarningThresholdsCommand,
-            *args: Any,
-            current: str = "",
-            **kwargs: Any,
-        ) -> str:
-            """
-            Implement :py:meth:`.MccsTile.GetCurrentWarningThresholds` command.
-
-            :param current: the current for which to get the warning thresholds.
-            :param args: unspecified arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A dictionary containing the warning thresholds for the specified
-                current, or for all currents if no current is specified.
-            """
-            if current:
-                res = self._component_manager.get_current_warning_thresholds(current)
-                return res
-            res = self._component_manager.get_current_warning_thresholds()
-            return res
-
-    @command(dtype_in="DevString", dtype_out="DevString")
-    def GetCurrentWarningThresholds(self: MccsTile, current: str = "") -> str:
-        """
-        Return the current (I=P/V) warning thresholds.
-
-        Note: Current names are case sensitive.
-
-        :param current: current to get thresholds for. If not specified,
-            the method will return thresholds for all currents.
-        :return: a list of register values
-
-        """
-        handler = self.get_command_object("GetCurrentWarningThresholds")
-        return handler(current=current)
-
-    class SetCurrentWarningThresholdsCommand(FastCommand):
-        """Class for handling the SetCurrentWarningThresholds() command."""
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_SetCurrentWarningThresholds.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.SetCurrentWarningThresholdsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetCurrentWarningThresholds instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "SetCurrentWarningThresholds", self.SCHEMA, logger
-            )
-            super().__init__(logger, validator)
-
-        def do(
-            self: MccsTile.SetCurrentWarningThresholdsCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> DevVarLongStringArrayType:
-            """
-            Implement :py:meth:`.MccsTile.SetCurrentWarningThresholds` command.
-
-            :param kwargs: A json string containing a dict with the following keys:
-                * current: the current for which to set the warning thresholds.
-                * min_thr: the minimum threshold for the specified current.
-                * max_thr: the maximum threshold for the specified current.
-            :param args: unspecified arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            current: str = kwargs.get("current", "")
-            min_thr: float = kwargs.get("min_thr", 0.0)
-            max_thr: float = kwargs.get("max_thr", 0.0)
-            if not all([current, min_thr, max_thr]):
-                self.logger.error(
-                    "All parameters must be supplied. Expected 'current', "
-                    "'min_thr', and 'max_thr'."
-                )
-                return (
-                    [ResultCode.REJECTED],
-                    [
-                        "All parameters must be supplied. Expected 'current', "
-                        "'min_thr', and 'max_thr'."
-                    ],
-                )
-            rc = self._component_manager.set_current_warning_thresholds(
-                current=current, min_thr=min_thr, max_thr=max_thr
-            )
-            if rc:
-                return (
-                    [ResultCode.OK],
-                    ["SetCurrentWarningThresholds command completed OK"],
-                )
-            return (
-                [ResultCode.FAILED],
-                [
-                    "SetCurrentWarningThresholds command failed to complete. "
-                    "Check current name is valid."
-                ],
-            )
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetCurrentWarningThresholds(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
-        """
-        Set current (I=P/V) warning thresholds in firmware.
-
-        Note: Current names are case sensitive.
-
-        :param argin: A json string containing a dictionary with the following keys:
-                * current: the current for which to set the warning thresholds.
-                * min_thr: the minimum threshold for the specified current.
-                * max_thr: the maximum threshold for the specified current.
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        handler = self.get_command_object("SetCurrentWarningThresholds")
-        return handler(argin)
 
 
 # ----------

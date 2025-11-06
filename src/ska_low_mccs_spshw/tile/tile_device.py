@@ -1138,6 +1138,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
+    def _handle_firmware_read(self: MccsTile) -> None:
+        """Handle a firmware read by pushing appropriate attribute events."""
+        hw_threshold_cache = self.hw_firmware_thresholds.to_device_property_dict()
+
+        for group, attr_value in hw_threshold_cache.items():
+            group_attribute_map = {
+                "voltages": "firmwareVoltageThresholds",
+                "currents": "firmwareCurrentThresholds",
+                "temperatures": "firmwareTemperatureThresholds",
+            }
+            serialised_value = json.dumps(attr_value)
+            self.push_change_event(group_attribute_map[group], serialised_value)
+            self.push_archive_event(group_attribute_map[group], serialised_value)
+
     def _check_database_match(self: MccsTile) -> bool:
         """
         Compare firmware thresholds from the database against read values.
@@ -1166,14 +1180,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     error_msgs.append(
                         f"[{group}.{threshold}] DB={db_value!r}, HW={read_value!r}"
                     )
-            group_attribute_map = {
-                "voltages": "firmwareVoltageThresholds",
-                "currents": "firmwareCurrentThresholds",
-                "temperatures": "firmwareTemperatureThresholds",
-            }
-            attr_value = json.dumps(read_threshold_group)
-            self.push_change_event(group_attribute_map[group], attr_value)
-            self.push_archive_event(group_attribute_map[group], attr_value)
 
         if error_msgs:
             joined_msg = "; ".join(error_msgs)
@@ -1211,6 +1217,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 )
                 self.hw_firmware_thresholds = attribute_value
                 self._check_database_match()
+                self._handle_firmware_read()
 
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
@@ -3362,6 +3369,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Commit changes and validate
         self.firmware_threshold_db_interface.write_threshold_to_db()
         self._check_database_match()
+        self._handle_firmware_read()
 
     @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
     def firmwareVoltageThresholds(
@@ -3459,6 +3467,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Commit updates
         self.firmware_threshold_db_interface.write_threshold_to_db()
         self._check_database_match()
+        self._handle_firmware_read()
 
     @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
     def firmwareCurrentThresholds(
@@ -3551,6 +3560,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         self.firmware_threshold_db_interface.write_threshold_to_db()
         self._check_database_match()
+        self._handle_firmware_read()
 
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
@@ -5221,8 +5231,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._device.hw_firmware_thresholds = (
                 self._component_manager._read_firmware_thresholds()
             )
-
-            return self._device._check_database_match()
+            self._device._handle_firmware_read()
+            is_match: bool = self._device._check_database_match()
+            return is_match
 
     @command(dtype_out="DevBoolean", fisallowed="is_engineering")
     def UpdateThresholdCache(self: MccsTile) -> bool:

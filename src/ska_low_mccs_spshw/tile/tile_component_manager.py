@@ -728,21 +728,35 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: the firmwareThesholds.
         """
+        threshold_read_warning_limit: float = 0.1  # [s]
+
         with acquire_timeout(
             lock=self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            t1 = time.time()
+            start = time.perf_counter()
+
+            # Read temperature thresholds
             temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
-            t2 = time.time()
-            self.logger.info(f"Temperatures read took {t2-t1} (s)")
+            t1 = time.perf_counter()
+            dt_temp = t1 - start
+            if dt_temp > threshold_read_warning_limit:
+                self.logger.warning(f"Temperatures read took {dt_temp:.3f}s")
+
+            # Read current thresholds
             current_thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
-            t3 = time.time()
-            self.logger.info(f"Currents read took {t3-t2} (s)")
+            t2 = time.perf_counter()
+            dt_curr = t2 - t1
+            if dt_curr > threshold_read_warning_limit:
+                self.logger.warning(f"Currents read took {dt_curr:.3f}s")
+
+            # Read voltage thresholds
             voltage_thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
-            t4 = time.time()
-            self.logger.info(f"Voltage read took {t4-t3} (s)")
+            t3 = time.perf_counter()
+            dt_volt = t3 - t2
+            if dt_volt > threshold_read_warning_limit:
+                self.logger.warning(f"Voltage read took {dt_volt:.3f}s")
 
         # Package values read into class.
         thresholds = FirmwareThresholds()

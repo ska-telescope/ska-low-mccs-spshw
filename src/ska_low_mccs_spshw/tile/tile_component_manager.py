@@ -722,9 +722,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     continue
 
-    def _read_firmware_thresholds(self) -> FirmwareThresholds:
+    def read_firmware_thresholds(self) -> FirmwareThresholds:
         """
-        Read voltage thresholds fron firmware.
+        Read all thresholds from firmware and save in cache.
 
         :return: the firmwareThesholds.
         """
@@ -1602,7 +1602,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
         pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
-        firmware_thresholds = self._with_hardware_lock(self._read_firmware_thresholds)
+        firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
 
         self._update_attribute_callback(
             static_delays=static_delays,

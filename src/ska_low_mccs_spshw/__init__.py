@@ -13,11 +13,13 @@ for, amongst other things, monitoring and control of LFAA.
 """
 
 __version__ = "10.1.1"
-__version_info__ = (
-    "ska-low-mccs-spshw",
-    __version__,
-    "This package implements SKA Low's MCCS SPSHW subsystem.",
-)
+__version_info__ = str(
+    (
+        "ska-low-mccs-spshw",
+        __version__,
+        "This package implements SKA Low's MCCS SPSHW subsystem.",
+    )
+).replace("'", "")
 
 __all__ = [
     "MccsSubrack",

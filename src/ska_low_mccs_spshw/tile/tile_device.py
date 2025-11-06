@@ -302,7 +302,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltage_man_1V2": "voltageMan1V2",
             "voltage_mgt_avcc": "voltageMGT_AVCC",
             "voltage_mgt_avtt": "voltageMGT_AVTT",
-            "voltage_mon": "voltageMon",
             "voltage_mon_5V0": "voltageMon5V0",
             "voltage_mon_3V3": "voltageMon3V3",
             "voltage_mon_1V8": "voltageMon1V8",
@@ -582,7 +581,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageMan1V2": ["voltages", "MAN_1V2"],
             "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
             "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
-            "voltageMon": ["voltages", "MON_5V0"],
             "voltageMon5V0": ["voltages", "MON_5V0"],
             "voltageMon3V3": ["voltages", "MON_3V3"],
             "voltageMon1V8": ["voltages", "MON_1V8"],
@@ -3178,24 +3176,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param value: firmware version
         """
         self.component_manager.firmware_version = value
-
-    @attribute(
-        dtype="DevDouble",
-        abs_change=0.05,
-        archive_abs_change=0.05,
-        min_value=4.5,
-        max_value=5.5,
-        min_alarm=4.55,
-        max_alarm=5.45,
-    )
-    def voltageMon(self: MccsTile) -> float | None:
-        """
-        Return the internal 5V supply of the TPM.
-
-        :return: Internal supply of the TPM
-        """
-        self.logger.warning("Deprecated in favour of voltageMon5V0")
-        return self._attribute_state["voltageMon"].read()
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:

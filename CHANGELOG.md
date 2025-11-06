@@ -5,6 +5,7 @@
 * [THORN-317] Fixed bios version read bug and health status value update bug
 * [THORN-292] Added SpsStation.daqPath which returns the directory DAQ is currently configured to.
 * [SKB-1086] Correct segfault during dev_init in MccsTile.
+* [LOW-1787] Remove deprecated voltageMon attribute
 
 ## 10.1.1
 

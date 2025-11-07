@@ -1569,6 +1569,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
             )
+            self._clear_hardware_attributes()
             if self._health_recorder is not None:
                 self._health_recorder.clear_attribute_state()
 

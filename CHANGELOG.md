@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-* [THORN-317] fixed bios version read bug and health status value update bug
+* [THORN-264] Update subrack to use an ADR-115 health model
+* [THORN-317] Fixed bios version read bug and health status value update bug
 
 ## 10.1.1
 

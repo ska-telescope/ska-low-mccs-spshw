@@ -4,6 +4,19 @@
 
 * [THORN-264] Update subrack to use an ADR-115 health model
 * [THORN-317] Fixed bios version read bug and health status value update bug
+* [THORN-254] Added default attribute alarm configuration for Tile and Subrack to `values.yaml`
+
+## 10.2.0
+
+* [THORN-275] Added faultReport attribute to assist with fault diognosis.
+* [THORN-275] Added MccsTile.UpdateThresholdCache
+* [THORN-275] Replace SetFirmwareTemperatureThresholds with firmwareTemperatureThresholds
+* [THORN-275] Replace SetVoltageWarningThresholds/GetVoltageWarningThresholds with firmwareVoltageThresholds
+* [THORN-275] Replace SetCurrentWarningThresholds/GetCurrentWarningThresholds with firmwareCurrentThresholds
+* [THORN-317] Fixed bios version read bug and health status value update bug
+* [THORN-292] Added SpsStation.daqPath which returns the directory DAQ is currently configured to.
+* [SKB-1086] Correct segfault during dev_init in MccsTile.
+* [LOW-1787] Remove deprecated voltageMon attribute
 
 ## 10.1.1
 

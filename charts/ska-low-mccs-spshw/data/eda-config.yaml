@@ -521,7 +521,13 @@ configuration:
       stationId:
         code_push_event: true
         archive_period: 0
-      voltageMon:
+      firmwareName:
+        code_push_event: true
+        archive_period: 0
+      firmwareVersion:
+        code_push_event: true
+        archive_period: 0
+      voltageMon5V0:
         code_push_event: true
         archive_period: 0
       isProgrammed:

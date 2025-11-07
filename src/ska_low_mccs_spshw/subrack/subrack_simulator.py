@@ -114,7 +114,7 @@ class SubrackSimulator(SubrackProtocol):
         },
         "power_supply_currents": {
             "length": 2,
-            "default": [2.2, 2.8],
+            "default": [2.2, 2.4],
             "writable": False,
         },
         "power_supply_voltages": {
@@ -154,7 +154,7 @@ class SubrackSimulator(SubrackProtocol):
         # },
         "tpm_voltages": {
             "length": 8,
-            "default": [5.0] * 8,
+            "default": [12.0] * 8,
             "writable": False,
         },
         "board_info": {

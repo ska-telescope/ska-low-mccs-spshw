@@ -783,12 +783,12 @@ class TestMccsTileTpmDriver:
             (
                 "fpga1Temperature",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
-                77.0,
+                99.0,
             ),
             (
                 "fpga2Temperature",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
-                77.0,
+                99.0,
             ),
             (
                 "boardTemperature",

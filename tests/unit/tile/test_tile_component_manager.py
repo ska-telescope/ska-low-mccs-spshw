@@ -109,7 +109,7 @@ class TestTileComponentManager:
                 pass
             case _:
                 # OFF, NO_SUPPLY, STANDBY
-                callbacks["component_state"].assert_call(power=power_state, lookahead=4)
+                callbacks["component_state"].assert_call(power=power_state, fault=False)
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.OFF.pretty_name(), lookahead=5
                 )
@@ -184,28 +184,33 @@ class TestTileComponentManager:
                     lookahead=5,
                     consume_nonmatches=True,
                 )
+                # A try except block in a test is unusual.
+                # It is done here due to the multithreaded
+                # nature of the application.
+                # The Fault is evaluated by looking at the poll_status and
+                # the subrack reported power.
+                # If they dissagree then we are faulted. However, due
+                # to the polling thread and the
+                # callback thread being different this can heppen
+                # in either order. The resulting state after this block is the same
+                # power= PowerState.ON, fault = False
                 try:
                     callbacks["component_state"].assert_call(
-                        power=PowerState.ON, lookahead=3
+                        power=PowerState.ON, fault=False
                     )
                 except AssertionError:
-                    # MccsSubrack will report the power of the TPM.
-                    # If the value reported by the MccsSubrack is
-                    # inconsistent with the value
-                    # reported from polling, we are in state FAULT. For example:
-                    # - MccsSubrack reports the TPM as NOT ON,
-                    # but we can poll the hardware.
-                    # Therefore depending on the exact timing of the poll
-                    # relative to the MccsSubrack TPM power callback,
-                    # we may find a transient FAULT.
                     callbacks["component_state"].assert_call(
-                        power=PowerState.ON, fault=True, lookahead=4
+                        power=PowerState.ON, fault=True
                     )
-                    # The lookahead is needed due to monitoring values being passed
-                    # to this callback.
-                    # For commands being executed e.g initialise,
-                    # the callback can be called multiple times.
-                    callbacks["component_state"].assert_call(fault=False, lookahead=6)
+                    callbacks["component_state"].assert_call(fault=False)
+                finally:
+                    assert (
+                        tile_component_manager._component_state["power"]
+                        == PowerState.ON
+                    )
+                    assert not tile_component_manager._component_state["fault"]
+                    callbacks["component_state"].assert_not_called()
+
                 assert tile_component_manager._tpm_status == TpmStatus.INITIALISED
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
@@ -360,7 +365,7 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["component_state"].assert_call(power=PowerState.OFF)
+        callbacks["component_state"].assert_call(power=PowerState.OFF, fault=False)
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
             lookahead=5,  # Unknown for number of polls until subrack callback.
@@ -378,24 +383,25 @@ class TestTileComponentManager:
         )
         # If we are on we can ESTABLISH a connection
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        # A try except block in a test is unusual.
+        # It is done here due to the multithreaded
+        # nature of the application.
+        # The Fault is evaluated by looking at the poll_status and
+        # the subrack reported power.
+        # If they dissagree then we are faulted. However, due
+        # to the polling thread and the callback thread being different this can heppen
+        # in either order. The resulting state after this block is the same
+        # power= PowerState.ON, fault = False
         try:
-            callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+            callbacks["component_state"].assert_call(power=PowerState.ON)
         except AssertionError:
-            # MccsSubrack will report the power of the TPM.
-            # If the value reported by the MccsSubrack is inconsistent with the value
-            # reported from polling, we are in state FAULT. For example:
-            # - MccsSubrack reports the TPM as NOT ON, but we can poll the hardware.
-            # Therefore depending on the exact timing of the poll
-            # relative to the MccsSubrack TPM power callback,
-            # we may find a transient FAULT.
-            callbacks["component_state"].assert_call(
-                power=PowerState.ON, fault=True, lookahead=2
-            )
-            # The lookahead of 4 is needed due to monitoring values being passed
-            # to this callback.
-            # For commands being executed e.g initialise,
-            # the callback can be called multiple times.
-            callbacks["component_state"].assert_call(fault=False, lookahead=4)
+            callbacks["component_state"].assert_call(power=PowerState.ON, fault=True)
+            callbacks["component_state"].assert_call(fault=False)
+        finally:
+            assert tile_component_manager._component_state["power"] == PowerState.ON
+            assert not tile_component_manager._component_state["fault"]
+            callbacks["component_state"].assert_not_called()
 
         tile_component_manager.off()
         # Manually report the Subrack turning on
@@ -404,13 +410,24 @@ class TestTileComponentManager:
             PowerState.OFF,
             tango.EventType.CHANGE_EVENT,
         )
-        callbacks["component_state"].assert_call(
-            power=PowerState.OFF, lookahead=10, consume_nonmatches=True
-        )
-        callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.OFF.pretty_name(),
-            lookahead=20,  # TODO: is this component_state?
-        )
+        # A try except block in a test is unusual.
+        # It is done here due to the multithreaded
+        # nature of the application.
+        # The Fault is evaluated by looking at the poll_status and
+        # the subrack reported power.
+        # If they dissagree then we are faulted. However, due
+        # to the polling thread and the callback thread being different this can heppen
+        # in either order. The resulting state after this block is the same
+        # power= PowerState.OFF, fault = False
+        try:
+            callbacks["component_state"].assert_call(power=PowerState.OFF)
+        except AssertionError:
+            callbacks["component_state"].assert_call(power=PowerState.OFF, fault=True)
+            callbacks["component_state"].assert_call(fault=False)
+        finally:
+            assert tile_component_manager._component_state["power"] == PowerState.OFF
+            assert not tile_component_manager._component_state["fault"]
+            callbacks["component_state"].assert_not_called()
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
@@ -531,7 +548,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         tile_component_manager.on(task_callback=callbacks["task"])
         try:
-            callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+            callbacks["component_state"].assert_call(
+                power=PowerState.ON, fault=False, lookahead=2
+            )
         except AssertionError:
             # MccsSubrack will report the power of the TPM.
             # If the value reported by the MccsSubrack is inconsistent with the value
@@ -548,6 +567,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             # For commands being executed e.g initialise,
             # the callback can be called multiple times.
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
+        finally:
+            assert tile_component_manager._component_state["power"] == PowerState.ON
+            assert not tile_component_manager._component_state["fault"]
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=5
@@ -3298,7 +3320,9 @@ class TestDynamicSimulator:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         dynamic_tile_component_manager.on(task_callback=callbacks["task"])
         try:
-            callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+            callbacks["component_state"].assert_call(
+                power=PowerState.ON, fault=False, lookahead=2
+            )
         except AssertionError:
             # MccsSubrack will report the power of the TPM.
             # If the value reported by the MccsSubrack is inconsistent with the value
@@ -3315,6 +3339,12 @@ class TestDynamicSimulator:
             # For commands being executed e.g initialise,
             # the callback can be called multiple times.
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
+        finally:
+            assert (
+                dynamic_tile_component_manager._component_state["power"]
+                == PowerState.ON
+            )
+            assert not dynamic_tile_component_manager._component_state["fault"]
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),

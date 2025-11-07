@@ -1013,6 +1013,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=(float,),
         label="Board current",
+        unit="Ampere",
         abs_change=0.1,
     )
     def boardCurrent(self: MccsSubrack) -> list[float] | None:
@@ -1441,7 +1442,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_number_of_ports()
 
-    @attribute(dtype=(int,), label="pdu port statess")
+    @attribute(dtype=(int,), label="pdu port states")
     def pduPortStates(self: MccsSubrack) -> list[int] | None:
         """
         Handle a Tango attribute read of the state of pdu port.
@@ -1489,7 +1490,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("tpmCurrents", None)
 
-    @attribute(dtype=(float,), max_dim_x=8, label="TPM powers", abs_change=0.1)
+    @attribute(
+        dtype=(float,), max_dim_x=8, label="TPM powers", max_alarm=120.0, abs_change=0.1
+    )
     def tpmPowers(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM powers.
@@ -1522,7 +1525,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("tpmTemperatures", None) or []
 
-    @attribute(dtype=(float,), max_dim_x=8, label="TPM voltages", abs_change=0.1)
+    @attribute(
+        dtype=(float,),
+        max_dim_x=8,
+        label="TPM voltages",
+        min_alarm=11.4,
+        max_alarm=12.6,
+        abs_change=0.1,
+    )
     def tpmVoltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM voltages.

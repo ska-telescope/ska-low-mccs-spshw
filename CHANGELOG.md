@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-264] Update subrack to use an ADR-115 health model
+* [THORN-317] Fixed bios version read bug and health status value update bug
 * [THORN-254] Added default attribute alarm configuration for Tile and Subrack to `values.yaml`
 
 ## 10.2.0

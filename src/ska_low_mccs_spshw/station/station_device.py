@@ -1608,6 +1608,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self._use_new_health_model = argin
 
+    @attribute(dtype="DevString")
+    def daqPath(self: SpsStation) -> str:
+        """
+        Get DAQ data path.
+
+        :return: Path where DAQ data files are stored.
+        """
+        if (
+            self.component_manager._lmc_daq_proxy is None
+            or self.component_manager._lmc_daq_proxy._proxy is None
+        ):
+            return ""
+        return json.loads(
+            self.component_manager._lmc_daq_proxy._proxy.getconfiguration()
+        )["directory"]
+
     # -------------
     # Slow Commands
     # -------------

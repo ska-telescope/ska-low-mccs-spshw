@@ -130,7 +130,7 @@ def check_subrack_is_online_and_on(
         print("Subrack device is in UNKNOWN state.")
 
     change_event_callbacks["subrack_state"].assert_change_event(
-        OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=4
+        OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=6
     )
     state = subrack_device.state()
 

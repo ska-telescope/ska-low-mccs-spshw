@@ -134,6 +134,7 @@ class SubrackDriver(
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
             board_info=None,
+            health_status=None,
         )
 
         self.logger.info(
@@ -615,7 +616,7 @@ class SubrackDriver(
         board_info: dict = self._component_state["board_info"]
         if board_info:
             bios_version = board_info["SMM"]["bios"]
-            if [int(x) for x in bios_version.lstrip("v").split(".")] > [1, 6, 0]:
+            if [int(x) for x in bios_version.lstrip("v").split(".")] >= [1, 6, 0]:
                 self._poll_commands = True
             self._checked_bios = True
 
@@ -883,6 +884,7 @@ class SubrackDriver(
             self._active_callback = None
             if "get_health_status" in retvalues.keys():
                 self.health_status = retvalues["get_health_status"]
+                self._update_component_state(health_status=self.health_status)
 
         values = poll_response.query_responses
         self._update_component_state(power=PowerState.ON, fault=fault)
@@ -935,6 +937,7 @@ class SubrackDriver(
             # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
             tpm_voltages=kwargs.get("tpm_voltages"),
             board_info=kwargs.get("board_info"),
+            health_status=kwargs.get("health_status"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

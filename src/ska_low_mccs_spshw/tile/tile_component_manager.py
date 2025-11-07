@@ -41,6 +41,12 @@ from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
 from .exception_codes import HardwareVerificationError
+from .firmware_threshold_interface import (
+    CURRENT_KEYS,
+    TEMPERATURE_KEYS,
+    VOLTAGE_KEYS,
+    FirmwareThresholds,
+)
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -228,7 +234,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
         self._update_attribute_callback = update_attribute_callback
-        self.fault_state: Optional[bool] = None
+        # Faulty until we are not
+        self.fault_state: Optional[bool] = True
         self._preadu_present: list[bool] = preadu_present
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
@@ -638,55 +645,32 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_success: a bool representing if the poll was a success
         :param exception_code: the exception code raised in last poll.
         """
-        is_faulty: bool = False
-        match poll_success:
-            case False:
-                with acquire_timeout(
-                    self._hardware_lock,
-                    self._default_lock_timeout,
-                    raise_exception=True,
+        with acquire_timeout(
+            self._hardware_lock,
+            self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not poll_success:
+                # Poll failed: check if subrack incorrectly reports TPM as ON
+                if (
+                    not self.is_connected
+                    and self._subrack_says_tpm_power == PowerState.ON
                 ):
-                    if (
-                        not self.is_connected
-                        and self._subrack_says_tpm_power == PowerState.ON
-                    ):
-                        self.logger.error(
-                            "Unable to connect to TPM, "
-                            "however subrack reports it as ON. "
-                        )
-                        is_faulty = True
-                    if (
-                        not self.is_connected
-                        and self._subrack_says_tpm_power == PowerState.OFF
-                    ):
-                        # ============================================
-                        # OpStateModel raises an error:
-                        # "Action component_no_fault is not
-                        # allowed in op_state OFF."
-                        #
-                        # We need to reset the base classes cached
-                        # fault_state to allow a change event
-                        # when ON, therefore
-                        # we update the fault state to None.
-                        self.fault_state = None
-                        return
-            case True:
-                if self._subrack_says_tpm_power != PowerState.ON:
-                    # This is an inconsistent state, we can connect with the
-                    # TPM but the subrack is NOT reporting the TPM ON.
-                    is_faulty = True
                     self.logger.error(
-                        "Tpm is connectable but subrack says power is "
-                        f"{PowerState(self._subrack_says_tpm_power).name}"
+                        "Unable to connect to TPM, but subrack reports it as ON."
                     )
-        if is_faulty:
-            self.fault_state = is_faulty
+                    self.fault_state = True
+                    return
+
+        # If polling succeeded but subrack disagrees about power state
+        if poll_success and self._subrack_says_tpm_power != PowerState.ON:
+            self.logger.error(
+                "TPM is connectable but subrack reports power as "
+                f"{PowerState(self._subrack_says_tpm_power).name}."
+            )
+            self.fault_state = True
         else:
-            if self.fault_state is True:
-                # We have stopped experiencing the fault.
-                self.fault_state = False
-            else:
-                self.fault_state = None
+            self.fault_state = False
 
     def poll_succeeded(self: TileComponentManager, poll_response: TileResponse) -> None:
         """
@@ -737,6 +721,86 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"Issue marking attribute {mapped_val} INVALID. {e}"
                     )
                     continue
+
+    def read_firmware_thresholds(self) -> FirmwareThresholds:
+        """
+        Read all thresholds from firmware and save in cache.
+
+        :return: the firmwareThesholds.
+        """
+        threshold_read_warning_limit: float = 0.1  # [s]
+
+        with acquire_timeout(
+            lock=self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            start = time.perf_counter()
+
+            # Read temperature thresholds
+            temperature_thresholds = self.tile.get_tpm_temperature_thresholds()
+            t1 = time.perf_counter()
+            dt_temp = t1 - start
+            if dt_temp > threshold_read_warning_limit:
+                self.logger.warning(f"Temperatures read took {dt_temp:.3f}s")
+
+            # Read current thresholds
+            current_thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
+            t2 = time.perf_counter()
+            dt_curr = t2 - t1
+            if dt_curr > threshold_read_warning_limit:
+                self.logger.warning(f"Currents read took {dt_curr:.3f}s")
+
+            # Read voltage thresholds
+            voltage_thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
+            t3 = time.perf_counter()
+            dt_volt = t3 - t2
+            if dt_volt > threshold_read_warning_limit:
+                self.logger.warning(f"Voltage read took {dt_volt:.3f}s")
+
+        # Package values read into class.
+        thresholds = FirmwareThresholds()
+
+        # Temperatures
+        for temperature in TEMPERATURE_KEYS:
+            setattr(
+                thresholds,
+                f"{temperature}_warning_threshold",
+                temperature_thresholds[f"{temperature}_warning_threshold"],
+            )
+            setattr(
+                thresholds,
+                f"{temperature}_alarm_threshold",
+                temperature_thresholds[f"{temperature}_alarm_threshold"],
+            )
+
+        # Voltages
+        for voltage in VOLTAGE_KEYS:
+            setattr(
+                thresholds,
+                f"{voltage}_min_alarm_threshold",
+                voltage_thresholds[voltage]["min"],
+            )
+            setattr(
+                thresholds,
+                f"{voltage}_max_alarm_threshold",
+                voltage_thresholds[voltage]["max"],
+            )
+
+        # Currents
+        for current in CURRENT_KEYS:
+            setattr(
+                thresholds,
+                f"{current}_min_alarm_threshold",
+                current_thresholds[current]["min"],
+            )
+            setattr(
+                thresholds,
+                f"{current}_max_alarm_threshold",
+                current_thresholds[current]["max"],
+            )
+
+        return thresholds
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
@@ -1538,6 +1602,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
         pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
+        firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1548,6 +1613,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
             pfb_version=pfb_version,
+            firmware_thresholds=firmware_thresholds,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2789,7 +2855,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
-                raise ValueError("Time too early")
+                raise ValueError(f"Time too early: {load_time=}, {load_frame=}")
 
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
@@ -2815,7 +2881,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param delay_array: delay in seconds, and delay rate in seconds/second
+        :param delay_array: list of [delay in seconds, and
+            delay rate in seconds/second] per antenna.
         :param beam_index: the beam to which the pointing delay should
             be applied
 
@@ -3861,7 +3928,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         max_board_alarm_threshold: float | None = None,
         max_fpga1_alarm_threshold: float | None = None,
         max_fpga2_alarm_threshold: float | None = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> dict[str, Any]:
         """
         Set the temperature thresholds.
 
@@ -3876,38 +3943,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param max_fpga2_alarm_threshold: The maximum alarm thresholds
             for the fpga2 (unit: Degree Celsius)
 
-        :return: a tuple containing a ``ResultCode`` and string with information about
-            the execution outcome.
+        :return: The set temperature thresholds if successful else None
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.set_tpm_temperature_thresholds(
-                        max_board_alarm_threshold=max_board_alarm_threshold,
-                        max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
-                        max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
-                    )
-                except ValueError as ve:
-                    value_error_message = (
-                        f"Failed to set the tpm temperature thresholds {ve}"
-                    )
-                    self.logger.error(value_error_message)
-                    return (ResultCode.FAILED, value_error_message)
-                except Exception as e:  # pylint: disable=broad-except
-                    message = f"Unexpected exception raised {repr(e)}"
-                    self.logger.error(message)
-                    return (ResultCode.FAILED, message)
-
-            else:
-                lock_failed_message = (
-                    "Failed to acquire lock for set_tpm_temperature_thresholds."
-                )
-                self.logger.warning(lock_failed_message)
-                return (ResultCode.FAILED, lock_failed_message)
-
-        return (ResultCode.OK, "Command executed.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_tpm_temperature_thresholds(
+                max_board_alarm_threshold=max_board_alarm_threshold,
+                max_fpga1_alarm_threshold=max_fpga1_alarm_threshold,
+                max_fpga2_alarm_threshold=max_fpga2_alarm_threshold,
+            )
+            return self.tile.get_tpm_temperature_thresholds()
 
     # -----------------------------
     # Test generator methods
@@ -4183,9 +4231,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             if voltage:
-                thresholds = self.tile.get_voltage_warning_thresholds(voltage)
+                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds(
+                    voltage
+                )
             else:
-                thresholds = self.tile.get_voltage_warning_thresholds()
+                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
             if thresholds is None:
                 return f"Specified voltage '{voltage}' not recognized."
             return json.dumps(thresholds)
@@ -4195,7 +4245,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         voltage: str,
         min_thr: float,
         max_thr: float,
-    ) -> bool | None:
+    ) -> dict[str, Any] | None:
         """
         Set the voltage warning thresholds.
 
@@ -4204,13 +4254,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param min_thr: The minimum threshold value.
         :param max_thr: The maximum threshold value.
 
-        :return: True if the thresholds were set successfully,
-            or None if the voltage type is not recognized.
+        :return: The set voltage thresholds if successful else None
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return self.tile.set_voltage_warning_thresholds(voltage, min_thr, max_thr)
+            set_correctly = self.tile.tpm_monitor.set_voltage_warning_thresholds(
+                voltage, min_thr, max_thr
+            )
+            if set_correctly:
+                return self.tile.tpm_monitor.get_voltage_warning_thresholds(voltage)
+            return None
 
     def get_current_warning_thresholds(
         self: TileComponentManager,
@@ -4228,9 +4282,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             if current:
-                thresholds = self.tile.get_current_warning_thresholds(current)
+                thresholds = self.tile.tpm_monitor.get_current_warning_thresholds(
+                    current
+                )
             else:
-                thresholds = self.tile.get_current_warning_thresholds()
+                thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
             if thresholds is None:
                 return f"Specified current '{current}' not recognized."
             return json.dumps(thresholds)
@@ -4240,7 +4296,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         current: str,
         min_thr: float,
         max_thr: float,
-    ) -> bool | None:
+    ) -> dict[str, Any] | None:
         """
         Set the current warning thresholds.
 
@@ -4249,13 +4305,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param min_thr: The minimum threshold value.
         :param max_thr: The maximum threshold value.
 
-        :return: True if the thresholds were set successfully,
-            or None if the current type is not recognized.
+        :return: The set current thresholds if successful else None
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return self.tile.set_current_warning_thresholds(current, min_thr, max_thr)
+            set_correctly = self.tile.tpm_monitor.set_current_warning_thresholds(
+                current, min_thr, max_thr
+            )
+            if set_correctly:
+                return self.tile.tpm_monitor.get_current_warning_thresholds(current)
+            return None
 
     @property
     @check_communicating

@@ -12,12 +12,14 @@ The Monitoring Control and Calibration (MCCS) subsystem is responsible
 for, amongst other things, monitoring and control of LFAA.
 """
 
-__version__ = "10.1.0"
-__version_info__ = (
-    "ska-low-mccs-spshw",
-    __version__,
-    "This package implements SKA Low's MCCS SPSHW subsystem.",
-)
+__version__ = "10.2.0"
+__version_info__ = str(
+    (
+        "ska-low-mccs-spshw",
+        __version__,
+        "This package implements SKA Low's MCCS SPSHW subsystem.",
+    )
+).replace("'", "")
 
 __all__ = [
     "MccsSubrack",

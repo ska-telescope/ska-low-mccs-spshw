@@ -889,8 +889,9 @@ class SpsStationComponentManager(
         # delay/delay rates
         assert len(antenna_order_delays) % 2 == 0
 
-        # Loop through each pair of delay/delay rates
-        for antenna_no in range(len(antenna_order_delays) // 2):
+        for antenna_id in self._antenna_mapping:
+            antenna_no = antenna_id - 1  # Keep it zero-based
+
             delay = antenna_order_delays[antenna_no * 2]
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 

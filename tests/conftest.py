@@ -42,6 +42,36 @@ class FanMode(enum.IntEnum):  # type: ignore[no-redef]
     AUTO = 1
 
 
+@pytest.fixture(name="db_temperature_thresholds", scope="module")
+def db_temperature_thresholds_fixture() -> dict[str, tango.StdStringVector]:
+    """
+    Return a dictionary containing the db values.
+
+    :returns: a dictionary containing the db values.
+    """
+    return {}
+
+
+@pytest.fixture(name="db_voltage_thresholds", scope="module")
+def db_voltage_thresholds_fixture() -> dict[str, tango.StdStringVector]:
+    """
+    Return a dictionary containing the db values.
+
+    :returns: a dictionary containing the db values.
+    """
+    return {}
+
+
+@pytest.fixture(name="db_current_thresholds", scope="module")
+def db_current_thresholds_fixture() -> dict[str, tango.StdStringVector]:
+    """
+    Return a dictionary containing the db values.
+
+    :returns: a dictionary containing the db values.
+    """
+    return {}
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     """
     Pytest hook; prints info about tango version.
@@ -306,7 +336,7 @@ def health_status_fixture() -> dict[str, Any]:
             "V_1V1": 1.1,
             "V_CORE": 1.2,
             "V_1V5": 1.5,
-            "V_3V3": 2.3,
+            "V_3V3": 3.3,
             "V_5V": 5.0,
             "V_3V": 3.0,
             "V_2V8": 2.8,
@@ -506,7 +536,7 @@ def subrack_device_attribute_values_fixture(
                 subrack_simulator_config["tpm_voltages"],
             )
         ],
-        "SubrackAPIVersion": "v1.6.0",
+        "subrackBoardInfo": "v1.6.0",
     }
 
 

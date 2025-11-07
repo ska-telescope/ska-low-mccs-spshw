@@ -293,6 +293,7 @@ class SpsTangoTestHarness:
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsSubrack",
         simulated_pdu: bool = True,
+        use_attribute_for_health: bool = True,
     ) -> None:
         """
         Add a subrack Tango device to the test harness.
@@ -307,6 +308,8 @@ class SpsTangoTestHarness:
             This may be used to override the usual device class,
             for example with a patched subclass.
         :param simulated_pdu: if the subrack has a simulated pdu
+        :param use_attribute_for_health: True if we want to
+            use this new feature.
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -329,6 +332,7 @@ class SpsTangoTestHarness:
             UpdateRate=update_rate,
             LoggingLevelDefault=logging_level,
             ParentTRL=get_sps_station_name(self._station_label),
+            UseAttributesForHealth=use_attribute_for_health,
             Simulated_PDU=simulated_pdu,
             PduTrl=get_pdu_name(),
             PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",

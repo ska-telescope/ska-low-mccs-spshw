@@ -208,12 +208,15 @@ def ensure_subrack_fan_mode(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
+    fan_modes = None
     for i in range(5):
-        fan_modes = subrack_device.subrackFanModes
-        if fan_modes is not None:
-            fan_modes = list(fan_modes)  # from numpy
-            break
-        time.sleep(1)
+        try:
+            fan_modes = subrack_device.subrackFanModes
+            if fan_modes is not None:
+                fan_modes = list(fan_modes)  # from numpy
+                break
+        except tango.DevFailed:
+            time.sleep(1)
 
     if fan_modes is None:
         pytest.fail("device failed to connect with comp manager in time")

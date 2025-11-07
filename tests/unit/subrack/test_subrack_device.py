@@ -14,9 +14,10 @@ import time
 from typing import Any, Iterator
 
 import pytest
-from ska_control_model import AdminMode, PowerState, ResultCode
+import tango
+from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-from tango import DeviceProxy, DevState, EventType
+from tango import DeviceProxy, DevState, EventType, server
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
@@ -42,6 +43,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "command_status",
         "command_result",
+        "healthState",
+        "attribute",
         "tpmPresent",
         "tpmCount",
         "tpm1PowerState",
@@ -87,10 +90,22 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
+@pytest.fixture(name="use_attribute_for_health")
+def use_attribute_for_health_fixture() -> bool:
+    """
+    Return a bool representing is attributes are used in health.
+
+    :returns: True if we want to make use of attributes in
+        health
+    """
+    return True
+
+
 @pytest.fixture(name="test_context")
 def test_context_fixture(
     subrack_id: int,
     subrack_simulator: SubrackSimulator,
+    use_attribute_for_health: bool,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which both subrack simulator and Tango device are running.
@@ -98,12 +113,36 @@ def test_context_fixture(
     :param subrack_id: the ID of the subrack under test
     :param subrack_simulator: the backend simulator that the Tango
         device will monitor and control
+    :param use_attribute_for_health: A bool representing if we are using the
+        attribute quality feature for health evaluation.
 
     :yields: a test context.
     """
+
+    class _PatchedMccsSubrack(MccsSubrack):
+        """A subrack class with a method to call the component state callback."""
+
+        @server.command
+        def ChangeHardwareAttributeValue(self, argin: str) -> None:
+            """
+            Patched method to change cached attribute values.
+
+            :param argin: json-ified dictionary containing the attribute name as a key
+                and the new value as it's corresponding value.
+            """
+            _temp_attr_dict = json.loads(argin)
+            for name, value in _temp_attr_dict.items():
+                self._hardware_attributes[name] = value
+                self.push_change_event(name, value)
+                self.push_archive_event(name, value)
+
     harness = SpsTangoTestHarness()
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
-    harness.add_subrack_device(subrack_id)
+    harness.add_subrack_device(
+        subrack_id,
+        use_attribute_for_health=use_attribute_for_health,
+        device_class=_PatchedMccsSubrack,
+    )
 
     with harness as context:
         yield context
@@ -286,7 +325,7 @@ def test_off_on(
         EventType.CHANGE_EVENT,
         change_event_callbacks["boardCurrent"],
     )
-    change_event_callbacks["boardCurrent"].assert_change_event([])
+    change_event_callbacks["boardCurrent"].assert_change_event(None)
 
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
@@ -340,7 +379,8 @@ def test_off_on(
     )
 
     change_event_callbacks["boardCurrent"].assert_change_event([])
-    assert not list(subrack_device.boardCurrent)
+    with pytest.raises(tango.DevFailed):
+        _ = subrack_device.boardCurrent
 
     # Okay, let's turn it back on again,
     # but we can't be bothered tracking the command status this time.
@@ -406,24 +446,25 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("tpm6PowerState", PowerState.UNKNOWN),
         ("tpm7PowerState", PowerState.UNKNOWN),
         ("tpm8PowerState", PowerState.UNKNOWN),
-        ("backplaneTemperatures", []),
-        ("boardTemperatures", []),
-        ("boardCurrent", []),
+        ("backplaneTemperatures", None),
+        ("boardTemperatures", None),
+        ("boardCurrent", None),
         ("cpldPllLocked", None),
-        ("powerSupplyCurrents", []),
-        ("powerSupplyFanSpeeds", []),
-        ("powerSupplyPowers", []),
-        ("powerSupplyVoltages", []),
-        ("subrackFanSpeeds", []),
-        ("subrackFanSpeedsPercent", []),
-        ("subrackFanModes", []),
+        ("powerSupplyCurrents", None),
+        ("powerSupplyFanSpeeds", None),
+        ("powerSupplyPowers", None),
+        ("powerSupplyVoltages", None),
+        ("subrackFanSpeeds", None),
+        ("subrackFanSpeedsPercent", None),
+        ("subrackFanModes", None),
         ("subrackPllLocked", None),
         ("subrackTimestamp", None),
-        ("tpmCurrents", []),
-        ("tpmPowers", []),
-        # ("tpmTemperatures", []),  # Not implemented on SMB
-        ("tpmVoltages", []),
+        ("tpmCurrents", None),
+        ("tpmPowers", None),
+        # ("tpmTemperatures", None),  # Not implemented on SMB
+        ("tpmVoltages", None),
     ]:
+        print(f"Asserting on {attribute_name}")
         subrack_device.subscribe_event(
             attribute_name,
             EventType.CHANGE_EVENT,
@@ -759,3 +800,182 @@ def test_health_status_attributes(
         change_event_callbacks[attribute_name].assert_change_event(
             value, lookahead=2, consume_nonmatches=True
         )
+
+
+@pytest.mark.parametrize(
+    (
+        "attribute",
+        "max_alarm",
+        "max_warning",
+        "min_warning",
+        "min_alarm",
+    ),
+    [
+        (
+            "internalVoltagesPOWERIN",
+            12.60,
+            12.48,
+            11.52,
+            11.40,
+        ),
+        (
+            "internalVoltagesSOC",
+            1.39,
+            1.38,
+            1.32,
+            1.31,
+        ),
+        (
+            "internalVoltagesARM",
+            1.42,
+            1.41,
+            1.29,
+            1.28,
+        ),
+        (
+            "internalVoltagesDDR",
+            1.39,
+            1.38,
+            1.32,
+            1.31,
+        ),
+        (
+            "internalVoltages2V5",
+            2.62,
+            2.60,
+            2.40,
+            2.38,
+        ),
+        (
+            "internalVoltages1V1",
+            1.13,
+            1.12,
+            1.08,
+            1.07,
+        ),
+        (
+            "internalVoltagesCORE",
+            1.24,
+            1.23,
+            1.17,
+            1.16,
+        ),
+        (
+            "internalVoltages1V5",
+            1.54,
+            1.53,
+            1.47,
+            1.46,
+        ),
+        (
+            "internalVoltages3V3",
+            3.46,
+            3.43,
+            3.16,
+            3.13,
+        ),
+        (
+            "internalVoltages5V",
+            5.25,
+            5.20,
+            4.80,
+            4.75,
+        ),
+        (
+            "internalVoltages3V",
+            3.15,
+            3.12,
+            2.88,
+            2.85,
+        ),
+        (
+            "internalVoltages2V8",
+            2.94,
+            2.91,
+            2.69,
+            2.66,
+        ),
+    ],
+)
+# pylint: disable=too-many-arguments
+def test_attribute_alarm_health_model(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    attribute: str,
+    max_alarm: float,
+    max_warning: float,
+    min_warning: float,
+    min_alarm: float,
+) -> None:
+    """
+    Test the new health state model.
+
+    This test sets the attribute's alarm and warning limits and then
+    pushes a value change past the max alarm value and checks if the
+    health state is failed. Then it fixes the value and checks that
+    the health state returns to OK.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event
+    :param attribute: the attribute to test health for.
+    :param max_alarm: maximum alarm threshold for the attribute.
+    :param max_warning: maximum warning threshold for the attribute.
+    :param min_warning: minimum warning threshold for the attribute.
+    :param min_alarm: minimum alarm threshold for the attribute.
+    """
+    assert subrack_device.adminMode == AdminMode.OFFLINE
+
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    subrack_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["healthState"],
+    )
+    change_event_callbacks["healthState"].assert_change_event(HealthState.UNKNOWN)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+    change_event_callbacks["healthState"].assert_not_called()
+
+    # Change attribute limits
+    try:
+        attribute_config = subrack_device.get_attribute_config(attribute.lower())
+        alarm_config = attribute_config.alarms
+        alarm_config.max_warning = str(max_warning)
+        alarm_config.max_alarm = str(max_alarm)
+        alarm_config.min_warning = str(min_warning)
+        alarm_config.min_alarm = str(min_alarm)
+        attribute_config.alarms = alarm_config
+        subrack_device.set_attribute_config(attribute_config)
+    except tango.DevFailed:
+        pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
+
+    # Change the values past the max alarm
+    subrack_device.ChangeHardwareAttributeValue(
+        json.dumps(
+            {
+                attribute: float(max_alarm * 1.5),
+            }
+        )
+    )
+    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+    assert subrack_device.state() == DevState.ALARM
+
+    # Change the value within the warning range
+    subrack_device.ChangeHardwareAttributeValue(
+        json.dumps(
+            {
+                attribute: float((max_warning + min_warning) / 2),
+            }
+        )
+    )
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+    assert subrack_device.state() == DevState.ON

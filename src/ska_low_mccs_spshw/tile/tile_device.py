@@ -31,7 +31,7 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
+from ska_low_mccs_common import MccsBaseDevice, HealthRecorder
 from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
@@ -245,12 +245,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # This can cause a segfault.
             self.component_manager.cleanup_subscriptions()
             self.component_manager.stop_communicating()
-            self.component_manager.wait_until_stopped()
-            del self.component_manager
             self._stopping = True
             if self._health_recorder is not None:
                 self._health_recorder.cleanup()
                 self._health_recorder = None
+            self.component_manager.wait_until_stopped()
+            self.component_manager = None
         except Exception:  # pylint: disable=broad-except
             pass
         return super().delete_device()

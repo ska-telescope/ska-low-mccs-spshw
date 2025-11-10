@@ -825,7 +825,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def wait_until_stopped(self: TileComponentManager) -> None:
         """Wait for the polling to stop."""
-        # self._event.wait(10.0)
+        if not self._event.wait(30.0):
+            print("failed to wait for polling to stop.")
 
     def cleanup_subscriptions(self: TileComponentManager) -> None:
         """Clean up subscriptions."""

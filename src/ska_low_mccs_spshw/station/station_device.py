@@ -172,6 +172,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
+            f"\tParentTRL: {self.ParentTRL}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -221,10 +222,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: a component manager for this device.
         """
-        station_name = self.get_name().split("/")[-1]
         return SpsStationComponentManager(
             self.StationId,
-            station_name,
             self.SubrackFQDNs,
             self.TileFQDNs,
             # It appears the test context inputs a space into empty strings.

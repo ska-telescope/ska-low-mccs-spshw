@@ -373,6 +373,13 @@ ska-tango-devices:
   #       TpmIp: 10.132.0.8
 
   deviceServerTypes:
+    # daq:
+    #   metadata:
+    #     component: daq
+    #   image:
+    #     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+    #     tag: 4.3.1-dirty
+    #     name: ska-low-mccs-daq
     spshw:
       metadata:
         component: spshw

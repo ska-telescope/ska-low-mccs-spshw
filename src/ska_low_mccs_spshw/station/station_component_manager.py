@@ -220,6 +220,7 @@ class _LMCDaqProxy(DeviceComponentManager):
     def __init__(
         self: _LMCDaqProxy,
         fqdn: str,
+        station_id: int,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
@@ -229,6 +230,8 @@ class _LMCDaqProxy(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
+        :param station_id: the id of the station to which this daq
+            is to be assigned
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
             called when the component state changes
@@ -239,6 +242,7 @@ class _LMCDaqProxy(DeviceComponentManager):
             called when the component state changes
         :param event_serialiser: the event serialiser to be used by this object
         """
+        self._station_id = station_id
         super().__init__(
             fqdn,
             logger,
@@ -253,12 +257,28 @@ class _LMCDaqProxy(DeviceComponentManager):
             "dataReceivedResult": self._daq_data_callback,
         }
 
+    def _configure_station_id(self: _LMCDaqProxy) -> None:
+        assert self._proxy is not None
+        # TODO: This can be removed once production is on Daq  ^4.4.0
+        self.logger.warning(
+            "Configuring station ID on DAQ."
+            "Deprecation warning: This configuration step will be removed in "
+            "future versions as this is now done directly in Daq as of 4.4.0."
+        )
+        cfg = json.dumps({"station_id": self._station_id})
+        self._proxy.Configure(cfg)
+
     def _device_state_changed(
         self: _LMCDaqProxy,
         event_name: str,
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
+        if (
+            self._communication_state == CommunicationStatus.ESTABLISHED
+            and event_value == tango.DevState.ON
+        ):
+            self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def _daq_data_callback(
@@ -292,6 +312,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
     def __init__(
         self: _BandpassDaqProxy,
         fqdn: str,
+        station_id: int,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
@@ -301,6 +322,8 @@ class _BandpassDaqProxy(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
+        :param station_id: the id of the station to which this daq
+            is to be assigned
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
             called when the component state changes
@@ -311,6 +334,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
             called when the component state changes
         :param event_serialiser: the event serialiser to be used by this object
         """
+        self._station_id = station_id
         super().__init__(
             fqdn,
             logger,
@@ -326,12 +350,28 @@ class _BandpassDaqProxy(DeviceComponentManager):
             "yPolBandpass": self._daq_data_callback,
         }
 
+    def _configure_station_id(self: _BandpassDaqProxy) -> None:
+        assert self._proxy is not None
+        # TODO: This can be removed once production is on Daq  ^4.4.0
+        self.logger.warning(
+            "Configuring station ID on DAQ."
+            "Deprecation warning: This configuration step will be removed in "
+            "future versions as this is now done directly in Daq as of 4.4.0."
+        )
+        cfg = json.dumps({"station_id": self._station_id})
+        self._proxy.Configure(cfg)
+
     def _device_state_changed(
         self: _BandpassDaqProxy,
         event_name: str,
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
+        if (
+            self._communication_state == CommunicationStatus.ESTABLISHED
+            and event_value == tango.DevState.ON
+        ):
+            self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def _daq_data_callback(
@@ -500,6 +540,7 @@ class SpsStationComponentManager(
             # TODO: Detect a bad daq trl.
             self._lmc_daq_proxy = _LMCDaqProxy(
                 self._lmc_daq_trl,
+                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, self._lmc_daq_trl
@@ -512,6 +553,7 @@ class SpsStationComponentManager(
             # TODO: Detect a bad daq trl.
             self._bandpass_daq_proxy = _BandpassDaqProxy(
                 self._bandpass_daq_trl,
+                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, self._bandpass_daq_trl

@@ -1046,6 +1046,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self._stopping:
             try:
+                # Update the attribute ALARM status.
+                self._multi_attr.check_alarm(attr_name)
+            except tango.DevFailed:
+                # no alarm defined
+                pass
+            try:
                 attr = self._multi_attr.get_attr_by_name(attr_name)
                 attr_value = self._attribute_state[attr_name].read()
                 if attr.is_max_alarm():
@@ -1093,12 +1099,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # it seems that fire_change_event will consume the
             # value set meaning a check_alarm has a nullptr.
             self._multi_attr.get_attr_by_name(name).set_value(attr_value)
-            try:
-                # Update the attribute ALARM status.
-                self._multi_attr.check_alarm(name)
-            except tango.DevFailed:
-                # no alarm defined
-                pass
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """

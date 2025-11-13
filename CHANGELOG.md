@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 10.3.0
+
+* [SKB-610] Remove configuring Daq from SpsStation on start_communication. This is now done from the helmfile templates in the Daq device directly.
 * [THORN-264] Update subrack to use an ADR-115 health model
 * [THORN-317] Fixed bios version read bug and health status value update bug
 * [THORN-254] Added default attribute alarm configuration for Tile and Subrack to `values.yaml`

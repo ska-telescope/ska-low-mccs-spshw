@@ -271,4 +271,4 @@ def hdf5_directory_fixture() -> str:
 
     :return: the name of target hdf5 directory.
     """
-    return "/test-data/test_eb_id/ska-low-mccs/test_scan_id"
+    return "/test-data/test_eb_id/ska-low-mccs/.test_scan_id"

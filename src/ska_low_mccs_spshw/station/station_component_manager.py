@@ -259,6 +259,12 @@ class _LMCDaqProxy(DeviceComponentManager):
 
     def _configure_station_id(self: _LMCDaqProxy) -> None:
         assert self._proxy is not None
+        # TODO: This can be removed once production is on Daq  ^4.4.0
+        self.logger.warning(
+            "Configuring station ID on DAQ."
+            "Deprecation warning: This configuration step will be removed in "
+            "future versions as this is now done directly in Daq as of 4.4.0."
+        )
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
 
@@ -272,7 +278,6 @@ class _LMCDaqProxy(DeviceComponentManager):
             self._communication_state == CommunicationStatus.ESTABLISHED
             and event_value == tango.DevState.ON
         ):
-            assert self._proxy is not None  # for the type checker
             self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
@@ -347,6 +352,12 @@ class _BandpassDaqProxy(DeviceComponentManager):
 
     def _configure_station_id(self: _BandpassDaqProxy) -> None:
         assert self._proxy is not None
+        # TODO: This can be removed once production is on Daq  ^4.4.0
+        self.logger.warning(
+            "Configuring station ID on DAQ."
+            "Deprecation warning: This configuration step will be removed in "
+            "future versions as this is now done directly in Daq as of 4.4.0."
+        )
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
 
@@ -360,7 +371,6 @@ class _BandpassDaqProxy(DeviceComponentManager):
             self._communication_state == CommunicationStatus.ESTABLISHED
             and event_value == tango.DevState.ON
         ):
-            assert self._proxy is not None  # for the type checker
             self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 

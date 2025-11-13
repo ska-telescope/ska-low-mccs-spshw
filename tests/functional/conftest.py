@@ -592,12 +592,12 @@ def poll_until_consumer_running(
     if no_of_iters == 1:
         pytest.fail(f"Wanted consumer: {wanted_consumer} not started.")
 
-    sleep(2)  # Waiting for SKUID to timeout...
+    sleep(3)  # Waiting for SKUID to timeout...
     return poll_until_consumer_running(daq, wanted_consumer, no_of_iters - 1)
 
 
 def poll_until_consumers_running(
-    daq: tango.DeviceProxy, wanted_consumer_list: list[str], no_of_iters: int = 5
+    daq: tango.DeviceProxy, wanted_consumer_list: list[str], no_of_iters: int = 10
 ) -> None:
     """
     Poll until a list of consumers are running.

@@ -172,6 +172,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
+            f"\tParentTRL: {self.ParentTRL}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties

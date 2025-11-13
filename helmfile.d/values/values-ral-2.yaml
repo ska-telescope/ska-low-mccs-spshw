@@ -57,8 +57,8 @@ helm_values:
     # deviceServerTypes:
     #   spshw:
     #     image:
-    #       registry: localhost:5000
-    #       tag: 3.1.1-dirty
+    #       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw # localhost:5000
+    #       tag: 10.2.0-dev.c4bbc06f3
     #       pullPolicy: Always
 
   # ska-low-mccs-daq:
@@ -67,4 +67,4 @@ helm_values:
   #         daq:
   #           image:
   #             registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-  #             tag: 3.0.0-rc2-dev.c3a04b7ec
+  #             tag: 4.3.1-dev.c0aa76e8a

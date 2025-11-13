@@ -387,7 +387,7 @@ class TileRequestProvider:
         self._lrc_queue.put((priority, next(self._command_counter), wipe_time, request))
         request.notify_queued()
 
-    def __del__(self) -> None:
+    def cleanup(self) -> None:
         """Clean up and notify callbacks."""
         stale_attributes = self.request_iterator.calculate_stale_attributes(None)
         self.request_iterator.state = TpmStatus.UNKNOWN

@@ -254,11 +254,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: result from delete_device.
         """
         try:
+            self._stopping = True
             # We do not want to raise a exception here
             # This can cause a segfault.
+            self.component_manager.cleanup_subscriptions()
             self.component_manager.stop_communicating()
-            del self.component_manager
-            self._stopping = True
+            self.component_manager.wait_until_stopped()
         except Exception:  # pylint: disable=broad-except
             pass
         return super().delete_device()
@@ -1043,21 +1044,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param attr_name: the name of the attribute causing the shutdown.
         """
-        try:
-            attr = self._multi_attr.get_attr_by_name(attr_name)
-            attr_value = self._attribute_state[attr_name].read()
-            if attr.is_max_alarm():
-                self.logger.warning(
-                    f"Attribute {attr_name} changed to {attr_value}, "
-                    "this is above maximum alarm, Shutting down TPM."
+        if not self._stopping:
+            try:
+                attr = self._multi_attr.get_attr_by_name(attr_name)
+                attr_value = self._attribute_state[attr_name].read()
+                if attr.is_max_alarm():
+                    self.logger.warning(
+                        f"Attribute {attr_name} changed to {attr_value}, "
+                        "this is above maximum alarm, Shutting down TPM."
+                    )
+                    self.component_manager.off()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.error(
+                    f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
+                    "Shutting down TPM."
                 )
                 self.component_manager.off()
-        except Exception as e:  # pylint: disable=broad-except
-            self.logger.error(
-                f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
-                "Shutting down TPM."
-            )
-            self.component_manager.off()
 
     def post_change_event(
         self: MccsTile,
@@ -1076,8 +1078,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
-        if self._stopping:
-            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:
@@ -1087,17 +1087,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
-        # https://gitlab.com/tango-controls/pytango/-/issues/615
-        # set_value must be called after push_change_event.
-        # it seems that fire_change_event will consume the
-        # value set meaning a check_alarm has a nullptr.
-        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
-        try:
-            # Update the attribute ALARM status.
-            self._multi_attr.check_alarm(name)
-        except tango.DevFailed:
-            # no alarm defined
-            pass
+        if not self._stopping:
+            # https://gitlab.com/tango-controls/pytango/-/issues/615
+            # set_value must be called after push_change_event.
+            # it seems that fire_change_event will consume the
+            # value set meaning a check_alarm has a nullptr.
+            self._multi_attr.get_attr_by_name(name).set_value(attr_value)
+            try:
+                # Update the attribute ALARM status.
+                self._multi_attr.check_alarm(name)
+            except tango.DevFailed:
+                # no alarm defined
+                pass
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """

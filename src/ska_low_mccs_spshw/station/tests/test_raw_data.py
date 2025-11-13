@@ -101,8 +101,8 @@ class TestRaw(BaseDaqTest):
         self.test_logger.debug(f"Testing {description} raw data.")
 
         with self.reset_context():
-            self._start_directory_watch()
             self._configure_daq("RAW_DATA")
+            self._start_directory_watch()
             self.test_logger.debug("Sending raw data")
             self._configure_and_start_pattern_generator("jesd")
             self._send_raw_data(sync=sync)

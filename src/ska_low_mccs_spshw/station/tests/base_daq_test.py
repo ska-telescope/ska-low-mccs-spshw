@@ -248,7 +248,11 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
         self._observer = Observer()  # type: ignore
-        self._observer.schedule(self._data_handler, "/product", recursive=True)
+        daq_dir = json.loads(
+            self.daq_proxy.getconfiguration()
+        )["directory"]
+        self.test_logger.info(f"Observer watching {daq_dir}...")
+        self._observer.schedule(self._data_handler, daq_dir, recursive=True)
         self._observer.start()
 
     def _stop_directory_watch(self: BaseDaqTest) -> None:

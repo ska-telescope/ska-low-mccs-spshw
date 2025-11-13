@@ -231,7 +231,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.fault_state: Optional[bool] = None
         self._preadu_present: list[bool] = preadu_present
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
-
+        self._polling_thread_id: int | None = None
         self._simulation_mode = simulation_mode
         self._default_lock_timeout = default_lock_timeout
         self._hardware_lock = LogLock(f"tpm{tile_id:02d}lock", logger)
@@ -356,6 +356,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: request to be to be executed in the next poll.
         """
+        if self._polling_thread_id is None:
+            self._polling_thread_id = threading.get_ident()
+        else:
+            if self._polling_thread_id != threading.get_ident():
+                self.logger.error(
+                    f"Thread mismatch {self._polling_thread_id} "
+                    f"!= {threading.get_ident()}"
+                )
+
         if not self._request_provider:
             raise AssertionError(
                 "The request provider is None, unable to get next request"

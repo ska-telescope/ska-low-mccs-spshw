@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [SKB-1079] Cleanup. Ensure that we are not defining important cleanup information in init, this is executed after
+
 ## 10.3.0
 
 * [SKB-610] Remove configuring Daq from SpsStation on start_communication. This is now done from the helmfile templates in the Daq device directly.

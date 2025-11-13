@@ -219,7 +219,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
         self._stopping: bool
-        self._health_recorder: HealthRecorder | None = None
+        self._health_recorder: HealthRecorder | None
         self._health_report = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds

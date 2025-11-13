@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-262] Add timeout to pytest configuration. This should be set to slightly less than the pipeline timeout so that test reports are generated before the job is killed.
+
 ## 10.3.0
 
 * [SKB-610] Remove configuring Daq from SpsStation on start_communication. This is now done from the helmfile templates in the Daq device directly.

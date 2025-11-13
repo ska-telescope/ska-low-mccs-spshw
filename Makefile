@@ -30,6 +30,8 @@ PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and l
 PYTHON_VARS_AFTER_PYTEST = --forked
 PYTHON_VARS_AFTER_PYTEST += "-n 16"
 PYTHON_TEST_FILE = tests
+PYTHON_VARS_BEFORE_PYTEST = timeout -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
+PYTHON_VARS_BEFORE_K8S_PYTEST = timeout -k 120 -s INT 4800
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
@@ -180,7 +182,7 @@ k8s-do-test:
 		"cd $(K8S_TEST_RUNNER_WORKING_DIRECTORY) && \
 		mkdir -p build/reports && \
 		$(K8S_TEST_RUNNER_PIP_INSTALL_COMMAND) && \
-		STATION_LABEL=$(STATION_LABEL) pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
+		STATION_LABEL=$(STATION_LABEL) $(PYTHON_VARS_BEFORE_K8S_PYTEST) pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
 	EXIT_CODE=$$? ; \
 	kubectl -n $(KUBE_NAMESPACE) cp ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/build/ ./build/ ; \
 	source $(K8S_SUPPORT); \

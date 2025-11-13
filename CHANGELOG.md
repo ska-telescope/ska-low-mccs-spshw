@@ -1,6 +1,8 @@
 # Version History
 
-## Unreleased
+## 10.4.0
+
+* [THORN-316] SelfCheck directory watch to only watch relevant folders
 
 ## 10.3.0
 

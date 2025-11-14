@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-262] Add timeout to pytest configuration. This should be set to slightly less than the pipeline timeout so that test reports are generated before the job is killed.
 * [SKB-1079] Cleanup. Ensure that we are not defining important cleanup information in init, this is executed after
 
 ## 10.3.0

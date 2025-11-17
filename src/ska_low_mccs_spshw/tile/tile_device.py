@@ -14,6 +14,7 @@ import json
 import logging
 import os.path
 import sys
+import threading
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
@@ -231,29 +232,36 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.power_state: PowerState | None = None
         self.status_information: dict[str, str] = {}
 
-    def delete_device(self: MccsTile) -> Any:
+    def delete_device(self: MccsTile) -> None:
         """
         Prepare to delete the device.
 
         This method must be done explicitly, else polling
         threads are not cleaned up after init_device().
-
-        :return: result from delete_device.
         """
+        for t in threading.enumerate():
+            print(
+                f"Threads open at beginning of DELETE DEVICE "
+                f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}",
+                flush=True,
+            )
         try:
             # We do not want to raise a exception here
             # This can cause a segfault.
-            self.component_manager.stop_communicating()
-            if self.component_manager._subrack_proxy:
-                self.component_manager._subrack_proxy.unsubscribe_all_change_events()
-            del self.component_manager
             self._stopping = True
             if self._health_recorder is not None:
                 self._health_recorder.cleanup()
                 self._health_recorder = None
+            self.component_manager.cleanup()
         except Exception:  # pylint: disable=broad-except
             pass
-        return super().delete_device()
+        super().delete_device()
+        for t in threading.enumerate():
+            print(
+                f"Threads open at end of DELETE DEVICE "
+                f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}",
+                flush=True,
+            )
 
     def init_device(self: MccsTile) -> None:
         """
@@ -262,6 +270,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises TypeError: when attributes have a converter
             that is not callable.
         """
+        for t in threading.enumerate():
+            print(
+                "Threads active in INIT_DEVICE "
+                f"Thread: {t.name}, ID: {t.ident}, Daemon: {t.daemon}",
+                flush=True,
+            )
         self._stopping = False
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
@@ -1433,21 +1447,35 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param attr_name: the name of the attribute causing the shutdown.
         """
-        try:
-            attr = self.get_device_attr().get_attr_by_name(attr_name)
-            attr_value = self._attribute_state[attr_name].read()
-            if attr.is_max_alarm():
-                self.logger.warning(
-                    f"Attribute {attr_name} changed to {attr_value}, "
-                    "this is above maximum alarm, Shutting down TPM."
+        # ===============================================
+        # Calling multi_attr methods on teardown causes segfault
+        # during startup, yes startup (check_alarm) during
+        # subscriptions, event thought we are joining this thread
+        # from delete_device. Figure that!
+        # Tango::Attribute::general_check_alarm<short>
+        # (Tango::AttrQuality const&, short const&, short const&) ()
+        # returning here appears to remove segfault, alternativly a
+        # large sleep of 30 seconds during startup will remove the
+        # occurance of a segfault. This issues was identified in
+        # skb-1079, but the root issues lies in cpptango and
+        # was not diognosed.
+        # ===============================================
+        if not self._stopping:
+            try:
+                attr = self.get_device_attr().get_attr_by_name(attr_name)
+                attr_value = self._attribute_state[attr_name].read()
+                if attr.is_max_alarm():
+                    self.logger.warning(
+                        f"Attribute {attr_name} changed to {attr_value}, "
+                        "this is above maximum alarm, Shutting down TPM."
+                    )
+                    self.component_manager.off()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.error(
+                    f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
+                    "Shutting down TPM."
                 )
                 self.component_manager.off()
-        except Exception as e:  # pylint: disable=broad-except
-            self.logger.error(
-                f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
-                "Shutting down TPM."
-            )
-            self.component_manager.off()
 
     def post_change_event(
         self: MccsTile,
@@ -1466,8 +1494,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
-        if self._stopping:
-            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:
@@ -1477,6 +1503,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
+        if self._stopping:
+            # ===============================================
+            # Calling multi_attr methods on teardown causes segfault
+            # during startup, yes startup (check_alarm) during
+            # subscriptions, event thought we are joining this thread
+            # from delete_device. Figure that!
+            # Tango::Attribute::general_check_alarm<short>
+            # (Tango::AttrQuality const&, short const&, short const&) ()
+            # returning here appears to remove segfault, alternativly a
+            # large sleep of 30 seconds during startup will remove the
+            # occurance of a segfault. This issues was identified in
+            # skb-1079, but the root issues lies in cpptango and
+            # was not diognosed.
+            # ===============================================
+            return
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.
         # it seems that fire_change_event will consume the

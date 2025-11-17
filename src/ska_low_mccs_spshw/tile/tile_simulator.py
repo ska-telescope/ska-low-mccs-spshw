@@ -1058,6 +1058,7 @@ class TileSimulator:
         self._station_id = self.STATION_ID
         self._timestamp = 0
         self._pps_delay: int = self.PPS_DELAY
+        self._timed_thread_stop = threading.Event()
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
@@ -2751,8 +2752,11 @@ class TileSimulator:
 
     def _timed_thread(self: TileSimulator) -> None:
         """Thread to update time related registers."""
-        while True:
+        while not self._timed_thread_stop.is_set():
             self._start_polling_event.wait()
+            # check stop flag immediately after waking
+            if self._timed_thread_stop.is_set():
+                break
             time_utc = time.time()
             _fpgatime = int(time_utc)
             if self.sync_time > 0 and self.sync_time < time_utc:
@@ -2765,6 +2769,12 @@ class TileSimulator:
             self.fpgas_time[0] = _fpgatime
             self.fpgas_time[1] = _fpgatime
             time.sleep(0.1)
+
+    def cleanup(self) -> None:
+        """Cleanup logic for gc."""
+        self._timed_thread_stop.set()
+        self._start_polling_event.set()
+        self._polling_thread.join()
 
     @check_mocked_overheating
     @connected
@@ -3207,9 +3217,13 @@ class DynamicTileSimulator(TileSimulator):
         self._updater.add_target(self.random_antenna_generator(), self._rfi_changed)
         self._updater.start()
 
-    def __del__(self: DynamicTileSimulator) -> None:
+    def cleanup(self: DynamicTileSimulator) -> None:
         """Garbage-collection hook."""
+        self._timed_thread_stop.set()
+        self._start_polling_event.set()
+        self._polling_thread.join()
         self._updater.stop()
+        self._updater.cleanup()
 
     def get_board_temperature(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked board temperature."""

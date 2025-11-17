@@ -8828,7 +8828,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         handler = self.get_command_object("ClearBroadbandRfi")
         self.logger.warning("Clearing broadband RFI (device)")
-        return handler()
+        (return_code, message) = handler()
+        self.logger.warning("Cleared broadband RFI (device)")
+        return ([return_code], [message])
 
 
 # ----------

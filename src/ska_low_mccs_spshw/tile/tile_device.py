@@ -3520,7 +3520,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
         return hw_currents
 
-    # pylint: disable=too-many-locals
     @firmwareCurrentThresholds.write  # type: ignore[no-redef]
     def firmwareCurrentThresholds(self: MccsTile, value: str) -> None:
         """
@@ -5235,7 +5234,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["pfbVersion"].read()
 
-    @attribute(dtype=("DevLong",), label="RFI Blanking-enabled Antennas")
+    @attribute(dtype=("DevLong",), max_dim_x=16, label="RFI Blanking-enabled Antennas")
     def rfiBlankingEnabledAntennas(self: MccsTile) -> list[int]:
         """
         Get the list of antennas for broadband RFI blanking is currently enabled.
@@ -8726,8 +8725,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
             :param argin: list antennas of which RFI counters to read
             :return: RFI counters
-            :rtype: numpy_array[antenna][polarisation]
-
             """
             return self._component_manager.read_broadband_rfi(argin)
 
@@ -8738,8 +8735,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: list antennas of which RFI counters to read
         :return: RFI counters
-        :rtype: numpy_array[antenna][polarisation]
-
         """
         handler = self.get_command_object("ReadBroadbandRfi")
         return handler(argin)
@@ -8771,7 +8766,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :param argin: list antennas whose RFI counters to read
             :return: Maximum RFI counts
             :rtype: int
-
             """
             return self._component_manager.max_broadband_rfi(argin)
 

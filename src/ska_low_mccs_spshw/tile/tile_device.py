@@ -8815,6 +8815,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             self.logger.warning("Clearing broadband RFI (cmd class)")
             self._component_manager.clear_broadband_rfi()
+            self.logger.warning("Cleared broadband RFI (cmd class)")
             return (ResultCode.OK, "ClearBroadbandRfi command completed OK")
 
     @command(dtype_out="DevVarLongStringArray")

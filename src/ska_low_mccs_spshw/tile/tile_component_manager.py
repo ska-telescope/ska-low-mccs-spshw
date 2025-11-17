@@ -4444,3 +4444,4 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.logger.warning("Clearing broadband RFI (cptmgr)")
             self.tile.clear_broadband_rfi()
+            self.logger.warning("Cleared broadband RFI (cptmgr)")

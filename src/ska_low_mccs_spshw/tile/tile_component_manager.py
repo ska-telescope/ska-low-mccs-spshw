@@ -4442,4 +4442,5 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
+            self.logger.warning("Clearing broadband RFI (cptmgr)")
             self.tile.clear_broadband_rfi()

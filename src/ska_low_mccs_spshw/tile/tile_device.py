@@ -8728,16 +8728,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             return self._component_manager.read_broadband_rfi(argin)
 
-    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongArray")
-    def ReadBroadbandRfi(self: MccsTile, argin: list[int]) -> np.ndarray:
+    @command(
+        dtype_in="DevVarLongArray",
+        dtype_out="DevVarLongArray",
+    )
+    def ReadBroadbandRfi(self: MccsTile, argin: list[int]) -> list[int]:
         """
         Read out the broadband RFI counters for the specified antennas.
 
         :param argin: list antennas of which RFI counters to read
-        :return: RFI counters
+        :return: RFI counters per pol flattened as a 1D list
         """
         handler = self.get_command_object("ReadBroadbandRfi")
-        return handler(argin)
+        return handler(argin).flatten().tolist()
 
     class MaxBroadbandRfiCommand(FastCommand):
         """Class for handling the MaxBroadbandRfi command."""

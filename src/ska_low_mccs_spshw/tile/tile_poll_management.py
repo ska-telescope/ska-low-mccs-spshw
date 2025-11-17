@@ -184,6 +184,7 @@ class RequestIterator:
     INITIALISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
+        "BROADBAND_RFI_FACTOR",
         "CHECK_CPLD_COMMS",
         "FPGA_REFERENCE_TIME",
         "IS_BEAMFORMER_RUNNING",
@@ -195,6 +196,7 @@ class RequestIterator:
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
         "PREADU_LEVELS",
+        "RFI_BLANKING_ENABLED_ANTENNAS",
         "TEMPERATURES",
         "VOLTAGES",
         "CURRENTS",
@@ -207,6 +209,7 @@ class RequestIterator:
     SYNCHRONISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
+        "BROADBAND_RFI_FACTOR",
         "CHECK_CPLD_COMMS",
         "FPGA_REFERENCE_TIME",
         "IS_BEAMFORMER_RUNNING",
@@ -218,6 +221,7 @@ class RequestIterator:
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
         "PREADU_LEVELS",
+        "RFI_BLANKING_ENABLED_ANTENNAS",
         "RFI_COUNT",
         "TILE_BEAMFORMER_FRAME",
         "TEMPERATURES",

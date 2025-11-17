@@ -88,6 +88,8 @@ _ATTRIBUTE_MAP: Final = {
     "CHECK_CPLD_COMMS": "global_status_alarms",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
+    "RFI_BLANKING_ENABLED_ANTENNAS": "rfi_blanking_enabled_antennas",
+    "BROADBAND_RFI_FACTOR": "broadband_rfi_factor",
 }
 
 
@@ -538,6 +540,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.read_broadband_rfi,
+                    publish=True,
+                )
+            case "RFI_BLANKING_ENABLED_ANTENNAS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    lambda: self.tile.rfi_blanking_enabled_antennas,
+                    publish=True,
+                )
+            case "BROADBAND_RFI_FACTOR":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    lambda: self.tile.broadband_rfi_factor,
                     publish=True,
                 )
             case _:
@@ -4329,3 +4343,103 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             return self.tile.is_station_beam_flagging_enabled()
+
+    @property
+    @check_communicating
+    def broadband_rfi_factor(self: TileComponentManager) -> float:
+        """
+        Return the broadband RFI factor.
+
+        :return: the broadband RFI factor
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.broadband_rfi_factor
+
+    @property
+    @check_communicating
+    def rfi_blanking_enabled_antennas(self: TileComponentManager) -> list[int]:
+        """
+        Return the list of antennas with RFI blanking enabled.
+
+        :return: list of antennas with RFI blanking enabled
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.rfi_blanking_enabled_antennas
+
+    def enable_broadband_rfi_blanking(
+        self: TileComponentManager, antennas: list[int]
+    ) -> None:
+        """
+        Enable broadband RFI blanking for a list of antennas.
+
+        :param antennas: list of antennas to enable broadband RFI blanking
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            self.tile.enable_broadband_rfi_blanking(antennas)
+
+    def disable_broadband_rfi_blanking(
+        self: TileComponentManager, antennas: list[int]
+    ) -> None:
+        """
+        Disable broadband RFI blanking for a list of antennas.
+
+        :param antennas: list of antennas to disable broadband RFI blanking
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            self.tile.disable_broadband_rfi_blanking(antennas)
+
+    def set_broadband_rfi_factor(
+        self: TileComponentManager, factor: float = 1.0
+    ) -> None:
+        """
+        Set the broadband RFI factor.
+
+        :param factor: the broadband RFI factor
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            self.tile.set_broadband_rfi_factor(factor)
+
+    def read_broadband_rfi(
+        self: TileComponentManager, antennas: list[int]
+    ) -> np.ndarray:
+        """
+        Read the broadband RFI levels for a list of antennas.
+
+        :param antennas: list of antennas to read broadband RFI levels
+
+        :return: broadband RFI levels for the specified antennas
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.read_broadband_rfi(antennas)
+
+    def max_broadband_rfi(self: TileComponentManager, antennas: list[int]) -> int:
+        """
+        Read the maximum broadband RFI levels for a list of antennas.
+
+        :param antennas: list of antennas to read maximum broadband RFI levels
+
+        :return: maximum broadband RFI levels for the specified antennas
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.max_broadband_rfi(antennas)
+
+    def clear_broadband_rfi(self: TileComponentManager) -> None:
+        """Clear the broadband RFI levels."""
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            self.tile.clear_broadband_rfi()

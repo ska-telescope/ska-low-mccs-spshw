@@ -3,6 +3,9 @@
 ## Unreleased
 
 * [SKB-1079] Cleanup. Ensure that we are not defining important cleanup information in init, this is executed after
+* [THORN-288] Update new RFI methods from tpm-api.
+  * Added MccsTile attributes: `rfiBlankingEnabledAntennas`, `broadbandRfiFactor`
+  * Added MccsTile commands: `EnableBroadbandRfiBlanking`, `DisableBroadbandRfiBlanking`, `SetBroadbandRfiFactor`, `ReadBroadbandRfi`, `MaxBroadbandRfi`, `ClearBroadbandRfi`
 
 ## 10.3.0
 

@@ -11,6 +11,8 @@ FROM artefact.skao.int/ska-build-python:0.1.1
 COPY --from=tools /usr/local/bin/retry /usr/local/bin/retry
 COPY --from=tools /usr/local/bin/wait-for-it.sh /usr/local/bin/wait-for-it.sh
 
+RUN apt-get update && apt-get install -y git
+
 WORKDIR /src
 
 ENV POETRY_NO_INTERACTION=1

@@ -13,20 +13,20 @@ from __future__ import annotations
 import datetime
 import gc
 import ipaddress
-import tango
-from logging import Logger
 import json
+import threading
 import time
 import unittest.mock
 from datetime import timezone
+from logging import Logger
 from typing import Any, Callable, Iterator
 from unittest.mock import ANY, MagicMock, call, patch
 
 import numpy as np
 import pytest
+import tango
 from astropy.utils import iers
 from ska_control_model import AdminMode, HealthState, ResultCode, TaskStatus
-import threading
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType

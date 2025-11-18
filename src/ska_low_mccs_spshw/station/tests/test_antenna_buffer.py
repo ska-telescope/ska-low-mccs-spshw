@@ -109,7 +109,6 @@ class TestAntennaBuffer(BaseDaqTest):
         }
         with self.reset_context():
             self.test_logger.debug("Starting directory watch")
-            self._start_directory_watch()
             self.test_logger.debug("Set up pattern generator")
             self._configure_and_start_pattern_generator(
                 "jesd",
@@ -140,6 +139,7 @@ class TestAntennaBuffer(BaseDaqTest):
             self._configure_daq(
                 daq_mode="ANTENNA_BUFFER", integrated=False, **daq_config
             )
+            self._start_directory_watch()
             self._read_antenna_buffer(
                 tiles=tiles,
             )

@@ -3080,6 +3080,76 @@ class TestMccsTileCommands:
                 }
             )
 
+    def test_get_set_rfi_factor(
+        self: TestMccsTileCommands, on_tile_device: MccsDeviceProxy
+    ) -> None:
+        """
+        Test we can set and get the RFI factor.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        initial_rfi_factor = on_tile_device.broadbandRfiFactor
+        assert isinstance(initial_rfi_factor, float)  # No assumption on initial value
+        on_tile_device.SetBroadbandRfiFactor(2.5)
+        while on_tile_device.broadbandRfiFactor == initial_rfi_factor:
+            time.sleep(0.1)
+        assert on_tile_device.broadbandRfiFactor == 2.5
+        on_tile_device.SetBroadbandRfiFactor(initial_rfi_factor)
+        while on_tile_device.broadbandRfiFactor == 2.5:
+            time.sleep(0.1)
+        assert on_tile_device.broadbandRfiFactor == initial_rfi_factor
+
+    def test_enable_disable_rfi_blanking(
+        self: TestMccsTileCommands, on_tile_device: MccsDeviceProxy
+    ) -> None:
+        """
+        Test we can enable and disable RFI blanking.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        initial_blanked_antennas = on_tile_device.rfiBlankingEnabledAntennas
+        assert initial_blanked_antennas.tolist() == []
+
+        [rc], [_] = on_tile_device.EnableBroadbandRfiBlanking([1, 3, 5])
+        assert rc == ResultCode.OK
+
+        while on_tile_device.rfiBlankingEnabledAntennas.tolist() == []:
+            time.sleep(0.1)
+        assert on_tile_device.rfiBlankingEnabledAntennas.tolist() == [1, 3, 5]
+
+        [rc], [_] = on_tile_device.DisableBroadbandRfiBlanking([3])
+        assert rc == ResultCode.OK
+        while on_tile_device.rfiBlankingEnabledAntennas.tolist() == [1, 3, 5]:
+            time.sleep(0.1)
+        assert on_tile_device.rfiBlankingEnabledAntennas.tolist() == [1, 5]
+
+        [rc], [_] = on_tile_device.DisableBroadbandRfiBlanking([1, 5])
+        assert rc == ResultCode.OK
+        while on_tile_device.rfiBlankingEnabledAntennas.tolist() == [1, 5]:
+            time.sleep(0.1)
+        assert on_tile_device.rfiBlankingEnabledAntennas.tolist() == []
+
+    def test_read_rfi(
+        self: TestMccsTileCommands, on_tile_device: MccsDeviceProxy
+    ) -> None:
+        """
+        Test we can read RFI.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        initial_rfi = on_tile_device.ReadBroadbandRfi(list(range(16)))
+        assert len(initial_rfi) == 16 * 2
+        assert isinstance(on_tile_device.MaxBroadbandRfi(list(range(16))), int)
+        on_tile_device.ClearBroadbandRfi()
+        cleared_rfi = on_tile_device.ReadBroadbandRfi(list(range(16))).tolist()
+        assert cleared_rfi == [0] * 16 * 2
+
 
 class TestDataBaseInteraction:
     """

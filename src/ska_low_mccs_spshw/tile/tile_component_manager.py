@@ -601,7 +601,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             case BoardError():
                 self.logger.error(f"BoardError: {repr(exception)}")
             case _:
-                self.logger.error(f"Unexpected error found: {repr(exception)}", exc_info=True)
+                self.logger.error(
+                    f"Unexpected error found: {repr(exception)}", exc_info=True
+                )
 
         # We do not evaluate error codes. Connect if not already!
         assert self._request_provider is not None
@@ -777,8 +779,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Voltages
         for voltage in VOLTAGE_KEYS:
             _thresholds = voltage_thresholds.get(voltage)
-            min_threshold = _thresholds.get("min", "Undefined") if _thresholds is not None else "Undefined"
-            max_threshold = _thresholds.get("max", "Undefined") if _thresholds is not None else "Undefined"
+            min_threshold = (
+                _thresholds.get("min", "Undefined")
+                if _thresholds is not None
+                else "Undefined"
+            )
+            max_threshold = (
+                _thresholds.get("max", "Undefined")
+                if _thresholds is not None
+                else "Undefined"
+            )
             setattr(
                 thresholds,
                 f"{voltage}_min_alarm_threshold",
@@ -793,8 +803,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Currents
         for current in CURRENT_KEYS:
             _thresholds = current_thresholds.get(current)
-            min_threshold = _thresholds.get("min", "Undefined") if _thresholds is not None else "Undefined"
-            max_threshold = _thresholds.get("max", "Undefined") if _thresholds is not None else "Undefined"
+            min_threshold = (
+                _thresholds.get("min", "Undefined")
+                if _thresholds is not None
+                else "Undefined"
+            )
+            max_threshold = (
+                _thresholds.get("max", "Undefined")
+                if _thresholds is not None
+                else "Undefined"
+            )
             setattr(
                 thresholds,
                 f"{current}_min_alarm_threshold",

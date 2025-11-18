@@ -3150,6 +3150,63 @@ class TestMccsTileCommands:
         cleared_rfi = on_tile_device.ReadBroadbandRfi(list(range(16))).tolist()
         assert cleared_rfi == [0] * 16 * 2
 
+    @pytest.mark.parametrize(
+        ("cmd_name"),
+        [
+            ("EnableBroadbandRfiBlanking"),
+            ("DisableBroadbandRfiBlanking"),
+        ],
+    )
+    def test_enable_disable_rfi_command_input_validation(
+        self: TestMccsTileCommands, on_tile_device: MccsDeviceProxy, cmd_name: str
+    ) -> None:
+        """
+        Test RFI command input validation.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param cmd_name: Name of the command to test.
+        """
+        [rc], [msg] = on_tile_device.command_inout(cmd_name, list(range(17)))
+        assert rc == ResultCode.REJECTED
+        assert msg == "Cannot specify more than 16 antennas"
+
+        [rc], [msg] = on_tile_device.command_inout(cmd_name, [1, 4, 6, -1])
+        assert rc == ResultCode.REJECTED
+        assert msg == "Antenna IDs must be between 0 and 15"
+
+        [rc], [msg] = on_tile_device.command_inout(cmd_name, [2, 3, 15, 16])
+        assert rc == ResultCode.REJECTED
+        assert msg == "Antenna IDs must be between 0 and 15"
+
+    @pytest.mark.parametrize(
+        ("cmd_name"),
+        [
+            ("ReadBroadbandRfi"),
+            ("MaxBroadbandRfi"),
+        ],
+    )
+    def test_read_max_rfi_command_input_validation(
+        self: TestMccsTileCommands, on_tile_device: MccsDeviceProxy, cmd_name: str
+    ) -> None:
+        """
+        Test RFI command input validation.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param cmd_name: Name of the command to test.
+        """
+        with pytest.raises(DevFailed, match="Cannot specify more than 16 antennas"):
+            on_tile_device.command_inout(cmd_name, list(range(17)))
+
+        with pytest.raises(DevFailed, match="Antenna IDs must be between 0 and 15"):
+            on_tile_device.command_inout(cmd_name, [1, 4, 6, -1])
+
+        with pytest.raises(DevFailed, match="Antenna IDs must be between 0 and 15"):
+            on_tile_device.command_inout(cmd_name, [2, 3, 15, 16])
+
 
 class TestDataBaseInteraction:
     """

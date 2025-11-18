@@ -8588,6 +8588,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
         """
+        if len(argin) > 16:
+            return ([ResultCode.REJECTED], ["Cannot specify more than 16 antennas"])
+        if max(argin) > 15 or min(argin) < 0:
+            return ([ResultCode.REJECTED], ["Antenna IDs must be between 0 and 15"])
         handler = self.get_command_object("EnableBroadbandRfiBlanking")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
@@ -8638,6 +8642,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
         """
+        if len(argin) > 16:
+            return ([ResultCode.REJECTED], ["Cannot specify more than 16 antennas"])
+        if max(argin) > 15 or min(argin) < 0:
+            return ([ResultCode.REJECTED], ["Antenna IDs must be between 0 and 15"])
         handler = self.get_command_object("DisableBroadbandRfiBlanking")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
@@ -8738,7 +8746,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: list antennas of which RFI counters to read
         :return: RFI counters per pol flattened as a 1D list
+
+        :raises ValueError: if input arguments are invalid
         """
+        if len(argin) > 16:
+            raise ValueError("Cannot specify more than 16 antennas")
+        if max(argin) > 15 or min(argin) < 0:
+            raise ValueError("Antenna IDs must be between 0 and 15")
         handler = self.get_command_object("ReadBroadbandRfi")
         return handler(argin).flatten().tolist()
 
@@ -8782,7 +8796,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: list antennas whose RFI counters to read
         :return: Maximum RFI counts
         :rtype: int
+
+        :raises ValueError: if input arguments are invalid
         """
+        if len(argin) > 16:
+            raise ValueError("Cannot specify more than 16 antennas")
+        if max(argin) > 15 or min(argin) < 0:
+            raise ValueError("Antenna IDs must be between 0 and 15")
         handler = self.get_command_object("MaxBroadbandRfi")
         return handler(argin)
 

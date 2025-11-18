@@ -1,14 +1,16 @@
 # Version History
 
-## 10.4.0
+## Unreleased
 
-* [THORN-316] SelfCheck directory watch to only watch relevant folders
-
-* [THORN-262] Add timeout to pytest configuration. This should be set to slightly less than the pipeline timeout so that test reports are generated before the job is killed.
-* [SKB-1079] Cleanup. Ensure that we are not defining important cleanup information in init, this is executed after
 * [THORN-288] Update new RFI methods from tpm-api.
   * Added MccsTile attributes: `rfiBlankingEnabledAntennas`, `broadbandRfiFactor`
   * Added MccsTile commands: `EnableBroadbandRfiBlanking`, `DisableBroadbandRfiBlanking`, `SetBroadbandRfiFactor`, `ReadBroadbandRfi`, `MaxBroadbandRfi`, `ClearBroadbandRfi`
+
+## 10.4.0
+
+* [THORN-316] SelfCheck directory watch to only watch relevant folders
+* [THORN-262] Add timeout to pytest configuration. This should be set to slightly less than the pipeline timeout so that test reports are generated before the job is killed.
+* [SKB-1079] Cleanup. Ensure that we are not defining important cleanup information in init, this is executed after
 
 ## 10.3.0
 

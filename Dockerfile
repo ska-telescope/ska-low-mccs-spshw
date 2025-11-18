@@ -1,15 +1,31 @@
-FROM artefact.skao.int/ska-tango-images-pytango-builder:9.5.0 AS buildenv
-FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.5.0 AS runtime
-# The following COPY is required so that we actually build the buildenv stage.
-# If we do not then as it is not at explicit requirement of the final target image it will be skipped.
-# This manifests as an error on line 2 stating that `stage 'buildenv' must be defined before current stage 'runtime'`
-COPY --from=buildenv . .
-USER root
+# TODO: Adding this image "as tools"
+# so that we can copy the shell scripts
+# that ska-tango-util expects this image to have
+# is highly unsatisfactory.
+# I've taken this from ska-tango-examples
+# but hopefully a better solution will be found.
+FROM artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.13 AS tools
+FROM artefact.skao.int/ska-build-python:0.1.1
 
+# TODO: Unsatisfactory; see comment above
+COPY --from=tools /usr/local/bin/retry /usr/local/bin/retry
+COPY --from=tools /usr/local/bin/wait-for-it.sh /usr/local/bin/wait-for-it.sh
+
+WORKDIR /src
+
+ENV POETRY_NO_INTERACTION=1
+ENV POETRY_VIRTUALENVS_IN_PROJECT=1
+ENV POETRY_VIRTUALENVS_CREATE=1
+ENV VIRTUAL_ENV=/src/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+COPY README.md pyproject.toml poetry.lock* ./
+RUN poetry install --no-root
+
+COPY Makefile ./
+COPY helmfile.d/ helmfile.d/
+COPY .make/ .make/
 RUN make install-firmware
 
-RUN apt-get update && apt-get install -y git
-
-RUN pip install -e .
-
-USER tango
+COPY src ./
+RUN poetry install

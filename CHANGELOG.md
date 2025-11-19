@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-330] Optimise dockerfile to cache steps better under repeated builds during development.
+* [SKB-1120] Fix backward compatibility with BIOS 0.5.0
 
 ## 10.4.0
 

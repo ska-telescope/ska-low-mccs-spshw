@@ -287,6 +287,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._poll_timeout: float = poll_timeout
         self._power_callback_timeout: float = power_callback_timeout
         self._event = threading.Event()
+        self._is_polling = False
         # ==========================================================
         # Added as part of SKB-1089, to keep track of frequency this
         # issus is seen in production.
@@ -810,6 +811,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
+        self._is_polling = True
         self._event.clear()
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
@@ -829,21 +831,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         super().polling_stopped()
 
         self._event.set()
+        self._is_polling = False
 
     def cleanup(self: TileComponentManager) -> None:
         """Perform necessary cleanup before device teardown."""
         # Stop communicating with the component, waiting a reasonable time
         # for the last request to execute.
-        # max poll time of 30 is used to cover the case that cleanup is
+        # max poll time of 45 is used to cover the case that cleanup is
         # called during initialisation.
-        max_poll_time: float = 30.0
-        self.stop_communicating()
-        if not self._event.wait(max_poll_time):
-            print(
-                "Failed waiting for final poll to terminate "
-                f"(timeout=={max_poll_time} [s]).",
-                flush=True,
-            )
+        max_poll_time: float = 45.0
+        if self._is_polling:
+            self.stop_communicating()
+            if not self._event.wait(max_poll_time):
+                print(
+                    "Failed waiting for final poll to terminate "
+                    f"(timeout=={max_poll_time} [s]).",
+                    flush=True,
+                )
 
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
             self.tile.cleanup()

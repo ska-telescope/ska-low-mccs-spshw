@@ -214,25 +214,6 @@ def patched_tile_device_class_fixture(
             )
             return tile_component_manager
 
-        def delete_device(self: PatchedTileDevice) -> None:
-            """
-            Clean up callbacks to ensure safe teardown.
-
-            During teardown of the MccsTile device a segfault can occur.
-            This is beleived to be due to the injection of the
-            TileComponentManager. The teardown of the MccsTile device in the context was
-            occuring before the teardown of the injected tilecomponentmanager,
-            this was leading to messages reporting that we were trying to
-            push a nonexistent attribute from TANGO during
-            teardown (when the attribute did exist).
-            Although i was not able to convince myself fully that this was concrete,
-            the act of stopping communication and joining the polling thread
-            removes the issue during teardown. This is supporting of the theory above.
-            """
-            tile_component_manager.stop_communicating()
-            tile_component_manager._poller._polling_thread.join()
-            super().delete_device()
-
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(
             self: PatchedTileDevice, attribute_to_set: str

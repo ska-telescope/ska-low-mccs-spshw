@@ -3450,10 +3450,8 @@ class SpsStationComponentManager(
                     ).split("correlation_burst_")[1]
                 except Empty:
                     self.logger.error("Failed to receive data in 10 seconds.")
-                    if len(dropped_channels) == last_channel - first_channel:
+                    if len(dropped_channels) == last_channel - first_channel + 1:
                         success = False
-                        break
-                    success = True
                     break
                 channel = int(filename.split("_")[0])
                 dropped_channels.remove(channel)
@@ -3475,7 +3473,7 @@ class SpsStationComponentManager(
                         status=TaskStatus.COMPLETED,
                         result=(
                             ResultCode.OK,
-                            {"dropped_chggannggels": dropped_channels},
+                            {"dropped_channels": dropped_channels},
                         ),
                     )
                 else:

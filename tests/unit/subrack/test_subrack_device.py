@@ -142,6 +142,7 @@ def test_context_fixture(
         subrack_id,
         use_attribute_for_health=use_attribute_for_health,
         device_class=_PatchedMccsSubrack,
+        define_parent_trl=False,
     )
 
     with harness as context:

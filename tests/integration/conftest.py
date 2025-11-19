@@ -212,7 +212,6 @@ def patched_tile_device_class_fixture(
             tile_component_manager._update_attribute_callback = (
                 self._update_attribute_callback
             )
-
             return tile_component_manager
 
         def delete_device(self: PatchedTileDevice) -> None:

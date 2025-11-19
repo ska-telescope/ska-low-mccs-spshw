@@ -43,6 +43,7 @@ from ska_tango_base.poller import PollingComponentManager
 from .exception_codes import HardwareVerificationError
 from .firmware_threshold_interface import (
     CURRENT_KEYS,
+    DB_UNDEFINED,
     TEMPERATURE_KEYS,
     VOLTAGE_KEYS,
     FirmwareThresholds,
@@ -601,7 +602,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             case BoardError():
                 self.logger.error(f"BoardError: {repr(exception)}")
             case _:
-                self.logger.error(f"Unexpected error found: {repr(exception)}")
+                self.logger.error(
+                    f"Unexpected error found: {repr(exception)}", exc_info=True
+                )
 
         # We do not evaluate error codes. Connect if not already!
         assert self._request_provider is not None
@@ -776,28 +779,34 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         # Voltages
         for voltage in VOLTAGE_KEYS:
+            _thresholds = voltage_thresholds.get(voltage, {})
+            min_threshold = _thresholds.get("min", DB_UNDEFINED)
+            max_threshold = _thresholds.get("max", DB_UNDEFINED)
             setattr(
                 thresholds,
                 f"{voltage}_min_alarm_threshold",
-                voltage_thresholds[voltage]["min"],
+                min_threshold,
             )
             setattr(
                 thresholds,
                 f"{voltage}_max_alarm_threshold",
-                voltage_thresholds[voltage]["max"],
+                max_threshold,
             )
 
         # Currents
         for current in CURRENT_KEYS:
+            _thresholds = current_thresholds.get(current, {})
+            min_threshold = _thresholds.get("min", DB_UNDEFINED)
+            max_threshold = _thresholds.get("max", DB_UNDEFINED)
             setattr(
                 thresholds,
                 f"{current}_min_alarm_threshold",
-                current_thresholds[current]["min"],
+                min_threshold,
             )
             setattr(
                 thresholds,
                 f"{current}_max_alarm_threshold",
-                current_thresholds[current]["max"],
+                max_threshold,
             )
 
         return thresholds

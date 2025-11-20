@@ -4,6 +4,7 @@
 
 * [THORN-331] Updates to AcquireDataForCalibration. Removed some old DAQ workarounds, added configurable integration time, it now reports dropped channels.
 * [THORN-330] Optimise dockerfile to cache steps better under repeated builds during development.
+* [THORN-332] Add SonarQube configuration
 * [SKB-1120] Fix backward compatibility with BIOS 0.5.0
 
 ## 10.4.0

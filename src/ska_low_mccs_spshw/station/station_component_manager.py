@@ -28,7 +28,6 @@ import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
 from ska_control_model import (
-    AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
@@ -57,50 +56,6 @@ from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
-
-
-def retry_command_on_exception(
-    device_proxy: tango.Deviceproxy,
-    command_name: str,
-    command_arguments: Any = None,
-    timeout: int = 30,
-) -> Any:
-    """
-    Retry command when DevFailed exception raised.
-
-    NOTE: By default this command will retry the command up to 30 seconds
-
-    :param device_proxy: A 'tango.DeviceProxy' to the backend device.
-    :param command_name: A string containing the command name.
-    :param command_arguments: The arguments to pass to command.
-        defaults to None
-    :param timeout: A max time in seconds before we give up trying
-
-    :returns: The response from the command.
-
-    :raises TimeoutError: if the command did not execute without exception in
-        timeout period.
-    """
-    assert device_proxy.adminMode in [
-        AdminMode.ONLINE,
-        AdminMode.ENGINEERING,
-    ], "Unable to execute command on a OFFLINE device."
-    tick = 2
-    terminate_time = time.time() + timeout
-    while time.time() < terminate_time:
-        try:
-            if command_arguments is None:
-                return getattr(device_proxy, command_name)()
-            return getattr(device_proxy, command_name)(command_arguments)
-        except tango.DevFailed as df:
-            print(
-                f"{device_proxy.dev_name()} failed to communicate with backend.\n"
-                f"{df}"
-            )
-            time.sleep(tick)
-    raise TimeoutError(
-        f"Unable to execute command {command_name} on {device_proxy.dev_name()}"
-    )
 
 
 class _TileProxy(DeviceComponentManager):
@@ -303,6 +258,26 @@ class _LMCDaqProxy(DeviceComponentManager):
                     f"Got unexpected change event for: {attribute_name} "
                     "in DaqProxy._daq_data_callback."
                 )
+
+    @property
+    def receiverIP(self: _LMCDaqProxy) -> str:
+        """
+        Return the reciever IP of the DAQ.
+
+        :return: the receiver IP of the DAQ.
+        """
+        assert self._proxy is not None
+        return self._proxy.receiverIP
+
+    @property
+    def receiverPorts(self: _LMCDaqProxy) -> list[int]:
+        """
+        Return the reciever ports of the DAQ.
+
+        :return: the receiver ports of the DAQ.
+        """
+        assert self._proxy is not None
+        return self._proxy.receiverPorts
 
 
 class _BandpassDaqProxy(DeviceComponentManager):
@@ -1088,6 +1063,7 @@ class SpsStationComponentManager(
             )
             if (
                 data_received_result[0] == "correlator"
+                or data_received_result[0] == "tc_correlator"
                 and self.acquiring_data_for_calibration.is_set()
             ):
                 self.calibration_data_received_queue.put(
@@ -3335,6 +3311,8 @@ class SpsStationComponentManager(
         first_channel: int,
         last_channel: int,
         start_time: str | None = None,
+        daq_mode: str = "TCC",
+        nof_samples: int = 1835008,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -3345,61 +3323,34 @@ class SpsStationComponentManager(
         :param first_channel: first channel to calibrate for
         :param last_channel: last channel to calibrate for
         :param start_time: UTC Time for start sending data.
+        :param daq_mode: the correlator mode to start, xGPU or TCC.
+        :param nof_samples: the number of samples to integrate, only variable in TCC.
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
         """
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[first_channel, last_channel, start_time],
+            args=[first_channel, last_channel, start_time, daq_mode, nof_samples],
             task_callback=task_callback,
         )
 
     def _start_daq(
         self: SpsStationComponentManager,
         daq_mode: str,
-        max_tries: int = 10,
-        tick: float = 0.5,
     ) -> None:
-        assert self._lmc_daq_proxy is not None
-        retry_command_on_exception(
-            self._lmc_daq_proxy._proxy,
-            "Start",
-            json.dumps(
-                {"modes_to_start": daq_mode},
-            ),
-        )
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._lmc_daq_proxy._proxy, "DaqStatus")
-            )
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                return
-            time.sleep(tick)
+        on_command = MccsCommandProxy(self._lmc_daq_trl, "Start", self.logger)
+        result, message = on_command(json.dumps({"modes_to_start": daq_mode}))
+        if result != ResultCode.OK:
+            raise ValueError(f"DAQ failed to start in {daq_mode}: {message}")
 
-        assert (
-            len(daq_status["Running Consumers"]) > 0
-            and daq_mode in daq_status["Running Consumers"][0]
-        ), f"Failed to start {daq_mode}."
-
-    def _stop_daq(
-        self: SpsStationComponentManager, max_tries: int = 10, tick: float = 0.5
-    ) -> None:
-        assert self._lmc_daq_proxy is not None
-        retry_command_on_exception(self._lmc_daq_proxy._proxy, "Stop")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._lmc_daq_proxy._proxy, "DaqStatus")
-            )
-            if len(daq_status["Running Consumers"]) == 0:
-                return
-            time.sleep(tick)
-
-        assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+    def _stop_daq(self: SpsStationComponentManager) -> None:
+        self.logger.info("Stopping DAQ")
+        off_command = MccsCommandProxy(self._lmc_daq_trl, "Stop", self.logger)
+        result, message = off_command()
+        if result != ResultCode.OK:
+            raise ValueError(f"DAQ failed to stop: {message}")
 
     # pylint: disable = too-many-branches
     @check_communicating
@@ -3408,6 +3359,8 @@ class SpsStationComponentManager(
         first_channel: int,
         last_channel: int,
         start_time: str | None = None,
+        daq_mode: str = "TCC",
+        nof_samples: int = 1835008,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3417,6 +3370,8 @@ class SpsStationComponentManager(
         :param start_time: UTC Time for start sending data.
         :param first_channel: first channel to calibrate for
         :param last_channel: last channel to calibrate for
+        :param daq_mode: the correlator mode to start, xGPU or TCC.
+        :param nof_samples: the number of samples to integrate, only variable in TCC.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -3450,8 +3405,17 @@ class SpsStationComponentManager(
 
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
-
-            self._start_daq("CORRELATOR_DATA")
+            self._configure_station_for_calibration(
+                nof_correlator_samples=nof_samples,
+                nof_tiles=(
+                    16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
+                ),
+            )
+            self._start_daq(
+                "CORRELATOR_DATA"
+                if daq_mode.lower() == "xgpu"
+                else "TC_CORRELATOR_DATA"
+            )
             if start_time is None:
                 self.logger.info(
                     "No start_time defined. Defaulting to 2 seconds in the future."
@@ -3467,13 +3431,14 @@ class SpsStationComponentManager(
                         "data_type": "channel",
                         "first_channel": first_channel,
                         "last_channel": last_channel,
-                        "n_samples": 1835008,
+                        "n_samples": nof_samples,
                     }
                 )
             )
             self.logger.debug(
-                f"Raw channel spigot sent for {first_channel=}, {last_channel=}"
+                f"Channel spigot sent for {first_channel=}, {last_channel=}"
             )
+            dropped_channels = list(range(first_channel, last_channel + 1))
             self.logger.debug("Waiting for data to be received...")
             success = True
             while True:
@@ -3485,9 +3450,11 @@ class SpsStationComponentManager(
                     ).split("correlation_burst_")[1]
                 except Empty:
                     self.logger.error("Failed to receive data in 10 seconds.")
-                    success = False
+                    if len(dropped_channels) == last_channel - first_channel + 1:
+                        success = False
                     break
                 channel = int(filename.split("_")[0])
+                dropped_channels.remove(channel)
                 if channel == last_channel:
                     self.logger.info(
                         f"Got data for {channel}, this is the last channel expected."
@@ -3504,14 +3471,17 @@ class SpsStationComponentManager(
                 if success:
                     task_callback(
                         status=TaskStatus.COMPLETED,
-                        result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
+                        result=(
+                            ResultCode.OK,
+                            {"dropped_channels": dropped_channels},
+                        ),
                     )
                 else:
                     task_callback(
                         status=TaskStatus.FAILED,
                         result=(
                             ResultCode.FAILED,
-                            "Failed to receive data in 10 seconds.",
+                            "No channels processed, maybe no data reached DAQ?",
                         ),
                     )
         finally:
@@ -3521,7 +3491,7 @@ class SpsStationComponentManager(
     def configure_station_for_calibration(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
-        **daq_config: dict[str, Any],
+        **daq_config: Any,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the configure station for calibration method.
@@ -3545,7 +3515,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-        **daq_config: dict[str, Any],
+        **daq_config: Any,
     ) -> None:
         """
         Configure station for calibration.
@@ -3554,6 +3524,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         :param daq_config: any extra config to configure DAQ with
         """
+        assert self._lmc_daq_proxy is not None
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -3568,65 +3539,26 @@ class SpsStationComponentManager(
                 return True
             return False
 
-        nof_correlator_samples: int = 1835008
-        receiver_frame_size: int = 9000
-
-        max_tries: int = 10
-        tick: float = 0.5
-
-        # Get DAQ running with correlator
-        assert self._lmc_daq_proxy is not None
-        assert self._lmc_daq_proxy._proxy is not None
-
-        daq_status = json.loads(
-            retry_command_on_exception(self._lmc_daq_proxy._proxy, "DaqStatus", None)
-        )
-        if _check_aborted():
-            return
-
-        # TODO: We have to stop all consumers before sending again
-        # https://jira.skatelescope.org/browse/MCCS-2183
-        if len(daq_status["Running Consumers"]) > 0:
-            self.logger.info("Stopping all consumers...")
-            rc, _ = retry_command_on_exception(self._lmc_daq_proxy._proxy, "Stop", None)
-            if rc != ResultCode.OK:
-                self.logger.warning("Unable to stop daq consumers.")
-            for _ in range(max_tries):
-                daq_status = json.loads(
-                    retry_command_on_exception(
-                        self._lmc_daq_proxy._proxy, "DaqStatus", None
-                    )
-                )
-                if len(daq_status["Running Consumers"]) == 0:
-                    break
-                if _check_aborted():
-                    return
-                time.sleep(tick)
-
-            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
-
         base_config = {
             "nof_tiles": 16,  # always 16 for correlation mode.
             "directory": "correlator_data",  # Appended to ADR-55 path.
-            "nof_correlator_samples": nof_correlator_samples,
-            "receiver_frame_size": receiver_frame_size,
+            "nof_correlator_samples": 1835008,
             "description": "Data from AcquireDataForCalibration",
         }
         base_config.update(daq_config)
 
-        retry_command_on_exception(
-            self._lmc_daq_proxy._proxy,
-            "configure",
-            json.dumps(base_config),
+        configure_command = MccsCommandProxy(
+            self._lmc_daq_trl, "Configure", self.logger
         )
+        configure_command(json.dumps(base_config), is_lrc=False)
         if _check_aborted():
             return
 
         self.set_lmc_download(
             mode="10g",
             payload_length=8192,  # Default for using 10g
-            dst_ip=daq_status["Receiver IP"][0],
-            dst_port=daq_status["Receiver Ports"][0],
+            dst_ip=self._lmc_daq_proxy.receiverIP,
+            dst_port=self._lmc_daq_proxy.receiverPorts[0],
         )
         if task_callback:
             task_callback(

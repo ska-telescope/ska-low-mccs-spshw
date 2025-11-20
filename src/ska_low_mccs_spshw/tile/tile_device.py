@@ -1446,21 +1446,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param attr_name: the name of the attribute causing the shutdown.
         """
-        # ===============================================
-        # Calling multi_attr methods on teardown causes segfault
-        # during startup, yes startup (check_alarm) during
-        # subscriptions, event thought we are joining this thread
-        # from delete_device. Figure that!
-        # Tango::Attribute::general_check_alarm<short>
-        # (Tango::AttrQuality const&, short const&, short const&) ()
-        # returning here appears to remove segfault, alternativly a
-        # large sleep of 30 seconds during startup will remove the
-        # occurance of a segfault. This issues was identified in
-        # skb-1079, but the root issues lies in cpptango and
-        # was not diognosed.
-        # ===============================================
         if not self._stopping:
             try:
+                self._multi_attr.check_alarm(attr_name)
                 attr = self._multi_attr.get_attr_by_name(attr_name)
                 attr_value = self._attribute_state[attr_name].read()
                 if attr.is_max_alarm():
@@ -1502,32 +1490,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
-        if self._stopping:
-            # ===============================================
-            # Calling multi_attr methods on teardown causes segfault
-            # during startup, yes startup (check_alarm) during
-            # subscriptions, event thought we are joining this thread
-            # from delete_device. Figure that!
-            # Tango::Attribute::general_check_alarm<short>
-            # (Tango::AttrQuality const&, short const&, short const&) ()
-            # returning here appears to remove segfault, alternativly a
-            # large sleep of 30 seconds during startup will remove the
-            # occurance of a segfault. This issues was identified in
-            # skb-1079, but the root issues lies in cpptango and
-            # was not diognosed.
-            # ===============================================
-            return
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.
         # it seems that fire_change_event will consume the
         # value set meaning a check_alarm has a nullptr.
-        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
-        try:
-            # Update the attribute ALARM status.
-            self._multi_attr.check_alarm(name)
-        except tango.DevFailed:
-            # no alarm defined
-            pass
+        if attr_quality != tango.AttrQuality.ATTR_INVALID:
+            self._multi_attr.get_attr_by_name(name).set_value(attr_value)
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """

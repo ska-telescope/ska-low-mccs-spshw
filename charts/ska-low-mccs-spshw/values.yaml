@@ -45,8 +45,7 @@ ska-tango-devices:
   labels:
     app: ska-low-mccs-spshw
 
-  # Attribute alarm device defaults.
-  # deviceDefaults:
+  # Attribute alarm default thresholds
   classProperties:
     MccsTile:
       boardTemperature->max_alarm: 70.0

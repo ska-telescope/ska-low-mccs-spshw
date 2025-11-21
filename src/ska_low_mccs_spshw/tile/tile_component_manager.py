@@ -837,7 +837,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
-        self._cleanup_subscriptions()
         if self._request_provider is not None:
             self._request_provider.cleanup()
         self._tpm_status = TpmStatus.UNKNOWN
@@ -856,6 +855,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # for the last request to execute.
         # max poll time of 45 is used to cover the case that cleanup is
         # called during initialisation.
+        self._cleanup_subscriptions()
         max_poll_time: float = 45.0
         if self._is_polling:
             self.stop_communicating()

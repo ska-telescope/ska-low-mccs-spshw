@@ -8833,9 +8833,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purposes only.
             """
-            self.logger.warning("Clearing broadband RFI (cmd class)")
             self._component_manager.clear_broadband_rfi()
-            self.logger.warning("Cleared broadband RFI (cmd class)")
             return (ResultCode.OK, "ClearBroadbandRfi command completed OK")
 
     @command(dtype_out="DevVarLongStringArray")
@@ -8847,9 +8845,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             indicating status. The message is for information purposes only.
         """
         handler = self.get_command_object("ClearBroadbandRfi")
-        self.logger.warning("Clearing broadband RFI (device)")
         (return_code, message) = handler()
-        self.logger.warning("Cleared broadband RFI (device)")
         return ([return_code], [message])
 
 

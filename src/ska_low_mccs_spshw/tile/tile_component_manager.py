@@ -4405,9 +4405,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.disable_broadband_rfi_blanking(antennas)
 
-    def set_broadband_rfi_factor(
-        self: TileComponentManager, factor: float = 1.0
-    ) -> None:
+    def set_broadband_rfi_factor(self: TileComponentManager, factor: float) -> None:
         """
         Set the broadband RFI factor.
 
@@ -4451,6 +4449,4 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            self.logger.warning("Clearing broadband RFI (cptmgr)")
             self.tile.clear_broadband_rfi()
-            self.logger.warning("Cleared broadband RFI (cptmgr)")

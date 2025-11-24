@@ -142,6 +142,8 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_attribute("receiverIP", "123.123.123")
+    builder.add_attribute("receiverPorts", [4660])
     builder.add_command(
         "DaqStatus",
         json.dumps(

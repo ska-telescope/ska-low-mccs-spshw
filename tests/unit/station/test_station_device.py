@@ -14,16 +14,19 @@ import datetime
 import gc
 import ipaddress
 import json
+import threading
 import time
 import unittest.mock
 from datetime import timezone
+from logging import Logger
 from typing import Any, Callable, Iterator
 from unittest.mock import ANY, MagicMock, call, patch
 
 import numpy as np
 import pytest
+import tango
 from astropy.utils import iers
-from ska_control_model import AdminMode, HealthState, ResultCode
+from ska_control_model import AdminMode, HealthState, ResultCode, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
@@ -41,6 +44,45 @@ from tests.test_tools import execute_lrc_to_completion
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
+
+
+TARGET = "ska_low_mccs_common.component.command_proxy.invoke_lrc"
+
+
+@pytest.fixture(autouse=True)
+def invoke_lrc_patch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Patch out invoke_lrc to always return a happy path.
+
+    :param monkeypatch: pytest monkeypatch fixture
+    """
+
+    def _happy_invoke_lrc(
+        lrc_callback: Callable,
+        proxy: tango.DeviceProxy,
+        command: str,
+        command_args: Any | None = None,
+        logger: Logger | None = None,
+    ) -> None:
+        getattr(proxy, command)(*command_args)
+
+        def _task_thread() -> None:
+            try:
+                lrc_callback(status=TaskStatus.QUEUED)
+                lrc_callback(status=TaskStatus.IN_PROGRESS)
+                lrc_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Command completed"),
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                if logger is not None:
+                    logger.error(f"Exception in _task_thread: {exc}", exc_info=True)
+
+        threading.Thread(target=_task_thread).start()
+
+    monkeypatch.setattr(TARGET, _happy_invoke_lrc, raising=True)
 
 
 @pytest.fixture(name="change_event_callbacks")

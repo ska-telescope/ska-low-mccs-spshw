@@ -270,6 +270,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "first_channel": {"type": "integer", "minimum": 1, "maximum": 512},
                 "last_channel": {"type": "integer", "minimum": 1, "maximum": 512},
                 "start_time": {"type": "string"},
+                "nof_samples": {"type": "integer"},
+                "daq_mode": {"type": "string", "enum": ["xGPU", "TCC"]},
             },
             "required": ["first_channel", "last_channel"],
         }

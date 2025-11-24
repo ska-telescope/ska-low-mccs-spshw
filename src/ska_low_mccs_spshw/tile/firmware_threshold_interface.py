@@ -42,6 +42,7 @@ VOLTAGE_KEYS: Final[list[str]] = [
     "MON_5V0",
 ]
 CURRENT_KEYS: Final[list[str]] = ["FE0_mVA", "FE1_mVA"]
+DB_UNDEFINED: Final[str] = "Undefined"
 
 
 class FirmwareThresholdsDbAdapter:
@@ -104,120 +105,120 @@ class FirmwareThresholds:
     # Temperatures
     # --------------------------
     _fpga1_warning_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _fpga1_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _fpga2_warning_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _fpga2_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _board_warning_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _board_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
 
     # --------------------------
     # Voltages
     # --------------------------
     _MGT_AVCC_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MGT_AVCC_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MGT_AVTT_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MGT_AVTT_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _SW_AVDD1_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _SW_AVDD1_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _SW_AVDD2_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _SW_AVDD2_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _AVDD3_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _AVDD3_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MAN_1V2_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MAN_1V2_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _DDR0_VREF_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _DDR0_VREF_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _DDR1_VREF_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _DDR1_VREF_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _VM_DRVDD_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _VM_DRVDD_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _VIN_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _VIN_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MON_3V3_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MON_3V3_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MON_1V8_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MON_1V8_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MON_5V0_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _MON_5V0_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
 
     # --------------------------
     # Currents
     # --------------------------
     _FE0_mVA_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _FE0_mVA_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _FE1_mVA_min_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
     _FE1_mVA_max_alarm_threshold: Union[int, float, str] = field(
-        default="Undefined", repr=False
+        default=DB_UNDEFINED, repr=False
     )
 
     # Make group_map an instance attribute with default_factory
@@ -266,7 +267,7 @@ class FirmwareThresholds:
         :raises ValueError: when validation fails.
         """
         if isinstance(value, str):
-            if value != "Undefined":
+            if value != DB_UNDEFINED:
                 raise ValueError(f"{name} string value must be 'Undefined'")
         elif not isinstance(value, (int, float)):
             raise ValueError(f"{name} must be int, float, or 'Undefined'")
@@ -364,15 +365,15 @@ class FirmwareThresholds:
 
             # Unwrap lists (like ['80'], ['Undefined'], ['8.0'])
             if isinstance(raw_value, (list, tuple)):
-                value = raw_value[0] if raw_value else "Undefined"
+                value = raw_value[0] if raw_value else DB_UNDEFINED
             elif hasattr(raw_value, "__iter__") and not isinstance(raw_value, str):
                 # handles Tango tango.StdStringVector
-                value = next(iter(raw_value), "Undefined")
+                value = next(iter(raw_value), DB_UNDEFINED)
             else:
                 value = raw_value
 
             # Convert to int/float where possible
-            if isinstance(value, str) and value != "Undefined":
+            if isinstance(value, str) and value != DB_UNDEFINED:
                 try:
                     value = float(value) if "." in value else int(value)
                 except ValueError as ex:

@@ -416,15 +416,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("beamformerTable", True, False)
             self._device.set_change_event("beamformerRegions", True, False)
 
-            self._device.set_archive_event("xPolBandpass", True, False)
-            self._device.set_archive_event("yPolBandpass", True, False)
-            self._device.set_archive_event("antennaInfo", True, False)
-            self._device.set_archive_event("tileProgrammingState", True, False)
-            self._device.set_archive_event("adcPower", True, False)
-            self._device.set_archive_event("dataReceivedResult", True, False)
-            self._device.set_archive_event("ppsDelaySpread", True, False)
-            self._device.set_archive_event("beamformerTable", True, False)
-            self._device.set_archive_event("beamformerRegions", True, False)
+            self._device.set_archive_event("xPolBandpass", True, True)
+            self._device.set_archive_event("yPolBandpass", True, True)
+            self._device.set_archive_event("antennaInfo", True, True)
+            self._device.set_archive_event("tileProgrammingState", True, True)
+            self._device.set_archive_event("adcPower", True, True)
+            self._device.set_archive_event("dataReceivedResult", True, True)
+            self._device.set_archive_event("ppsDelaySpread", True, True)
+            self._device.set_archive_event("beamformerTable", True, True)
+            self._device.set_archive_event("beamformerRegions", True, True)
 
             super().do()
 
@@ -1243,7 +1243,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.tile_programming_state()
 
-    @attribute(dtype=("DevDouble",), max_dim_x=512)
+    @attribute(dtype=("DevDouble",), max_dim_x=512, archive_period=5000)
     def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.

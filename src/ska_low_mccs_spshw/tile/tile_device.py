@@ -415,6 +415,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "data_transmission_mode": "dataTransmissionMode",
             "integrated_data_transmission_mode": "integratedDataTransmissionMode",
             "pfb_version": "pfbVersion",
+            "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas",
+            "broadband_rfi_factor": "broadbandRfiFactor",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -969,6 +971,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
             ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
             ("StopAntennaBuffer", self.StopAntennaBufferCommand),
+            ("EnableBroadbandRfiBlanking", self.EnableBroadbandRfiBlankingCommand),
+            ("DisableBroadbandRfiBlanking", self.DisableBroadbandRfiBlankingCommand),
+            ("SetBroadbandRfiFactor", self.SetBroadbandRfiFactorCommand),
+            ("ReadBroadbandRfi", self.ReadBroadbandRfiCommand),
+            ("MaxBroadbandRfi", self.MaxBroadbandRfiCommand),
+            ("ClearBroadbandRfi", self.ClearBroadbandRfiCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -3512,7 +3520,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
         return hw_currents
 
-    # pylint: disable=too-many-locals
     @firmwareCurrentThresholds.write  # type: ignore[no-redef]
     def firmwareCurrentThresholds(self: MccsTile, value: str) -> None:
         """
@@ -5226,6 +5233,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the version of the polyphase filter firmware
         """
         return self._attribute_state["pfbVersion"].read()
+
+    @attribute(dtype=("DevLong",), max_dim_x=16, label="RFI Blanking-enabled Antennas")
+    def rfiBlankingEnabledAntennas(self: MccsTile) -> list[int]:
+        """
+        Get the list of antennas for broadband RFI blanking is currently enabled.
+
+        :return: list of antennas with RFI blanking enabled
+        :rtype: list(int)
+        """
+        return self._attribute_state["rfiBlankingEnabledAntennas"].read()
+
+    @attribute(dtype="DevFloat", label="Broadband RFI Factor")
+    def broadbandRfiFactor(self: MccsTile) -> float:
+        """
+        Get the RFI factor for broadband RFI detection.
+
+        Note: Only the RFI factor of FPGA1 is read,
+            since the same value is loaded into all FPGAs.
+
+        :return: rfi_factor: the sensitivity value for the RFI detection
+        :rtype: float
+        """
+        return self._attribute_state["broadbandRfiFactor"].read()
 
     # --------
     # Commands
@@ -8511,6 +8541,312 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
         return super().On()
+
+    class EnableBroadbandRfiBlankingCommand(FastCommand):
+        """Class for handling the EnableBroadbandRfiBlanking command."""
+
+        def __init__(
+            self: MccsTile.EnableBroadbandRfiBlankingCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new EnableBroadbandRfiBlankingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "EnableBroadbandRfiBlanking command completed OK"
+        FAILED_MESSAGE = "EnableBroadbandRfiBlanking failed to execute"
+
+        def do(
+            self: MccsTile.EnableBroadbandRfiBlankingCommand,
+            argin: list[int],
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.EnableBroadbandRfiBlanking` command.
+
+            :param argin: List of antenna IDs to enable blanking on (0-15).
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.enable_broadband_rfi_blanking(argin)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
+    def EnableBroadbandRfiBlanking(
+        self: MccsTile, argin: list[int]
+    ) -> DevVarLongStringArrayType:
+        """
+        Enable broadband RFI blanking on specified antennas.
+
+        :param argin: List of antenna IDs to enable blanking on (0-15).
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+        """
+        if len(argin) > 16:
+            return ([ResultCode.REJECTED], ["Cannot specify more than 16 antennas"])
+        if max(argin) > 15 or min(argin) < 0:
+            return ([ResultCode.REJECTED], ["Antenna IDs must be between 0 and 15"])
+        handler = self.get_command_object("EnableBroadbandRfiBlanking")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class DisableBroadbandRfiBlankingCommand(FastCommand):
+        """Class for handling the DisableBroadbandRfiBlanking command."""
+
+        def __init__(
+            self: MccsTile.DisableBroadbandRfiBlankingCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new DisableBroadbandRfiBlankingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "DisableBroadbandRfiBlanking command completed OK"
+        FAILED_MESSAGE = "DisableBroadbandRfiBlanking failed to execute"
+
+        def do(
+            self: MccsTile.DisableBroadbandRfiBlankingCommand,
+            argin: list[int],
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.DisableBroadbandRfiBlanking` command.
+
+            :param argin: List of antenna IDs to disable blanking on (0-15).
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.disable_broadband_rfi_blanking(argin)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
+    def DisableBroadbandRfiBlanking(
+        self: MccsTile, argin: list[int]
+    ) -> DevVarLongStringArrayType:
+        """
+        Disable broadband RFI blanking on specified antennas.
+
+        :param argin: List of antenna IDs to disable blanking on (0-15).
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+        """
+        if len(argin) > 16:
+            return ([ResultCode.REJECTED], ["Cannot specify more than 16 antennas"])
+        if max(argin) > 15 or min(argin) < 0:
+            return ([ResultCode.REJECTED], ["Antenna IDs must be between 0 and 15"])
+        handler = self.get_command_object("DisableBroadbandRfiBlanking")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class SetBroadbandRfiFactorCommand(FastCommand):
+        """Class for handling the SetBroadbandRfiFactor command."""
+
+        def __init__(
+            self: MccsTile.SetBroadbandRfiFactorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new SetBroadbandRfiFactorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "SetBroadbandRfiFactor command completed OK"
+        FAILED_MESSAGE = "SetBroadbandRfiFactor failed to execute"
+
+        def do(
+            self: MccsTile.SetBroadbandRfiFactorCommand,
+            rfi_factor: float,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetBroadbandRfiFactor` command.
+
+            :param rfi_factor: the sensitivity value for the RFI detection
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.set_broadband_rfi_factor(rfi_factor)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevFloat", dtype_out="DevVarLongStringArray")
+    def SetBroadbandRfiFactor(
+        self: MccsTile, argin: float
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the RFI factor for broadband RFI detection.
+
+        The higher the RFI factor, the less RFI is detected/flagged.
+        This is because data is flagged if the short term power is greater than
+        the long term power * RFI factor * 32/27
+
+        :param argin: the sensitivity value for the RFI detection
+        :type argin: float
+
+        :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+        """
+        handler = self.get_command_object("SetBroadbandRfiFactor")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class ReadBroadbandRfiCommand(FastCommand):
+        """Class for handling the ReadBroadbandRfi command."""
+
+        def __init__(
+            self: MccsTile.ReadBroadbandRfiCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new ReadBroadbandRfiCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.ReadBroadbandRfiCommand,
+            argin: list[int],
+        ) -> np.ndarray:
+            """
+            Implement :py:meth:`.MccsTile.ReadBroadbandRfi` command.
+
+            :param argin: list antennas of which RFI counters to read
+            :return: RFI counters
+            """
+            return self._component_manager.read_broadband_rfi(argin)
+
+    @command(
+        dtype_in="DevVarLongArray",
+        dtype_out="DevVarLongArray",
+    )
+    def ReadBroadbandRfi(self: MccsTile, argin: list[int]) -> list[int]:
+        """
+        Read out the broadband RFI counters for the specified antennas.
+
+        :param argin: list antennas of which RFI counters to read
+        :return: RFI counters per pol flattened as a 1D list
+
+        :raises ValueError: if input arguments are invalid
+        """
+        if len(argin) > 16:
+            raise ValueError("Cannot specify more than 16 antennas")
+        if max(argin) > 15 or min(argin) < 0:
+            raise ValueError("Antenna IDs must be between 0 and 15")
+        handler = self.get_command_object("ReadBroadbandRfi")
+        return handler(argin).flatten().tolist()
+
+    class MaxBroadbandRfiCommand(FastCommand):
+        """Class for handling the MaxBroadbandRfi command."""
+
+        def __init__(
+            self: MccsTile.MaxBroadbandRfiCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new MaxBroadbandRfiCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.MaxBroadbandRfiCommand,
+            argin: list[int],
+        ) -> int:
+            """
+            Implement :py:meth:`.MccsTile.MaxBroadbandRfi` command.
+
+            :param argin: list antennas whose RFI counters to read
+            :return: Maximum RFI counts
+            :rtype: int
+            """
+            return self._component_manager.max_broadband_rfi(argin)
+
+    @command(dtype_in="DevVarLongArray", dtype_out="DevLong")
+    def MaxBroadbandRfi(self: MccsTile, argin: list[int]) -> int:
+        """
+        Get max of RFI counts of specified antennas.
+
+        This returns the RFI count of the antenna with the maximum RFI count.
+
+        :param argin: list antennas whose RFI counters to read
+        :return: Maximum RFI counts
+        :rtype: int
+
+        :raises ValueError: if input arguments are invalid
+        """
+        if len(argin) > 16:
+            raise ValueError("Cannot specify more than 16 antennas")
+        if max(argin) > 15 or min(argin) < 0:
+            raise ValueError("Antenna IDs must be between 0 and 15")
+        handler = self.get_command_object("MaxBroadbandRfi")
+        return handler(argin)
+
+    class ClearBroadbandRfiCommand(FastCommand):
+        """Class for handling the ClearBroadbandRfi command."""
+
+        def __init__(
+            self: MccsTile.ClearBroadbandRfiCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new ClearBroadbandRfiCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.ClearBroadbandRfiCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.ClearBroadbandRfi` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purposes only.
+            """
+            self._component_manager.clear_broadband_rfi()
+            return (ResultCode.OK, "ClearBroadbandRfi command completed OK")
+
+    @command(dtype_out="DevVarLongStringArray")
+    def ClearBroadbandRfi(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Clear all RFI counts registers.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+        """
+        handler = self.get_command_object("ClearBroadbandRfi")
+        (return_code, message) = handler()
+        return ([return_code], [message])
 
 
 # ----------

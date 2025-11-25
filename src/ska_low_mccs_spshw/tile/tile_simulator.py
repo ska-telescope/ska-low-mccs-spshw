@@ -1111,6 +1111,10 @@ class TileSimulator:
             "used_fpga_id": [],
         }
         self._antenna_buffer_implemented = True
+        self._rfi_blanking_enabled_antennas: dict[int, bool] = {
+            i: False for i in range(TileData.ANTENNA_COUNT)
+        }
+        self._broadband_rfi_factor: float = 1.0
 
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
@@ -2981,7 +2985,7 @@ class TileSimulator:
         self.csp_spead_format = spead_format
 
     @property
-    def ska_spead_header(self) -> bool:
+    def ska_spead_header(self: TileSimulator) -> bool:
         """
         Return format of the CSP Spead header.
 
@@ -2989,7 +2993,9 @@ class TileSimulator:
         """
         return self.csp_spead_format == "SKA"
 
-    def read_broadband_rfi(self, antennas: range = range(16)) -> np.ndarray:
+    def read_broadband_rfi(
+        self: TileSimulator, antennas: range | list[int] = range(16)
+    ) -> np.ndarray:
         """
         Read out the broadband RFI counters.
 
@@ -2998,6 +3004,81 @@ class TileSimulator:
         :return: rfi counters
         """
         return self._rfi_count[np.array(antennas)]
+
+    def enable_broadband_rfi_blanking(
+        self: TileSimulator, antennas: range | list[int] = range(16)
+    ) -> None:
+        """
+        Enable broadband RFI blanking on specified antennas.
+
+        :param antennas: list antennas on which to enable rfi blanking
+        """
+        for ant in antennas:
+            self._rfi_blanking_enabled_antennas[ant] = True
+
+    def disable_broadband_rfi_blanking(
+        self: TileSimulator, antennas: range | list[int] = range(16)
+    ) -> None:
+        """
+        Disable broadband RFI blanking on specified antennas.
+
+        :param antennas: list antennas on which to disable rfi blanking
+        """
+        for ant in antennas:
+            self._rfi_blanking_enabled_antennas[ant] = False
+
+    def set_broadband_rfi_factor(self: TileSimulator, rfi_factor: float = 1.0) -> None:
+        """
+        Set broadband RFI factor.
+
+        :param rfi_factor: broadband RFI factor
+        """
+        self._broadband_rfi_factor = rfi_factor
+
+    def max_broadband_rfi(
+        self: TileSimulator, antennas: range | list[int] = range(16)
+    ) -> int:
+        """
+        Return maximum broadband RFI counter value.
+
+        :param antennas: list antenna IDs whose RFI counters to read
+
+        :return: maximum broadband RFI counter value
+        """
+        ret = np.max(self.read_broadband_rfi(antennas))
+        self.logger.warning(f"{ret=}")
+        self.logger.warning(f"{type(ret)=}")
+        return ret
+
+    def clear_broadband_rfi(self: TileSimulator) -> None:
+        """Clear broadband RFI counters."""
+        self._rfi_count = np.zeros(
+            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
+        )
+
+    @property
+    def rfi_blanking_enabled_antennas(
+        self: TileSimulator,
+    ) -> list[int]:
+        """
+        Return list of antennas with broadband RFI blanking enabled.
+
+        :return: list of antennas with rfi blanking enabled
+        """
+        enabled_ants = []
+        for ant, enabled in self._rfi_blanking_enabled_antennas.items():
+            if enabled:
+                enabled_ants.append(ant)
+        return enabled_ants
+
+    @property
+    def broadband_rfi_factor(self: TileSimulator) -> float:
+        """
+        Return broadband RFI factor.
+
+        :return: broadband RFI factor
+        """
+        return self._broadband_rfi_factor
 
     @connected
     def __getattr__(self: TileSimulator, name: str) -> Any:

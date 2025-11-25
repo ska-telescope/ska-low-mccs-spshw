@@ -138,7 +138,7 @@ class AttributeManager:
         """
         if self._value is not None:
             return self._value, time.time(), self._quality
-        return self._value
+        return None
 
     def __notify(self: AttributeManager) -> None:
         """Notify callback with value."""

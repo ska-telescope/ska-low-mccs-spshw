@@ -119,7 +119,7 @@ class DynamicValuesUpdater:
         self._update_rate = update_rate
         self._thread_is_running = False
         self._thread = threading.Thread(
-            name="DynamicValuesUpdater thread",
+            name="DynamicValuesUpdater",
             target=self._update,
             args=(),
             daemon=True,

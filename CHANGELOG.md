@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 10.5.0
+
 * [THORN-365] Add attribute event checking to `rfiBlankingEnabledAntennas` and `broadbandRfiFactor`.
 * [SKB-1086] Correct reccursion error in SKB-1089 workaround.
 * [LOW-1841] Upgrade ska-tango-devices dependency from 0.10.0 to 0.10.1.

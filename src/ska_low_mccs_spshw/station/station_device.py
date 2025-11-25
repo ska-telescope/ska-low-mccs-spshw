@@ -818,6 +818,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(("DevFloat",),),
         max_dim_x=512,  # Channels
         max_dim_y=256,  # Antennas
+        archive_period=5000,
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -831,6 +832,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(("DevFloat",),),
         max_dim_x=512,  # Channels
         max_dim_y=256,  # Antennas
+        archive_period=5000,
     )
     def yPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -843,6 +845,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("str",),
         max_dim_x=2,  # Always the last result (unique_id, JSON-encoded result)
+        archive_period=5000,
     )
     def dataReceivedResult(self: SpsStation) -> tuple[str, str] | None:
         """
@@ -924,7 +927,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return json.dumps(self.component_manager._antenna_mapping)
 
-    @attribute(dtype="DevString")
+    @attribute(dtype="DevString", archive_period=5000)
     def antennaInfo(self: SpsStation) -> str:
         """
         Return antenna information.
@@ -1066,7 +1069,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.component_manager.pps_delay_corrections = delays
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", archive_period=5000)
     def ppsDelaySpread(self: SpsStation) -> int:
         """
         Get difference between maximum and minimum delays.
@@ -1078,7 +1081,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.pps_delay_spread
 
-    @attribute(dtype=("DevLong",), max_dim_x=336)
+    @attribute(dtype=("DevLong",), max_dim_x=336, archive_period=5000)
     def beamformerTable(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
@@ -1100,7 +1103,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             itertools.chain.from_iterable(self.component_manager.beamformer_table)
         )
 
-    @attribute(dtype=("DevLong",), max_dim_x=384)
+    @attribute(dtype=("DevLong",), max_dim_x=384, archive_period=5000)
     def beamformerRegions(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
@@ -1234,7 +1237,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(dtype=("DevString",), max_dim_x=16)
+    @attribute(dtype=("DevString",), max_dim_x=16, archive_period=5000)
     def tileProgrammingState(self: SpsStation) -> list[str]:
         """
         Get the tile programming state.

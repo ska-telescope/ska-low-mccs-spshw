@@ -8,6 +8,7 @@
 * [THORN-288] Update new RFI methods from tpm-api.
   * Added MccsTile attributes: `rfiBlankingEnabledAntennas`, `broadbandRfiFactor`
   * Added MccsTile commands: `EnableBroadbandRfiBlanking`, `DisableBroadbandRfiBlanking`, `SetBroadbandRfiFactor`, `ReadBroadbandRfi`, `MaxBroadbandRfi`, `ClearBroadbandRfi`
+* [SKB-1131] Set SpsStation archive events to use `detect=True` in order to make use of Tango filtering. For these attrs `archive_period` has a default of 5s set in most cases. This can be overridden in the values file at deploy-time.
 * [THORN-331] Updates to AcquireDataForCalibration. Removed some old DAQ workarounds, added configurable integration time, it now reports dropped channels.
 * [THORN-330] Optimise dockerfile to cache steps better under repeated builds during development.
 * [THORN-332] Add SonarQube configuration

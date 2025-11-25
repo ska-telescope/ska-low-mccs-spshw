@@ -143,6 +143,7 @@ def integration_test_context_fixture(
             subrack_id,
             subrack_bay=subrack_bay,
             device_class=patched_tile_device_class,
+            use_attributes_for_health=True,
         )
         harness.set_sps_station_device(
             subrack_ids=[subrack_id],
@@ -188,12 +189,11 @@ def patched_tile_device_class_fixture(
             "ppsPresent": ["timing", "pps", "status"],
         }
 
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
+        def init_device(self) -> None:
             self.health_attribute_to_simulator_map = copy.deepcopy(
                 self.HEALTH_ATTRIBUTE_TO_SIMULATOR_MAP
             )
-
-            super().__init__(*args, **kwargs)
+            super().init_device()
 
         def create_component_manager(
             self: PatchedTileDevice,

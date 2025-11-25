@@ -109,9 +109,13 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         try:
             self.logger.info("Deleting device")
             self.component_manager.stop_communicating()
+            # TODO: marshaller_proxy is conditional.
+            # Should this just be component_manager.cleanup() ?
+            if self.component_manager._power_marshaller_trl:
+                self.component_manager.marshaller_proxy.cleanup()
         except Exception as ex:  # pylint: disable=broad-exception-caught
             self.logger.error("Failed to delete device %s", repr(ex))
-        self.component_manager.marshaller_proxy.cleanup()
+        super().delete_device()
 
     def _init_state_model(self: MccsPdu) -> None:
         """Initialise the state model."""

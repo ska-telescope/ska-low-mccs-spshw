@@ -785,7 +785,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "FPGA1",
             ],
         }
-        self._multi_attr = self.get_device_attr()
         super().init_device()
 
         self.db_firmware_thresholds = FirmwareThresholds()
@@ -1448,8 +1447,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self._stopping:
             try:
-                self._multi_attr.check_alarm(attr_name)
-                attr = self._multi_attr.get_attr_by_name(attr_name)
+                self.get_device_attr().check_alarm(attr_name)
+                attr = self.get_device_attr().get_attr_by_name(attr_name)
                 attr_value = self._attribute_state[attr_name].read()
                 if attr.is_max_alarm():
                     self.logger.warning(
@@ -1490,12 +1489,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
-        # https://gitlab.com/tango-controls/pytango/-/issues/615
-        # set_value must be called after push_change_event.
-        # it seems that fire_change_event will consume the
-        # value set meaning a check_alarm has a nullptr.
-        if attr_quality != tango.AttrQuality.ATTR_INVALID:
-            self._multi_attr.get_attr_by_name(name).set_value(attr_value)
+        self.get_device_attr().get_attr_by_name(name).set_value(attr_value)
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -6438,7 +6432,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             threshold limits.
         """
         handler = self.get_command_object("SetAttributeThresholds")
-        (return_code, message) = handler(self._multi_attr, argin)
+        (return_code, message) = handler(self.get_device_attr(), argin)
         return ([return_code], [message])
 
     class GetArpTableCommand(FastCommand):

@@ -848,12 +848,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"(timeout=={max_poll_time} [s]).",
                     flush=True,
                 )
-
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
             self.tile.cleanup()
-        else:
-            # self.tile.disconnect() why does this not exist? (does it need to ?)
-            pass
+        # Dereference by one, there is no API for a stronger disconnect
+        # method, we are dereferencing by 1 in hope that the connection
+        # is closed by gc. This is very fragile.
+        self.tile = None  # type: ignore[assignment]
 
         with self._poller._condition:
             self._poller._state = self._poller._State.KILLED

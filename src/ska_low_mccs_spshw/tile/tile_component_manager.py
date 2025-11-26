@@ -850,6 +850,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
             self.tile.cleanup()
+        else:
+            self.tile.disconnect()
         # Dereference by one, there is no API for a stronger disconnect
         # method, we are dereferencing by 1 in hope that the connection
         # is closed by gc. This is very fragile.

@@ -855,6 +855,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # is closed by gc. This is very fragile.
         self.tile = None  # type: ignore[assignment]
 
+        self._synchronised_checker.abort()
+        self._synchronised_checker = None  # type: ignore[assignment]
+
         with self._poller._condition:
             self._poller._state = self._poller._State.KILLED
             self._poller._condition.notify()

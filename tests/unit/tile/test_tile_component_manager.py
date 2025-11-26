@@ -1933,7 +1933,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Set preADU levels that are different for each entry to check that the value
         # masking is happening as expected.
-        desired_levels = np.array([i for i in range(32)])
+        desired_levels = np.array(list(range(32)))
         tile_component_manager.set_preadu_levels(desired_levels)
         attenuattion_values = np.concatenate(
             [

@@ -7813,7 +7813,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         * tone_2_frequency: frequency for the second tone. Same
             as ToneFrequency.
         * tone_2_amplitude: peak tone amplitude for the second tone.
-            Same as ToneAmplitude.
+            Same as ToneAmplitude..
         * noise_amplitude: RMS amplitude of the pseudorandom Gaussian
             white noise, normalized to 26.03 ADC units.
         * pulse_frequency: frequency of the periodic pulse. A code

@@ -1930,9 +1930,18 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.set_preadu_levels(np.array([3.0] * 32))
         # Read ska_low_sps_tpm_api software preADU levels for preADU 1, channel 1
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
-        # Set preADU levels to 3 for all channels
-        tile_component_manager.set_preadu_levels(np.array([4.0] * 32))
-        assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 4.00
+
+        # Set preADU levels that are different for each entry to check that the value
+        # masking is happening as expected.
+        desired_levels = np.array([i for i in range(32)])
+        tile_component_manager.set_preadu_levels(desired_levels)
+        attenuattion_values = np.concatenate(
+            [
+                tile_simulator.tpm.preadu[0].get_attenuation(),
+                tile_simulator.tpm.preadu[1].get_attenuation(),
+            ]
+        )
+        assert np.allclose(attenuattion_values, desired_levels, atol=0.25)
 
         with pytest.raises(ValueError):
             tile_component_manager.set_preadu_levels(np.array([3.0] * 33))

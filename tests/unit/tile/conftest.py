@@ -602,6 +602,5 @@ def patched_tile_device_class_fixture(
                 PowerState.ON,
                 tango.EventType.CHANGE_EVENT,
             )
-            self.component_manager.tile.mock_on()
 
     return PatchedTileDevice

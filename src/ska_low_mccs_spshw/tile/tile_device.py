@@ -253,8 +253,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self._health_recorder.cleanup()
                 self._health_recorder = None
             self.component_manager.cleanup()
-        except Exception:  # pylint: disable=broad-except
-            pass
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Failed to delete_device with {e=}", flush=True)
         super().delete_device()
         for t in threading.enumerate():
             print(
@@ -909,6 +909,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.BiosVersion,
                 self.PreAduFitted,
             )
+            self._health_recorder = None
 
     def create_component_manager(
         self: MccsTile,

@@ -4770,7 +4770,7 @@ transitions = "0.9.2"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/"
 reference = "skb-1079-add-cleanup"
-resolved_reference = "5cb3355302c7c4a82086115a73638c1461d7d7b4"
+resolved_reference = "ef3105fc0f9e7b2e8050908b86423be7ece7ebac"
 
 [[package]]
 name = "ska-low-mccs-daq"

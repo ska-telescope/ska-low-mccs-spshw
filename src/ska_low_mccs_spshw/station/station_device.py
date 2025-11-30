@@ -420,7 +420,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_archive_event("yPolBandpass", True, False)
             self._device.set_archive_event("antennaInfo", True, False)
             self._device.set_archive_event("tileProgrammingState", True, False)
-            self._device.set_archive_event("adcPower", True, False)
+            self._device.set_archive_event("adcPower", True, True)
             self._device.set_archive_event("dataReceivedResult", True, False)
             self._device.set_archive_event("ppsDelaySpread", True, False)
             self._device.set_archive_event("beamformerTable", True, False)

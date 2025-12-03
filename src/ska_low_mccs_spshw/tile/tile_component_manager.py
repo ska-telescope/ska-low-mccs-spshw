@@ -1377,6 +1377,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                                 self._station_id,
                                 self._tile_id,
                             )
+                            # TODO: Failure of this work around
+                            # occurs with a low probability (~1/16) times.
+                            # This fails on set_qsfp_led in the
+                            # ska-low-sps-tpm-api layer. A sleep is easier to implement
+                            # here and is used to probe issue.
+                            time.sleep(0.4)
                             self._execute_initialise(
                                 force_reprogramming=True,
                                 pps_delay_correction=pps_delay_correction,

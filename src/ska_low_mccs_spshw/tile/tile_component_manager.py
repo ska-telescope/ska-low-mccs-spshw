@@ -1288,6 +1288,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises zlib.error: If workaround implemented in SKB-1089
             did not work first time.
+
+        :returns: None
         """
         with self._initialising():
             with acquire_timeout(

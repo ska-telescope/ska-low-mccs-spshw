@@ -9,6 +9,7 @@
 * [THORN-330] Optimise dockerfile to cache steps better under repeated builds during development.
 * [THORN-332] Add SonarQube configuration
 * [SKB-1120] Fix backward compatibility with BIOS 0.5.0
+* [THORN-334] Fixed set preAdu values bug
 
 ## 10.4.0
 

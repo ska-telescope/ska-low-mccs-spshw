@@ -1267,14 +1267,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                                 pps_delay_correction=pps_delay_correction,
                                 final_try=True,
                             )
-                        else:
-                            self.logger.error(
-                                "Workaround already attempted for "
-                                "station %s tile %s. Giving up.",
-                                self._station_id,
-                                self._tile_id,
-                            )
-                            raise
+                            return
+                        self.logger.error(
+                            "Workaround already attempted for "
+                            "station %s tile %s. Giving up.",
+                            self._station_id,
+                            self._tile_id,
+                        )
+                        raise
                     #
                     # extra steps required to have it working
                     #

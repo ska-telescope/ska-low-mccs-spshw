@@ -147,10 +147,10 @@ ral-low-k8s-test:
   extends: k8s-test
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      allow_failure: true
+      allow_failure: false
       when: always
     - when: manual
-      allow_failure: true
+      allow_failure: false
   needs:
     - oci-image-build
   tags:

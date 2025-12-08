@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1086] Correct reccursion error in SKB-1089 workaround.
 * [LOW-1841] Upgrade ska-tango-devices dependency from 0.10.0 to 0.10.1.
 * [THORN-288] Update new RFI methods from tpm-api.
   * Added MccsTile attributes: `rfiBlankingEnabledAntennas`, `broadbandRfiFactor`

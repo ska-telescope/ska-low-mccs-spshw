@@ -4,6 +4,7 @@
 
 ## 10.5.0
 
+* [SKB-1131] Remove archiving for xPolBandpass and yPolBandpass in SpsStation. Please use the duplicate attribute in MccsDaq for archiving.
 * [THORN-365] Add attribute event checking to `rfiBlankingEnabledAntennas` and `broadbandRfiFactor`.
 * [SKB-1086] Correct reccursion error in SKB-1089 workaround.
 * [LOW-1841] Upgrade ska-tango-devices dependency from 0.10.0 to 0.10.1.

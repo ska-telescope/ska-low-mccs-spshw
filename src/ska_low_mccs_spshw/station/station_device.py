@@ -416,8 +416,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("beamformerTable", True, False)
             self._device.set_change_event("beamformerRegions", True, False)
 
-            self._device.set_archive_event("xPolBandpass", True, True)
-            self._device.set_archive_event("yPolBandpass", True, True)
+            self._device.set_archive_event("xPolBandpass", False)
+            self._device.set_archive_event("yPolBandpass", False)
             self._device.set_archive_event("antennaInfo", True, True)
             self._device.set_archive_event("tileProgrammingState", True, True)
             self._device.set_archive_event("adcPower", True, True)
@@ -677,7 +677,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     # pylint: disable=attribute-defined-outside-init
                     self._x_bandpass_data = x_pol_bandpass_ordered
                     self.push_change_event("xPolBandpass", x_pol_bandpass_ordered)
-                    self.push_archive_event("xPolBandpass", x_pol_bandpass_ordered)
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"Caught exception setting station X bandpass:\n {e}"
@@ -707,7 +706,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     # pylint: disable=attribute-defined-outside-init
                     self._y_bandpass_data = y_pol_bandpass_ordered
                     self.push_change_event("yPolBandpass", y_pol_bandpass_ordered)
-                    self.push_archive_event("yPolBandpass", y_pol_bandpass_ordered)
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"Caught exception setting station Y bandpass:\n {e}"

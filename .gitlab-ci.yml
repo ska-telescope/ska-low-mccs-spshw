@@ -26,10 +26,10 @@ stages:
   - staging
   - test
   - test-psi-low
-  - test-ral-low
   - publish
   - pages
   - scan
+  - test-ral-low
 
 include:
   # Python packages build,lint, test and publish

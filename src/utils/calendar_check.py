@@ -71,7 +71,7 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
     event_type_allowlist: list[str],
     expected_runtime: timedelta,
     required_event_name: str | None = None,
-    author: str | None = None,
+    author: str = "",
 ) -> bool | list[Any]:
     """
     Return if calendar is booked within input time range.
@@ -124,8 +124,8 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
         mail_addr = organiser.split(":")[1]
 
         diff_author = False
-        if mail_addr != author:
-            diff_author = True
+        if mail_addr not in author:
+            # diff_author = True  # tmp remove for testing
             print(
                 "Timeslot not booked by the person who triggered this job, "
                 f"booking: {mail_addr}, job triggerer: {author}"

@@ -2,12 +2,16 @@
 
 ## Unreleased
 
+## 10.5.0
+
+* [SKB-1131] Remove archiving for xPolBandpass and yPolBandpass in SpsStation. Please use the duplicate attribute in MccsDaq for archiving.
 * [THORN-365] Add attribute event checking to `rfiBlankingEnabledAntennas` and `broadbandRfiFactor`.
 * [SKB-1086] Correct reccursion error in SKB-1089 workaround.
 * [LOW-1841] Upgrade ska-tango-devices dependency from 0.10.0 to 0.10.1.
 * [THORN-288] Update new RFI methods from tpm-api.
   * Added MccsTile attributes: `rfiBlankingEnabledAntennas`, `broadbandRfiFactor`
   * Added MccsTile commands: `EnableBroadbandRfiBlanking`, `DisableBroadbandRfiBlanking`, `SetBroadbandRfiFactor`, `ReadBroadbandRfi`, `MaxBroadbandRfi`, `ClearBroadbandRfi`
+* [SKB-1131] Set SpsStation archive events to use `detect=True` in order to make use of Tango filtering. For these attrs `archive_period` has a default of 5s set in most cases. This can be overridden in the values file at deploy-time.
 * [THORN-331] Updates to AcquireDataForCalibration. Removed some old DAQ workarounds, added configurable integration time, it now reports dropped channels.
 * [THORN-330] Optimise dockerfile to cache steps better under repeated builds during development.
 * [THORN-332] Add SonarQube configuration

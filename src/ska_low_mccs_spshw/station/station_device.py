@@ -416,15 +416,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("beamformerTable", True, False)
             self._device.set_change_event("beamformerRegions", True, False)
 
-            self._device.set_archive_event("xPolBandpass", True, False)
-            self._device.set_archive_event("yPolBandpass", True, False)
-            self._device.set_archive_event("antennaInfo", True, False)
-            self._device.set_archive_event("tileProgrammingState", True, False)
-            self._device.set_archive_event("adcPower", True, False)
-            self._device.set_archive_event("dataReceivedResult", True, False)
-            self._device.set_archive_event("ppsDelaySpread", True, False)
-            self._device.set_archive_event("beamformerTable", True, False)
-            self._device.set_archive_event("beamformerRegions", True, False)
+            self._device.set_archive_event("xPolBandpass", False)
+            self._device.set_archive_event("yPolBandpass", False)
+            self._device.set_archive_event("antennaInfo", True, True)
+            self._device.set_archive_event("tileProgrammingState", True, True)
+            self._device.set_archive_event("adcPower", True, True)
+            self._device.set_archive_event("dataReceivedResult", True, True)
+            self._device.set_archive_event("ppsDelaySpread", True, True)
+            self._device.set_archive_event("beamformerTable", True, True)
+            self._device.set_archive_event("beamformerRegions", True, True)
 
             super().do()
 
@@ -677,7 +677,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     # pylint: disable=attribute-defined-outside-init
                     self._x_bandpass_data = x_pol_bandpass_ordered
                     self.push_change_event("xPolBandpass", x_pol_bandpass_ordered)
-                    self.push_archive_event("xPolBandpass", x_pol_bandpass_ordered)
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"Caught exception setting station X bandpass:\n {e}"
@@ -707,7 +706,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     # pylint: disable=attribute-defined-outside-init
                     self._y_bandpass_data = y_pol_bandpass_ordered
                     self.push_change_event("yPolBandpass", y_pol_bandpass_ordered)
-                    self.push_archive_event("yPolBandpass", y_pol_bandpass_ordered)
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"Caught exception setting station Y bandpass:\n {e}"
@@ -818,6 +816,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(("DevFloat",),),
         max_dim_x=512,  # Channels
         max_dim_y=256,  # Antennas
+        archive_period=5000,
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -831,6 +830,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(("DevFloat",),),
         max_dim_x=512,  # Channels
         max_dim_y=256,  # Antennas
+        archive_period=5000,
     )
     def yPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -843,6 +843,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("str",),
         max_dim_x=2,  # Always the last result (unique_id, JSON-encoded result)
+        archive_period=5000,
     )
     def dataReceivedResult(self: SpsStation) -> tuple[str, str] | None:
         """
@@ -924,7 +925,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return json.dumps(self.component_manager._antenna_mapping)
 
-    @attribute(dtype="DevString")
+    @attribute(dtype="DevString", archive_period=5000)
     def antennaInfo(self: SpsStation) -> str:
         """
         Return antenna information.
@@ -1066,7 +1067,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.component_manager.pps_delay_corrections = delays
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", archive_period=5000)
     def ppsDelaySpread(self: SpsStation) -> int:
         """
         Get difference between maximum and minimum delays.
@@ -1078,7 +1079,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.pps_delay_spread
 
-    @attribute(dtype=("DevLong",), max_dim_x=336)
+    @attribute(dtype=("DevLong",), max_dim_x=336, archive_period=5000)
     def beamformerTable(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
@@ -1100,7 +1101,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             itertools.chain.from_iterable(self.component_manager.beamformer_table)
         )
 
-    @attribute(dtype=("DevLong",), max_dim_x=384)
+    @attribute(dtype=("DevLong",), max_dim_x=384, archive_period=5000)
     def beamformerRegions(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
@@ -1234,7 +1235,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(dtype=("DevString",), max_dim_x=16)
+    @attribute(dtype=("DevString",), max_dim_x=16, archive_period=5000)
     def tileProgrammingState(self: SpsStation) -> list[str]:
         """
         Get the tile programming state.
@@ -1243,7 +1244,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.tile_programming_state()
 
-    @attribute(dtype=("DevDouble",), max_dim_x=512)
+    @attribute(dtype=("DevDouble",), max_dim_x=512, archive_period=5000)
     def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.

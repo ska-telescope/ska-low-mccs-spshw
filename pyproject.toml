@@ -122,6 +122,7 @@ MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"
 PowerMarshaller = "ska_low_mccs_spshw.power_marshaller.power_marshaller_device:main"
 Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
 is_calendar_booked = "utils.scripts.is_calendar_booked:main"
+check_deployment = "utils.scripts.check_deployment"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"

@@ -71,6 +71,7 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
     event_type_allowlist: list[str],
     expected_runtime: timedelta,
     required_event_name: str | None = None,
+    author: str | None = None,
 ) -> bool | list[Any]:
     """
     Return if calendar is booked within input time range.
@@ -81,6 +82,7 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
     :param expected_runtime: How far in the future to check for clashes.
     :param required_event_name: if supplied, the search window
         must be fully covered by an event of this name.
+    :param author: the email address of who triggered the job
 
     :return: is calendar is booked.
     """
@@ -116,7 +118,20 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
 
         event_type_id = event["CUSTOM-EVENTTYPE-ID"]
         ignored = ignore_all or event_type_id in event_type_allowlist
-        if not ignored:
+
+        organiser = event["ORGANIZER"]
+
+        mail_addr = organiser.split(":")[1]
+
+        diff_author = False
+        if mail_addr != author:
+            diff_author = True
+            print(
+                "Timeslot not booked by the person who triggered this job, "
+                f"booking: {mail_addr}, job triggerer: {author}"
+            )
+
+        if not ignored and diff_author:
             clashing_events.append(event)
 
         print(f"{' ' if ignored else 'X'} {start} until {end_time} {summary}")

@@ -169,11 +169,9 @@ ral-low-k8s-test:
     JSON_REPORT_PATH: build/reports/report.json
     HW_DEPLOYMENT: true
   before_script:
-    - |
-      if [[ "$CI_PIPELINE_SOURCE" == "schedule" ]]; then
-        is_calendar_booked --calendar RAL --expected-runtime 30m
-      fi
+    - is_calendar_booked --calendar RAL --expected-runtime 30m --author $CI_COMMIT_AUTHOR
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
+    - check_deployment
     - make k8s-install-chart
     - make k8s-wait
   artifacts:

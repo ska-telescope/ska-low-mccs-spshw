@@ -5253,8 +5253,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Broadband RFI Factor",
-        abs_change=0.01,
-        archive_abs_change=0.01,
+        abs_change=0.00000001,  # Below resolution of DevFloat
+        archive_abs_change=0.00000001,  # Below resolution of DevFloat
     )
     def broadbandRfiFactor(self: MccsTile) -> float:
         """

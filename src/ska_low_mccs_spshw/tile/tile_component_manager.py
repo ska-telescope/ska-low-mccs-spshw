@@ -89,8 +89,6 @@ _ATTRIBUTE_MAP: Final = {
     "CHECK_CPLD_COMMS": "global_status_alarms",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
-    "RFI_BLANKING_ENABLED_ANTENNAS": "rfi_blanking_enabled_antennas",
-    "BROADBAND_RFI_FACTOR": "broadband_rfi_factor",
 }
 
 
@@ -543,18 +541,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.read_broadband_rfi,
                     publish=True,
                 )
-            case "RFI_BLANKING_ENABLED_ANTENNAS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    lambda: self.tile.rfi_blanking_enabled_antennas,
-                    publish=True,
-                )
-            case "BROADBAND_RFI_FACTOR":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    lambda: self.tile.broadband_rfi_factor,
-                    publish=True,
-                )
             case _:
                 message = f"Unrecognised poll request {repr(request_spec)}"
                 self.logger.error(message)
@@ -609,10 +595,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             case ConnectionError():
                 self.logger.error(f"ConnectionError found {exception}")
             case LibraryError():
-                self.logger.error(
-                    f"LibraryError raised from poll {exception}, "
-                    "check the cpld communications"
-                )
+                self.logger.error(f"LibraryError raised from poll: {exception}")
             case BoardError():
                 self.logger.error(f"BoardError: {repr(exception)}")
             case _:
@@ -1626,6 +1609,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
         pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
         firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
+        rfi_blanking_enabled_antennas = self._with_hardware_lock(
+            lambda: self.tile.rfi_blanking_enabled_antennas
+        )
+        broadband_rfi_factor = self._with_hardware_lock(
+            lambda: self.tile.broadband_rfi_factor
+        )
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1637,6 +1626,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             beamformer_regions=beamformer_regions,
             pfb_version=pfb_version,
             firmware_thresholds=firmware_thresholds,
+            rfi_blanking_enabled_antennas=rfi_blanking_enabled_antennas,
+            broadband_rfi_factor=broadband_rfi_factor,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -4391,6 +4382,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.enable_broadband_rfi_blanking(antennas)
+            rfi_enabled_antenna = self.tile.rfi_blanking_enabled_antennas
+
+        self._update_attribute_callback(
+            rfi_blanking_enabled_antennas=rfi_enabled_antenna
+        )
 
     def disable_broadband_rfi_blanking(
         self: TileComponentManager, antennas: list[int]
@@ -4404,6 +4400,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.disable_broadband_rfi_blanking(antennas)
+            rfi_enabled_antenna = self.tile.rfi_blanking_enabled_antennas
+
+        self._update_attribute_callback(
+            rfi_blanking_enabled_antennas=rfi_enabled_antenna
+        )
 
     def set_broadband_rfi_factor(self: TileComponentManager, factor: float) -> None:
         """
@@ -4415,6 +4416,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.set_broadband_rfi_factor(factor)
+            broadband_rfi_factor = self.tile.broadband_rfi_factor
+
+        self._update_attribute_callback(broadband_rfi_factor=broadband_rfi_factor)
 
     def read_broadband_rfi(
         self: TileComponentManager, antennas: list[int]

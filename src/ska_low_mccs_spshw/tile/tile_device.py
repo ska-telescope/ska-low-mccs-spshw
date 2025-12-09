@@ -5234,7 +5234,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["pfbVersion"].read()
 
-    @attribute(dtype=("DevLong",), max_dim_x=16, label="RFI Blanking-enabled Antennas")
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=16,
+        label="RFI Blanking-enabled Antennas",
+        abs_change=1,
+        archive_abs_change=1,
+    )
     def rfiBlankingEnabledAntennas(self: MccsTile) -> list[int]:
         """
         Get the list of antennas for broadband RFI blanking is currently enabled.
@@ -5244,7 +5250,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["rfiBlankingEnabledAntennas"].read()
 
-    @attribute(dtype="DevFloat", label="Broadband RFI Factor")
+    @attribute(
+        dtype="DevFloat",
+        label="Broadband RFI Factor",
+        abs_change=0.01,
+        archive_abs_change=0.01,
+    )
     def broadbandRfiFactor(self: MccsTile) -> float:
         """
         Get the RFI factor for broadband RFI detection.

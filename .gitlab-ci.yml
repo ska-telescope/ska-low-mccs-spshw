@@ -171,7 +171,7 @@ ral-low-k8s-test:
   before_script:
     - is_calendar_booked --calendar RAL --expected-runtime 30m --author $CI_COMMIT_AUTHOR
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
-    - check_deployment
+    - bash src/utils/scripts/check_deployment.sh
     - make k8s-install-chart
     - make k8s-wait
   artifacts:

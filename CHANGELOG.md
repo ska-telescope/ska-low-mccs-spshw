@@ -1,6 +1,10 @@
 # Version History
 
-## Unreleased
+## 10.5.1
+
+* [THORN-343] Update ska-low-sps-tpm-api for better logs.
+* [SKB-1079] Update tile->TPM disconnect to clear the socket.
+* [THORN-343] Update TPM firmware 6.7.1 -> 8.0.0
 
 ## 10.5.0
 

@@ -38,9 +38,6 @@ def main() -> None:
         help="Notebooks will only run if a calendar event of this name "
         "covers the time window implied by --expected-runtime.",
     )
-    parser.add_argument(
-        "--author", type=str, help="The email address of who triggered the job"
-    )
     args = parser.parse_args()
 
     calendar_meta = CALENDAR_METADATA[args.calendar]
@@ -50,7 +47,6 @@ def main() -> None:
         calendar_meta["event_type_allowlist"],
         args.expected_runtime,
         required_event_name=args.required_event_name,
-        author=args.author,
     ):
         # this lets us differentiate from unexpected errors, in pipelines etc
         sys.exit(10)

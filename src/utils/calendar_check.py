@@ -131,6 +131,10 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
                 f"booking: {mail_addr}, job triggerer: {author}"
             )
 
+        if "PIPELINE_TEST" in event["DESCRIPTION"]:
+            ignored = True
+            print("PIPELINE_TEST keyword found in desc, continuing")
+
         if not ignored and diff_author:
             clashing_events.append(event)
 

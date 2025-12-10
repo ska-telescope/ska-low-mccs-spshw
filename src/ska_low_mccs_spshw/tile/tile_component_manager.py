@@ -2338,11 +2338,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             try:
                 self.tile.set_lmc_integrated_download(
                     mode,
-                    channel_payload_length,
-                    beam_payload_length,
-                    dst_ip,
-                    src_port,
-                    dst_port,
+                    channel_payload_length=channel_payload_length,
+                    beam_payload_length=beam_payload_length,
+                    dst_ip=dst_ip,
+                    src_port=src_port,
+                    dst_port=dst_port,
                     netmask_40g=netmask_40g,
                     gateway_ip_40g=gateway_40g,
                 )
@@ -3311,10 +3311,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     self.tile.set_lmc_download(
                         mode,
-                        payload_length,
-                        dst_ip,
-                        src_port,
-                        dst_port,
+                        payload_length=payload_length,
+                        dst_ip=dst_ip,
+                        src_port=src_port,
+                        dst_port=dst_port,
                         netmask_40g=netmask_40g,
                         gateway_ip_40g=gateway_40g,
                     )

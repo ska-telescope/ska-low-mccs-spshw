@@ -2388,11 +2388,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Assert
         tile_simulator.set_lmc_integrated_download.assert_called_with(
             mocked_input_params["mode"],
-            mocked_input_params["channel_payload_length"],
-            mocked_input_params["beam_payload_length"],
-            mocked_input_params["dst_ip"],
-            mocked_input_params["src_port"],
-            mocked_input_params["dst_port"],
+            channel_payload_length=mocked_input_params["channel_payload_length"],
+            beam_payload_length=mocked_input_params["beam_payload_length"],
+            dst_ip=mocked_input_params["dst_ip"],
+            src_port=mocked_input_params["src_port"],
+            dst_port=mocked_input_params["dst_port"],
             netmask_40g=None,
             gateway_ip_40g=None,
         )
@@ -2646,10 +2646,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.set_lmc_download(**mocked_input_params)
         tile_simulator.set_lmc_download.assert_called_once_with(
             mocked_input_params["mode"],
-            mocked_input_params["payload_length"],
-            mocked_input_params["dst_ip"],
-            mocked_input_params["src_port"],
-            mocked_input_params["dst_port"],
+            payload_length=mocked_input_params["payload_length"],
+            dst_ip=mocked_input_params["dst_ip"],
+            src_port=mocked_input_params["src_port"],
+            dst_port=mocked_input_params["dst_port"],
             netmask_40g=None,
             gateway_ip_40g=None,
         )

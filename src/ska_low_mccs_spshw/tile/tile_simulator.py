@@ -1186,13 +1186,17 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def initialise_beamformer(
-        self: TileSimulator, start_channel: int, nof_channels: int
+        self: TileSimulator,
+        start_channel: int,
+        nof_channels: int,
+        beam_index: int = 0,
     ) -> None:
         """
         Mock set the beamformer parameters.
 
         :param start_channel: start_channel
         :param nof_channels: nof_channels
+        :param beam_index: index of the beam
 
         :raises ValueError: For out of range values.
         """
@@ -1925,7 +1929,8 @@ class TileSimulator:
     def set_lmc_download(
         self: TileSimulator,
         mode: str,
-        payload_length: int = 1024,
+        data_type: str | None = None,
+        payload_length: int | None = None,
         dst_ip: str = "10.0.10.1",
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
@@ -1941,6 +1946,7 @@ class TileSimulator:
         Therefore dst_ip is the name of the service to use rather than the IP.
 
         :param mode: "1G" or "10G"
+        :param data_type: Specify which data type to configure, or None for all.
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination service.
@@ -2576,8 +2582,9 @@ class TileSimulator:
     def set_lmc_integrated_download(
         self: TileSimulator,
         mode: str,
-        channel_payload_length: int,
-        beam_payload_length: int,
+        data_type: str | None = None,
+        channel_payload_length: int | None = None,
+        beam_payload_length: int | None = None,
         dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
@@ -2588,6 +2595,7 @@ class TileSimulator:
         Configure link and size of control data for integrated LMC packets.
 
         :param mode: '1G' or '10G'
+        :param data_type: Specify which data type to configure, or None for all.
         :param channel_payload_length: SPEAD payload length for integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated beam data
         :param dst_ip: Destination IP

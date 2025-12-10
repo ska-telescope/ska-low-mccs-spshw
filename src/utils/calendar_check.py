@@ -125,7 +125,7 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
 
         diff_author = False
         if mail_addr not in author:
-            # diff_author = True  # tmp remove for testing
+            diff_author = True
             print(
                 "Timeslot not booked by the person who triggered this job, "
                 f"booking: {mail_addr}, job triggerer: {author}"

@@ -1,12 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
-kubectl get pods -n ska-low-mccs-spshw
+output=$(kubectl get pods -n ral-2 2>&1)
 
-if [ $? -e "No resources found in ska-low-mccs namespace." ];
+if [[ $output == *"No resources found"* ]];
 then
     echo "No deployment found, creating one..."
-    return 0
+    exit 0
 else
     echo "There is already a deployment in use, tear down before running tests"
-    return -1
+    exit -1
 fi

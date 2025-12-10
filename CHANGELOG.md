@@ -1,7 +1,12 @@
 # Version History
 
-## 10.5.1
+## 11.0.0
 
+* [THORN-343] Change pll attribute names:
+  * adc_pll_status -> adc_pll_lock_status
+  * timing_pll_status -> timing_pll_lock_status
+  * timing_pll_40g_status -> timing_pll_40g_lock_status
+  * f2f_pll_status -> f2f_pll_lock_status
 * [THORN-343] Update ska-low-sps-tpm-api for better logs.
 * [SKB-1079] Update tile->TPM disconnect to clear the socket.
 * [THORN-343] Update TPM firmware 6.7.1 -> 8.0.0

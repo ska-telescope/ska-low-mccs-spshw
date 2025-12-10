@@ -571,7 +571,7 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
     # (wrapper_attr_name, device_attr_name) pairs
     # for assigning _AttributeReadOnlyAccess descriptors
     _ro_attrs = [
-        ("adc_pll_status", "adc_pll_status"),
+        ("adc_pll_lock_status", "adc_pll_lock_status"),
         ("tile_beamformer_status", "tile_beamformer_status"),
         ("station_beamformer_status", "station_beamformer_status"),
         ("station_beamformer_error_count", "station_beamformer_error_count"),
@@ -595,9 +595,9 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
         ("clocks", "clocks"),
         ("adc_sysref_counter", "adc_sysref_counter"),
         ("adc_sysref_timing_requirements", "adc_sysref_timing_requirements"),
-        ("f2f_pll_status", "f2f_pll_status"),
+        ("f2f_pll_lock_status", "f2f_pll_lock_status"),
         ("qpll_status", "qpll_status"),
-        ("timing_pll_status", "timing_pll_status"),
+        ("timing_pll_lock_status", "timing_pll_lock_status"),
         ("tile_info", "tile_info"),
         ("voltages", "voltages"),
         ("temperatures", "temperatures"),

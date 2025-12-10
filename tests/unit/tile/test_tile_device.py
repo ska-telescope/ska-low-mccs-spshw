@@ -1142,14 +1142,14 @@ class TestMccsTile:
             "voltageVM_SW_AMP",
             "voltageVrefDDR0",
             "currentTileBeamformerFrame",
-            "f2f_pll_status",
+            "f2f_pll_lock_status",
             "fpga0_clock_managers_status",
             "fpga1_clock_managers_count",
             "fpga0_lane_error_count",
             "fpga0_resync_count",
             "station_beamformer_status",
-            "adc_pll_status",
-            "timing_pll_40g_status",
+            "adc_pll_lock_status",
+            "timing_pll_40g_lock_status",
         ],
     )
     def test_archive(
@@ -1214,7 +1214,7 @@ class TestMccsTile:
                 False,
             ),
             (
-                "f2f_pll_status",
+                "f2f_pll_lock_status",
                 ["io", "f2f_interface", "pll_status"],
                 (False, 0),
             ),

@@ -1118,7 +1118,7 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["adc_power"],
         )
-        change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
+        change_event_callbacks["adc_power"].assert_change_event(list(range(1, 33)))
         tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )

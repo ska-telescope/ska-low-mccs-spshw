@@ -169,7 +169,7 @@ ral-low-k8s-test:
     JSON_REPORT_PATH: build/reports/report.json
     HW_DEPLOYMENT: true
   before_script:
-    - is_calendar_booked --calendar RAL --expected-runtime 30m --author "$CI_COMMIT_AUTHOR"
+    - is_calendar_booked --calendar RAL --expected-runtime 30m"
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
     - bash src/utils/scripts/check_deployment.sh
     - make k8s-install-chart

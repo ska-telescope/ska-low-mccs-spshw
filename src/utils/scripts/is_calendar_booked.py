@@ -46,7 +46,7 @@ def main() -> None:
         calendar_meta["UID"],
         calendar_meta["event_type_allowlist"],
         args.expected_runtime,
-        required_event_name=args.required_event_name,
+        args.required_event_name,
     ):
         # this lets us differentiate from unexpected errors, in pipelines etc
         sys.exit(10)

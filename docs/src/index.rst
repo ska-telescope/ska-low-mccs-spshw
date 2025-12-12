@@ -12,6 +12,7 @@ prototype for the `Square Kilometre Array`_.
    :caption: Guide
 
    guide/deploy
+   guide/merging
 
 .. toctree::
    :maxdepth: 2

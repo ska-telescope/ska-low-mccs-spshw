@@ -10,6 +10,7 @@
 * [THORN-343] Update ska-low-sps-tpm-api for better logs.
 * [SKB-1079] Update tile->TPM disconnect to clear the socket.
 * [THORN-343] Update TPM firmware 6.7.1 -> 8.0.0
+* [JANUS-271] Safely stopping channelised data in burst mode when stop_data_transmission() is called
 
 ## 10.5.0
 

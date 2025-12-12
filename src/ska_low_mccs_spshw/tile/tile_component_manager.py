@@ -2883,7 +2883,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.OK, "apply_pointing_delays completed OK")
 
     @check_communicating
     def load_pointing_delays(

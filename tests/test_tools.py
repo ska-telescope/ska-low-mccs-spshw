@@ -477,11 +477,14 @@ class _ProgrammingStateAccess:
                         lookahead=5,
                     )
             case TpmStatus.SYNCHRONISED:
-                start_time = datetime.strftime(
-                    datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
-                )
-                obj._tile_device.globalReferenceTime = start_time
-                obj._tile_device.On()
+                if obj._tile_device.tileprogrammingstate == "Initialised":
+                    obj._tile_device.StartAcquisition("{}")
+                else:
+                    start_time = datetime.strftime(
+                        datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
+                    )
+                    obj._tile_device.globalReferenceTime = start_time
+                    obj._tile_device.On()
             case _:
                 raise NotImplementedError("Not yet able to drive TPM to this state.")
 

@@ -1410,6 +1410,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
                         self._start_acquisition()
 
+                # Tpm might be in a different status if manually
+                # initialised, check and update.
+                self.__update_tpm_status()
+
     @abort_task_on_exception
     @check_communicating
     def download_firmware(

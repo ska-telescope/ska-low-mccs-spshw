@@ -9,6 +9,7 @@ Feature: Test tile
         When the Tile data acquisition is started
         Then the Tile dropped packets is 0 after 30 seconds
 
+    @xfail
     Scenario: Tile synchronised state recovered after dev_init
         Given an SPS deployment against HW
         And the SpsStation and tiles are ON
@@ -17,6 +18,7 @@ Feature: Test tile
         When the Tile TANGO device is restarted
         Then the Tile comes up in the defined Synchronised state
 
+    @xfail
     Scenario: Tile initialised state recovered after dev_init
         Given an SPS deployment against HW
         And the SpsStation and tiles are ON

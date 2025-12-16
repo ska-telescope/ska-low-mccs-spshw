@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-362] Force pipeline hardware tests to run
+
 ## 10.5.0
 
 * [SKB-1131] Remove archiving for xPolBandpass and yPolBandpass in SpsStation. Please use the duplicate attribute in MccsDaq for archiving.

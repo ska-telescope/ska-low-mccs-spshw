@@ -1,6 +1,7 @@
 # Version History
 
 ## Unreleased
+* [LOW-1935] Fix the message returned on success by the MccsTile.ApplyPointingDelays command, which had been copied from another command and not changed.
 
 * [THORN-362] Force pipeline hardware tests to run
 

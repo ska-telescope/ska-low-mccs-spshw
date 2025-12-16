@@ -44,6 +44,50 @@ __all__ = [
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
 
+def apply_jitter(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    Apply a simulated network jitter to the component.
+
+    This will apply a simulated jitter to the decorated method.
+
+    This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @apply_jitter
+        def get_attribute(self, name):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function.
+    """
+
+    @functools.wraps(func)
+    def inner(
+        tile_simulator: TileSimulator,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Apply a jitter if defined before calling method.
+
+        :param tile_simulator: the subrack simulator this is applied to
+        :param args: positional arguments to the wrapped function
+        :param kwargs: keyword arguments to the wrapped function
+
+        :return: whatever the wrapped function returns
+        """
+        if tile_simulator._network_jitter_limits:
+            min_jitter, max_jitter = tile_simulator._network_jitter_limits
+            if min_jitter and max_jitter:
+                sleep_time = random.randrange(min_jitter, max_jitter) / 1000
+                time.sleep(sleep_time)
+        return func(tile_simulator, *args, **kwargs)
+
+    return inner
+
+
 def connected(func: Wrapped) -> Wrapped:
     """
     Return a function that checks if the TileSimulator is connectable.
@@ -1116,6 +1160,40 @@ class TileSimulator:
         }
         self._broadband_rfi_factor: float = 1.0
 
+        self._network_jitter_limits: tuple[int, int] = (0, 0)  # ms
+
+    @property
+    def network_jitter_limits(self: TileSimulator) -> tuple[int, int]:
+        """
+        Return the max network jitter in miliseconds.
+
+        :return: the maximum network jitter in milliseconds.
+        """
+        return self._network_jitter_limits
+
+    @network_jitter_limits.setter
+    def network_jitter_limits(self: TileSimulator, jitter: tuple[int, int]) -> None:
+        """
+        Return the max network jitter in milliseconds.
+
+        :param jitter: the new maximum simulated network jitter in
+            milliseconds.
+
+        :raises ValueError: If te limits are not in the correct format.
+        """
+        try:
+            min_jitter, max_jitter = jitter
+        except ValueError as e:
+            raise e
+        if (max_jitter or min_jitter) and max_jitter < min_jitter:
+            raise ValueError("First item must have value lower than the second")
+        if max_jitter < 0 or min_jitter < 0:
+            raise ValueError("Values must be positive.")
+        if max_jitter > 20_000 or min_jitter > 20_000:
+            raise ValueError("Value too large, must be less than 20,000 miliseconds")
+
+        self._network_jitter_limits = (min_jitter, max_jitter)
+
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
         """
@@ -1545,6 +1623,7 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
 
+    @apply_jitter
     @check_mocked_overheating
     @connected
     def get_pps_delay(self: TileSimulator, enable_correction: bool = True) -> int:

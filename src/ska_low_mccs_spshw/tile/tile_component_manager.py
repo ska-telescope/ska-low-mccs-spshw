@@ -984,6 +984,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except
                     self.logger.error("Subrack callback failed to connect to hardware.")
+            else:
+                self.__update_tpm_status()
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)

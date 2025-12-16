@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [SKB-1086] Correct race condition where subrack callback is using out of date information about tpm_status before attempting initialisation. This can lead to subrack not initialising TPM.
+
 ## 10.5.0
 
 * [SKB-1131] Remove archiving for xPolBandpass and yPolBandpass in SpsStation. Please use the duplicate attribute in MccsDaq for archiving.

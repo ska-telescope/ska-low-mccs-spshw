@@ -191,7 +191,7 @@ ral-low-xray-publish:
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
-      allow_failure: false
+      allow_failure: true
   needs:
     - ral-low-k8s-test
   tags:
@@ -214,7 +214,7 @@ ral-low-stop-k8s:
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
-      allow_failure: false
+      allow_failure: true
   needs:
     - ral-low-k8s-test
   tags:

@@ -1692,7 +1692,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "adc_pll_status",
+                "adc_pll_lock_status",
                 ["adcs", "pll_status"],
                 {
                     "ADC0": (True, True),

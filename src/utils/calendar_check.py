@@ -116,6 +116,11 @@ def is_calendar_booked(  # pylint: disable=too-many-locals
 
         event_type_id = event["CUSTOM-EVENTTYPE-ID"]
         ignored = ignore_all or event_type_id in event_type_allowlist
+
+        if "PIPELINE_TEST" in event["DESCRIPTION"]:
+            ignored = True
+            print("PIPELINE_TEST keyword found in desc, continuing")
+
         if not ignored:
             clashing_events.append(event)
 

@@ -507,7 +507,7 @@ class MockTpm:
         self._is_programmed = False
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
-        self.preadu = [PreAdu(logger)] * 2
+        self.preadu = [PreAdu(logger), PreAdu(logger)]
         self._station_beamf = [self.beam1, self.beam2]
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
@@ -1000,7 +1000,7 @@ class TileSimulator:
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
-    ADC_RMS = [float(i) for i in range(32)]
+    ADC_RMS = [float(i) for i in range(1, 33)]  # adc_rms should not be 0
     FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     TILE_MONITORING_POINTS = copy.deepcopy(TileData.get_tile_defaults())

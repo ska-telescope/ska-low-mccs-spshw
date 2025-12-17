@@ -11,6 +11,8 @@
 * [SKB-1079] Update tile->TPM disconnect to clear the socket.
 * [THORN-343] Update TPM firmware 6.7.1 -> 8.0.0
 * [JANUS-271] Safely stopping channelised data in burst mode when stop_data_transmission() is called
+* [LOW-1935] Fix the message returned on success by the MccsTile.ApplyPointingDelays command, which had been copied from another command and not changed.
+* [THORN-362] Force pipeline hardware tests to run
 
 ## 10.5.0
 
@@ -26,6 +28,7 @@
 * [THORN-330] Optimise dockerfile to cache steps better under repeated builds during development.
 * [THORN-332] Add SonarQube configuration
 * [SKB-1120] Fix backward compatibility with BIOS 0.5.0
+* [THORN-334] Fixed set preAdu values bug
 
 ## 10.4.0
 

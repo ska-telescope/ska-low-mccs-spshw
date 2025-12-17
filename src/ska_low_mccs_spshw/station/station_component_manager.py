@@ -3726,6 +3726,23 @@ class SpsStationComponentManager(
         # calculate difference in dB between current and target values
         adc_medians = np.median(adc_data, axis=0)
 
+        zero_list = np.where(adc_medians == 0)[0]
+        # this should not happen in production as adc values are always >0
+        # however, in the unlikely event it does happen we should make the
+        # error clear.
+        if zero_list.size > 0:
+            err_msg = (
+                "Adc median values contain one or more 0 value(s) at the "
+                f"following location(s): {zero_list}"
+            )
+            self.logger.error(err_msg)
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, err_msg),
+                )
+                return
+
         # adc deltas
         # The maximum attenuation is 127/4=31.75 dB
         # 10^(-31.75/10) = 0.000668

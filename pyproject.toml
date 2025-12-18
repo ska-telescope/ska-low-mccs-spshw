@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "10.5.0"
+version = "11.0.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -19,7 +19,7 @@ priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag = "1.0.1"}
+ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag = "2.1.1"}
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "^10.0.0"

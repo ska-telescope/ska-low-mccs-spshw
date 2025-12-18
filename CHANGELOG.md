@@ -1,8 +1,17 @@
 # Version History
 
-## Unreleased
-* [LOW-1935] Fix the message returned on success by the MccsTile.ApplyPointingDelays command, which had been copied from another command and not changed.
+## 11.0.0
 
+* [THORN-343] Change pll attribute names:
+  * adc_pll_status -> adc_pll_lock_status
+  * timing_pll_status -> timing_pll_lock_status
+  * timing_pll_40g_status -> timing_pll_40g_lock_status
+  * f2f_pll_status -> f2f_pll_lock_status
+* [THORN-343] Update ska-low-sps-tpm-api for better logs.
+* [SKB-1079] Update tile->TPM disconnect to clear the socket.
+* [THORN-343] Update TPM firmware 6.7.1 -> 8.0.0
+* [JANUS-271] Safely stopping channelised data in burst mode when stop_data_transmission() is called
+* [LOW-1935] Fix the message returned on success by the MccsTile.ApplyPointingDelays command, which had been copied from another command and not changed.
 * [THORN-362] Force pipeline hardware tests to run
 
 ## 10.5.0

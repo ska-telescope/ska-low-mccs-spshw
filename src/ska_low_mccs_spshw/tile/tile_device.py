@@ -351,18 +351,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
-            "adc_pll_status": "adc_pll_status",
+            "adc_pll_lock_status": "adc_pll_lock_status",
             "fpga0_qpll_status": "fpga0_qpll_status",
             "fpga0_qpll_counter": "fpga0_qpll_counter",
             "fpga1_qpll_status": "fpga1_qpll_status",
             "fpga1_qpll_counter": "fpga1_qpll_counter",
-            "f2f_pll_status": "f2f_pll_status",
+            "f2f_pll_lock_status": "f2f_pll_lock_status",
             "f2f_pll_counter": "f2f_pll_counter",
             "f2f_soft_errors": "f2f_soft_errors",
             "f2f_hard_errors": "f2f_hard_errors",
-            "timing_pll_status": "timing_pll_status",
+            "timing_pll_lock_status": "timing_pll_lock_status",
             "timing_pll_count": "timing_pll_count",
-            "timing_pll_40g_status": "timing_pll_40g_status",
+            "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
             "timing_pll_40g_count": "timing_pll_40g_count",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
@@ -420,7 +420,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         attribute_converters: dict[str, Any] = {
-            "adc_pll_status": adc_pll_to_list,
+            "adc_pll_lock_status": adc_pll_to_list,
             "fpga0_bip_error_count": udp_error_count_to_list,
             "fpga0_decode_error_count": udp_error_count_to_list,
             "fpga1_bip_error_count": udp_error_count_to_list,
@@ -435,10 +435,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_clocks": clocks_to_list,
             "adc_sysref_counter": adc_to_list,
             "adc_sysref_timing_requirements": adc_to_list,
-            "timing_pll_status": lambda val: (
+            "timing_pll_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "timing_pll_40g_status": lambda val: (
+            "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
             "fpga0_qpll_status": lambda val: (
@@ -447,7 +447,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "f2f_pll_status": lambda val: int(val[0]) if val[0] is not None else None,
+            "f2f_pll_lock_status": lambda val: int(val[0])
+            if val[0] is not None
+            else None,
             "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
             "f2f_pll_counter": lambda val: int(val[1]) if val[1] is not None else None,
             "timing_pll_40g_count": lambda val: (
@@ -628,7 +630,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
             "voltageVM_PLL": ["voltages", "VM_PLL"],
             "voltageVM_SW_AMP": ["voltages", "VM_SW_AMP"],
-            "adc_pll_status": ["adcs", "pll_status"],
+            "adc_pll_lock_status": ["adcs", "pll_status"],
             # qpll_status is a tuple, extracting status and
             # conuter in different attributes
             "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
@@ -637,17 +639,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA1"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "f2f_pll_status": ["io", "f2f_interface", "pll_status"],
+            "f2f_pll_lock_status": ["io", "f2f_interface", "pll_status"],
             "f2f_pll_counter": ["io", "f2f_interface", "pll_status"],
             "f2f_soft_errors": ["io", "f2f_interface", "soft_error"],
             "f2f_hard_errors": ["io", "f2f_interface", "hard_error"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "timing_pll_status": ["timing", "pll"],
+            "timing_pll_lock_status": ["timing", "pll"],
             "timing_pll_count": ["timing", "pll"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "timing_pll_40g_status": ["timing", "pll_40g"],
+            "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
@@ -1528,12 +1530,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevShort",),),
         max_dim_x=16,
         max_dim_y=2,
-        label="adc_pll_status",
+        label="adc_pll_lock_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def adc_pll_status(self: MccsTile) -> np.ndarray:
+    def adc_pll_lock_status(self: MccsTile) -> np.ndarray:
         """
         Return the pll status of all 16 ADCs.
 
@@ -1544,12 +1546,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             (lock has not fallen).
 
         :example:
-            >>> tile.adc_pll_status
+            >>> tile.adc_pll_lock_status
             [[1]*16,[1]*16]
 
         :return: the pll status of all ADCs
         """
-        return self._attribute_state["adc_pll_status"].read()
+        return self._attribute_state["adc_pll_lock_status"].read()
 
     @attribute(dtype="DevBoolean", label="tile_beamformer_status")
     def tile_beamformer_status(self: MccsTile) -> bool:
@@ -2539,26 +2541,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="f2f_pll_status",
+        label="f2f_pll_lock_status",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
     )
-    def f2f_pll_status(self: MccsTile) -> int:
+    def f2f_pll_lock_status(self: MccsTile) -> int:
         """
         Return the PLL lock status.
 
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.f2f_pll_status
+            >>> tile.f2f_pll_lock_status
             '1'
 
         :return: the PLL lock status.
         """
-        return self._attribute_state["f2f_pll_status"].read()
+        return self._attribute_state["f2f_pll_lock_status"].read()
 
     @attribute(
         dtype="DevShort",
@@ -2584,26 +2586,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="timing_pll_status",
+        label="timing_pll_lock_status",
         min_alarm=0,
         max_value=2,
         min_value=-1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def timing_pll_status(self: MccsTile) -> int:
+    def timing_pll_lock_status(self: MccsTile) -> int:
         """
         Return the PLL lock status and lock loss counter.
 
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.timing_pll_status
+            >>> tile.timing_pll_lock_status
             1
 
         :return: the PLL lock status.
         """
-        return self._attribute_state["timing_pll_status"].read()
+        return self._attribute_state["timing_pll_lock_status"].read()
 
     @attribute(
         dtype="DevShort",
@@ -2630,26 +2632,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="timing_pll_40g_status",
+        label="timing_pll_40g_lock_status",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
     )
-    def timing_pll_40g_status(self: MccsTile) -> int:
+    def timing_pll_40g_lock_status(self: MccsTile) -> int:
         """
         Return the PLL 40G lock status.
 
         Expected: `1` if PLL 40G locked.
 
         :example:
-            >>> tile.timing_pll_40g_status
+            >>> tile.timing_pll_40g_lock_status
             '1`
 
         :return: the PLL lock status and lock loss counter.
         """
-        return self._attribute_state["timing_pll_40g_status"].read()
+        return self._attribute_state["timing_pll_40g_lock_status"].read()
 
     @attribute(
         dtype="DevShort",

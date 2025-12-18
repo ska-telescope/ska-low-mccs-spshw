@@ -278,7 +278,7 @@ configuration:
       boardTemperature:
         code_push_event: true
         archive_period: 0
-      adc_pll_status:
+      adc_pll_lock_status:
         code_push_event: true
         archive_period: 0
       tile_beamformer_status:
@@ -407,19 +407,19 @@ configuration:
       fpga1_qpll_counter:
         code_push_event: true
         archive_period: 0
-      f2f_pll_status:
+      f2f_pll_lock_status:
         code_push_event: true
         archive_period: 0
       f2f_pll_counter:
         code_push_event: true
         archive_period: 0
-      timing_pll_status:
+      timing_pll_lock_status:
         code_push_event: true
         archive_period: 0
       timing_pll_count:
         code_push_event: true
         archive_period: 0
-      timing_pll_40g_status:
+      timing_pll_40g_lock_status:
         code_push_event: true
         archive_period: 0
       timing_pll_40g_count:

@@ -21,7 +21,7 @@ global:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 10.5.0
+  tag: 11.0.0
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -54,7 +54,7 @@ ska-tango-devices:
       boardTemperature->min_warning: 16.0
       boardTemperature->min_alarm: 15.0
 
-      adc_pll_status->min_alarm: 0
+      adc_pll_lock_status->min_alarm: 0
 
       fpga0_station_beamformer_error_count->max_alarm: 1
       fpga1_station_beamformer_error_count->max_alarm: 1
@@ -111,15 +111,15 @@ ska-tango-devices:
       fpga0_qpll_counter->max_alarm: 1
       fpga1_qpll_counter->max_alarm: 1
 
-      f2f_pll_status->min_alarm: 0
+      f2f_pll_lock_status->min_alarm: 0
 
       f2f_pll_counter->max_alarm: 1
 
-      timing_pll_status->min_alarm: 0
+      timing_pll_lock_status->min_alarm: 0
 
       timing_pll_count->max_alarm: 1
 
-      timing_pll_40g_status->min_alarm: 0
+      timing_pll_40g_lock_status->min_alarm: 0
 
       timing_pll_40g_count->max_alarm: 1
 
@@ -387,7 +387,7 @@ ska-tango-devices:
       image:
         registry: artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 10.5.0
+        tag: 11.0.0
         pullPolicy: IfNotPresent
       command: spshw
       resources:

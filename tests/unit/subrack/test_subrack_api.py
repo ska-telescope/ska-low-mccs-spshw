@@ -6,7 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """Tests of the SubrackApi."""
-import unittest
+from unittest.mock import Mock
 
 import fastapi
 import pytest
@@ -18,13 +18,13 @@ from ska_low_mccs_spshw.subrack.subrack_api import SubrackProtocol, router
 
 
 @pytest.fixture(name="backend")
-def backend_fixture() -> unittest.mock.Mock:
+def backend_fixture() -> Mock:
     """
     Return a mock backend to test the API against.
 
     :return: a mock backend to test the API against.
     """
-    return unittest.mock.Mock()
+    return Mock()
 
 
 @pytest.fixture(name="client")
@@ -97,9 +97,7 @@ def test_getattribute_with_no_name(client: TestClient) -> None:
     }
 
 
-def test_getattribute_with_bad_name(
-    client: TestClient, backend: unittest.mock.Mock
-) -> None:
+def test_getattribute_with_bad_name(client: TestClient, backend: Mock) -> None:
     """
     Test handling of a getattribute request for a non-existent attribute.
 
@@ -122,7 +120,7 @@ def test_getattribute_with_bad_name(
     }
 
 
-def test_good_getattribute(client: TestClient, backend: unittest.mock.Mock) -> None:
+def test_good_getattribute(client: TestClient, backend: Mock) -> None:
     """
     Test handling of a well-formed getattribute request.
 
@@ -171,9 +169,7 @@ def test_setattribute_with_no_value(client: TestClient) -> None:
     }
 
 
-def test_setattribute_with_bad_name(
-    client: TestClient, backend: unittest.mock.Mock
-) -> None:
+def test_setattribute_with_bad_name(client: TestClient, backend: Mock) -> None:
     """
     Test handling of a setattribute attempt on a non-existent attribute.
 
@@ -196,9 +192,7 @@ def test_setattribute_with_bad_name(
     }
 
 
-def test_setattribute_on_readonly_attribute(
-    client: TestClient, backend: unittest.mock.Mock
-) -> None:
+def test_setattribute_on_readonly_attribute(client: TestClient, backend: Mock) -> None:
     """
     Test handling of an attempt to set a readonly attribute.
 
@@ -223,9 +217,7 @@ def test_setattribute_on_readonly_attribute(
     }
 
 
-def test_setattribute_with_wrong_length(
-    client: TestClient, backend: unittest.mock.Mock
-) -> None:
+def test_setattribute_with_wrong_length(client: TestClient, backend: Mock) -> None:
     """
     Test handling of a setattribute with the wrong attribute length.
 
@@ -250,7 +242,7 @@ def test_setattribute_with_wrong_length(
     }
 
 
-def test_good_setattribute(client: TestClient, backend: unittest.mock.Mock) -> None:
+def test_good_setattribute(client: TestClient, backend: Mock) -> None:
     """
     Test handling of a well-formed setattribute request.
 
@@ -299,7 +291,7 @@ def test_command_with_no_value(client: TestClient) -> None:
     }
 
 
-def test_command_with_bad_name(client: TestClient, backend: unittest.mock.Mock) -> None:
+def test_command_with_bad_name(client: TestClient, backend: Mock) -> None:
     """
     Test handling of invokation of a non-existent command.
 
@@ -322,7 +314,7 @@ def test_command_with_bad_name(client: TestClient, backend: unittest.mock.Mock) 
     }
 
 
-def test_good_command(client: TestClient, backend: unittest.mock.Mock) -> None:
+def test_good_command(client: TestClient, backend: Mock) -> None:
     """
     Test handling of a well-formed command.
 

@@ -240,10 +240,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         threads are not cleaned up after init_device().
         """
         for t in threading.enumerate():
-            print(
+            self.logger.info(
                 f"Threads open at beginning of DELETE DEVICE "
-                f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}",
-                flush=True,
+                f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}"
             )
         try:
             # We do not want to raise a exception here
@@ -256,12 +255,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         except Exception as e:  # pylint: disable=broad-except
             print(f"Failed to delete_device with {e=}", flush=True)
         super().delete_device()
-        for t in threading.enumerate():
-            print(
-                f"Threads open at end of DELETE DEVICE "
-                f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}",
-                flush=True,
-            )
 
     def init_device(self: MccsTile) -> None:
         """
@@ -270,12 +263,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :raises TypeError: when attributes have a converter
             that is not callable.
         """
-        for t in threading.enumerate():
-            print(
-                "Threads active in INIT_DEVICE "
-                f"Thread: {t.name}, ID: {t.ident}, Daemon: {t.daemon}",
-                flush=True,
-            )
         self._stopping = False
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.

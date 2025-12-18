@@ -843,18 +843,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if self._is_polling:
             self.stop_communicating()
             if not self._event.wait(max_poll_time):
-                print(
+                self.logger.warning(
                     "Failed waiting for final poll to terminate "
-                    f"(timeout=={max_poll_time} [s]).",
-                    flush=True,
+                    f"(timeout=={max_poll_time} [s])."
                 )
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
             self.tile.cleanup()
         else:
             self.tile.disconnect()
-        # Dereference by one, there is no API for a stronger disconnect
-        # method, we are dereferencing by 1 in hope that the connection
-        # is closed by gc. This is very fragile.
+
+        # Dereference by one, to help with garbage collection.
         self.tile = None  # type: ignore[assignment]
 
         self._synchronised_checker.abort()
@@ -865,10 +863,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._poller._condition.notify()
         self._poller._polling_thread.join(max_poll_time)
         if self._poller._polling_thread.is_alive():
-            print(
+            self.logger.warning(
                 "Failed waiting for polling thread to die "
-                f"(timeout=={max_poll_time} [s]).",
-                flush=True,
+                f"(timeout=={max_poll_time} [s])."
             )
 
     def _cleanup_subscriptions(self: TileComponentManager) -> None:

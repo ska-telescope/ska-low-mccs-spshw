@@ -353,7 +353,7 @@ def tile_is_in_state(
         tile_device,
         "tileProgrammingState",
         programming_state,
-        lookahead=5,  # Several states first first hence lookahead == 5
+        lookahead=2,
     )
     # There is an edge case here. When we are discovering state,
     # the configuration attributes will be read on the next poll.0

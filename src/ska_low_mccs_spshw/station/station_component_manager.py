@@ -620,7 +620,7 @@ class SpsStationComponentManager(
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
-            power=PowerState.UNKNOWN,
+            power=None,
             fault=None,
             is_configured=None,
             adc_power=None,

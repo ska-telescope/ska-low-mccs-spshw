@@ -63,7 +63,9 @@ def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
         device.adminmode = AdminMode.ONLINE
 
 
-@scenario("features/tile.feature", "Tile synchronised state recovered after dev_init")
+@scenario(
+    "features/tile.feature", "Tile synchronised state now recovered after dev_init"
+)
 def test_tile_synchronised_recover(
     stations_devices_exported: list[tango.DeviceProxy],
 ) -> None:
@@ -77,7 +79,9 @@ def test_tile_synchronised_recover(
         device.adminmode = AdminMode.ONLINE
 
 
-@scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
+@scenario(
+    "features/tile.feature", "Tile initialised state now recovered after dev_init"
+)
 def test_tile_initialised_recover(
     stations_devices_exported: list[tango.DeviceProxy],
 ) -> None:
@@ -99,7 +103,6 @@ def check_against_hardware(hw_context: bool) -> None:
     :param hw_context: whether or not the current test is againt HW.
     """
     if not hw_context:
-        assert False, f"hw_context not here == {hw_context} "
         pytest.skip(
             "This test requires real HW. "
             "We require that a bounce of the Pod "
@@ -107,8 +110,6 @@ def check_against_hardware(hw_context: bool) -> None:
             "Since the simulator is constructed in init_device its "
             "state is reset after a init_device."
         )
-    else:
-        assert False, f"hw_context exists == {hw_context} "
 
 
 @given("an SPS deployment against a real context")
@@ -245,7 +246,10 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         )
 
 
-@given("the Tile is in a defined synchronised state", target_fixture="defined_state")
+@given(
+    "the Tile is in a defined expected synchronised state",
+    target_fixture="defined_state",
+)
 def tile_has_defined_synchronised_state(
     tile_device: tango.DeviceProxy,
 ) -> dict[str, Any]:
@@ -268,7 +272,7 @@ def tile_has_defined_synchronised_state(
     return defined_state
 
 
-@given("the Tile is available", target_fixture="tile_device")
+@given("the Tile is now available", target_fixture="tile_device")
 def tile_device_fixture(
     station_tiles: list[tango.DeviceProxy],
 ) -> tango.DeviceProxy:
@@ -284,7 +288,10 @@ def tile_device_fixture(
     return station_tiles[-1]
 
 
-@given("the Tile is in a defined initialised state", target_fixture="defined_state")
+@given(
+    "the Tile is in a defined expected initialised state",
+    target_fixture="defined_state",
+)
 def tile_has_defined_initialised_state(
     tile_device: tango.DeviceProxy,
 ) -> dict[str, Any]:
@@ -310,7 +317,7 @@ def tile_has_defined_initialised_state(
     return defined_state
 
 
-@when("the Tile TANGO device is restarted")
+@when("the Tile TANGO device is now restarted")
 def tile_is_restarted(tile_device: tango.DeviceProxy) -> None:
     """
     Restart the device.
@@ -339,7 +346,11 @@ def tile_start_data_acq(
     assert timeout <= 60, "Tiles didn't synchronise"
 
 
-@then(parsers.cfparse("the Tile comes up in the defined {programming_state} state"))
+@then(
+    parsers.cfparse(
+        "the Tile comes up in the defined expected {programming_state} state"
+    )
+)
 def tile_is_in_state(
     tile_device: tango.DeviceProxy,
     defined_state: dict[str, Any],

@@ -99,6 +99,7 @@ def check_against_hardware(hw_context: bool) -> None:
     :param hw_context: whether or not the current test is againt HW.
     """
     if not hw_context:
+        assert False, f"hw_context not here == {hw_context} "
         pytest.skip(
             "This test requires real HW. "
             "We require that a bounce of the Pod "
@@ -106,6 +107,8 @@ def check_against_hardware(hw_context: bool) -> None:
             "Since the simulator is constructed in init_device its "
             "state is reset after a init_device."
         )
+    else:
+        assert False, f"hw_context exists == {hw_context} "
 
 
 @given("an SPS deployment against a real context")

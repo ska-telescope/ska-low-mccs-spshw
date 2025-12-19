@@ -9,21 +9,21 @@ Feature: Test tile
         When the Tile data acquisition is started
         Then the Tile dropped packets is 0 after 30 seconds
 
-    Scenario: Tile synchronised state recovered after dev_init
+    Scenario: Tile synchronised state now recovered after dev_init
         Given an SPS deployment against HW
         And the SpsStation and tiles are ON
-        And the Tile is available
-        And the Tile is in a defined synchronised state
-        When the Tile TANGO device is restarted
-        Then the Tile comes up in the defined Synchronised state
+        And the Tile is now available
+        And the Tile is in a defined expected synchronised state
+        When the Tile TANGO device is now restarted
+        Then the Tile comes up in the defined expected Synchronised state
 
-    Scenario: Tile initialised state recovered after dev_init
+    Scenario: Tile initialised state now recovered after dev_init
         Given an SPS deployment against HW
         And the SpsStation and tiles are ON
-        And the Tile is available
-        And the Tile is in a defined initialised state
-        When the Tile TANGO device is restarted
-        Then the Tile comes up in the defined Initialised state
+        And the Tile is now available
+        And the Tile is in a defined expected initialised state
+        When the Tile TANGO device is now restarted
+        Then the Tile comes up in the defined expected Initialised state
 
 # Scenario: Tile state recovered after dev_init
 #     Given an SPS deployment against HW

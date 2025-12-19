@@ -1,7 +1,7 @@
 # Version History
 
 ## Unreleased
-
+* [LOW-1956] Update ska-tango-devices chart dependency to v0.13.0
 * [JANUS-305] Bumping TPM API version to 2.2.1 for fix to stop_data_transmission with continuous channel data
 
 ## 11.0.0

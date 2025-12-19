@@ -98,7 +98,9 @@ def check_against_hardware(hw_context: bool) -> None:
 
     :param hw_context: whether or not the current test is againt HW.
     """
+    print("check against hw ??")
     if not hw_context:
+        print("not hardware??")
         pytest.skip(
             "This test requires real HW. "
             "We require that a bounce of the Pod "

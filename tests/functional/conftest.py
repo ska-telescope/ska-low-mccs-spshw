@@ -440,7 +440,10 @@ def hw_context_fixture(request: pytest.FixtureRequest) -> bool:
 
     :return: whether to to test against an real HW only.
     """
-    return request.config.getoption("--hw-deployment")
+    tmp = request.config.getoption("--hw-deployment")
+
+    print(f"hw fixture tmp = {tmp}")
+    return tmp
 
 
 @pytest.fixture(name="subrack_address", scope="module")

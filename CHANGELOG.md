@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [JANUS-305] Bumping TPM API version to 2.2.1 for fix to stop_data_transmission with continuous channel data
+
 ## 11.0.0
 
 * [THORN-343] Change pll attribute names:

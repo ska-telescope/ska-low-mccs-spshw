@@ -3003,6 +3003,41 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         return (ResultCode.OK, "LoadCalibrationCoefficents command completed OK")
 
+    def load_calibration_coefficients_for_channels(
+        self: TileComponentManager,
+        start_channel: int,
+        calibration_coefficients: list[list[complex]],
+    ) -> tuple[ResultCode, str]:
+        """
+        Load calibration coefficients for all antennas and a subset of channels.
+
+        These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
+
+        :param start_channel: the first channel to which the coefficients apply
+        :param calibration_coefficients: a tridimensional complex array of
+            coefficients
+
+        :return: Result code and message.
+        """
+        self.logger.debug("TileComponentManager: load_calibration_coefficients_for_channels")
+        with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
+            if acquired:
+                try:
+                    self.tile.load_calibration_coefficients_for_channels(
+                        start_channel, calibration_coefficients
+                    )
+                # pylint: disable=broad-except
+                except Exception as e:
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
+                    )
+            else:
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "LoadCalibrationCoefficentsForChannels command completed OK")
+
     def initialise_beamformer(
         self: TileComponentManager,
         start_channel: int,

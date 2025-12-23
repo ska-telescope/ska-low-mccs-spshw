@@ -952,7 +952,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
             ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
             ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
-            ("LoadCalibrationCoefficientsForChannels", self.LoadCalibrationCoefficientsForChannelsCommand)
+            (
+                "LoadCalibrationCoefficientsForChannels",
+                self.LoadCalibrationCoefficientsForChannelsCommand,
+            ),
             ("ApplyCalibration", self.ApplyCalibrationCommand),
             ("LoadPointingDelays", self.LoadPointingDelaysCommand),
             ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
@@ -6848,7 +6851,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """Class for handling the LoadCalibrationCoefficients(argin) command."""
 
         def __init__(
-            self: MccsTile.LoadCalibrationCoefficientsCommand,
+            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
             component_manager: TileComponentManager,
             logger: logging.Logger | None = None,
         ) -> None:
@@ -6868,7 +6871,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficientsForChannels` commands.
+            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficientsForChannels` cmd.
 
             :param argin: calibration coefficients
             :param args: unspecified positional arguments. This should be empty and is
@@ -6906,7 +6909,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 for i in range(1, len(argin), 128)
             ]
 
-            result, message = self._component_manager.load_calibration_coefficients_for_channels(
+            (
+                result,
+                message,
+            ) = self._component_manager.load_calibration_coefficients_for_channels(
                 start_channel, calibration_coefficients
             )
             return (result, message)

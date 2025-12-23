@@ -3006,7 +3006,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def load_calibration_coefficients_for_channels(
         self: TileComponentManager,
         start_channel: int,
-        calibration_coefficients: list[list[complex]],
+        calibration_coefficients: list[list[list[complex]]],
     ) -> tuple[ResultCode, str]:
         """
         Load calibration coefficients for all antennas and a subset of channels.
@@ -3020,7 +3020,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Result code and message.
         """
-        self.logger.debug("TileComponentManager: load_calibration_coefficients_for_channels")
+        self.logger.debug(
+            "TileComponentManager: load_calibration_coefficients_for_channels"
+        )
         with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
             if acquired:
                 try:
@@ -3036,7 +3038,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             else:
                 return (ResultCode.FAILED, "Failed to acquire hardware lock")
 
-        return (ResultCode.OK, "LoadCalibrationCoefficentsForChannels command completed OK")
+        return (
+            ResultCode.OK,
+            "LoadCalibrationCoefficentsForChannels command completed OK",
+        )
 
     def initialise_beamformer(
         self: TileComponentManager,

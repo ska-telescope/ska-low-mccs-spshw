@@ -841,6 +841,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         antenna_order_delays: list[float],
     ) -> dict[int, list[float]]:
+        # Distribute delays, in EEP antenna order, to individual tiles.
         beam_index = antenna_order_delays[0]
 
         # pre-allocate arrays for each of our tiles
@@ -2866,6 +2867,30 @@ class SpsStationComponentManager(
         coefs[0] = float(tile_antenna)
         proxy.LoadCalibrationCoefficients(list(coefs))
 
+    def load_calibration_coefficients_for_channels(
+        self: SpsStationComponentManager, calibration_coefficients: list[float]
+    ) -> None:
+        """
+        Load calibration coefficients for all antennas and specific channels.
+
+        These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
+
+        :param calibration_coefficients: a tridimensional complex array of
+            coefficients, indexed by channels, antennas, polarizations,
+            flattened into a list.
+            Dimension of antennas is 256, in tile antenna order,
+            Dimension of polarizations is 4.
+        """
+        start_channel = calibration_coefficients[0]
+        coefficients = np.array(calibration_coefficients[1:]).reshape([-1, 256, 4])
+        for t, proxy in enumerate(self._tile_proxies.values()):
+            tile_coefficients = [start_channel] + list(
+                coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1])
+            )
+            assert proxy._proxy is not None
+            proxy._proxy.LoadCalibrationCoefficientsForChannels(tile_coefficients)
+
     def apply_calibration(
         self: SpsStationComponentManager, switch_time: str
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
@@ -2890,9 +2915,14 @@ class SpsStationComponentManager(
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
-        The delay_array specifies the delay and delay rate for each antenna. beam_index
-        specifies which beam is desired (range 0-47, limited to 7 in the current
-        firmware)
+        The delay_array specifies the delay and delay rate for each antenna.
+        First element in the array is beam_index: specifies which beam is
+        desired (range 0-47, limited to 7 in the current firmware)
+        Other elements are pairs of delay and delay rate for each antenna,
+        in EEP antenna order.
+        delay_list[2*eep_index -1] is delay, in seconds, and
+        delay_list[2*eep] is the delay rate, in second/second, for antenna
+        with given EEP index (range 1-256)
 
         :param delay_list: delay in seconds, and delay rate in seconds/second
         """

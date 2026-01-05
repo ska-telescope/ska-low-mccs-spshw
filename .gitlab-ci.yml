@@ -192,6 +192,7 @@ ral-low-xray-publish:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
       allow_failure: true
+  resource_group: ral-hardware
   needs:
     - ral-low-k8s-test
   tags:

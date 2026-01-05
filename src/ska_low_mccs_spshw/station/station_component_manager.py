@@ -658,6 +658,27 @@ class SpsStationComponentManager(
         else:
             logger.debug("No antenna mapping provided, skipping")
 
+    def cleanup(self: SpsStationComponentManager) -> None:
+        """
+        Cleanup resources held by the component manager.
+
+        This includes cleaning up resources held by all sub-component managers.
+        """
+        self._communication_manager.shutdown()
+        if self._lmc_daq_proxy:
+            self._lmc_daq_proxy.cleanup()
+        if self._bandpass_daq_proxy:
+            self._bandpass_daq_proxy.cleanup()
+        for tile_proxy in self._tile_proxies.values():
+            tile_proxy.cleanup()
+        for subrack_proxy in self._subrack_proxies.values():
+            subrack_proxy.cleanup()
+        self._task_executor._executor.shutdown()
+
+        # Superclass cleanup currently not implemented.
+        # Expected in future versions.
+        # super().cleanup()
+
     def _port_to_antenna_order(
         self: SpsStationComponentManager,
         antenna_mapping: dict[int, dict[str, int]],

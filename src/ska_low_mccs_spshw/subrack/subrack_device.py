@@ -356,7 +356,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._health_recorder: HealthRecorder | None
         self._health_report = ""
         self.component_manager: SubrackComponentManager
-
         self._tpm_present: list[bool] = []
         self._tpm_count = 0
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
@@ -373,6 +372,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         This is overridden here to change the Tango serialisation model.
         """
+        self._stopping = False
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -396,10 +396,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
+        self._stopping = True
         if self.component_manager.pdu_proxy:
             self.component_manager.pdu_proxy.cleanup()
 
-        self._stopping = True
         if self._health_recorder is not None:
             self._health_recorder.cleanup()
             self._health_recorder = None
@@ -1612,6 +1612,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param health_status: any changes to the health_status variables.
         :param kwargs: other state updates
         """
+        if self._stopping:
+            return
         super()._component_state_changed(fault=fault, power=power)
         if not self.UseAttributesForHealth:
             if power is not None:

@@ -15,6 +15,7 @@ import logging
 import os.path
 import sys
 import threading
+import time
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
@@ -254,6 +255,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.component_manager.cleanup()
         except Exception as e:  # pylint: disable=broad-except
             print(f"Failed to delete_device with {e=}", flush=True)
+        time.sleep(0.05)  # optional, just to drain async events
         super().delete_device()
 
     def init_device(self: MccsTile) -> None:

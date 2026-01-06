@@ -180,7 +180,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def delete_device(self: SpsStation) -> None:
         """Delete the device."""
-        self.component_manager.cleanup()
+        try:
+            self.component_manager.cleanup()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        time.sleep(0.1)
         super().delete_device()
 
     def _init_state_model(self: SpsStation) -> None:

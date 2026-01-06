@@ -10,6 +10,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import importlib.resources
 import sys
+import time
 from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
@@ -115,6 +116,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
                 self.component_manager.marshaller_proxy.cleanup()
         except Exception as ex:  # pylint: disable=broad-exception-caught
             self.logger.error("Failed to delete device %s", repr(ex))
+        time.sleep(0.1)
         super().delete_device()
 
     def _init_state_model(self: MccsPdu) -> None:

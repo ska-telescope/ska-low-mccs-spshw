@@ -13,6 +13,7 @@ import importlib
 import json
 import logging
 import sys
+import time
 from typing import Any, Callable, Final, Optional
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
@@ -397,14 +398,18 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
         self._stopping = True
-        if self.component_manager.pdu_proxy:
-            self.component_manager.pdu_proxy.cleanup()
+        try:
+            if self.component_manager.pdu_proxy:
+                self.component_manager.pdu_proxy.cleanup()
 
-        if self._health_recorder is not None:
-            self._health_recorder.cleanup()
-            self._health_recorder = None
+            if self._health_recorder is not None:
+                self._health_recorder.cleanup()
+                self._health_recorder = None
 
-        self.component_manager._task_executor._executor.shutdown()
+            self.component_manager._task_executor._executor.shutdown()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        time.sleep(0.1)
         super().delete_device()
 
     class InitCommand(DeviceInitCommand):

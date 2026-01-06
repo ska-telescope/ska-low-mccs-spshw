@@ -10,6 +10,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import sys
+import time
 from typing import Any, Callable, cast
 
 import tango
@@ -81,6 +82,7 @@ class PowerMarshaller(MccsBaseDevice):
         # pylint: disable=broad-exception-caught
         except Exception as ex:
             self.logger.error("Failed to delete device %s", repr(ex))
+        time.sleep(0.1)
         super().delete_device()
 
     def _init_state_model(self: PowerMarshaller) -> None:

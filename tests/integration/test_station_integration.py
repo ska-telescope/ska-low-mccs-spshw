@@ -29,6 +29,36 @@ from tests.test_tools import (
 gc.disable()
 
 
+@pytest.fixture(name="tile_subs")
+def tile_subs_fixture() -> list[int]:
+    """
+    Return a list to hold subscriptions for tile.
+
+    :return: an empty list.
+    """
+    return []
+
+
+@pytest.fixture(name="subrack_subs")
+def subrack_subs_fixture() -> list[int]:
+    """
+    Return a list to hold subscriptions for subrack.
+
+    :return: an empty list.
+    """
+    return []
+
+
+@pytest.fixture(name="station_subs")
+def station_subs_fixture() -> list[int]:
+    """
+    Return a list to hold subscriptions for station.
+
+    :return: an empty list.
+    """
+    return []
+
+
 @pytest.fixture(name="change_event_callbacks")
 def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
@@ -53,12 +83,14 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-def test_initialise_can_execute(
+def test_initialise_can_execute(  # pylint: disable=too-many-arguments
     sps_station_device: tango.DeviceProxy,
     subrack_device: tango.DeviceProxy,
     tile_device: tango.DeviceProxy,
     tile_simulator: TileSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    tile_subs: list[int],
+    subrack_subs: list[int],
 ) -> None:
     """
     Test the sps station Initialise function executes.
@@ -77,12 +109,16 @@ def test_initialise_can_execute(
         what tile_device is observing.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param tile_subs: a list to hold subscriptions for tile.
+    :param subrack_subs: a list to hold subscriptions for subrack.
     """
     subrack_device.inheritModes = False
-    subrack_device.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_state"],
+    subrack_subs.append(
+        subrack_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_state"],
+        )
     )
     change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.DISABLE)
     subrack_device.adminMode = AdminMode.ONLINE
@@ -91,16 +127,20 @@ def test_initialise_can_execute(
         tango.DevState.ON, lookahead=2
     )
     assert tile_device.adminMode == AdminMode.OFFLINE
-    tile_device.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["tile_state"],
+    tile_subs.append(
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
     )
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
-    tile_device.subscribe_event(
-        "tileProgrammingState",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["tile_programming_state"],
+    tile_subs.append(
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
     )
 
     change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
@@ -139,6 +179,9 @@ class TestStationTileIntegration:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test SPS station integration with subservient subrack and tile.
@@ -150,6 +193,9 @@ class TestStationTileIntegration:
             what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -160,25 +206,31 @@ class TestStationTileIntegration:
         # Since the devices are in adminMode OFFLINE,
         # they are not even trying to monitor and control their components,
         # so they each report state as DISABLE.
-        tile_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_state"],
+        tile_subs.append(
+            tile_device.subscribe_event(
+                "state",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["tile_state"],
+            )
         )
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
-        sps_station_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["station_state"],
+        station_subs.append(
+            sps_station_device.subscribe_event(
+                "state",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["station_state"],
+            )
         )
         change_event_callbacks["station_state"].assert_change_event(
             tango.DevState.DISABLE
         )
-        subrack_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["subrack_state"],
+        subrack_subs.append(
+            subrack_device.subscribe_event(
+                "state",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["subrack_state"],
+            )
         )
         change_event_callbacks["subrack_state"].assert_change_event(
             tango.DevState.DISABLE
@@ -188,10 +240,12 @@ class TestStationTileIntegration:
         change_event_callbacks["station_state"].assert_change_event(
             tango.DevState.UNKNOWN
         )
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
+        tile_subs.append(
+            tile_device.subscribe_event(
+                "tileProgrammingState",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["tile_programming_state"],
+            )
         )
         change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
 
@@ -254,6 +308,9 @@ class TestStationTileIntegration:
         tile_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test the sps station Initialise function executes.
@@ -272,6 +329,9 @@ class TestStationTileIntegration:
             what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -281,6 +341,9 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
         number_of_iterations = 2
         for i in range(number_of_iterations):
@@ -308,7 +371,7 @@ class TestStationTileIntegration:
             wait_for_completed_command_to_clear_from_queue(tile_device)
             wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
-    def test_pps_delay(  # pylint: disable=too-many-arguments
+    def test_pps_delay(  # pylint: disable=too-many-arguments, too-many-locals
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
@@ -316,6 +379,9 @@ class TestStationTileIntegration:
         tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test that pps delays can be set and read from station to tile.
@@ -328,6 +394,9 @@ class TestStationTileIntegration:
         :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -337,8 +406,10 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
-
         initial_corrections = sps_station_device.ppsDelayCorrections
 
         # set a pps Correction to apply
@@ -374,6 +445,9 @@ class TestStationTileIntegration:
         tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test the sps station adcPower gets updates.
@@ -389,6 +463,9 @@ class TestStationTileIntegration:
         :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -398,12 +475,17 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
 
-        sps_station_device.subscribe_event(
-            "adcPower",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_adc_power"],
+        station_subs.append(
+            sps_station_device.subscribe_event(
+                "adcPower",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["sps_adc_power"],
+            )
         )
         change_event_callbacks["sps_adc_power"].assert_change_event(Anything)
 
@@ -438,6 +520,9 @@ class TestStationTileIntegration:
         tile_component_manager: TileComponentManager,
         static_time_delays: np.ndarray,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test the sps station adcPower gets updates.
@@ -454,6 +539,9 @@ class TestStationTileIntegration:
         :param static_time_delays: a fixture containing the static_time_delays.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -463,12 +551,17 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
 
-        tile_device.subscribe_event(
-            "staticTimeDelays",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_static_delays"],
+        tile_subs.append(
+            tile_device.subscribe_event(
+                "staticTimeDelays",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["tile_static_delays"],
+            )
         )
 
         change_event_callbacks["tile_static_delays"].assert_change_event(
@@ -498,6 +591,9 @@ class TestStationTileIntegration:
         tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test the sps station preadulevels gets updates.
@@ -513,6 +609,9 @@ class TestStationTileIntegration:
         :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -522,6 +621,9 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
 
         # Initialise values in the backend TileSimulator and forces update
@@ -533,10 +635,12 @@ class TestStationTileIntegration:
             unittest.mock.Mock(return_value="PREADU_LEVELS")
         )
 
-        tile_device.subscribe_event(
-            "preaduLevels",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_preadu_levels"],
+        tile_subs.append(
+            tile_device.subscribe_event(
+                "preaduLevels",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["tile_preadu_levels"],
+            )
         )
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
@@ -581,6 +685,9 @@ class TestStationTileIntegration:
         tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test the sps station cspRounding gets updates.
@@ -596,6 +703,9 @@ class TestStationTileIntegration:
         :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -605,13 +715,18 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
 
         # Subscibe to change events on the preaduLevels attribute.
-        tile_device.subscribe_event(
-            "cspRounding",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_csp_rounding"],
+        tile_subs.append(
+            tile_device.subscribe_event(
+                "cspRounding",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["tile_csp_rounding"],
+            )
         )
         change_event_callbacks["tile_csp_rounding"].assert_change_event(Anything)
 
@@ -656,6 +771,9 @@ class TestStationTileIntegration:
         tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_subs: list[int],
+        subrack_subs: list[int],
+        station_subs: list[int],
     ) -> None:
         """
         Test the sps station cspRounding gets updates.
@@ -671,6 +789,9 @@ class TestStationTileIntegration:
         :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param tile_subs: a list to hold subscriptions for tile.
+        :param subrack_subs: a list to hold subscriptions for subrack.
+        :param station_subs: a list to hold subscriptions for station.
         """
         subrack_device.inheritModes = False
         tile_device.inheritModes = False
@@ -680,6 +801,9 @@ class TestStationTileIntegration:
             tile_device,
             tile_simulator,
             change_event_callbacks,
+            tile_subs,
+            subrack_subs,
+            station_subs,
         )
 
         tile_device.channeliserRounding = np.array([10] * 512)
@@ -690,10 +814,12 @@ class TestStationTileIntegration:
             unittest.mock.Mock(return_value="CHANNELISER_ROUNDING")
         )
         # Subscibe to change events on the preaduLevels attribute.
-        tile_device.subscribe_event(
-            "channeliserRounding",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_channeliser_rounding"],
+        tile_subs.append(
+            tile_device.subscribe_event(
+                "channeliserRounding",
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks["tile_channeliser_rounding"],
+            )
         )
         change_event_callbacks["tile_channeliser_rounding"].assert_change_event(
             [10] * 512

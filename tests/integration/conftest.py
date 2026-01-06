@@ -306,14 +306,18 @@ def tile_component_manager_fixture(
 
 
 @pytest.fixture(name="tile_simulator")
-def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
+def tile_simulator_fixture(logger: logging.Logger) -> Iterator[TileSimulator]:
     """
     Return a TileSimulator.
 
     :param logger: logger
-    :return: a TileSimulator
+    :yields: a TileSimulator
     """
-    return TileSimulator(logger)
+    tile_simulator = TileSimulator(logger)
+
+    yield tile_simulator
+
+    tile_simulator.cleanup()
 
 
 @pytest.fixture(name="static_time_delays")

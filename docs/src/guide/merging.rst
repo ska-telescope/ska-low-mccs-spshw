@@ -36,9 +36,9 @@ To get around this you can add the keyword `PIPELINE_TEST` to the
 description in the calander. This will allow the tests to run
 
 
-Additionally, the ral-test stage now is part of a resource group in the
-gitlab-ci pipeline. This acts as a lock that prevents other pipeline stages
-in the same group from running at the same time.
+Additionally, the ral-test stage now is part of the resource group 'ral-hardware'
+in the gitlab-ci pipeline. This resource can be claimed by a single stage,
+providing safety against concurrent hardware access.
 What this means in practice is that gitlab will prevent you from running
 the tests when another test is running.
 If you do attempt to run the tests while others are running, the resource group

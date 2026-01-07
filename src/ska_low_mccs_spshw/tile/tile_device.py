@@ -2739,6 +2739,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatures"].read()
 
     @attribute(
+        dtype="DevString",
+        label="tpm_communication_check",
+    )
+    def tpm_communication_check(self: MccsTile) -> str:
+        """
+        Check the TPM communication.
+
+        :return: a random string if communication is OK.
+        """
+        self.component_manager.tpm_communication_check()
+        return "Hi there! TPM communication is OK."
+
+    @attribute(
         dtype="DevBoolean",
         label="useAttributesForHealth",
     )

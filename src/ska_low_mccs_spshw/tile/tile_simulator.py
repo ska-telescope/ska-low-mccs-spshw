@@ -1924,6 +1924,14 @@ class TileSimulator:
         """
         return self._is_arp_table_healthy
 
+    def tpm_communication_check(self: TileSimulator) -> None:
+        """
+        Check TPM communication.
+
+        In the simulator this is a no-op.
+        """
+        self.logger.error("TPM communication check called on simulator")
+
     @check_mocked_overheating
     @connected
     def set_lmc_download(

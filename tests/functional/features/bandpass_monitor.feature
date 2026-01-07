@@ -16,7 +16,6 @@ Feature: Test bandpass monitor
         Then the DAQ reports that it is stopping monitoring bandpasses
 
     @XTP-34300
-    @xfail
     Scenario: Receive bandpass data
         Given the DAQ is available
         And no consumers are running

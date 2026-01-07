@@ -15,7 +15,6 @@ Feature: Test health
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is OK
 
-    @xfail
     Scenario: Failed when tile monitoring point is out of bounds
         Given the Station is online
         And the Station has been commanded to turn On
@@ -29,7 +28,6 @@ Feature: Test health
         And the Station reports that its HealthState is FAILED
         And the Subracks reports that its HealthState is OK
 
-    @xfail
     Scenario: Failed when subrack monitoring point is out of bounds
         Given the Station is online
         And the Station has been commanded to turn On
@@ -44,7 +42,6 @@ Feature: Test health
         And the Station reports that its HealthState is FAILED
         And the Subracks reports that its HealthState is FAILED
 
-    @xfail
     Scenario: Health changes when healthThresholds changes
         Given the Station is online
         And the Station has been commanded to turn On

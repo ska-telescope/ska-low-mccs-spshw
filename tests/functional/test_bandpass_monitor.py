@@ -397,10 +397,19 @@ def daq_received_data(
             ("integrated_channel", Anything)
         )
     except AssertionError:
-        if station_name == "stfc-ral-2":
-            pytest.xfail(
-                "There seems to be a discrepency between the simulator and hardware."
-                "When testing against hardware the datatype collected is burst_channel"
+        # if station_name == "stfc-ral-2":
+        #     pytest.xfail(
+        #         "There seems to be a discrepency between the simulator and hardware."
+        #         "When testing against hardware the datatype collected is burst_chan"
+        #     )
+        print("Change event queue content for data_received_callback:")
+        while not change_event_callbacks[
+            "data_received_callback"
+        ]._callable._call_queue.empty():
+            print(
+                change_event_callbacks[
+                    "data_received_callback"
+                ]._callable._call_queue.get()
             )
         pytest.fail("No integrated_channel data was received")
     # Stop the data transmission, else it will continue forever.
@@ -426,12 +435,19 @@ def daq_bandpasses_saved(
         assert np.count_nonzero(daq_device.xPolBandpass) > 0
         change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)
         assert np.count_nonzero(daq_device.yPolBandpass) > 0
-    except AssertionError as e:
-        if station_name == "stfc-ral-2":
-            pytest.xfail(
-                "There is an issue with this stage at RAL."
-                "Caught exception: list index out of range. "
-                "Tile 1 out of bounds! Max tile number: 1"
-                f"Failed with message {e}"
+    except AssertionError:
+        # if station_name == "stfc-ral-2":
+        #     pytest.xfail(
+        #         "There is an issue with this stage at RAL."
+        #         "Caught exception: list index out of range. "
+        #         "Tile 1 out of bounds! Max tile number: 1"
+        #         f"Failed with message {e}"
+        #     )
+        print("Change event queue content for daq_xPolBandpass:")
+        while not change_event_callbacks[
+            "daq_xPolBandpass"
+        ]._callable._call_queue.empty():
+            print(
+                change_event_callbacks["daq_xPolBandpass"]._callable._call_queue.get()
             )
         pytest.fail("Bandpass callbacks got no update")

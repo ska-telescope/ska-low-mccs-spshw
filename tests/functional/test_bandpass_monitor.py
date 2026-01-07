@@ -375,7 +375,8 @@ def tile_send_data(
 
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
-    tile_device.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
+    # tile_device.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
+    tile_device.ConfigureIntegratedChannelData(json.dumps({}))
 
 
 @then("the DAQ reports that it has received integrated channel data")

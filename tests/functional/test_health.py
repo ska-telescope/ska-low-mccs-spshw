@@ -55,6 +55,40 @@ def test_failed_when_tile_monitoring_point_is_out_of_bounds(
 
 @scenario(
     "features/health.feature",
+    "Health changes when healthThresholds changes",
+)
+def test_health_changes_when_healththresholds_changes(
+    station_devices: dict[str, tango.DeviceProxy]
+) -> None:
+    """
+    Reset Subrack and Station health parameters.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    :param station_devices: dictionary of proxies with device name as a key.
+    """
+    for subrack in station_devices["Subracks"]:
+        if not subrack.useAttributesForHealth:
+            subrack.healthModelParams = json.dumps(
+                {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+            )
+        else:
+            conf = subrack.get_attribute_config("boardTemperatures")
+            conf.alarms.min_alarm = "10.0"
+            conf.alarms.max_alarm = "50.0"
+            conf.alarms.min_warning = "15.0"
+            conf.alarms.max_warning = "45.0"
+            subrack.set_attribute_config(conf)
+    new_health_params = {
+        "subracks": [1, 1, 1],
+    }
+    for station in station_devices["Station"]:
+        station.healthThresholds = json.dumps(new_health_params)
+
+
+@scenario(
+    "features/health.feature",
     "Failed when subrack monitoring point is out of bounds",
 )
 def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
@@ -77,8 +111,8 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
             conf = subrack.get_attribute_config("boardTemperatures")
             conf.alarms.min_alarm = "10.0"
             conf.alarms.max_alarm = "50.0"
-            conf.alarms.min_warning = "15"
-            conf.alarms.max_warning = "45"
+            conf.alarms.min_warning = "15.0"
+            conf.alarms.max_warning = "45.0"
             subrack.set_attribute_config(conf)
 
 

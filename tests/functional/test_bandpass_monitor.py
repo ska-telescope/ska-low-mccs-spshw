@@ -166,7 +166,7 @@ def tile_ready_to_send_to_daq(
     daq_status = json.loads(daq_device.DaqStatus())
 
     tpm_lmc_config = {
-        "mode": "1G",
+        "mode": "10G",
         "destination_ip": daq_status["Receiver IP"][0],
         "destination_port": daq_status["Receiver Ports"][0],
     }
@@ -375,8 +375,7 @@ def tile_send_data(
 
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
-    # tile_device.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
-    tile_device.ConfigureIntegratedChannelData(json.dumps({}))
+    tile_device.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
 
 
 @then("the DAQ reports that it has received integrated channel data")

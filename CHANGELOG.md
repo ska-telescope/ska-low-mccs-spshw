@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-347] Fix bandpass functional tests at RAL.
 * [THORN-358] RAL Calendar CICD Queue: Running tests at RAL can now be queued
 * [LOW-1956][LOW-1959] Update ska-tango-devices chart dependency to v0.13.0, thus gaining access to support for headless services, and read-only volume mounts.
 * [JANUS-305] Bumping TPM API version to 2.2.1 for fix to stop_data_transmission with continuous channel data

@@ -143,7 +143,6 @@ def integration_test_context_fixture(
             subrack_id,
             subrack_bay=subrack_bay,
             device_class=patched_tile_device_class,
-            use_attributes_for_health=True,
         )
         harness.set_sps_station_device(
             subrack_ids=[subrack_id],

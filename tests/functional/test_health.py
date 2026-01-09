@@ -82,6 +82,35 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
             subrack.set_attribute_config(conf)
 
 
+@scenario(
+    "features/health.feature",
+    "Health changes when healthThresholds changes",
+)
+def test_health_changes_when_thresholds_change(
+    station_devices: dict[str, tango.DeviceProxy]
+) -> None:
+    """
+    Reset Subrack health parameters.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    :param station_devices: dictionary of proxies with device name as a key.
+    """
+    for subrack in station_devices["Subracks"]:
+        if not subrack.useAttributesForHealth:
+            subrack.healthModelParams = json.dumps(
+                {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+            )
+        else:
+            conf = subrack.get_attribute_config("boardTemperatures")
+            conf.alarms.min_alarm = "10.0"
+            conf.alarms.max_alarm = "50.0"
+            conf.alarms.min_warning = "15"
+            conf.alarms.max_warning = "45"
+            subrack.set_attribute_config(conf)
+
+
 @pytest.fixture(name="command_info")
 def command_info_fixture() -> dict[str, Any]:
     """
@@ -242,13 +271,21 @@ def set_subrack_thresholds(
     :param station_devices: A fixture with the station devices.
     """
     for subrack in station_devices["Subracks"]:
-        new_board_params = {
-            "failed_max_board_temp": 70.0,
-            "degraded_max_board_temp": 60.0,
-            "failed_min_board_temp": 10.0,
-            "degraded_min_board_temp": 20.0,
-        }
-        subrack.healthModelParams = json.dumps(new_board_params)
+        if not subrack.useAttributesForHealth:
+            new_board_params = {
+                "failed_max_board_temp": 50.0,
+                "degraded_max_board_temp": 45.0,
+                "failed_min_board_temp": 10.0,
+                "degraded_min_board_temp": 15.0,
+            }
+            subrack.healthModelParams = json.dumps(new_board_params)
+        else:
+            conf = subrack.get_attribute_config("boardTemperatures")
+            conf.alarms.min_alarm = "10.0"
+            conf.alarms.max_alarm = "50.0"
+            conf.alarms.min_warning = "15"
+            conf.alarms.max_warning = "45"
+            subrack.set_attribute_config(conf)
 
 
 @given("the Station has been commanded to turn On")

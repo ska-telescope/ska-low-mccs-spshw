@@ -443,10 +443,12 @@ def daq_received_data(
     change_event_callbacks: MockTangoEventCallbackGroup,
     tile_device: tango.DeviceProxy,
     station_name: str,
+    station: tango.DeviceProxy,
 ) -> None:
     """
     Confirm Daq has received data.
 
+    :param station: A 'tango.DeviceProxy' to the Station device.
     :param station_name: the name of the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
@@ -473,7 +475,7 @@ def daq_received_data(
             )
         pytest.fail("No integrated_channel data was received")
     # Stop the data transmission, else it will continue forever.
-    tile_device.StopIntegratedData()
+    station.StopIntegratedData()
 
 
 @then("the DAQ saves bandpass data to its relevant attributes")

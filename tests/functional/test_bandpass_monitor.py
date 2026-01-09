@@ -170,7 +170,7 @@ def tile_ready_to_send_to_daq(
         "destination_ip": daq_status["Receiver IP"][0],
         "destination_port": daq_status["Receiver Ports"][0],
     }
-    synchronised_tile_device.SetLmcDownload(json.dumps(tpm_lmc_config))
+    synchronised_tile_device.SetLmcIntegratedDownload(json.dumps(tpm_lmc_config))
 
 
 @given("no consumers are running")

@@ -192,12 +192,30 @@ def station_ready_to_send_to_daq(
         poll_until_state_change(subrack_device, tango.DevState.ON, 5)
     daq_status = json.loads(daq_device.DaqStatus())
 
-    tpm_lmc_config = {
+    lmc_config = {
         "mode": "10G",
         "destination_ip": daq_status["Receiver IP"][0],
         "destination_port": daq_status["Receiver Ports"][0],
     }
-    station.SetLmcIntegratedDownload(json.dumps(tpm_lmc_config))
+    station.SetLmcIntegratedDownload(json.dumps(lmc_config))
+
+
+@given("the Station is synchronised")
+def station_in_synchronised_state(
+    station: tango.DeviceProxy,
+) -> None:
+    """
+    Ensure that the Station is in Synchronised state.
+
+    :param station: A 'tango.DeviceProxy' to the Station device.
+    """
+    if not all(status == "Synchronised" for status in station.tileProgrammingState):
+        station.StartAcquisition("{}")
+        time.sleep(2)
+    try:
+        assert all(status == "Synchronised" for status in station.tileProgrammingState)
+    except AssertionError:
+        pytest.fail(f"Not all tiles are Synchronised: {station.tileProgrammingState}")
 
 
 @given("no consumers are running")

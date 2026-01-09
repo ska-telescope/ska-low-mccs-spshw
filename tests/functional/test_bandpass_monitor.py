@@ -173,6 +173,33 @@ def tile_ready_to_send_to_daq(
     synchronised_tile_device.SetLmcIntegratedDownload(json.dumps(tpm_lmc_config))
 
 
+@given("the Station is routed to the DAQ")
+def station_ready_to_send_to_daq(
+    daq_device: tango.DeviceProxy,
+    station: tango.DeviceProxy,
+    subrack_device: tango.DeviceProxy,
+) -> None:
+    """
+    Configure the Daq device for select data type.
+
+    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
+    :param station: A 'tango.DeviceProxy' to the Station device
+        in Synchronised state.
+    :param subrack_device: A 'tango.DeviceProxy' to the Subrack device.
+    """
+    if subrack_device.state() != tango.DevState.ON:
+        subrack_device.adminMode = AdminMode.ONLINE
+        poll_until_state_change(subrack_device, tango.DevState.ON, 5)
+    daq_status = json.loads(daq_device.DaqStatus())
+
+    tpm_lmc_config = {
+        "mode": "10G",
+        "destination_ip": daq_status["Receiver IP"][0],
+        "destination_port": daq_status["Receiver Ports"][0],
+    }
+    station.SetLmcIntegratedDownload(json.dumps(tpm_lmc_config))
+
+
 @given("no consumers are running")
 def daq_device_has_no_running_consumers(
     daq_device: tango.DeviceProxy,
@@ -376,6 +403,21 @@ def tile_send_data(
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
     tile_device.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
+
+
+@when(
+    "the Station is commanded to send integrated channel data",
+    target_fixture="initial_hdf5_count",
+)
+def station_send_data(
+    station: tango.DeviceProxy,
+) -> None:
+    """
+    Command the station to start sending data.
+
+    :param station: A 'tango.DeviceProxy' to the Station device.
+    """
+    station.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
 
 
 @then("the DAQ reports that it has received integrated channel data")

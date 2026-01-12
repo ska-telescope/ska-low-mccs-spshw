@@ -211,6 +211,8 @@ def get_tile_sync(
 
     :param tile: A 'tango.DeviceProxy' to a Tile device.
     """
+    if tile.tileProgrammingState == "Synchronised":
+        return
     if tile.adminMode != AdminMode.ONLINE:
         tile.adminMode = AdminMode.ONLINE
         AttributeWaiter(timeout=60).wait_for_value(
@@ -240,7 +242,7 @@ def get_tile_sync(
         else:
             tile.initialise()
 
-        AttributeWaiter(timeout=180).wait_for_value(
+        AttributeWaiter(timeout=60).wait_for_value(
             tile,
             "tileProgrammingState",
             "Synchronised",

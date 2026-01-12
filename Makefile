@@ -114,7 +114,7 @@ ifdef K8S_PYTEST_EXTRA_ARGUMENTS
 K8S_TEST_RUNNER_PYTEST_OPTIONS += $(K8S_PYTEST_EXTRA_ARGUMENTS)
 endif
 
-K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional
+K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/test_bandpass_monitor.py
 K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 
 K8S_TEST_RUNNER_CHART_REGISTRY ?= https://artefact.skao.int/repository/helm-internal

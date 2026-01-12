@@ -10,7 +10,6 @@ Feature: Test bandpass monitor
         Given the DAQ is available
         And no consumers are running
         And the DAQ is configured
-        And the DAQ is started with the integrated channel data consumer
         And the bandpass monitor is running
         When the DAQ is commanded to stop monitoring bandpasses
         Then the DAQ reports that it is stopping monitoring bandpasses
@@ -22,7 +21,6 @@ Feature: Test bandpass monitor
         And the Tile is available
         And the Subrack is available
         And the DAQ is configured
-        And the DAQ is started with the integrated channel data consumer
         And the bandpass monitor is running
         And the Station is synchronised
         And the Station is routed to the DAQ

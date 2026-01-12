@@ -241,7 +241,7 @@ def get_tile_sync(
             tile.on()
         else:
             tile.initialise()
-
+        # Do we need to check for Tiles that end up in Initialised and Sync them?
         AttributeWaiter(timeout=60).wait_for_value(
             tile,
             "tileProgrammingState",
@@ -497,7 +497,8 @@ def station_send_data(
 
     :param station: A 'tango.DeviceProxy' to the Station device.
     """
-    station.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
+    station.set_logging_level(5)  # DEBUG
+    station.SendDataSamples(json.dumps({"data_type": "channel"}))
 
 
 # TODO: Move this

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime
 from typing import Any, Generator
 
 import numpy as np
@@ -27,7 +28,9 @@ from tests.functional.conftest import (
     verify_bandpass_state,
 )
 from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
-from tests.test_tools import retry_communication
+from tests.test_tools import AttributeWaiter, retry_communication
+
+RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 scenarios("./features/bandpass_monitor.feature")
 
@@ -200,18 +203,75 @@ def station_ready_to_send_to_daq(
     station.SetLmcIntegratedDownload(json.dumps(lmc_config))
 
 
+def get_tile_sync(
+    tile: tango.DeviceProxy,
+) -> None:
+    """
+    Get a Tile to Synchronised state.
+
+    :param tile: A 'tango.DeviceProxy' to a Tile device.
+    """
+    if tile.adminMode != AdminMode.ONLINE:
+        tile.adminMode = AdminMode.ONLINE
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile,
+            "tileProgrammingState",
+            None,
+            lookahead=5,
+        )
+
+    initial_grt = tile.globalreferenceTime
+
+    if tile.tileProgrammingState != "Synchronised":
+        if initial_grt == "":
+            start_time = datetime.strftime(
+                datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
+            )
+            tile.globalreferenceTime = start_time
+        if tile.state() in [tango.DevState.UNKNOWN]:
+            # We are adminMode.ONLINE, we should discover state.
+            AttributeWaiter(timeout=8).wait_for_value(
+                tile,
+                "tileProgrammingState",
+                None,
+            )
+        if tile.state() == tango.DevState.OFF:
+            tile.on()
+        else:
+            tile.initialise()
+
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile,
+            "tileProgrammingState",
+            "Synchronised",
+            lookahead=5,
+        )
+
+
 @given("the Station is synchronised")
 def station_in_synchronised_state(
     station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
 ) -> None:
     """
     Ensure that the Station is in Synchronised state.
 
     :param station: A 'tango.DeviceProxy' to the Station device.
+    :param station_tiles: A list of 'tango.DeviceProxy' to all Station's Tile devices.
     """
-    if not all(status == "Synchronised" for status in station.tileProgrammingState):
-        station.StartAcquisition("{}")
-        time.sleep(2)
+    if station.adminMode != AdminMode.ONLINE:
+        print("Setting station admin mode to ONLINE")
+        station.adminMode = AdminMode.ONLINE
+        AttributeWaiter(timeout=60).wait_for_value(
+            station, "state", tango.DevState.UNKNOWN
+        )
+        AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+    wait_for_lrcs_to_finish(station_tiles + [station], timeout=180)
+
+    for tile in station_tiles:
+        get_tile_sync(tile)
+        assert tile.tileProgrammingState == "Synchronised"
+
     try:
         assert all(status == "Synchronised" for status in station.tileProgrammingState)
     except AssertionError:
@@ -436,6 +496,31 @@ def station_send_data(
     :param station: A 'tango.DeviceProxy' to the Station device.
     """
     station.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
+
+
+# TODO: Move this
+def wait_for_lrcs_to_finish(
+    devices: list[tango.DeviceProxy], timeout: int = 120
+) -> None:
+    """
+    Wait for the LongrunningCommands to finish on devices.
+
+    :param devices: The devices we want to check
+    :param timeout: the max time to wait
+
+    :raises TimeoutError: is timeout period exceeded before state change.
+    """
+    count = 0
+    for device in devices:
+        count = 0
+        while device.lrcQueue != ():
+            time.sleep(1)
+            count += 1
+            if count == timeout:
+                raise TimeoutError(
+                    f"LRCs still running after {timeout} seconds: "
+                    f"{device.dev_name()} : {device.lrcQueue}"
+                )
 
 
 @then("the DAQ reports that it has received integrated channel data")

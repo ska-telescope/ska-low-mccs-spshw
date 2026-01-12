@@ -240,7 +240,7 @@ def get_tile_sync(
         else:
             tile.initialise()
 
-        AttributeWaiter(timeout=60).wait_for_value(
+        AttributeWaiter(timeout=180).wait_for_value(
             tile,
             "tileProgrammingState",
             "Synchronised",

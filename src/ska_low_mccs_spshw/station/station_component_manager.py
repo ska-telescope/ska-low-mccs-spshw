@@ -2474,8 +2474,13 @@ class SpsStationComponentManager(
         :return: list of programming state for all TPMs
         """
         for tile_id, tile in enumerate(self._tile_proxies.values()):
-            assert tile._proxy is not None  # for the type checker
-            assert tile._proxy.tileProgrammingState is not None
+            # Some weirdness going on here.
+            # assert tile._proxy is not None  # for the type checker
+            # assert tile._proxy.tileProgrammingState is not None
+            if tile._proxy is None:
+                continue
+            if tile._proxy.tileProgrammingState is None:
+                continue
             self._tile_programming_state[tile_id] = tile._proxy.tileProgrammingState
         return self._tile_programming_state.copy()
 

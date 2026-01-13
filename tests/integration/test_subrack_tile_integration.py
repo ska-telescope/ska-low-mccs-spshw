@@ -66,7 +66,6 @@ class TestSubrackTileIntegration:
         self: TestSubrackTileIntegration,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
-        pdu_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -82,15 +81,13 @@ class TestSubrackTileIntegration:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
-        :param pdu_device: the pdu Tango device under test.
         :param tile_simulator: The mocked tile_simulator
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
-        assert pdu_device.adminMode == AdminMode.OFFLINE
-        pdu_device.adminMode = AdminMode.ONLINE
+
         # Since the subrack device is in adminMode OFFLINE,
         # it is not even trying to monitor and control its subrack,
         # so it reports its state as DISABLE,

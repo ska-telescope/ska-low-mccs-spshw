@@ -16,7 +16,7 @@ import time
 import warnings
 from datetime import datetime
 from time import sleep
-from typing import Any, Iterator
+from typing import Any, Callable, Iterable, Iterator
 from unittest.mock import patch
 
 import _pytest
@@ -35,6 +35,15 @@ from tests.harness import (
 from ..test_tools import AttributeWaiter
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+TIMEOUT = 90  # Used in wait for obsState and lrcs to finish
+
+
+def _flatten(two_dimension_list: Iterable[Iterable]) -> list:
+    return [
+        value
+        for one_dimension_list in two_dimension_list
+        for value in one_dimension_list
+    ]
 
 
 # TODO: https://github.com/pytest-dev/pytest-forked/issues/67
@@ -805,3 +814,37 @@ def synchronised_tile_device_fixture(
 
     # Restore the previous GRT
     tile_device.globalreferenceTime = initial_grt
+
+
+@pytest.fixture(name="wait_for_lrcs_to_finish")
+def wait_for_lrcs_to_finish_fixture(
+    all_devices: dict[str, list[tango.DeviceProxy]],
+) -> Callable:
+    """
+    Wait for Long Running Commands on devices under test to finish.
+
+    We are sending quite a few LRCs in some of these tests, we must ensure
+    they are complete before moving onto the next step, or before trying to
+    read attributes.
+
+    :param all_devices: dict of all devices in the test.
+
+    :returns: a callable checking status of LRCs on all devices.
+    """
+
+    def _wait_for_lrcs_to_finish(timeout: int = TIMEOUT) -> None:
+        count = 0
+
+        for device in _flatten(list(all_devices.values())):
+            count = 0
+            while device.lrcQueue != () or device.lrcExecuting != ():
+                time.sleep(1)
+                count += 1
+                if count == timeout:
+                    pytest.fail(
+                        f"LRCs still running after {timeout} seconds: "
+                        f"{device.dev_name()} : {device.lrcQueue=} "
+                        f"{device.lrcExecuting=}"
+                    )
+
+    return _wait_for_lrcs_to_finish

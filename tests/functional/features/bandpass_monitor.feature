@@ -26,6 +26,7 @@ Feature: Test bandpass monitor
         And the DAQ is started with the integrated channel data consumer
         And the Station is synchronised
         And the Station is routed to the DAQ
+        And there are no alarms on the Station or Tiles
         When the Station is commanded to send integrated channel data
         Then the DAQ reports that it has received integrated channel data
         And the DAQ saves bandpass data to its relevant attributes

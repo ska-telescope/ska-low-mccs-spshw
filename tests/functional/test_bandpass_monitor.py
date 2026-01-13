@@ -250,6 +250,29 @@ def get_tile_sync(
         )
 
 
+@given("there are no alarms on the Station or Tiles")
+def no_alarms_on_station_or_tiles(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+) -> None:
+    """
+    Ensure there are no alarms on the Station or Tiles.
+
+    :param station: A 'tango.DeviceProxy' to the Station device.
+    :param station_tiles: A list of 'tango.DeviceProxy' to all Station's Tile devices.
+    """
+    devices_to_check = station_tiles + [station]
+    alarming_devices = []
+    for device in devices_to_check:
+        if device.state() == tango.DevState.ALARM:
+            alarming_devices.append((device.dev_name(), device.healthreport))
+    if alarming_devices:
+        alarm_messages = "\n".join(
+            [f"{name}: {report}" for name, report in alarming_devices]
+        )
+        pytest.fail(f"Alarms present on devices:\n{alarm_messages}")
+
+
 @given("the Station is synchronised")
 def station_in_synchronised_state(
     station: tango.DeviceProxy,
@@ -270,9 +293,22 @@ def station_in_synchronised_state(
         AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
     wait_for_lrcs_to_finish(station_tiles + [station], timeout=180)
 
+    # If we're not syncd then turn the station "off" and on again to force a resync.
+    if not all(tile.tileProgrammingState == "Synchronised" for tile in station_tiles):
+        print("Some tiles are not synchronised, attempting to sync them now.")
+        station.standby()
+        AttributeWaiter(timeout=180).wait_for_value(
+            station, "state", tango.DevState.STANDBY
+        )
+        station.on()
+        AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+
     for tile in station_tiles:
-        get_tile_sync(tile)
-        assert tile.tileProgrammingState == "Synchronised"
+        AttributeWaiter(timeout=180).wait_for_value(
+            tile, "tileProgrammingState", "Synchronised", lookahead=5
+        )
+        # get_tile_sync(tile)
+        # assert tile.tileProgrammingState == "Synchronised"
 
     try:
         assert all(status == "Synchronised" for status in station.tileProgrammingState)
@@ -497,7 +533,6 @@ def station_send_data(
 
     :param station: A 'tango.DeviceProxy' to the Station device.
     """
-    station.set_logging_level(5)  # DEBUG
     station.SendDataSamples(json.dumps({"data_type": "channel"}))
 
 

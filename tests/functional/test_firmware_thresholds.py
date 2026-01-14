@@ -120,9 +120,7 @@ def device_threshold_updated_fixture(
     "features/firmware_writes.feature", "Tile firmware thresholds checked after restart"
 )
 def test_device_reads_db_on_init() -> None:
-    """
-    Run a test scenario that tests the tile device.
-    """
+    """Run a test scenario that tests the tile device."""
 
 
 @scenario(
@@ -130,9 +128,7 @@ def test_device_reads_db_on_init() -> None:
     "Tile firmware thresholds checked after write",
 )
 def test_thresholds_checked_with_db_after_write() -> None:
-    """
-    Run a test scenario that tests the tile device.
-    """
+    """Run a test scenario that tests the tile device."""
 
 
 @scenario(
@@ -140,19 +136,15 @@ def test_thresholds_checked_with_db_after_write() -> None:
     "Tile firmware thresholds unset in db",
 )
 def test_thresholds_unset_in_db() -> None:
-    """
-    Run a test scenario that tests the tile device.
-    """
+    """Run a test scenario that tests the tile device."""
 
 
 @scenario(
     "features/firmware_writes.feature",
     "Tile firmware thresholds written to match db",
 )
-def test_thresholds_written_to_match_db(station_label: str) -> None:
-    """
-    Run a test scenario that tests the tile device.
-    """
+def test_thresholds_written_to_match_db() -> None:
+    """Run a test scenario that tests the tile device."""
 
 
 @given("an SPS deployment against a real context")

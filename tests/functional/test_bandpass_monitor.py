@@ -219,10 +219,12 @@ def no_alarms_on_station_or_tiles(
     alarming_devices = []
     for device in devices_to_check:
         if device.state() == tango.DevState.ALARM:
-            alarming_devices.append((device.dev_name(), device.healthreport))
+            alarming_devices.append(
+                (device.dev_name(), device.healthreport, device.tileProgrammingState)
+            )
     if alarming_devices:
         alarm_messages = "\n".join(
-            [f"{name}: {report}" for name, report in alarming_devices]
+            [f"{name}: {report} - {tps}" for name, report, tps in alarming_devices]
         )
         pytest.fail(f"Alarms present on devices:\n{alarm_messages}")
 
@@ -356,6 +358,7 @@ def daq_integrated_channel_running(
     yield
 
     daq_device.Stop()
+    poll_until_consumers_stopped(daq_device)
 
 
 @then("the bandpass DAQ is started with the integrated channel data consumer")
@@ -500,7 +503,7 @@ def station_send_data(
 
     :yields: Nothing, just for cleanup.
     """
-    station.SendDataSamples(json.dumps({"data_type": "channel"}))
+    # station.SendDataSamples(json.dumps({"data_type": "channel"}))
     yield
     # Stop the data transmission, else it will continue forever.
     station.StopIntegratedData()

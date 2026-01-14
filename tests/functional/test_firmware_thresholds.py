@@ -119,51 +119,30 @@ def device_threshold_updated_fixture(
 @scenario(
     "features/firmware_writes.feature", "Tile firmware thresholds checked after restart"
 )
-def test_device_reads_db_on_init(station_label: str) -> None:
+def test_device_reads_db_on_init() -> None:
     """
     Run a test scenario that tests the tile device.
-
-    :param station_label: Name of the station to test against.
     """
-    if station_label == "stfc-ral-2":
-        pytest.skip(
-            "RAL hardware tests are passing inconsistently."
-            "These tests will be skipped until proper cleanup is implemented."
-        )
 
 
 @scenario(
     "features/firmware_writes.feature",
     "Tile firmware thresholds checked after write",
 )
-def test_thresholds_checked_with_db_after_write(station_label: str) -> None:
+def test_thresholds_checked_with_db_after_write() -> None:
     """
     Run a test scenario that tests the tile device.
-
-    :param station_label: Name of the station to test against.
     """
-    if station_label == "stfc-ral-2":
-        pytest.skip(
-            "RAL hardware tests are passing inconsistently."
-            "These tests will be skipped until proper cleanup is implemented."
-        )
 
 
 @scenario(
     "features/firmware_writes.feature",
     "Tile firmware thresholds unset in db",
 )
-def test_thresholds_unset_in_db(station_label: str) -> None:
+def test_thresholds_unset_in_db() -> None:
     """
     Run a test scenario that tests the tile device.
-
-    :param station_label: Name of the station to test against.
     """
-    if station_label == "stfc-ral-2":
-        pytest.skip(
-            "RAL hardware tests are passing inconsistently."
-            "These tests will be skipped until proper cleanup is implemented."
-        )
 
 
 @scenario(
@@ -173,25 +152,24 @@ def test_thresholds_unset_in_db(station_label: str) -> None:
 def test_thresholds_written_to_match_db(station_label: str) -> None:
     """
     Run a test scenario that tests the tile device.
-
-    :param station_label: Name of the station to test against.
     """
+
+
+@given("an SPS deployment against a real context")
+def check_against_real_context(true_context: bool, station_label: str) -> None:
+    """
+    Skip the test if not in real context.
+
+    :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
+    """
+    if not true_context:
+        pytest.skip("This test requires real context.")
     if station_label == "stfc-ral-2":
         pytest.skip(
             "RAL hardware tests are passing inconsistently."
             "These tests will be skipped until proper cleanup is implemented."
         )
-
-
-@given("an SPS deployment against a real context")
-def check_against_real_context(true_context: bool) -> None:
-    """
-    Skip the test if not in real context.
-
-    :param true_context: whether or not the current context is real.
-    """
-    if not true_context:
-        pytest.skip("This test requires real context.")
 
 
 @given("the SpsStation and tiles are ON")

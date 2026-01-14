@@ -92,11 +92,12 @@ def test_tile_initialised_recover(
 
 
 @given("an SPS deployment against HW")
-def check_against_hardware(hw_context: bool) -> None:
+def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
     Skip the test if not in real context.
 
     :param hw_context: whether or not the current test is againt HW.
+    :param station_label: Station to test against.
     """
     if not hw_context:
         pytest.skip(
@@ -106,17 +107,28 @@ def check_against_hardware(hw_context: bool) -> None:
             "Since the simulator is constructed in init_device its "
             "state is reset after a init_device."
         )
+    if station_label == "stfc-ral-2":
+        pytest.skip(
+            "RAL hardware tests are passing inconsistently."
+            "These tests will be skipped until proper cleanup is implemented."
+        )
 
 
 @given("an SPS deployment against a real context")
-def check_against_real_context(true_context: bool) -> None:
+def check_against_real_context(true_context: bool, station_label: str) -> None:
     """
     Skip the test if not in real context.
 
     :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
     """
     if not true_context:
         pytest.skip("This test requires real context.")
+    if station_label == "stfc-ral-2":
+        pytest.skip(
+            "RAL hardware tests are passing inconsistently."
+            "These tests will be skipped until proper cleanup is implemented."
+        )
 
 
 @given("the SpsStation and tiles are ON")

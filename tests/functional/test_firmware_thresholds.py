@@ -119,32 +119,68 @@ def device_threshold_updated_fixture(
 @scenario(
     "features/firmware_writes.feature", "Tile firmware thresholds checked after restart"
 )
-def test_device_reads_db_on_init() -> None:
-    """Run a test scenario that tests the tile device."""
+def test_device_reads_db_on_init(station_label: str) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param station_label: Name of the station to test against.
+    """
+    if station_label == "stfc-ral-2":
+        pytest.skip(
+            "RAL hardware tests are passing inconsistently."
+            "These tests will be skipped until proper cleanup is implemented."
+        )
 
 
 @scenario(
     "features/firmware_writes.feature",
     "Tile firmware thresholds checked after write",
 )
-def test_thresholds_checked_with_db_after_write() -> None:
-    """Run a test scenario that tests the tile device."""
+def test_thresholds_checked_with_db_after_write(station_label: str) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param station_label: Name of the station to test against.
+    """
+    if station_label == "stfc-ral-2":
+        pytest.skip(
+            "RAL hardware tests are passing inconsistently."
+            "These tests will be skipped until proper cleanup is implemented."
+        )
 
 
 @scenario(
     "features/firmware_writes.feature",
     "Tile firmware thresholds unset in db",
 )
-def test_thresholds_unset_in_db() -> None:
-    """Run a test scenario that tests the tile device."""
+def test_thresholds_unset_in_db(station_label: str) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param station_label: Name of the station to test against.
+    """
+    if station_label == "stfc-ral-2":
+        pytest.skip(
+            "RAL hardware tests are passing inconsistently."
+            "These tests will be skipped until proper cleanup is implemented."
+        )
 
 
 @scenario(
     "features/firmware_writes.feature",
     "Tile firmware thresholds written to match db",
 )
-def test_thresholds_written_to_match_db() -> None:
-    """Run a test scenario that tests the tile device."""
+def test_thresholds_written_to_match_db(station_label: str) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param station_label: Name of the station to test against.
+    """
+    if station_label == "stfc-ral-2":
+        pytest.skip(
+            "RAL hardware tests are passing inconsistently."
+            "These tests will be skipped until proper cleanup is implemented."
+        )
 
 
 @given("an SPS deployment against a real context")

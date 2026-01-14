@@ -101,20 +101,21 @@ def station_devices_exported_fixture(
 @pytest.fixture(name="station")
 def station_fixture(
     station_label: str | None, true_context: bool
-) -> tango.DeviceProxy | None:
+) -> Iterator[tango.DeviceProxy | None]:
     """
     Fixture containing a proxy to the station under test.
 
     :param station_label: the names of the station we are testing against.
     :param true_context: Whether we are testing against a real deployment.
 
-    :returns: a proxy to the station under test.
+    :yields: a proxy to the station under test.
     """
     if not true_context:
-        return None
+        yield None
+        return
     if not station_label:
         station_label = DEFAULT_STATION_LABEL
-    return tango.DeviceProxy(get_sps_station_name(station_label))
+    yield tango.DeviceProxy(get_sps_station_name(station_label))
 
 
 @pytest.fixture(name="sps_devices_exported")

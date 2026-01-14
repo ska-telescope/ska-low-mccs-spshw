@@ -483,7 +483,7 @@ def tile_send_data(
 
     :yields: Nothing, just for cleanup.
     """
-    tile_device.SendDataSamples(json.dumps({"data_type": "channel", "n_samples": 16}))
+    tile_device.ConfigureIntegratedChannelData("{}")
     yield
     # Stop the data transmission, else it will continue forever.
     tile_device.StopIntegratedData()
@@ -503,7 +503,7 @@ def station_send_data(
 
     :yields: Nothing, just for cleanup.
     """
-    # station.SendDataSamples(json.dumps({"data_type": "channel"}))
+    station.ConfigureIntegratedChannelData("{}")
     yield
     # Stop the data transmission, else it will continue forever.
     station.StopIntegratedData()

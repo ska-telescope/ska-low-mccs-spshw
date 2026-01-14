@@ -110,6 +110,12 @@ def test_health_changes_when_thresholds_change(
             conf.alarms.max_warning = "45"
             subrack.set_attribute_config(conf)
 
+    new_health_params = {
+        "subracks": [1, 1, 1],
+    }
+    for station in station_devices["Station"]:
+        station.healthThresholds = json.dumps(new_health_params)
+
 
 @pytest.fixture(name="command_info")
 def command_info_fixture() -> dict[str, Any]:

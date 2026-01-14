@@ -1587,7 +1587,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Hence we leave lock and wait for callback.
         callbacks["attribute_state"].assert_against_call(
             programming_state=TpmStatus.SYNCHRONISED.pretty_name(),
-            lookahead=100,
+            lookahead=20,
             consume_nonmatches=True,
         )
 

@@ -71,7 +71,14 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     for subrack in station_devices["Subracks"]:
         if not subrack.useAttributesForHealth:
             subrack.healthModelParams = json.dumps(
-                {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+                {
+                    "failed_fan_speed_diff": 100000,
+                    "degraded_fan_speed_diff": 100000,
+                    "failed_max_board_temp": 50.0,
+                    "degraded_max_board_temp": 45.0,
+                    "failed_min_board_temp": 10.0,
+                    "degraded_min_board_temp": 15.0,
+                }
             )
         else:
             conf = subrack.get_attribute_config("boardTemperatures")

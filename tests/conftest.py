@@ -16,7 +16,7 @@ from __future__ import annotations
 import enum
 import logging
 import os
-from pathlib import Path
+from importlib.resources import files
 from typing import Any, Callable
 
 import pytest
@@ -74,13 +74,12 @@ def reset_attribute_configs_fixture() -> dict[str, Callable]:
 
     :returns: a dictionary of callables to reset tile or subrack attribute configs.
     """
-    # Load default values from values.yaml
-    values_yaml_path = (
-        Path(__file__).parent.parent / "charts" / "ska-low-mccs-spshw" / "values.yaml"
+    # Load default values from packaged data file
+    data_package = files("tests.data")
+    values_yaml_content = (data_package / "default_values.yaml").read_text(
+        encoding="utf-8"
     )
-
-    with open(values_yaml_path, "r", encoding="utf-8") as f:
-        values_data = yaml.safe_load(f)
+    values_data = yaml.safe_load(values_yaml_content)
 
     # Extract class properties
     class_properties = values_data["ska-tango-devices"]["classProperties"]

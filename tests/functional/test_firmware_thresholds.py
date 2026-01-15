@@ -139,7 +139,7 @@ def device_threshold_updated_fixture(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=lookahead, 
+        lookahead=lookahead,
     )
 
 
@@ -429,7 +429,7 @@ def check_for_configuration_missmatch(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=lookahead
+        lookahead=lookahead,
     )
     assert tile_device.state() == tango.DevState.FAULT
 

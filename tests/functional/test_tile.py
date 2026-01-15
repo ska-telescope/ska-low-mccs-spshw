@@ -204,7 +204,17 @@ def check_spsstation_state(
     ):
         if iters >= 60:
             pytest.fail(
-                f"Not all tiles came ON: {[tile.state() for tile in station_tiles]}"
+                "Not all tiles came ON: "
+                f"""{[
+                    (
+                        tile.dev_name(),
+                        tile.state(),
+                        tile.tileprogrammingstate,
+                        tile.lrcexecuting,
+                        tile.lrcfinished
+                    )
+                    for tile in station_tiles
+                ]}"""
             )
         time.sleep(1)
         iters += 1

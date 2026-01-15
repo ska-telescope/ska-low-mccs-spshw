@@ -2,6 +2,9 @@
 
 ## 11.1.0
 
+* [JANUS-300] Bumping TPM FPGA firmware version to 9.0.0
+  * Increased bitwidth of subarray and substation ID
+  * Calibration coefficients are automatically copied back when banks are switched
 * [SKB-1171] Devices which fail to connect to their parent device for adminmode inheritance will now retry forever, however the device will go to alarm if the connection has been failing for the timeout length, the device will go to ALARM. The timeout length defaults to 120s however is configurable through the ParentConnectionTimeout device property.
 * [THORN-351] Fix health functional tests at RAL.
 * [THORN-347] Fix bandpass functional tests at RAL.

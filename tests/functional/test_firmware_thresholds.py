@@ -129,12 +129,7 @@ def device_threshold_updated_fixture(
     # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
     # When testing against hw the state is discovered directly
     # UNKNOWN first hence lookahead == 2
-    lookahead = (
-        6
-        if int(tile_device.get_property("SimulationConfig")["SimulationConfig"][0])
-        == SimulationMode.TRUE
-        else 2
-    )
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
@@ -419,12 +414,7 @@ def check_for_configuration_missmatch(
     # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
     # When testing against hw the state is discovered directly
     # UNKNOWN first hence lookahead == 2
-    lookahead = (
-        6
-        if int(tile_device.get_property("SimulationConfig")["SimulationConfig"][0])
-        == SimulationMode.TRUE
-        else 2
-    )
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
@@ -460,11 +450,12 @@ def tile_reports_on(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        lookahead=lookahead,
     )
     assert tile_device.state() == tango.DevState.ON
     sub_id = tile_device.subscribe_event(

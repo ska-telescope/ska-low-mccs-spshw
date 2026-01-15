@@ -946,8 +946,11 @@ def test_attribute_alarm_health_model(
     change_event_callbacks["healthState"].assert_not_called()
 
     # Change attribute limits
+    # Store original config for cleanup
+    original_attribute_config = subrack_device.get_attribute_config(attribute.lower())
+
     try:
-        attribute_config = subrack_device.get_attribute_config(attribute.lower())
+        attribute_config = original_attribute_config
         alarm_config = attribute_config.alarms
         alarm_config.max_warning = str(max_warning)
         alarm_config.max_alarm = str(max_alarm)
@@ -958,24 +961,28 @@ def test_attribute_alarm_health_model(
     except tango.DevFailed:
         pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
 
-    # Change the values past the max alarm
-    subrack_device.ChangeHardwareAttributeValue(
-        json.dumps(
-            {
-                attribute: float(max_alarm * 1.5),
-            }
+    try:
+        # Change the values past the max alarm
+        subrack_device.ChangeHardwareAttributeValue(
+            json.dumps(
+                {
+                    attribute: float(max_alarm * 1.5),
+                }
+            )
         )
-    )
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-    assert subrack_device.state() == DevState.ALARM
+        change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+        assert subrack_device.state() == DevState.ALARM
 
-    # Change the value within the warning range
-    subrack_device.ChangeHardwareAttributeValue(
-        json.dumps(
-            {
-                attribute: float((max_warning + min_warning) / 2),
-            }
+        # Change the value within the warning range
+        subrack_device.ChangeHardwareAttributeValue(
+            json.dumps(
+                {
+                    attribute: float((max_warning + min_warning) / 2),
+                }
+            )
         )
-    )
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
-    assert subrack_device.state() == DevState.ON
+        change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+        assert subrack_device.state() == DevState.ON
+    finally:
+        # Cleanup: Restore original attribute config
+        subrack_device.set_attribute_config(original_attribute_config)

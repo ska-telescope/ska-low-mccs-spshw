@@ -1803,10 +1803,13 @@ class TestMccsTile:
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         change_event_callbacks["health_state"].assert_not_called()
 
+        # Store original config for cleanup
+        original_attribute_config = on_tile_device.get_attribute_config(
+            attribute_name.lower()
+        )
+
         try:
-            attribute_config = on_tile_device.get_attribute_config(
-                attribute_name.lower()
-            )
+            attribute_config = original_attribute_config
             alarm_config = attribute_config.alarms
             if max_warning is not None:
                 alarm_config.max_warning = str(max_warning)
@@ -1821,19 +1824,28 @@ class TestMccsTile:
         except tango.DevFailed:
             pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
 
-        # Simulate value from ska-low-sps-tpm-api
-        set_nested_value(
-            tile_simulator._tile_health_structure,
-            backend_health_path,
-            backend_health_value,
-        )
+        try:
+            # Simulate value from ska-low-sps-tpm-api
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                backend_health_value,
+            )
 
-        # If we are expecting a value different from initial HealthState.OK,
-        # Expect a change event.
-        if resulting_health != HealthState.OK:
-            change_event_callbacks["health_state"].assert_change_event(resulting_health)
+            # If we are expecting a value different from initial HealthState.OK,
+            # Expect a change event.
+            if resulting_health != HealthState.OK:
+                change_event_callbacks["health_state"].assert_change_event(
+                    resulting_health
+                )
 
-        assert on_tile_device.healthState == resulting_health
+            assert on_tile_device.healthState == resulting_health
+        finally:
+            # Cleanup: Restore original attribute config
+            try:
+                on_tile_device.set_attribute_config(original_attribute_config)
+            except tango.DevFailed:
+                print(f"Failed to restore attribute config for {attribute_name}")
 
 
 # pylint: disable=too-many-public-methods

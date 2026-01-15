@@ -26,7 +26,6 @@ import tango
 from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-from tango import EventType
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -186,25 +185,13 @@ def execute_lrc_to_completion(
     :param command_name: the name of the device command under test
     :param command_arguments: argument to the command (optional)
     """
-    _lrc_tracker = MockTangoEventCallbackGroup("track_lrc_command", timeout=timeout)
-
-    subscription_id = device_proxy.subscribe_event(
-        "longrunningcommandstatus",
-        EventType.CHANGE_EVENT,
-        _lrc_tracker["track_lrc_command"],
+    [[_], [command_id]] = getattr(device_proxy, command_name)(command_arguments)
+    wait_for_lrc_result(
+        device=device_proxy,
+        uid=command_id,
+        expected_result=ResultCode.OK,
+        timeout=timeout,
     )
-    _lrc_tracker["track_lrc_command"].assert_change_event(Anything)
-    [[task_status], [command_id]] = getattr(device_proxy, command_name)(
-        command_arguments
-    )
-
-    assert task_status == ResultCode.QUEUED
-    assert command_name in command_id.split("_")[-1]
-    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "STAGING"))
-    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "QUEUED"))
-    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "IN_PROGRESS"))
-    _lrc_tracker["track_lrc_command"].assert_change_event((command_id, "COMPLETED"))
-    device_proxy.unsubscribe_event(subscription_id)
 
 
 def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> None:

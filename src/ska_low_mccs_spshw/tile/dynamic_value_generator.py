@@ -118,7 +118,13 @@ class DynamicValuesUpdater:
 
         self._update_rate = update_rate
         self._thread_is_running = False
-        self._thread = threading.Thread(target=self._update, args=(), daemon=True)
+        self._thread = threading.Thread(
+            name="DynamicValuesUpdater",
+            target=self._update,
+            args=(),
+            daemon=True,
+        )
+        self._finished = threading.Event()
 
     def start(self: DynamicValuesUpdater) -> None:
         """Start the updater thread."""

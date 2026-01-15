@@ -81,6 +81,7 @@ class PowerMarshaller(MccsBaseDevice):
         # pylint: disable=broad-exception-caught
         except Exception as ex:
             self.logger.error("Failed to delete device %s", repr(ex))
+        super().delete_device()
 
     def _init_state_model(self: PowerMarshaller) -> None:
         """Initialise the state model."""

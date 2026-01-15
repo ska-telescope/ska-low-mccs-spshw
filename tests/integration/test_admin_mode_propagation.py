@@ -69,21 +69,24 @@ class TestAdminModePropagation:
 
         # First change events might be subscription errors so we set
         # a higher lookahead value
-        change_event_callbacks.assert_change_event(
-            "subrack_adminMode", AdminMode.ONLINE, lookahead=2, consume_nonmatches=True
+        change_event_callbacks["subrack_adminMode"].assert_change_event(
+            AdminMode.OFFLINE
+        )
+        change_event_callbacks["subrack_adminMode"].assert_change_event(
+            AdminMode.ONLINE
         )
         assert subrack_device.adminMode == AdminMode.ONLINE
 
         sps_station_device.adminMode = AdminMode.OFFLINE
-        change_event_callbacks.assert_change_event(
-            "subrack_adminMode", AdminMode.OFFLINE
+        change_event_callbacks["subrack_adminMode"].assert_change_event(
+            AdminMode.OFFLINE
         )
         assert subrack_device.adminMode == AdminMode.OFFLINE
 
         # Turn inheritance off by setting directly
         subrack_device.adminMode = AdminMode.ENGINEERING
-        change_event_callbacks.assert_change_event(
-            "subrack_adminMode", AdminMode.ENGINEERING
+        change_event_callbacks["subrack_adminMode"].assert_change_event(
+            AdminMode.ENGINEERING
         )
 
         sps_station_device.adminMode = AdminMode.ONLINE
@@ -92,14 +95,14 @@ class TestAdminModePropagation:
 
         # Go back to inheriting
         subrack_device.inheritModes = True
-        change_event_callbacks.assert_change_event(
-            "subrack_adminMode", AdminMode.ONLINE
+        change_event_callbacks["subrack_adminMode"].assert_change_event(
+            AdminMode.ONLINE
         )
         assert subrack_device.adminMode == AdminMode.ONLINE
 
         sps_station_device.adminMode = AdminMode.OFFLINE
-        change_event_callbacks.assert_change_event(
-            "subrack_adminMode", AdminMode.OFFLINE
+        change_event_callbacks["subrack_adminMode"].assert_change_event(
+            AdminMode.OFFLINE
         )
         assert subrack_device.adminMode == AdminMode.OFFLINE
 

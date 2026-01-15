@@ -5066,14 +5066,14 @@ reference = "skao"
 
 [[package]]
 name = "ska-telmodel"
-version = "1.30.0"
+version = "1.31.0"
 description = "SKA telescope model library"
 optional = false
 python-versions = ">=3.10.0,<4.0.0"
 groups = ["main", "docs"]
 files = [
-    {file = "ska_telmodel-1.30.0-py3-none-any.whl", hash = "sha256:ff145671302bc612016a69b4606378273bfc7028c7afea82da1c365f81ee42e9"},
-    {file = "ska_telmodel-1.30.0.tar.gz", hash = "sha256:cb7c396c2385c2d57ea33101093fbe5afd6d722db376c25c9c7ea719072b94cb"},
+    {file = "ska_telmodel-1.31.0-py3-none-any.whl", hash = "sha256:d034ff09031dee5c0f6cc17686fc377655926b33e4cd0002e4973163e0a16cd2"},
+    {file = "ska_telmodel-1.31.0.tar.gz", hash = "sha256:e175a577e3476730048016c77a8d4a6839f1c934e5b11e27b58266b22b50300b"},
 ]
 
 [package.dependencies]

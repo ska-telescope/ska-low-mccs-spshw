@@ -78,11 +78,24 @@ def revert_db_thresholds_fixture() -> dict[str, dict[str, Any]]:
     }
 
 
+@pytest.fixture(name="initial_tile_programmingstate")
+def initial_tile_programmingstate_fixture(tile_device: tango.DeviceProxy) -> str:
+    """
+    Return the initial programming state of the tile device.
+
+    :param tile_device: a proxy to the tile device under test.
+
+    :return: the initial programming state of the tile device.
+    """
+    return tile_device.tileProgrammingState
+
+
 @pytest.fixture(name="device_threshold_updated")
 def device_threshold_updated_fixture(
     tile_device: tango.DeviceProxy,
     initial_db_thresholds: dict[str, dict[str, Any]],
     revert_db_thresholds: dict[str, dict[str, Any]],
+    initial_tile_programmingstate: str,
 ) -> Generator[None, None, None]:
     """
     Fixture to orchestrate the altering of thresholds in db.
@@ -92,6 +105,8 @@ def device_threshold_updated_fixture(
         in database
     :param revert_db_thresholds: the values to
         revert initial population
+    :param initial_tile_programmingstate: the initial programming state
+        of the tile device
 
     :yields: To return cleanup
     """
@@ -111,7 +126,7 @@ def device_threshold_updated_fixture(
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
-        "Initialised",
+        initial_tile_programmingstate,
         lookahead=2,  # UNKNOWN first hence lookahead == 2
     )
 
@@ -373,7 +388,9 @@ def write_thresholds_to_match(
 
 @then("the Tile reports it has configuration mismatch")
 def check_for_configuration_missmatch(
-    tile_device: tango.DeviceProxy, change_event_callbacks: MockTangoEventCallbackGroup
+    tile_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    initial_tile_programmingstate: str,
 ) -> None:
     """
     Check for configuration missmatch.
@@ -381,11 +398,13 @@ def check_for_configuration_missmatch(
     :param tile_device: the tile under test
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+    :param initial_tile_programmingstate: the initial programming state
+        of the tile device
     """
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
-        "Initialised",
+        initial_tile_programmingstate,
         lookahead=2,  # UNKNOWN first hence lookahead == 2
     )
     assert tile_device.state() == tango.DevState.FAULT
@@ -404,7 +423,9 @@ def check_for_configuration_missmatch(
 
 @then("the Tile reports it has no configuration mismatch")
 def tile_reports_on(
-    tile_device: tango.DeviceProxy, change_event_callbacks: MockTangoEventCallbackGroup
+    tile_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    initial_tile_programmingstate: str,
 ) -> None:
     """
     Check that the tile is ON.
@@ -412,11 +433,13 @@ def tile_reports_on(
     :param tile_device: the tile under test
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+    :param initial_tile_programmingstate: the initial programming state
+        of the tile device
     """
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
-        "Initialised",
+        initial_tile_programmingstate,
         lookahead=2,  # UNKNOWN first hence lookahead == 2
     )
     assert tile_device.state() == tango.DevState.ON

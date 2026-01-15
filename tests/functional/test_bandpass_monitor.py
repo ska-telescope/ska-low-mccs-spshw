@@ -248,7 +248,9 @@ def station_in_synchronised_state(
         AttributeWaiter(timeout=60).wait_for_value(
             station, "state", tango.DevState.UNKNOWN
         )
-        AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+        AttributeWaiter(timeout=180).wait_for_value(
+            station, "state", tango.DevState.ON, lookahead=5
+        )
     wait_for_lrcs_to_finish(station_tiles + [station], timeout=180)
 
     # If we're not syncd then turn the station "off" and on again to force a resync.

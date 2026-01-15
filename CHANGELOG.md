@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* [THORN-389] Bumping TPM FPGA firmware version to 9.0.0
+  * Increased bitwidth of subarray and substation ID
+  * Calibration coefficients are automatically copied back when banks are switched
 * [LOW-2034] Remove unused EDA config ConfigMap
 * [THORN-353] Fixed subrack functional tests at RAL.
 * [THORN-349] Fixed spead capture functional tests at RAL.

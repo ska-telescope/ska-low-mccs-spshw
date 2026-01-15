@@ -247,6 +247,7 @@ def station_online(
     station_devices: dict[str, list[tango.DeviceProxy]],
     get_device_online: Callable,
     station_name: str,
+    reset_attribute_configs: dict[str, Callable],
 ) -> None:
     """
     Put a station ONLINE.
@@ -254,8 +255,16 @@ def station_online(
     :param station_devices: A fixture with the station devices.
     :param get_device_online: a fixture to call to bring a device ONLINE
     :param station_name: the name of the station under test.
+    :param reset_attribute_configs: Functions to reset attribute configs.
     """
     if station_name == "stfc-ral-2":
+        # We reset attr configs here so that we can be reasonably sure we'll
+        # be using the defaults.
+        # This can be removed once the health tests are cleaning up properly.
+        for subrack in station_devices["Subracks"]:
+            reset_attribute_configs["subrack"](subrack)
+        for tile in station_devices["Tiles"]:
+            reset_attribute_configs["tile"](tile)
         pytest.skip(
             "RAL hardware tests are passing inconsistently."
             "These tests will be skipped until proper cleanup is implemented."

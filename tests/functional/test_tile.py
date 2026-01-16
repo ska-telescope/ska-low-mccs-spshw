@@ -314,9 +314,7 @@ def tile_is_restarted(tile_device: tango.DeviceProxy) -> None:
 
     :param tile_device: tile device under test.
     """
-    tile_device.set_timeout_millis(10000)
     tile_device.init()
-    tile_device.set_timeout_millis(3000)
 
 
 @when("the Tile data acquisition is started")

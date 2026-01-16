@@ -134,6 +134,7 @@ class DynamicValuesUpdater:
     def stop(self: DynamicValuesUpdater) -> None:
         """Stop the updater thread."""
         self._thread_is_running = False
+        self._targets = []
 
     def add_target(
         self: DynamicValuesUpdater,
@@ -159,7 +160,11 @@ class DynamicValuesUpdater:
                 for generator, callback in self._targets:
                     callback(next(generator))
                 time.sleep(self._update_rate)
+            self._finished.set()
 
-    def __del__(self: DynamicValuesUpdater) -> None:
+    def cleanup(self: DynamicValuesUpdater) -> None:
         """Things to do before this object is garbage collected."""
         self.stop()
+        self._thread.join(10.0)
+        if self._thread.is_alive():
+            print("Failed to cleanup DynamicValuesUpdater thread", flush=True)

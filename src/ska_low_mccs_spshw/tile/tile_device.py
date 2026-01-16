@@ -246,7 +246,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_recorder.cleanup()
             self._health_recorder = None
         self.component_manager.cleanup()
+
+        # NOTE: This will be removed from tango-base 1.4.0 and the interface changed
+        # so will need removing when we update
         self.ExecutePendingOperations()
+
         super().delete_device()
         for t in threading.enumerate():
             self.logger.info(

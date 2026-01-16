@@ -658,9 +658,7 @@ class TestMccsTile:
         )
         self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
 
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Off", lookahead=3
-        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         # When turning the TPM ON we expect the configuration to be read.
         on_tile_device.MockTpmOn()
@@ -668,7 +666,7 @@ class TestMccsTile:
             DevState.ON, lookahead=2, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=5
+            "Initialised", lookahead=4
         )
         self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)
 

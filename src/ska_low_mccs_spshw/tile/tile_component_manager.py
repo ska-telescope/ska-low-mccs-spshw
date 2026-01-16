@@ -270,9 +270,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._station_id = station_id
         self._tile_id = tile_id
         self._tpm_status = TpmStatus.UNKNOWN
-        self._update_attribute_callback(
-            programming_state=TpmStatus.UNKNOWN.pretty_name()
-        )
         self._csp_rounding = np.array(self.CSP_ROUNDING)
         self._csp_spead_format = "SKA"
         self._global_reference_time: int | None = None
@@ -1019,11 +1016,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.mock_off()
 
         self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-
-        self._tpm_status = TpmStatus.UNKNOWN
-        self._update_attribute_callback(
-            programming_state=self._tpm_status.pretty_name()
-        )
         self._subrack_says_tpm_power = event_value
 
         self.power_state = event_value

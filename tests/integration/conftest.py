@@ -134,10 +134,11 @@ def integration_test_context_fixture(
         harness = SpsTangoTestHarness()
         harness.add_subrack_simulator(subrack_id, subrack_simulator)
         harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
-        harness.add_pdu_device(
-            "ENLOGIC", "10.135.253.170", "public", logging_level=int(LoggingLevel.ERROR)
-        )
-        harness.add_power_marshaller_device()
+        # harness.add_pdu_device(
+        #     "ENLOGIC", "10.135.253.170", "public",
+        # logging_level=int(LoggingLevel.ERROR)
+        # )
+        # harness.add_power_marshaller_device()
         harness.add_tile_device(
             tile_id,
             subrack_id,
@@ -188,12 +189,11 @@ def patched_tile_device_class_fixture(
             "ppsPresent": ["timing", "pps", "status"],
         }
 
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
+        def init_device(self) -> None:
             self.health_attribute_to_simulator_map = copy.deepcopy(
                 self.HEALTH_ATTRIBUTE_TO_SIMULATOR_MAP
             )
-
-            super().__init__(*args, **kwargs)
+            super().init_device()
 
         def create_component_manager(
             self: PatchedTileDevice,
@@ -212,7 +212,6 @@ def patched_tile_device_class_fixture(
             tile_component_manager._update_attribute_callback = (
                 self._update_attribute_callback
             )
-
             return tile_component_manager
 
         def delete_device(self: PatchedTileDevice) -> None:

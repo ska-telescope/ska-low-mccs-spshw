@@ -294,6 +294,7 @@ class SpsTangoTestHarness:
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsSubrack",
         simulated_pdu: bool = True,
         use_attribute_for_health: bool = True,
+        define_parent_trl: bool = True,
     ) -> None:
         """
         Add a subrack Tango device to the test harness.
@@ -310,6 +311,8 @@ class SpsTangoTestHarness:
         :param simulated_pdu: if the subrack has a simulated pdu
         :param use_attribute_for_health: True if we want to
             use this new feature.
+        :param define_parent_trl: True if we want to define the parentTRL.
+            you may want to disable for unittests.
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -324,6 +327,12 @@ class SpsTangoTestHarness:
         else:
             (host, port) = address
 
+        optional_properties = {}
+        if define_parent_trl:
+            optional_properties.update(
+                {"ParentTRL": get_sps_station_name(self._station_label)}
+            )
+
         self._tango_test_harness.add_device(
             get_subrack_name(subrack_id, station_label=self._station_label),
             device_class,
@@ -331,11 +340,11 @@ class SpsTangoTestHarness:
             SubrackPort=port,
             UpdateRate=update_rate,
             LoggingLevelDefault=logging_level,
-            ParentTRL=get_sps_station_name(self._station_label),
             UseAttributesForHealth=use_attribute_for_health,
             Simulated_PDU=simulated_pdu,
             PduTrl=get_pdu_name(),
             PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",
+            **optional_properties,
         )
 
     def add_power_marshaller_device(self: SpsTangoTestHarness) -> None:
@@ -353,6 +362,7 @@ class SpsTangoTestHarness:
         v2_community: str,
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsPdu",
+        define_parent_trl: bool = False,
     ) -> None:
         """
         Add a pdu Tango device to the test harness.
@@ -364,7 +374,15 @@ class SpsTangoTestHarness:
         :param device_class: The device class to use.
             This may be used to override the usual device class,
             for example with a patched subclass.
+        :param define_parent_trl: True if we want to define the parentTRL.
+            you may want to disable for unittests.
         """
+        optional_properties = {}
+        if define_parent_trl:
+            optional_properties.update(
+                {"ParentTRL": get_sps_station_name(self._station_label)}
+            )
+
         self._tango_test_harness.add_device(
             get_pdu_name(),
             device_class,
@@ -372,6 +390,7 @@ class SpsTangoTestHarness:
             Host=host,
             V2Community=v2_community,
             LoggingLevelDefault=logging_level,
+            **optional_properties,
         )
 
     def add_mock_subrack_device(
@@ -410,6 +429,7 @@ class SpsTangoTestHarness:
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsTile",
         use_attributes_for_health: bool = False,
+        define_parent_trl: bool = True,
     ) -> None:
         """
         Add a tile Tango device to the test harness.
@@ -422,7 +442,14 @@ class SpsTangoTestHarness:
             This may be used to override the usual device class,
             for example with a patched subclass.
         :param use_attributes_for_health: True to use new healthModel.
+        :param define_parent_trl: True if we want to define the parentTRL.
+            you may want to disable for unittests.
         """
+        optional_properties = {}
+        if define_parent_trl:
+            optional_properties.update(
+                {"ParentTRL": get_sps_station_name(self._station_label)}
+            )
         self._tango_test_harness.add_device(
             get_tile_name(tile_id, station_label=self._station_label),
             device_class,
@@ -439,8 +466,8 @@ class SpsTangoTestHarness:
             HardwareVersion="v1.6.7a",
             BiosVersion="0.5.0",
             PreAduFitted=[True, True],
-            ParentTRL=get_sps_station_name(self._station_label),
             UseAttributesForHealth=use_attributes_for_health,
+            **optional_properties,
         )
 
     def add_mock_tile_device(

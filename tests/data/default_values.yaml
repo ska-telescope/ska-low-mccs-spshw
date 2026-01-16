@@ -4,50 +4,8 @@
 #
 # NOTE: This file is a copy of charts/ska-low-mccs-spshw/values.yaml
 #       Keep it in sync when alarm thresholds change in values.yaml
-
-display: ":0"
-xauthority: "~/.Xauthority"
-
-system: SW-infrastructure
-subsystem: low-mccs-spshw
-telescope: SKA-low
-
-labels:
-  app: ska-low-mccs-spshw
-
-global:
-  minikube: true
-  tango_host: databaseds-tango-base:10000
-  cluster_domain: cluster.local
-
-# Image to be used for simulators etc.
-image:
-  registry: artefact.skao.int
-  name: ska-low-mccs-spshw
-  tag: 11.0.0
-  pullPolicy: IfNotPresent
-
-# Resources for simulators etc
-resources:
-  requests:
-    cpu: 20m
-    memory: 50Mi
-
-simulators: {} # e.g.
-  # subracks:
-  #   s8-1-1:
-  #     srmb_host: subrack-simulator-s8-1
-  #     srmb_port: 8081
-
-pgadmin4:
-  enabled: false
-
+#       We only use the ska-tango-devices.classProperties part though.
 ska-tango-devices:
-  domain: low
-  subsystem: mccs
-  labels:
-    app: ska-low-mccs-spshw
-
   # Attribute alarm device defaults.
   # deviceDefaults:
   classProperties:
@@ -366,67 +324,3 @@ ska-tango-devices:
       tpmVoltages->min_alarm: 11.4
 
       tpmPowers->max_alarm: 120.0
-
-  # devices:
-  #   MccsTile:
-  #     low-mccs/tile/s8-1-tpm01:
-  #       SubrackFQDN: low-mccs/subrack/s8-1-1
-  #       SubrackBay: 1
-  #       TileId: 1
-  #       StationId: 345
-  #       TpmIp: 10.132.0.8
-
-  deviceServerTypes:
-    # daq:
-    #   metadata:
-    #     component: daq
-    #   image:
-    #     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-    #     tag: 4.3.1-dirty
-    #     name: ska-low-mccs-daq
-    spshw:
-      metadata:
-        component: spshw
-      image:
-        registry: artefact.skao.int
-        name: ska-low-mccs-spshw
-        tag: 11.0.0
-        pullPolicy: IfNotPresent
-      command: spshw
-      resources:
-        limits:
-          memory: 2Gi
-        requests:
-          cpu: 20m
-          memory: 50Mi
-      livenessProbe:
-        initialDelaySeconds: 0
-        periodSeconds: 10
-        timeoutSeconds: 3
-        successThreshold: 1
-        failureThreshold: 3
-      readinessProbe:
-        initialDelaySeconds: 0
-        periodSeconds: 10
-        timeoutSeconds: 3
-        successThreshold: 1
-        failureThreshold: 3
-
-  # deviceServers:
-  #   spshw:
-  #     tile-s8-1-tpm-01:
-  #       expose: false
-  #       devices:
-  #         MccsTile:
-  #         - low-mccs/tile/s8-1-tpm01
-  #     spsstation-s8-1:
-  #       extraVolumes:
-  #       - name: daq-data
-  #         persistentVolumeClaim:
-  #           claimName: daq-data
-  #       extraVolumeMounts:
-  #         - name: daq-data
-  #           mountPath: /product
-  #       devices:
-  #         SpsStation:
-  #         - low-mccs/spsstation/s8-1

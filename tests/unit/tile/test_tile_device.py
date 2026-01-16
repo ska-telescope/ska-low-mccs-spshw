@@ -152,6 +152,7 @@ def test_context_fixture(
             device_class=patched_tile_device_class,
             logging_level=2,
             use_attributes_for_health=use_attribute_for_health,
+            define_parent_trl=False,
         )
         harness.add_mock_station_device(mock_station_device_proxy)
 
@@ -531,7 +532,7 @@ class TestMccsTile:
     ) -> None:
         for attr in attr_list:
             if tile.read_attribute(attr).quality != tango.AttrQuality.ATTR_VALID:
-                pytest.fail(f"attribute {attr} not VALID")
+                pytest.fail(f"attribute {attr} not VALID {tile.read_attribute(attr)}")
 
     # pylint: disable=too-many-arguments
     def test_tpm_configuration_invalid_when_unable_to_read(
@@ -601,6 +602,7 @@ class TestMccsTile:
         on_tile_device: DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
         tpm_configuration_attributes: list[str],
+        mock_subrack_device_proxy: unittest.mock.Mock,
     ) -> None:
         """
         Test that configuration is read from the TPM.
@@ -612,7 +614,10 @@ class TestMccsTile:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
+        :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
+            device.
         """
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
         on_tile_device.subscribe_event(
             "state",
             EventType.CHANGE_EVENT,
@@ -620,17 +625,30 @@ class TestMccsTile:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
+        )
         # Turning the device OFFLINE means that we can no longer say we know the
         # configuration of the device_under_test. Check they move to INVALID.
         on_tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
-
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
         # Turning the device ONLINE should prompt a read of configuration.
         on_tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(
             DevState.ON, lookahead=2, consume_nonmatches=True
         )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
+        )
+        # sleep to allow poll
+        time.sleep(1)
         self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)
 
         # Turning the TPM off means that the configuration is not known.
@@ -641,11 +659,6 @@ class TestMccsTile:
         )
         self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
 
-        on_tile_device.subscribe_event(
-            "tileProgrammingState",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
         change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         # When turning the TPM ON we expect the configuration to be read.
@@ -1935,6 +1948,7 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
+        change_event_callbacks["state"].assert_not_called()
 
     @pytest.mark.parametrize(
         ("command_name", "command_args"),

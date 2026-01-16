@@ -123,12 +123,13 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     if initial_tile_programmingstate == "Synchronised":
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,
             "tileProgrammingState",
             "Initialised",
-            lookahead=2,
+            lookahead=lookahead,
         )
         tile_device.StartAcquisition("{}")
     # Due to the way the TileSimulator if coupled to the lifetime of the device
@@ -137,7 +138,6 @@ def device_threshold_updated_fixture(
     # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
     # When testing against hw the state is discovered directly
     # UNKNOWN first hence lookahead == 2
-    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
@@ -422,12 +422,13 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     if initial_tile_programmingstate == "Synchronised":
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,
             "tileProgrammingState",
             "Initialised",
-            lookahead=2,
+            lookahead=lookahead,
         )
         tile_device.StartAcquisition("{}")
     # Due to the way the TileSimulator if coupled to the lifetime of the device
@@ -436,7 +437,6 @@ def check_for_configuration_missmatch(
     # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
     # When testing against hw the state is discovered directly
     # UNKNOWN first hence lookahead == 2
-    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",

@@ -239,22 +239,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This method must be done explicitly, else polling
         threads are not cleaned up after init_device().
         """
+        # We do not want to raise a exception here
+        # This can cause a segfault.
+        self._stopping = True
+        if self._health_recorder is not None:
+            self._health_recorder.cleanup()
+            self._health_recorder = None
+        self.component_manager.cleanup()
+        super().delete_device()
         for t in threading.enumerate():
             self.logger.info(
-                f"Threads open at beginning of DELETE DEVICE "
+                f"Threads open at end of DELETE DEVICE "
                 f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}"
             )
-        try:
-            # We do not want to raise a exception here
-            # This can cause a segfault.
-            self._stopping = True
-            if self._health_recorder is not None:
-                self._health_recorder.cleanup()
-                self._health_recorder = None
-            self.component_manager.cleanup()
-        except Exception as e:  # pylint: disable=broad-except
-            print(f"Failed to delete_device with {e=}", flush=True)
-        super().delete_device()
 
     def init_device(self: MccsTile) -> None:
         """
@@ -1435,19 +1432,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param attr_name: the name of the attribute causing the shutdown.
         """
-        # ===============================================
-        # Calling multi_attr methods on teardown causes segfault
-        # during startup, yes startup (check_alarm) during
-        # subscriptions, event thought we are joining this thread
-        # from delete_device. Figure that!
-        # Tango::Attribute::general_check_alarm<short>
-        # (Tango::AttrQuality const&, short const&, short const&) ()
-        # returning here appears to remove segfault, alternativly a
-        # large sleep of 30 seconds during startup will remove the
-        # occurance of a segfault. This issues was identified in
-        # skb-1079, but the root issues lies in cpptango and
-        # was not diognosed.
-        # ===============================================
+        # ============================================
+        # Only shutdown if we are not already stopping
+        # ============================================
         if not self._stopping:
             try:
                 attr = self.get_device_attr().get_attr_by_name(attr_name)
@@ -1502,8 +1489,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # returning here appears to remove segfault, alternativly a
             # large sleep of 30 seconds during startup will remove the
             # occurance of a segfault. This issues was identified in
-            # skb-1079, but the root issues lies in cpptango and
-            # was not diognosed.
+            # skb-1079, but the root issues lies in cpptango.
+            # During investigation the following ticket was created
+            # https://gitlab.com/tango-controls/cppTango/-/issues/1585
+            # was raised. Available in pytango 10.3.0 release.
             # ===============================================
             return
         # https://gitlab.com/tango-controls/pytango/-/issues/615

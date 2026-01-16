@@ -286,8 +286,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._initialise_executing: bool = False
         self._poll_timeout: float = poll_timeout
         self._power_callback_timeout: float = power_callback_timeout
-        self._event = threading.Event()
-        self._is_polling = False
+        self._polling_stopped_event = threading.Event()
+        self._polling_stopped_event.set()  # not polling initially
         # ==========================================================
         # Added as part of SKB-1089, to keep track of frequency this
         # issus is seen in production.
@@ -811,8 +811,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
-        self._is_polling = True
-        self._event.clear()
+        self._polling_stopped_event.clear()
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
         self._request_provider.desire_configuration_read()
@@ -829,8 +828,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.power_state = PowerState.UNKNOWN
         super().polling_stopped()
 
-        self._event.set()
-        self._is_polling = False
+        self._polling_stopped_event.set()
 
     def cleanup(self: TileComponentManager) -> None:
         """Perform necessary cleanup before device teardown."""
@@ -840,13 +838,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # called during initialisation.
         self._cleanup_subscriptions()
         max_poll_time: float = 45.0
-        if self._is_polling:
-            self.stop_communicating()
-            if not self._event.wait(max_poll_time):
-                self.logger.warning(
-                    "Failed waiting for final poll to terminate "
-                    f"(timeout=={max_poll_time} [s])."
-                )
+
+        self.stop_communicating()
+        if not self._polling_stopped_event.wait(max_poll_time):
+            self.logger.warning(
+                "Failed waiting for final poll to terminate "
+                f"(timeout=={max_poll_time} [s])."
+            )
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
             self.tile.cleanup()
         else:

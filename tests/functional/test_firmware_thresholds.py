@@ -123,6 +123,14 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
+    if initial_tile_programmingstate == "Synchronised":
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=2,
+        )
+        tile_device.StartAcquisition("{}")
     # Due to the way the TileSimulator if coupled to the lifetime of the device
     # It is recreated on init_device. This means that is will be re-initialised
     # from the subrack callback. This leads to a few more lookaheads
@@ -414,6 +422,14 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    if initial_tile_programmingstate == "Synchronised":
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=2,
+        )
+        tile_device.StartAcquisition("{}")
     # Due to the way the TileSimulator if coupled to the lifetime of the device
     # It is recreated on init_device. This means that is will be re-initialised
     # from the subrack callback. This leads to a few more lookaheads

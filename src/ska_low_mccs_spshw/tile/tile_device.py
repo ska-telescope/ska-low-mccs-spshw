@@ -246,6 +246,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_recorder.cleanup()
             self._health_recorder = None
         self.component_manager.cleanup()
+        self.ExecutePendingOperations()
         super().delete_device()
         for t in threading.enumerate():
             self.logger.info(

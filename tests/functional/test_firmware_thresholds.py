@@ -123,12 +123,19 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
-    print(f"{tile_device.tileProgrammingState=}")
+    if initial_tile_programmingstate == "Synchronised":
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=2,
+        )
+        tile_device.StartAcquisition("{}")
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        lookahead=2,
     )
 
 
@@ -408,12 +415,19 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
-    print(f"{tile_device.tileProgrammingState=}")
+    if initial_tile_programmingstate == "Synchronised":
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=2,
+        )
+        tile_device.StartAcquisition("{}")
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        lookahead=2,
     )
     assert tile_device.state() == tango.DevState.FAULT
 

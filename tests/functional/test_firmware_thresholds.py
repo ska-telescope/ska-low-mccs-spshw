@@ -15,7 +15,7 @@ from typing import Any, Generator
 import pytest
 import tango
 from pytest_bdd import given, scenario, then, when
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, SimulationMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -123,11 +123,18 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
+    # Due to the way the TileSimulator if coupled to the lifetime of the device
+    # It is recreated on init_device. This means that is will be re-initialised
+    # from the subrack callback. This leads to a few more lookaheads
+    # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
+    # When testing against hw the state is discovered directly
+    # UNKNOWN first hence lookahead == 2
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        lookahead=lookahead,
     )
 
 
@@ -401,11 +408,18 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    # Due to the way the TileSimulator if coupled to the lifetime of the device
+    # It is recreated on init_device. This means that is will be re-initialised
+    # from the subrack callback. This leads to a few more lookaheads
+    # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
+    # When testing against hw the state is discovered directly
+    # UNKNOWN first hence lookahead == 2
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        lookahead=lookahead,
     )
     assert tile_device.state() == tango.DevState.FAULT
 
@@ -436,11 +450,12 @@ def tile_reports_on(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
         initial_tile_programmingstate,
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        lookahead=lookahead,
     )
     assert tile_device.state() == tango.DevState.ON
     sub_id = tile_device.subscribe_event(

@@ -123,6 +123,7 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
+    print(f"{tile_device.tileProgrammingState=}")
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
@@ -407,6 +408,7 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    print(f"{tile_device.tileProgrammingState=}")
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",

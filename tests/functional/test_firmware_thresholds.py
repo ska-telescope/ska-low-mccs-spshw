@@ -123,7 +123,7 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
-    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+    lookahead = 6
     if initial_tile_programmingstate == "Synchronised":
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,

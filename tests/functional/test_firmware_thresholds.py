@@ -187,11 +187,6 @@ def check_against_real_context(true_context: bool, station_label: str) -> None:
     """
     if not true_context:
         pytest.skip("This test requires real context.")
-    if station_label == "stfc-ral-2":
-        pytest.skip(
-            "RAL hardware tests are passing inconsistently."
-            "These tests will be skipped until proper cleanup is implemented."
-        )
 
 
 @given("the SpsStation and tiles are ON")

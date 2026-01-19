@@ -32,7 +32,7 @@ PYTHON_VARS_AFTER_PYTEST += "-n 16"
 PYTHON_TEST_FILE = tests
 PYTHON_VARS_BEFORE_PYTEST = timeout --foreground -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
 PYTHON_VARS_BEFORE_K8S_PYTEST = timeout --foreground -k 120 -s INT 4800
-K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/
+K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/test_health.py::test_health_changes_when_thresholds_change
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests

@@ -417,7 +417,7 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
-    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+    lookahead = 6
     if initial_tile_programmingstate == "Synchronised":
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-347] Fix bandpass functional tests at RAL.
 * [THORN-354] Fix spshw functional tests in test_tile.py, process omni_queue before deleting_device
 * [SKB-1079] Add device cleanup to MccsTile.
 * [SKB-1133] Fix SpsStation thread cleanup issues.

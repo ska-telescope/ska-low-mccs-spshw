@@ -2751,7 +2751,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.OK, "Configure integrated channel data completed OK")
 
     @check_communicating
     def set_csp_download(

@@ -123,13 +123,26 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+    if (
+        tile_device.simulationMode == SimulationMode.TRUE
+        and initial_tile_programmingstate == "Synchronised"
+    ):
+        # Simulator only gets to Initialised on its own.
+        # If we expect Sync then we have to nudge it.
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=lookahead,
+        )
+        tile_device.StartAcquisition("{}")
     # Due to the way the TileSimulator if coupled to the lifetime of the device
     # It is recreated on init_device. This means that is will be re-initialised
     # from the subrack callback. This leads to a few more lookaheads
     # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
     # When testing against hw the state is discovered directly
     # UNKNOWN first hence lookahead == 2
-    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
@@ -170,11 +183,12 @@ def test_thresholds_written_to_match_db() -> None:
 
 
 @given("an SPS deployment against a real context")
-def check_against_real_context(true_context: bool) -> None:
+def check_against_real_context(true_context: bool, station_label: str) -> None:
     """
     Skip the test if not in real context.
 
     :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
     """
     if not true_context:
         pytest.skip("This test requires real context.")
@@ -408,13 +422,34 @@ def check_for_configuration_missmatch(
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
     """
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+
     # Due to the way the TileSimulator if coupled to the lifetime of the device
     # It is recreated on init_device. This means that is will be re-initialised
     # from the subrack callback. This leads to a few more lookaheads
     # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
     # When testing against hw the state is discovered directly
     # UNKNOWN first hence lookahead == 2
-    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+    if (
+        tile_device.simulationMode == SimulationMode.TRUE
+        and initial_tile_programmingstate == "Synchronised"
+    ):
+        # Simulator only gets to Initialised on its own.
+        # If we expect Sync then we have to nudge it.
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=lookahead,
+        )
+        tile_device.StartAcquisition("{}")
+
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            initial_tile_programmingstate,
+            lookahead=lookahead,
+        )
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",

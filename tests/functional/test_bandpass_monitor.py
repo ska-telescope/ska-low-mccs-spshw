@@ -257,7 +257,7 @@ def station_in_synchronised_state(
     # Sometimes we can have all tiles "Synchronised" but not really in sync so data
     # is not sent.
     if station.state() is not tango.DevState.STANDBY:
-        print("Some tiles are not synchronised, attempting to sync them now.")
+        print("Synchronising tiles by setting station to STANDBY and then ON.")
         station.standby()
         AttributeWaiter(timeout=180).wait_for_value(
             station, "state", tango.DevState.STANDBY

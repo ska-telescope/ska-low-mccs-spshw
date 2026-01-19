@@ -461,7 +461,6 @@ class TestMccsTile:
             "pfbVersion",
             "beamformerTable",
             "beamformerRegions",
-            "parentConnectionFailed",
         ]
 
     @pytest.fixture(name="software_configuration_attributes")
@@ -486,6 +485,7 @@ class TestMccsTile:
             "lastPointingDelays",
             "cspSpeadFormat",
             "parentTRL",
+            "parentConnectionFailed",
             "antennaBufferMode",
             "dataTransmissionMode",
             "integratedDataTransmissionMode",

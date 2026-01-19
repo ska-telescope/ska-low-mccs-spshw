@@ -253,17 +253,13 @@ def station_in_synchronised_state(
         )
     wait_for_lrcs_to_finish(station_tiles + [station], timeout=180)
 
-    # If we're not syncd then turn the station "off" and on again to force a resync.
-    # Sometimes we can have all tiles "Synchronised" but not really in sync so data
-    # is not sent.
-    if station.state() is not tango.DevState.STANDBY:
-        print("Synchronising tiles by setting station to STANDBY and then ON.")
-        station.standby()
-        AttributeWaiter(timeout=180).wait_for_value(
-            station, "state", tango.DevState.STANDBY
-        )
-        station.on()
-        AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+    print("Synchronising tiles by setting station to STANDBY and then ON.")
+    station.standby()
+    AttributeWaiter(timeout=180).wait_for_value(
+        station, "state", tango.DevState.STANDBY
+    )
+    station.on()
+    AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
 
     for tile in station_tiles:
         AttributeWaiter(timeout=180).wait_for_value(

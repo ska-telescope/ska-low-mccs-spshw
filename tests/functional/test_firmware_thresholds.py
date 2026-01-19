@@ -124,6 +124,7 @@ def device_threshold_updated_fixture(
     # Sleep to allow time for device to come up.
     time.sleep(6)
     lookahead = 6
+    print(tile_device.tileprogrammingstate)
     if initial_tile_programmingstate == "Synchronised":
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,
@@ -418,6 +419,7 @@ def check_for_configuration_missmatch(
         of the tile device
     """
     lookahead = 6
+    print(tile_device.tileprogrammingstate)
     if initial_tile_programmingstate == "Synchronised":
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,

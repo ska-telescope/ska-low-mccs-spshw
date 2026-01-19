@@ -92,11 +92,12 @@ def test_tile_initialised_recover(
 
 
 @given("an SPS deployment against HW")
-def check_against_hardware(hw_context: bool) -> None:
+def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
     Skip the test if not in real context.
 
     :param hw_context: whether or not the current test is againt HW.
+    :param station_label: Station to test against.
     """
     if not hw_context:
         pytest.skip(
@@ -109,11 +110,12 @@ def check_against_hardware(hw_context: bool) -> None:
 
 
 @given("an SPS deployment against a real context")
-def check_against_real_context(true_context: bool) -> None:
+def check_against_real_context(true_context: bool, station_label: str) -> None:
     """
     Skip the test if not in real context.
 
     :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
     """
     if not true_context:
         pytest.skip("This test requires real context.")
@@ -176,25 +178,17 @@ def check_spsstation_state(
     # Sleep time to discover state.
     time.sleep(5)
 
-    # TODO: An On from SpsStation level when ON will mean that
-    # Any TPMs that are OFF will remain OFF due to ON being defined as
-    # any TPM ON and the base class rejecting calls to ON if device is ON.
-    # Therefore we are individually calling MccsTile.On() here.
-    _initial_station_state = station.state()
+    # Make sure Station and all Tiles are ON by going through STANDBY
+    station.standby()
+    AttributeWaiter(timeout=180).wait_for_value(
+        station, "state", tango.DevState.STANDBY
+    )
+    station.on()
+    AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+
     for tile in station_tiles:
-        if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
-            tile.on()
-            AttributeWaiter(timeout=60).wait_for_value(
-                tile,
-                "state",
-                tango.DevState.ON,
-            )
-    if (
-        _initial_station_state != tango.DevState.ON
-        and station.state() != tango.DevState.ON
-    ):
-        AttributeWaiter(timeout=60).wait_for_value(
-            station, "state", tango.DevState.ON, lookahead=3
+        AttributeWaiter(timeout=180).wait_for_value(
+            tile, "tileProgrammingState", "Synchronised", lookahead=5
         )
 
     iters = 0
@@ -204,7 +198,17 @@ def check_spsstation_state(
     ):
         if iters >= 60:
             pytest.fail(
-                f"Not all tiles came ON: {[tile.state() for tile in station_tiles]}"
+                "Not all tiles came ON: "
+                f"""{[
+                    (
+                        tile.dev_name(),
+                        tile.state(),
+                        tile.tileprogrammingstate,
+                        tile.lrcexecuting,
+                        tile.lrcfinished
+                    )
+                    for tile in station_tiles
+                ]}"""
             )
         time.sleep(1)
         iters += 1

@@ -32,6 +32,7 @@ PYTHON_VARS_AFTER_PYTEST += "-n 16"
 PYTHON_TEST_FILE = tests
 PYTHON_VARS_BEFORE_PYTEST = timeout --foreground -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
 PYTHON_VARS_BEFORE_K8S_PYTEST = timeout --foreground -k 120 -s INT 4800
+K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
@@ -44,7 +45,7 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 6.7.1
+FIRMWARE_VERSION = 8.0.0
 DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
 
 install-firmware:
@@ -114,7 +115,6 @@ ifdef K8S_PYTEST_EXTRA_ARGUMENTS
 K8S_TEST_RUNNER_PYTEST_OPTIONS += $(K8S_PYTEST_EXTRA_ARGUMENTS)
 endif
 
-K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional
 K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 
 K8S_TEST_RUNNER_CHART_REGISTRY ?= https://artefact.skao.int/repository/helm-internal

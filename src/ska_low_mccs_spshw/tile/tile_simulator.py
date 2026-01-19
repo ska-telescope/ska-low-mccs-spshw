@@ -1102,6 +1102,7 @@ class TileSimulator:
         self._station_id = self.STATION_ID
         self._timestamp = 0
         self._pps_delay: int = self.PPS_DELAY
+        self._timed_thread_stop = threading.Event()
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
@@ -1264,13 +1265,17 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def initialise_beamformer(
-        self: TileSimulator, start_channel: int, nof_channels: int
+        self: TileSimulator,
+        start_channel: int,
+        nof_channels: int,
+        beam_index: int = 0,
     ) -> None:
         """
         Mock set the beamformer parameters.
 
         :param start_channel: start_channel
         :param nof_channels: nof_channels
+        :param beam_index: index of the beam
 
         :raises ValueError: For out of range values.
         """
@@ -2004,7 +2009,8 @@ class TileSimulator:
     def set_lmc_download(
         self: TileSimulator,
         mode: str,
-        payload_length: int = 1024,
+        data_type: str | None = None,
+        payload_length: int | None = None,
         dst_ip: str = "10.0.10.1",
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
@@ -2020,6 +2026,7 @@ class TileSimulator:
         Therefore dst_ip is the name of the service to use rather than the IP.
 
         :param mode: "1G" or "10G"
+        :param data_type: Specify which data type to configure, or None for all.
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination service.
@@ -2655,8 +2662,9 @@ class TileSimulator:
     def set_lmc_integrated_download(
         self: TileSimulator,
         mode: str,
-        channel_payload_length: int,
-        beam_payload_length: int,
+        data_type: str | None = None,
+        channel_payload_length: int | None = None,
+        beam_payload_length: int | None = None,
         dst_ip: str = "10.0.10.1",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
@@ -2667,6 +2675,7 @@ class TileSimulator:
         Configure link and size of control data for integrated LMC packets.
 
         :param mode: '1G' or '10G'
+        :param data_type: Specify which data type to configure, or None for all.
         :param channel_payload_length: SPEAD payload length for integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated beam data
         :param dst_ip: Destination IP
@@ -2675,7 +2684,8 @@ class TileSimulator:
         :param netmask_40g: the mask to apply to the 40g.
         :param gateway_ip_40g: the gateway ip for the 40g.
         """
-        self.logger.error("set_lmc_integrated_download not implemented in simulator")
+        self.dst_ip = dst_ip
+        self.dst_port = dst_port
 
     @check_mocked_overheating
     @connected
@@ -2822,8 +2832,11 @@ class TileSimulator:
 
     def _timed_thread(self: TileSimulator) -> None:
         """Thread to update time related registers."""
-        while True:
+        while not self._timed_thread_stop.is_set():
             self._start_polling_event.wait()
+            # check stop flag immediately after waking
+            if self._timed_thread_stop.is_set():
+                break
             time_utc = time.time()
             _fpgatime = int(time_utc)
             if self.sync_time > 0 and self.sync_time < time_utc:
@@ -2836,6 +2849,12 @@ class TileSimulator:
             self.fpgas_time[0] = _fpgatime
             self.fpgas_time[1] = _fpgatime
             time.sleep(0.1)
+
+    def cleanup(self) -> None:
+        """Cleanup logic for gc."""
+        self._timed_thread_stop.set()
+        self._start_polling_event.set()
+        self._polling_thread.join()
 
     @check_mocked_overheating
     @connected
@@ -3278,9 +3297,13 @@ class DynamicTileSimulator(TileSimulator):
         self._updater.add_target(self.random_antenna_generator(), self._rfi_changed)
         self._updater.start()
 
-    def __del__(self: DynamicTileSimulator) -> None:
+    def cleanup(self: DynamicTileSimulator) -> None:
         """Garbage-collection hook."""
+        self._timed_thread_stop.set()
+        self._start_polling_event.set()
+        self._polling_thread.join()
         self._updater.stop()
+        self._updater.cleanup()
 
     def get_board_temperature(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked board temperature."""

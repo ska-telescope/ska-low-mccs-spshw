@@ -286,7 +286,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._initialise_executing: bool = False
         self._poll_timeout: float = poll_timeout
         self._power_callback_timeout: float = power_callback_timeout
-
+        self._polling_stopped_event = threading.Event()
+        self._polling_stopped_event.set()  # not polling initially
         # ==========================================================
         # Added as part of SKB-1089, to keep track of frequency this
         # issus is seen in production.
@@ -810,6 +811,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
+        self._polling_stopped_event.clear()
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
         self._request_provider.desire_configuration_read()
@@ -817,13 +819,58 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
-        self._request_provider = None
+        if self._request_provider is not None:
+            self._request_provider.cleanup()
         self._tpm_status = TpmStatus.UNKNOWN
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
         self.power_state = PowerState.UNKNOWN
         super().polling_stopped()
+
+        self._polling_stopped_event.set()
+
+    def cleanup(self: TileComponentManager) -> None:
+        """Perform necessary cleanup before device teardown."""
+        # Stop communicating with the component, waiting a reasonable time
+        # for the last request to execute.
+        # max poll time of 45 is used to cover the case that cleanup is
+        # called during initialisation.
+        self._cleanup_subscriptions()
+        max_poll_time: float = 45.0
+
+        self.stop_communicating()
+        if not self._polling_stopped_event.wait(max_poll_time):
+            self.logger.warning(
+                "Failed waiting for final poll to terminate "
+                f"(timeout=={max_poll_time} [s])."
+            )
+        if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
+            self.tile.cleanup()
+        else:
+            self.tile.disconnect()
+
+        # Dereference by one, to help with garbage collection.
+        self.tile = None  # type: ignore[assignment]
+
+        self._synchronised_checker.abort()
+        self._synchronised_checker = None  # type: ignore[assignment]
+
+        with self._poller._condition:
+            self._poller._state = self._poller._State.KILLED
+            self._poller._condition.notify()
+        self._poller._polling_thread.join(max_poll_time)
+        if self._poller._polling_thread.is_alive():
+            self.logger.warning(
+                "Failed waiting for polling thread to die "
+                f"(timeout=={max_poll_time} [s])."
+            )
+
+    def _cleanup_subscriptions(self: TileComponentManager) -> None:
+        """Clean up subscriptions."""
+        if self._subrack_proxy:
+            self._subrack_proxy.unsubscribe_all_change_events()
+            self._subrack_proxy = None
 
     def off(
         self: TileComponentManager, task_callback: Optional[Callable] = None
@@ -984,6 +1031,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except
                     self.logger.error("Subrack callback failed to connect to hardware.")
+            else:
+                self.__update_tpm_status()
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
@@ -1362,6 +1411,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             "Global reference time specifed, starting acquisition"
                         )
                         self._start_acquisition()
+                self.__update_tpm_status()
 
     @abort_task_on_exception
     @check_communicating
@@ -2338,11 +2388,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             try:
                 self.tile.set_lmc_integrated_download(
                     mode,
-                    channel_payload_length,
-                    beam_payload_length,
-                    dst_ip,
-                    src_port,
-                    dst_port,
+                    channel_payload_length=channel_payload_length,
+                    beam_payload_length=beam_payload_length,
+                    dst_ip=dst_ip,
+                    src_port=src_port,
+                    dst_port=dst_port,
                     netmask_40g=netmask_40g,
                     gateway_ip_40g=gateway_40g,
                 )
@@ -2701,7 +2751,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.OK, "Configure integrated channel data completed OK")
 
     @check_communicating
     def set_csp_download(
@@ -2883,7 +2933,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.OK, "apply_pointing_delays completed OK")
 
     @check_communicating
     def load_pointing_delays(
@@ -3311,10 +3361,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     self.tile.set_lmc_download(
                         mode,
-                        payload_length,
-                        dst_ip,
-                        src_port,
-                        dst_port,
+                        payload_length=payload_length,
+                        dst_ip=dst_ip,
+                        src_port=src_port,
+                        dst_port=dst_port,
                         netmask_40g=netmask_40g,
                         gateway_ip_40g=gateway_40g,
                     )

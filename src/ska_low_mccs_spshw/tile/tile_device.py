@@ -14,6 +14,7 @@ import json
 import logging
 import os.path
 import sys
+import threading
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
@@ -231,29 +232,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.power_state: PowerState | None = None
         self.status_information: dict[str, str] = {}
 
-    def delete_device(self: MccsTile) -> Any:
+    def delete_device(self: MccsTile) -> None:
         """
         Prepare to delete the device.
 
         This method must be done explicitly, else polling
         threads are not cleaned up after init_device().
-
-        :return: result from delete_device.
         """
-        try:
-            # We do not want to raise a exception here
-            # This can cause a segfault.
-            self.component_manager.stop_communicating()
-            if self.component_manager._subrack_proxy:
-                self.component_manager._subrack_proxy.unsubscribe_all_change_events()
-            del self.component_manager
-            self._stopping = True
-            if self._health_recorder is not None:
-                self._health_recorder.cleanup()
-                self._health_recorder = None
-        except Exception:  # pylint: disable=broad-except
-            pass
-        return super().delete_device()
+        # We do not want to raise a exception here
+        # This can cause a segfault.
+        self._stopping = True
+        if self._health_recorder is not None:
+            self._health_recorder.cleanup()
+            self._health_recorder = None
+        self.component_manager.cleanup()
+
+        # NOTE: This will be removed from tango-base 1.4.0 and the interface changed
+        # so will need removing when we update
+        self.ExecutePendingOperations()
+
+        super().delete_device()
+        for t in threading.enumerate():
+            self.logger.info(
+                f"Threads open at end of DELETE DEVICE "
+                f"Threads: {t.name}, ID: {t.ident}, Daemon: {t.daemon}"
+            )
 
     def init_device(self: MccsTile) -> None:
         """
@@ -351,18 +354,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
-            "adc_pll_status": "adc_pll_status",
+            "adc_pll_lock_status": "adc_pll_lock_status",
             "fpga0_qpll_status": "fpga0_qpll_status",
             "fpga0_qpll_counter": "fpga0_qpll_counter",
             "fpga1_qpll_status": "fpga1_qpll_status",
             "fpga1_qpll_counter": "fpga1_qpll_counter",
-            "f2f_pll_status": "f2f_pll_status",
+            "f2f_pll_lock_status": "f2f_pll_lock_status",
             "f2f_pll_counter": "f2f_pll_counter",
             "f2f_soft_errors": "f2f_soft_errors",
             "f2f_hard_errors": "f2f_hard_errors",
-            "timing_pll_status": "timing_pll_status",
+            "timing_pll_lock_status": "timing_pll_lock_status",
             "timing_pll_count": "timing_pll_count",
-            "timing_pll_40g_status": "timing_pll_40g_status",
+            "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
             "timing_pll_40g_count": "timing_pll_40g_count",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
@@ -420,7 +423,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         attribute_converters: dict[str, Any] = {
-            "adc_pll_status": adc_pll_to_list,
+            "adc_pll_lock_status": adc_pll_to_list,
             "fpga0_bip_error_count": udp_error_count_to_list,
             "fpga0_decode_error_count": udp_error_count_to_list,
             "fpga1_bip_error_count": udp_error_count_to_list,
@@ -435,10 +438,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_clocks": clocks_to_list,
             "adc_sysref_counter": adc_to_list,
             "adc_sysref_timing_requirements": adc_to_list,
-            "timing_pll_status": lambda val: (
+            "timing_pll_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "timing_pll_40g_status": lambda val: (
+            "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
             "fpga0_qpll_status": lambda val: (
@@ -447,7 +450,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "f2f_pll_status": lambda val: int(val[0]) if val[0] is not None else None,
+            "f2f_pll_lock_status": lambda val: int(val[0])
+            if val[0] is not None
+            else None,
             "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
             "f2f_pll_counter": lambda val: int(val[1]) if val[1] is not None else None,
             "timing_pll_40g_count": lambda val: (
@@ -628,7 +633,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
             "voltageVM_PLL": ["voltages", "VM_PLL"],
             "voltageVM_SW_AMP": ["voltages", "VM_SW_AMP"],
-            "adc_pll_status": ["adcs", "pll_status"],
+            "adc_pll_lock_status": ["adcs", "pll_status"],
             # qpll_status is a tuple, extracting status and
             # conuter in different attributes
             "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
@@ -637,17 +642,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA1"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "f2f_pll_status": ["io", "f2f_interface", "pll_status"],
+            "f2f_pll_lock_status": ["io", "f2f_interface", "pll_status"],
             "f2f_pll_counter": ["io", "f2f_interface", "pll_status"],
             "f2f_soft_errors": ["io", "f2f_interface", "soft_error"],
             "f2f_hard_errors": ["io", "f2f_interface", "hard_error"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "timing_pll_status": ["timing", "pll"],
+            "timing_pll_lock_status": ["timing", "pll"],
             "timing_pll_count": ["timing", "pll"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "timing_pll_40g_status": ["timing", "pll_40g"],
+            "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
@@ -771,7 +776,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "FPGA1",
             ],
         }
-        self._multi_attr = self.get_device_attr()
         super().init_device()
 
         self.db_firmware_thresholds = FirmwareThresholds()
@@ -894,6 +898,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.BiosVersion,
                 self.PreAduFitted,
             )
+            self._health_recorder = None
 
     def create_component_manager(
         self: MccsTile,
@@ -1432,21 +1437,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param attr_name: the name of the attribute causing the shutdown.
         """
-        try:
-            attr = self._multi_attr.get_attr_by_name(attr_name)
-            attr_value = self._attribute_state[attr_name].read()
-            if attr.is_max_alarm():
-                self.logger.warning(
-                    f"Attribute {attr_name} changed to {attr_value}, "
-                    "this is above maximum alarm, Shutting down TPM."
+        # ============================================
+        # Only shutdown if we are not already stopping
+        # ============================================
+        if not self._stopping:
+            try:
+                attr = self.get_device_attr().get_attr_by_name(attr_name)
+                attr_value = self._attribute_state[attr_name].read()
+                if attr.is_max_alarm():
+                    self.logger.warning(
+                        f"Attribute {attr_name} changed to {attr_value}, "
+                        "this is above maximum alarm, Shutting down TPM."
+                    )
+                    self.component_manager.off()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.error(
+                    f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
+                    "Shutting down TPM."
                 )
                 self.component_manager.off()
-        except Exception as e:  # pylint: disable=broad-except
-            self.logger.error(
-                f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
-                "Shutting down TPM."
-            )
-            self.component_manager.off()
 
     def post_change_event(
         self: MccsTile,
@@ -1465,8 +1474,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
-        if self._stopping:
-            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:
@@ -1476,14 +1483,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
+        if self._stopping:
+            # ===============================================
+            # Calling multi_attr methods on teardown causes segfault
+            # during startup, yes startup (check_alarm) during
+            # subscriptions, event thought we are joining this thread
+            # from delete_device. Figure that!
+            # Tango::Attribute::general_check_alarm<short>
+            # (Tango::AttrQuality const&, short const&, short const&) ()
+            # returning here appears to remove segfault, alternativly a
+            # large sleep of 30 seconds during startup will remove the
+            # occurance of a segfault. This issues was identified in
+            # skb-1079, but the root issues lies in cpptango.
+            # During investigation the following ticket was created
+            # https://gitlab.com/tango-controls/cppTango/-/issues/1585
+            # was raised. Available in pytango 10.3.0 release.
+            # ===============================================
+            return
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.
         # it seems that fire_change_event will consume the
         # value set meaning a check_alarm has a nullptr.
-        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
+        self.get_device_attr().get_attr_by_name(name).set_value(attr_value)
         try:
             # Update the attribute ALARM status.
-            self._multi_attr.check_alarm(name)
+            self.get_device_attr().check_alarm(name)
         except tango.DevFailed:
             # no alarm defined
             pass
@@ -1528,12 +1552,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevShort",),),
         max_dim_x=16,
         max_dim_y=2,
-        label="adc_pll_status",
+        label="adc_pll_lock_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def adc_pll_status(self: MccsTile) -> np.ndarray:
+    def adc_pll_lock_status(self: MccsTile) -> np.ndarray:
         """
         Return the pll status of all 16 ADCs.
 
@@ -1544,12 +1568,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             (lock has not fallen).
 
         :example:
-            >>> tile.adc_pll_status
+            >>> tile.adc_pll_lock_status
             [[1]*16,[1]*16]
 
         :return: the pll status of all ADCs
         """
-        return self._attribute_state["adc_pll_status"].read()
+        return self._attribute_state["adc_pll_lock_status"].read()
 
     @attribute(dtype="DevBoolean", label="tile_beamformer_status")
     def tile_beamformer_status(self: MccsTile) -> bool:
@@ -2539,26 +2563,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="f2f_pll_status",
+        label="f2f_pll_lock_status",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
     )
-    def f2f_pll_status(self: MccsTile) -> int:
+    def f2f_pll_lock_status(self: MccsTile) -> int:
         """
         Return the PLL lock status.
 
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.f2f_pll_status
+            >>> tile.f2f_pll_lock_status
             '1'
 
         :return: the PLL lock status.
         """
-        return self._attribute_state["f2f_pll_status"].read()
+        return self._attribute_state["f2f_pll_lock_status"].read()
 
     @attribute(
         dtype="DevShort",
@@ -2584,26 +2608,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="timing_pll_status",
+        label="timing_pll_lock_status",
         min_alarm=0,
         max_value=2,
         min_value=-1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def timing_pll_status(self: MccsTile) -> int:
+    def timing_pll_lock_status(self: MccsTile) -> int:
         """
         Return the PLL lock status and lock loss counter.
 
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.timing_pll_status
+            >>> tile.timing_pll_lock_status
             1
 
         :return: the PLL lock status.
         """
-        return self._attribute_state["timing_pll_status"].read()
+        return self._attribute_state["timing_pll_lock_status"].read()
 
     @attribute(
         dtype="DevShort",
@@ -2630,26 +2654,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="timing_pll_40g_status",
+        label="timing_pll_40g_lock_status",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
     )
-    def timing_pll_40g_status(self: MccsTile) -> int:
+    def timing_pll_40g_lock_status(self: MccsTile) -> int:
         """
         Return the PLL 40G lock status.
 
         Expected: `1` if PLL 40G locked.
 
         :example:
-            >>> tile.timing_pll_40g_status
+            >>> tile.timing_pll_40g_lock_status
             '1`
 
         :return: the PLL lock status and lock loss counter.
         """
-        return self._attribute_state["timing_pll_40g_status"].read()
+        return self._attribute_state["timing_pll_40g_lock_status"].read()
 
     @attribute(
         dtype="DevShort",
@@ -6440,7 +6464,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             threshold limits.
         """
         handler = self.get_command_object("SetAttributeThresholds")
-        (return_code, message) = handler(self._multi_attr, argin)
+        (return_code, message) = handler(self.get_device_attr(), argin)
         return ([return_code], [message])
 
     class GetArpTableCommand(FastCommand):

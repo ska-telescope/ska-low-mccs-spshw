@@ -1771,7 +1771,7 @@ def test_TriggerAdcEqualisation(
         station_device,
         command_name="TriggerAdcEqualisation",
         command_arguments=args,
-        timeout=20,  # 20 measurements of 1 second each
+        timeout=24,  # 20 measurements of 1 second each + buffer
     )
 
 

@@ -192,10 +192,27 @@ Ethernet interface configuration
   * *Configure40GCore*: Configure one of the available cores. Parameters as a json string
     with the following keywords. All keywords are optinal, except CoreID and ArpTableEntry.
 
-    * core_id - (int) core id, 0 for FPGA1, 1 for FPGA2
+    * core_id - (int) FortyG Ethernet core id. 
+      0 for QSFP P1 (Lower QSFP), 1 for QSFP P2 (Upper QSFP).
 
-    * arp_table_entry - (int) ARP table entry ID. 8 entries available, only 0 and 1 
-      currently used, respectively for beamformer chain (0) and LMC (1) 
+    * arp_table_entry - (int) ARP table entry ID to configure. 
+      Each entry corresponds to a particular Tile data product as in the below table.
+      16 entries available. Only 0 to 9 currently used.
+
+      ==========================================  =========
+      Data Product                                ARP Entry
+      ==========================================  =========
+      Station Beam - Even channels (Master FPGA)  0
+      Station Beam - Odd channels (Slave FPGA)    1  
+      LMC - Raw ADC                               2
+      LMC - Raw ADC Synchronized                  3
+      LMC - Channelized Burst                     4
+      LMC - Channelized Continuous                5
+      LMC - Tile Beam                             6
+      LMC Integrated - Channelized                7
+      LMC Integrated - Tile Beam                  8
+      Antenna Buffer                              9
+      ==========================================  =========
 
     * source_mac - (int) mac address
 
@@ -207,15 +224,32 @@ Ethernet interface configuration
 
     * destination_port - (int) destination port
 
-  * *Get40GCoreConfiguration*: retrieves the configuration for one specific port, or for all
-    programmed ports. Parameter: json string with keywords core_id and arp_table_entry.
-    If core_id = -1 all ports are reported. Returns a list of json dictionaries with 
+  * *Get40GCoreConfiguration*: retrieves the configuration for one specific FortyG link, or for all
+    programmed FortyG links. Parameter: json string with keywords core_id and arp_table_entry.
+    If core_id = -1 both FortyG links are reported. Returns a list of json dictionaries with 
     the same keywords of *Configure40GCore*:
 
-    * core_id - (int) core id, 0 for FPGA1, 1 for FPGA2
+    * core_id - (int) FortyG Ethernet core id. 
+      0 for QSFP P1 (Lower QSFP), 1 for QSFP P2 (Upper QSFP).
 
-    * arp_table_entry - (int) ARP table entry ID. 8 entries available, only 0 and 1
-      currently used, respectively for beamformer chain (0) and LMC (1)
+    * arp_table_entry - (int) ARP table entry ID to configure. 
+      Each entry corresponds to a particular Tile data product as in the below table.
+      16 entries available. Only 0 to 9 currently used.
+
+      ==========================================  =========
+      Data Product                                ARP Entry
+      ==========================================  =========
+      Station Beam - Even channels (Master FPGA)  0
+      Station Beam - Odd channels (Slave FPGA)    1  
+      LMC - Raw ADC                               2
+      LMC - Raw ADC Synchronized                  3
+      LMC - Channelized Burst                     4
+      LMC - Channelized Continuous                5
+      LMC - Tile Beam                             6
+      LMC Integrated - Channelized                7
+      LMC Integrated - Tile Beam                  8
+      Antenna Buffer                              9
+      ==========================================  =========
 
     * source_mac - (int) mac address
 
@@ -234,7 +268,7 @@ Ethernet interface configuration
 
     * mode - (string) ``1G`` or ``10G`` (Mandatory) (use ``10G`` for 40G link)
 
-    * payload_length - (int) SPEAD payload length for channel data. Default 
+    * payload_length - (int) SPEAD payload length.
 
     * destination_ip - (string) Destination IP. Is mandatory for 40G link, not required
       for 1G link. 
@@ -246,15 +280,16 @@ Ethernet interface configuration
   * *SetLmcIntegratedDownload*: Configure link and size of integrated data.
     Parameter: a json dictionary with optional keywords:
 
-    * mode - (string) ``1G`` or ``10G`` (Mandatory)
+    * mode - (string) ``1G`` or ``10G`` (Mandatory) (use ``10G`` for 40G link)
 
     * channel_payload_length - (int) SPEAD payload length for integrated channel data
 
     * beam_payload_length - (int) SPEAD payload length for integrated beam data
 
-    * destination_ip - (string) Destination IP. Same IP and port is used for LMC and integrated
-      LMC, so values should be specified only in one of *SetLmcDownload* and
-      *SetLmcIntegratedDownload*. Last specified overrides IP and port for both. 
+    * destination_ip - (string) Destination IP. If using ``1G``, the same IP and port is used
+      for LMC and integrated LMC, so values should be specified only in one of *SetLmcDownload*
+      and *SetLmcIntegratedDownload*. Last specified overrides IP and port for both. This
+      limitation does not apply to ``10G``/``40G``.
 
     * source_port - (int) Source port for integrated data streams
 

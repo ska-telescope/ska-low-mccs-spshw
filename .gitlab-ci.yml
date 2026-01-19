@@ -26,10 +26,10 @@ stages:
   - staging
   - test
   - test-psi-low
-  - test-ral-low
   - publish
   - pages
   - scan
+  - test-ral-low
 
 include:
   # Python packages build,lint, test and publish
@@ -142,6 +142,7 @@ psi-low-stop-k8s:
     - make k8s-delete-namespace
   allow_failure: true
 
+
 ral-low-k8s-test:
   stage: test-ral-low
   extends: k8s-test
@@ -149,8 +150,10 @@ ral-low-k8s-test:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       allow_failure: true
       when: always
-    - when: manual
-      allow_failure: true
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: false
+  resource_group: ral-hardware
   needs:
     - oci-image-build
   tags:
@@ -169,11 +172,9 @@ ral-low-k8s-test:
     JSON_REPORT_PATH: build/reports/report.json
     HW_DEPLOYMENT: true
   before_script:
-    - |
-      if [[ "$CI_PIPELINE_SOURCE" == "schedule" ]]; then
-        is_calendar_booked --calendar RAL --expected-runtime 30m
-      fi
+    - is_calendar_booked --calendar RAL --expected-runtime 30m
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
+    - bash src/utils/scripts/check_deployment.sh
     - make k8s-install-chart
     - make k8s-wait
   artifacts:
@@ -186,7 +187,14 @@ ral-low-k8s-test:
 
 ral-low-xray-publish:
   stage: test-ral-low
-  when: manual
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      allow_failure: true
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: true
+  resource_group: ral-hardware
   needs:
     - ral-low-k8s-test
   tags:
@@ -203,6 +211,14 @@ ral-low-xray-publish:
 
 ral-low-stop-k8s:
   stage: test-ral-low
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      allow_failure: true
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: true
+  resource_group: ral-hardware
   needs:
     - ral-low-k8s-test
   tags:

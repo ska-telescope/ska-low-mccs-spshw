@@ -15,7 +15,7 @@ from typing import Any, Generator
 import pytest
 import tango
 from pytest_bdd import given, scenario, then, when
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, SimulationMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -78,11 +78,24 @@ def revert_db_thresholds_fixture() -> dict[str, dict[str, Any]]:
     }
 
 
+@pytest.fixture(name="initial_tile_programmingstate")
+def initial_tile_programmingstate_fixture(tile_device: tango.DeviceProxy) -> str:
+    """
+    Return the initial programming state of the tile device.
+
+    :param tile_device: a proxy to the tile device under test.
+
+    :return: the initial programming state of the tile device.
+    """
+    return tile_device.tileProgrammingState
+
+
 @pytest.fixture(name="device_threshold_updated")
 def device_threshold_updated_fixture(
     tile_device: tango.DeviceProxy,
     initial_db_thresholds: dict[str, dict[str, Any]],
     revert_db_thresholds: dict[str, dict[str, Any]],
+    initial_tile_programmingstate: str,
 ) -> Generator[None, None, None]:
     """
     Fixture to orchestrate the altering of thresholds in db.
@@ -92,6 +105,8 @@ def device_threshold_updated_fixture(
         in database
     :param revert_db_thresholds: the values to
         revert initial population
+    :param initial_tile_programmingstate: the initial programming state
+        of the tile device
 
     :yields: To return cleanup
     """
@@ -108,11 +123,31 @@ def device_threshold_updated_fixture(
     tango.DeviceProxy(tile_device.adm_name()).restartserver()
     # Sleep to allow time for device to come up.
     time.sleep(6)
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+    if (
+        tile_device.simulationMode == SimulationMode.TRUE
+        and initial_tile_programmingstate == "Synchronised"
+    ):
+        # Simulator only gets to Initialised on its own.
+        # If we expect Sync then we have to nudge it.
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=lookahead,
+        )
+        tile_device.StartAcquisition("{}")
+    # Due to the way the TileSimulator if coupled to the lifetime of the device
+    # It is recreated on init_device. This means that is will be re-initialised
+    # from the subrack callback. This leads to a few more lookaheads
+    # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
+    # When testing against hw the state is discovered directly
+    # UNKNOWN first hence lookahead == 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
-        "Initialised",
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        initial_tile_programmingstate,
+        lookahead=lookahead,
     )
 
 
@@ -148,11 +183,12 @@ def test_thresholds_written_to_match_db() -> None:
 
 
 @given("an SPS deployment against a real context")
-def check_against_real_context(true_context: bool) -> None:
+def check_against_real_context(true_context: bool, station_label: str) -> None:
     """
     Skip the test if not in real context.
 
     :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
     """
     if not true_context:
         pytest.skip("This test requires real context.")
@@ -373,7 +409,9 @@ def write_thresholds_to_match(
 
 @then("the Tile reports it has configuration mismatch")
 def check_for_configuration_missmatch(
-    tile_device: tango.DeviceProxy, change_event_callbacks: MockTangoEventCallbackGroup
+    tile_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    initial_tile_programmingstate: str,
 ) -> None:
     """
     Check for configuration missmatch.
@@ -381,12 +419,42 @@ def check_for_configuration_missmatch(
     :param tile_device: the tile under test
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+    :param initial_tile_programmingstate: the initial programming state
+        of the tile device
     """
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
+
+    # Due to the way the TileSimulator if coupled to the lifetime of the device
+    # It is recreated on init_device. This means that is will be re-initialised
+    # from the subrack callback. This leads to a few more lookaheads
+    # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
+    # When testing against hw the state is discovered directly
+    # UNKNOWN first hence lookahead == 2
+    if (
+        tile_device.simulationMode == SimulationMode.TRUE
+        and initial_tile_programmingstate == "Synchronised"
+    ):
+        # Simulator only gets to Initialised on its own.
+        # If we expect Sync then we have to nudge it.
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=lookahead,
+        )
+        tile_device.StartAcquisition("{}")
+
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            initial_tile_programmingstate,
+            lookahead=lookahead,
+        )
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
-        "Initialised",
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        initial_tile_programmingstate,
+        lookahead=lookahead,
     )
     assert tile_device.state() == tango.DevState.FAULT
 
@@ -404,7 +472,9 @@ def check_for_configuration_missmatch(
 
 @then("the Tile reports it has no configuration mismatch")
 def tile_reports_on(
-    tile_device: tango.DeviceProxy, change_event_callbacks: MockTangoEventCallbackGroup
+    tile_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    initial_tile_programmingstate: str,
 ) -> None:
     """
     Check that the tile is ON.
@@ -412,12 +482,15 @@ def tile_reports_on(
     :param tile_device: the tile under test
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+    :param initial_tile_programmingstate: the initial programming state
+        of the tile device
     """
+    lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",
-        "Initialised",
-        lookahead=2,  # UNKNOWN first hence lookahead == 2
+        initial_tile_programmingstate,
+        lookahead=lookahead,
     )
     assert tile_device.state() == tango.DevState.ON
     sub_id = tile_device.subscribe_event(

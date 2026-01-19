@@ -134,10 +134,11 @@ def integration_test_context_fixture(
         harness = SpsTangoTestHarness()
         harness.add_subrack_simulator(subrack_id, subrack_simulator)
         harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
-        harness.add_pdu_device(
-            "ENLOGIC", "10.135.253.170", "public", logging_level=int(LoggingLevel.ERROR)
-        )
-        harness.add_power_marshaller_device()
+        # harness.add_pdu_device(
+        #     "ENLOGIC", "10.135.253.170", "public",
+        # logging_level=int(LoggingLevel.ERROR)
+        # )
+        # harness.add_power_marshaller_device()
         harness.add_tile_device(
             tile_id,
             subrack_id,
@@ -188,12 +189,11 @@ def patched_tile_device_class_fixture(
             "ppsPresent": ["timing", "pps", "status"],
         }
 
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
+        def init_device(self) -> None:
             self.health_attribute_to_simulator_map = copy.deepcopy(
                 self.HEALTH_ATTRIBUTE_TO_SIMULATOR_MAP
             )
-
-            super().__init__(*args, **kwargs)
+            super().init_device()
 
         def create_component_manager(
             self: PatchedTileDevice,
@@ -212,27 +212,7 @@ def patched_tile_device_class_fixture(
             tile_component_manager._update_attribute_callback = (
                 self._update_attribute_callback
             )
-
             return tile_component_manager
-
-        def delete_device(self: PatchedTileDevice) -> None:
-            """
-            Clean up callbacks to ensure safe teardown.
-
-            During teardown of the MccsTile device a segfault can occur.
-            This is beleived to be due to the injection of the
-            TileComponentManager. The teardown of the MccsTile device in the context was
-            occuring before the teardown of the injected tilecomponentmanager,
-            this was leading to messages reporting that we were trying to
-            push a nonexistent attribute from TANGO during
-            teardown (when the attribute did exist).
-            Although i was not able to convince myself fully that this was concrete,
-            the act of stopping communication and joining the polling thread
-            removes the issue during teardown. This is supporting of the theory above.
-            """
-            tile_component_manager.stop_communicating()
-            tile_component_manager._poller._polling_thread.join()
-            super().delete_device()
 
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(
@@ -326,14 +306,18 @@ def tile_component_manager_fixture(
 
 
 @pytest.fixture(name="tile_simulator")
-def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
+def tile_simulator_fixture(logger: logging.Logger) -> Iterator[TileSimulator]:
     """
     Return a TileSimulator.
 
     :param logger: logger
-    :return: a TileSimulator
+    :yields: a TileSimulator
     """
-    return TileSimulator(logger)
+    tile_simulator = TileSimulator(logger)
+
+    yield tile_simulator
+
+    tile_simulator.cleanup()
 
 
 @pytest.fixture(name="static_time_delays")

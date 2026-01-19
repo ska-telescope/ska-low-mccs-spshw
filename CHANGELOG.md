@@ -3,6 +3,7 @@
 ## 11.1.0
 
 * [SKB-1171] Devices which fail to connect to their parent device for adminmode inheritance will now retry forever, however the device will go to alarm if the connection has been failing for the timeout length, the device will go to ALARM. The timeout length defaults to 120s however is configurable through the ParentConnectionTimeout device property.
+* [THORN-347] Fix bandpass functional tests at RAL.
 * [THORN-354] Fix spshw functional tests in test_tile.py, process omni_queue before deleting_device
 * [SKB-1079] Add device cleanup to MccsTile.
 * [SKB-1133] Fix SpsStation thread cleanup issues.

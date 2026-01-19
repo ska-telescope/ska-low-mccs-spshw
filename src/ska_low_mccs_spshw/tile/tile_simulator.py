@@ -2605,7 +2605,8 @@ class TileSimulator:
         :param netmask_40g: the mask to apply to the 40g.
         :param gateway_ip_40g: the gateway ip for the 40g.
         """
-        self.logger.error("set_lmc_integrated_download not implemented in simulator")
+        self.dst_ip = dst_ip
+        self.dst_port = dst_port
 
     @check_mocked_overheating
     @connected

@@ -16,7 +16,7 @@ import time
 import warnings
 from datetime import datetime
 from time import sleep
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from unittest.mock import patch
 
 import _pytest
@@ -35,6 +35,7 @@ from tests.harness import (
 from ..test_tools import AttributeWaiter
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+TIMEOUT = 90  # Used in wait for obsState and lrcs to finish
 
 
 # TODO: https://github.com/pytest-dev/pytest-forked/issues/67
@@ -100,20 +101,21 @@ def station_devices_exported_fixture(
 @pytest.fixture(name="station")
 def station_fixture(
     station_label: str | None, true_context: bool
-) -> tango.DeviceProxy | None:
+) -> Iterator[tango.DeviceProxy | None]:
     """
     Fixture containing a proxy to the station under test.
 
     :param station_label: the names of the station we are testing against.
     :param true_context: Whether we are testing against a real deployment.
 
-    :returns: a proxy to the station under test.
+    :yields: a proxy to the station under test.
     """
     if not true_context:
-        return None
+        yield None
+        return
     if not station_label:
         station_label = DEFAULT_STATION_LABEL
-    return tango.DeviceProxy(get_sps_station_name(station_label))
+    yield tango.DeviceProxy(get_sps_station_name(station_label))
 
 
 @pytest.fixture(name="sps_devices_exported")
@@ -805,3 +807,35 @@ def synchronised_tile_device_fixture(
 
     # Restore the previous GRT
     tile_device.globalreferenceTime = initial_grt
+
+
+@pytest.fixture(name="wait_for_lrcs_to_finish")
+def wait_for_lrcs_to_finish_fixture() -> Callable:
+    """
+    Wait for Long Running Commands on devices under test to finish.
+
+    We are sending quite a few LRCs in some of these tests, we must ensure
+    they are complete before moving onto the next step, or before trying to
+    read attributes.
+
+    :returns: a callable checking status of LRCs on all devices.
+    """
+
+    def _wait_for_lrcs_to_finish(
+        devices: list[tango.DeviceProxy], timeout: int = TIMEOUT
+    ) -> None:
+        count = 0
+
+        for device in devices:
+            count = 0
+            while device.lrcQueue != () or device.lrcExecuting != ():
+                time.sleep(1)
+                count += 1
+                if count == timeout:
+                    pytest.fail(
+                        f"LRCs still running after {timeout} seconds: "
+                        f"{device.dev_name()} : {device.lrcQueue=} "
+                        f"{device.lrcExecuting=}"
+                    )
+
+    return _wait_for_lrcs_to_finish

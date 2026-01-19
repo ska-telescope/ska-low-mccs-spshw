@@ -124,14 +124,19 @@ def device_threshold_updated_fixture(
     # Sleep to allow time for device to come up.
     time.sleep(6)
     lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
-    # if initial_tile_programmingstate == "Synchronised":
-    #     AttributeWaiter(timeout=45).wait_for_value(
-    #         tile_device,
-    #         "tileProgrammingState",
-    #         "Initialised",
-    #         lookahead=lookahead,
-    #     )
-    #     tile_device.StartAcquisition("{}")
+    if (
+        tile_device.simulationMode == SimulationMode.TRUE
+        and initial_tile_programmingstate == "Synchronised"
+    ):
+        # Simulator only gets to Initialised on its own.
+        # If we expect Sync then we have to nudge it.
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            "Initialised",
+            lookahead=lookahead,
+        )
+        tile_device.StartAcquisition("{}")
     # Due to the way the TileSimulator if coupled to the lifetime of the device
     # It is recreated on init_device. This means that is will be re-initialised
     # from the subrack callback. This leads to a few more lookaheads
@@ -418,7 +423,19 @@ def check_for_configuration_missmatch(
         of the tile device
     """
     lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
-    if initial_tile_programmingstate == "Synchronised":
+
+    # Due to the way the TileSimulator if coupled to the lifetime of the device
+    # It is recreated on init_device. This means that is will be re-initialised
+    # from the subrack callback. This leads to a few more lookaheads
+    # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
+    # When testing against hw the state is discovered directly
+    # UNKNOWN first hence lookahead == 2
+    if (
+        tile_device.simulationMode == SimulationMode.TRUE
+        and initial_tile_programmingstate == "Synchronised"
+    ):
+        # Simulator only gets to Initialised on its own.
+        # If we expect Sync then we have to nudge it.
         AttributeWaiter(timeout=45).wait_for_value(
             tile_device,
             "tileProgrammingState",
@@ -426,12 +443,13 @@ def check_for_configuration_missmatch(
             lookahead=lookahead,
         )
         tile_device.StartAcquisition("{}")
-    # Due to the way the TileSimulator if coupled to the lifetime of the device
-    # It is recreated on init_device. This means that is will be re-initialised
-    # from the subrack callback. This leads to a few more lookaheads
-    # UNKNOWN -> UNPROGRAMMED -> PROGRAMMED -> INITIALISED.
-    # When testing against hw the state is discovered directly
-    # UNKNOWN first hence lookahead == 2
+
+        AttributeWaiter(timeout=45).wait_for_value(
+            tile_device,
+            "tileProgrammingState",
+            initial_tile_programmingstate,
+            lookahead=lookahead,
+        )
     AttributeWaiter(timeout=45).wait_for_value(
         tile_device,
         "tileProgrammingState",

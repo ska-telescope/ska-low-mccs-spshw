@@ -178,27 +178,6 @@ def check_spsstation_state(
     # Sleep time to discover state.
     time.sleep(5)
 
-    # TODO: An On from SpsStation level when ON will mean that
-    # Any TPMs that are OFF will remain OFF due to ON being defined as
-    # any TPM ON and the base class rejecting calls to ON if device is ON.
-    # Therefore we are individually calling MccsTile.On() here.
-    # _initial_station_state = station.state()
-    # for tile in station_tiles:
-    #     if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
-    #         tile.on()
-    #         AttributeWaiter(timeout=60).wait_for_value(
-    #             tile,
-    #             "state",
-    #             tango.DevState.ON,
-    #         )
-    # if (
-    #     _initial_station_state != tango.DevState.ON
-    #     and station.state() != tango.DevState.ON
-    # ):
-    #     AttributeWaiter(timeout=60).wait_for_value(
-    #         station, "state", tango.DevState.ON, lookahead=3
-    #     )
-
     # Make sure Station and all Tiles are ON by going through STANDBY
     station.standby()
     AttributeWaiter(timeout=180).wait_for_value(

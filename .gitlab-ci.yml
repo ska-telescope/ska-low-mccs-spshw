@@ -142,6 +142,7 @@ psi-low-stop-k8s:
     - make k8s-delete-namespace
   allow_failure: true
 
+
 ral-low-k8s-test:
   stage: test-ral-low
   extends: k8s-test
@@ -152,6 +153,7 @@ ral-low-k8s-test:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
       allow_failure: false
+  resource_group: ral-hardware
   needs:
     - oci-image-build
   tags:
@@ -192,6 +194,7 @@ ral-low-xray-publish:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
       allow_failure: true
+  resource_group: ral-hardware
   needs:
     - ral-low-k8s-test
   tags:
@@ -215,6 +218,7 @@ ral-low-stop-k8s:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
       allow_failure: true
+  resource_group: ral-hardware
   needs:
     - ral-low-k8s-test
   tags:

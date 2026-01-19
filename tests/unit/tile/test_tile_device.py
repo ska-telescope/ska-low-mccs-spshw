@@ -461,6 +461,7 @@ class TestMccsTile:
             "pfbVersion",
             "beamformerTable",
             "beamformerRegions",
+            "parentConnectionFailed",
         ]
 
     @pytest.fixture(name="software_configuration_attributes")

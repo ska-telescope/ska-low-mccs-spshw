@@ -182,21 +182,34 @@ def check_spsstation_state(
     # Any TPMs that are OFF will remain OFF due to ON being defined as
     # any TPM ON and the base class rejecting calls to ON if device is ON.
     # Therefore we are individually calling MccsTile.On() here.
-    _initial_station_state = station.state()
+    # _initial_station_state = station.state()
+    # for tile in station_tiles:
+    #     if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
+    #         tile.on()
+    #         AttributeWaiter(timeout=60).wait_for_value(
+    #             tile,
+    #             "state",
+    #             tango.DevState.ON,
+    #         )
+    # if (
+    #     _initial_station_state != tango.DevState.ON
+    #     and station.state() != tango.DevState.ON
+    # ):
+    #     AttributeWaiter(timeout=60).wait_for_value(
+    #         station, "state", tango.DevState.ON, lookahead=3
+    #     )
+
+    # Make sure Station and all Tiles are ON by going through STANDBY
+    station.standby()
+    AttributeWaiter(timeout=180).wait_for_value(
+        station, "state", tango.DevState.STANDBY
+    )
+    station.on()
+    AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+
     for tile in station_tiles:
-        if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
-            tile.on()
-            AttributeWaiter(timeout=60).wait_for_value(
-                tile,
-                "state",
-                tango.DevState.ON,
-            )
-    if (
-        _initial_station_state != tango.DevState.ON
-        and station.state() != tango.DevState.ON
-    ):
-        AttributeWaiter(timeout=60).wait_for_value(
-            station, "state", tango.DevState.ON, lookahead=3
+        AttributeWaiter(timeout=180).wait_for_value(
+            tile, "tileProgrammingState", "Synchronised", lookahead=5
         )
 
     iters = 0
@@ -204,7 +217,7 @@ def check_spsstation_state(
         tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
         for tile in station_tiles
     ):
-        if iters >= 180:
+        if iters >= 60:
             pytest.fail(
                 "Not all tiles came ON: "
                 f"""{[

@@ -52,9 +52,9 @@ Feature: Test health
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is OK
         And the Subracks board temperature thresholds are adjusted
-        And the Subracks reports that its HealthState is FAILED
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is FAILED
+        And the Subracks reports that its HealthState is FAILED
         When the Station healthThresholds are adjusted
         Then the Station reports that its HealthState is OK
 

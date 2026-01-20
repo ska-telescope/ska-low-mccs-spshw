@@ -125,13 +125,13 @@ def check_subrack_is_online_and_on(
         print("Putting subrack device ONLINE...")
         subrack_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["subrack_state"].assert_change_event(
-            tango.DevState.UNKNOWN
+            tango.DevState.UNKNOWN, lookahead=1
         )
         print("Subrack device is in UNKNOWN state.")
 
-    change_event_callbacks["subrack_state"].assert_change_event(
-        OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=6
-    )
+        change_event_callbacks["subrack_state"].assert_change_event(
+            OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=6
+        )
     state = subrack_device.state()
 
     if state == tango.DevState.OFF:
@@ -282,7 +282,7 @@ def ensure_subrack_fan_speed_percent(
     # All we see is a HTTP timeout.
     # And the fan speed setting is never updated.
     # This scenario cannot be developed further until this bug is fixed.
-    pytest.xfail(reason="Server-side bug")
+    # pytest.xfail(reason="Server-side bug")
 
     speed_percent = fan_speeds_percent[fan_number - 1]
     if speed_percent != pytest.approx(90.0):

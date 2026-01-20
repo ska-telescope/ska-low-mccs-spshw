@@ -89,7 +89,7 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     "features/health.feature",
     "Health changes when healthThresholds changes",
 )
-def test_health_changes_when_thresholds_change(
+def test_health_changes_when_healththresholds_changes(
     station_devices: dict[str, tango.DeviceProxy],
     reset_attribute_configs: dict[str, Callable],
 ) -> None:
@@ -265,10 +265,6 @@ def station_online(
             reset_attribute_configs["subrack"](subrack)
         for tile in station_devices["Tiles"]:
             reset_attribute_configs["tile"](tile)
-        pytest.skip(
-            "RAL hardware tests are passing inconsistently."
-            "These tests will be skipped until proper cleanup is implemented."
-        )
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:

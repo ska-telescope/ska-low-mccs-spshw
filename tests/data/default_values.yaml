@@ -323,4 +323,4 @@ ska-tango-devices:
       tpmVoltages->max_alarm: 12.6
       tpmVoltages->min_alarm: 11.4
 
-      tpmPowers->max_alarm: 120.0
+      tpmPowers->max_alarm: 124.0

@@ -265,10 +265,6 @@ def station_online(
             reset_attribute_configs["subrack"](subrack)
         for tile in station_devices["Tiles"]:
             reset_attribute_configs["tile"](tile)
-        # pytest.skip(
-        #     "RAL hardware tests are passing inconsistently."
-        #     "These tests will be skipped until proper cleanup is implemented."
-        # )
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:

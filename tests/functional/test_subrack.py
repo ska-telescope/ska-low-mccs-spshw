@@ -256,6 +256,7 @@ def ensure_subrack_fan_speed_percent(
     subrack_device: tango.DeviceProxy,
     fan_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    station_label: str,
 ) -> None:
     """
     Ensure that the fan is set to 90% speed.
@@ -265,7 +266,16 @@ def ensure_subrack_fan_speed_percent(
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param station_label: Name of the station to test against.
     """
+    if station_label == "stfc-ral-2":
+        # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.
+        # All we see is a HTTP timeout.
+        # And the fan speed setting is never updated.
+        # This scenario cannot be developed further until this bug is fixed.
+        pytest.skip(
+            reason="Server-side HTTP timeout in subrack prevents setting fan speeds."
+        )
     fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
     expected_fan_speeds_percent = [pytest.approx(s) for s in fan_speeds_percent]
 
@@ -275,14 +285,10 @@ def ensure_subrack_fan_speed_percent(
         change_event_callbacks["subrack_fan_speeds_percent"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=4
+        "subrack_fan_speeds_percent",
+        expected_fan_speeds_percent,
+        lookahead=4,
     )
-
-    # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.
-    # All we see is a HTTP timeout.
-    # And the fan speed setting is never updated.
-    # This scenario cannot be developed further until this bug is fixed.
-    # pytest.xfail(reason="Server-side bug")
 
     speed_percent = fan_speeds_percent[fan_number - 1]
     if speed_percent != pytest.approx(90.0):

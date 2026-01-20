@@ -89,7 +89,7 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     "features/health.feature",
     "Health changes when healthThresholds changes",
 )
-def test_health_changes_when_thresholds_change(
+def test_health_changes_when_healththresholds_changes(
     station_devices: dict[str, tango.DeviceProxy],
     reset_attribute_configs: dict[str, Callable],
 ) -> None:

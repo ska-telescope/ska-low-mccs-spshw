@@ -449,7 +449,7 @@ def check_subrack_fan_speed_setting(
     expected_fan_speeds_percent[fan_number - 1] = pytest.approx(100.0)
 
     change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
-        expected_fan_speeds_percent
+        expected_fan_speeds_percent, lookahead=5
     )
 
 
@@ -475,7 +475,7 @@ def check_subrack_fan_speed(
         pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
     ]
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds
+        "subrack_fan_speeds", expected_fan_speeds, lookahead=5
     )
 
 

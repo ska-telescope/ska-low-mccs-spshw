@@ -485,6 +485,7 @@ class TestMccsTile:
             "lastPointingDelays",
             "cspSpeadFormat",
             "parentTRL",
+            "parentConnectionFailed",
             "antennaBufferMode",
             "dataTransmissionMode",
             "integratedDataTransmissionMode",

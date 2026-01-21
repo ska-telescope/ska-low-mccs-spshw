@@ -3,12 +3,16 @@
 ## Unreleased
 
 * [THORN-353] Fixing subrack functional tests at RAL (fan speed test cannot be done yet due to a bug in the subrack)
+
+## 11.1.0
+
+* [SKB-1171] Devices which fail to connect to their parent device for adminmode inheritance will now retry forever, however the device will go to alarm if the connection has been failing for the timeout length, the device will go to ALARM. The timeout length defaults to 120s however is configurable through the ParentConnectionTimeout device property.
 * [THORN-351] Fix health functional tests at RAL.
 * [THORN-347] Fix bandpass functional tests at RAL.
 * [THORN-354] Fix spshw functional tests in test_tile.py, process omni_queue before deleting_device
 * [SKB-1079] Add device cleanup to MccsTile.
 * [SKB-1133] Fix SpsStation thread cleanup issues.
-* [SKB-1133] Update ska-low-mccs-common 4.1.1 -> 4.3.0
+* [SKB-1133] Update ska-low-mccs-common 4.1.1 -> 4.4.0
 * [THORN-358] RAL Calendar CICD Queue: Running tests at RAL can now be queued
 * [LOW-1956] Update ska-tango-devices chart dependency to v0.13.0, thus gaining access to support for headless services, and read-only volume mounts.
 * [JANUS-305] Bumping TPM API version to 2.2.1 for fix to stop_data_transmission with continuous channel data

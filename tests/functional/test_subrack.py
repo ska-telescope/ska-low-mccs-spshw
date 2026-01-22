@@ -148,24 +148,14 @@ def check_subrack_is_online_and_on(
     print("Subrack device is in ON state.")
 
 
-@given("a choice of subrack fan", target_fixture="fan_number")
-def choose_a_fan(station_label: str) -> int:
+@given("four subrack fan numbers", target_fixture="fan_number")
+def choose_a_fan() -> list[int]:
     """
-    Return a fan number.
+    Return fan numbers.
 
-    :param station_label: Station name.
-
-    :return: a fan number.
+    :return: fan numbers.
     """
-    if station_label == "stfc-ral-2":
-        # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.
-        # All we see is a HTTP timeout.
-        # And the fan speed setting is never updated.
-        # This scenario cannot be developed further until this bug is fixed.
-        pytest.skip(
-            reason="Server-side HTTP timeout in subrack prevents setting fan speeds."
-        )
-    return 1
+    return [1, 2, 3, 4]
 
 
 @given("a choice of TPM", target_fixture="tpm_number")
@@ -203,21 +193,22 @@ def choose_a_tpm(
     return 1 + tpms_present.index(True)
 
 
-@given("the fan mode is manual")
+@given("the fan modes are manual")
 def ensure_subrack_fan_mode(
     subrack_device: tango.DeviceProxy,
-    fan_number: int,
+    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Ensure that the fan is in manual mode.
+    Ensure that the fans are in manual mode.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: number of the subrack fan being exercised by this
+    :param fan_number: list of the subrack fans being exercised by this
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
+    print(f"Initial subrack fan modes (manual=0): {subrack_device.subrackFanModes=}")
     fan_modes = None
     for i in range(5):
         try:
@@ -249,29 +240,34 @@ def ensure_subrack_fan_mode(
     assert fan_modes
 
     expected_fan_modes = fan_modes
-    if expected_fan_modes[fan_number - 1] == FanMode.AUTO:
-        expected_fan_modes[fan_number - 1] = int(FanMode.MANUAL)
+    for fan in fan_number:
+        if expected_fan_modes[fan - 1] == FanMode.AUTO:
+            expected_fan_modes[fan - 1] = int(FanMode.MANUAL)
 
-        encoded_arg = json.dumps({"fan_id": fan_number, "mode": int(FanMode.MANUAL)})
-        subrack_device.SetSubrackFanMode(encoded_arg)
+            encoded_arg = json.dumps({"fan_id": fan, "mode": int(FanMode.MANUAL)})
+            print(f"Setting fan {fan} mode to MANUAL...")
+            subrack_device.SetSubrackFanMode(encoded_arg)
 
-        change_event_callbacks.assert_change_event(
-            "subrack_fan_mode", expected_fan_modes, lookahead=4
-        )
+            change_event_callbacks.assert_change_event(
+                "subrack_fan_mode", expected_fan_modes, lookahead=4
+            )
     subrack_device.unsubscribe_event(sub_id)
+    print(
+        f"After setting subrack fan modes to manual: {subrack_device.subrackFanModes=}"
+    )
 
 
 @given("the fan's speed setting is 90%")
 def ensure_subrack_fan_speed_percent(
     subrack_device: tango.DeviceProxy,
-    fan_number: int,
+    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Ensure that the fan is set to 90% speed.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: number of the subrack fan being exercised by this
+    :param fan_number: list of the subrack fans being exercised by this
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
@@ -290,33 +286,35 @@ def ensure_subrack_fan_speed_percent(
         lookahead=4,
     )
 
-    speed_percent = fan_speeds_percent[fan_number - 1]
-    if speed_percent != pytest.approx(90.0):
-        encoded_arg = json.dumps({"subrack_fan_id": fan_number, "speed_percent": 90.0})
-        subrack_device.SetSubrackFanSpeed(encoded_arg)
-        expected_fan_speeds_percent[fan_number - 1] = pytest.approx(90.0)
-        change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=2
-        )
+    for fan in fan_number:
+        speed_percent = fan_speeds_percent[fan - 1]
+        if speed_percent != pytest.approx(90.0):
+            encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 90.0})
+            subrack_device.SetSubrackFanSpeed(encoded_arg)
+            expected_fan_speeds_percent[fan - 1] = pytest.approx(90.0)
+            change_event_callbacks.assert_change_event(
+                "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=2
+            )
 
 
 @given("the fan's speed is approximately 90% of its maximum")
 def ensure_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
-    fan_number: int,
+    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Ensure that the fan's speed is about 90% of its maximum.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: number of the subrack fan being exercised by this
+    :param fan_number: list of the subrack fans being exercised by this
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
     fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
-    assert fan_speeds_percent[fan_number - 1] == pytest.approx(90.0)  # just checkin'
+    for fan in fan_number:
+        assert fan_speeds_percent[fan - 1] == pytest.approx(90.0)  # just checkin'
 
     expected_fan_speeds = [
         pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
@@ -388,17 +386,18 @@ def ensure_tpm_power_state(
 @when("I set the fan speed to 100%")
 def set_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
-    fan_number: int,
+    fan_number: list[int],
 ) -> None:
     """
     Set the subrack's fan speed to 100%.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: number of the subrack fan being exercised by this
+    :param fan_number: list of the subrack fans being exercised by this
         test.
     """
-    encoded_arg = json.dumps({"subrack_fan_id": fan_number, "speed_percent": 100.0})
-    subrack_device.SetSubrackFanSpeed(encoded_arg)
+    for fan in fan_number:
+        encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 100.0})
+        subrack_device.SetSubrackFanSpeed(encoded_arg)
 
 
 @when("I tell the subrack to turn on the TPM")
@@ -432,21 +431,22 @@ def turn_off_all_tpms(
 @then("the fan's speed setting becomes 100%")
 def check_subrack_fan_speed_setting(
     subrack_device: tango.DeviceProxy,
-    fan_number: int,
+    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Check that the fan's speed setting becomes 100%.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: number of the subrack fan being exercised by this
+    :param fan_number: list of the subrack fans being exercised by this
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
     fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
     expected_fan_speeds_percent = [pytest.approx(p) for p in fan_speeds_percent]
-    expected_fan_speeds_percent[fan_number - 1] = pytest.approx(100.0)
+    for fan in fan_number:
+        expected_fan_speeds_percent[fan - 1] = pytest.approx(100.0)
 
     change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
         expected_fan_speeds_percent, lookahead=5
@@ -456,20 +456,21 @@ def check_subrack_fan_speed_setting(
 @then("the fan's speed becomes approximately 100% of its maximum")
 def check_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
-    fan_number: int,
+    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Check that the fan's speed becomes approximately 100% of its maximum.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: number of the subrack fan being exercised by this
+    :param fan_number: list of the subrack fans being exercised by this
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
     fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
-    assert fan_speeds_percent[fan_number - 1] == pytest.approx(100.0)  # just checkin'
+    for fan in fan_number:
+        assert fan_speeds_percent[fan - 1] == pytest.approx(100.0)  # just checkin'
 
     expected_fan_speeds = [
         pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent

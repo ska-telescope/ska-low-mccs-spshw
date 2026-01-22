@@ -263,9 +263,7 @@ def station_in_synchronised_state(
         AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
     except AssertionError:
         # Hardware can be in the ALARM state, we should still continue.
-        AttributeWaiter(timeout=180).wait_for_value(
-            station, "state", tango.DevState.ALARM
-        )
+        assert station.state() in [tango.DevState.ON, tango.DevState.ALARM]
 
     for tile in station_tiles:
         AttributeWaiter(timeout=180).wait_for_value(

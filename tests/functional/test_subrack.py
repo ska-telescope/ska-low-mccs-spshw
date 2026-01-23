@@ -193,18 +193,15 @@ def choose_a_tpm(
     return 1 + tpms_present.index(True)
 
 
-@given("the fan modes are manual")
+@given("all fan modes are manual")
 def ensure_subrack_fan_mode(
     subrack_device: tango.DeviceProxy,
-    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Ensure that the fans are in manual mode.
 
     :param subrack_device: the subrack Tango device under test.
-    :param fan_number: list of the subrack fans being exercised by this
-        test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
@@ -240,12 +237,13 @@ def ensure_subrack_fan_mode(
     assert fan_modes
 
     expected_fan_modes = fan_modes
-    for fan in fan_number:
-        if expected_fan_modes[fan - 1] == FanMode.AUTO:
+    for fan in [1, 3]:  # Subrack fans change mode in pairs (1+2), (3+4).
+        if FanMode.AUTO in [expected_fan_modes[fan - 1], expected_fan_modes[fan]]:
             expected_fan_modes[fan - 1] = int(FanMode.MANUAL)
+            expected_fan_modes[fan] = int(FanMode.MANUAL)
 
             encoded_arg = json.dumps({"fan_id": fan, "mode": int(FanMode.MANUAL)})
-            print(f"Setting fan {fan} mode to MANUAL...")
+            print(f"Setting fans {fan}+{fan+1} mode to MANUAL...")
             subrack_device.SetSubrackFanMode(encoded_arg)
 
             change_event_callbacks.assert_change_event(

@@ -252,9 +252,6 @@ def ensure_subrack_fan_mode(
                 "subrack_fan_mode", expected_fan_modes, lookahead=4
             )
     subrack_device.unsubscribe_event(sub_id)
-    print(
-        f"After setting subrack fan modes to manual: {subrack_device.subrackFanModes=}"
-    )
 
 
 @given("the fan's speed setting is 90%")

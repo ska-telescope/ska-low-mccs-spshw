@@ -701,7 +701,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param argin: json dictionary with mandatory keywords
 
             * `fan_id` (int) fan id from 1 to 4
-            * `mode` - (int) mode: 1=MANUAL, 2=AUTO
+            * `mode` - (int) mode: 0=MANUAL, 1=AUTO
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

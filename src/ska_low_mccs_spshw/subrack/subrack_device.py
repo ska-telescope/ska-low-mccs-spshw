@@ -111,7 +111,9 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
-
+        self.logger.info(
+            f"Setting fan ({subrack_fan_id}) speed to {int(speed_percent)}"
+        )
         self._fan_speed_set(subrack_fan_id, int(speed_percent))
 
         return super().do(subrack_fan_id, int(speed_percent))

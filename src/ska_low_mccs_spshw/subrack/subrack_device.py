@@ -87,7 +87,7 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         self: SetSubrackFanSpeedCommand,
         *args: Any,
         subrack_fan_id: int,
-        speed_percent: float,
+        speed_percent: int,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -239,7 +239,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
         self: SetPowerSupplyFanSpeedCommand,
         *args: Any,
         power_supply_fan_id: int,
-        speed_percent: float,
+        speed_percent: int,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """

@@ -40,6 +40,10 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
 
     This command sets the selected subrack fan speed.
 
+    Note: Fans are controlled in pairs, so setting fan 1 or fan 2 sets both 1 and 2,
+        similarly for fans 3 and 4.
+
+
     This command takes as input a JSON string that conforms to the
     following schema:
 
@@ -87,7 +91,7 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         self: SetSubrackFanSpeedCommand,
         *args: Any,
         subrack_fan_id: int,
-        speed_percent: float,
+        speed_percent: int,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -108,9 +112,9 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
 
-        self._fan_speed_set(subrack_fan_id, speed_percent)
+        self._fan_speed_set(subrack_fan_id, int(speed_percent))
 
-        return super().do(subrack_fan_id, speed_percent)
+        return super().do(subrack_fan_id, int(speed_percent))
 
 
 class SetSubrackFanModeCommand(SubmittedSlowCommand):
@@ -195,6 +199,9 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
 
     This command set the selected power supply fan speed.
 
+    Note: Fans are controlled in pairs, so setting fan 1 or fan 2 sets both 1 and 2,
+        similarly for fans 3 and 4.
+
     This command takes as input a JSON string that conforms to the
     following schema:
 
@@ -239,7 +246,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
         self: SetPowerSupplyFanSpeedCommand,
         *args: Any,
         power_supply_fan_id: int,
-        speed_percent: float,
+        speed_percent: int,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -260,7 +267,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
 
-        return super().do(power_supply_fan_id, speed_percent)
+        return super().do(power_supply_fan_id, int(speed_percent))
 
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
@@ -681,7 +688,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param argin: json dictionary with mandatory keywords
 
             * `subrack_fan_id` (int) fan id from 1 to 4
-            * `speed_percent` - (float) fan speed in percent
+            * `speed_percent` - (int) fan speed in percent
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -721,7 +728,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param argin: json dictionary with mandatory keywords
 
             * `power_supply_id` (int) power supply id from 1 to 2
-            * `speed_percent` - (float) fan speed in percent
+            * `speed_percent` - (int) fan speed in percent
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

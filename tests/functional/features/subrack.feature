@@ -5,9 +5,9 @@ Feature: Test always-on subrack
     @XTP-17870 @XTP-17871
     Scenario: Monitor and control subrack fan speed
         Given a subrack that is online and on
-        And four subrack fan numbers
+        And two subrack fan pairs
         And all fan modes are manual
-        And the fan's speed setting is 90%
+        And all fan speed settings are 90%
         And the fan's speed is approximately 90% of its maximum
 
         When I set the fan speed to 100%

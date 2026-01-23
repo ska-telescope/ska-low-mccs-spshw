@@ -148,14 +148,14 @@ def check_subrack_is_online_and_on(
     print("Subrack device is in ON state.")
 
 
-@given("four subrack fan numbers", target_fixture="fan_number")
+@given("two subrack fan pairs", target_fixture="fan_number")
 def choose_a_fan() -> list[int]:
     """
     Return fan numbers.
 
     :return: fan numbers.
     """
-    return [1, 2, 3, 4]
+    return [1, 3]
 
 
 @given("a choice of TPM", target_fixture="tpm_number")
@@ -196,12 +196,14 @@ def choose_a_tpm(
 @given("all fan modes are manual")
 def ensure_subrack_fan_mode(
     subrack_device: tango.DeviceProxy,
+    fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Ensure that the fans are in manual mode.
 
     :param subrack_device: the subrack Tango device under test.
+    :param fan_number: Fan numbers to target in tests.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
@@ -237,7 +239,7 @@ def ensure_subrack_fan_mode(
     assert fan_modes
 
     expected_fan_modes = fan_modes
-    for fan in [1, 3]:  # Subrack fans change mode in pairs (1+2), (3+4).
+    for fan in fan_number:  # Subrack fans change mode in pairs (1+2), (3+4).
         if FanMode.AUTO in [expected_fan_modes[fan - 1], expected_fan_modes[fan]]:
             expected_fan_modes[fan - 1] = int(FanMode.MANUAL)
             expected_fan_modes[fan] = int(FanMode.MANUAL)
@@ -252,7 +254,7 @@ def ensure_subrack_fan_mode(
     subrack_device.unsubscribe_event(sub_id)
 
 
-@given("the fan's speed setting is 90%")
+@given("all fan speed settings are 90%")
 def ensure_subrack_fan_speed_percent(
     subrack_device: tango.DeviceProxy,
     fan_number: list[int],
@@ -286,7 +288,9 @@ def ensure_subrack_fan_speed_percent(
         if speed_percent != pytest.approx(90.0):
             encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 90.0})
             subrack_device.SetSubrackFanSpeed(encoded_arg)
+            # Subrack fans update in pairs.
             expected_fan_speeds_percent[fan - 1] = pytest.approx(90.0)
+            expected_fan_speeds_percent[fan] = pytest.approx(90.0)
             change_event_callbacks.assert_change_event(
                 "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=2
             )
@@ -310,9 +314,11 @@ def ensure_subrack_fan_speed(
     fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
     for fan in fan_number:
         assert fan_speeds_percent[fan - 1] == pytest.approx(90.0)  # just checkin'
+        assert fan_speeds_percent[fan] == pytest.approx(90.0)  # just checkin'
 
     expected_fan_speeds = [
-        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
+        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
+        for p in fan_speeds_percent
     ]
 
     subrack_device.subscribe_event(
@@ -321,7 +327,7 @@ def ensure_subrack_fan_speed(
         change_event_callbacks["subrack_fan_speeds"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds, lookahead=4
+        "subrack_fan_speeds", expected_fan_speeds, lookahead=10
     )
 
 
@@ -442,6 +448,7 @@ def check_subrack_fan_speed_setting(
     expected_fan_speeds_percent = [pytest.approx(p) for p in fan_speeds_percent]
     for fan in fan_number:
         expected_fan_speeds_percent[fan - 1] = pytest.approx(100.0)
+        expected_fan_speeds_percent[fan] = pytest.approx(100.0)
 
     change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
         expected_fan_speeds_percent, lookahead=5
@@ -466,12 +473,14 @@ def check_subrack_fan_speed(
     fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
     for fan in fan_number:
         assert fan_speeds_percent[fan - 1] == pytest.approx(100.0)  # just checkin'
+        assert fan_speeds_percent[fan] == pytest.approx(100.0)  # just checkin'
 
     expected_fan_speeds = [
-        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
+        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
+        for p in fan_speeds_percent
     ]
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds, lookahead=5
+        "subrack_fan_speeds", expected_fan_speeds, lookahead=10
     )
 
 

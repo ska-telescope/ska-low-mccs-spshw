@@ -66,7 +66,6 @@ def subrack_device_fixture(
 @scenario("features/subrack.feature", "Monitor and control subrack fan speed")
 def test_monitor_and_control_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
-    fan_number: list[int],
 ) -> None:
     """
     Run a test scenario that monitors and controls a subrack fan's speed.
@@ -75,17 +74,17 @@ def test_monitor_and_control_subrack_fan_speed(
     scenario.
 
     :param subrack_device: Subrack under test.
-    :param fan_number: Fan numbers to act upon.
     """
     # Make sure the subracks are in MANUAL at 100%.
+    # Fans are set in pairs: 1+2, 3+4.
     fan_modes = list(subrack_device.subrackFanModes)
     if FanMode.AUTO in fan_modes:
-        for fan in fan_number:
+        for fan in [1, 3]:
             encoded_arg = json.dumps({"fan_id": fan, "mode": int(FanMode.MANUAL)})
             subrack_device.SetSubrackFanMode(encoded_arg)
 
-    for fan in fan_number:
-        encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 100.0})
+    for fan in [1, 3]:
+        encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 100})
         subrack_device.SetSubrackFanSpeed(encoded_arg)
 
 

@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable = too-many-lines
 """This module contains the tests of the subrack Tango device."""
 from __future__ import annotations
 
@@ -398,7 +399,8 @@ def test_off_on(
     )
 
 
-def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-statements
+# pylint: disable=too-many-locals, too-many-statements, too-many-branches
+def test_monitoring_and_control(
     subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
     subrack_device_attribute_values: dict[str, Any],
@@ -623,13 +625,33 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     percent_to_set = 49.0
     subrack_fan_speeds_percent = subrack_device.subrackFanSpeedsPercent
     expected_speeds_percent = [pytest.approx(i) for i in subrack_fan_speeds_percent]
+
     expected_speeds_percent[fan_to_change - 1] = pytest.approx(percent_to_set)
+    # Subrack fans are set in pairs when one of the pair is set. 1+2, 3+4.
+    if fan_to_change in [1, 2]:
+        expected_speeds_percent[0] = pytest.approx(percent_to_set)
+        expected_speeds_percent[1] = pytest.approx(percent_to_set)
+    else:
+        expected_speeds_percent[2] = pytest.approx(percent_to_set)
+        expected_speeds_percent[3] = pytest.approx(percent_to_set)
 
     subrack_fan_speeds = subrack_device.subrackFanSpeeds
     expected_speeds = [pytest.approx(i) for i in subrack_fan_speeds]
-    expected_speeds[fan_to_change - 1] = pytest.approx(
-        percent_to_set * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
-    )
+
+    if fan_to_change in [1, 2]:
+        expected_speeds[0] = pytest.approx(
+            percent_to_set * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
+        )
+        expected_speeds[1] = pytest.approx(
+            percent_to_set * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
+        )
+    else:
+        expected_speeds[2] = pytest.approx(
+            percent_to_set * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
+        )
+        expected_speeds[3] = pytest.approx(
+            percent_to_set * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
+        )
 
     json_kwargs = json.dumps(
         {"subrack_fan_id": fan_to_change, "speed_percent": percent_to_set}
@@ -650,7 +672,14 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     else:
         mode_to_set = FanMode.AUTO
     expected_modes = list(subrack_fan_mode)
-    expected_modes[fan_to_change - 1] = mode_to_set
+
+    if fan_to_change in [1, 2]:
+        expected_modes[0] = mode_to_set
+        expected_modes[1] = mode_to_set
+    else:
+        expected_modes[2] = mode_to_set
+        expected_modes[3] = mode_to_set
+
     json_kwargs = json.dumps({"fan_id": fan_to_change, "mode": int(mode_to_set)})
     _ = subrack_device.SetSubrackFanMode(json_kwargs)
 

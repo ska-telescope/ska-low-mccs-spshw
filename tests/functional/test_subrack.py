@@ -207,7 +207,6 @@ def ensure_subrack_fan_mode(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
-    print(f"Initial subrack fan modes (manual=0): {subrack_device.subrackFanModes=}")
     fan_modes = None
     for i in range(5):
         try:

@@ -64,13 +64,29 @@ def subrack_device_fixture(
 
 
 @scenario("features/subrack.feature", "Monitor and control subrack fan speed")
-def test_monitor_and_control_subrack_fan_speed() -> None:
+def test_monitor_and_control_subrack_fan_speed(
+    subrack_device: tango.DeviceProxy,
+    fan_number: list[int],
+) -> None:
     """
     Run a test scenario that monitors and controls a subrack fan's speed.
 
     Any code in this scenario function is run at the *end* of the
     scenario.
+
+    :param subrack_device: Subrack under test.
+    :param fan_number: Fan numbers to act upon.
     """
+    # Make sure the subracks are in MANUAL at 100%.
+    fan_modes = list(subrack_device.subrackFanModes)
+    if FanMode.AUTO in fan_modes:
+        for fan in fan_number:
+            encoded_arg = json.dumps({"fan_id": fan, "mode": int(FanMode.MANUAL)})
+            subrack_device.SetSubrackFanMode(encoded_arg)
+
+    for fan in fan_number:
+        encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 100.0})
+        subrack_device.SetSubrackFanSpeed(encoded_arg)
 
 
 @scenario("features/subrack.feature", "Turn on a TPM")
@@ -300,6 +316,7 @@ def ensure_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
     fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
+    station_label: str,
 ) -> None:
     """
     Ensure that the fan's speed is about 90% of its maximum.
@@ -309,25 +326,30 @@ def ensure_subrack_fan_speed(
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param station_label: The station under test.
     """
-    fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
-    for fan in fan_number:
-        assert fan_speeds_percent[fan - 1] == pytest.approx(90.0)  # just checkin'
-        assert fan_speeds_percent[fan] == pytest.approx(90.0)  # just checkin'
+    # The subrack at RAL appears to have different maximum fan speeds
+    # for each fan present. Fan2 also consistently reports 0rpm.
+    # Until this issue is clarified we skip checks on fan speed in RPM.
+    if station_label != "stfc-ral-2":
+        fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
+        for fan in fan_number:
+            assert fan_speeds_percent[fan - 1] == pytest.approx(90.0)  # just checkin'
+            assert fan_speeds_percent[fan] == pytest.approx(90.0)  # just checkin'
 
-    expected_fan_speeds = [
-        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
-        for p in fan_speeds_percent
-    ]
+        expected_fan_speeds = [
+            pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
+            for p in fan_speeds_percent
+        ]
 
-    subrack_device.subscribe_event(
-        "subrackFanSpeeds",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_speeds"],
-    )
-    change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds, lookahead=10
-    )
+        subrack_device.subscribe_event(
+            "subrackFanSpeeds",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_fan_speeds"],
+        )
+        change_event_callbacks.assert_change_event(
+            "subrack_fan_speeds", expected_fan_speeds, lookahead=10
+        )
 
 
 @given(parsers.parse("the TPM is {target_power}"))
@@ -459,6 +481,7 @@ def check_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
     fan_number: list[int],
     change_event_callbacks: MockTangoEventCallbackGroup,
+    station_label: str,
 ) -> None:
     """
     Check that the fan's speed becomes approximately 100% of its maximum.
@@ -468,19 +491,24 @@ def check_subrack_fan_speed(
         test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param station_label: The station under test.
     """
-    fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
-    for fan in fan_number:
-        assert fan_speeds_percent[fan - 1] == pytest.approx(100.0)  # just checkin'
-        assert fan_speeds_percent[fan] == pytest.approx(100.0)  # just checkin'
+    # The subrack at RAL appears to have different maximum fan speeds
+    # for each fan present. Fan2 also consistently reports 0rpm.
+    # Until this issue is clarified we skip checks on fan speed in RPM.
+    if station_label != "stfc-ral-2":
+        fan_speeds_percent = list(subrack_device.subrackFanSpeedsPercent)
+        for fan in fan_number:
+            assert fan_speeds_percent[fan - 1] == pytest.approx(100.0)  # just checkin'
+            assert fan_speeds_percent[fan] == pytest.approx(100.0)  # just checkin'
 
-    expected_fan_speeds = [
-        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
-        for p in fan_speeds_percent
-    ]
-    change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds, lookahead=10
-    )
+        expected_fan_speeds = [
+            pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
+            for p in fan_speeds_percent
+        ]
+        change_event_callbacks.assert_change_event(
+            "subrack_fan_speeds", expected_fan_speeds, lookahead=10
+        )
 
 
 @then(parsers.parse("the subrack reports that the TPM is {target_power}"))

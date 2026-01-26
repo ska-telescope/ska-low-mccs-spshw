@@ -18,6 +18,7 @@ from __future__ import annotations
 import enum
 import json
 import time
+from typing import Generator
 
 import pytest
 import tango
@@ -63,20 +64,21 @@ def subrack_device_fixture(
     return functional_test_context.get_subrack_device(subrack_id)
 
 
-@scenario("features/subrack.feature", "Monitor and control subrack fan speed")
-def test_monitor_and_control_subrack_fan_speed(
+@pytest.fixture(name="fan_mode_cleanup")
+def fan_mode_cleanup_fixture(
     subrack_device: tango.DeviceProxy,
-) -> None:
+) -> Generator:
     """
-    Run a test scenario that monitors and controls a subrack fan's speed.
+    Cleanup fixture to set fan modes and speeds to max after test.
 
-    Any code in this scenario function is run at the *end* of the
-    scenario.
+    :param subrack_device: the subrack Tango device under test.
 
-    :param subrack_device: Subrack under test.
+    :yields: control back to the test
     """
+    yield
     # Make sure the subracks are in MANUAL at 100%.
     # Fans are set in pairs: 1+2, 3+4.
+    print("Setting fans to MANUAL and 100% during teardown.")
     fan_modes = list(subrack_device.subrackFanModes)
     if FanMode.AUTO in fan_modes:
         for fan in [1, 3]:
@@ -86,6 +88,20 @@ def test_monitor_and_control_subrack_fan_speed(
     for fan in [1, 3]:
         encoded_arg = json.dumps({"subrack_fan_id": fan, "speed_percent": 100})
         subrack_device.SetSubrackFanSpeed(encoded_arg)
+
+
+@scenario("features/subrack.feature", "Monitor and control subrack fan speed")
+def test_monitor_and_control_subrack_fan_speed(
+    fan_mode_cleanup: Generator,
+) -> None:
+    """
+    Run a test scenario that monitors and controls a subrack fan's speed.
+
+    Any code in this scenario function is run at the *end* of the
+    scenario.
+
+    :param fan_mode_cleanup: Fixture to ensure fan cleanup after test.
+    """
 
 
 @scenario("features/subrack.feature", "Turn on a TPM")

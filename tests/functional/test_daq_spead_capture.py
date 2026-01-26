@@ -153,7 +153,7 @@ def tile_ready_to_send_to_daq(
     daq_status = json.loads(daq_device.DaqStatus())
 
     tpm_lmc_config = {
-        "mode": "1G",
+        "mode": "10G",
         "destination_ip": daq_status["Receiver IP"][0],
         "destination_port": int(daq_status["Receiver Ports"][0]),
     }
@@ -198,8 +198,8 @@ def send_simulated_data(
     return initial_count
 
 
-@then(parsers.cfparse("Daq receives data {daq_modes_of_interest}"))
-def check_capture(
+@then(parsers.cfparse("Daq receives data INTEGRATED_CHANNEL_DATA"))
+def check_capture_integrated(
     change_event_callbacks: MockTangoEventCallbackGroup,
     get_hdf5_count: Callable,
     initial_hdf5_count: int,
@@ -228,6 +228,33 @@ def check_capture(
                 )
             )
         pytest.fail("No integrated data received.")
+    final_hdf5_count = get_hdf5_count()
+    assert final_hdf5_count - initial_hdf5_count >= 1
+
+
+@then(parsers.cfparse("Daq receives data CHANNEL_DATA"))
+def check_capture_channel(
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    get_hdf5_count: Callable,
+    initial_hdf5_count: int,
+    station_name: str,
+) -> None:
+    """
+    Confirm Daq has received the correct data.
+
+    :param station_name: the name of the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param initial_hdf5_count: the initial number of hdf5 files in directory.
+    :param get_hdf5_count: A callable to return the number of hdf5 files
+        in a directory.
+    """
+    try:
+        change_event_callbacks["data_received_callback"].assert_change_event(
+            ("burst_channel", Anything)
+        )
+    except AssertionError:
+        pytest.fail("No burst data received.")
     final_hdf5_count = get_hdf5_count()
     assert final_hdf5_count - initial_hdf5_count >= 1
 

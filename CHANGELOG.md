@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-* [THORN-353] Fixing subrack functional tests at RAL (fan speed test cannot be done yet due to a bug in the subrack)
+* [THORN-353] Fixed subrack functional tests at RAL.
+* [THORN-349] Fixed spead capture functional tests at RAL.
 
 ## 11.1.0
 

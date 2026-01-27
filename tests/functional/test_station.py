@@ -60,11 +60,6 @@ def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
     if not hw_context:
         pytest.skip("This test requires real HW.")
-    if station_label == "stfc-ral-2":
-        pytest.skip(
-            "RAL hardware tests are passing inconsistently."
-            "These tests will be skipped until proper cleanup is implemented."
-        )
 
 
 @given("the SpsStation is ON")

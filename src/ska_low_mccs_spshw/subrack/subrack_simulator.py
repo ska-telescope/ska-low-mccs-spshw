@@ -432,13 +432,27 @@ class SubrackSimulator(SubrackProtocol):
         (fan_str, speed_str) = arg.split(",")
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
-        self._attribute_values["subrack_fan_speeds_percent"][fan_index] = speed
+        # On hardware we observe that when we change either fan 1 or fan 2
+        # that the speed of both fans change. Similarly for 3 and 4.
+        if fan_index in (0, 1):
+            self._attribute_values["subrack_fan_speeds_percent"][0] = speed
+            self._attribute_values["subrack_fan_speeds_percent"][1] = speed
+        elif fan_index in (2, 3):
+            self._attribute_values["subrack_fan_speeds_percent"][2] = speed
+            self._attribute_values["subrack_fan_speeds_percent"][3] = speed
 
     def _set_fan_mode(self: SubrackSimulator, arg: str) -> None:
         (fan_str, mode_str) = arg.split(",")
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         mode = int(mode_str)  # FanMode[mode_str]
-        self._attribute_values["subrack_fan_mode"][fan_index] = mode
+        # On hardware we observe that when we change either fan 1 or fan 2
+        # that the mode of both fans change. Similarly for 3 and 4.
+        if fan_index in (0, 1):
+            self._attribute_values["subrack_fan_mode"][0] = mode
+            self._attribute_values["subrack_fan_mode"][1] = mode
+        elif fan_index in (2, 3):
+            self._attribute_values["subrack_fan_mode"][2] = mode
+            self._attribute_values["subrack_fan_mode"][3] = mode
 
     def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")

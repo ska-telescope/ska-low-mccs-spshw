@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-353] Fixed subrack functional tests at RAL.
+* [THORN-349] Fixed spead capture functional tests at RAL.
+
 ## 11.1.0
 
 * [SKB-1171] Devices which fail to connect to their parent device for adminmode inheritance will now retry forever, however the device will go to alarm if the connection has been failing for the timeout length, the device will go to ALARM. The timeout length defaults to 120s however is configurable through the ParentConnectionTimeout device property.

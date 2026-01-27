@@ -78,7 +78,7 @@ def subrack_subs_fixture() -> list[int]:
     return []
 
 
-# pylint: disable=too-few-public-methods, too-many-arguments
+# pylint: disable=too-few-public-methods
 class TestSubrackTileIntegration:
     """Integration test cases for a SPS station with subservient subrack and tile."""
 

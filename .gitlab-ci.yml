@@ -246,7 +246,6 @@ ral-low-soak-test:
       allow_failure: false
   environment:
     name: test-ral-low-soak/$CI_COMMIT_REF_SLUG
-    on_stop: ral-low-soak-stop-k8s
     auto_stop_in: 1 minute
   variables:
     SOAK_ITERATIONS: "10"
@@ -290,35 +289,16 @@ ral-low-soak-test:
       
       # Exit with failure if any iteration failed
       [ $FAILED_ITERATIONS -eq 0 ] || exit 1
+  after_script:
+    - export KUBECONFIG=~/.kube/config
+    - make k8s-uninstall-chart || true
+    - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all || true
+    - make k8s-delete-namespace || true
   artifacts:
     name: "$CI_PROJECT_NAME-soak-$CI_JOB_ID"
     paths:
       - "build/reports/soak-iteration-*/"
     when: always
-
-ral-low-soak-stop-k8s:
-  stage: test-ral-low
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SOAK_TEST == "true"'
-      when: always
-    - if: '$SOAK_TEST == "true"'
-      when: always
-  resource_group: ral-hardware
-  needs:
-    - ral-low-soak-test
-  tags:
-    - k8srunner-stfc-ral
-  environment:
-    name: test-ral-low-soak/$CI_COMMIT_REF_SLUG
-    action: stop
-  image: $SKA_K8S_TOOLS_BUILD_DEPLOY
-  variables:
-    KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
-  script:
-    - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
-    - make k8s-uninstall-chart
-    - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
-    - make k8s-delete-namespace
 
 helmfile-lint:
   image: $SKA_K8S_TOOLS_BUILD_DEPLOY

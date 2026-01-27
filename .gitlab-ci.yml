@@ -249,44 +249,12 @@ ral-low-soak-test:
     SOAK_ITERATIONS: "10"
   before_script:
     - is_calendar_booked --calendar RAL --expected-runtime 5h
-    - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
+    - export KUBECONFIG=~/.kube/config
     - bash src/utils/scripts/check_deployment.sh
     - make k8s-install-chart
     - make k8s-wait
   script:
-    - |
-      TOTAL_ITERATIONS=${SOAK_ITERATIONS:-10}
-      FAILED_ITERATIONS=0
-      
-      for i in $(seq 1 $TOTAL_ITERATIONS); do
-        echo "=== Soak Test Iteration $i/$TOTAL_ITERATIONS ==="
-        
-        # Create iteration-specific directory
-        ITERATION_DIR="build/reports/soak-iteration-$i"
-        mkdir -p "$ITERATION_DIR"
-        
-        # Run test with iteration-specific output paths
-        JUNITXML_REPORT_PATH="$ITERATION_DIR/functional-tests.xml" \
-        CUCUMBER_JSON_PATH="$ITERATION_DIR/cucumber.json" \
-        JSON_REPORT_PATH="$ITERATION_DIR/report.json" \
-        make k8s-test || {
-          echo "FAILED: Iteration $i failed"
-          FAILED_ITERATIONS=$((FAILED_ITERATIONS + 1))
-        }
-        
-        echo "Completed iteration $i/$TOTAL_ITERATIONS"
-      done
-      
-      # Summary
-      echo "======================================"
-      echo "Soak Test Summary:"
-      echo "Total Iterations: $TOTAL_ITERATIONS"
-      echo "Failed Iterations: $FAILED_ITERATIONS"
-      echo "Success Rate: $(( (TOTAL_ITERATIONS - FAILED_ITERATIONS) * 100 / TOTAL_ITERATIONS ))%"
-      echo "======================================"
-      
-      # Exit with failure if any iteration failed
-      [ $FAILED_ITERATIONS -eq 0 ] || exit 1
+    - bash src/utils/scripts/run_soak_test.sh
   after_script:
     - export KUBECONFIG=~/.kube/config
     - make k8s-uninstall-chart || true

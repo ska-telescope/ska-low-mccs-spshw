@@ -16,9 +16,12 @@ for i in $(seq 1 $TOTAL_ITERATIONS); do
   make k8s-test || true
   
   if [ -f "$ITERATION_DIR/functional-tests.xml" ]; then
-    TESTS=$(xmllint --xpath "string(//testsuite/@tests)" "$ITERATION_DIR/functional-tests.xml" 2>/dev/null || echo "0")
-    FAILURES=$(xmllint --xpath "string(//testsuite/@failures)" "$ITERATION_DIR/functional-tests.xml" 2>/dev/null || echo "0")
-    ERRORS=$(xmllint --xpath "string(//testsuite/@errors)" "$ITERATION_DIR/functional-tests.xml" 2>/dev/null || echo "0")
+    read TESTS FAILURES ERRORS <<< $(python3 -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('$ITERATION_DIR/functional-tests.xml')
+suite = tree.find('.//testsuite')
+print(suite.get('tests', '0'), suite.get('failures', '0'), suite.get('errors', '0'))
+")
     PASSED=$((TESTS - FAILURES - ERRORS))
     
     if [ $FAILURES -gt 0 ] || [ $ERRORS -gt 0 ]; then
@@ -61,18 +64,26 @@ for i in $(seq 1 $TOTAL_ITERATIONS); do
   echo ""
   echo "--- Iteration $i ---"
   if [ -f "build/reports/soak-iteration-$i/functional-tests.xml" ]; then
-    TESTS=$(xmllint --xpath "string(//testsuite/@tests)" "build/reports/soak-iteration-$i/functional-tests.xml" 2>/dev/null || echo "0")
-    FAILURES=$(xmllint --xpath "string(//testsuite/@failures)" "build/reports/soak-iteration-$i/functional-tests.xml" 2>/dev/null || echo "0")
-    ERRORS=$(xmllint --xpath "string(//testsuite/@errors)" "build/reports/soak-iteration-$i/functional-tests.xml" 2>/dev/null || echo "0")
+    read TESTS FAILURES ERRORS TIME <<< $(python3 -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('build/reports/soak-iteration-$i/functional-tests.xml')
+suite = tree.find('.//testsuite')
+print(suite.get('tests', '0'), suite.get('failures', '0'), suite.get('errors', '0'), suite.get('time', '0'))
+")
     PASSED=$((TESTS - FAILURES - ERRORS))
-    TIME=$(xmllint --xpath "string(//testsuite/@time)" "build/reports/soak-iteration-$i/functional-tests.xml" 2>/dev/null || echo "0")
     
     echo "$PASSED passed, $FAILURES failed, $ERRORS errors in ${TIME}s"
     
-    if [ $FAILURES -gt 0 ] || [ $ERRORS -gt 0 ]; then
+    if [ "$FAILURES" != "0" ] || [ "$ERRORS" != "0" ]; then
       echo ""
       echo "Failed tests:"
-      xmllint --xpath "//testcase[@*[local-name()='failure' or local-name()='error']]/@name" "build/reports/soak-iteration-$i/functional-tests.xml" 2>/dev/null | grep -o 'name="[^"]*"' | cut -d'"' -f2 | sed 's/^/  - /' || echo "  (Could not parse test names)"
+      python3 -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('build/reports/soak-iteration-$i/functional-tests.xml')
+for tc in tree.findall('.//testcase'):
+    if tc.find('failure') is not None or tc.find('error') is not None:
+        print('  - ' + tc.get('name'))
+" || echo "  (Could not parse test names)"
     fi
   else
     echo "No test results found"

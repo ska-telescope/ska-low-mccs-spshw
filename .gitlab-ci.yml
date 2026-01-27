@@ -235,6 +235,89 @@ ral-low-stop-k8s:
     - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
     - make k8s-delete-namespace
 
+ral-low-soak-test:
+  stage: test-ral-low
+  extends: ral-low-k8s-test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SOAK_TEST == "true"'
+      when: always
+    - if: '$SOAK_TEST == "true"'
+      when: manual
+      allow_failure: false
+  environment:
+    name: test-ral-low-soak/$CI_COMMIT_REF_SLUG
+    on_stop: ral-low-soak-stop-k8s
+    auto_stop_in: 1 minute
+  variables:
+    SOAK_ITERATIONS: "10"
+  before_script:
+    - is_calendar_booked --calendar RAL --expected-runtime 5h
+    - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
+    - bash src/utils/scripts/check_deployment.sh
+    - make k8s-install-chart
+    - make k8s-wait
+  script:
+    - |
+      TOTAL_ITERATIONS=${SOAK_ITERATIONS:-10}
+      FAILED_ITERATIONS=0
+      
+      for i in $(seq 1 $TOTAL_ITERATIONS); do
+        echo "=== Soak Test Iteration $i/$TOTAL_ITERATIONS ==="
+        
+        # Create iteration-specific directory
+        ITERATION_DIR="build/reports/soak-iteration-$i"
+        mkdir -p "$ITERATION_DIR"
+        
+        # Run test with iteration-specific output paths
+        JUNITXML_REPORT_PATH="$ITERATION_DIR/functional-tests.xml" \
+        CUCUMBER_JSON_PATH="$ITERATION_DIR/cucumber.json" \
+        JSON_REPORT_PATH="$ITERATION_DIR/report.json" \
+        make k8s-test || {
+          echo "FAILED: Iteration $i failed"
+          FAILED_ITERATIONS=$((FAILED_ITERATIONS + 1))
+        }
+        
+        echo "Completed iteration $i/$TOTAL_ITERATIONS"
+      done
+      
+      # Summary
+      echo "======================================"
+      echo "Soak Test Summary:"
+      echo "Total Iterations: $TOTAL_ITERATIONS"
+      echo "Failed Iterations: $FAILED_ITERATIONS"
+      echo "Success Rate: $(( (TOTAL_ITERATIONS - FAILED_ITERATIONS) * 100 / TOTAL_ITERATIONS ))%"
+      echo "======================================"
+      
+      # Exit with failure if any iteration failed
+      [ $FAILED_ITERATIONS -eq 0 ] || exit 1
+  artifacts:
+    name: "$CI_PROJECT_NAME-soak-$CI_JOB_ID"
+    paths:
+      - "build/reports/soak-iteration-*/"
+    when: always
+
+ral-low-soak-stop-k8s:
+  stage: test-ral-low
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SOAK_TEST == "true"'
+      when: always
+  resource_group: ral-hardware
+  needs:
+    - ral-low-soak-test
+  tags:
+    - k8srunner-stfc-ral
+  environment:
+    name: test-ral-low-soak/$CI_COMMIT_REF_SLUG
+    action: stop
+  image: $SKA_K8S_TOOLS_BUILD_DEPLOY
+  variables:
+    KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
+  script:
+    - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
+    - make k8s-uninstall-chart
+    - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
+    - make k8s-delete-namespace
+
 helmfile-lint:
   image: $SKA_K8S_TOOLS_BUILD_DEPLOY
   stage: lint

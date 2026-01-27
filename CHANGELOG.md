@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [LOW-2034] Remove unused EDA config ConfigMap
 * [THORN-353] Fixed subrack functional tests at RAL.
 * [THORN-349] Fixed spead capture functional tests at RAL.
 

@@ -244,9 +244,7 @@ ral-low-soak-test:
     - if: '$SOAK_TEST == "true"'
       when: manual
       allow_failure: false
-  environment:
-    name: test-ral-low-soak/$CI_COMMIT_REF_SLUG
-    auto_stop_in: 1 minute
+  environment: null
   variables:
     SOAK_ITERATIONS: "10"
   before_script:

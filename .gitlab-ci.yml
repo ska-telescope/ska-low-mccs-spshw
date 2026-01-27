@@ -301,6 +301,8 @@ ral-low-soak-stop-k8s:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $SOAK_TEST == "true"'
       when: always
+    - if: '$SOAK_TEST == "true"'
+      when: always
   resource_group: ral-hardware
   needs:
     - ral-low-soak-test

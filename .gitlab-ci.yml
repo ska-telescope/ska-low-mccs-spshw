@@ -248,7 +248,7 @@ ral-low-soak-test:
   variables:
     SOAK_ITERATIONS: "10"
   before_script:
-    - is_calendar_booked --calendar RAL --expected-runtime 5h
+    - is_calendar_booked --calendar RAL --expected-runtime $((SOAK_ITERATIONS / 2))h
     - export KUBECONFIG=~/.kube/config
     - bash src/utils/scripts/check_deployment.sh
     - make k8s-install-chart

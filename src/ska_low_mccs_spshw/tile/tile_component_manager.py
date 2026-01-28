@@ -12,7 +12,6 @@ import json
 import logging
 import threading
 import time
-import zlib
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
@@ -288,12 +287,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._power_callback_timeout: float = power_callback_timeout
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
-        # ==========================================================
-        # Added as part of SKB-1089, to keep track of frequency this
-        # issus is seen in production.
-        self._decompression_success: int = 0
-        self._decompression_error: int = 0
-        # ==========================================================
 
         self._event_serialiser = event_serialiser
 
@@ -1147,17 +1140,24 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            core_communication = self.tile.check_communication()
-            self._update_attribute_callback(core_communication=core_communication)
-
-            if not any(core_communication.values()):
-                # TPM OFF or Network Issue
+            # There is some correlation between calling this and decompression errors
+            cpld_contacted = False
+            try:
+                self.tile.get_temperature()
+                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+                cpld_contacted = True
+            except Exception:  # pylint: disable=broad-except
+                pass
+            if (
+                self.tile.tpm is None
+                or not self.tile.is_connected()
+                or not cpld_contacted
+            ):
                 if self.power_state == PowerState.UNKNOWN:
                     return TpmStatus.UNKNOWN
                 if self.power_state != PowerState.ON:
                     return TpmStatus.OFF
                 return TpmStatus.UNCONNECTED
-
             try:
                 # We are connected to at least the CPLD.
                 # TPM ON, FPGAs not programmed or TPM overtemperature self shutdown
@@ -1272,7 +1272,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         force_reprogramming: bool,
         pps_delay_correction: int,
-        final_try: bool = False,
     ) -> None:
         """
         Initialise the TPM.
@@ -1281,18 +1280,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
-        :param final_try: A flag to work around SKB-1089.
-
-        :raises zlib.error: If workaround implemented in SKB-1089
-            did not work first time.
         """
         with self._initialising():
             with acquire_timeout(
                 self._hardware_lock, self._default_lock_timeout, raise_exception=True
             ):
                 if force_reprogramming:
-                    self.logger.info("Forcing erasing of FPGA.")
-                    self.tile.erase_fpgas()
+                    if self.tile.is_programmed():
+                        self.logger.info("Forcing erasing of FPGA.")
+                        try:
+                            self.tile.erase_fpgas()
+                        except Exception as e:  # pylint: disable=broad-except
+                            self.logger.error(
+                                f"Failed erasing FPGAs: {repr(e)}", exc_info=True
+                            )
                     self._tpm_status = TpmStatus.UNPROGRAMMED
                     self._update_attribute_callback(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
@@ -1327,49 +1328,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"* staticTimeDelays of {self._static_time_delays} \n"
                         f"* PreAduLevels of {self._preadu_levels} \n"
                     )
-                    try:
-                        self.tile.initialise(
-                            station_id=self._station_id,
-                            tile_id=self._tile_id,
-                            pps_delay=pps_delay_correction,
-                            active_40g_ports_setting="port1-only",
-                            src_ip_fpga1=self.src_ip_40g_fpga1,
-                            src_ip_fpga2=self.src_ip_40g_fpga2,
-                            time_delays=self._static_time_delays,
-                        )
-                        self._decompression_success += 1
-                    except zlib.error as e:
-                        self._decompression_error += 1
-                        total = self._decompression_error + self._decompression_success
-                        self.logger.warning(
-                            "XML data is corrupt. "
-                            "This is a known issue in BIOS 0.6.0 (see SKB-1089). "
-                            "We have seen this issue %d / %d times. Error: %s",
-                            self._decompression_error,
-                            total,
-                            e,
-                        )
-
-                        if not final_try:
-                            self.logger.warning(
-                                "Reprogramming FPGA for "
-                                "station %s tile %s to workaround SKB-1089.",
-                                self._station_id,
-                                self._tile_id,
-                            )
-                            self._execute_initialise(
-                                force_reprogramming=True,
-                                pps_delay_correction=pps_delay_correction,
-                                final_try=True,
-                            )
-                            return
-                        self.logger.error(
-                            "Workaround already attempted for "
-                            "station %s tile %s. Giving up.",
-                            self._station_id,
-                            self._tile_id,
-                        )
-                        raise
+                    self.tile.initialise(
+                        station_id=self._station_id,
+                        tile_id=self._tile_id,
+                        pps_delay=pps_delay_correction,
+                        active_40g_ports_setting="port1-only",
+                        src_ip_fpga1=self.src_ip_40g_fpga1,
+                        src_ip_fpga2=self.src_ip_40g_fpga2,
+                        time_delays=self._static_time_delays,
+                    )
                     #
                     # extra steps required to have it working
                     #

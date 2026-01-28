@@ -1,5 +1,11 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1089] Prevent attempts to communicate with FPGA via CPLD. The check_communication() method is destructive, calling this in an unprogrammed state can lead to decompression issues
+presenting themselves in initialisation.
+* [SKB-1089] Add workaround for I2C race condition when setting an LED after FPGA is erased.
+
 ## 11.1.0
 
 * [SKB-1171] Devices which fail to connect to their parent device for adminmode inheritance will now retry forever, however the device will go to alarm if the connection has been failing for the timeout length, the device will go to ALARM. The timeout length defaults to 120s however is configurable through the ParentConnectionTimeout device property.

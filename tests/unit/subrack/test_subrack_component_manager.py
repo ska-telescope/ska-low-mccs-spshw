@@ -528,7 +528,13 @@ class TestOn:
             fan_to_set, fan_speed_percent_setting
         )
 
-        subrack_fan_speeds_percent[fan_to_set - 1] = fan_speed_percent_setting
+        # Subrack fans are set in pairs when one of the pair is set. 1+2, 3+4.
+        if fan_to_set in [1, 2]:
+            subrack_fan_speeds_percent[0] = fan_speed_percent_setting
+            subrack_fan_speeds_percent[1] = fan_speed_percent_setting
+        else:
+            subrack_fan_speeds_percent[2] = fan_speed_percent_setting
+            subrack_fan_speeds_percent[3] = fan_speed_percent_setting
         callbacks["component_state"].assert_call(
             subrack_fan_speeds_percent=[
                 pytest.approx(p) for p in subrack_fan_speeds_percent
@@ -549,7 +555,13 @@ class TestOn:
         )
         subrack_component_manager.set_subrack_fan_mode(fan_to_set, fan_speed_mode)
 
-        subrack_fan_mode[fan_to_set - 1] = fan_speed_mode
+        # Subrack fans are set in pairs when one of the pair is set. 1+2, 3+4.
+        if fan_to_set in [1, 2]:
+            subrack_fan_speeds_percent[0] = fan_speed_percent_setting
+            subrack_fan_speeds_percent[1] = fan_speed_percent_setting
+        else:
+            subrack_fan_speeds_percent[2] = fan_speed_percent_setting
+            subrack_fan_speeds_percent[3] = fan_speed_percent_setting
         callbacks["component_state"].assert_call(
             subrack_fan_mode=subrack_fan_mode,
         )
@@ -564,7 +576,13 @@ class TestOn:
             fan_to_set, fan_speed_setting
         )
 
-        power_supply_fan_speeds[fan_to_set - 1] = fan_speed_setting
+        # Subrack fans are set in pairs when one of the pair is set. 1+2, 3+4.
+        if fan_to_set in [1, 2]:
+            power_supply_fan_speeds[0] = fan_speed_setting
+            power_supply_fan_speeds[1] = fan_speed_setting
+        else:
+            power_supply_fan_speeds[2] = fan_speed_setting
+            power_supply_fan_speeds[3] = fan_speed_setting
         callbacks["component_state"].assert_call(
             power_supply_fan_speeds=[pytest.approx(s) for s in power_supply_fan_speeds],
         )

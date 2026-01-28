@@ -16,10 +16,12 @@ from __future__ import annotations
 import enum
 import logging
 import os
-from typing import Any
+from importlib.resources import files
+from typing import Any, Callable
 
 import pytest
 import tango
+import yaml
 from _pytest.python_api import ApproxBase
 
 from tests.harness import get_bandpass_daq_name, get_lmc_daq_name
@@ -50,6 +52,103 @@ def db_temperature_thresholds_fixture() -> dict[str, tango.StdStringVector]:
     :returns: a dictionary containing the db values.
     """
     return {}
+
+
+@pytest.fixture(name="reset_attribute_configs")
+def reset_attribute_configs_fixture() -> dict[str, Callable]:
+    """
+    Fixture that provides a function to reset attribute configs to defaults.
+
+    Default values are taken from values.yaml classProperties.
+    Supports Tile and Subrack.
+
+    Example usage:
+        # Reset all attributes for a tile device
+        reset_attribute_configs["tile"](tile_device)
+
+        # Reset all attributes for a subrack device
+        reset_attribute_configs["subrack"](subrack_device)
+
+        # Reset a specific attribute (optional)
+        reset_attribute_configs["tile"](tile_device, "boardTemperature")
+
+    :returns: a dictionary of callables to reset tile or subrack attribute configs.
+    """
+    # Load default values from packaged data file
+    data_package = files("tests.data")
+    values_yaml_content = (data_package / "default_values.yaml").read_text(
+        encoding="utf-8"
+    )
+    values_data = yaml.safe_load(values_yaml_content)
+
+    # Extract class properties
+    class_properties = values_data["ska-tango-devices"]["classProperties"]
+    tile_props = class_properties["MccsTile"]
+    subrack_props = class_properties["MccsSubrack"]
+
+    def _apply_alarm_config(
+        device: tango.DeviceProxy, attribute_name: str, props: dict[str, Any]
+    ) -> None:
+        """
+        Apply alarm configuration from properties to a device attribute.
+
+        :param device: The device proxy.
+        :param attribute_name: The attribute name.
+        :param props: The properties dictionary from values.yaml.
+        """
+        conf = device.get_attribute_config(attribute_name)
+
+        # Check for alarm properties in format "attributeName->alarm_type"
+        prop_prefix = f"{attribute_name}->"
+        if f"{prop_prefix}min_alarm" in props:
+            conf.alarms.min_alarm = str(props[f"{prop_prefix}min_alarm"])
+        if f"{prop_prefix}min_warning" in props:
+            conf.alarms.min_warning = str(props[f"{prop_prefix}min_warning"])
+        if f"{prop_prefix}max_warning" in props:
+            conf.alarms.max_warning = str(props[f"{prop_prefix}max_warning"])
+        if f"{prop_prefix}max_alarm" in props:
+            conf.alarms.max_alarm = str(props[f"{prop_prefix}max_alarm"])
+
+        device.set_attribute_config(conf)
+
+    def _reset_device_attributes(
+        device: tango.DeviceProxy,
+        props: dict[str, Any],
+        attribute_name: str | None = None,
+    ) -> None:
+        """
+        Reset device attribute configs to default values from values.yaml.
+
+        :param device: The device proxy to reset.
+        :param props: The properties dictionary from values.yaml for this device class.
+        :param attribute_name: Specific attribute to reset, or None for all.
+        """
+        if attribute_name:
+            # Reset specific attribute
+            _apply_alarm_config(device, attribute_name, props)
+        else:
+            # Reset all attributes that have alarm configs in values.yaml
+            attributes_to_reset = set()
+            for key in props.keys():
+                if "->" in key:
+                    attr_name = key.split("->")[0]
+                    attributes_to_reset.add(attr_name)
+
+            for attr_name in attributes_to_reset:
+                try:
+                    _apply_alarm_config(device, attr_name, props)
+                except tango.DevFailed:
+                    # Attribute might not exist on this device, skip it
+                    pass
+
+    return {
+        "tile": lambda device, attr=None: _reset_device_attributes(
+            device, tile_props, attr
+        ),
+        "subrack": lambda device, attr=None: _reset_device_attributes(
+            device, subrack_props, attr
+        ),
+    }
 
 
 @pytest.fixture(name="db_voltage_thresholds", scope="module")

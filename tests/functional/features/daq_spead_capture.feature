@@ -20,7 +20,6 @@ Feature: Receiving SPEAD packets.
   # - This test is skipped if not a true context
 
   @XTP-34316
-  @xfail
   Scenario Outline: Sending SPEAD packets to be captured by DAQ
     Given this test is running against station <expected_station>.
     And the DAQ is available

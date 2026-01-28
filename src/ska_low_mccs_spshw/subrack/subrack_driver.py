@@ -549,7 +549,7 @@ class SubrackDriver(
             task_callback(status=TaskStatus.QUEUED)
         return (
             TaskStatus.QUEUED,
-            f"Subrack fan {fan_number} will be set to speed mode {mode.AUTO} at next "
+            f"Subrack fan {fan_number} will be set to speed mode {mode.value} at next "
             "poll.",
         )
 

@@ -1031,6 +1031,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except
                     self.logger.error("Subrack callback failed to connect to hardware.")
+            else:
+                self.__update_tpm_status()
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
@@ -1409,6 +1411,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             "Global reference time specifed, starting acquisition"
                         )
                         self._start_acquisition()
+                self.__update_tpm_status()
 
     @abort_task_on_exception
     @check_communicating
@@ -2748,7 +2751,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+        return (ResultCode.OK, "Configure integrated channel data completed OK")
 
     @check_communicating
     def set_csp_download(

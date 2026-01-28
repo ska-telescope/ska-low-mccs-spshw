@@ -1140,9 +1140,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            # There is some correlation between calling this and decompression errors
             cpld_contacted = False
             try:
+                # Check if the CPLD is accessible
+                # This is standin to replace check_communication which
+                # is destructive leading to skb-1089. Calls to 0x4 and 0x10000004
+                # in an unprogrammed state is bad.
                 self.tile.get_temperature()
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
                 cpld_contacted = True
@@ -1280,6 +1283,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
+
+        :raises LibraryError: When a LibraryError is raised that does not
+            match "I2C/EEP request not accepted!"
         """
         with self._initialising():
             with acquire_timeout(
@@ -1289,11 +1295,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     if self.tile.is_programmed():
                         self.logger.info("Forcing erasing of FPGA.")
                         try:
+                            # This is wrapped in a try except block due to a
+                            # I2C error covered in SKB-1089.
+                            # This occurs when attempting to
+                            # set an LED after erasing FPGAs.
+                            # TODO: move exception to lower levels.
                             self.tile.erase_fpgas()
-                        except Exception as e:  # pylint: disable=broad-except
-                            self.logger.error(
-                                f"Failed erasing FPGAs: {repr(e)}", exc_info=True
-                            )
+                        except LibraryError as e:
+                            # Only capture issue covered in SKB-1089.
+                            if str(e) == "I2C/EEP request not accepted!":
+                                self.logger.error(
+                                    f"Failed erasing FPGAs: {repr(e)}", exc_info=True
+                                )
+                            else:
+                                raise
                     self._tpm_status = TpmStatus.UNPROGRAMMED
                     self._update_attribute_callback(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()

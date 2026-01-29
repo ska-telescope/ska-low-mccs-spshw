@@ -519,6 +519,9 @@ class TestMccsTile:
             "rfiCount",
             "runningBeams",
             "ppsDelay",
+            "fortyGPacketCount",
+            "allStagedCal",
+            "allLiveCal",
         ]
 
     def __check_attributes_invalid(

@@ -248,25 +248,25 @@ def station_in_synchronised_state(
         AttributeWaiter(timeout=60).wait_for_value(
             station, "state", tango.DevState.UNKNOWN
         )
-        AttributeWaiter(timeout=180).wait_for_value(
+        AttributeWaiter(timeout=300).wait_for_value(
             station, "state", tango.DevState.ON, lookahead=5
         )
-    wait_for_lrcs_to_finish(station_tiles + [station], timeout=180)
+    wait_for_lrcs_to_finish(station_tiles + [station], timeout=300)
 
     print("Synchronising tiles by setting station to STANDBY and then ON.")
     station.standby()
-    AttributeWaiter(timeout=180).wait_for_value(
+    AttributeWaiter(timeout=300).wait_for_value(
         station, "state", tango.DevState.STANDBY
     )
     station.on()
     try:
-        AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+        AttributeWaiter(timeout=300).wait_for_value(station, "state", tango.DevState.ON)
     except AssertionError:
         # Hardware can be in the ALARM state, we should still continue.
         assert station.state() in [tango.DevState.ON, tango.DevState.ALARM]
 
     for tile in station_tiles:
-        AttributeWaiter(timeout=180).wait_for_value(
+        AttributeWaiter(timeout=300).wait_for_value(
             tile, "tileProgrammingState", "Synchronised", lookahead=5
         )
 

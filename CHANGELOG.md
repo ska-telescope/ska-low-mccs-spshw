@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-361] Add job to `gitlab-ci.yml` for RAL soak testing. Runs k8s-test 10 times by default. Requires gitlab variable `SOAK_TEST=true` and nof iterations can be controlled by using the `SOAK_ITERATIONS` gitlab variable.
 * [LOW-2034] Remove unused EDA config ConfigMap
 * [THORN-353] Fixed subrack functional tests at RAL.
 * [THORN-349] Fixed spead capture functional tests at RAL.

@@ -2250,7 +2250,7 @@ class TileSimulator:
     @connected
     def load_calibration_coefficients_for_channels(
         self: TileSimulator,
-        start_channel: int,
+        first_channel: int,
         calibration_coefficients: list[list[list[complex]]],
     ) -> None:
         """
@@ -2270,13 +2270,13 @@ class TileSimulator:
         The calibration coefficients may include any rotation matrix (e.g.
         the parallitic angle), but do not include the geometric delay.
 
-        :param start_channel: Start beamformer channel for coefficients (0-383)
+        :param first_channel: Start beamformer channel for coefficients (0-383)
         :param calibration_coefficients: Calibration coefficient array
         """
-        last_channel = start_channel + len(calibration_coefficients) - 1
+        last_channel = first_channel + len(calibration_coefficients) - 1
         self.logger.debug(
             "Received calibration coefficients for channels "
-            f"{start_channel}-{last_channel}"
+            f"{first_channel}-{last_channel}"
         )
 
     @check_mocked_overheating

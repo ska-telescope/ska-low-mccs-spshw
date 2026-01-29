@@ -235,6 +235,37 @@ ral-low-stop-k8s:
     - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
     - make k8s-delete-namespace
 
+ral-low-soak-test:
+  stage: test-ral-low
+  extends: ral-low-k8s-test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SOAK_TEST == "true"'
+      when: always
+    - if: '$SOAK_TEST == "true"'
+      when: manual
+      allow_failure: false
+  environment: null
+  variables:
+    SOAK_ITERATIONS: "10"
+  before_script:
+    - is_calendar_booked --calendar RAL --expected-runtime $((SOAK_ITERATIONS / 2))h
+    - export KUBECONFIG=~/.kube/config
+    - bash src/utils/scripts/check_deployment.sh
+    - make k8s-install-chart
+    - make k8s-wait
+  script:
+    - bash src/utils/scripts/run_soak_test.sh
+  after_script:
+    - export KUBECONFIG=~/.kube/config
+    - make k8s-uninstall-chart || true
+    - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all || true
+    - make k8s-delete-namespace || true
+  artifacts:
+    name: "$CI_PROJECT_NAME-soak-$CI_JOB_ID"
+    paths:
+      - "build/reports/soak-iteration-*/"
+    when: always
+
 helmfile-lint:
   image: $SKA_K8S_TOOLS_BUILD_DEPLOY
   stage: lint

@@ -119,6 +119,7 @@ def mock_tile_builder_fixture(
         "ApplyCalibration",
         "SetBeamformerRegions",
         "LoadCalibrationCoefficients",
+        "LoadCalibrationCoefficientsForChannels",
     ]:
         builder.add_command(
             command_name, ([ResultCode.OK], [f"{command_name} completed OK."])

@@ -97,10 +97,6 @@ class TestTileComponentManager:
                 # pass a transient state UNKNOWN.
                 callbacks["component_state"].assert_call(power=power_state, fault=True)
                 callbacks["attribute_state"].assert_call(
-                    core_communication={"CPLD": False, "FPGA0": False, "FPGA1": False},
-                    lookahead=5,
-                )
-                callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNCONNECTED.pretty_name(),
                     lookahead=5,
                 )
@@ -166,10 +162,6 @@ class TestTileComponentManager:
         match power_state:
             case PowerState.ON:
                 callbacks["attribute_state"].assert_call(
-                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=5,
-                )
-                callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
                     lookahead=5,
                     consume_nonmatches=True,
@@ -214,10 +206,6 @@ class TestTileComponentManager:
                 assert tile_component_manager._tpm_status == TpmStatus.INITIALISED
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
-                callbacks["attribute_state"].assert_call(
-                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
-                )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
@@ -228,10 +216,6 @@ class TestTileComponentManager:
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 # We start in UNKNOWN so no need to assert
-                callbacks["attribute_state"].assert_call(
-                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
-                )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )

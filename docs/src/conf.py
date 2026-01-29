@@ -110,6 +110,7 @@ nitpick_ignore = [
     # In many case, we should look at refactoring so that these external
     # dependencies don't leak out through our public interface.
     ("py:exc", "LibraryError"),
+    ("py:exc", "BoardError"),
     ("py:class", "RegisterInfo"),
     ("py:class", "Angle"),
     ("py:class", "numpy.complex128"),
@@ -117,7 +118,6 @@ nitpick_ignore = [
     ("py:exc", "yaml.YAMLError"),
     ("py:class", "ska_low_sps_tpm_api.tile.Tile"),
     ("py:class", "ska_low_sps_tpm_api.tile_wrapper.Tile"),
-    ("py:exc", "LibraryError"),
     ("py:exc", "HTTPException"),  # fastapi online docs are mkdocs-based
     ("py:class", "starlette.requests.Request"),  # mkdocs-based
     ("py:class", "uvicorn.config.Config"),  # mkdocs-based

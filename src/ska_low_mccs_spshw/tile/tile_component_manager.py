@@ -1151,11 +1151,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 cpld_contacted = True
             except Exception:  # pylint: disable=broad-except
                 pass
-            if (
-                self.tile.tpm is None
-                or not self.tile.is_connected()
-                or not cpld_contacted
-            ):
+            if (self.tile.tpm is None) or (not cpld_contacted):
                 if self.power_state == PowerState.UNKNOWN:
                     return TpmStatus.UNKNOWN
                 if self.power_state != PowerState.ON:

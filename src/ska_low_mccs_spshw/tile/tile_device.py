@@ -5292,6 +5292,51 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["broadbandRfiFactor"].read()
 
+    @attribute(
+        dtype="DevString",
+        label="40G Packet Count",
+    )
+    def fortyGPacketCount(self: MccsTile) -> str:
+        """
+        Get 40G packet counts.
+
+        The return value depends on how many 40G cores are active.
+        Typically, only one core is active.
+
+        Example::
+
+            # 0 cores active
+            {}
+
+            # 1 core active
+            {
+                'FPGA0': {
+                    'rx_received': 2921,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 6973024
+                }
+            }
+
+            # 2 cores active
+            {
+                'FPGA0': {
+                    'rx_received': 3881,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 7321460
+                },
+                'FPGA1': {
+                    'rx_received': 1,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 3122
+                }
+            }
+
+        :return: Packet counts per active 40G core. Returns an empty dictionary
+                if no 40G cores are active.
+        :rtype: dict
+        """
+        return json.dumps(self.component_manager.get_40g_packet_counts())
+
     # --------
     # Commands
     # --------

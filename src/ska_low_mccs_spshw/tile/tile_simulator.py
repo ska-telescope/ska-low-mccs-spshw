@@ -1139,6 +1139,20 @@ class TileSimulator:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
 
+    @connected
+    def get_40g_packet_counts(self: TileSimulator) -> dict[str, dict[str, int]]:
+        """
+        Get 40G packet counts.
+
+        The return value depends on how many 40G cores are active.
+        Typically, only one core is active.
+
+        :return: mocked 40G packet counts.
+        """
+        return {
+            "FPGA0": {"rx_received": 1234, "rx_forwarded": 0, "tx_transmitted": 987654}
+        }
+
     @check_mocked_overheating
     @connected
     def get_tile_id(self: TileSimulator) -> int:

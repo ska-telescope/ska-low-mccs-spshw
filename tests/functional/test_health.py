@@ -147,6 +147,7 @@ def excluded_tile_attributes_fixture() -> list[str]:
     return [
         "buildState",  # Mismatch between cpp and tango args.
         "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "coreCommunicationStatus",  # skb-1089
         "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
         "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.

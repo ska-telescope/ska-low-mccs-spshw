@@ -882,6 +882,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "integratedDataTransmissionMode",
                 "antennaBufferMode",
                 "coreCommunicationStatus",
+                "timing_pll_40g_count"
             }
 
             self._health_recorder = HealthRecorder(
@@ -1474,6 +1475,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
+        if attr_value is None:
+            if name == "voltageVrefDDR1":
+                print("dsiouhdsiudh ")
+
+            self.get_device_attr().get_attr_by_name(name).set_quality(
+                tango.AttrQuality.ATTR_INVALID, 
+                True
+            )
+            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:

@@ -88,6 +88,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "track_lrc_command",
         "alarm_attribute",
         "attribute_state",
+        "fpga0_clock",
         timeout=9.0,
     )
 
@@ -1047,17 +1048,49 @@ class TestMccsTile:
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
 
+        tile_device.subscribe_event(
+            "fpga0_clocks",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["fpga0_clock"],
+        )
+        change_event_callbacks["fpga0_clock"].assert_change_event(Anything)
+        change_event_callbacks["fpga0_clock"].assert_not_called()
         tile_simulator.simulate_health_value(
             ["timing", "clocks", "FPGA0", "JESD"], None
         )
-        time.sleep(time_to_poll_attributes + 10)
+        tile_simulator.simulate_health_value(["voltages", "DDR1_VREF"], value=None)
+
+        time.sleep(time_to_poll_attributes + 60)
+        change_event_callbacks["fpga0_clock"].assert_change_event(Anything)
+
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
-                try:
-                    assert tile_device[attr].quality == tango.AttrQuality.ATTR_VALID
-                except AssertionError:
-                    print(f"{attr=} was not in quality ATTR_VALID")
-                    pytest.fail(f"{attr=} was not in quality ATTR_VALID")
+                if attr in ["fpga0_clocks", "voltageVrefDDR1"]:
+                    try:
+                        assert (
+                            tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
+                        )
+                    except AssertionError:
+                        val = tile_device[attr].value
+                        print(f"{attr=} was not in quality ATTR_INVALID {val=}")
+                        pytest.fail(f"{attr=} was not in quality ATTR_INVALID {val=}")
+                else:
+                    try:
+                        assert tile_device[attr].quality == tango.AttrQuality.ATTR_VALID
+                    except AssertionError:
+                        print(f"{attr=} was not in quality ATTR_VALID")
+                        pytest.fail(f"{attr=} was not in quality ATTR_VALID")
+        tile_simulator.simulate_health_value(
+            ["timing", "clocks", "FPGA0", "JESD"], value=True
+        )
+        tile_simulator.simulate_health_value(["voltages", "DDR1_VREF"], value=0.60)
+        print("dsoiudsoidj")
+        print(tile_device.timing)
+
+        time.sleep(time_to_poll_attributes + 10)
+        assert tile_device.healthState == HealthState.OK, tile_device.healthReport
+        print("dsdsdsdsdsdsd")
+        print(tile_device.timing)
 
     def test_healthState(
         self: TestMccsTile,

@@ -1138,6 +1138,7 @@ class TileSimulator:
         for key in path[:-1]:
             d = d[key]
         d[path[-1]] = value
+        print(f"doishd: {self._tile_health_structure=}")
 
     @check_mocked_overheating
     @connected
@@ -1615,9 +1616,9 @@ class TileSimulator:
         )
         # save values to buffer attributes
         self._antenna_buffer_tile_attribute["mode"] = mode
-        self._antenna_buffer_tile_attribute[
-            "DDR_start_address"
-        ] = ddr_start_byte_address
+        self._antenna_buffer_tile_attribute["DDR_start_address"] = (
+            ddr_start_byte_address
+        )
         self._antenna_buffer_tile_attribute["max_DDR_byte_size"] = max_ddr_byte_size
         self._antenna_buffer_tile_attribute["set_up_complete"] = True
 
@@ -1707,9 +1708,9 @@ class TileSimulator:
 
         # Save values to buffer attributes for testing
         self._antenna_buffer_tile_attribute["start_time"] = start_time
-        self._antenna_buffer_tile_attribute[
-            "timestamp_capture_duration"
-        ] = timestamp_capture_duration
+        self._antenna_buffer_tile_attribute["timestamp_capture_duration"] = (
+            timestamp_capture_duration
+        )
         self._antenna_buffer_tile_attribute["continuous_mode"] = continuous_mode
         self._antenna_buffer_tile_attribute["read_antenna_buffer"] = False
         self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = False
@@ -2865,27 +2866,27 @@ class TileSimulator:
 
         if max_board_alarm_threshold is not None:
             if _is_less_than_50(max_board_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "board_alarm_threshold"
-                ] = max_board_alarm_threshold
+                self._tpm_temperature_thresholds["board_alarm_threshold"] = (
+                    max_board_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_board_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga1_alarm_threshold is not None:
             if _is_less_than_50(max_fpga1_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga1_alarm_threshold"
-                ] = max_fpga1_alarm_threshold
+                self._tpm_temperature_thresholds["fpga1_alarm_threshold"] = (
+                    max_fpga1_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga1_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga2_alarm_threshold is not None:
             if _is_less_than_50(max_fpga2_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga2_alarm_threshold"
-                ] = max_fpga2_alarm_threshold
+                self._tpm_temperature_thresholds["fpga2_alarm_threshold"] = (
+                    max_fpga2_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga2_alarm_threshold=} not larger than 50. Doing nothing"

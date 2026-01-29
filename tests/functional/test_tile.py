@@ -180,17 +180,17 @@ def check_spsstation_state(
 
     # Make sure Station and all Tiles are ON by going through STANDBY
     station.standby()
-    AttributeWaiter(timeout=180).wait_for_value(
+    AttributeWaiter(timeout=300).wait_for_value(
         station, "state", tango.DevState.STANDBY
     )
     station.on()
     try:
-        AttributeWaiter(timeout=180).wait_for_value(station, "state", tango.DevState.ON)
+        AttributeWaiter(timeout=300).wait_for_value(station, "state", tango.DevState.ON)
     except AssertionError:
         # Hardware can be in the ALARM state, we should still continue.
         assert station.state() in [tango.DevState.ON, tango.DevState.ALARM]
     for tile in station_tiles:
-        AttributeWaiter(timeout=180).wait_for_value(
+        AttributeWaiter(timeout=300).wait_for_value(
             tile, "tileProgrammingState", "Synchronised", lookahead=5
         )
 

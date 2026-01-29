@@ -5333,7 +5333,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Packet counts per active 40G core. Returns an empty dictionary
                 if no 40G cores are active.
-        :rtype: dict
         """
         return json.dumps(self.component_manager.get_40g_packet_counts())
 

@@ -1279,9 +1279,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
-
-        :raises LibraryError: When a LibraryError is raised that does not
-            match "I2C/EEP request not accepted!"
         """
         with self._initialising():
             with acquire_timeout(
@@ -1290,21 +1287,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 if force_reprogramming:
                     if self.tile.is_programmed():
                         self.logger.info("Forcing erasing of FPGA.")
-                        try:
-                            # This is wrapped in a try except block due to a
-                            # I2C error covered in SKB-1089.
-                            # This occurs when attempting to
-                            # set an LED after erasing FPGAs.
-                            # TODO: move exception to lower levels.
-                            self.tile.erase_fpgas()
-                        except LibraryError as e:
-                            # Only capture issue covered in SKB-1089.
-                            if str(e) == "I2C/EEP request not accepted!":
-                                self.logger.error(
-                                    f"Failed erasing FPGAs: {repr(e)}", exc_info=True
-                                )
-                            else:
-                                raise
+                        # SKB-1089: This fails, needs to be captured in tpm-api level.
+                        self.tile.erase_fpgas()
                     self._tpm_status = TpmStatus.UNPROGRAMMED
                     self._update_attribute_callback(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()

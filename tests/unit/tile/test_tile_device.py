@@ -874,6 +874,7 @@ class TestMccsTile:
     def test_basic_attribute_quality(
         self: TestMccsTile,
         tile_device: DeviceProxy,
+        tile_simulator: TileSimulator,
         tile_component_manager: unittest.mock.Mock,
         poll_rate: float,
         health_attributes: list[str],
@@ -1045,8 +1046,11 @@ class TestMccsTile:
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
-        time.sleep(time_to_poll_attributes)
 
+        tile_simulator.simulate_health_value(
+            ["timing", "clocks", "FPGA0", "JESD"], None
+        )
+        time.sleep(time_to_poll_attributes + 10)
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
                 try:

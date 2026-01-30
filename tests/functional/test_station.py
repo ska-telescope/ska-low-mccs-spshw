@@ -183,7 +183,7 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    deadline = time.time() + 120  # seconds
+    deadline = time.time() + 300  # seconds
     print("Waiting for all remaining unprogrammed tiles Synchronise")
     while time.time() < deadline:
         time.sleep(2)

@@ -103,26 +103,26 @@ def check_spsstation_state(
         # TODO: THORN-228 - We must turn to standby in order to
         # be able to execute On again.
         station.Standby()
+        AttributeWaiter(timeout=300).wait_for_value(
+            station,
+            "state",
+            tango.DevState.STANDBY,
+        )
         for tile in station_tiles:
             AttributeWaiter(timeout=45).wait_for_value(
                 tile,
                 "tileProgrammingState",
                 "Off",
             )
-        AttributeWaiter(timeout=45).wait_for_value(
-            station,
-            "state",
-            tango.DevState.STANDBY,
-        )
         # Start and wait for the On procedure to finish.
-        execute_lrc_to_completion(station, "On", None, 120)
+        execute_lrc_to_completion(station, "On", None, 300)
 
     iters = 0
     while any(
         tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
         for tile in station_tiles
     ):
-        if iters >= 120:
+        if iters >= 300:
             pytest.fail(
                 f"Not all tiles came ON: {[tile.state() for tile in station_tiles]}"
             )

@@ -2304,7 +2304,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> coefficients.insert(0, float(first_channel))
         >>> input = list(itertools.chain.from_iterable(coefficients))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("LoadCalibrationCoefficients", input)
+        >>> dp.command_inout("LoadCalibrationCoefficientsForChannels", input)
         """
         if len(argin) < 2047:
             self.logger.error("Insufficient calibration coefficients")

@@ -2247,8 +2247,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self.component_manager.load_calibration_coefficients(argin)
 
-        # handler = self.get_command_object("LoadCalibrationCoefficients")
-        # (return_code, message) = handler(argin)
         return ([ResultCode.OK], ["LoadCalibrationCoefficients command completed OK"])
 
     @command(
@@ -2316,14 +2314,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
             raise ValueError("Incomplete specification of coefficient")
 
-        # self.component_manager.load_calibration_coefficients_for_channels(argin)
         handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
         (return_code, message) = handler(argin)
         return (return_code, message)
-        # return (
-        #     [ResultCode.OK],
-        #     ["LoadCalibrationCoefficientsForChannels command completed OK"]
-        # )
 
     @command(
         dtype_in="DevString",

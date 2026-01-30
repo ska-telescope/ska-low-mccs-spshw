@@ -3073,20 +3073,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.debug(
             "TileComponentManager: load_calibration_coefficients_for_channels"
         )
-        with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
-            if acquired:
-                try:
-                    self.tile.load_calibration_coefficients_for_channels(
-                        start_channel, calibration_coefficients
-                    )
-                # pylint: disable=broad-except
-                except Exception as e:
-                    return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
-                    )
-            else:
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.load_calibration_coefficients_for_channels(
+                    start_channel, calibration_coefficients
+                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                return (
+                    ResultCode.FAILED,
+                    f"TileComponentManager: Tile access failed: {e}",
+                )
 
         return (
             ResultCode.OK,

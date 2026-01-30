@@ -6908,7 +6908,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            if len(argin) < 128:
+            if len(argin) < 129:
                 self.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 128 != 0:
@@ -6918,6 +6918,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 )
                 raise ValueError("Incomplete specification of coefficient")
             start_channel = int(argin[0])
+            if (start_channel < 0) or (start_channel > 383):
+                raise ValueError("Start channel outside of range 0-383")
             calibration_coefficients = [
                 [
                     [

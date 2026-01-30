@@ -2904,7 +2904,7 @@ class SpsStationComponentManager(
             Dimension of polarizations is 4.
         """
         start_channel = calibration_coefficients[0]
-        coefficients = np.array(calibration_coefficients[1:]).reshape([-1, 256, 4])
+        coefficients = np.array(calibration_coefficients[1:]).reshape([-1, 256, 8])
         for t, proxy in enumerate(self._tile_proxies.values()):
             tile_coefficients = [start_channel] + list(
                 coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1])

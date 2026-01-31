@@ -2889,8 +2889,10 @@ class SpsStationComponentManager(
         proxy.LoadCalibrationCoefficients(list(coefs))
 
     def load_calibration_coefficients_for_channels(
-        self: SpsStationComponentManager, calibration_coefficients: list[float]
-    ) -> None:
+        self: SpsStationComponentManager,
+        calibration_coefficients: list[float],
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """
         Load calibration coefficients for all antennas and specific channels.
 
@@ -2902,15 +2904,52 @@ class SpsStationComponentManager(
             flattened into a list.
             Dimension of antennas is 256, in tile antenna order,
             Dimension of polarizations is 4.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
         """
-        start_channel = calibration_coefficients[0]
+        return self.submit_task(
+            self._load_calibration_coefficients_for_channels,
+            args=[calibration_coefficients],
+            task_callback=task_callback,
+        )
+
+    def _load_calibration_coefficients_for_channels(
+        self: SpsStationComponentManager,
+        calibration_coefficients: list[float],
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Load calibration coefficients for all antennas and specific channels.
+
+        :param calibration_coefficients: a tridimensional complex array of
+            coefficients, indexed by channels, antennas, polarizations,
+            flattened into a list. First element is first channel.
+            Dimension of antennas is 256, in tile antenna order,
+            Dimension of polarizations is 4.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        first_channel = calibration_coefficients[0]
         coefficients = np.array(calibration_coefficients[1:]).reshape([-1, 256, 8])
         for t, proxy in enumerate(self._tile_proxies.values()):
-            tile_coefficients = [start_channel] + list(
+            tile_coefficients = [first_channel] + list(
                 coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1])
             )
             assert proxy._proxy is not None
             proxy._proxy.LoadCalibrationCoefficientsForChannels(tile_coefficients)
+
+        message = "Calibration coefficients loaded into all Tiles successfully."
+        result_code = ResultCode.OK
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(result_code, message),
+            )
 
     def apply_calibration(
         self: SpsStationComponentManager, switch_time: str

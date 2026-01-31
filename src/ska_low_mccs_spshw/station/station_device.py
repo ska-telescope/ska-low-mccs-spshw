@@ -2316,7 +2316,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
         (return_code, message) = handler(argin)
-        return (return_code, message)
+        return ([return_code], [message])
 
     @command(
         dtype_in="DevString",

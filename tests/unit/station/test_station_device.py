@@ -1021,7 +1021,7 @@ def test_Standby(
         ),
         pytest.param(
             "LoadCalibrationCoefficientsForChannels",
-            [2.0] + [3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4] * 16,
+            [2.0] + [3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4] * 256,
             "LoadCalibrationCoefficientsForChannels",
             [2.0] + [3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4] * 16,
         ),

@@ -2442,7 +2442,9 @@ class TestMccsTileCommands:
 
         # test exception with wrong number of elements
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = on_tile_device.LoadCalibrationCoefficientsForChannels(coefficients[0:128])
+            _ = on_tile_device.LoadCalibrationCoefficientsForChannels(
+                coefficients[0:128]
+            )
 
         # test exception with negative first channel
         coefficients[0] = float(-1)

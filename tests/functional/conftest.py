@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterator
 from unittest.mock import patch
 
 import _pytest
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode
@@ -72,6 +73,38 @@ def pytest_addoption(
             "run HW only tests"
         ),
     )
+
+
+@pytest.fixture(name="nof_antennas")
+def nof_antennas_fixture() -> int:
+    """
+    Fixture for the number of antennas per tile.
+
+    :returns: Number of antennas (16).
+    """
+    return 16
+
+
+@pytest.fixture(name="nof_channels")
+def nof_channels_fixture() -> int:
+    """
+    Fixture for the number of channels.
+
+    :returns: Number of channels (384).
+    """
+    return 384
+
+
+@pytest.fixture(name="nof_pols")
+def nof_pols_fixture() -> int:
+    """
+    Fixture for the number of polarizations.
+
+    Includes cross-pol terms.
+
+    :returns: Number of polarizations (4).
+    """
+    return 4
 
 
 @pytest.fixture(name="stations_devices_exported")
@@ -839,3 +872,25 @@ def wait_for_lrcs_to_finish_fixture() -> Callable:
                     )
 
     return _wait_for_lrcs_to_finish
+
+
+@pytest.fixture(name="calibration_coefficients")
+def calibration_coefficients_fixture(
+    nof_channels: int, nof_antennas: int, nof_pols: int
+) -> list[list[list[list[float]]]]:
+    """
+    Return a list of calibration coefficients.
+
+    :param nof_channels: Number of channels.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_pols: Number of polarizations.
+
+    :returns: A list of calibration coefficients.
+    """
+    # List of floats nof_channels*nof_antennas*nof_pols*2 (real, imag)
+    calibration_coefficients = (
+        np.arange(nof_channels * nof_antennas * nof_pols * 2)
+        .reshape(nof_channels, nof_antennas, nof_pols, 2)
+        .tolist()
+    )
+    return calibration_coefficients

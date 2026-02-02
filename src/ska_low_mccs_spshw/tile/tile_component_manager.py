@@ -4551,53 +4551,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             return self.tile.get_40g_packet_counts()
 
-    def load_calibration_coefficients_for_channels(
-        self: TileComponentManager,
-        first_channel: int,
-        calibration_coefficients: np.ndarray,
-    ) -> None:
-        """
-        Load calibration coefficients for all antennas and specific channels.
-
-        ``calibration_coefficients`` is a tri-dimensional complex array of the form
-        ``calibration_coefficients[channel, antennam, polarization]``, with each
-        element representing a normalized coefficient, with (1.0, 0.0) the normal,
-        expected response for an ideal antenna.
-
-        ``channel`` is the index specifying the channels at the beamformer output,
-        i.e. considering only those channels actually processed and beam assignments.
-        First channel is specified in the parameter, the number of channels is
-        determined by the array shape.
-
-        ``antenna`` is the antenna index, ranging 0 to 15.
-
-        The polarization index ranges from 0 to 3.
-
-        - 0: X polarization direct element
-        - 1: X->Y polarization cross element
-        - 2: Y->X polarization cross element
-        - 3: Y polarization direct element
-
-        The calibration coefficients may include any rotation matrix (e.g.
-        the parallitic angle), but do not include the geometric delay.
-
-        :param first_channel: First channel index at the beamformer output for
-            which calibration coefficients are provided.
-        :param calibration_coefficients: Calibration coefficient array
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            self.tile.load_calibration_coefficients_for_channels(
-                first_channel=first_channel,
-                calibration_coefficients=calibration_coefficients,
-            )
-
     def read_all_staged_calibration_coefficients(
         self: TileComponentManager,
-    ) -> np.ndarray:
+    ) -> list[list[list[complex]]]:
         """
         Read all staged calibration coefficients from the TPM.
 
@@ -4612,7 +4568,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def read_all_live_calibration_coefficients(
         self: TileComponentManager,
-    ) -> np.ndarray:
+    ) -> list[list[list[complex]]]:
         """
         Read all live calibration coefficients from the TPM.
 

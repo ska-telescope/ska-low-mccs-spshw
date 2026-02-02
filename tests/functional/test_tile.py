@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, Generator
 
 import numpy as np
 import pytest
@@ -79,6 +79,22 @@ def test_tile_synchronised_recover(
 
 @scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
 def test_tile_initialised_recover(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/tile.feature", "Apply and read back staged calibration coefficients"
+)
+def test_apply_read_staged_cal_coeffs(
     stations_devices_exported: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -331,6 +347,83 @@ def tile_start_data_acq(
         time.sleep(1)
         timeout = timeout + 1
     assert timeout <= 60, "Tiles didn't synchronise"
+
+
+@when("I stage calibration coefficients on the Tile")
+def stage_calibration_coefficients_on_tile(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+) -> Generator:
+    """
+    Stage calibration coefficients on the Tile.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A 4D list of
+        calibration coefficients for a Tile. List of floats.
+        channel * antenna * pol * (real, imag)
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+
+    :yields: Control to the test.
+    """
+    # Store original cal.
+    original_staged_cal: list[list[list[list[float]]]] = json.loads(
+        tile_device.allStagedCal
+    )
+    for antenna in range(nof_antennas):
+        # Only loads for one antenna at a time.
+        # 8 values per channel for an antenna.
+        # nof_channels * nof_pols * 2 values total plus antenna number prepended.
+        # Extract all channels for this specific antenna
+        cal_to_stage = [antenna] + np.array(
+            [calibration_coefficients[ch][antenna] for ch in range(nof_channels)]
+        ).ravel().tolist()
+        tile_device.LoadCalibrationCoefficients(cal_to_stage)
+
+    yield
+
+    # Restore original cal
+    for antenna in range(nof_antennas):
+        cal_to_stage = [antenna] + np.array(
+            [original_staged_cal[ch][antenna] for ch in range(nof_channels)]
+        ).ravel().tolist()
+        tile_device.LoadCalibrationCoefficients(cal_to_stage)
+
+    try:
+        assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
+            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
+        )
+    except AssertionError:
+        pytest.fail("Could not validate restoration of original staged calibration.")
+
+
+@then("the applied calibration coefficients can be read back correctly from the Tile")
+def read_and_compare_staged_calibration(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+    nof_pols: int,
+) -> None:
+    """
+    Read back and compare staged calibration on Tile.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A flattened list of
+        calibration coefficients for a Tile.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+    :param nof_pols: Number of polarizations.
+    """
+    expected_length = nof_channels * nof_antennas * nof_pols * 2
+    expected_cal_1d = np.array(calibration_coefficients).ravel().tolist()
+    assert len(expected_cal_1d) == expected_length
+    actual_cal_1d = np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
+    assert len(actual_cal_1d) == expected_length
+
+    assert actual_cal_1d == pytest.approx(expected_cal_1d)
 
 
 @then(parsers.cfparse("the Tile comes up in the defined {programming_state} state"))

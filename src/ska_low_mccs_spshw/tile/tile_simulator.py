@@ -1116,12 +1116,13 @@ class TileSimulator:
             i: False for i in range(TileData.ANTENNA_COUNT)
         }
         self._broadband_rfi_factor: float = 1.0
-        self._staged_calibration_coefficients: np.ndarray = np.zeros(
-            (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=complex
-        )
-        self._live_calibration_coefficients: np.ndarray = np.zeros(
-            (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=complex
-        )
+        # Pols*2 for cross pol terms. (Should it technically be **2?)
+        self._staged_calibration_coefficients: list[list[list[complex]]] = np.zeros(
+            (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA * 2), dtype=complex
+        ).tolist()
+        self._live_calibration_coefficients: list[list[list[complex]]] = np.ones(
+            (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA * 2), dtype=complex
+        ).tolist()
 
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
@@ -2239,55 +2240,60 @@ class TileSimulator:
             self._is_last = is_last
         return self._is_set_first_last_tile_write_successful
 
-    @connected
-    def load_calibration_coefficients_for_channels(
-        self: TileSimulator,
-        first_channel: int,
-        calibration_coefficients: np.ndarray,
-    ) -> None:
-        """
-        Load calibration coefficients for all antennas and specific channels.
+    # Gianni is implementing this in THORN-372.
+    # TODO: I'll uncomment and update this once it's merged.
+    # @connected
+    # def load_calibration_coefficients_for_channels(
+    #     self: TileSimulator,
+    #     first_channel: int,
+    #     calibration_coefficients: np.ndarray,
+    # ) -> None:
+    #     """
+    #     Load calibration coefficients for all antennas and specific channels.
 
-        ``calibration_coefficients`` is a tri-dimensional complex array of the form
-        ``calibration_coefficients[channel, antennam, polarization]``, with each
-        element representing a normalized coefficient, with (1.0, 0.0) the normal,
-        expected response for an ideal antenna.
+    #     ``calibration_coefficients`` is a tri-dimensional complex array of the form
+    #     ``calibration_coefficients[channel, antennam, polarization]``, with each
+    #     element representing a normalized coefficient, with (1.0, 0.0) the normal,
+    #     expected response for an ideal antenna.
 
-        ``channel`` is the index specifying the channels at the beamformer output,
-        i.e. considering only those channels actually processed and beam assignments.
-        First channel is specified in the parameter, the number of channels is
-        determined by the array shape.
+    #     ``channel`` is the index specifying the channels at the beamformer output,
+    #     i.e. considering only those channels actually processed and beam assignments.
+    #     First channel is specified in the parameter, the number of channels is
+    #     determined by the array shape.
 
-        ``antenna`` is the antenna index, ranging 0 to 15.
+    #     ``antenna`` is the antenna index, ranging 0 to 15.
 
-        The polarization index ranges from 0 to 3.
+    #     The polarization index ranges from 0 to 3.
 
-        - 0: X polarization direct element
-        - 1: X->Y polarization cross element
-        - 2: Y->X polarization cross element
-        - 3: Y polarization direct element
+    #     - 0: X polarization direct element
+    #     - 1: X->Y polarization cross element
+    #     - 2: Y->X polarization cross element
+    #     - 3: Y polarization direct element
 
-        The calibration coefficients may include any rotation matrix (e.g.
-        the parallitic angle), but do not include the geometric delay.
+    #     The calibration coefficients may include any rotation matrix (e.g.
+    #     the parallitic angle), but do not include the geometric delay.
 
-        :param first_channel: First channel index at the beamformer output for
-            which calibration coefficients are provided.
-        :param calibration_coefficients: Calibration coefficient array
-        """
-        num_channels = calibration_coefficients.shape[0]
-        self._staged_calibration_coefficients[
-            first_channel : first_channel + num_channels, :, :
-        ] = calibration_coefficients
-        self.logger.debug(
-            f"Simulator received calibration coefficients for channels "
-            f"{first_channel} to "
-            f"{first_channel + num_channels - 1}"
-        )
+    #     :param first_channel: First channel index at the beamformer output for
+    #         which calibration coefficients are provided.
+    #     :param calibration_coefficients: Calibration coefficient array
+    #     """
+    #     num_channels = calibration_coefficients.shape[0]
+    #     # Properly assign calibration coefficients for the specified channel range
+    #     for i in range(num_channels):
+    #         for antenna in range(calibration_coefficients.shape[1]):
+    #             self._staged_calibration_coefficients[first_channel + i][
+    #                 antenna
+    #             ] = calibration_coefficients[i, antenna].tolist()
+    #     self.logger.debug(
+    #         f"Simulator received calibration coefficients for channels "
+    #         f"{first_channel} to "
+    #         f"{first_channel + num_channels - 1}"
+    #     )
 
     @connected
     def read_all_staged_calibration_coefficients(
         self: TileSimulator,
-    ) -> np.ndarray:
+    ) -> list[list[list[complex]]]:
         """
         Read all staged calibration coefficients.
 
@@ -2298,7 +2304,7 @@ class TileSimulator:
     @connected
     def read_all_live_calibration_coefficients(
         self: TileSimulator,
-    ) -> np.ndarray:
+    ) -> list[list[list[complex]]]:
         """
         Read all live calibration coefficients.
 
@@ -2329,9 +2335,24 @@ class TileSimulator:
         the parallitic angle), but do not include the geometric delay.
 
         :param antenna: Antenna number (0-15)
-        :param calibration_coefficients: Calibration coefficient array
+        :param calibration_coefficients: Calibration coefficient array (384x4 complex)
+
+        :raises ValueError: If inputs do not pass validation.
         """
-        self._staged_calibration_coefficients[:, antenna, :] = calibration_coefficients
+        # Validate input dimensions
+        if len(calibration_coefficients) != 384:
+            raise ValueError(
+                f"Expected 384 channels, got {len(calibration_coefficients)}"
+            )
+        if any(len(ch) != 4 for ch in calibration_coefficients):
+            raise ValueError("Each channel must have exactly 4 polarization values")
+
+        # Assign calibration coefficients for this antenna across all channels
+        for channel in range(len(calibration_coefficients)):
+            self._staged_calibration_coefficients[channel][
+                antenna
+            ] = calibration_coefficients[channel]
+
         self.logger.debug(
             f"Simulator received calibration coefficients for antenna {antenna}"
         )

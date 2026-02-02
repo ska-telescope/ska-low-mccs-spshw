@@ -2435,38 +2435,6 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="ValueError"):
             _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
-    def test_LoadCalibrationCoefficientsForChannels(
-        self: TestMccsTileCommands,
-        on_tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
-    ) -> None:
-        """
-        Test for LoadCalibrationCoefficientsForChannels.
-
-        :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
-        """
-        # Expect a flat array, first num = first_channel
-        # Rest of the array is 4 pol values (each a complex number) per antenna.
-        coefficients = [1.2, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9] * 16
-
-        # check that it can execute without exception - Add element for first_channel
-        _ = on_tile_device.LoadCalibrationCoefficientsForChannels([1] + coefficients)
-
-        with pytest.raises(DevFailed, match="ValueError"):
-            _ = on_tile_device.LoadCalibrationCoefficientsForChannels(
-                [1] + coefficients[0:8]
-            )
-
-        with pytest.raises(DevFailed, match="ValueError"):
-            _ = on_tile_device.LoadCalibrationCoefficientsForChannels(
-                [-1] + coefficients
-            )
-
     def test_AntennaBuffer(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,

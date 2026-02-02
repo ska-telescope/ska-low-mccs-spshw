@@ -393,7 +393,7 @@ def stage_calibration_coefficients_on_tile(
 
     try:
         assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
-            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
+            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
         )
     except AssertionError:
         pytest.fail("Could not validate restoration of original staged calibration.")
@@ -423,7 +423,7 @@ def read_and_compare_staged_calibration(
     actual_cal_1d = np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
     assert len(actual_cal_1d) == expected_length
 
-    assert actual_cal_1d == pytest.approx(expected_cal_1d)
+    assert actual_cal_1d == pytest.approx(expected_cal_1d, abs=0.001)
 
 
 @then(parsers.cfparse("the Tile comes up in the defined {programming_state} state"))

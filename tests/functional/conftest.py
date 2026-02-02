@@ -881,16 +881,29 @@ def calibration_coefficients_fixture(
     """
     Return a list of calibration coefficients.
 
+    Calibration coefficients should be normalized complex values around 1.0+0j,
+    representing the antenna response. This fixture generates the same
+    calibration for all channels, with each antenna having a unique value:
+    antenna 1 (index 0) = 0.1+0j, antenna 2 (index 1) = 0.2+0j, ...,
+    antenna 16 (index 15) = 1.6+0j. All polarizations for an antenna use
+    the same value.
+
     :param nof_channels: Number of channels.
     :param nof_antennas: Number of antennas per tile.
     :param nof_pols: Number of polarizations.
 
     :returns: A list of calibration coefficients.
     """
-    # List of floats nof_channels*nof_antennas*nof_pols*2 (real, imag)
-    calibration_coefficients = (
-        np.arange(nof_channels * nof_antennas * nof_pols * 2)
-        .reshape(nof_channels, nof_antennas, nof_pols, 2)
-        .tolist()
+    # Create array with shape (nof_channels, nof_antennas, nof_pols, 2)
+    calibration_coefficients = np.zeros(
+        (nof_channels, nof_antennas, nof_pols, 2), dtype=float
     )
-    return calibration_coefficients
+
+    # Set same calibration for all channels
+    # Each antenna gets value (antenna_index + 1) * 0.1 as the real component
+    for antenna in range(nof_antennas):
+        antenna_value = (antenna + 1) * 0.1  # 0.1, 0.2, 0.3, ..., 1.6
+        calibration_coefficients[:, antenna, :, 0] = antenna_value  # Real part
+        calibration_coefficients[:, antenna, :, 1] = 0.0  # Imaginary part
+
+    return calibration_coefficients.tolist()

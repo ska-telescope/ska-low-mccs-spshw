@@ -3735,6 +3735,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return False
         return True
 
+    def _check_initialised_for_write(
+        self: MccsTile, req_type: tango.AttReqType
+    ) -> bool:
+        """
+        Return a flag representing whether we are allowed to access the attribute.
+
+        :param req_type: the request type
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        return self._is_initialised(req_type)
+
     def _is_initialised(self: MccsTile, *args: Any) -> bool:
         """
         Return a flag representing whether we are in Initialised state.
@@ -3800,7 +3814,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=2,
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
@@ -3982,7 +3996,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def phaseTerminalCount(self: MccsTile) -> int:
         """
@@ -4167,7 +4181,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         archive_abs_change=1,
         abs_change=1,
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def staticTimeDelays(self: MccsTile) -> list[int]:
         """
@@ -4196,7 +4210,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=384,
         archive_abs_change=1,
         abs_change=1,
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
@@ -4244,7 +4258,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         abs_change=0.1,
         archive_abs_change=0.1,
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def preaduLevels(self: MccsTile) -> list[float]:
         """
@@ -4537,7 +4551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="cspSpeadFormat",
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def cspSpeadFormat(self: MccsTile) -> str:
         """

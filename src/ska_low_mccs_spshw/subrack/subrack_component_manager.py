@@ -335,7 +335,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
         self.pdu_proxy = (
             None
-            if simulated_pdu
+            if simulated_pdu or not pdu_trl
             else _PDUProxy(
                 pdu_trl,
                 logger,

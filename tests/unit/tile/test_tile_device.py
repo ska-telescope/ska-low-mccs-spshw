@@ -1371,7 +1371,7 @@ class TestMccsTile:
             in str(excinfo.value)
             or (
                 "To execute this command we must be in state "
-                "'Programmed', 'Initialised' or 'Synchronised'!"
+                "'Initialised' or 'Synchronised'!"
             )
             in str(excinfo.value)
         )

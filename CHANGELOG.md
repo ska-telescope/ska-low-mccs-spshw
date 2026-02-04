@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation
 * [THORN-389] Bumping TPM FPGA firmware version to 9.0.0
   * Increased bitwidth of subarray and substation ID
   * Calibration coefficients are automatically copied back when banks are switched

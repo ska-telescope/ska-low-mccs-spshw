@@ -242,7 +242,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._simulation_mode = simulation_mode
         self._default_lock_timeout = default_lock_timeout
-        self._hardware_lock = LogLock(f"tpm{tile_id:02d}lock", logger)
+        self._hardware_lock = LogLock(
+            f"tpm{tile_id:02d}lock",
+            logger,
+            timeout_warning=default_lock_timeout / 2,
+        )
         # This TaskExecutor is used to check the synchronisation state
         # of the TPM.
         self._synchronised_checker = TaskExecutor(max_workers=1)

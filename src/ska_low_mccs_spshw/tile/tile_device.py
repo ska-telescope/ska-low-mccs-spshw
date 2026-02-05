@@ -1320,10 +1320,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param db_configuration_fault: a tuple with status and information
             about whether we are experiencing a configuration fault.
         """
-        if power in [PowerState.OFF, PowerState.UNKNOWN]:
-            for attr in self._attribute_state.values():
-                attr.mark_stale()
-
         if power is not None:
             self.power_state = power
         if fault is not None:
@@ -1333,7 +1329,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Propagate power state to base implementation
         super()._component_state_changed(power=power)
+        # Ensure any attribute updates are processed before
+        # marking attribute as INVALID.
+        self.ExecutePendingOperations()
 
+        if power in [PowerState.OFF, PowerState.UNKNOWN]:
+            for attr in self._attribute_state.values():
+                attr.mark_stale()
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(

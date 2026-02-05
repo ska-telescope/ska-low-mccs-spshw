@@ -23,6 +23,7 @@ SIMULATOR_ONLY_METHODS = [
     "mock_on",
     "mock_off",
     "cleanup",
+    "simulate_health_value",
     "_timed_thread",
     "_TileSimulator__is_connectable",  # mangled
     "evaluate_mcu_action",

@@ -956,6 +956,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
             ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
             ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
+            (
+                "LoadCalibrationCoefficientsForChannels",
+                self.LoadCalibrationCoefficientsForChannelsCommand,
+            ),
             ("ApplyCalibration", self.ApplyCalibrationCommand),
             ("LoadPointingDelays", self.LoadPointingDelaysCommand),
             ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
@@ -6937,6 +6941,130 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
         handler = self.get_command_object("LoadCalibrationCoefficients")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class LoadCalibrationCoefficientsForChannelsCommand(FastCommand):
+        """Class for handling the LoadCalibrationCoefficients(argin) command."""
+
+        def __init__(
+            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new LoadCalibrationCoefficientsForChannelsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
+            argin: list[float],
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficientsForChannels` cmd.
+
+            :param argin: calibration coefficients
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
+            """
+            if len(argin) < 129:
+                self.logger.error("Insufficient calibration coefficients")
+                raise ValueError("Insufficient calibration coefficients")
+            if len(argin[1:]) % 128 != 0:
+                self.logger.error(
+                    "Incomplete specification of coefficient. "
+                    "Needs 8 values (4 complex Jones) per channeli per antenna"
+                )
+                raise ValueError("Incomplete specification of coefficient")
+            start_channel = int(argin[0])
+            if (start_channel < 0) or (start_channel > 383):
+                raise ValueError("Start channel outside of range 0-383")
+            calibration_coefficients = [
+                [
+                    [
+                        complex(argin[ant + i], argin[ant + i + 1]),
+                        complex(argin[ant + i + 2], argin[ant + i + 3]),
+                        complex(argin[ant + i + 4], argin[ant + i + 5]),
+                        complex(argin[ant + i + 6], argin[ant + i + 7]),
+                    ]
+                    for ant in range(0, 128, 8)
+                ]
+                for i in range(1, len(argin), 128)
+            ]
+
+            (
+                result,
+                message,
+            ) = self._component_manager.load_calibration_coefficients_for_channels(
+                start_channel, calibration_coefficients
+            )
+            return (result, message)
+
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
+    def LoadCalibrationCoefficientsForChannels(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
+        """
+        Load the calibration coefficients, but does not apply them.
+
+        This is performed by apply_calibration.
+        The calibration coefficients may include any rotation
+        matrix (e.g. the parallactic angle), but do not include the geometric delay.
+
+        :param argin: list comprises:
+
+        * start_channe - (int) is the first channel to which the coefficientsr
+            will be applied.
+        * calibration_coefficients - [array] a tridimensional complex array comprising
+            calibration_coefficients[channel, antenna, polarization], with each element
+            representing a normalized coefficient, with (1.0, 0.0) being the
+            normal, expected response for an ideal antenna.
+
+            * channel - (int) channel is the index specifying the channels at the
+                              beamformer output, i.e. considering only those channels
+                              actually processed and beam assignments.
+            * antenna - index ranging 0 to 16, for the 16 antennas managed by the tile
+            * polarization index ranges from 0 to 3.
+
+                * 0: X polarization direct element
+                * 1: X->Y polarization cross element
+                * 2: Y->X polarization cross element
+                * 3: Y polarization direct element
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> start_channel = 2
+        >>> complex_coefficients =[[[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*16]*4
+        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
+        >>> out = ([v.real, v.imag] for v in inp]
+        >>> coefficients = list(itertools.chain.from_iterable(out))
+        >>> coefficients.insert(0, float(start_channel))
+        >>> input = list(itertools.chain.from_iterable(coefficients))
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadCalibrationCoefficientsForChannels", input)
+        """
+        handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

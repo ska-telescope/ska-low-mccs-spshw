@@ -2003,6 +2003,33 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         tile_component_manager.apply_calibration(iso_date)
 
+    def test_load_calibration_coefficients_for_channels(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the load_calibration_coefficients function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        t_s = tile_simulator  # to shorten the name
+        t_s.connect()
+        t_s.load_calibration_coefficients_for_channels = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
+
+        cal_coefs = [[[complex(3, 3), complex(4, 4), complex(5, 5), complex(6, 6)]]]
+        tile_component_manager.load_calibration_coefficients_for_channels(3, cal_coefs)
+        t_s.load_calibration_coefficients_for_channels.assert_called_with(3, cal_coefs)
+
+        # Check that thrown exception are caught when thrown.
+        t_s.load_calibration_coefficients_for_channels.side_effect = Exception(
+            "mocked exception"
+        )
+        tile_component_manager.load_calibration_coefficients_for_channels(3, cal_coefs)
+
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         "delay_array, beam_index, expected_delay",

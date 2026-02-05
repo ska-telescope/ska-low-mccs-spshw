@@ -318,6 +318,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "trigger_adc_equalisation",
                 trigger_adc_equalisation_schema,
             ),
+            (
+                "LoadCalibrationCoefficientsForChannels",
+                "load_calibration_coefficients_for_channels",
+                None,
+            ),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
             ("RunTest", "run_test", run_test_schema),
@@ -2242,9 +2247,76 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self.component_manager.load_calibration_coefficients(argin)
 
-        # handler = self.get_command_object("LoadCalibrationCoefficients")
-        # (return_code, message) = handler(argin)
         return ([ResultCode.OK], ["LoadCalibrationCoefficients command completed OK"])
+
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+    )
+    def LoadCalibrationCoefficientsForChannels(
+        self: SpsStation, argin: list[float]
+    ) -> DevVarLongStringArrayType:
+        """
+        Load the calibration coefficients, but does not apply them.
+
+        This is performed by apply_calibration.
+        The calibration coefficients may include any rotation
+        matrix (e.g. the parallactic angle), but do not include the geometric delay.
+
+        :param argin: list comprises:
+
+        * first_channel - (int) is the first channel in the block of channels
+            to which the coefficients will be applied.
+        * calibration_coefficients - [array] a flatteded tridimensional complex
+            array comprising calibration_coefficients[channel, antenna, pol],
+            with each element representing a normalized coefficient, with
+            (1.0, 0.0) being the normal, expected response for an ideal antenna.
+
+            * channel - (int) channel is the index specifying the channels at the
+                              beamformer output, i.e. considering only those
+                              channels actually processed and beam assignments.
+
+            * antenna - (int) antenna index ranging from 0 to 255, in
+                              (tile, antenna) order
+
+            * polarization index ranges from 0 to 3.
+
+                * 0: X polarization direct element
+                * 1: X->Y polarization cross element
+                * 2: Y->X polarization cross element
+                * 3: Y polarization direct element
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :raises ValueError: if parameters are illegal or inconsistent
+
+        :example:
+
+        >>> first_channel = 8
+        >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*256*8
+        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
+        >>> out = ([v.real, v.imag] for v in inp]
+        >>> coefficients = list(itertools.chain.from_iterable(out))
+        >>> coefficients.insert(0, float(first_channel))
+        >>> input = list(itertools.chain.from_iterable(coefficients))
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadCalibrationCoefficientsForChannels", input)
+        """
+        if len(argin) < 2047:
+            self.logger.error("Insufficient calibration coefficients")
+            raise ValueError("Insufficient calibration coefficients")
+        if len(argin) % 2048 != 1:
+            self.logger.error(
+                "Incomplete specification of coefficient. "
+                "Needs 8 values (4 complex Jones) per channel per antenna"
+            )
+            raise ValueError("Incomplete specification of coefficient")
+
+        handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
     @command(
         dtype_in="DevString",

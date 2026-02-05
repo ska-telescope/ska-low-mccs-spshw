@@ -530,9 +530,7 @@ def switch_active_calibration_bank(
     tile_device.ApplyCalibration("")
 
 
-@then(
-    "the staged calibration coefficients match the original live calibration coefficients"
-)
+@then("the staged calibration matches the original live calibration")
 def compare_new_staged_with_original_live_calibration(
     tile_device: tango.DeviceProxy,
     original_live_cal: list[list[list[list[float]]]],

@@ -1411,7 +1411,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if mark_invalid or alarms is None:
             for alarm_name, _ in self.__alarm_attribute_map.items():
-                self._attribute_state[alarm_name].mark_stale()
+                self.logger.warning(
+                    f"Unable to read {alarm_name}, logging as invalid. "
+                    "However, attribute value is "
+                    f"last known value: {self._attribute_state[alarm_name].read()}"
+                )
         else:
             for alarm_name, alarm_path in self.__alarm_attribute_map.items():
                 alarm_value = alarms.get(alarm_path)

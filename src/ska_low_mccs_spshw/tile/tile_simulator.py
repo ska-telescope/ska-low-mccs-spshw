@@ -2240,55 +2240,57 @@ class TileSimulator:
             self._is_last = is_last
         return self._is_set_first_last_tile_write_successful
 
-    # Gianni is implementing this in THORN-372.
-    # TODO: I'll uncomment and update this once it's merged.
-    # @connected
-    # def load_calibration_coefficients_for_channels(
-    #     self: TileSimulator,
-    #     first_channel: int,
-    #     calibration_coefficients: np.ndarray,
-    # ) -> None:
-    #     """
-    #     Load calibration coefficients for all antennas and specific channels.
+    @connected
+    def load_calibration_coefficients_for_channels(
+        self: TileSimulator,
+        first_channel: int,
+        calibration_coefficients: list[list[list[complex]]],
+    ) -> None:
+        """
+        Load calibration coefficients for all antennas and specific channels.
 
-    #     ``calibration_coefficients`` is a tri-dimensional complex array of the form
-    #     ``calibration_coefficients[channel, antennam, polarization]``, with each
-    #     element representing a normalized coefficient, with (1.0, 0.0) the normal,
-    #     expected response for an ideal antenna.
+        ``calibration_coefficients`` is a tri-dimensional complex array of the form
+        ``calibration_coefficients[channel, antenna, polarization]``, with each
+        element representing a normalized coefficient, with (1.0, 0.0) the normal,
+        expected response for an ideal antenna.
 
-    #     ``channel`` is the index specifying the channels at the beamformer output,
-    #     i.e. considering only those channels actually processed and beam assignments.
-    #     First channel is specified in the parameter, the number of channels is
-    #     determined by the array shape.
+        ``channel`` is the index specifying the channels at the beamformer output,
+        i.e. considering only those channels actually processed and beam assignments.
+        First channel is specified in the parameter, the number of channels is
+        determined by the array shape.
 
-    #     ``antenna`` is the antenna index, ranging 0 to 15.
+        ``antenna`` is the antenna index, ranging 0 to 15.
 
-    #     The polarization index ranges from 0 to 3.
+        The polarization index ranges from 0 to 3.
 
-    #     - 0: X polarization direct element
-    #     - 1: X->Y polarization cross element
-    #     - 2: Y->X polarization cross element
-    #     - 3: Y polarization direct element
+        - 0: X polarization direct element
+        - 1: X->Y polarization cross element
+        - 2: Y->X polarization cross element
+        - 3: Y polarization direct element
 
-    #     The calibration coefficients may include any rotation matrix (e.g.
-    #     the parallitic angle), but do not include the geometric delay.
+        The calibration coefficients may include any rotation matrix (e.g.
+        the parallitic angle), but do not include the geometric delay.
 
-    #     :param first_channel: First channel index at the beamformer output for
-    #         which calibration coefficients are provided.
-    #     :param calibration_coefficients: Calibration coefficient array
-    #     """
-    #     num_channels = calibration_coefficients.shape[0]
-    #     # Properly assign calibration coefficients for the specified channel range
-    #     for i in range(num_channels):
-    #         for antenna in range(calibration_coefficients.shape[1]):
-    #             self._staged_calibration_coefficients[first_channel + i][
-    #                 antenna
-    #             ] = calibration_coefficients[i, antenna].tolist()
-    #     self.logger.debug(
-    #         f"Simulator received calibration coefficients for channels "
-    #         f"{first_channel} to "
-    #         f"{first_channel + num_channels - 1}"
-    #     )
+        :param first_channel: First channel index at the beamformer output for
+            which calibration coefficients are provided.
+        :param calibration_coefficients: Calibration coefficient array
+            [channel, antenna, polarization]
+        """
+        num_channels = len(calibration_coefficients)
+
+        # Assign calibration coefficients for the specified channel range
+        for i, channel_coeffs in enumerate(calibration_coefficients):
+            channel_idx = first_channel + i
+            for antenna, antenna_coeffs in enumerate(channel_coeffs):
+                self._staged_calibration_coefficients[channel_idx][
+                    antenna
+                ] = antenna_coeffs
+
+        self.logger.debug(
+            f"Simulator received calibration coefficients for channels "
+            f"{first_channel} to "
+            f"{first_channel + num_channels - 1}"
+        )
 
     @connected
     def read_all_staged_calibration_coefficients(
@@ -2355,39 +2357,6 @@ class TileSimulator:
 
         self.logger.debug(
             f"Simulator received calibration coefficients for antenna {antenna}"
-        )
-
-    @check_mocked_overheating
-    @connected
-    def load_calibration_coefficients_for_channels(
-        self: TileSimulator,
-        first_channel: int,
-        calibration_coefficients: list[list[list[complex]]],
-    ) -> None:
-        """
-        Load calibration coefficients for all antennas and a subset of channels.
-
-        calibration_coefficients is a tri-dimensional complex array of the form
-        calibration_coefficients[channel, antenna, polarization], with each
-        element representing a normalized coefficient, with (1.0, 0.0) the
-        normal, expected response for an ideal antenna.
-        Channel is the index specifying the channels at the beamformer output,
-        i.e. considering only those channels actually processed and beam assignments.
-        The polarization index ranges from 0 to 3.
-        0: X polarization direct element
-        1: X->Y polarization cross element
-        2: Y->X polarization cross element
-        3: Y polarization direct element
-        The calibration coefficients may include any rotation matrix (e.g.
-        the parallitic angle), but do not include the geometric delay.
-
-        :param first_channel: Start beamformer channel for coefficients (0-383)
-        :param calibration_coefficients: Calibration coefficient array
-        """
-        last_channel = first_channel + len(calibration_coefficients) - 1
-        self.logger.debug(
-            "Received calibration coefficients for channels "
-            f"{first_channel}-{last_channel}"
         )
 
     @check_mocked_overheating

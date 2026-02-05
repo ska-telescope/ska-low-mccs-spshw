@@ -25,11 +25,18 @@ Feature: Test tile
         When the Tile TANGO device is restarted
         Then the Tile comes up in the defined Initialised state
 
-    Scenario: Apply and read back staged calibration coefficients
+    Scenario: Apply and read back staged calibration coefficients per antenna
         Given an SPS deployment against a real context
         And the SpsStation and tiles are ON
         And the Tile is available
-        When I stage calibration coefficients on the Tile
+        When I stage calibration coefficients on the Tile per antenna
+        Then the applied calibration coefficients can be read back correctly from the Tile
+
+    Scenario: Apply and read back staged calibration coefficients per channel
+        Given an SPS deployment against a real context
+        And the SpsStation and tiles are ON
+        And the Tile is available
+        When I stage calibration coefficients on the Tile per channel
         Then the applied calibration coefficients can be read back correctly from the Tile
 
 # Scenario: Tile state recovered after dev_init

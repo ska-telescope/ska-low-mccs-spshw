@@ -479,8 +479,10 @@ def stage_calibration_coefficients_on_tile_per_channel(
 
     cal_data = [0]  # Start with first_channel = 0
     for ch in range(nof_channels):
+        # For each channel, interleave antenna data by value position
+        # Command expects: [ant0_val0, ant0_val1, ..., ant0_val7,
+        #                   ant1_val0, ant1_val1, ..., ant1_val7, ...]
         for antenna in range(nof_antennas):
-            # Extract all pols for this antenna in this channel and flatten
             cal_data.extend(
                 np.array(calibration_coefficients[ch][antenna]).ravel().tolist()
             )

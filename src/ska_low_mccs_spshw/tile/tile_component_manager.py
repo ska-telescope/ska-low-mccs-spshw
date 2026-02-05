@@ -3079,8 +3079,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             try:
+                # Convert to numpy array to support tuple indexing in TPM API
+                coeffs_array = np.array(calibration_coefficients, dtype=complex)
                 self.tile.load_calibration_coefficients_for_channels(
-                    start_channel, calibration_coefficients
+                    start_channel, coeffs_array
                 )
             # pylint: disable=broad-except
             except Exception as e:

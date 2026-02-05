@@ -7029,7 +7029,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: list comprises:
 
-        * start_channe - (int) is the first channel to which the coefficientsr
+        * start_channel - (int) is the first channel to which the coefficients
             will be applied.
         * calibration_coefficients - [array] a tridimensional complex array comprising
             calibration_coefficients[channel, antenna, polarization], with each element

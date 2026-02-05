@@ -2244,7 +2244,7 @@ class TileSimulator:
     def load_calibration_coefficients_for_channels(
         self: TileSimulator,
         first_channel: int,
-        calibration_coefficients: list[list[list[complex]]],
+        calibration_coefficients: np.ndarray,
     ) -> None:
         """
         Load calibration coefficients for all antennas and specific channels.

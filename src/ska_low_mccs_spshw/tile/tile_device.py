@@ -3736,18 +3736,43 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return False
         return True
 
-    def _not_initialising(self: MccsTile, *args: Any) -> bool:
+    def _check_initialised_for_write(
+        self: MccsTile, req_type: tango.AttReqType
+    ) -> bool:
         """
-        Return a flag representing whether we are not in Initialising state.
+        Return a flag representing whether we are allowed to access the attribute.
+
+        :param req_type: the request type
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        return self._is_initialised(req_type)
+
+    def _is_initialised(self: MccsTile, *args: Any) -> bool:
+        """
+        Return a flag representing whether we are in Initialised state.
 
         :param args: The tango.AttReqType.
 
-        :return: True if Tile is not in Initialising state.
+        :return: True if Tile is in Initialised state.
         """
-        if self.component_manager._initialise_executing is False:
+        if self.component_manager._initialise_executing:
+            reason = "CommandNotAllowed"
+            msg = "Cannot execute this command while initialise is executing!"
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+
+        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        if prog_state in ["Initialised", "Synchronised"]:
             return True
         reason = "CommandNotAllowed"
-        msg = "Cannot execute this command while initialise is executing!"
+        msg = (
+            "To execute this command we must be in state "
+            "'Initialised' or 'Synchronised'! "
+            f"Tile is currently in state {prog_state}"
+        )
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
@@ -3790,7 +3815,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=2,
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_check_initialised_for_write",
     )
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
@@ -3800,7 +3825,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpgas_time
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="_is_initialised")
     def fpgaTime(self: MccsTile) -> str:
         """
         Return the FPGA internal time.
@@ -3809,7 +3834,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_time
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="_is_initialised")
     def fpgaReferenceTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -3818,7 +3843,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.formatted_fpga_reference_time
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="_is_initialised")
     def fpgaFrameTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -3851,7 +3876,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self._antenna_ids = list(antenna_ids)
 
-    @attribute(dtype=("DevString",), max_dim_x=16, fisallowed="_not_initialising")
+    @attribute(dtype=("DevString",), max_dim_x=16, fisallowed="_is_initialised")
     def fortyGbDestinationIps(self: MccsTile) -> list[str]:
         """
         Return the destination IPs for all 40Gb ports on the tile.
@@ -3867,7 +3892,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
@@ -3894,7 +3919,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevLong",
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
         abs_change=1,
         archive_abs_change=1,
     )
@@ -3937,7 +3962,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def currentFrame(self: MccsTile) -> int:
         """
@@ -3950,7 +3975,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_current_frame
 
-    @attribute(dtype="DevBoolean", fisallowed="_not_initialising")
+    @attribute(dtype="DevBoolean", fisallowed="_is_initialised")
     def pendingDataRequests(self: MccsTile) -> bool | None:
         """
         Check for pending data requests.
@@ -3959,7 +3984,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.pending_data_requests
 
-    @attribute(dtype="DevBoolean", fisallowed="_not_initialising")
+    @attribute(dtype="DevBoolean", fisallowed="_is_initialised")
     def isBeamformerRunning(self: MccsTile) -> bool | None:
         """
         Check if beamformer is running.
@@ -3968,7 +3993,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(dtype="DevLong", abs_change=1, archive_abs_change=1)
+    @attribute(
+        dtype="DevLong",
+        abs_change=1,
+        archive_abs_change=1,
+        fisallowed="_check_initialised_for_write",
+    )
     def phaseTerminalCount(self: MccsTile) -> int:
         """
         Get phase terminal count.
@@ -3990,7 +4020,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def ppsDelay(self: MccsTile) -> int | None:
         """
@@ -4120,7 +4150,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=512,
         archive_abs_change=1,
         abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
@@ -4152,6 +4182,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         archive_abs_change=1,
         abs_change=1,
+        fisallowed="_check_initialised_for_write",
     )
     def staticTimeDelays(self: MccsTile) -> list[int]:
         """
@@ -4180,6 +4211,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=384,
         archive_abs_change=1,
         abs_change=1,
+        fisallowed="_check_initialised_for_write",
     )
     def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
@@ -4222,7 +4254,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.global_reference_time = reference_time
 
-    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1)
+    @attribute(
+        dtype=(float,),
+        max_dim_x=32,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        fisallowed="_check_initialised_for_write",
+    )
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
@@ -4514,6 +4552,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="cspSpeadFormat",
+        fisallowed="_check_initialised_for_write",
     )
     def cspSpeadFormat(self: MccsTile) -> str:
         """
@@ -4581,7 +4620,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["rfiCount"].read()
 
     @attribute(
-        dtype=("DevBoolean",), max_dim_x=2, fisallowed="_not_initialising"
+        dtype=("DevBoolean",), max_dim_x=2, fisallowed="_is_initialised"
     )  # fpgas
     def stationBeamFlagEnabled(
         self: MccsTile,
@@ -4626,7 +4665,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.integrated_data_transmission_mode
 
-    @attribute(dtype=("DevBoolean",), max_dim_x=48, fisallowed="_not_initialising")
+    @attribute(dtype=("DevBoolean",), max_dim_x=48, fisallowed="_is_initialised")
     def runningBeams(self: MccsTile) -> list[bool]:
         """
         List running status for each SubarrayBeam.

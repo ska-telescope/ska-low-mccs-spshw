@@ -12,7 +12,6 @@ import json
 import logging
 import threading
 import time
-import zlib
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
@@ -288,12 +287,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._power_callback_timeout: float = power_callback_timeout
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
-        # ==========================================================
-        # Added as part of SKB-1089, to keep track of frequency this
-        # issus is seen in production.
-        self._decompression_success: int = 0
-        self._decompression_error: int = 0
-        # ==========================================================
 
         self._event_serialiser = event_serialiser
 
@@ -1157,7 +1150,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 if self.power_state != PowerState.ON:
                     return TpmStatus.OFF
                 return TpmStatus.UNCONNECTED
-
             try:
                 # We are connected to at least the CPLD.
                 # TPM ON, FPGAs not programmed or TPM overtemperature self shutdown
@@ -1272,7 +1264,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         force_reprogramming: bool,
         pps_delay_correction: int,
-        final_try: bool = False,
     ) -> None:
         """
         Initialise the TPM.
@@ -1281,10 +1272,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
-        :param final_try: A flag to work around SKB-1089.
-
-        :raises zlib.error: If workaround implemented in SKB-1089
-            did not work first time.
         """
         with self._initialising():
             with acquire_timeout(
@@ -1327,49 +1314,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"* staticTimeDelays of {self._static_time_delays} \n"
                         f"* PreAduLevels of {self._preadu_levels} \n"
                     )
-                    try:
-                        self.tile.initialise(
-                            station_id=self._station_id,
-                            tile_id=self._tile_id,
-                            pps_delay=pps_delay_correction,
-                            active_40g_ports_setting="port1-only",
-                            src_ip_fpga1=self.src_ip_40g_fpga1,
-                            src_ip_fpga2=self.src_ip_40g_fpga2,
-                            time_delays=self._static_time_delays,
-                        )
-                        self._decompression_success += 1
-                    except zlib.error as e:
-                        self._decompression_error += 1
-                        total = self._decompression_error + self._decompression_success
-                        self.logger.warning(
-                            "XML data is corrupt. "
-                            "This is a known issue in BIOS 0.6.0 (see SKB-1089). "
-                            "We have seen this issue %d / %d times. Error: %s",
-                            self._decompression_error,
-                            total,
-                            e,
-                        )
-
-                        if not final_try:
-                            self.logger.warning(
-                                "Reprogramming FPGA for "
-                                "station %s tile %s to workaround SKB-1089.",
-                                self._station_id,
-                                self._tile_id,
-                            )
-                            self._execute_initialise(
-                                force_reprogramming=True,
-                                pps_delay_correction=pps_delay_correction,
-                                final_try=True,
-                            )
-                            return
-                        self.logger.error(
-                            "Workaround already attempted for "
-                            "station %s tile %s. Giving up.",
-                            self._station_id,
-                            self._tile_id,
-                        )
-                        raise
+                    self.tile.initialise(
+                        station_id=self._station_id,
+                        tile_id=self._tile_id,
+                        pps_delay=pps_delay_correction,
+                        active_40g_ports_setting="port1-only",
+                        src_ip_fpga1=self.src_ip_40g_fpga1,
+                        src_ip_fpga2=self.src_ip_40g_fpga2,
+                        time_delays=self._static_time_delays,
+                    )
                     #
                     # extra steps required to have it working
                     #
@@ -1648,23 +1601,42 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Read configuration information from the TPM."""
         self.logger.info("Updating attribute configuration from TPM")
 
-        channeliser_rounding = self.channeliser_truncation
         # NOTE: THORN-207: There is no API to read csp_rounding from TPM.
         csp_rounding = self.csp_rounding
-        # hardware methods recuire a lock
-        static_delays = self._with_hardware_lock(self.get_static_delays)
+
+        # ===========================================================================
+        # Methods that can be called in unprogrammed state.
+        is_programmed = self._with_hardware_lock(self.tile.is_programmed)
         station_id = self._with_hardware_lock(self.tile.get_station_id)
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
-        beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
-        beamformer_regions = self._with_hardware_lock(self.tile.get_beamformer_regions)
-        pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
         firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
-        rfi_blanking_enabled_antennas = self._with_hardware_lock(
-            lambda: self.tile.rfi_blanking_enabled_antennas
-        )
-        broadband_rfi_factor = self._with_hardware_lock(
-            lambda: self.tile.broadband_rfi_factor
-        )
+        # ===========================================================================
+
+        # Defaults when TPM is not programmed
+        channeliser_rounding = None
+        static_delays = None
+        beamformer_table = None
+        beamformer_regions = None
+        pfb_version = None
+        rfi_blanking_enabled_antennas = None
+        broadband_rfi_factor = None
+
+        # To avoid accessing FPGA registers when not programmed, we
+        # only read these attributes if the TPM is programmed. SKB-1089.
+        if is_programmed:
+            channeliser_rounding = self.channeliser_truncation
+            static_delays = self._with_hardware_lock(self.get_static_delays)
+            beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
+            beamformer_regions = self._with_hardware_lock(
+                self.tile.get_beamformer_regions
+            )
+            pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
+            rfi_blanking_enabled_antennas = self._with_hardware_lock(
+                lambda: self.tile.rfi_blanking_enabled_antennas
+            )
+            broadband_rfi_factor = self._with_hardware_lock(
+                lambda: self.tile.broadband_rfi_factor
+            )
 
         self._update_attribute_callback(
             static_delays=static_delays,

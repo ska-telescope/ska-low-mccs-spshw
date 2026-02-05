@@ -1202,7 +1202,11 @@ class TileSimulator:
         Get the board temperature.
 
         :return: a float with the board temperature.
+
+        :raises BoardError: when the CPLD is not connectable.
         """
+        if not self._is_cpld_connectable:
+            raise BoardError("CPLD not connectable.")
         return self._tile_health_structure["temperatures"]["board"]
 
     @check_mocked_overheating
@@ -2021,6 +2025,7 @@ class TileSimulator:
                 # This sleep is to wait for the timed thread to
                 # update a register.
                 time.sleep(0.12)
+            self._is_cpld_connectable = True
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
@@ -2083,7 +2088,11 @@ class TileSimulator:
         cpld_registers = [int(0x30000000)]
         if self.tpm_mocked_overheating:
             # We can still access the (CPLD version) when FPGAs are shutdown.
-            if key in cpld_registers and self._is_cpld_connectable:
+            if (
+                key in cpld_registers
+                and self._is_cpld_connectable
+                and self.tpm is not None
+            ):
                 pass
             else:
                 self.logger.warning(

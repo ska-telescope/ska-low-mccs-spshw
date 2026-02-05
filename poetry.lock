@@ -5109,7 +5109,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "2.3.1"
+version = "3.0.0"
 description = "An API for management of the Tile Processing Modules of the SKA-Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -5124,8 +5124,8 @@ numpy = "^1.26.4"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
-reference = "2.3.1"
-resolved_reference = "5fedc0dcdfb717f1a38210e5a4ba360812eb55cc"
+reference = "skb-1089-c2c-calibration"
+resolved_reference = "8f8f4e3b71fe9b55c41ba104528e85fb2a5ab951"
 
 [[package]]
 name = "ska-ser-logging"
@@ -6495,4 +6495,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "51db2c6c331a6c1f0c51611af8a72a29a544b39c008445300046afc170c52ce9"
+content-hash = "4d9fbc1e12ae4ab315b01ffacee5883e3c413e31082a010803cc627d36277f3b"

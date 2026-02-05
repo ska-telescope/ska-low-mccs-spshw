@@ -13,6 +13,7 @@ import importlib  # allow forward references in type hints
 import json
 import logging
 import os.path
+import re
 import sys
 import threading
 from dataclasses import dataclass
@@ -73,6 +74,39 @@ from .tpm_status import TpmStatus
 __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
+
+def merge(d: dict[str, Any], u: dict[str, Any]) -> None:
+    """
+    Deep merge dictionary u into dictionary d.
+
+    :param d: dictionary to merge into
+    :param u: dictionary to merge from
+    """
+    for k, v in u.items():
+        if isinstance(v, dict) and isinstance(d.get(k), dict):
+            d[k].update(v)
+        else:
+            d[k] = v
+
+
+def is_v1(version_str: str) -> bool:
+    """
+    Return True if version is v1.x.x?, False if v2.x.x?.
+
+    :param version_str: version string to check.
+    :return: True if v1.x.x? (or empty string), False if v2.x.x?.
+    :raises ValueError: if version_str is not valid.
+    """
+    # Allow empty string (treat as v2 by default)
+    if version_str == "":
+        return False
+
+    match = re.fullmatch(r"v([12])\.\d+\.\d+[a-z]?", version_str)
+    if not match:
+        raise ValueError(f"Invalid version format: '{version_str}'")
+
+    return match.group(1) == "1"
 
 
 def engineering_mode_required(func: Callable) -> Callable:
@@ -884,6 +918,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "coreCommunicationStatus",
             }
 
+            if is_v1(self.HardwareVersion):
+                # Older tiles do not have ADC temperature sensors.
+                for idx in range(16):
+                    healthful_attrs.discard(f"temperatureADC{idx}")
+
+            if self.BiosVersion == "0.5.0":
+                # This monitoring point was introduced in 0.6.0.
+                # If we are bios 0.5.0 we ignore it.
+                healthful_attrs.discard("timing_pll_40g_count")
+
             self._health_recorder = HealthRecorder(
                 self.get_name(),
                 logger=self.logger,
@@ -1221,7 +1265,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 if mark_invalid:
                     self.tile_health_structure = {}
                 else:
-                    self.tile_health_structure.update(attribute_value)
+                    merge(self.tile_health_structure, attribute_value)
+                    # self.tile_health_structure.update(attribute_value)
                 if not self.UseAttributesForHealth:
                     self._health_model.update_state(
                         tile_health_structure=self.tile_health_structure
@@ -1402,20 +1447,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 )
                 attribute_value = None
 
-            if attribute_value is not None:
-                try:
-                    if attribute_name in self._attribute_state:
-                        self._attribute_state[attribute_name].update(attribute_value)
-                    else:
-                        self.logger.warning(f"Attribute {attribute_name} not found.")
-                except Exception as e:  # pylint: disable=broad-except
-                    # Note: attribute converters were removed in
-                    # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
-                    # These converters added in skb-520 can be implemented
-                    # now that skb-609 is fixed.
-                    self.logger.error(
-                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
-                    )
+            try:
+                if attribute_name in self._attribute_state:
+                    self._attribute_state[attribute_name].update(attribute_value)
+                else:
+                    self.logger.warning(f"Attribute {attribute_name} not found.")
+            except Exception as e:  # pylint: disable=broad-except
+                # Note: attribute converters were removed in
+                # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+                # These converters added in skb-520 can be implemented
+                # now that skb-609 is fixed.
+                self.logger.error(
+                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -1478,6 +1522,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
+        if attr_value is None:
+            self.get_device_attr().get_attr_by_name(name).set_quality(
+                tango.AttrQuality.ATTR_INVALID, True
+            )
+            return
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         if attr_quality == tango.AttrQuality.ATTR_INVALID:

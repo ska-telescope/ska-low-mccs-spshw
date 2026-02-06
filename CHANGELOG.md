@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 11.2.0
 
 * [THORN-402] Configure pipeline to ignore sonar scan results.
 * [THORN-404] Avoid lock timeout when evaluating fault.

@@ -523,6 +523,8 @@ def switch_active_calibration_bank(
     original_staged_cal = np.array(json.loads(tile_device.allStagedCal))
     original_live_cal = np.array(json.loads(tile_device.allLiveCal))
     tile_device.ApplyCalibration("")
+    time.sleep(5)  # We saw what looked like a partial bank swap.
+    # Did we read it during the operation?
     new_live_cal = np.array(json.loads(tile_device.allLiveCal))
     new_staged_cal = np.array(json.loads(tile_device.allStagedCal))
 

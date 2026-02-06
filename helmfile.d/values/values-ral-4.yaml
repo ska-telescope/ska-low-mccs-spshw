@@ -30,28 +30,36 @@ helm_values:
           ParentTRL: ""
       MccsTile:
         low-mccs/tile/stfc-ral-2-tpm25:
+          HardwareVersion: v1.6.7a
           BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm26:
+          HardwareVersion: v1.6.7a
           BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm27:
+          HardwareVersion: v1.6.7a
           BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm28:
+          HardwareVersion: v1.6.7a
           BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm29:
-          BiosVersion: 0.5.0
+          HardwareVersion: v1.6.7a
+          BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm30:
-          BiosVersion: 0.5.0
+          HardwareVersion: v1.6.7a
+          BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm31:
-          BiosVersion: 0.5.0
+          HardwareVersion: v1.6.7a
+          BiosVersion: 0.6.0
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-4-tpm32:
-          BiosVersion: 0.5.0
+          HardwareVersion: v1.6.7a
+          BiosVersion: 0.6.0
           PreAduFitted: [true, true]
     # deviceServerTypes:
     #   spshw:

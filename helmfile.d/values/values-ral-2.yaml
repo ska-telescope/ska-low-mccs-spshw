@@ -33,27 +33,35 @@ helm_values:
       MccsTile:
         low-mccs/tile/stfc-ral-2-tpm09:
           BiosVersion: 0.6.0
+          HardwareVersion: v1.6.7a
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-2-tpm10:
           BiosVersion: 0.6.0
+          HardwareVersion: v1.6.7a
           PreAduFitted: [true, true]
         low-mccs/tile/stfc-ral-2-tpm11:
           BiosVersion: 0.6.0
+          HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm12:
           BiosVersion: 0.6.0
+          HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm13:
           BiosVersion: 0.6.0
+          HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm14:
           BiosVersion: 0.6.0
+          HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm15:
           BiosVersion: 0.6.0
+          HardwareVersion: v2.0.2a
           PreAduFitted: [false, false]
         low-mccs/tile/stfc-ral-2-tpm16:
           BiosVersion: 0.6.0
+          HardwareVersion: v2.0.2a
           PreAduFitted: [false, false]
       MccsSubrack: # SPRTS-787
         low-mccs/subrack/stfc-ral-2-sr2:

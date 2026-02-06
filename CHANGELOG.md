@@ -3,6 +3,7 @@
 ## 11.2.0
 
 * [THORN-402] Configure pipeline to ignore sonar scan results.
+* [THORN-404] Update RAL deployment hardware specification.
 * [THORN-404] Avoid lock timeout when evaluating fault.
 * [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation
 * [THORN-389] Bumping TPM FPGA firmware version to 9.0.0

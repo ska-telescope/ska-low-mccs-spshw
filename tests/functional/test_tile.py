@@ -520,9 +520,32 @@ def switch_active_calibration_bank(
 
     :yields: Control to the test.
     """
-    original_live_cal = json.loads(tile_device.allLiveCal)
-    [rc, msg] = tile_device.ApplyCalibration("")
-    print(f"{rc=}, {msg=}")
+    original_staged_cal = np.array(json.loads(tile_device.allStagedCal))
+    original_live_cal = np.array(json.loads(tile_device.allLiveCal))
+    tile_device.ApplyCalibration("")
+    new_live_cal = np.array(json.loads(tile_device.allLiveCal))
+    new_staged_cal = np.array(json.loads(tile_device.allStagedCal))
+
+    print(
+        "Original Staged == Original Live (Expect False): "
+        f"{original_staged_cal == pytest.approx(original_live_cal)}"
+    )
+    print(
+        "Original Staged == New Live (Expect True): "
+        f"{original_staged_cal == pytest.approx(new_live_cal)}"
+    )
+    print(
+        "New Staged == New Live (Expect False): "
+        f"{new_staged_cal == pytest.approx(new_live_cal)}"
+    )
+    print(
+        "New Staged == Original Live (Expect True): "
+        f"{new_staged_cal == pytest.approx(original_live_cal)}"
+    )
+    print(f"Original Staged[0]: {original_staged_cal[0]}")
+    print(f"Original Live[0]: {original_live_cal[0]}")
+    print(f"New Staged[0]: {new_staged_cal[0]}")
+    print(f"New Live[0]: {new_live_cal[0]}")
 
     yield original_live_cal
 

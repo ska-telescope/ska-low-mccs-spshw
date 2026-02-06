@@ -652,7 +652,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._default_lock_timeout,
                 raise_exception=False,
             ):
-                self._last_known_connected = self.is_connected
+                self._last_known_connected = self._is_connected(raise_exception=False)
 
             if not self._last_known_connected:
                 self.logger.error(
@@ -965,15 +965,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._subrack_says_tpm_power_changed,
             )
 
-    @property
-    def is_connected(self) -> bool:
+    def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """
         Check the communication with CPLD.
 
+        :param raise_exception: if True, raise an exception if not connected.
         :return: True if connected, else False.
         """
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock,
+            self._default_lock_timeout,
+            raise_exception=raise_exception,
         ):
             try:
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
@@ -1021,7 +1023,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._power_callback_timeout, raise_exception=True
         ):
-            self._last_known_connected = self.is_connected
+            self._last_known_connected = self._is_connected()
             # Connect if not already.
             if not self._last_known_connected or self.tile.tpm is None:
                 try:
@@ -2292,7 +2294,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            if not self.is_connected or self.tile.tpm is None:
+            if not self._is_connected() or self.tile.tpm is None:
                 try:
                     self.logger.debug("Connecting to TPM")
                     self.tile.connect()

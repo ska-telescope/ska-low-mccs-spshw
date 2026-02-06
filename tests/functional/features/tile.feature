@@ -47,7 +47,6 @@ Feature: Test tile
         And the staged calibration coefficients can be read back correctly from the Tile
         When I switch the active calibration bank
         Then the live calibration coefficients can be read back correctly from the Tile
-        And the staged calibration matches the original live calibration
 
 # Scenario: Tile state recovered after dev_init
 #     Given an SPS deployment against HW

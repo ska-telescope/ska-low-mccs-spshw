@@ -2377,10 +2377,7 @@ class TileSimulator:
         :param switch_time: switch time
         """
         self.logger.debug("Simulator applying calibration coefficients")
-        self._live_calibration_coefficients, self._staged_calibration_coefficients = (
-            self._staged_calibration_coefficients,
-            self._live_calibration_coefficients,
-        )
+        self._live_calibration_coefficients = self._staged_calibration_coefficients
 
     @check_mocked_overheating
     @connected

@@ -512,74 +512,43 @@ def stage_calibration_coefficients_on_tile_per_channel(
 @when("I switch the active calibration bank", target_fixture="original_live_cal")
 def switch_active_calibration_bank(
     tile_device: tango.DeviceProxy,
+    nof_channels: int,
+    nof_antennas: int,
 ) -> Generator:
     """
     Switch staged and live calibration banks on the tile device.
 
     :param tile_device: Tile device under test.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
 
     :yields: Control to the test.
     """
-    original_staged_cal = np.array(json.loads(tile_device.allStagedCal))
     original_live_cal = np.array(json.loads(tile_device.allLiveCal))
     tile_device.ApplyCalibration("")
-    time.sleep(5)  # We saw what looked like a partial bank swap.
-    # Did we read it during the operation?
-    new_live_cal = np.array(json.loads(tile_device.allLiveCal))
-    new_staged_cal = np.array(json.loads(tile_device.allStagedCal))
+    time.sleep(0.25)  # We saw what looked like a partial bank swap vs hardware.
+    # Looks like the command is returning too soon from tpm-api.
 
-    print(
-        "Original Staged == Original Live (Expect False): "
-        f"{original_staged_cal == pytest.approx(original_live_cal)}"
-    )
-    print(
-        "Original Staged == New Live (Expect True): "
-        f"{original_staged_cal == pytest.approx(new_live_cal)}"
-    )
-    print(
-        "New Staged == New Live (Expect False): "
-        f"{new_staged_cal == pytest.approx(new_live_cal)}"
-    )
-    print(
-        "New Staged == Original Live (Expect True): "
-        f"{new_staged_cal == pytest.approx(original_live_cal)}"
-    )
-    print(f"Original Staged[0]: {original_staged_cal[0]}")
-    print(f"Original Live[0]: {original_live_cal[0]}")
-    print(f"New Staged[0]: {new_staged_cal[0]}")
-    print(f"New Live[0]: {new_live_cal[0]}")
-
-    yield original_live_cal
+    yield
 
     # Restore original live cal.
+    restore_data = [0]  # Start with first_channel = 0
+    for ch in range(nof_channels):
+        for antenna in range(nof_antennas):
+            restore_data.extend(
+                np.array(original_live_cal[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(restore_data)
     tile_device.ApplyCalibration("")
+    time.sleep(0.25)
 
-
-@then("the staged calibration matches the original live calibration")
-def compare_new_staged_with_original_live_calibration(
-    tile_device: tango.DeviceProxy,
-    original_live_cal: list[list[list[list[float]]]],
-    nof_antennas: int,
-    nof_channels: int,
-    nof_pols: int,
-) -> None:
-    """
-    Read back and compare live calibration on Tile.
-
-    :param tile_device: Tile under test.
-    :param original_live_cal: A list of
-        calibration coefficients for a Tile.
-    :param nof_antennas: Number of antennas per tile.
-    :param nof_channels: Number of channels.
-    :param nof_pols: Number of polarizations.
-    """
-    expected_length = nof_channels * nof_antennas * nof_pols * 2
-    expected_cal_1d = np.array(original_live_cal).ravel().tolist()
-    assert len(expected_cal_1d) == expected_length
-    actual_cal_1d = np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
-    assert len(actual_cal_1d) == expected_length
-
-    assert actual_cal_1d == pytest.approx(expected_cal_1d, abs=0.001)
+    try:
+        assert np.array(original_live_cal).ravel().tolist() == pytest.approx(
+            np.array(json.loads(tile_device.allLiveCal)).ravel().tolist(), abs=0.001
+        )
+    except AssertionError:
+        pytest.fail("Could not validate restoration of original live calibration.")
 
 
 @then("the live calibration coefficients can be read back correctly from the Tile")

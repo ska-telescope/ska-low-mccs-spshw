@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1181] Start the beamformer with an empty channel_groups to start the beamformer daisy chain. This will still report beamformer_is_running as False.
 * [THORN-389] Bump TPM-API version 2.2.1 -> 2.3.0
   * Added Tile attribute: fortyGPacketCount - Packet counts per active core.
   * Added Tile attribute: allStagedCal - Returns all staged calibration coefficients.

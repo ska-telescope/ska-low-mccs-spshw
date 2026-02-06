@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines, too-many-public-methods
+# mypy: ignore-errors
 #
 #  -*- coding: utf-8 -*
 #
@@ -1581,6 +1582,14 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
+
+            self.logger.debug(
+                "Starting station beamformer with empty channel_groups"
+                "to start the beamformer daisy chain during station initialise"
+            )
+            self._start_beamformer(
+                start_time=None, duration=-1, channel_groups=[], scan_id=0
+            )
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED

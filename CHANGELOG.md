@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 11.2.0
 
 * [THORN-404] Avoid lock timeout when evaluating fault.
 * [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation

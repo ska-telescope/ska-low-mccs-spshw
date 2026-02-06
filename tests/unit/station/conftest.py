@@ -274,8 +274,14 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             Make the station device think it has received state change
             event from its tiles, indicating that the tiles are now OFF.
             """
-            for name in self.component_manager._tile_proxies:
+            for idx, name in enumerate(self.component_manager._tile_proxies):
                 self.component_manager._tile_state_changed(name, power=PowerState.OFF)
+                self.component_manager._on_tile_attribute_change(
+                    idx,
+                    "tileprogrammingstate",
+                    "Off",
+                    tango.AttrQuality.ATTR_VALID,
+                )
 
         @command()
         def MockTilesOn(self: PatchedSpsStationDevice) -> None:

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-404] Avoid lock timeout when evaluating fault.
 * [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation
 * [THORN-389] Bumping TPM FPGA firmware version to 9.0.0
   * Increased bitwidth of subarray and substation ID

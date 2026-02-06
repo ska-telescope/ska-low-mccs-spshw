@@ -2,6 +2,7 @@
 
 ## 11.2.0
 
+* [THORN-404] Update station standby to wait for tileprogrammingstate to be Off.
 * [THORN-404] Update RAL deployment hardware specification.
 * [THORN-404] Avoid lock timeout when evaluating fault.
 * [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation

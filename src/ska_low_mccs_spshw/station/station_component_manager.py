@@ -1334,6 +1334,9 @@ class SpsStationComponentManager(
                 if all(
                     states == PowerState.OFF
                     for states in self._tile_power_states.values()
+                ) and all(
+                    programmmingstate == "Off"
+                    for programmmingstate in self._tile_programming_state
                 ):
                     break
                 timeout -= tick

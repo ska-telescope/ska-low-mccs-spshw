@@ -1019,22 +1019,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_says_tpm_power = event_value
 
         self.power_state = event_value
-        # Connect if not already.
-        with acquire_timeout(
-            self._hardware_lock, self._power_callback_timeout, raise_exception=True
-        ):
-            self._last_known_connected = self._is_connected()
-            # Connect if not already.
-            if not self._last_known_connected or self.tile.tpm is None:
-                try:
-                    self.connect()
-                    self._last_known_connected = True
-                except Exception:  # pylint: disable=broad-except
-                    self.logger.error("Subrack callback failed to connect to hardware.")
-            else:
-                self.__update_tpm_status()
 
         if event_value == PowerState.ON:
+            # Connect if not already.
+            with acquire_timeout(
+                self._hardware_lock, self._power_callback_timeout, raise_exception=True
+            ):
+                self._last_known_connected = self._is_connected()
+                # Connect if not already.
+                if not self._last_known_connected or self.tile.tpm is None:
+                    try:
+                        self.connect()
+                        self._last_known_connected = True
+                    except Exception:  # pylint: disable=broad-except
+                        self.logger.error(
+                            "Subrack callback failed to connect to hardware."
+                        )
+                else:
+                    self.__update_tpm_status()
+
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
             # Attempt reinitialisation if connected

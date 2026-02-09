@@ -618,8 +618,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
         self.active_request = None
 
-        self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
+        self.update_fault_state(poll_success=False)
 
         self._update_component_state(
             power=self._subrack_says_tpm_power, fault=self.fault_state
@@ -646,7 +646,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_success: a bool representing if the poll was a success
         :param exception_code: the exception code raised in last poll.
         """
-        if not poll_success and self._subrack_says_tpm_power == PowerState.ON:
+        if not poll_success and self.power_state == PowerState.ON:
             with acquire_timeout(
                 self._hardware_lock,
                 self._default_lock_timeout,

@@ -1,5 +1,4 @@
 # pylint: disable=too-many-lines, too-many-public-methods
-# mypy: ignore-errors
 #
 #  -*- coding: utf-8 -*
 #
@@ -3058,10 +3057,10 @@ class SpsStationComponentManager(
 
     def _start_beamformer(
         self: SpsStationComponentManager,
-        start_time: str,
-        duration: float,
-        channel_groups: list[int] | None,
-        scan_id: int,
+        start_time: Optional[str] = None,
+        duration: int = -1,
+        channel_groups: Optional[list[int]] = None,
+        scan_id: int = 0,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3079,7 +3078,8 @@ class SpsStationComponentManager(
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        parameter_list = {
+
+        parameter_list: dict[str, Any] = {
             "start_time": start_time,
             "duration": duration,
             "scan_id": scan_id,

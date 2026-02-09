@@ -1275,9 +1275,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param db_configuration_fault: a tuple with status and information
             about whether we are experiencing a configuration fault.
         """
-        if power in [PowerState.OFF, PowerState.UNKNOWN]:
+        if power in (PowerState.OFF, PowerState.UNKNOWN):
             for attr in self._attribute_state.values():
-                attr.mark_stale()
+                try:
+                    attr.mark_stale()
+                except Exception as exc:  # pylint: disable=broad-except
+                    self.logger.warning(
+                        "Failed to mark %r as stale: %s",
+                        attr,
+                        exc,
+                        exc_info=True,
+                    )
 
         if power is not None:
             self.power_state = power

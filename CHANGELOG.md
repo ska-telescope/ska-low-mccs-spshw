@@ -1,8 +1,11 @@
 # Version History
 
-## Unreleased
+## 11.2.0
 
 * [THORN-402] Configure pipeline to ignore sonar scan results.
+* [THORN-404] Update station standby to wait for tileprogrammingstate to be Off.
+* [THORN-404] Update RAL deployment hardware specification.
+* [THORN-404] Avoid lock timeout when evaluating fault.
 * [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation
 * [THORN-389] Bumping TPM FPGA firmware version to 9.0.0
   * Increased bitwidth of subarray and substation ID
@@ -98,6 +101,10 @@ quality factor will be used to inform health.
 * [LOW-1801] Make SpsStation `UpdateStaticDelays` use `delay_x` and `delay_y` instead of the deprecated `delay`.
 
 ## 10.0.0
+
+* [THORN-261] Deprecate healthModelParams when feature flag UseAttributesForHealth is True
+
+* [THORN-261] Removed temperatureHealth, voltageHealth, currentHealth, alarmHealth, adcHealth, timingHealth, ioHealth, dspHealth when feature flag UseAttributesForHealth is True
 
 * [THORN-261] Alarms added to adc_pll_status, fpga0_station_beamformer_error_count, fpga1_station_beamformer_error_count, fpga0_station_beamformer_flagged_count, fpga1_station_beamformer_flagged_count, fpga0_crc_error_count, fpga1_crc_error_count, fpga0_bip_error_count, fpga1_bip_error_count, fpga0_decode_error_count, fpga1_decode_error_count, fpga0_linkup_loss_count, fpga1_linkup_loss_count, fpga0_data_router_status, fpga1_data_router_status, fpga0_ddr_reset_counter, fpga1_ddr_reset_counter, f2f_soft_errors, f2f_hard_errors, fpga0_resync_count, fpga1_resync_count, fpga0_lane_error_count, fpga1_lane_error_count, fpga0_clock_managers_count, fpga1_clock_managers_count, fpga0_clock_managers_status, fpga1_clock_managers_status, fpga0_clocks, fpga1_clocks, adc_sysref_counter, adc_sysref_timing_requirements, fpga0_qpll_status, fpga0_qpll_counter, fpga1_qpll_status, fpga1_qpll_counter, f2f_pll_status, f2f_pll_counter, timing_pll_status, timing_pll_count, timing_pll_40g_status, timing_pll_40g_count, station_beamformer_status, tile_beamformer_status, arp, udp_status, ddr_initialisation, lane_status, link_status
 

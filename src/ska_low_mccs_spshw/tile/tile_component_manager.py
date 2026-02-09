@@ -292,6 +292,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
 
+        # We track the last known connection status to
+        # avoid unnecessary connection attempts.
+        # Updated within the hardware lock to ensure
+        # thread safety with the polling loop.
+        self._last_known_connected: bool = False
+
         self._event_serialiser = event_serialiser
 
         if simulation_mode == SimulationMode.TRUE:
@@ -568,6 +574,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._poll_timeout, raise_exception=True
         ):
             result = poll_request()
+            self._last_known_connected = True
         return TileResponse(
             poll_request.name,
             result,
@@ -615,8 +622,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
         self.active_request = None
 
-        self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
+        self.update_fault_state(poll_success=False)
 
         self._update_component_state(
             power=self._subrack_says_tpm_power, fault=self.fault_state
@@ -643,22 +650,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_success: a bool representing if the poll was a success
         :param exception_code: the exception code raised in last poll.
         """
-        with acquire_timeout(
-            self._hardware_lock,
-            self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            if not poll_success:
-                # Poll failed: check if subrack incorrectly reports TPM as ON
-                if (
-                    not self.is_connected
-                    and self._subrack_says_tpm_power == PowerState.ON
-                ):
-                    self.logger.error(
-                        "Unable to connect to TPM, but subrack reports it as ON."
-                    )
-                    self.fault_state = True
-                    return
+        if not poll_success and self.power_state == PowerState.ON:
+            with acquire_timeout(
+                self._hardware_lock,
+                self._default_lock_timeout,
+                raise_exception=False,
+            ):
+                self._last_known_connected = self._is_connected(raise_exception=False)
+
+            if not self._last_known_connected:
+                self.logger.error(
+                    "Unable to connect to TPM, but subrack reports it as ON."
+                )
+                self.fault_state = True
+                return
 
         # If polling succeeded but subrack disagrees about power state
         if poll_success and self._subrack_says_tpm_power != PowerState.ON:
@@ -964,15 +969,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._subrack_says_tpm_power_changed,
             )
 
-    @property
-    def is_connected(self) -> bool:
+    def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """
         Check the communication with CPLD.
 
+        :param raise_exception: if True, raise an exception if not connected.
         :return: True if connected, else False.
         """
         with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+            self._hardware_lock,
+            self._default_lock_timeout,
+            raise_exception=raise_exception,
         ):
             try:
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
@@ -1016,27 +1023,30 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_says_tpm_power = event_value
 
         self.power_state = event_value
-        # Connect if not already.
-        with acquire_timeout(
-            self._hardware_lock, self._power_callback_timeout, raise_exception=True
-        ):
-            __is_connected = self.is_connected
-            # Connect if not already.
-            if not __is_connected or self.tile.tpm is None:
-                try:
-                    self.connect()
-                    __is_connected = True
-                except Exception:  # pylint: disable=broad-except
-                    self.logger.error("Subrack callback failed to connect to hardware.")
-            else:
-                self.__update_tpm_status()
 
         if event_value == PowerState.ON:
+            # Connect if not already.
+            with acquire_timeout(
+                self._hardware_lock, self._power_callback_timeout, raise_exception=True
+            ):
+                self._last_known_connected = self._is_connected()
+                # Connect if not already.
+                if not self._last_known_connected or self.tile.tpm is None:
+                    try:
+                        self.connect()
+                        self._last_known_connected = True
+                    except Exception:  # pylint: disable=broad-except
+                        self.logger.error(
+                            "Subrack callback failed to connect to hardware."
+                        )
+                else:
+                    self.__update_tpm_status()
+
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
             # Attempt reinitialisation if connected
             # and not already initialised/ing.
-            if __is_connected and self._tpm_status not in [
+            if self._last_known_connected and self._tpm_status not in [
                 TpmStatus.INITIALISED,
                 TpmStatus.SYNCHRONISED,
             ]:
@@ -2291,7 +2301,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            if not self.is_connected or self.tile.tpm is None:
+            if not self._is_connected() or self.tile.tpm is None:
                 try:
                     self.logger.debug("Connecting to TPM")
                     self.tile.connect()

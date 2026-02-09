@@ -357,7 +357,22 @@ when these commands will be implemented.
     the antenna (range 0 to 511). Remaining elements represent inverse Jones
     matrices for each frequency channel.
 
-  * *ApplyCalibration*:
+  * *LoadCalibrationCoefficientsForChannels*: Load cal coefficients for all 
+    antennas and a set of contiguous channels. 
+
+    parameter: float array with (2048 x n_channels) + 1 elements. First element
+    indicates the first beamformer channel for which coefficients are provided, 
+    each subsequent block of 2048 channels is interpreted as a ([256,4], complex)
+    array of coefficients for 256 antennas, 2x2 Jones matrix, real+imaginary,
+    for one frequency channel. Unspecified channels are not changed.
+
+  * *ApplyCalibration*: Apply the calibration coefficients for all channels and
+    antennas. The applied coefficients are copied back in the calibration array,
+    so successive operations of *loadCalibrationCefficients* + *ApplyCalibration*
+    may be used to separately update individual subset of channels (beams). 
+
+    Parameter: string specifying the time for applying the delays. Formatted
+    as ISO 8691 UTC time.
 
   * *LoadPointingDelays*: Load delays for all antennas and a single beam. Delays
     are specified one beam at a time, typically by a *StationBeam* device,

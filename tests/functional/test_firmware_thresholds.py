@@ -456,6 +456,12 @@ def check_for_configuration_missmatch(
         initial_tile_programmingstate,
         lookahead=lookahead,
     )
+    # We can transtion through ON to FAULT.
+    # After restart we may be in ON first, until we
+    # have read the configuration and detected the mismatch.
+    AttributeWaiter(timeout=5).wait_for_value(
+        tile_device, "state", tango.DevState.FAULT
+    )
     assert tile_device.state() == tango.DevState.FAULT
 
     sub_id = tile_device.subscribe_event(

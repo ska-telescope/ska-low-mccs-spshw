@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-402] Configure pipeline to ignore sonar scan results.
+* [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation
 * [THORN-389] Bumping TPM FPGA firmware version to 9.0.0
   * Increased bitwidth of subarray and substation ID
   * Calibration coefficients are automatically copied back when banks are switched
@@ -9,6 +11,9 @@
 * [LOW-2034] Remove unused EDA config ConfigMap
 * [THORN-353] Fixed subrack functional tests at RAL.
 * [THORN-349] Fixed spead capture functional tests at RAL.
+* [SKB-1089] Prevent attempts to communicate with FPGA via CPLD. The check_communication() method is destructive, calling this in an unprogrammed state can lead to decompression issues
+presenting themselves in initialisation.
+* [SKB-1089] Add workaround for I2C race condition when setting an LED after FPGA is erased.
 
 ## 11.1.0
 

@@ -955,6 +955,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
             ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
             ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
+            (
+                "LoadCalibrationCoefficientsForChannels",
+                self.LoadCalibrationCoefficientsForChannelsCommand,
+            ),
             ("ApplyCalibration", self.ApplyCalibrationCommand),
             ("LoadPointingDelays", self.LoadPointingDelaysCommand),
             ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
@@ -3731,18 +3735,43 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return False
         return True
 
-    def _not_initialising(self: MccsTile, *args: Any) -> bool:
+    def _check_initialised_for_write(
+        self: MccsTile, req_type: tango.AttReqType
+    ) -> bool:
         """
-        Return a flag representing whether we are not in Initialising state.
+        Return a flag representing whether we are allowed to access the attribute.
+
+        :param req_type: the request type
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        return self._is_initialised(req_type)
+
+    def _is_initialised(self: MccsTile, *args: Any) -> bool:
+        """
+        Return a flag representing whether we are in Initialised state.
 
         :param args: The tango.AttReqType.
 
-        :return: True if Tile is not in Initialising state.
+        :return: True if Tile is in Initialised state.
         """
-        if self.component_manager._initialise_executing is False:
+        if self.component_manager._initialise_executing:
+            reason = "CommandNotAllowed"
+            msg = "Cannot execute this command while initialise is executing!"
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+
+        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        if prog_state in ["Initialised", "Synchronised"]:
             return True
         reason = "CommandNotAllowed"
-        msg = "Cannot execute this command while initialise is executing!"
+        msg = (
+            "To execute this command we must be in state "
+            "'Initialised' or 'Synchronised'! "
+            f"Tile is currently in state {prog_state}"
+        )
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
@@ -3785,7 +3814,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=2,
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_check_initialised_for_write",
     )
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
@@ -3795,7 +3824,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpgas_time
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="_is_initialised")
     def fpgaTime(self: MccsTile) -> str:
         """
         Return the FPGA internal time.
@@ -3804,7 +3833,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_time
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="_is_initialised")
     def fpgaReferenceTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -3813,7 +3842,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.formatted_fpga_reference_time
 
-    @attribute(dtype="DevString", fisallowed="_not_initialising")
+    @attribute(dtype="DevString", fisallowed="_is_initialised")
     def fpgaFrameTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -3846,7 +3875,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self._antenna_ids = list(antenna_ids)
 
-    @attribute(dtype=("DevString",), max_dim_x=16, fisallowed="_not_initialising")
+    @attribute(dtype=("DevString",), max_dim_x=16, fisallowed="_is_initialised")
     def fortyGbDestinationIps(self: MccsTile) -> list[str]:
         """
         Return the destination IPs for all 40Gb ports on the tile.
@@ -3862,7 +3891,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
@@ -3889,7 +3918,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevLong",
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
         abs_change=1,
         archive_abs_change=1,
     )
@@ -3932,7 +3961,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def currentFrame(self: MccsTile) -> int:
         """
@@ -3945,7 +3974,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_current_frame
 
-    @attribute(dtype="DevBoolean", fisallowed="_not_initialising")
+    @attribute(dtype="DevBoolean", fisallowed="_is_initialised")
     def pendingDataRequests(self: MccsTile) -> bool | None:
         """
         Check for pending data requests.
@@ -3954,7 +3983,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.pending_data_requests
 
-    @attribute(dtype="DevBoolean", fisallowed="_not_initialising")
+    @attribute(dtype="DevBoolean", fisallowed="_is_initialised")
     def isBeamformerRunning(self: MccsTile) -> bool | None:
         """
         Check if beamformer is running.
@@ -3963,7 +3992,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(dtype="DevLong", abs_change=1, archive_abs_change=1)
+    @attribute(
+        dtype="DevLong",
+        abs_change=1,
+        archive_abs_change=1,
+        fisallowed="_check_initialised_for_write",
+    )
     def phaseTerminalCount(self: MccsTile) -> int:
         """
         Get phase terminal count.
@@ -3985,7 +4019,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def ppsDelay(self: MccsTile) -> int | None:
         """
@@ -4115,7 +4149,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=512,
         archive_abs_change=1,
         abs_change=1,
-        fisallowed="_not_initialising",
+        fisallowed="_is_initialised",
     )
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
@@ -4147,6 +4181,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         archive_abs_change=1,
         abs_change=1,
+        fisallowed="_check_initialised_for_write",
     )
     def staticTimeDelays(self: MccsTile) -> list[int]:
         """
@@ -4175,6 +4210,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=384,
         archive_abs_change=1,
         abs_change=1,
+        fisallowed="_check_initialised_for_write",
     )
     def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
@@ -4217,7 +4253,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.global_reference_time = reference_time
 
-    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1)
+    @attribute(
+        dtype=(float,),
+        max_dim_x=32,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        fisallowed="_check_initialised_for_write",
+    )
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
@@ -4509,6 +4551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="cspSpeadFormat",
+        fisallowed="_check_initialised_for_write",
     )
     def cspSpeadFormat(self: MccsTile) -> str:
         """
@@ -4576,7 +4619,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["rfiCount"].read()
 
     @attribute(
-        dtype=("DevBoolean",), max_dim_x=2, fisallowed="_not_initialising"
+        dtype=("DevBoolean",), max_dim_x=2, fisallowed="_is_initialised"
     )  # fpgas
     def stationBeamFlagEnabled(
         self: MccsTile,
@@ -4621,7 +4664,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.integrated_data_transmission_mode
 
-    @attribute(dtype=("DevBoolean",), max_dim_x=48, fisallowed="_not_initialising")
+    @attribute(dtype=("DevBoolean",), max_dim_x=48, fisallowed="_is_initialised")
     def runningBeams(self: MccsTile) -> list[bool]:
         """
         List running status for each SubarrayBeam.
@@ -6862,6 +6905,130 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
         handler = self.get_command_object("LoadCalibrationCoefficients")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class LoadCalibrationCoefficientsForChannelsCommand(FastCommand):
+        """Class for handling the LoadCalibrationCoefficients(argin) command."""
+
+        def __init__(
+            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new LoadCalibrationCoefficientsForChannelsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(  # type: ignore[override]
+            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
+            argin: list[float],
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficientsForChannels` cmd.
+
+            :param argin: calibration coefficients
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+
+            :raises ValueError: if the argin argument does not have the
+                right length / structure
+            """
+            if len(argin) < 129:
+                self.logger.error("Insufficient calibration coefficients")
+                raise ValueError("Insufficient calibration coefficients")
+            if len(argin[1:]) % 128 != 0:
+                self.logger.error(
+                    "Incomplete specification of coefficient. "
+                    "Needs 8 values (4 complex Jones) per channeli per antenna"
+                )
+                raise ValueError("Incomplete specification of coefficient")
+            start_channel = int(argin[0])
+            if (start_channel < 0) or (start_channel > 383):
+                raise ValueError("Start channel outside of range 0-383")
+            calibration_coefficients = [
+                [
+                    [
+                        complex(argin[ant + i], argin[ant + i + 1]),
+                        complex(argin[ant + i + 2], argin[ant + i + 3]),
+                        complex(argin[ant + i + 4], argin[ant + i + 5]),
+                        complex(argin[ant + i + 6], argin[ant + i + 7]),
+                    ]
+                    for ant in range(0, 128, 8)
+                ]
+                for i in range(1, len(argin), 128)
+            ]
+
+            (
+                result,
+                message,
+            ) = self._component_manager.load_calibration_coefficients_for_channels(
+                start_channel, calibration_coefficients
+            )
+            return (result, message)
+
+    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
+    def LoadCalibrationCoefficientsForChannels(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
+        """
+        Load the calibration coefficients, but does not apply them.
+
+        This is performed by apply_calibration.
+        The calibration coefficients may include any rotation
+        matrix (e.g. the parallactic angle), but do not include the geometric delay.
+
+        :param argin: list comprises:
+
+        * start_channe - (int) is the first channel to which the coefficientsr
+            will be applied.
+        * calibration_coefficients - [array] a tridimensional complex array comprising
+            calibration_coefficients[channel, antenna, polarization], with each element
+            representing a normalized coefficient, with (1.0, 0.0) being the
+            normal, expected response for an ideal antenna.
+
+            * channel - (int) channel is the index specifying the channels at the
+                              beamformer output, i.e. considering only those channels
+                              actually processed and beam assignments.
+            * antenna - index ranging 0 to 16, for the 16 antennas managed by the tile
+            * polarization index ranges from 0 to 3.
+
+                * 0: X polarization direct element
+                * 1: X->Y polarization cross element
+                * 2: Y->X polarization cross element
+                * 3: Y polarization direct element
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> start_channel = 2
+        >>> complex_coefficients =[[[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*16]*4
+        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
+        >>> out = ([v.real, v.imag] for v in inp]
+        >>> coefficients = list(itertools.chain.from_iterable(out))
+        >>> coefficients.insert(0, float(start_channel))
+        >>> input = list(itertools.chain.from_iterable(coefficients))
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadCalibrationCoefficientsForChannels", input)
+        """
+        handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

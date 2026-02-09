@@ -1181,7 +1181,11 @@ class TileSimulator:
         Get the board temperature.
 
         :return: a float with the board temperature.
+
+        :raises BoardError: when the CPLD is not connectable.
         """
+        if not self._is_cpld_connectable:
+            raise BoardError("CPLD not connectable.")
         return self._tile_health_structure["temperatures"]["board"]
 
     @check_mocked_overheating
@@ -2000,6 +2004,7 @@ class TileSimulator:
                 # This sleep is to wait for the timed thread to
                 # update a register.
                 time.sleep(0.12)
+            self._is_cpld_connectable = True
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
@@ -2062,7 +2067,11 @@ class TileSimulator:
         cpld_registers = [int(0x30000000)]
         if self.tpm_mocked_overheating:
             # We can still access the (CPLD version) when FPGAs are shutdown.
-            if key in cpld_registers and self._is_cpld_connectable:
+            if (
+                key in cpld_registers
+                and self._is_cpld_connectable
+                and self.tpm is not None
+            ):
                 pass
             else:
                 self.logger.warning(
@@ -2245,6 +2254,39 @@ class TileSimulator:
         :param calibration_coefficients: Calibration coefficient array
         """
         self.logger.debug(f"Received calibration coefficients for antenna {antenna}")
+
+    @check_mocked_overheating
+    @connected
+    def load_calibration_coefficients_for_channels(
+        self: TileSimulator,
+        first_channel: int,
+        calibration_coefficients: list[list[list[complex]]],
+    ) -> None:
+        """
+        Load calibration coefficients for all antennas and a subset of channels.
+
+        calibration_coefficients is a tri-dimensional complex array of the form
+        calibration_coefficients[channel, antenna, polarization], with each
+        element representing a normalized coefficient, with (1.0, 0.0) the
+        normal, expected response for an ideal antenna.
+        Channel is the index specifying the channels at the beamformer output,
+        i.e. considering only those channels actually processed and beam assignments.
+        The polarization index ranges from 0 to 3.
+        0: X polarization direct element
+        1: X->Y polarization cross element
+        2: Y->X polarization cross element
+        3: Y polarization direct element
+        The calibration coefficients may include any rotation matrix (e.g.
+        the parallitic angle), but do not include the geometric delay.
+
+        :param first_channel: Start beamformer channel for coefficients (0-383)
+        :param calibration_coefficients: Calibration coefficient array
+        """
+        last_channel = first_channel + len(calibration_coefficients) - 1
+        self.logger.debug(
+            "Received calibration coefficients for channels "
+            f"{first_channel}-{last_channel}"
+        )
 
     @check_mocked_overheating
     @connected

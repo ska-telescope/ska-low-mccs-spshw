@@ -1371,7 +1371,7 @@ class TestMccsTile:
             in str(excinfo.value)
             or (
                 "To execute this command we must be in state "
-                "'Programmed', 'Initialised' or 'Synchronised'!"
+                "'Initialised' or 'Synchronised'!"
             )
             in str(excinfo.value)
         )
@@ -2401,7 +2401,7 @@ class TestMccsTileCommands:
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test for LoadCalibrationCoefficients.
+        Test LoadCalibrationCoefficients and LoadCalibrationCoefficientsForCahnnels.
 
         :param on_tile_device: fixture that provides a
         :param on_tile_device: fixture that provides a
@@ -2418,9 +2418,9 @@ class TestMccsTileCommands:
                 complex(4.6, 8.2),
                 complex(6.8, 2.4),
             ]
-        ] * 5
+        ]
         inp = list(itertools.chain.from_iterable(complex_coefficients))
-        out = [[v.real, v.imag] for v in inp]
+        out = [[v.real, v.imag] for v in inp] * 5
         coefficients = [antenna] + list(itertools.chain.from_iterable(out))
 
         # check that it can execute without exception
@@ -2431,6 +2431,25 @@ class TestMccsTileCommands:
 
         with pytest.raises(DevFailed, match="ValueError"):
             _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:16])
+
+        # test the channel based version of the command
+        first_channel = float(31)
+        out = [[v.real, v.imag] for v in inp] * 16
+        coefficients = [first_channel] + list(itertools.chain.from_iterable(out))
+
+        # check that it can execute without exception in the channel version
+        _ = on_tile_device.LoadCalibrationCoefficientsForChannels(coefficients)
+
+        # test exception with wrong number of elements
+        with pytest.raises(DevFailed, match="ValueError"):
+            _ = on_tile_device.LoadCalibrationCoefficientsForChannels(
+                coefficients[0:128]
+            )
+
+        # test exception with negative first channel
+        coefficients[0] = float(-1)
+        with pytest.raises(DevFailed, match="ValueError"):
+            _ = on_tile_device.LoadCalibrationCoefficientsForChannels(coefficients)
 
     def test_AntennaBuffer(
         self: TestMccsTileCommands,

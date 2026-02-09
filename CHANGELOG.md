@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-377] Use configuration properties in health.
+
 ## 11.2.0
 
 * [THORN-402] Configure pipeline to ignore sonar scan results.

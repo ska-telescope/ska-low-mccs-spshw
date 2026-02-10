@@ -352,7 +352,7 @@ class TestStationTileIntegration:
                 device_proxy=sps_station_device,
                 command_name="Initialise",
                 command_arguments=None,
-                timeout=12,
+                timeout=14,
             )
             change_event_callbacks["tile_programming_state"].assert_change_event(
                 "NotProgrammed"

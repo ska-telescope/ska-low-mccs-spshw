@@ -16,6 +16,7 @@ import os.path
 import re
 import sys
 import threading
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
@@ -33,7 +34,7 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
+from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
@@ -69,6 +70,7 @@ from .firmware_threshold_interface import (
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
+from .tile_health_recorder import TileHealthRecorder
 from .tpm_status import TpmStatus
 
 __all__ = ["MccsTile", "main"]
@@ -240,7 +242,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
         self._stopping: bool
-        self._health_recorder: HealthRecorder | None
+        self._health_recorder: TileHealthRecorder | None
         self._health_report = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds
@@ -251,6 +253,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager_fault: bool | None = None
         self.power_state: PowerState | None = None
         self.status_information: dict[str, str] = {}
+
+        self._intermediate_healths: dict[str, HealthState] = {
+            "temperatures": HealthState.UNKNOWN,
+            "currents": HealthState.UNKNOWN,
+            "dsp": HealthState.UNKNOWN,
+            "voltages": HealthState.UNKNOWN,
+            "io": HealthState.UNKNOWN,
+            "timing": HealthState.UNKNOWN,
+            "adcs": HealthState.UNKNOWN,
+            "alarms": HealthState.UNKNOWN,
+        }
+        self._intermediate_attrs: dict[str, list[str]]
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -796,6 +810,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "FPGA1",
             ],
         }
+        self._intermediate_attrs = defaultdict(list)
+        for attr, path in self.attribute_monitoring_point_map.items():
+            if not path:
+                continue
+            self._intermediate_attrs[path[0]].append(attr.lower())
+
         super().init_device()
 
         self.db_firmware_thresholds = FirmwareThresholds()
@@ -866,6 +886,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.push_change_event("healthState", health)
                 self.push_archive_event("healthState", health)
 
+    def _intermediate_health_changed(
+        self: MccsTile,
+        group: str,
+        health: HealthState,
+    ) -> None:
+        if self._stopping:
+            return
+
+        if self.UseAttributesForHealth:
+            if self._intermediate_healths[group] != health:
+                self.logger.info(
+                    "Intermediate Health changed ==> " f"{group=} {health=}"
+                )
+                self._intermediate_healths[group] = health
+
     def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
         """
         Handle change in attribute configuration.
@@ -914,12 +949,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # If we are bios 0.5.0 we ignore it.
                 healthful_attrs.discard("timing_pll_40g_count")
 
-            self._health_recorder = HealthRecorder(
+            self._health_recorder = TileHealthRecorder(
                 self.get_name(),
                 logger=self.logger,
                 attributes=list(healthful_attrs),
                 health_callback=self._health_changed_new,
                 attr_conf_callback=self._attr_conf_changed,
+                intermediate_health_callback=self._intermediate_health_changed,
+                health_groups=self._intermediate_attrs,
             )
         else:
             self._health_model = TileHealthModel(
@@ -4395,12 +4432,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: temperature Health State of the device
-
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["temperatures"]
         return self._health_model.intermediate_healths["temperatures"][0]
 
     @attribute(dtype=HealthState)
@@ -4413,12 +4447,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: voltage Health State of the device
-
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["voltages"]
         return self._health_model.intermediate_healths["voltages"][0]
 
     @attribute(dtype=HealthState)
@@ -4431,11 +4462,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: current Health State of the device
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["currents"]
         return self._health_model.intermediate_healths["currents"][0]
 
     @attribute(dtype=HealthState)
@@ -4448,11 +4477,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: alarm Health State of the device
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["alarms"]
         return self._health_model.intermediate_healths["alarms"][0]
 
     @attribute(dtype=HealthState)
@@ -4465,11 +4492,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: ADC Health State of the device
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["adcs"]
         return self._health_model.intermediate_healths["adcs"][0]
 
     @attribute(dtype=HealthState)
@@ -4482,11 +4507,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: timing Health State of the device
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["timing"]
         return self._health_model.intermediate_healths["timing"][0]
 
     @attribute(dtype=HealthState)
@@ -4499,11 +4522,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: io Health State of the device
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["io"]
         return self._health_model.intermediate_healths["io"][0]
 
     @attribute(dtype=HealthState)
@@ -4516,11 +4537,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         the overall healthState of the tile.
 
         :return: dsp Health State of the device
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
         """
         if self.UseAttributesForHealth:
-            raise NotImplementedError("")
+            return self._intermediate_healths["dsp"]
         return self._health_model.intermediate_healths["dsp"][0]
 
     @attribute(dtype="DevString")

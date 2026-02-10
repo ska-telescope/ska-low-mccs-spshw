@@ -13,6 +13,7 @@ import importlib  # allow forward references in type hints
 import json
 import logging
 import os.path
+import re
 import sys
 import threading
 from dataclasses import dataclass
@@ -73,6 +74,25 @@ from .tpm_status import TpmStatus
 __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
+
+def is_v1(version_str: str) -> bool:
+    """
+    Return True if version is v1.x.x?, False if v2.x.x?.
+
+    :param version_str: version string to check.
+    :return: True if v1.x.x? (or empty string), False if v2.x.x?.
+    :raises ValueError: if version_str is not valid.
+    """
+    # Allow empty string (treat as v2 by default)
+    if version_str == "":
+        return False
+
+    match = re.fullmatch(r"v([12])\.\d+\.\d+[a-z]?", version_str)
+    if not match:
+        raise ValueError(f"Invalid version format: '{version_str}'")
+
+    return match.group(1) == "1"
 
 
 def engineering_mode_required(func: Callable) -> Callable:
@@ -883,6 +903,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "antennaBufferMode",
                 "coreCommunicationStatus",
             }
+
+            if is_v1(self.HardwareVersion):
+                # Older tiles do not have ADC temperature sensors.
+                for idx in range(16):
+                    healthful_attrs.discard(f"temperatureADC{idx}")
+
+            if self.BiosVersion == "0.5.0":
+                # This monitoring point was introduced in 0.6.0.
+                # If we are bios 0.5.0 we ignore it.
+                healthful_attrs.discard("timing_pll_40g_count")
 
             self._health_recorder = HealthRecorder(
                 self.get_name(),

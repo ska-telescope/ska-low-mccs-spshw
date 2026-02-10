@@ -15,6 +15,7 @@ import logging
 import os.path
 import sys
 import threading
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
@@ -233,16 +234,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.power_state: PowerState | None = None
         self.status_information: dict[str, str] = {}
 
-        self._intermediate_reports: dict[str, str] = {
-            "temperatures": "",
-            "currents": "",
-            "dsp": "",
-            "voltages": "",
-            "io": "",
-            "timing": "",
-            "adcs": "",
-            "alarms": "",
-        }
         self._intermediate_healths: dict[str, HealthState] = {
             "temperatures": HealthState.UNKNOWN,
             "currents": HealthState.UNKNOWN,
@@ -253,6 +244,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs": HealthState.UNKNOWN,
             "alarms": HealthState.UNKNOWN,
         }
+        self._intermediate_attrs: dict[str, list[str]]
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -798,6 +790,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "FPGA1",
             ],
         }
+        self._intermediate_attrs = defaultdict(list)
+        for attr, path in self.attribute_monitoring_point_map.items():
+            if not path:
+                continue
+            self._intermediate_attrs[path[0]].append(attr.lower())
+
         super().init_device()
 
         self.db_firmware_thresholds = FirmwareThresholds()
@@ -872,18 +870,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
         group: str,
         health: HealthState,
-        health_report: str,
     ) -> None:
         if self._stopping:
             return
 
         if self.UseAttributesForHealth:
-            self._intermediate_reports[group] = health_report
-
             if self._intermediate_healths[group] != health:
                 self.logger.info(
-                    "Intermediate Health changed ==> "
-                    f"{group=} {health=}, {health_report=}"
+                    "Intermediate Health changed ==> " f"{group=} {health=}"
                 )
                 self._intermediate_healths[group] = health
 
@@ -932,6 +926,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 health_callback=self._health_changed_new,
                 attr_conf_callback=self._attr_conf_changed,
                 intermediate_health_callback=self._intermediate_health_changed,
+                health_groups=self._intermediate_attrs,
             )
         else:
             self._health_model = TileHealthModel(
@@ -1253,7 +1248,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
         return True
 
-    # pylint: disable=too-many-branches
     def _update_attribute_callback(
         self: MccsTile,
         mark_invalid: bool = False,
@@ -1269,12 +1263,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._health_model.update_state(
                         tile_health_structure=self.tile_health_structure
                     )
-                elif self._health_recorder is not None:
-                    # Note: This assumes we are reading block-by-block for each
-                    # intermediate health.
-                    group = next(iter(attribute_value))
-                    attrs = set(attribute_value[group])
-                    self._health_recorder.update_health_groups(group, attrs)
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
             elif attribute_name == "firmware_thresholds":
                 self.logger.debug(

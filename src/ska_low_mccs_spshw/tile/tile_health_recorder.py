@@ -6,7 +6,6 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements a class for recording intermediate healths for MccsTile."""
-from collections import defaultdict
 from logging import Logger
 from typing import Callable
 
@@ -25,7 +24,8 @@ class TileHealthRecorder(HealthRecorder):
         attributes: list[str],
         health_callback: Callable[[HealthState, str], None],
         attr_conf_callback: Callable[[str], None],
-        intermediate_health_callback: Callable[[str, HealthState, str], None]
+        intermediate_health_callback: Callable[[str, HealthState], None],
+        health_groups: dict[str, list[str]],
     ) -> None:
         """
         Initialise a new instance.
@@ -41,9 +41,11 @@ class TileHealthRecorder(HealthRecorder):
             push an event, it will be OK until the attribute is updated.
         :param intermediate_health_callback: callback to be called whenever the
             intermediate healths change.
+        :param health_groups: dictionary containing health groups keyed to the
+            attributes in that group.
         """
         self._intermediate_health_callback = intermediate_health_callback
-        self._health_groups: dict[str, set] = defaultdict(set)
+        self._health_groups: dict[str, list] = health_groups
         self._intermediate_healths: dict[str, tuple] = {}
         super().__init__(
             trl,
@@ -52,15 +54,6 @@ class TileHealthRecorder(HealthRecorder):
             health_callback=health_callback,
             attr_conf_callback=attr_conf_callback,
         )
-
-    def update_health_groups(self, health_group: str, attrs: set[str]) -> None:
-        """
-        Update which group each attr belongs to, called by MccsTile upon a HW read.
-
-        :param health_group: the health group.
-        :param attrs: the attributes in that health group.
-        """
-        self._health_groups[health_group] = attrs
 
     def _evaluate_intermediate_health(self) -> None:
         for group, attrs in self._health_groups.items():
@@ -75,14 +68,14 @@ class TileHealthRecorder(HealthRecorder):
             (
                 last_intermediate_health,
                 last_intermediate_report,
-            ) = self._intermediate_healths.get(group, ())
+            ) = self._intermediate_healths.get(
+                group, (HealthState.UNKNOWN, "No attributes read")
+            )
             if (
                 intermediate_health != last_intermediate_health
                 or intermediate_report != last_intermediate_report
             ):
-                self._intermediate_health_callback(
-                    group, intermediate_health, intermediate_report
-                )
+                self._intermediate_health_callback(group, intermediate_health)
 
     def update_health(self) -> None:
         """Update the intermediate healths alongside the overall health."""

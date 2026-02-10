@@ -1086,13 +1086,9 @@ class TestMccsTile:
             ["timing", "clocks", "FPGA0", "JESD"], value=True
         )
         tile_simulator.simulate_health_value(["voltages", "DDR1_VREF"], value=0.60)
-        print("dsoiudsoidj")
-        print(tile_device.timing)
 
-        time.sleep(time_to_poll_attributes + 10)
+        time.sleep(time_to_poll_attributes)
         assert tile_device.healthState == HealthState.OK, tile_device.healthReport
-        print("dsdsdsdsdsdsd")
-        print(tile_device.timing)
 
     def test_healthState(
         self: TestMccsTile,

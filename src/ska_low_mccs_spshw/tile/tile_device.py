@@ -1303,7 +1303,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.tile_health_structure = {}
                 else:
                     merge(self.tile_health_structure, attribute_value)
-                    # self.tile_health_structure.update(attribute_value)
                 if not self.UseAttributesForHealth:
                     self._health_model.update_state(
                         tile_health_structure=self.tile_health_structure

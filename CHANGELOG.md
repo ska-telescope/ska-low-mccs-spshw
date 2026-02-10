@@ -2,6 +2,7 @@
 
 ## 11.2.0
 
+* [SKB-1181] During Station Initialise, start the beamformer with an empty channel_groups to start the beamformer daisy chain. This will still report beamformer_is_running as False but packets for station beam data will start flowing from all the tiles except the last tile because the channel_groups is empty.
 * [THORN-402] Configure pipeline to ignore sonar scan results.
 * [THORN-404] Update station standby to wait for tileprogrammingstate to be Off.
 * [THORN-404] Update RAL deployment hardware specification.

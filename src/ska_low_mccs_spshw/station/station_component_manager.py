@@ -1581,6 +1581,14 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
+
+            self.logger.debug(
+                "Starting station beamformer with empty channel_groups"
+                "to start the beamformer daisy chain during station initialise"
+            )
+            self._start_beamformer(
+                start_time=None, duration=-1, channel_groups=[], scan_id=0
+            )
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
@@ -3049,10 +3057,10 @@ class SpsStationComponentManager(
 
     def _start_beamformer(
         self: SpsStationComponentManager,
-        start_time: str,
-        duration: float,
-        channel_groups: list[int] | None,
-        scan_id: int,
+        start_time: Optional[str] = None,
+        duration: int = -1,
+        channel_groups: Optional[list[int]] = None,
+        scan_id: int = 0,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3070,7 +3078,8 @@ class SpsStationComponentManager(
         """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        parameter_list = {
+
+        parameter_list: dict[str, Any] = {
             "start_time": start_time,
             "duration": duration,
             "scan_id": scan_id,

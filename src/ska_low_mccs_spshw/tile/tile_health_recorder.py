@@ -46,7 +46,6 @@ class TileHealthRecorder(HealthRecorder):
         """
         self._intermediate_health_callback = intermediate_health_callback
         self._health_groups: dict[str, list] = health_groups
-        self._intermediate_healths: dict[str, tuple] = {}
         super().__init__(
             trl,
             logger,
@@ -65,17 +64,7 @@ class TileHealthRecorder(HealthRecorder):
             intermediate_health, intermediate_report = self._evaluate_health(
                 intermediate_attrs
             )
-            (
-                last_intermediate_health,
-                last_intermediate_report,
-            ) = self._intermediate_healths.get(
-                group, (HealthState.UNKNOWN, "No attributes read")
-            )
-            if (
-                intermediate_health != last_intermediate_health
-                or intermediate_report != last_intermediate_report
-            ):
-                self._intermediate_health_callback(group, intermediate_health)
+            self._intermediate_health_callback(group, intermediate_health)
 
     def update_health(self) -> None:
         """Update the intermediate healths alongside the overall health."""

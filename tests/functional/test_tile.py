@@ -183,6 +183,10 @@ def check_spsstation_state(
     AttributeWaiter(timeout=300).wait_for_value(
         station, "state", tango.DevState.STANDBY
     )
+    for tile in station_tiles:
+        AttributeWaiter(timeout=300).wait_for_value(
+            tile, "tileProgrammingState", "Off", lookahead=5
+        )
     station.on()
     try:
         AttributeWaiter(timeout=300).wait_for_value(station, "state", tango.DevState.ON)

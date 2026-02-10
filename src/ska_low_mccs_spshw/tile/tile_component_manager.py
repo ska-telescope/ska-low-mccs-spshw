@@ -88,6 +88,7 @@ _ATTRIBUTE_MAP: Final = {
     "CHECK_CPLD_COMMS": "global_status_alarms",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
+    "40G_PACKET_COUNT": "40g_packet_count",
 }
 
 
@@ -543,6 +544,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.read_broadband_rfi,
+                    publish=True,
+                )
+            case "40G_PACKET_COUNT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_40g_packet_counts,
                     publish=True,
                 )
             case _:

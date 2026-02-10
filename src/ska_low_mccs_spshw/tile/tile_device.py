@@ -421,6 +421,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "pfb_version": "pfbVersion",
             "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas",
             "broadband_rfi_factor": "broadbandRfiFactor",
+            "40g_packet_count": "fortyGPacketCount",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -451,9 +452,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "f2f_pll_lock_status": lambda val: int(val[0])
-            if val[0] is not None
-            else None,
+            "f2f_pll_lock_status": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
             "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
             "f2f_pll_counter": lambda val: int(val[1]) if val[1] is not None else None,
             "timing_pll_40g_count": lambda val: (

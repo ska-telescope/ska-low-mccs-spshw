@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-405] Re-implement intermediate healths in MccsTile, fix old health model in MccsTile.
 * [THORN-402] Configure pipeline to ignore sonar scan results.
 * [THORN-372] Added command  'LoadCalibrationCoefficientForChannels ' to MccsTile & SpsStation
 * [THORN-389] Bumping TPM FPGA firmware version to 9.0.0

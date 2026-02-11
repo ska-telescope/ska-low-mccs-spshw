@@ -1144,7 +1144,6 @@ class TileSimulator:
         for key in path[:-1]:
             d = d[key]
         d[path[-1]] = value
-        print(f"doishd: {self._tile_health_structure=}")
 
     @check_mocked_overheating
     @connected

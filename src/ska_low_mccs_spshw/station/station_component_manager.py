@@ -844,12 +844,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config.get("delay_x", antenna_config["delay"])
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config.get("delay_y", antenna_config["delay"])
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config.get("delay_x", antenna_config["delay"])
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config.get("delay_y", antenna_config["delay"])
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -3004,10 +3004,8 @@ class SpsStationComponentManager(
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
 
-            # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
-            # But this code should not be depending on assumptions about TRL structure
-            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1][3:])
-            delays_for_tile = tile_delays[tile_no - 1]
+            tile_no = tile_proxy._proxy.logicalTileId
+            delays_for_tile = tile_delays[tile_no]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
     def apply_pointing_delays(

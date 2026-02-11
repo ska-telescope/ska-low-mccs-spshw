@@ -56,7 +56,7 @@ Feature: Test tile
         And I switch the active calibration bank
         And the staged and live calibration coefficients can be read back correctly from the Tile for the first half of channels
         When I stage calibration coefficients on the Tile for the rest of the channels
-        And I switch the active calibration bank
+        And I switch the active calibration bank again
         Then the live calibration coefficients can be read back correctly from the Tile
         And the staged calibration coefficients can be read back correctly from the Tile
 

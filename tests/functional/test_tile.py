@@ -663,6 +663,7 @@ def stage_calibration_coefficients_on_tile_per_channel(
         pytest.fail("Could not validate restoration of original staged calibration.")
 
 
+@given("I switch the active calibration bank", target_fixture="original_live_cal")
 @when("I switch the active calibration bank", target_fixture="original_live_cal")
 def switch_active_calibration_bank(
     tile_device: tango.DeviceProxy,
@@ -703,6 +704,20 @@ def switch_active_calibration_bank(
         )
     except AssertionError:
         pytest.fail("Could not validate restoration of original live calibration.")
+
+
+@when("I switch the active calibration bank again", target_fixture="original_live_cal")
+def switch_active_calibration_bank_again(
+    tile_device: tango.DeviceProxy,
+) -> None:
+    """
+    Switch staged and live calibration banks on the tile device.
+
+    :param tile_device: Tile device under test.
+    """
+    tile_device.ApplyCalibration("")
+    time.sleep(0.25)  # We saw what looked like a partial bank swap vs hardware.
+    # Looks like the command is returning too soon from tpm-api.
 
 
 @then("the live calibration coefficients can be read back correctly from the Tile")

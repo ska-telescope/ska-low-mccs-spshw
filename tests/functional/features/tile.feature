@@ -48,6 +48,18 @@ Feature: Test tile
         When I switch the active calibration bank
         Then the live calibration coefficients can be read back correctly from the Tile
 
+    Scenario: Apply and verify calibration updates
+        Given an SPS deployment against a real context
+        And the SpsStation and tiles are ON
+        And the Tile is available
+        And I stage calibration coefficients on the Tile for half of the channels
+        And I switch the active calibration bank
+        And the staged and live calibration coefficients can be read back correctly from the Tile for the first half of channels
+        When I stage calibration coefficients on the Tile for the rest of the channels
+        And I switch the active calibration bank
+        Then the live calibration coefficients can be read back correctly from the Tile
+        And the staged calibration coefficients can be read back correctly from the Tile
+
 # Scenario: Tile state recovered after dev_init
 #     Given an SPS deployment against HW
 #     And the SpsStation and tiles are ON

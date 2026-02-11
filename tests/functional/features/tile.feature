@@ -48,7 +48,7 @@ Feature: Test tile
         When I switch the active calibration bank
         Then the live calibration coefficients can be read back correctly from the Tile
 
-    Scenario: Apply and verify calibration updates
+    Scenario: Apply and verify partial calibration updates
         Given an SPS deployment against a real context
         And the SpsStation and tiles are ON
         And the Tile is available

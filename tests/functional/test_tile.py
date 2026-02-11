@@ -149,6 +149,28 @@ def test_apply_switch_verify_cal_coeffs(
         device.adminmode = AdminMode.ONLINE
 
 
+@scenario(
+    "features/tile.feature",
+    "Apply and verify partial calibration updates",
+)
+def test_apply_switch_verify_partial_cal_coeffs(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests calibration bank switching.
+
+    This test stages and applies calibration for half of the channels,
+        switches banks, verifies staged and live cal,
+        applies calibration for the other half of the channels,
+        switches banks and verifies staged and live cal.
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
 @given("an SPS deployment against HW")
 def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
@@ -293,7 +315,8 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         assert first_tile.data_router_discarded_packets == json.dumps(
             {"FPGA0": [0, 0], "FPGA1": [0, 0]}
         )
-    except Exception:  # pylint: disable=broad-except
+    # pylint: disable=broad-except
+    except Exception:
         # Allow time to in case of first read.
         time.sleep(10)
         assert first_tile.data_router_discarded_packets == json.dumps(

@@ -594,6 +594,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "rfiCount": NpArrayAttributeManager(
                     functools.partial(self.post_change_event, "rfiCount")
                 ),
+                "fortyGPacketCount": AttributeManager(
+                    functools.partial(self.post_change_event, "fortyGPacketCount")
+                ),
             }
         )
 
@@ -1395,9 +1398,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information[
-                "firmware_configuration_status"
-            ] = self.db_configuration_fault[1]
+            self.status_information["firmware_configuration_status"] = (
+                self.db_configuration_fault[1]
+            )
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault
@@ -4668,6 +4671,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_y=16,  # antenna
         abs_change=1,
         archive_abs_change=1,
+        fisallowed="_is_initialised",
     )
     def rfiCount(self: MccsTile) -> list[list]:
         """
@@ -5397,6 +5401,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="40G Packet Count",
+        fisallowed="_is_initialised",
     )
     def fortyGPacketCount(self: MccsTile) -> str:
         """
@@ -5436,7 +5441,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: Packet counts per active 40G core. Returns an empty dictionary
                 if no 40G cores are active.
         """
-        return json.dumps(self.component_manager.get_40g_packet_counts())
+        return json.dumps(self._attribute_state["fortyGPacketCount"].read())
 
     @attribute(
         dtype="DevString",

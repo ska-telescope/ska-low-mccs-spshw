@@ -706,7 +706,7 @@ def switch_active_calibration_bank(
         pytest.fail("Could not validate restoration of original live calibration.")
 
 
-@when("I switch the active calibration bank again", target_fixture="original_live_cal")
+@when("I switch the active calibration bank again")
 def switch_active_calibration_bank_again(
     tile_device: tango.DeviceProxy,
 ) -> None:

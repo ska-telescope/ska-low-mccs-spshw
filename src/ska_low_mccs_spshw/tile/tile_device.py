@@ -1398,9 +1398,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information["firmware_configuration_status"] = (
-                self.db_configuration_fault[1]
-            )
+            self.status_information[
+                "firmware_configuration_status"
+            ] = self.db_configuration_fault[1]
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault

@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-405] Re-implement intermediate healths in MccsTile, fix old health model in MccsTile.
+* [THORN-377] Use configuration properties in health.
+
 ## 11.2.0
 
 * [THORN-389] Bump TPM-API version 2.2.1 -> 2.3.0

@@ -470,7 +470,7 @@ class SpsStationComponentManager(
 
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
-        self._tile_id_mapping: dict[str, int] = {}
+        self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
         self._number_of_tiles = len(tile_fqdns)
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
@@ -849,20 +849,20 @@ class SpsStationComponentManager(
             [0] * TileData.ADC_CHANNELS for _ in range(len(self._tile_proxies))
         ]
         for antenna_config in self._antenna_mapping.values():
-            try:
-                tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
-            except KeyError:
-                self.logger.debug(
-                    f"Mapping for tile {antenna_config['tpm']} present, "
-                    "but device not deployed. Skipping."
+            tile_logical_id = antenna_config["tpm"]
+            if tile_logical_id >= len(self._tile_proxies):
+                self.logger.warning(
+                    f"Antenna references tile with logical ID {tile_logical_id}, "
+                    f"but only {len(self._tile_proxies)} tiles are deployed. "
+                    "Skipping this antenna."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config.get("delay_x", antenna_config["delay"])
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config.get("delay_y", antenna_config["delay"])
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config.get("delay_x", antenna_config["delay"])
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config.get("delay_y", antenna_config["delay"])
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

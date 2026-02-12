@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* [THORN-389] Bump TPM-API version 2.2.1 -> 2.3.0
+  * Added Tile attribute: fortyGPacketCount - Packet counts per active core.
+  * Added Tile attribute: allStagedCal - Returns all staged calibration coefficients.
+  * Added Tile attribute: allLiveCal - Returns all live calibration coefficients.
+  * Added Tile command: LoadCalibrationCoefficientsForChannels - Loads calibration coefficients for specified channels.
 * [THORN-405] Re-implement intermediate healths in MccsTile, fix old health model in MccsTile.
 * [THORN-377] Use configuration properties in health.
 

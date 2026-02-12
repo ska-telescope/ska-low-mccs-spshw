@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterator
 from unittest.mock import patch
 
 import _pytest
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode
@@ -72,6 +73,38 @@ def pytest_addoption(
             "run HW only tests"
         ),
     )
+
+
+@pytest.fixture(name="nof_antennas")
+def nof_antennas_fixture() -> int:
+    """
+    Fixture for the number of antennas per tile.
+
+    :returns: Number of antennas (16).
+    """
+    return 16
+
+
+@pytest.fixture(name="nof_channels")
+def nof_channels_fixture() -> int:
+    """
+    Fixture for the number of channels.
+
+    :returns: Number of channels (384).
+    """
+    return 384
+
+
+@pytest.fixture(name="nof_pols")
+def nof_pols_fixture() -> int:
+    """
+    Fixture for the number of polarizations.
+
+    Includes cross-pol terms.
+
+    :returns: Number of polarizations (4).
+    """
+    return 4
 
 
 @pytest.fixture(name="stations_devices_exported")
@@ -839,3 +872,38 @@ def wait_for_lrcs_to_finish_fixture() -> Callable:
                     )
 
     return _wait_for_lrcs_to_finish
+
+
+@pytest.fixture(name="calibration_coefficients")
+def calibration_coefficients_fixture(
+    nof_channels: int, nof_antennas: int, nof_pols: int
+) -> list[list[list[list[float]]]]:
+    """
+    Return a list of calibration coefficients.
+
+    Calibration coefficients should be normalized complex values around 1.0+0j,
+    representing the antenna response. This fixture generates the same
+    calibration for all channels, with each antenna having a unique value:
+    antenna 1 (index 0) = 0.1+0j, antenna 2 (index 1) = 0.2+0j, ...,
+    antenna 16 (index 15) = 1.6+0j. All polarizations for an antenna use
+    the same value.
+
+    :param nof_channels: Number of channels.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_pols: Number of polarizations.
+
+    :returns: A list of calibration coefficients.
+    """
+    # Create array with shape (nof_channels, nof_antennas, nof_pols, 2)
+    calibration_coefficients = np.zeros(
+        (nof_channels, nof_antennas, nof_pols, 2), dtype=float
+    )
+
+    # Set same calibration for all channels
+    # Each antenna gets value (antenna_index + 1) * 0.1 as the real component
+    for antenna in range(nof_antennas):
+        antenna_value = (antenna + 1) * 0.1  # 0.1, 0.2, 0.3, ..., 1.6
+        calibration_coefficients[:, antenna, :, 0] = antenna_value  # Real part
+        calibration_coefficients[:, antenna, :, 1] = 0.0  # Imaginary part
+
+    return calibration_coefficients.tolist()

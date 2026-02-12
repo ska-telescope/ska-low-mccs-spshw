@@ -45,6 +45,7 @@ from ska_tango_base.commands import (
 from tango.server import attribute, command, device_property
 
 from .attribute_converters import (
+    NumpyEncoder,
     adc_pll_to_list,
     adc_to_list,
     clock_managers_count,
@@ -454,6 +455,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "pfb_version": "pfbVersion",
             "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas",
             "broadband_rfi_factor": "broadbandRfiFactor",
+            "40g_packet_count": "fortyGPacketCount",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -484,9 +486,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "f2f_pll_lock_status": lambda val: int(val[0])
-            if val[0] is not None
-            else None,
+            "f2f_pll_lock_status": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
             "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
             "f2f_pll_counter": lambda val: int(val[1]) if val[1] is not None else None,
             "timing_pll_40g_count": lambda val: (
@@ -591,6 +593,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 ),
                 "rfiCount": NpArrayAttributeManager(
                     functools.partial(self.post_change_event, "rfiCount")
+                ),
+                "fortyGPacketCount": AttributeManager(
+                    functools.partial(self.post_change_event, "fortyGPacketCount")
                 ),
             }
         )
@@ -4666,6 +4671,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_y=16,  # antenna
         abs_change=1,
         archive_abs_change=1,
+        fisallowed="_is_initialised",
     )
     def rfiCount(self: MccsTile) -> list[list]:
         """
@@ -5391,6 +5397,81 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :rtype: float
         """
         return self._attribute_state["broadbandRfiFactor"].read()
+
+    @attribute(
+        dtype="DevString",
+        label="40G Packet Count",
+        fisallowed="_is_initialised",
+    )
+    def fortyGPacketCount(self: MccsTile) -> str:
+        """
+        Get 40G packet counts.
+
+        The return value depends on how many 40G cores are active.
+        Typically, only one core is active.
+
+        Example::
+
+            # 0 cores active
+            {}
+
+            # 1 core active
+            {
+                'FPGA0': {
+                    'rx_received': 2921,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 6973024
+                }
+            }
+
+            # 2 cores active
+            {
+                'FPGA0': {
+                    'rx_received': 3881,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 7321460
+                },
+                'FPGA1': {
+                    'rx_received': 1,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 3122
+                }
+            }
+
+        :return: Packet counts per active 40G core. Returns an empty dictionary
+                if no 40G cores are active.
+        """
+        return json.dumps(self._attribute_state["fortyGPacketCount"].read())
+
+    @attribute(
+        dtype="DevString",
+        label="All Staged Calibration Coefficients",
+    )
+    def allStagedCal(self: MccsTile) -> str:
+        """
+        Read all staged calibration coefficients.
+
+        :return: JSON string of all staged calibration coefficients.
+        """
+        return json.dumps(
+            self.component_manager.read_all_staged_calibration_coefficients(),
+            cls=NumpyEncoder,
+        )
+
+    @attribute(
+        dtype="DevString",
+        label="All Live Calibration Coefficients",
+    )
+    def allLiveCal(self: MccsTile) -> str:
+        """
+        Read all live calibration coefficients.
+
+        :return: JSON string of all live calibration coefficients.
+        """
+        return json.dumps(
+            self.component_manager.read_all_live_calibration_coefficients(),
+            cls=NumpyEncoder,
+        )
 
     # --------
     # Commands
@@ -7050,7 +7131,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param argin: list comprises:
 
-        * start_channe - (int) is the first channel to which the coefficientsr
+        * start_channel - (int) is the first channel to which the coefficients
             will be applied.
         * calibration_coefficients - [array] a tridimensional complex array comprising
             calibration_coefficients[channel, antenna, polarization], with each element

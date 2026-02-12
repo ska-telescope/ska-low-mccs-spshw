@@ -203,6 +203,7 @@ class RequestIterator:
         "TIMING",
         "IO",
         "DSP",
+        "40G_PACKET_COUNT",
     ]
     SYNCHRONISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
@@ -228,6 +229,7 @@ class RequestIterator:
         "TIMING",
         "IO",
         "DSP",
+        "40G_PACKET_COUNT",
     ]
 
     def __init__(self: RequestIterator):

@@ -5138,8 +5138,8 @@ numpy = "^1.26.4"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
-reference = "skb-1089-c2c-calibration"
-resolved_reference = "aa986fabf9b7fbb2526cf9afe5347cbb87a2ed14"
+reference = "3.0.0"
+resolved_reference = "3582d293cd9bd83bb7384dec9c162529a0017b04"
 
 [[package]]
 name = "ska-ser-logging"
@@ -6509,4 +6509,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "d18b8c304671138eb626961a668484b2f4850149d521b54c69b734a0e548d8c7"
+content-hash = "d324be5c1d0ffefbf3778f6c5b1e0d7c7bfd748f172e798446e8ab5d12cde609"

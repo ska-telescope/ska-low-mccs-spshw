@@ -87,7 +87,7 @@ def merge(d: dict[str, Any], u: dict[str, Any]) -> None:
     """
     for k, v in u.items():
         if isinstance(v, dict) and isinstance(d.get(k), dict):
-            d[k].update(v)
+            merge(d[k], v)
         else:
             d[k] = v
 

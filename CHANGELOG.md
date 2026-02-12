@@ -9,10 +9,11 @@
   * Added Tile command: LoadCalibrationCoefficientsForChannels - Loads calibration coefficients for specified channels.
 * [THORN-405] Re-implement intermediate healths in MccsTile, fix old health model in MccsTile.
 * [THORN-377] Use configuration properties in health.
+* [THORN-377] handle single health attribute failure.
+* [SKB-1181] During Station Initialise, start the beamformer with an empty channel_groups to start the beamformer daisy chain. This will still report beamformer_is_running as False but packets for station beam data will start flowing from all the tiles except the last tile because the channel_groups is empty.
 
 ## 11.2.0
 
-* [SKB-1181] During Station Initialise, start the beamformer with an empty channel_groups to start the beamformer daisy chain. This will still report beamformer_is_running as False but packets for station beam data will start flowing from all the tiles except the last tile because the channel_groups is empty.
 * [THORN-402] Configure pipeline to ignore sonar scan results.
 * [THORN-404] Update station standby to wait for tileprogrammingstate to be Off.
 * [THORN-404] Update RAL deployment hardware specification.
@@ -25,7 +26,7 @@
 * [LOW-2034] Remove unused EDA config ConfigMap
 * [THORN-353] Fixed subrack functional tests at RAL.
 * [THORN-349] Fixed spead capture functional tests at RAL.
-* [SKB-1089] Prevent attempts to communicate with FPGA via CPLD. The check_communication() method is destructive, calling this in an unprogrammed state can lead to decompression issues
+* [SKB-1089] Prevent attempts to communicate with FPGA via CPLD when in unprogrammed state.
 presenting themselves in initialisation.
 * [SKB-1089] Add workaround for I2C race condition when setting an LED after FPGA is erased.
 

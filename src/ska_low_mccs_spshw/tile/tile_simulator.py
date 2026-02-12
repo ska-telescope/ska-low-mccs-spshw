@@ -1140,6 +1140,18 @@ class TileSimulator:
             return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
 
+    def simulate_health_value(self: TileSimulator, path: list[str], value: Any) -> None:
+        """
+        Simulate a value in the health structure.
+
+        :param path: The dictionary path you want to inject a value at
+        :param value: The value you want injecting.
+        """
+        d: dict[Any, Any] = self._tile_health_structure
+        for key in path[:-1]:
+            d = d[key]
+        d[path[-1]] = value
+
     @check_mocked_overheating
     @connected
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:

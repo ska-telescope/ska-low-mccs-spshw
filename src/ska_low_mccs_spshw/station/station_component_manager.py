@@ -1583,7 +1583,7 @@ class SpsStationComponentManager(
             message = "Initialisation Complete"
 
             self.logger.debug(
-                "Starting station beamformer with empty channel_groups"
+                "Starting station beamformer with empty channel_groups "
                 "to start the beamformer daisy chain during station initialise"
             )
             self._start_beamformer(

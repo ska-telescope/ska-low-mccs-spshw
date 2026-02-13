@@ -2892,7 +2892,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Result code and message
         """
-        time.sleep(2)
+        time.sleep(3)
         if load_time == "":
             load_frame = 0
         elif isinstance(load_time, int):  # added for backward compatibility

@@ -2892,7 +2892,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Result code and message
         """
-        time.sleep(3)
+        time.sleep(5)  # This will be causing tango timeouts buuuut....
         if load_time == "":
             load_frame = 0
         elif isinstance(load_time, int):  # added for backward compatibility

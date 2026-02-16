@@ -2901,7 +2901,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if load_frame < 0:
                 self.logger.error(f"apply_pointing_delays: Invalid time {load_time}")
                 raise ValueError(f"Invalid time {load_time}")
-            time.sleep(2)
+            time.sleep(5)
             if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"

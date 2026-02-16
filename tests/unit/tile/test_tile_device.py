@@ -1898,6 +1898,72 @@ class TestMccsTile:
             except tango.DevFailed:
                 print(f"Failed to restore attribute config for {attribute_name}")
 
+    def test_alarm_to_off_does_not_transition_via_on(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Verify that ALARMED device transitions to OFF correctly.
+
+        Disallowed:
+            ALARM -> ON -> ...
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        # Subscribe to health change events
+        on_tile_device.subscribe_event(
+            "HealthState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["health_state"],
+        )
+
+        # Ensure starting state is OK
+        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        assert on_tile_device.healthState == HealthState.OK
+
+        # Force device into FAILED / ALARM
+        tile_simulator._tile_health_structure["timing"]["clocks"]["FPGA0"] = {
+            "JESD": 1,
+            "DDR": 0,
+            "UDP": 1,
+        }
+
+        change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+
+        assert on_tile_device.healthState == HealthState.FAILED
+        assert on_tile_device.state() == tango.DevState.ALARM
+
+        # Trigger mock off sequence
+        tile_simulator.mock_off()
+        on_tile_device.MockTpmOff()
+
+        observed_states = []
+
+        # Observe state transitions for a short period
+        for _ in range(100):
+            time.sleep(0.1)
+            state = on_tile_device.state()
+            observed_states.append(state)
+
+            if state == tango.DevState.OFF:
+                break
+
+        # Ensure we never transitioned via ON
+        assert (
+            tango.DevState.ON not in observed_states
+        ), f"Invalid transition path detected: {observed_states}"
+
+        # Final state must be OFF
+        assert on_tile_device.state() == tango.DevState.OFF
+
 
 # pylint: disable=too-many-public-methods
 class TestMccsTileCommands:

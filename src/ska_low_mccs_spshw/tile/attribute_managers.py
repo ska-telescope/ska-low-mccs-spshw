@@ -83,13 +83,17 @@ class AttributeManager:
 
         is_event_required = False
         self._last_update = time.time()
-        new_value = (
-            self._converter(value)
-            if self._converter and not _is_none_type(value)
-            else value
-        )
 
-        if _is_none_type(new_value):
+        try:
+            new_value = (
+                self._converter(value)
+                if self._converter and not _is_none_type(value)
+                else value
+            )
+        except Exception:  # pylint: disable=broad-except
+            new_value = None
+
+        if _is_none_type(val=new_value):
             # Move to invalid and require event!
             if self._quality != tango.AttrQuality.ATTR_INVALID:
                 self._quality = tango.AttrQuality.ATTR_INVALID

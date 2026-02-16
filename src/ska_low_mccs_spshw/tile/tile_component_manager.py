@@ -88,6 +88,7 @@ _ATTRIBUTE_MAP: Final = {
     "CHECK_CPLD_COMMS": "global_status_alarms",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
+    "40G_PACKET_COUNT": "40g_packet_count",
 }
 
 
@@ -543,6 +544,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.read_broadband_rfi,
+                    publish=True,
+                )
+            case "40G_PACKET_COUNT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_40g_packet_counts,
                     publish=True,
                 )
             case _:
@@ -3065,8 +3072,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             try:
+                # Convert to numpy array to support tuple indexing in TPM API
+                coeffs_array = np.array(calibration_coefficients, dtype=complex)
                 self.tile.load_calibration_coefficients_for_channels(
-                    start_channel, calibration_coefficients
+                    start_channel, coeffs_array
                 )
             # pylint: disable=broad-except
             except Exception as e:
@@ -4531,3 +4540,79 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.clear_broadband_rfi()
+
+    def get_40g_packet_counts(self: TileComponentManager) -> dict[str, dict[str, int]]:
+        """
+        Get 40G packet counts.
+
+        The return value depends on how many 40G cores are active.
+        Typically, only one core is active.
+
+        Example::
+
+            # 0 cores active
+            {}
+
+            # 1 core active
+            {
+                'FPGA0': {
+                    'rx_received': 2921,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 6973024
+                }
+            }
+
+            # 2 cores active
+            {
+                'FPGA0': {
+                    'rx_received': 3881,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 7321460
+                },
+                'FPGA1': {
+                    'rx_received': 1,
+                    'rx_forwarded': 0,
+                    'tx_transmitted': 3122
+                }
+            }
+
+        :return: Packet counts per active 40G core. Returns an empty dictionary
+                if no 40G cores are active.
+        :rtype: dict
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_40g_packet_counts()
+
+    def read_all_staged_calibration_coefficients(
+        self: TileComponentManager,
+    ) -> list[list[list[complex]]]:
+        """
+        Read all staged calibration coefficients from the TPM.
+
+        :return: Calibration coefficient array
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.read_all_staged_calibration_coefficients()
+
+    def read_all_live_calibration_coefficients(
+        self: TileComponentManager,
+    ) -> list[list[list[complex]]]:
+        """
+        Read all live calibration coefficients from the TPM.
+
+        :return: Calibration coefficient array
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.read_all_live_calibration_coefficients()

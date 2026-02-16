@@ -2022,7 +2022,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         cal_coefs = [[[complex(3, 3), complex(4, 4), complex(5, 5), complex(6, 6)]]]
         tile_component_manager.load_calibration_coefficients_for_channels(3, cal_coefs)
-        t_s.load_calibration_coefficients_for_channels.assert_called_with(3, cal_coefs)
+        assert np.array_equal(
+            t_s.load_calibration_coefficients_for_channels.call_args[0][1],
+            np.array(cal_coefs, dtype=complex),
+        )
 
         # Check that thrown exception are caught when thrown.
         t_s.load_calibration_coefficients_for_channels.side_effect = Exception(

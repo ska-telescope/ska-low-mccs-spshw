@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, Generator
 
 import numpy as np
 import pytest
@@ -83,6 +83,86 @@ def test_tile_initialised_recover(
 ) -> None:
     """
     Run a test scenario that tests the tile device.
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/tile.feature",
+    "Apply and read back staged calibration coefficients per antenna",
+)
+def test_apply_read_staged_cal_coeffs_antenna(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    In this test we use LoadCalibrationCoefficients which loads on a per-antenna basis
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/tile.feature",
+    "Apply and read back staged calibration coefficients per channel",
+)
+def test_apply_read_staged_cal_coeffs_channel(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    In this test we use LoadCalibrationCoefficientsForChannels which loads on a
+        per-channel basis
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/tile.feature",
+    "Apply calibration, verify, switch banks, verify, revert",
+)
+def test_apply_switch_verify_cal_coeffs(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests calibration bank switching.
+
+    This test stages calibration, verifies it, switches banks, and verifies live cal.
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/tile.feature",
+    "Apply and verify partial calibration updates",
+)
+def test_apply_switch_verify_partial_cal_coeffs(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests calibration bank switching.
+
+    This test stages and applies calibration for half of the channels,
+        switches banks, verifies staged and live cal,
+        applies calibration for the other half of the channels,
+        switches banks and verifies staged and live cal.
 
     :param stations_devices_exported: Fixture containing the trl
         root for all sps devices.
@@ -235,7 +315,8 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         assert first_tile.data_router_discarded_packets == json.dumps(
             {"FPGA0": [0, 0], "FPGA1": [0, 0]}
         )
-    except Exception:  # pylint: disable=broad-except
+    # pylint: disable=broad-except
+    except Exception:
         # Allow time to in case of first read.
         time.sleep(10)
         assert first_tile.data_router_discarded_packets == json.dumps(
@@ -335,6 +416,363 @@ def tile_start_data_acq(
         time.sleep(1)
         timeout = timeout + 1
     assert timeout <= 60, "Tiles didn't synchronise"
+
+
+@given("I stage calibration coefficients on the Tile per antenna")
+@when("I stage calibration coefficients on the Tile per antenna")
+def stage_calibration_coefficients_on_tile_per_antenna(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+) -> Generator:
+    """
+    Stage calibration coefficients on the Tile using per-antenna loading.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A 4D list of
+        calibration coefficients for a Tile. List of floats.
+        channel * antenna * pol * (real, imag)
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+
+    :yields: Control to the test.
+    """
+    # Store original cal.
+    original_staged_cal: list[list[list[list[float]]]] = json.loads(
+        tile_device.allStagedCal
+    )
+    for antenna in range(nof_antennas):
+        # Only loads for one antenna at a time.
+        # 8 values per channel for an antenna.
+        # nof_channels * nof_pols * 2 values total plus antenna number prepended.
+        # Extract all channels for this specific antenna
+        cal_to_stage = [antenna] + np.array(
+            [calibration_coefficients[ch][antenna] for ch in range(nof_channels)]
+        ).ravel().tolist()
+        tile_device.LoadCalibrationCoefficients(cal_to_stage)
+
+    yield
+
+    # Restore original cal
+    for antenna in range(nof_antennas):
+        cal_to_stage = [antenna] + np.array(
+            [original_staged_cal[ch][antenna] for ch in range(nof_channels)]
+        ).ravel().tolist()
+        tile_device.LoadCalibrationCoefficients(cal_to_stage)
+
+    try:
+        assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
+            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
+        )
+    except AssertionError:
+        pytest.fail("Could not validate restoration of original staged calibration.")
+
+
+@given("I stage calibration coefficients on the Tile for half of the channels")
+def stage_calibration_coefficients_on_tile_for_half_of_the_channels(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+) -> Generator:
+    """
+    Stage calibration coefficients on the Tile using per-channel loading.
+
+    This uses LoadCalibrationCoefficientsForChannels which can load multiple
+    channels at once, with all antennas for each channel.
+
+    In this fixture we load half the channels.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A 4D list of
+        calibration coefficients for a Tile. List of floats.
+        channel * antenna * pol * (real, imag)
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+
+    :yields: Control to the test.
+    """
+    # Store original cal.
+    original_staged_cal: list[list[list[list[float]]]] = json.loads(
+        tile_device.allStagedCal
+    )
+    cal_data = [0]  # Start with first_channel = 0
+    for ch in range(0, nof_channels // 2):
+        for antenna in range(nof_antennas):
+            cal_data.extend(
+                np.array(calibration_coefficients[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(cal_data)
+
+    yield
+
+    # Restore original cal
+    restore_data = [0]  # Start with first_channel = 0
+    for ch in range(nof_channels):
+        for antenna in range(nof_antennas):
+            restore_data.extend(
+                np.array(original_staged_cal[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(restore_data)
+
+    try:
+        assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
+            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
+        )
+    except AssertionError:
+        pytest.fail("Could not validate restoration of original staged calibration.")
+
+
+@when("I stage calibration coefficients on the Tile for the rest of the channels")
+def stage_calibration_coefficients_on_tile_for_remainder_of_the_channels(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+) -> None:
+    """
+    Stage calibration coefficients on the Tile using per-channel loading.
+
+    This uses LoadCalibrationCoefficientsForChannels which can load multiple
+    channels at once, with all antennas for each channel.
+
+    In this fixture we load the remaining channels.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A 4D list of
+        calibration coefficients for a Tile. List of floats.
+        channel * antenna * pol * (real, imag)
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+    """
+    cal_data = [nof_channels // 2]  # Start with first_channel = nof_channels // 2
+    for ch in range(nof_channels // 2, nof_channels):
+        for antenna in range(nof_antennas):
+            cal_data.extend(
+                np.array(calibration_coefficients[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(cal_data)
+
+
+@given(
+    "the staged and live calibration coefficients can be read back correctly from the "
+    "Tile for the first half of channels"
+)
+def read_and_compare_half_staged_and_live_calibration(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+    nof_pols: int,
+) -> None:
+    """
+    Read back and compare staged and live calibration on Tile.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A flattened list of
+        calibration coefficients for a Tile.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+    :param nof_pols: Number of polarizations.
+    """
+    # We only staged the first half of channels, so only check those
+    half_channels = nof_channels // 2
+    expected_cal_1d = (
+        np.array(calibration_coefficients)[:half_channels].ravel().tolist()
+    )
+
+    actual_cal_staged = (
+        np.array(json.loads(tile_device.allStagedCal))[:half_channels].ravel().tolist()
+    )
+    actual_cal_live = (
+        np.array(json.loads(tile_device.allLiveCal))[:half_channels].ravel().tolist()
+    )
+    assert actual_cal_staged == pytest.approx(actual_cal_live, abs=0.001)
+
+    assert actual_cal_live == pytest.approx(expected_cal_1d, abs=0.001)
+
+
+@when("I stage calibration coefficients on the Tile per channel")
+def stage_calibration_coefficients_on_tile_per_channel(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+) -> Generator:
+    """
+    Stage calibration coefficients on the Tile using per-channel loading.
+
+    This uses LoadCalibrationCoefficientsForChannels which can load multiple
+    channels at once, with all antennas for each channel.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A 4D list of
+        calibration coefficients for a Tile. List of floats.
+        channel * antenna * pol * (real, imag)
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+
+    :yields: Control to the test.
+    """
+    # Store original cal.
+    original_staged_cal: list[list[list[list[float]]]] = json.loads(
+        tile_device.allStagedCal
+    )
+
+    # Load all channels at once
+    # Format: [first_channel, ch0_ant0_data, ch0_ant1_data, ..., ch0_ant15_data,
+    #          ch1_ant0_data, ch1_ant1_data, ..., ch1_ant15_data, ...]
+    # Where each antenna data is: pol0_real, pol0_imag, pol1_real, pol1_imag,
+    #                              pol2_real, pol2_imag, pol3_real, pol3_imag (8 values)
+    # Total per channel: 16 antennas * 8 values = 128 values
+    # Total: 1 (start_channel) + 384 channels * 128 values = 49153 values
+
+    cal_data = [0]  # Start with first_channel = 0
+    for ch in range(nof_channels):
+        # For each channel, interleave antenna data by value position
+        # Command expects: [ant0_val0, ant0_val1, ..., ant0_val7,
+        #                   ant1_val0, ant1_val1, ..., ant1_val7, ...]
+        for antenna in range(nof_antennas):
+            cal_data.extend(
+                np.array(calibration_coefficients[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(cal_data)
+
+    yield
+
+    # Restore original cal
+    restore_data = [0]  # Start with first_channel = 0
+    for ch in range(nof_channels):
+        for antenna in range(nof_antennas):
+            restore_data.extend(
+                np.array(original_staged_cal[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(restore_data)
+
+    try:
+        assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
+            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
+        )
+    except AssertionError:
+        pytest.fail("Could not validate restoration of original staged calibration.")
+
+
+@given("I switch the active calibration bank", target_fixture="original_live_cal")
+@when("I switch the active calibration bank", target_fixture="original_live_cal")
+def switch_active_calibration_bank(
+    tile_device: tango.DeviceProxy,
+    nof_channels: int,
+    nof_antennas: int,
+) -> Generator:
+    """
+    Switch staged and live calibration banks on the tile device.
+
+    :param tile_device: Tile device under test.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+
+    :yields: Control to the test.
+    """
+    original_live_cal = np.array(json.loads(tile_device.allLiveCal))
+    tile_device.ApplyCalibration("")
+    time.sleep(0.25)  # We saw what looked like a partial bank swap vs hardware.
+    # Looks like the command is returning too soon from tpm-api.
+
+    yield
+
+    # Restore original live cal.
+    restore_data = [0]  # Start with first_channel = 0
+    for ch in range(nof_channels):
+        for antenna in range(nof_antennas):
+            restore_data.extend(
+                np.array(original_live_cal[ch][antenna]).ravel().tolist()
+            )
+
+    tile_device.LoadCalibrationCoefficientsForChannels(restore_data)
+    tile_device.ApplyCalibration("")
+    time.sleep(0.25)
+
+    try:
+        assert np.array(original_live_cal).ravel().tolist() == pytest.approx(
+            np.array(json.loads(tile_device.allLiveCal)).ravel().tolist(), abs=0.001
+        )
+    except AssertionError:
+        pytest.fail("Could not validate restoration of original live calibration.")
+
+
+@when("I switch the active calibration bank again")
+def switch_active_calibration_bank_again(
+    tile_device: tango.DeviceProxy,
+) -> None:
+    """
+    Switch staged and live calibration banks on the tile device.
+
+    :param tile_device: Tile device under test.
+    """
+    tile_device.ApplyCalibration("")
+    time.sleep(0.25)  # We saw what looked like a partial bank swap vs hardware.
+    # Looks like the command is returning too soon from tpm-api.
+
+
+@then("the live calibration coefficients can be read back correctly from the Tile")
+def read_and_compare_live_calibration(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+    nof_pols: int,
+) -> None:
+    """
+    Read back and compare live calibration on Tile.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A flattened list of
+        calibration coefficients for a Tile.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+    :param nof_pols: Number of polarizations.
+    """
+    expected_length = nof_channels * nof_antennas * nof_pols * 2
+    expected_cal_1d = np.array(calibration_coefficients).ravel().tolist()
+    assert len(expected_cal_1d) == expected_length
+    actual_cal_1d = np.array(json.loads(tile_device.allLiveCal)).ravel().tolist()
+    assert len(actual_cal_1d) == expected_length
+
+    assert actual_cal_1d == pytest.approx(expected_cal_1d, abs=0.001)
+
+
+@given("the staged calibration coefficients can be read back correctly from the Tile")
+@then("the staged calibration coefficients can be read back correctly from the Tile")
+def read_and_compare_staged_calibration(
+    tile_device: tango.DeviceProxy,
+    calibration_coefficients: list[list[list[list[float]]]],
+    nof_antennas: int,
+    nof_channels: int,
+    nof_pols: int,
+) -> None:
+    """
+    Read back and compare staged calibration on Tile.
+
+    :param tile_device: Tile under test.
+    :param calibration_coefficients: A flattened list of
+        calibration coefficients for a Tile.
+    :param nof_antennas: Number of antennas per tile.
+    :param nof_channels: Number of channels.
+    :param nof_pols: Number of polarizations.
+    """
+    expected_length = nof_channels * nof_antennas * nof_pols * 2
+    expected_cal_1d = np.array(calibration_coefficients).ravel().tolist()
+    assert len(expected_cal_1d) == expected_length
+    actual_cal_1d = np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
+    assert len(actual_cal_1d) == expected_length
+
+    assert actual_cal_1d == pytest.approx(expected_cal_1d, abs=0.001)
 
 
 @then(parsers.cfparse("the Tile comes up in the defined {programming_state} state"))

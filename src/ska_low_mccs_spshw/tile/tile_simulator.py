@@ -1116,6 +1116,13 @@ class TileSimulator:
             i: False for i in range(TileData.ANTENNA_COUNT)
         }
         self._broadband_rfi_factor: float = 1.0
+        # Pols*2 for cross pol terms. (Should it technically be **2?)
+        self._staged_calibration_coefficients: list[list[list[complex]]] = np.zeros(
+            (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA * 2), dtype=complex
+        ).tolist()
+        self._live_calibration_coefficients: list[list[list[complex]]] = np.ones(
+            (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA * 2), dtype=complex
+        ).tolist()
 
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
@@ -1133,11 +1140,37 @@ class TileSimulator:
             return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
 
+    def simulate_health_value(self: TileSimulator, path: list[str], value: Any) -> None:
+        """
+        Simulate a value in the health structure.
+
+        :param path: The dictionary path you want to inject a value at
+        :param value: The value you want injecting.
+        """
+        d: dict[Any, Any] = self._tile_health_structure
+        for key in path[:-1]:
+            d = d[key]
+        d[path[-1]] = value
+
     @check_mocked_overheating
     @connected
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
+
+    @connected
+    def get_40g_packet_counts(self: TileSimulator) -> dict[str, dict[str, int]]:
+        """
+        Get 40G packet counts.
+
+        The return value depends on how many 40G cores are active.
+        Typically, only one core is active.
+
+        :return: mocked 40G packet counts.
+        """
+        return {
+            "FPGA0": {"rx_received": 1234, "rx_forwarded": 0, "tx_transmitted": 987654}
+        }
 
     @check_mocked_overheating
     @connected
@@ -2228,6 +2261,80 @@ class TileSimulator:
             self._is_last = is_last
         return self._is_set_first_last_tile_write_successful
 
+    @connected
+    def load_calibration_coefficients_for_channels(
+        self: TileSimulator,
+        first_channel: int,
+        calibration_coefficients: np.ndarray,
+    ) -> None:
+        """
+        Load calibration coefficients for all antennas and specific channels.
+
+        ``calibration_coefficients`` is a tri-dimensional complex array of the form
+        ``calibration_coefficients[channel, antenna, polarization]``, with each
+        element representing a normalized coefficient, with (1.0, 0.0) the normal,
+        expected response for an ideal antenna.
+
+        ``channel`` is the index specifying the channels at the beamformer output,
+        i.e. considering only those channels actually processed and beam assignments.
+        First channel is specified in the parameter, the number of channels is
+        determined by the array shape.
+
+        ``antenna`` is the antenna index, ranging 0 to 15.
+
+        The polarization index ranges from 0 to 3.
+
+        - 0: X polarization direct element
+        - 1: X->Y polarization cross element
+        - 2: Y->X polarization cross element
+        - 3: Y polarization direct element
+
+        The calibration coefficients may include any rotation matrix (e.g.
+        the parallitic angle), but do not include the geometric delay.
+
+        :param first_channel: First channel index at the beamformer output for
+            which calibration coefficients are provided.
+        :param calibration_coefficients: Calibration coefficient array
+            [channel, antenna, polarization]
+        """
+        num_channels = len(calibration_coefficients)
+
+        # Assign calibration coefficients for the specified channel range
+        for i, channel_coeffs in enumerate(calibration_coefficients):
+            channel_idx = first_channel + i
+            for antenna, antenna_coeffs in enumerate(channel_coeffs):
+                self._staged_calibration_coefficients[channel_idx][
+                    antenna
+                ] = antenna_coeffs
+
+        self.logger.debug(
+            f"Simulator received calibration coefficients for channels "
+            f"{first_channel} to "
+            f"{first_channel + num_channels - 1}"
+        )
+
+    @connected
+    def read_all_staged_calibration_coefficients(
+        self: TileSimulator,
+    ) -> list[list[list[complex]]]:
+        """
+        Read all staged calibration coefficients.
+
+        :return: Calibration coefficient array
+        """
+        return self._staged_calibration_coefficients
+
+    @connected
+    def read_all_live_calibration_coefficients(
+        self: TileSimulator,
+    ) -> list[list[list[complex]]]:
+        """
+        Read all live calibration coefficients.
+
+        :return: Calibration coefficient array
+        """
+        return self._live_calibration_coefficients
+
     @check_mocked_overheating
     @connected
     def load_calibration_coefficients(
@@ -2251,41 +2358,26 @@ class TileSimulator:
         the parallitic angle), but do not include the geometric delay.
 
         :param antenna: Antenna number (0-15)
-        :param calibration_coefficients: Calibration coefficient array
-        """
-        self.logger.debug(f"Received calibration coefficients for antenna {antenna}")
+        :param calibration_coefficients: Calibration coefficient array (384x4 complex)
 
-    @check_mocked_overheating
-    @connected
-    def load_calibration_coefficients_for_channels(
-        self: TileSimulator,
-        first_channel: int,
-        calibration_coefficients: list[list[list[complex]]],
-    ) -> None:
+        :raises ValueError: If inputs do not pass validation.
         """
-        Load calibration coefficients for all antennas and a subset of channels.
+        # Validate input dimensions
+        if len(calibration_coefficients) != 384:
+            raise ValueError(
+                f"Expected 384 channels, got {len(calibration_coefficients)}"
+            )
+        if any(len(ch) != 4 for ch in calibration_coefficients):
+            raise ValueError("Each channel must have exactly 4 polarization values")
 
-        calibration_coefficients is a tri-dimensional complex array of the form
-        calibration_coefficients[channel, antenna, polarization], with each
-        element representing a normalized coefficient, with (1.0, 0.0) the
-        normal, expected response for an ideal antenna.
-        Channel is the index specifying the channels at the beamformer output,
-        i.e. considering only those channels actually processed and beam assignments.
-        The polarization index ranges from 0 to 3.
-        0: X polarization direct element
-        1: X->Y polarization cross element
-        2: Y->X polarization cross element
-        3: Y polarization direct element
-        The calibration coefficients may include any rotation matrix (e.g.
-        the parallitic angle), but do not include the geometric delay.
+        # Assign calibration coefficients for this antenna across all channels
+        for channel in range(len(calibration_coefficients)):
+            self._staged_calibration_coefficients[channel][
+                antenna
+            ] = calibration_coefficients[channel]
 
-        :param first_channel: Start beamformer channel for coefficients (0-383)
-        :param calibration_coefficients: Calibration coefficient array
-        """
-        last_channel = first_channel + len(calibration_coefficients) - 1
         self.logger.debug(
-            "Received calibration coefficients for channels "
-            f"{first_channel}-{last_channel}"
+            f"Simulator received calibration coefficients for antenna {antenna}"
         )
 
     @check_mocked_overheating
@@ -2296,7 +2388,8 @@ class TileSimulator:
 
         :param switch_time: switch time
         """
-        self.logger.debug("Applying calibration coefficients")
+        self.logger.debug("Simulator applying calibration coefficients")
+        self._live_calibration_coefficients = self._staged_calibration_coefficients
 
     @check_mocked_overheating
     @connected

@@ -2892,7 +2892,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Result code and message
         """
-        time.sleep(1)
         if load_time == "":
             load_frame = 0
         elif isinstance(load_time, int):  # added for backward compatibility
@@ -2902,7 +2901,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if load_frame < 0:
                 self.logger.error(f"apply_pointing_delays: Invalid time {load_time}")
                 raise ValueError(f"Invalid time {load_time}")
-            if (load_frame - self.fpga_current_frame) < 50:
+            time.sleep(2)
+            if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [SKB-1200] Change apply pointing to use LogicalTileId rather than extracting from the Tile's TRL. Change get_mappings to map antennas to the correct LogicalTileID.
+* [SKB-1200] Change apply pointing to use LogicalTileId rather than extracting from the Tile's TRL. Change get_mappings to map antennas to the correct LogicalTileID. Update mccs-common 4.4.3->4.4.4
 * [THORN-405] Re-implement intermediate healths in MccsTile, fix old health model in MccsTile.
 * [THORN-377] Use configuration properties in health.
 

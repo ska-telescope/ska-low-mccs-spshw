@@ -1370,7 +1370,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Propagate power state to base implementation
         super()._component_state_changed(power=power)
-
+        self.ExecutePendingOperations()
         if power in (PowerState.OFF, PowerState.UNKNOWN):
             for attr in self._attribute_state.values():
                 try:

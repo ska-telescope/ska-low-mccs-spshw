@@ -245,6 +245,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.test_logger.debug("Starting directory watch")
         assert self.daq_proxy is not None
         assert self._data_handler is not None
+        self._data_handler.ignore_next_event = True
         self.daq_proxy.add_change_event_callback(
             "datareceivedresult", self._data_handler.on_created
         )

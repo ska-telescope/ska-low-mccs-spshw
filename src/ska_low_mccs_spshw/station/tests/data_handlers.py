@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import abc
+import json
 import logging
 import os
 import threading
@@ -23,12 +24,12 @@ from ska_low_mccs_daq.pydaq.persisters import (  # type: ignore
     FileDAQModes,
     RawFormatFileManager,
 )
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from tango import AttrQuality
 
 from ...tile.tile_data import TileData
 
 
-class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
+class BaseDataReceivedHandler(abc.ABC):
     """Base class for the data received handler."""
 
     def __init__(
@@ -61,21 +62,25 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
     def handle_data(self: BaseDataReceivedHandler) -> None:
         """Handle reading the data from received HDF5."""
 
-    def on_created(self: BaseDataReceivedHandler, event: FileSystemEvent) -> None:
+    def on_created(
+        self: BaseDataReceivedHandler, name: str, value: list[str], quality: AttrQuality
+    ) -> None:
         """
         Check every event for newly created files to process.
 
-        :param event: Event to check.
+        :param name: name of the event, should always be datareceivedresult.
+        :param value: value of the data received event.
+        :param quality: the tango.AttrQuality of the event.
         """
         with self._callback_lock:
-            if not event._src_path.endswith(".hdf5") or event.is_directory:
-                return
+            assert name.lower() == "datareceivedresult"
             self._tile_id += 1
             if self._tile_id < self._nof_tiles:
                 self._logger.debug(f"Got {self._tile_id} files so far.")
                 return
             self._logger.debug("Got data for all tiles, gathering data.")
-            self._base_path = os.path.split(event._src_path)[0]
+            file = json.loads(value[1])["file_name"]
+            self._base_path = os.path.split(file)[0]
             try:
                 time.sleep(1)
                 self.handle_data()

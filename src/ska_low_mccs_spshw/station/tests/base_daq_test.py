@@ -21,8 +21,6 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.observers import Observer
-from watchdog.observers.inotify import InotifyObserver
 
 from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
@@ -42,7 +40,6 @@ DATA_TYPE_TO_BITWIDTH = {
 }
 
 
-# pylint: disable=too-many-instance-attributes
 class BaseDaqTest(TpmSelfCheckTest):
     """Base class for a generic DAQ test."""
 
@@ -65,7 +62,6 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param component_manager: SpsStation component manager under test.
         """
         self._data: np.ndarray | None = None
-        self._observer: InotifyObserver
         self._data_handler: BaseDataReceivedHandler | None = None
         self._pattern: list | None = None
         self._adders: list | None = None
@@ -247,17 +243,16 @@ class BaseDaqTest(TpmSelfCheckTest):
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
-        self._observer = Observer()  # type: ignore
         assert self.daq_proxy is not None
-        daq_dir = json.loads(self.daq_proxy.getconfiguration())["directory"]
-        self.test_logger.info(f"Observer watching {daq_dir}...")
-        self._observer.schedule(self._data_handler, daq_dir, recursive=True)
-        self._observer.start()
+        assert self._data_handler is not None
+        self.daq_proxy.add_change_event_callback(
+            "datareceivedresult", self._data_handler.on_created
+        )
 
     def _stop_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Stopping directory watch")
-        self._observer.stop()
-        self._observer.join()
+        assert self.daq_proxy is not None
+        self.daq_proxy.unsubscribe_change_event("datareceivedresult")
 
     def _delete_data(self: BaseDaqTest) -> None:
         if not self.keep_data:

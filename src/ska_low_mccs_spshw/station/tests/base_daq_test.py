@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
+from tango import EventType
 
 from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
@@ -253,6 +254,11 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _stop_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Stopping directory watch")
         assert self.daq_proxy is not None
+        if (
+            "datareceivedresult"
+            not in self.daq_proxy._change_event_subscription_ids[EventType.CHANGE_EVENT]
+        ):
+            return
         self.daq_proxy.unsubscribe_change_event("datareceivedresult")
 
     def _delete_data(self: BaseDaqTest) -> None:

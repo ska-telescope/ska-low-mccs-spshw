@@ -29,6 +29,7 @@ from tango import AttrQuality
 from ...tile.tile_data import TileData
 
 
+# pylint: disable=too-many-instance-attributes
 class BaseDataReceivedHandler(abc.ABC):
     """Base class for the data received handler."""
 
@@ -52,6 +53,7 @@ class BaseDataReceivedHandler(abc.ABC):
         self._tile_id = 0
         self.data: np.ndarray
         self._callback_lock = threading.Lock()
+        self.ignore_next_event = False
         self.initialise_data()
 
     @abc.abstractmethod
@@ -72,6 +74,9 @@ class BaseDataReceivedHandler(abc.ABC):
         :param value: value of the data received event.
         :param quality: the tango.AttrQuality of the event.
         """
+        if self.ignore_next_event:
+            self.ignore_next_event = False
+            return
         with self._callback_lock:
             assert name.lower() == "datareceivedresult"
             self._tile_id += 1

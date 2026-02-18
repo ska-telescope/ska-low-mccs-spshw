@@ -317,7 +317,7 @@ def test_load_pointing_delays(
     for tpm in range(16):
         for channel in channels:
             station_component_manager._antenna_mapping[antenna_no] = {
-                "tpm": tpm + 1,  # tpm is 1 based
+                "tpm": tpm,  # tpm is 0 based (logical ID)
                 "tpm_y_channel": channel * 2,
                 "tpm_x_channel": channel * 2 + 1,
                 "delay": 1,
@@ -341,7 +341,7 @@ def test_load_pointing_delays(
         ) in station_component_manager._antenna_mapping.items():
             tile_no = antenna_config["tpm"]
             y_channel = antenna_config["tpm_y_channel"]
-            if tile_no == tile_id and int(y_channel / 2) == channel:
+            if tile_no == 0 and int(y_channel / 2) == channel:  # First tile
                 delay, delay_rate = (
                     antenna_order_delays[antenna_no * 2 - 1],
                     antenna_order_delays[antenna_no * 2],
@@ -370,7 +370,7 @@ def test_port_to_antenna_order(
 
     tpm_x_mapping = np.zeros((16, 16))
     for antenna, antenna_info in station_component_manager._antenna_mapping.items():
-        tpm = int(antenna_info["tpm"]) - 1
+        tpm = int(antenna_info["tpm"])
         x_port = antenna_info["tpm_x_channel"]
         # Create a simple dataset where map[tpm][port] = antenna_number
         # so that it's obvious if we've re-ordered it correctly or not.
@@ -437,7 +437,7 @@ def test_get_static_delays(
     random.shuffle(channels)
 
     antenna_no = 1
-    for tpm in range(1, 16 + 1):
+    for tpm in range(16):
         for channel in channels:
             station_component_manager._antenna_mapping[antenna_no] = {
                 "tpm": tpm,
@@ -452,15 +452,15 @@ def test_get_static_delays(
         0 for _ in range(station_component_manager._number_of_tiles * 2 * len(channels))
     ]
     for antenna, antenna_config in station_component_manager._antenna_mapping.items():
-        if int(antenna_config["tpm"]) in [
-            tile_id + i for i in range(0, station_component_manager._number_of_tiles)
-        ]:
+        if int(antenna_config["tpm"]) in range(
+            station_component_manager._number_of_tiles
+        ):  # Check against 0-based logical IDs [0, 1, 2, 3]
             expected_static_delays[
-                ((antenna_config["tpm"] - 1) * 2 * len(channels))
+                (antenna_config["tpm"] * 2 * len(channels))
                 + antenna_config["tpm_y_channel"]
             ] = antenna_config["delay"]
             expected_static_delays[
-                ((antenna_config["tpm"] - 1) * 2 * len(channels))
+                (antenna_config["tpm"] * 2 * len(channels))
                 + antenna_config["tpm_x_channel"]
             ] = antenna_config["delay"]
     assert static_delays == expected_static_delays

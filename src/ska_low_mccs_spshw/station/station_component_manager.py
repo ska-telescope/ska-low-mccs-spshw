@@ -470,7 +470,7 @@ class SpsStationComponentManager(
 
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
-        self._tile_id_mapping: dict[str, int] = {}
+        self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
         self._number_of_tiles = len(tile_fqdns)
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
@@ -706,7 +706,7 @@ class SpsStationComponentManager(
         try:
             for antenna in range(1, data.shape[0] + 1):  # 1 based antenna numbering
                 tpm_number = int(antenna_mapping[antenna]["tpm"])
-                tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
+                tile_base_index = tpm_number * nof_antennas_per_tile
                 # So long as X and Y pols are always on adjacent ports this should work.
                 tpm_port_number = antenna_mapping[antenna]["tpm_x_channel"]
                 port_offset = int(tpm_port_number // 2)
@@ -791,21 +791,34 @@ class SpsStationComponentManager(
 
         # Look through all the stations on this cluster, find antennas on this station.
         antennas = {}
+        tpms = {}
         for station_config in stations.values():
             if station_config["id"] == self._station_id:
                 antennas = self._find_by_key(station_config, "antennas")
+                tpms = self._find_by_key(station_config, "tpms")
                 break
 
         if not antennas:
             self.logger.error(f"Couldn't find antennas on station {self._station_id}.")
             return
 
+        if not tpms:
+            self.logger.error(f"Couldn't find tpms on station {self._station_id}.")
+            return
+
         try:
             for _, antenna_config in antennas.items():
                 antenna_number: int = int(antenna_config["eep"])  # 1 based numbering
-                tpm_number: int = int(antenna_config["tpm"].split("tpm")[-1])
+                tpm_name: str = antenna_config["tpm"]
+                # Look up the TPM's logical ID from the TPMs config
+                if tpm_name not in tpms:
+                    self.logger.warning(
+                        f"Antenna {antenna_number} references unknown TPM {tpm_name}"
+                    )
+                    continue
+                tpm_id: int = tpms[tpm_name]["id"]
                 self._antenna_mapping[antenna_number] = {
-                    "tpm": tpm_number,  # 1 based numbering
+                    "tpm": tpm_id,  # 0-based logical TPM ID
                     "tpm_x_channel": antenna_config["tpm_x_channel"],
                     "tpm_y_channel": antenna_config["tpm_y_channel"],
                     "delay": antenna_config["delay"],
@@ -813,7 +826,7 @@ class SpsStationComponentManager(
                 # Construct labels for bandpass data.
                 self._antenna_info[antenna_number] = {
                     "station_id": self._station_id,
-                    "tpm_id": tpm_number,
+                    "tpm_id": tpm_id,
                     "antenna_location": antenna_config["location_offset"],
                 }
         except KeyError as err:
@@ -836,12 +849,12 @@ class SpsStationComponentManager(
             [0] * TileData.ADC_CHANNELS for _ in range(len(self._tile_proxies))
         ]
         for antenna_config in self._antenna_mapping.values():
-            try:
-                tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
-            except KeyError:
-                self.logger.debug(
-                    f"Mapping for tile {antenna_config['tpm']} present, "
-                    "but device not deployed. Skipping."
+            tile_logical_id = antenna_config["tpm"]
+            if tile_logical_id >= len(self._tile_proxies):
+                self.logger.warning(
+                    f"Antenna references tile with logical ID {tile_logical_id}, "
+                    f"but only {len(self._tile_proxies)} tiles are deployed. "
+                    "Skipping this antenna."
                 )
                 continue
             tile_delays[tile_logical_id][
@@ -890,7 +903,7 @@ class SpsStationComponentManager(
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 
             # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"] - 1
+            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"]
             channel = (
                 self._antenna_mapping[antenna_no + 1]["tpm_y_channel"] // 2
             )  # y channel, even
@@ -3004,10 +3017,8 @@ class SpsStationComponentManager(
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
 
-            # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
-            # But this code should not be depending on assumptions about TRL structure
-            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1][3:])
-            delays_for_tile = tile_delays[tile_no - 1]
+            tile_no = tile_proxy._proxy.logicalTileId
+            delays_for_tile = tile_delays[tile_no]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
     def apply_pointing_delays(

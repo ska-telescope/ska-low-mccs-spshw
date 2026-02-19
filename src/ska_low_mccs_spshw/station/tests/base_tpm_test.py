@@ -91,6 +91,7 @@ class TpmSelfCheckTest(abc.ABC):
         if self.daq_trl != "":
             self.daq_proxy = MccsDeviceProxy(fqdn=self.daq_trl, logger=self.logger)
             self.proxies.append(self.daq_proxy)
+            self.daq_proxy.set_timeout_millis(20000)
 
         self._proxies_constructed = True
 

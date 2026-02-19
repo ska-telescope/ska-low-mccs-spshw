@@ -339,15 +339,15 @@ class BaseDaqTest(TpmSelfCheckTest):
         return data
 
     def _reset(self: BaseDaqTest) -> None:
-        self._data = None
-        self._data_created_event.clear()
-        self._adders = None
-        self._pattern = None
         self._stop_directory_watch()
         if self.daq_proxy is not None:
             self.daq_proxy.Init()
             # Sleep to allow time to stop.
             time.sleep(1)
+        self._data = None
+        self._data_created_event.clear()
+        self._adders = None
+        self._pattern = None
         # self._delete_data()
 
     @contextmanager

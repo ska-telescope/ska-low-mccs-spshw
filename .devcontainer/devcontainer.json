@@ -52,9 +52,8 @@
             ]
         }
     },
-    "postCreateCommand": "sudo poetry self update && sudo poetry config virtualenvs.create false && sudo poetry install",
-    "remoteUser": "tango",
-    "remoteEnv": {
-        "PATH": "/home/tango/.local/bin:${containerEnv:PATH}",
-    }
+    "containerEnv": {
+        "UV_CACHE_DIR": "/workspaces/ska-low-mccs-spshw/.uvcache"
+    },
+    "postCreateCommand": "uv sync --locked --group docs"
 }

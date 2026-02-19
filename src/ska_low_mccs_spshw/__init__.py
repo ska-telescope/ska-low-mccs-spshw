@@ -60,7 +60,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
             SpsStation,
         ),
         args=args or None,
-        **kwargs
+        **kwargs,
     )
 
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+[THORN-390] Migrate from poetry to uv
+
 ## 11.3.0
 
 * [SKB-1200] Change apply pointing to use LogicalTileId rather than extracting from the Tile's TRL. Change get_mappings to map antennas to the correct LogicalTileID. Update mccs-common 4.4.3->4.4.5

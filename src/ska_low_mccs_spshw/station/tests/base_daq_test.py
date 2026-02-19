@@ -76,6 +76,7 @@ class BaseDaqTest(TpmSelfCheckTest):
 
     def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
         self._data = data
+        self.test_logger.debug("Setting data received event.")
         self._data_created_event.set()
 
     def _configure_daq(

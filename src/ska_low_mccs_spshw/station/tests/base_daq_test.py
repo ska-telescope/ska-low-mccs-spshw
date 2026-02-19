@@ -97,7 +97,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         if "nof_antennas" not in daq_config:
             daq_config.update(
                 {
-                    "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+                    "nof_antennas": TileData.ANTENNA_COUNT,
                 }
             )
         if "nof_tiles" not in daq_config:

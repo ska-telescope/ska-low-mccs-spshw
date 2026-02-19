@@ -77,6 +77,8 @@ class BaseDataReceivedHandler(abc.ABC):
         if self.ignore_next_event:
             self.ignore_next_event = False
             return
+        if quality != AttrQuality.ATTR_VALID:
+            return
         with self._callback_lock:
             assert name.lower() == "datareceivedresult"
             self._tile_id += 1

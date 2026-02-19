@@ -91,6 +91,7 @@ class BaseDataReceivedHandler(abc.ABC):
             try:
                 time.sleep(1)
                 self.handle_data()
+                self._logger.debug("Handled data, calling back.")
                 self._data_created_callback(data=self.data)
                 self.reset()
             except Exception as e:  # pylint: disable=broad-exception-caught

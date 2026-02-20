@@ -70,6 +70,10 @@ include:
     - gitlab-ci/python.yml
     - gitlab-ci/docs-build.yml
 
+docs-build:
+  before_script:
+  - apt-get update && apt-get install -y --no-install-recommends plantuml
+
 sonar-scan:
   script:
     - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}" || echo "allowed to fail"

@@ -132,7 +132,7 @@ is_calendar_booked = "utils.scripts.is_calendar_booked:main"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"
-addopts = "--json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs_spshw --junitxml=build/reports/unit-tests.xml --verbose"
+addopts = "--forked -n 16 --json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs_spshw --junitxml=build/reports/unit-tests.xml --verbose"
 console_output_style = "progress"
 junit_family = "legacy"
 markers = ["XTP-25768",

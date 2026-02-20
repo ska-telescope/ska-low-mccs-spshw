@@ -120,11 +120,11 @@ def run_server_forever(backend: SubrackProtocol, port: int) -> None:
         The actual port on which the server is running
         will be printed to stdout.
     """
-    print("Starting daq server...", flush=True)
+    print("Starting subrack server...", flush=True)
     server_config = _configure_server(backend, port=port)
     the_server = uvicorn.Server(config=server_config)
     the_server.run()
-    print("Stopping daq server.")
+    print("Stopping subrack server.")
 
 
 def main() -> None:

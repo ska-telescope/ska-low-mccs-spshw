@@ -3,7 +3,7 @@ dependencies = [
     "ska-low-sps-tpm-api @ git+https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/@3.0.0",
     "fire >= 0.5.0, <0.6.0",
     "numpy >= 1.26.4, <2.0.0",
-    "pytango >= 10.0.3, <11.0.0",
+    "pytango >= 10.0.3, <10.1.0",
     "PyYAML >= 6.0.1, <7.0.0",
     "requests >= 2.31.0, <3.0.0",
     "scipy >= 1.11.2, <2.0.0",

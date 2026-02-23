@@ -325,6 +325,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             component_state_changed_callback,
             poll_rate=poll_rate,
         )
+        # NOTE: During the update to ska-tango-base:1.4.2 the poller_thread
+        # takes a bit londer to start up revealing a race condition.
+        # This sleep is essential, without it the condition nofification is
+        # missed in start_communicating and polling never starts. WOM-1114
+        time.sleep(0.2)
 
     def _submit_lrc_request(
         self: TileComponentManager,

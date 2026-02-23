@@ -1140,6 +1140,13 @@ class SpsStationComponentManager(
             # This is to prevent the Station changing to DevState.ON before all tiles
             # have had a chance to turn on.
             return
+        if self._communication_state != CommunicationStatus.ESTABLISHED:
+            # An update to the base classes 1.3.2 -> 1.4.0 has a more strict
+            # power transition model. When NOT_ESTABILISHED we are UNKNOWN
+            # Once we are ESTABLISHED we can now proceed to update Power from
+            # UNKNOWN. This flag is used to gate this transition, only transition
+            # after communication has been established.
+            return
         with self._power_state_lock:
             tile_power_states = list(self._tile_power_states.values())
             subrack_power_states = list(self._subrack_power_states.values())

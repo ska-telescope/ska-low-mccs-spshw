@@ -586,7 +586,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             consume_nonmatches=True,
         )
 
-        return tile_component_manager
+        yield tile_component_manager
+
+        tile_component_manager.cleanup()
 
     @pytest.fixture()
     def antenna_values(

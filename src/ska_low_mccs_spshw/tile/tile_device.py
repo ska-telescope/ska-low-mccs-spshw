@@ -296,9 +296,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_recorder = None
         self.component_manager.cleanup()
 
-        # NOTE: This will be removed from tango-base 1.4.0 and the interface changed
-        # so will need removing when we update
-        self.ExecutePendingOperations()
+        # # NOTE: This will be removed from tango-base 1.4.0 and the interface changed
+        # # so will need removing when we update
+        # self.ExecutePendingOperations()
 
         super().delete_device()
         for t in threading.enumerate():
@@ -8867,10 +8867,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # On/Off commands
     # ---------------
 
-    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
-        dtype_out="DevVarLongStringArray"
-    )
-    def Off(self: MccsTile) -> DevVarLongStringArrayType:
+    def execute_Off(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Turn the device off.
 
@@ -8883,12 +8880,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = True
-        return super().Off()
+        return super().execute_Off()
 
-    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
-        dtype_out="DevVarLongStringArray"
-    )
-    def On(self: MccsTile) -> DevVarLongStringArrayType:
+    def execute_On(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Turn device on.
 
@@ -8901,7 +8895,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
-        return super().On()
+        return super().execute_On()
 
     class EnableBroadbandRfiBlankingCommand(FastCommand):
         """Class for handling the EnableBroadbandRfiBlanking command."""

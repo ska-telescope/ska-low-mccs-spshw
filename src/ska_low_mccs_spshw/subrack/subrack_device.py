@@ -25,7 +25,7 @@ from ska_tango_base.commands import (
     ResultCode,
     SubmittedSlowCommand,
 )
-from tango import DevFailed
+from tango import AttrQuality, DevFailed
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -1638,6 +1638,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     if isinstance(value, dict):
                         # Serialise value to match attribute definition.
                         value = json.dumps(value)
+                if value is None:
+                    self.get_device_attr().get_attr_by_name(
+                        tango_attribute_name
+                    ).set_quality(quality=AttrQuality.ATTR_INVALID, send_event=True)
+                    continue
                 try:
                     self.push_change_event(tango_attribute_name, value)
                     self.push_archive_event(tango_attribute_name, value)

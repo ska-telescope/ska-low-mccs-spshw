@@ -415,12 +415,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param power: pdu power.
         :param state_change: state changes
         """
-        # ===========================================================================
-        # NOTE: The PDU power state is not integrated into the component state,
-        # unindented to reduce noise from alling back with empty dict.
-        if state_change:
-            self._component_state_changed_callback(pdu=state_change)
-        # ===========================================================================
+        self._component_state_changed_callback(pdu=state_change)
 
     def turn_off_tpm(
         self: SubrackComponentManager,

@@ -90,6 +90,7 @@ _ATTRIBUTE_MAP: Final = {
     "RFI_COUNT": "rfi_count",
     "40G_PACKET_COUNT": "40g_packet_count",
 }
+_POLL_THREAD_STARTUP_DELAY: Final[float] = 0.2
 
 
 class TaskCompleteWaiter(TaskCallbackType):
@@ -325,11 +326,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             component_state_changed_callback,
             poll_rate=poll_rate,
         )
-        # NOTE: During the update to ska-tango-base:1.4.2 the poller_thread
-        # takes a bit londer to start up revealing a race condition.
-        # This sleep is essential, without it the condition nofification is
-        # missed in start_communicating and polling never starts. WOM-1114
-        time.sleep(0.2)
+        # See WOM-1114. Temporary delay to avoid missed Condition.notify()
+        # race in upstream poller implementation (ska-tango-base 1.4.2).
+        time.sleep(_POLL_THREAD_STARTUP_DELAY)
 
     def _submit_lrc_request(
         self: TileComponentManager,

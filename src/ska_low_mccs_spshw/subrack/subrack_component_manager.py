@@ -344,6 +344,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             )
         )
         self.proxy_map: dict[str, Any] = {}
+        self.power_marshaller_proxy = None
 
         # TODO Reimpliment power marshaller
         # self.power_marshaller_trl = power_marshaller_trl

@@ -5,4 +5,4 @@ pyyaml==6.0
 pytest-repeat==0.9.4
 ska-control-model==1.1.1
 ska-tango-testing==0.7.3
-pytango==10.0.0
+pytango==10.1.3

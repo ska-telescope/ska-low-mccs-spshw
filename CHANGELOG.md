@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-413] update pytango 10.0.3 -> 10.1.3
+* [THORN-413] update ska-tango-base 1.3.2 -> 1.4.2
+* [THORN-413] update ska-low-mccs-common 4.4.5 -> 4.4.6
+
 ## 11.3.0
 
 * [SKB-1200] Change apply pointing to use LogicalTileId rather than extracting from the Tile's TRL. Change get_mappings to map antennas to the correct LogicalTileID. Update mccs-common 4.4.3->4.4.5

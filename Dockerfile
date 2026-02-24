@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 # Install git for dependencies from git repositories
-RUN apt-get update && apt-get install -y --no-install-recommends git && \
+RUN apt-get update && apt-get install -y --no-install-recommends git make && \
     rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock ./

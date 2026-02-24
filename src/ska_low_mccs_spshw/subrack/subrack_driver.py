@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
@@ -26,6 +27,7 @@ from .http_stack import HttpPollRequest, HttpPollResponse
 from .subrack_data import FanMode, SubrackData
 
 PDU_DATA_NO_PORTS = 24
+_POLL_THREAD_STARTUP_DELAY: Final[float] = 0.2
 
 
 class HttpError(Exception):
@@ -143,6 +145,37 @@ class SubrackDriver(
             f"Poll rate is {self._poll_rate}. "
             f"Attributes will be updated roughly each {self._max_tick} polls."
         )
+        # See WOM-1114. Temporary delay to avoid missed Condition.notify()
+        # race in upstream poller implementation (ska-tango-base 1.4.2).
+        time.sleep(_POLL_THREAD_STARTUP_DELAY)
+
+    def _update_communication_state(
+        self: SubrackDriver,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        """
+        Override base communication state handling.
+
+        In ska-tango-base 1.4.2, communication state updates became coupled
+        to power state transitions. For the Subrack device this resulted in
+        undesirable state update behaviour.
+
+        This override decouples communication state handling from power state
+        updates, preserving the existing behaviour of the Subrack device while
+        allowing other devices (e.g. MccsTile and MccsStation) to adopt the
+        updated ska-tango-base implementation.
+
+        NOTE:
+            This introduces technical debt for Subrack, as it diverges from
+            the base class behaviour.
+
+        :param communication_state: the new communication status of the
+            component manager.
+        """
+        with self._communication_state_lock:
+            if self._communication_state != communication_state:
+                self._communication_state = communication_state
+                self._push_communication_state_update(communication_state)
 
     def off(
         self: SubrackDriver, task_callback: Optional[Callable] = None

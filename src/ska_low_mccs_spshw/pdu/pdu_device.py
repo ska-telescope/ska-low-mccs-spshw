@@ -26,7 +26,7 @@ from .pdu_component_manager import PduComponentManager
 __all__ = ["MccsPdu", "main"]
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-ancestors
 class MccsPdu(MccsBaseDevice, AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 

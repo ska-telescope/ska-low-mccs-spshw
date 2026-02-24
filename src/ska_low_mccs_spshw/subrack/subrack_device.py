@@ -274,6 +274,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
 
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
+# pylint: disable=too-many-ancestors
 class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of an SPS subrack."""
 

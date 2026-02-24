@@ -14,7 +14,7 @@ import ipaddress
 import json
 import time
 import unittest.mock
-from typing import Any
+from typing import Any, Iterator
 
 import numpy as np
 import pytest
@@ -528,7 +528,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
-    ) -> TileComponentManager:
+    ) -> Iterator[TileComponentManager]:
         """
         Return the tile_component_manager component under test.
 
@@ -536,7 +536,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             component manager (driving a TileSimulator)
         :param callbacks: dictionary of driver callbacks.
 
-        :return: the tile_component_manager class object under test
+        :yield: the tile_component_manager class object under test
         """
         # pylint: disable=attribute-defined-outside-init
         self.tile_name = "tile_component_manager"

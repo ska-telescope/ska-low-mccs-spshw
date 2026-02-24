@@ -147,6 +147,7 @@ class TileAttribute:
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
+# pylint: disable=too-many-ancestors
 class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
@@ -1205,19 +1206,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #         message = "Tile On command completed OK"
     #         return (ResultCode.OK, message)
 
-    def is_On_allowed(self: MccsTile) -> bool:
-        """
-        Check if command `On` is allowed in the current device state.
+    # def is_On_allowed(self: MccsTile) -> bool:
+    #     """
+    #     Check if command `On` is allowed in the current device state.
 
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
+    #     :return: ``True`` if the command is allowed
+    #     """
+    #     return self.get_state() in [
+    #         tango.DevState.OFF,
+    #         tango.DevState.STANDBY,
+    #         tango.DevState.ON,
+    #         tango.DevState.UNKNOWN,
+    #         tango.DevState.FAULT,
+    #     ]
 
     # ----------
     # Callbacks
@@ -3362,9 +3363,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.SimulationConfig
 
     @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(  # pylint: disable=arguments-differ
-        self: MccsTile, value: SimulationMode
-    ) -> None:
+    def simulationMode(self: MccsTile, value: SimulationMode) -> None:
         """
         Set the simulation mode.
 

@@ -73,7 +73,7 @@ def engineering_mode_required(func: Callable) -> Callable:
     return wrapper
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-ancestors
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
 
@@ -426,34 +426,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             super().do()
 
             return (ResultCode.OK, "Initialisation complete")
-
-    def is_On_allowed(self: SpsStation) -> bool:
-        """
-        Check if command `On` is allowed in the current device state.
-
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
-
-    def is_Standby_allowed(self: SpsStation) -> bool:
-        """
-        Check if command `Standby` is allowed in the current device state.
-
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
 
     def _setup_health_rollup(
         self: SpsStation,
@@ -2849,4 +2821,6 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
 
 
 if __name__ == "__main__":
+    main()
+    main()
     main()

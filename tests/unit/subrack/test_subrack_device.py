@@ -120,7 +120,7 @@ def test_context_fixture(
     :yields: a test context.
     """
 
-    class _PatchedMccsSubrack(MccsSubrack):
+    class _PatchedMccsSubrack(MccsSubrack):  # pylint: disable=too-many-ancestors
         """A subrack class with a method to call the component state callback."""
 
         @server.command
@@ -154,7 +154,7 @@ def test_context_fixture(
 def subrack_device_fixture(
     test_context: SpsTangoTestHarnessContext,
     subrack_id: int,
-) -> DeviceProxy:
+) -> Iterator[DeviceProxy]:
     """
     Fixture that returns the subrack Tango device under test.
 
@@ -354,7 +354,7 @@ def test_off_on(
     )
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
-    ([result_code], [off_command_id]) = subrack_device.Off()
+    ([result_code], [off_command_id]) = subrack_device.off()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
@@ -386,7 +386,7 @@ def test_off_on(
 
     # Okay, let's turn it back on again,
     # but we can't be bothered tracking the command status this time.
-    _ = subrack_device.On()
+    _ = subrack_device.on()
 
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)

@@ -21,7 +21,7 @@ RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
 # COPY Makefile ./
 # COPY helmfile.d/ helmfile.d/
 # COPY .make/ .make/
-# RUN make install-firmware
 COPY . .
+RUN make install-firmware
 RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
     uv sync --locked --no-dev

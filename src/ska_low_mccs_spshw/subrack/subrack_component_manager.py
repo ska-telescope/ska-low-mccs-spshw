@@ -344,14 +344,16 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             )
         )
         self.proxy_map: dict[str, Any] = {}
-        self.power_marshaller_trl = power_marshaller_trl
-        self.power_marshaller_proxy = _PowerMarshallerProxy(
-            power_marshaller_trl,
-            logger,
-            functools.partial(self._device_communication_state_changed, pdu_trl),
-            functools.partial(self._pdu_state_changed, pdu_trl),
-        )
-        self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
+
+        # TODO Reimpliment power marshaller
+        # self.power_marshaller_trl = power_marshaller_trl
+        # self.power_marshaller_proxy = _PowerMarshallerProxy(
+        #     power_marshaller_trl,
+        #     logger,
+        #     functools.partial(self._device_communication_state_changed, pdu_trl),
+        #     functools.partial(self._pdu_state_changed, pdu_trl),
+        # )
+        # self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
         self._communication_manager: CommunicationManager | None = None
         if self.pdu_proxy is not None:
@@ -704,13 +706,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             the command changes
         :param task_abort_event: Check for abort, defaults to None
         """
-        for port in self.pdu_ports:
-            self.power_marshaller_proxy.schedule_power(
-                "subrack",
-                self.pdu_trl,
-                "pduPortOn",
-                str(port),
-            )
+        if self.power_marshaller_proxy:
+            for port in self.pdu_ports:
+                self.power_marshaller_proxy.schedule_power(
+                    "subrack",
+                    self.pdu_trl,
+                    "pduPortOn",
+                    str(port),
+                )
 
     def schedule_off(
         self: SubrackComponentManager,
@@ -742,13 +745,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             the command changes
         :param task_abort_event: Check for abort, defaults to None
         """
-        for port in self.pdu_ports:
-            self.power_marshaller_proxy.schedule_power(
-                "subrack",
-                self.pdu_trl,
-                "pduPortOff",
-                str(port),
-            )
+        if self.power_marshaller_proxy:
+            for port in self.pdu_ports:
+                self.power_marshaller_proxy.schedule_power(
+                    "subrack",
+                    self.pdu_trl,
+                    "pduPortOff",
+                    str(port),
+                )
 
     def set_subrack_fan_speed(
         self: SubrackComponentManager,

@@ -864,7 +864,7 @@ def test_beamformer_table(
     # Component state callback is getting called by many many sources.
     callbacks["component_state"].assert_call(
         beamformerTable=tile_initial_beamformer_table,
-        lookahead=25,
+        lookahead=29,
         consume_nonmatches=True,
     )
     callbacks["component_state"].assert_call(

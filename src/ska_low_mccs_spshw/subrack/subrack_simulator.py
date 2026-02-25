@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import copy
 import functools
+import itertools
 import random
 import threading
 import time
+from collections.abc import Iterator
 from typing import Any, Callable, Final, Optional, TypedDict, cast
 
 from .subrack_api import SubrackProtocol
@@ -89,7 +91,7 @@ class SubrackSimulator(SubrackProtocol):
         },
         "backplane_temperatures": {
             "length": 2,
-            "default": [38.0, 39.0],
+            "default": itertools.cycle([[38.0, 39.0], [38.5, 39.5]]),
             "writable": False,
         },
         "board_temperatures": {
@@ -329,7 +331,10 @@ class SubrackSimulator(SubrackProtocol):
     def _get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:
         if name not in self.ATTRIBUTE_METADATA:
             raise AttributeError(f"{name} not present")
-        return self._attribute_values[name]
+        value = self._attribute_values[name]
+        if isinstance(value, Iterator):
+            return next(value)
+        return value
 
     @apply_jitter
     def execute_command(

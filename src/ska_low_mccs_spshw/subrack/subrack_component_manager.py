@@ -345,17 +345,25 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
         self.proxy_map: dict[str, Any] = {}
         self.power_marshaller_trl = power_marshaller_trl
-        self.power_marshaller_proxy = _PowerMarshallerProxy(
-            power_marshaller_trl,
-            logger,
-            functools.partial(self._device_communication_state_changed, pdu_trl),
-            functools.partial(self._pdu_state_changed, pdu_trl),
+        self.power_marshaller_proxy = (
+            None
+            if not power_marshaller_trl
+            else _PowerMarshallerProxy(
+                power_marshaller_trl,
+                logger,
+                functools.partial(
+                    self._device_communication_state_changed,
+                    power_marshaller_trl,
+                ),
+                functools.partial(self._pdu_state_changed, power_marshaller_trl),
+            )
         )
-        self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
         self._communication_manager: CommunicationManager | None = None
         if self.pdu_proxy is not None:
             self.proxy_map[pdu_trl] = self.pdu_proxy
+        if self.power_marshaller_proxy is not None:
+            self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
         # TODO: This CommunicationManager does not play well with the
         # ComponentManagerWithUpstreamPowerSupply.
@@ -704,6 +712,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             the command changes
         :param task_abort_event: Check for abort, defaults to None
         """
+        if self.power_marshaller_proxy is None:
+            self.logger.warning(
+                "PowerMarshaller not configured, cannot schedule power on"
+            )
+            return
         for port in self.pdu_ports:
             self.power_marshaller_proxy.schedule_power(
                 "subrack",
@@ -742,6 +755,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             the command changes
         :param task_abort_event: Check for abort, defaults to None
         """
+        if self.power_marshaller_proxy is None:
+            self.logger.warning(
+                "PowerMarshaller not configured, cannot schedule power off"
+            )
+            return
         for port in self.pdu_ports:
             self.power_marshaller_proxy.schedule_power(
                 "subrack",

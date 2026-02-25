@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "11.3.0"
+version = "11.3.1"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -111,6 +111,7 @@ uvicorn = {extras = ["standard"], version = "^0.23.2"}
 ska-telmodel = "^1.4.1"
 ska-ser-snmp = "^0.6.1"
 semver = "^3.0.4"
+virtualenv = "^20.38.0"
 
 [tool.poetry.scripts]
 spshw = "ska_low_mccs_spshw:main"

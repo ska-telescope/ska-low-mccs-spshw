@@ -4,6 +4,10 @@
 
 [THORN-390] Migrate from poetry to uv
 
+## 11.3.1
+
+* [SKB-1200] Update subrack simulator to push slightly varying backplane temps in order to trigger health updates properly when cycling adminMode.
+
 ## 11.3.0
 
 * [SKB-1200] Change apply pointing to use LogicalTileId rather than extracting from the Tile's TRL. Change get_mappings to map antennas to the correct LogicalTileID. Update mccs-common 4.4.3->4.4.5

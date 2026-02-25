@@ -217,7 +217,9 @@ def test_fast_adminMode_switch(
 
         for _ in range(number_of_communication_cycles):
             subrack_device.adminmode = AdminMode.OFFLINE
+            time.sleep(0.1)
             subrack_device.adminmode = AdminMode.ONLINE
+            time.sleep(0.1)
 
         # When cycling adminmode ONLINE n times we expect up to n
         # transitions to DevState.ON. The important point is that is end

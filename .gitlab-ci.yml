@@ -84,12 +84,6 @@ deploy-staging:
 deploy-integration:
   when: manual
 
-oci-image-build:
-  before_script:  # TODO: Remove this once the pipeline image has buildx
-  - apt-get update && apt-get install -y --no-install-recommends docker-buildx-plugin
-  - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-  - mkdir -p build
-
 psi-low-k8s-test:
   stage: test-psi-low
   when: manual

@@ -903,8 +903,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if self._health_state != health:
                 self.logger.info(f"Health changed ==> {health=}, {health_report=}")
                 self._health_state = health
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
 
     def _intermediate_health_changed(
         self: MccsTile,
@@ -1529,8 +1527,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
         if self._health_state != health:
             self._health_state = health
-            self.push_change_event("healthState", health)
-            self.push_archive_event("healthState", health)
 
     def shutdown_on_max_alarm(self: MccsTile, attr_name: str) -> None:
         """

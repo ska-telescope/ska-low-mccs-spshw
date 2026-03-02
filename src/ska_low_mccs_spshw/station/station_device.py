@@ -729,7 +729,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         if self._use_new_health_model:
             self._health_state = health
-            self.push_change_event("healthState", health)
 
     def _old_health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -745,7 +744,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         if not self._use_new_health_model:
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
 
     def _health_summary_changed(
         self: SpsStation, health_summary: HealthSummary

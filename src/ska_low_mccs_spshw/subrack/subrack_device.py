@@ -474,8 +474,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_report = health_report
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
 
     def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
         """
@@ -1701,7 +1699,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if not self.UseAttributesForHealth:
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
 
     def _update_board_current(self: MccsSubrack, board_current: float) -> None:
         if board_current is None:

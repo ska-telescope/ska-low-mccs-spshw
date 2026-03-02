@@ -415,7 +415,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_recorder.cleanup()
             self._health_recorder = None
 
-        self.component_manager._task_executor._executor.shutdown()
+        self.component_manager.cleanup()
         super().delete_device()
 
     class InitCommand(DeviceInitCommand):

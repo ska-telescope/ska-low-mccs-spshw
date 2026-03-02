@@ -673,7 +673,7 @@ class SpsStationComponentManager(
             tile_proxy.cleanup()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.cleanup()
-        self._task_executor._executor.shutdown()
+        super().cleanup()
 
         # Superclass cleanup currently not implemented.
         # Expected in future versions.

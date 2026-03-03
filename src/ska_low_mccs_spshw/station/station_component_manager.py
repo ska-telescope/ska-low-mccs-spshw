@@ -4032,9 +4032,12 @@ class SpsStationComponentManager(
             # tango.asyncio.DeviceProxy to use that functionality, which would involve a
             # general refactor of SpsStation. So for now we just spin up some threads,
             # and execute each synchronous call in it's own thread manually.
+            def _execute_with_omni(command, proxy):
+                with tango.EnsureOmniThread():
+                    return command(proxy)
             with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
                 futures: list[Future] = [
-                    executor.submit(command, proxy)
+                    executor.submit(_execute_with_omni, command, proxy)
                     for command, proxy in commands_to_execute
                 ]
                 complete, incomplete = wait(futures, timeout=timeout)

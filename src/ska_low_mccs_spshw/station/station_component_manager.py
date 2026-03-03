@@ -1423,6 +1423,7 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Tiles already initialised")
             result_code = ResultCode.OK
+            task_callback(status=TaskStatus.COMPLETED, result=(result_code, "On Command Completed") )
             return
 
         if result_code == ResultCode.OK and not all(

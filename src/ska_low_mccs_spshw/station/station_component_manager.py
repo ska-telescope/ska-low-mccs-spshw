@@ -1423,7 +1423,11 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Tiles already initialised")
             result_code = ResultCode.OK
-            task_callback(status=TaskStatus.COMPLETED, result=(result_code, "On Command Completed") )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(result_code, "On Command Completed"),
+                )
             return
 
         if result_code == ResultCode.OK and not all(
@@ -4033,9 +4037,15 @@ class SpsStationComponentManager(
             # tango.asyncio.DeviceProxy to use that functionality, which would involve a
             # general refactor of SpsStation. So for now we just spin up some threads,
             # and execute each synchronous call in it's own thread manually.
-            def _execute_with_omni(command, proxy):
+            def _execute_with_omni(
+                command: Callable[
+                    [MccsDeviceProxy], tuple[list[ResultCode], list[str | None]]
+                ],
+                proxy: tango.DeviceProxy,
+            ) -> Any:
                 with tango.EnsureOmniThread():
                     return command(proxy)
+
             with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
                 futures: list[Future] = [
                     executor.submit(_execute_with_omni, command, proxy)

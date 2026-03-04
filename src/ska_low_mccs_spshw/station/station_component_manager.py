@@ -18,7 +18,7 @@ import json
 import logging
 import threading
 import time
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import Future, wait
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
@@ -48,6 +48,7 @@ from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
+from tango.utils import PyTangoThreadPoolExecutor
 
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
@@ -4037,18 +4038,11 @@ class SpsStationComponentManager(
             # tango.asyncio.DeviceProxy to use that functionality, which would involve a
             # general refactor of SpsStation. So for now we just spin up some threads,
             # and execute each synchronous call in it's own thread manually.
-            def _execute_with_omni(
-                command: Callable[
-                    [MccsDeviceProxy], tuple[list[ResultCode], list[str | None]]
-                ],
-                proxy: tango.DeviceProxy,
-            ) -> Any:
-                with tango.EnsureOmniThread():
-                    return command(proxy)
-
-            with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
+            with PyTangoThreadPoolExecutor(
+                max_workers=len(self._tile_proxies)
+            ) as executor:
                 futures: list[Future] = [
-                    executor.submit(_execute_with_omni, command, proxy)
+                    executor.submit(command, proxy)
                     for command, proxy in commands_to_execute
                 ]
                 complete, incomplete = wait(futures, timeout=timeout)

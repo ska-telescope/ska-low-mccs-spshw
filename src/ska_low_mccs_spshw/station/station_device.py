@@ -178,11 +178,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
-    def delete_device(self: SpsStation) -> None:
-        """Delete the device."""
-        self.component_manager.cleanup()
-        super().delete_device()
-
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
         self._obs_state_model = SpsStationObsStateModel(

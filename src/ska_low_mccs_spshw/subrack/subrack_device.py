@@ -282,7 +282,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     SubrackIp = device_property(dtype=str)
     SubrackPort = device_property(dtype=int, default_value=8081)
     UpdateRate = device_property(dtype=float, default_value=15.0)
-    PowerMarshallerTrl = device_property(dtype=str)
+    PowerMarshallerTrl = device_property(dtype=str, default_value="")
     PduTrl = device_property(dtype=str, default_value="")
     PduPorts = device_property(dtype=(int,), default_value=[])
     SimulatedPDU = device_property(dtype=bool, default_value=True)

@@ -347,14 +347,15 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self.power_marshaller_proxy = None
 
         # TODO Reimpliment power marshaller
-        # self.power_marshaller_trl = power_marshaller_trl
-        # self.power_marshaller_proxy = _PowerMarshallerProxy(
-        #     power_marshaller_trl,
-        #     logger,
-        #     functools.partial(self._device_communication_state_changed, pdu_trl),
-        #     functools.partial(self._pdu_state_changed, pdu_trl),
-        # )
-        # self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
+        self.power_marshaller_trl = power_marshaller_trl
+        if self.power_marshaller_trl:
+            self.power_marshaller_proxy = _PowerMarshallerProxy(
+                power_marshaller_trl,
+                logger,
+                functools.partial(self._device_communication_state_changed, pdu_trl),
+                functools.partial(self._pdu_state_changed, pdu_trl),
+            )
+            self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
 
         self._communication_manager: CommunicationManager | None = None
         if self.pdu_proxy is not None:

@@ -680,7 +680,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=subrack._name,
             health=HealthState.OK,
-            lookahead=20,
+            lookahead=25,
         )
 
     for tile in station_component_manager._tile_proxies.values():
@@ -689,15 +689,15 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             health=HealthState.OK,
-            lookahead=20,
+            lookahead=25,
         )
         # Need to wait for this event to come through before we turn a tile OFF.
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             power=PowerState.ON,
-            lookahead=20,
+            lookahead=25,
         )
-    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=10)
+    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=25)
     assert station_component_manager._component_state["power"] == PowerState.ON
 
     tile_names = list(station_component_manager._tile_proxies.keys())

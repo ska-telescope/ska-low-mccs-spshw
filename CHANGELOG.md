@@ -1,6 +1,7 @@
 # Version History
 
 ## Unreleased
+## 11.3.2
 * [THORN-413] update pytango 10.0.3 -> 10.1.3
 * [THORN-413] update ska-tango-base 1.3.2 -> 1.4.2
 * [THORN-413] update ska-low-mccs-common 4.4.5 -> 4.4.6

@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+* [THORN-454] Add background step to wipe threshold values in the database before tests
 * [SPRTS-859] update thresholds for currentFE0, currentFE1 and voltageMGT_AVTT according to the latest information from suppliers.
 
 ## 11.3.2
+
 * [THORN-413] update pytango 10.0.3 -> 10.1.3
 * [THORN-413] update ska-tango-base 1.3.2 -> 1.4.2
 * [THORN-413] update ska-low-mccs-common 4.4.5 -> 4.4.6
@@ -12,7 +14,6 @@
 ## 11.3.1
 
 * [SKB-1200] Update subrack simulator to push slightly varying backplane temps in order to trigger health updates properly when cycling adminMode.
-
 
 ## 11.3.0
 

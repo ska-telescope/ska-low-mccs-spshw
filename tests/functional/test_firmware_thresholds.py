@@ -38,6 +38,59 @@ def tile_device_fixture(
     return station_tiles[-1]
 
 
+@pytest.fixture(name="undefined_db_thresholds")
+def undefined_db_thresholds_fixture() -> dict[str, dict[str, Any]]:
+    """
+    Return db thresholds with all values set to Undefined.
+
+    :returns: db thresholds with all values set to Undefined.
+    """
+    return {
+        "temperatures": {
+            "fpga1_alarm_threshold": "Undefined",
+            "board_warning_threshold": "Undefined",
+            "board_alarm_threshold": "Undefined",
+            "fpga2_warning_threshold": "Undefined",
+            "fpga2_alarm_threshold": "Undefined",
+            "fpga1_warning_threshold": "Undefined",
+        },
+        "voltages": {
+            "MGT_AVCC_min_alarm_threshold": "Undefined",
+            "MGT_AVCC_max_alarm_threshold": "Undefined",
+            "MGT_AVTT_min_alarm_threshold": "Undefined",
+            "MGT_AVTT_max_alarm_threshold": "Undefined",
+            "SW_AVDD1_min_alarm_threshold": "Undefined",
+            "SW_AVDD1_max_alarm_threshold": "Undefined",
+            "SW_AVDD2_min_alarm_threshold": "Undefined",
+            "SW_AVDD2_max_alarm_threshold": "Undefined",
+            "AVDD3_min_alarm_threshold": "Undefined",
+            "AVDD3_max_alarm_threshold": "Undefined",
+            "MAN_1V2_min_alarm_threshold": "Undefined",
+            "MAN_1V2_max_alarm_threshold": "Undefined",
+            "DDR0_VREF_min_alarm_threshold": "Undefined",
+            "DDR0_VREF_max_alarm_threshold": "Undefined",
+            "DDR1_VREF_min_alarm_threshold": "Undefined",
+            "DDR1_VREF_max_alarm_threshold": "Undefined",
+            "VM_DRVDD_min_alarm_threshold": "Undefined",
+            "VM_DRVDD_max_alarm_threshold": "Undefined",
+            "VIN_min_alarm_threshold": "Undefined",
+            "VIN_max_alarm_threshold": "Undefined",
+            "MON_3V3_min_alarm_threshold": "Undefined",
+            "MON_3V3_max_alarm_threshold": "Undefined",
+            "MON_1V8_min_alarm_threshold": "Undefined",
+            "MON_1V8_max_alarm_threshold": "Undefined",
+            "MON_5V0_min_alarm_threshold": "Undefined",
+            "MON_5V0_max_alarm_threshold": "Undefined",
+        },
+        "currents": {
+            "FE0_mVA_min_alarm_threshold": "Undefined",
+            "FE0_mVA_max_alarm_threshold": "Undefined",
+            "FE1_mVA_min_alarm_threshold": "Undefined",
+            "FE1_mVA_max_alarm_threshold": "Undefined",
+        },
+    }
+
+
 @pytest.fixture(name="initial_db_thresholds")
 def initial_db_thresholds_fixture() -> dict[str, dict[str, Any]]:
     """
@@ -200,6 +253,7 @@ def check_spsstation_state(
     change_event_callbacks: MockTangoEventCallbackGroup,
     stations_devices_exported: list[tango.DeviceProxy],
     station_tiles: list[tango.DeviceProxy],
+    undefined_db_thresholds: dict[str, str],
 ) -> None:
     """
     Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
@@ -211,6 +265,11 @@ def check_spsstation_state(
         root for all sps devices.
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
+    :param undefined_db_thresholds: a dictionary containing the thresholds to
+        set in the database to effectively wipe them.
+        This is needed as the device will ignore thresholds set to Undefined,
+        and manual activity on a persistent deployment may
+        have set thresholds to specific values.
     """
     sub_id1 = station.subscribe_event(
         "adminMode",
@@ -257,6 +316,20 @@ def check_spsstation_state(
     # Therefore we are individually calling MccsTile.On() here.
     _initial_station_state = station.state()
     for tile in station_tiles:
+        if tile.state() == tango.DevState.FAULT:
+            # If we are in a persistent deployment,
+            # and the thresholds were previously set to specific values,
+            # then the device can be in FAULT due to the database
+            # thresholds being different to the firmware thresholds.
+            # We need to set the database thresholds to
+            # Undefined so that the device ignores them,
+            # and then resync with the database before we can turn the device ON.
+            tile.adminMode = AdminMode.ENGINEERING
+            tango.Database().put_device_attribute_property(
+                tile.dev_name(), undefined_db_thresholds
+            )
+            tile.UpdateThresholdCache()
+            tile.adminMode = AdminMode.ONLINE
         if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
             tile.on()
             AttributeWaiter(timeout=60).wait_for_value(
@@ -264,6 +337,7 @@ def check_spsstation_state(
                 "state",
                 tango.DevState.ON,
             )
+        tile.adminMode = AdminMode.ONLINE
     if (
         _initial_station_state != tango.DevState.ON
         and station.state() != tango.DevState.ON

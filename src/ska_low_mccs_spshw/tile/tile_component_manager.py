@@ -90,6 +90,7 @@ _ATTRIBUTE_MAP: Final = {
     "RFI_COUNT": "rfi_count",
     "40G_PACKET_COUNT": "40g_packet_count",
 }
+_POLL_THREAD_STARTUP_DELAY: Final[float] = 0.2
 
 
 class TaskCompleteWaiter(TaskCallbackType):
@@ -325,6 +326,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             component_state_changed_callback,
             poll_rate=poll_rate,
         )
+        # See WOM-1114. Temporary delay to avoid missed Condition.notify()
+        # race in upstream poller implementation (ska-tango-base 1.4.2).
+        time.sleep(_POLL_THREAD_STARTUP_DELAY)
 
     def _submit_lrc_request(
         self: TileComponentManager,

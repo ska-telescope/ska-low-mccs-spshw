@@ -18,7 +18,7 @@ import json
 import logging
 import threading
 import time
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import Future, wait
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
@@ -48,6 +48,7 @@ from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
+from tango.utils import PyTangoThreadPoolExecutor
 
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
@@ -673,7 +674,7 @@ class SpsStationComponentManager(
             tile_proxy.cleanup()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.cleanup()
-        self._task_executor._executor.shutdown()
+        super().cleanup()
 
         # Superclass cleanup currently not implemented.
         # Expected in future versions.
@@ -1066,6 +1067,7 @@ class SpsStationComponentManager(
         fqdn: str,
         power: Optional[PowerState] = None,
         health: Optional[HealthState] = None,
+        fault: Optional[bool] = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:
@@ -1139,6 +1141,13 @@ class SpsStationComponentManager(
             # Suppress power state evaluation whilst power command in progress.
             # This is to prevent the Station changing to DevState.ON before all tiles
             # have had a chance to turn on.
+            return
+        if self._communication_state != CommunicationStatus.ESTABLISHED:
+            # An update to the base classes 1.3.2 -> 1.4.0 has a more strict
+            # power transition model. When NOT_ESTABILISHED we are UNKNOWN
+            # Once we are ESTABLISHED we can now proceed to update Power from
+            # UNKNOWN. This flag is used to gate this transition, only transition
+            # after communication has been established.
             return
         with self._power_state_lock:
             tile_power_states = list(self._tile_power_states.values())
@@ -1415,6 +1424,11 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Tiles already initialised")
             result_code = ResultCode.OK
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(result_code, "On Command Completed"),
+                )
             return
 
         if result_code == ResultCode.OK and not all(
@@ -4024,7 +4038,9 @@ class SpsStationComponentManager(
             # tango.asyncio.DeviceProxy to use that functionality, which would involve a
             # general refactor of SpsStation. So for now we just spin up some threads,
             # and execute each synchronous call in it's own thread manually.
-            with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
+            with PyTangoThreadPoolExecutor(
+                max_workers=len(self._tile_proxies)
+            ) as executor:
                 futures: list[Future] = [
                     executor.submit(command, proxy)
                     for command, proxy in commands_to_execute

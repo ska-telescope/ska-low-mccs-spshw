@@ -285,7 +285,7 @@ def test_Off(
     )
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
-    ([result_code], [off_command_id]) = station_device.Off()
+    ([result_code], [off_command_id]) = station_device.off()
     assert result_code == ResultCode.QUEUED
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "STAGING")
@@ -401,7 +401,7 @@ def test_On(
     )
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
-    ([result_code], [off_command_id]) = station_device.Off()
+    ([result_code], [off_command_id]) = station_device.off()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
@@ -425,7 +425,7 @@ def test_On(
     assert station_device.state() == DevState.OFF
 
     # Now turn the station back on using the On command
-    ([result_code], [on_command_id]) = station_device.On()
+    ([result_code], [on_command_id]) = station_device.on()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
@@ -542,7 +542,7 @@ def test_Abort_On(
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
     # Turn station to Standby state
-    ([result_code], [standby_command_id]) = station_device.Standby()
+    ([result_code], [standby_command_id]) = station_device.standby()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
@@ -571,7 +571,7 @@ def test_Abort_On(
     # Turn a tile off, the on command won't be able to finish until it times out
     mock_tile_device_proxies[0].adminMode = AdminMode.OFFLINE
 
-    ([on_result_code], [on_command_id]) = station_device.On()
+    ([on_result_code], [on_command_id]) = station_device.on()
 
     assert on_result_code == ResultCode.QUEUED
     change_event_callbacks["command_status"].assert_change_event(
@@ -792,7 +792,7 @@ def test_Standby(
     )
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
-    ([result_code], [command_id]) = station_device.Standby()
+    ([result_code], [command_id]) = station_device.standby()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(

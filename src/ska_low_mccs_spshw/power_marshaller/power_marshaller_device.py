@@ -27,6 +27,7 @@ from .power_marshaller_component_manager import PowerMarshallerComponentManager
 __all__ = ["PowerMarshaller", "main"]
 
 
+# pylint: disable=too-many-ancestors
 class PowerMarshaller(MccsBaseDevice):
     """An implementation of a PowerMarshaller Tango device for MCCS."""
 
@@ -177,7 +178,6 @@ class PowerMarshaller(MccsBaseDevice):
         """
         if self._health_state != health:
             self._health_state = health
-            self.push_change_event("healthState", health)
 
     @attribute(dtype="DevString")
     def healthReport(self: PowerMarshaller) -> str:

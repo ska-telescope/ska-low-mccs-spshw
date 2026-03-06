@@ -25,6 +25,7 @@ from ska_tango_base.commands import (
     ResultCode,
     SubmittedSlowCommand,
 )
+from tango import AttrQuality, DevFailed
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -273,6 +274,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
 
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
+# pylint: disable=too-many-ancestors
 class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of an SPS subrack."""
 
@@ -413,7 +415,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_recorder.cleanup()
             self._health_recorder = None
 
-        self.component_manager._task_executor._executor.shutdown()
         super().delete_device()
 
     class InitCommand(DeviceInitCommand):
@@ -472,8 +473,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_report = health_report
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
 
     def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
         """
@@ -1633,8 +1632,29 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             if special_update_method is None:
                 tango_attribute_name = self._ATTRIBUTE_MAP[key]
                 self._hardware_attributes[tango_attribute_name] = value
-                self.push_change_event(tango_attribute_name, value)
-                self.push_archive_event(tango_attribute_name, value)
+                if tango_attribute_name == "subrackBoardInfo":
+                    if isinstance(value, dict):
+                        # Serialise value to match attribute definition.
+                        value = json.dumps(value)
+                if value is None:
+                    self.get_device_attr().get_attr_by_name(
+                        tango_attribute_name
+                    ).set_quality(quality=AttrQuality.ATTR_INVALID, send_event=True)
+                    continue
+                try:
+                    self.push_change_event(tango_attribute_name, value)
+                    self.push_archive_event(tango_attribute_name, value)
+                except DevFailed as e:
+                    # TODO: Anything that appears here is undesired
+                    # and a ticket should be created to resolve.
+                    self.logger.warning(
+                        "Failed to push Tango events for "
+                        "attribute '%s' with value '%s': %s",
+                        tango_attribute_name,
+                        value,
+                        e,
+                        exc_info=True,
+                    )
             else:
                 special_update_method(value)
 
@@ -1678,7 +1698,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if not self.UseAttributesForHealth:
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
 
     def _update_board_current(self: MccsSubrack, board_current: float) -> None:
         if board_current is None:

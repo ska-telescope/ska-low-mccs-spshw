@@ -14,6 +14,9 @@ include .make-uv/make/docs-uv.mk
 
 DOCS_SPHINXOPTS = -W --keep-going
 
+docs-pre-build:
+	uv sync --frozen --group docs
+
 .PHONY: docs-pre-build
 
 ########################################################################

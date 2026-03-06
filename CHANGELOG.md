@@ -1,12 +1,17 @@
 # Version History
 
 ## Unreleased
+## 11.3.2
+* [THORN-413] update pytango 10.0.3 -> 10.1.3
+* [THORN-413] update ska-tango-base 1.3.2 -> 1.4.2
+* [THORN-413] update ska-low-mccs-common 4.4.5 -> 4.4.6
 
 [THORN-390] Migrate from poetry to uv
 
 ## 11.3.1
 
 * [SKB-1200] Update subrack simulator to push slightly varying backplane temps in order to trigger health updates properly when cycling adminMode.
+
 
 ## 11.3.0
 

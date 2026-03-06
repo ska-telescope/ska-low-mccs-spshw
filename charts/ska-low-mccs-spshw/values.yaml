@@ -223,7 +223,7 @@ ska-tango-devices:
       voltageMGT_AVCC->min_alarm: 0.83
 
       voltageMGT_AVTT->max_alarm: 1.26
-      voltageMGT_AVTT->min_alarm: 1.14
+      voltageMGT_AVTT->min_alarm: 1.104
 
       voltageMon5V0->max_alarm: 5.19
       voltageMon5V0->min_alarm: 4.69

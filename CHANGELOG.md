@@ -1,6 +1,9 @@
 # Version History
 
 ## Unreleased
+
+* [SPRTS-859] update thresholds for currentFE0, currentFE1 and voltageMGT_AVTT according to the latest information from suppliers.
+
 ## 11.3.2
 * [THORN-413] update pytango 10.0.3 -> 10.1.3
 * [THORN-413] update ska-tango-base 1.3.2 -> 1.4.2

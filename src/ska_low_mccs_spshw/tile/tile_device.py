@@ -4755,8 +4755,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        min_warning=2.40,
-        min_alarm=2.37,
     )
     def currentFE0(self: MccsTile) -> float | None:
         """
@@ -4774,8 +4772,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        min_warning=2.40,
-        min_alarm=2.37,
     )
     def currentFE1(self: MccsTile) -> float | None:
         """
@@ -4889,7 +4885,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.26,
-        min_alarm=1.14,
+        min_alarm=1.104,
     )
     def voltageMGT_AVTT(self: MccsTile) -> float | None:
         """

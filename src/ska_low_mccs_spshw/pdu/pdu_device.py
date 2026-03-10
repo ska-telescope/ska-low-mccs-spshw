@@ -26,7 +26,7 @@ from .pdu_component_manager import PduComponentManager
 __all__ = ["MccsPdu", "main"]
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-ancestors
 class MccsPdu(MccsBaseDevice, AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 
@@ -240,7 +240,6 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         """
         if self._health_state != health:
             self._health_state = health
-            self.push_change_event("healthState", health)
 
     @attribute(dtype="DevString")
     def healthReport(self: MccsPdu) -> str:

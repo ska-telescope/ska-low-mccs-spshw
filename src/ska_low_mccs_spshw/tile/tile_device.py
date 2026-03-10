@@ -147,6 +147,7 @@ class TileAttribute:
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
+# pylint: disable=too-many-ancestors
 class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
@@ -294,11 +295,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self._health_recorder is not None:
             self._health_recorder.cleanup()
             self._health_recorder = None
-        self.component_manager.cleanup()
-
-        # NOTE: This will be removed from tango-base 1.4.0 and the interface changed
-        # so will need removing when we update
-        self.ExecutePendingOperations()
 
         super().delete_device()
         for t in threading.enumerate():
@@ -902,8 +898,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if self._health_state != health:
                 self.logger.info(f"Health changed ==> {health=}, {health_report=}")
                 self._health_state = health
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
 
     def _intermediate_health_changed(
         self: MccsTile,
@@ -1205,19 +1199,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #         message = "Tile On command completed OK"
     #         return (ResultCode.OK, message)
 
-    def is_On_allowed(self: MccsTile) -> bool:
-        """
-        Check if command `On` is allowed in the current device state.
+    # def is_On_allowed(self: MccsTile) -> bool:
+    #     """
+    #     Check if command `On` is allowed in the current device state.
 
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
+    #     :return: ``True`` if the command is allowed
+    #     """
+    #     return self.get_state() in [
+    #         tango.DevState.OFF,
+    #         tango.DevState.STANDBY,
+    #         tango.DevState.ON,
+    #         tango.DevState.UNKNOWN,
+    #         tango.DevState.FAULT,
+    #     ]
 
     # ----------
     # Callbacks
@@ -1528,8 +1522,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
         if self._health_state != health:
             self._health_state = health
-            self.push_change_event("healthState", health)
-            self.push_archive_event("healthState", health)
 
     def shutdown_on_max_alarm(self: MccsTile, attr_name: str) -> None:
         """
@@ -3362,9 +3354,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.SimulationConfig
 
     @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(  # pylint: disable=arguments-differ
-        self: MccsTile, value: SimulationMode
-    ) -> None:
+    def simulationMode(self: MccsTile, value: SimulationMode) -> None:
         """
         Set the simulation mode.
 
@@ -4765,8 +4755,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        min_warning=2.40,
-        min_alarm=2.37,
     )
     def currentFE0(self: MccsTile) -> float | None:
         """
@@ -4784,8 +4772,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        min_warning=2.40,
-        min_alarm=2.37,
     )
     def currentFE1(self: MccsTile) -> float | None:
         """
@@ -4899,7 +4885,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.26,
-        min_alarm=1.14,
+        min_alarm=1.104,
     )
     def voltageMGT_AVTT(self: MccsTile) -> float | None:
         """
@@ -8867,10 +8853,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # On/Off commands
     # ---------------
 
-    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
-        dtype_out="DevVarLongStringArray"
-    )
-    def Off(self: MccsTile) -> DevVarLongStringArrayType:
+    def execute_Off(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Turn the device off.
 
@@ -8883,12 +8866,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = True
-        return super().Off()
+        return super().execute_Off()
 
-    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
-        dtype_out="DevVarLongStringArray"
-    )
-    def On(self: MccsTile) -> DevVarLongStringArrayType:
+    def execute_On(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Turn device on.
 
@@ -8901,7 +8881,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
-        return super().On()
+        return super().execute_On()
 
     class EnableBroadbandRfiBlankingCommand(FastCommand):
         """Class for handling the EnableBroadbandRfiBlanking command."""

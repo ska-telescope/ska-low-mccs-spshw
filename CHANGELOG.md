@@ -3,6 +3,8 @@
 ## Unreleased
 
 * [THORN-454] Add background step to wipe threshold values in the database before tests
+* [THORN-459] Revert behaviour change after tango base update. Do not allow On when DevState is already ON.
+* [THORN-459] Improve synchronisation checker thread cleanup to remove sleep.
 * [SPRTS-859] update thresholds for currentFE0, currentFE1 and voltageMGT_AVTT according to the latest information from suppliers.
 
 ## 11.3.2

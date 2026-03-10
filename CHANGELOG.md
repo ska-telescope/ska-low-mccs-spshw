@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
 * [THORN-454] Add background step to wipe threshold values in the database before tests
 * [SPRTS-859] update thresholds for currentFE0, currentFE1 and voltageMGT_AVTT according to the latest information from suppliers.
 

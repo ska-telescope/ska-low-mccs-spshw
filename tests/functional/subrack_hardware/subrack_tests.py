@@ -11,9 +11,6 @@ import json
 import pytest
 from ska_low_mccs_common.component import WebHardwareClient
 
-if not "":
-    pytest.skip("skipping windows-only tests", allow_module_level=True)
-
 
 def assert_with_context(
     value: int | str | bool, expected: tuple | list | str | int | bool, context: str
@@ -39,6 +36,7 @@ def assert_with_context(
         assert expected == value, context
 
 
+@pytest.mark.subrack_hardware
 class TestSubrackHardwareAPI:
     """Dedicated hardware tests for the subrack API."""
 

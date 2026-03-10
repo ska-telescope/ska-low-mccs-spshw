@@ -15,27 +15,62 @@ def pytest_addoption(
     parser: _pytest.config.argparsing.Parser,  # type: ignore[name-defined]
 ) -> None:
     """
-    Read command line options.
+    Add a command line option to pytest.
 
-    :param parser: pytest fixture
+    This is a pytest hook, here implemented to add the `--ral_context` and
+    `--test-hardware` options, used to the determine how to run the
+    Subrack Hardware test and which config values to use.
+
+    :param parser: the command line options parser
     """
     parser.addoption(
-        "--test-context",
+        "--ral_context",
+        action="store",
+        default="minikube-ci",
+        help="deployment context in which the test is ran",
+    )
+    parser.addoption(
+        "--test-hardware",
         action="store",
         default="minikube-ci",
         help="deployment context in which the test is ran",
     )
 
 
+def pytest_collection_modifyitems(request: pytest.FixtureRequest, items: list) -> None:
+    """
+    Modify which subrack tests are run based on cli input.
+
+    This a pytest hook, implemented to configure which hardware tests are ran based on
+    the hardware environment supplied.
+
+    :param request: Pytest fixture
+    :param items: list of pytest Items
+    """
+    if request.config.getoption("--test-hardware"):
+        return
+    skip_hardware_test = pytest.mark.skip(
+        reason="Requires --test-hardware option to run"
+    )
+    for item in items:
+        if "hardware" in item.keywords:
+            item.add_marker(skip_hardware_test)
+
+
 @pytest.fixture(name="subrack_id")
 def subrack_id_fixture(request: pytest.FixtureRequest) -> str:
     """
-    Return the correct subrack id.
+    Return the correct subrack id or skip all tests.
+
+    Filters out unexpected environment variables added during a pipeline run.
 
     :param request: pytest fixture
     :return: a string id used for subrack values.
     """
-    return request.config.getoption("--test-context")
+    subrack_context = str(request.config.getoption("--ral_context"))
+    if subrack_context in ["ral_1", "ral_2", "ral_3", "ral_4", "ral_5"]:
+        return subrack_context
+    return "minikube-ci"
 
 
 @pytest.fixture(name="base_ip")

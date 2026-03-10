@@ -4,6 +4,7 @@
 
 * [THORN-454] Add background step to wipe threshold values in the database before tests
 * [SPRTS-859] update thresholds for currentFE0, currentFE1 and voltageMGT_AVTT according to the latest information from suppliers.
+* [THORN-414] added subrack api tests to check subrack independently.
 
 ## 11.3.2
 

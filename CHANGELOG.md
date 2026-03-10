@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1229] Turning on SPS station causes TPMs to stop communicating/syncing
 * [THORN-390] Migrate from poetry to uv
 * [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
 * [THORN-454] Add background step to wipe threshold values in the database before tests

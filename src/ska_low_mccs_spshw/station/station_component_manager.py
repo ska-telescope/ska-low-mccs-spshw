@@ -1130,14 +1130,17 @@ class SpsStationComponentManager(
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
 
     def _evaluate_power_state(
-        self: SpsStationComponentManager,
+        self: SpsStationComponentManager, called_from: Optional[str] = ""
     ) -> None:
         # 1. Any Tile ON, result = ON. (Subrack must therefore be on.)
         # 2. Any Subrack ON, All Tile OFF/NO_SUPP, result = STANDBY
         # 3. All Subrack NO_SUPP, All Tile NO_SUPP, result = NO_SUPP
         # 4. All Subracks OFF/NO_SUPP, All Tiles OFF/NO_SUPP, result = OFF
         # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
-        if self._power_command_in_progress.locked():
+        if self._power_command_in_progress.locked() and called_from not in [
+            "on",
+            "standby",
+        ]:
             # Suppress power state evaluation whilst power command in progress.
             # This is to prevent the Station changing to DevState.ON before all tiles
             # have had a chance to turn on.
@@ -1377,6 +1380,8 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
+        self._evaluate_power_state("standby")
+
     def on(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1493,6 +1498,8 @@ class SpsStationComponentManager(
             message = "On Command failed"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
+
+        self._evaluate_power_state("standby")
 
     def initialise(
         self: SpsStationComponentManager,

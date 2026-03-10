@@ -220,9 +220,6 @@ class TestSubrackHardwareAPI:
         [
             ("cpld_pll_locked", True),
             ("subrack_pll_locked", True),
-            # ("api_version", '2.8.0 (v2.7.0-86-gdfb95e5)
-            # [WARNING minimum SMM OS_rev required 0.11.0]'),
-            # ("subrack_timestamp", 100),
         ],
     )
     def test_attributes_fixed(

@@ -55,5 +55,5 @@
     "containerEnv": {
         "UV_CACHE_DIR": "/workspaces/ska-low-mccs-spshw/.uvcache"
     },
-    "postCreateCommand": "uv sync --locked --group docs"
+    "postCreateCommand": "uv sync --locked --group dev"
 }

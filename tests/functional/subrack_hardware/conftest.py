@@ -37,7 +37,7 @@ def pytest_addoption(
     )
 
 
-def pytest_collection_modifyitems(request: pytest.FixtureRequest, items: list) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list) -> None:
     """
     Modify which subrack tests are run based on cli input.
 
@@ -47,7 +47,7 @@ def pytest_collection_modifyitems(request: pytest.FixtureRequest, items: list) -
     :param request: Pytest fixture
     :param items: list of pytest Items
     """
-    if request.config.getoption("--test-hardware"):
+    if config.getoption("--test-hardware"):
         return
     skip_hardware_test = pytest.mark.skip(
         reason="Requires --test-hardware option to run"

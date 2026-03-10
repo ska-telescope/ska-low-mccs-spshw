@@ -107,7 +107,7 @@ K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
 	--cucumberjson=$(CUCUMBER_JSON_PATH) \
 	--json-report --json-report-file=$(JSON_REPORT_PATH)\
 	--test-context=$(KUBE_NAMESPACE) \
-	--ignore tests/functional/subrack_hardware
+	--ignore=tests/functional/subrack_hardware
 
 ifdef HW_DEPLOYMENT
 K8S_TEST_RUNNER_PYTEST_OPTIONS += --hw-deployment

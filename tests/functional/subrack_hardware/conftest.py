@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module contains pytest-specific test harness for SPSHW functional tests."""
+"""This file contains hardware API test for the subrack hardware."""
 import _pytest
 import pytest
 from ska_low_mccs_common.component import WebHardwareClient

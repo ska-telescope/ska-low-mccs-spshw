@@ -44,7 +44,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list) -> None:
     This a pytest hook, implemented to configure which hardware tests are ran based on
     the hardware environment supplied.
 
-    :param request: Pytest fixture
+    :param config: Pytest fixture
     :param items: list of pytest Items
     """
     if config.getoption("--test-hardware"):

@@ -297,6 +297,27 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_recorder = None
 
         super().delete_device()
+
+        # ============================================================
+        # Temporary workaround for THORN-466
+        #
+        # A segmentation fault was observed after upgrading PyTango.
+        # Until the root cause is fixed, we explicitly mark attributes
+        # as INVALID when they have a value. This prevents the crash
+        # and allows SPSHW releases to proceed.
+        #
+        # Track progress and removal of this workaround in THORN-466.
+        # ============================================================
+
+        device_attrs = self.get_device_attr()
+
+        for attr_name, attr_state in self._attribute_state.items():
+            if attr_state.read() is None:
+                continue
+
+            device_attrs.get_attr_by_name(attr_name).set_quality(
+                tango.AttrQuality.ATTR_INVALID
+            )
         for t in threading.enumerate():
             self.logger.info(
                 f"Threads open at end of DELETE DEVICE "

@@ -53,6 +53,7 @@ from tango.utils import PyTangoThreadPoolExecutor
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 from ..tile.tile_data import TileData
+from .station_on_workaround_utils import ensure_tpms_on
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 

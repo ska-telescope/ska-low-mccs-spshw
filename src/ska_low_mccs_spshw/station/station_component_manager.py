@@ -1052,7 +1052,7 @@ class SpsStationComponentManager(
                 if self._component_state_callback is not None:
                     self._component_state_callback(device_name=fqdn, power=power)
 
-                self._evaluate_power_state()
+                self._evaluate_power_state("tile")
 
         if health is not None:
             # Old health model.
@@ -1072,7 +1072,7 @@ class SpsStationComponentManager(
         if power is not None:
             with self._power_state_lock:
                 self._subrack_power_states[fqdn] = power
-                self._evaluate_power_state()
+                self._evaluate_power_state("subrack")
         # Old health model.
         if health is not None:
             self._subrack_health_changed_callback(fqdn, HealthState(health))
@@ -1137,6 +1137,7 @@ class SpsStationComponentManager(
         # 3. All Subrack NO_SUPP, All Tile NO_SUPP, result = NO_SUPP
         # 4. All Subracks OFF/NO_SUPP, All Tiles OFF/NO_SUPP, result = OFF
         # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
+        self.logger.error(f"eval power called from {called_from}")
         if self._power_command_in_progress.locked() and called_from not in [
             "on",
             "standby",
@@ -1188,7 +1189,7 @@ class SpsStationComponentManager(
                 self.logger.debug(f"subrack powers: {subrack_power_states}")
                 evaluated_power_state = PowerState.UNKNOWN  # 5
 
-            self.logger.debug(
+            self.logger.error(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
@@ -1327,7 +1328,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        self.logger.debug(
+        self.logger.error(
             "Starting standby. State transitions suppressed during power command."
         )
         result_code = ResultCode.OK  # default if nothing to do
@@ -1337,12 +1338,12 @@ class SpsStationComponentManager(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on subracks")
+            self.logger.error("Starting on sequence on subracks")
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
-        self.logger.debug("Subracks now on")
-        self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
+        self.logger.error("Subracks now on")
+        self.logger.error(f"Tile power states: {self._tile_power_states.values()}")
         with self._power_state_lock:
-            self.logger.debug("Starting off sequence on tiles")
+            self.logger.error("Starting off sequence on tiles")
             results = []
             for proxy in self._tile_proxies.values():
                 [task_status, task_id] = proxy.off()
@@ -1367,11 +1368,11 @@ class SpsStationComponentManager(
                 timeout -= tick
                 time.sleep(tick)
             if timeout > 0:
-                self.logger.debug("End standby")
+                self.logger.error("End standby")
                 task_status = TaskStatus.COMPLETED
                 message = "Standby command completed."
             else:
-                self.logger.debug("Timeout in standby")
+                self.logger.error("Timeout in standby")
                 task_status = TaskStatus.FAILED
                 message = "Standby command timeout."
         else:
@@ -1415,8 +1416,8 @@ class SpsStationComponentManager(
         """
         # pylint: disable=too-many-branches
         message: str = ""
-        self.logger.debug("Starting on sequence.")
-        self.logger.debug("State transitions suppressed during power command.")
+        self.logger.error("Starting on sequence.")
+        self.logger.error("State transitions suppressed during power command.")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
@@ -1427,7 +1428,7 @@ class SpsStationComponentManager(
             and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
             for proxy in self._tile_proxies.values()
         ):
-            self.logger.debug("Tiles already initialised")
+            self.logger.error("Tiles already initialised")
             result_code = ResultCode.OK
             if task_callback:
                 task_callback(
@@ -1440,52 +1441,52 @@ class SpsStationComponentManager(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on subracks")
+            self.logger.error("Starting on sequence on subracks")
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
-        self.logger.debug("Subracks now on")
+        self.logger.error("Subracks now on")
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting tile source IPs before initialisation")
+            self.logger.error("Setting tile source IPs before initialisation")
             result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting global reference time")
+            self.logger.error("Setting global reference time")
             self._set_global_reference_time(self._global_reference_time or None)
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on tiles")
+            self.logger.error("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tiles")
+            self.logger.error("Initialising tiles")
             result_code = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
             # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising station")
+            self.logger.error("Initialising station")
             result_code = self._initialise_station(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Waiting for ARP table")
+            self.logger.error("Waiting for ARP table")
             result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Routing data")
+            self.logger.error("Routing data")
             result_code = self._route_data(None, task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Checking synchronisation")
+            self.logger.error("Checking synchronisation")
             result_code = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            self.logger.debug("End initialisation")
+            self.logger.error("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
         elif result_code is ResultCode.ABORTED:

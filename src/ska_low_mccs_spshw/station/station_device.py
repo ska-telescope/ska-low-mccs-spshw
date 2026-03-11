@@ -152,6 +152,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "tiles": (1, 1, 2),
         }
         super().init_device()
+        self.logger.error("joe")
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -177,6 +178,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+        self.logger.error("joe")
 
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()

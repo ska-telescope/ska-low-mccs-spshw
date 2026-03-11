@@ -1608,7 +1608,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    # pylint: disable=line-too-long
     def ReInitialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Initialise the station with overridable defaults.

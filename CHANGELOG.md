@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
 * [THORN-454] Add background step to wipe threshold values in the database before tests
 * [THORN-459] Revert behaviour change after tango base update. Do not allow On when DevState is already ON.
 * [THORN-459] Improve synchronisation checker thread cleanup to remove sleep.

@@ -3800,8 +3800,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         *,
-        target_adc: float,
-        bias: float,
+        target_adc: Optional[float] = 17.0,
+        bias: Optional[float] = 0.0,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the trigger adc equalisation method.

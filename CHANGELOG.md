@@ -1,7 +1,8 @@
 # Version History
 
-## Unreleased
+## 11.3.3
 
+* [THORN-455] Remove all calls to setting Tango serial model to NO_SYNC. This turns off the tango serialisation monitor which we should not be doing.
 * [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
 * [THORN-454] Add background step to wipe threshold values in the database before tests
 * [THORN-459] Revert behaviour change after tango base update. Do not allow On when DevState is already ON.

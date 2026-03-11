@@ -23,7 +23,6 @@ from functools import wraps
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
-import tango
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -137,13 +136,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._beamformer_regions: Optional[list[int]] = None
 
     def init_device(self: SpsStation) -> None:
-        """
-        Initialise the device.
-
-        This is overridden here to change the Tango serialisation model.
-        """
-        util = tango.Util.instance()
-        util.set_serial_model(tango.SerialModel.NO_SYNC)
+        """Initialise the device."""
         self._use_new_health_model = True
         self._health_thresholds: dict[str, Any] = {
             "pps_delta_degraded": 4,

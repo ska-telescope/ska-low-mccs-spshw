@@ -1,7 +1,9 @@
 # Version History
 
-## Unreleased
+## 11.3.3
 
+* [THORN-466] Add temporary workaround for segfault (introduced after pytango update.)
+* [THORN-455] Remove all calls to setting Tango serial model to NO_SYNC. This turns off the tango serialisation monitor which we should not be doing.
 * [THORN-390] Migrate from poetry to uv
 * [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
 * [THORN-454] Add background step to wipe threshold values in the database before tests

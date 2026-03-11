@@ -1199,20 +1199,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #         message = "Tile On command completed OK"
     #         return (ResultCode.OK, message)
 
-    # def is_On_allowed(self: MccsTile) -> bool:
-    #     """
-    #     Check if command `On` is allowed in the current device state.
-
-    #     :return: ``True`` if the command is allowed
-    #     """
-    #     return self.get_state() in [
-    #         tango.DevState.OFF,
-    #         tango.DevState.STANDBY,
-    #         tango.DevState.ON,
-    #         tango.DevState.UNKNOWN,
-    #         tango.DevState.FAULT,
-    #     ]
-
     # ----------
     # Callbacks
     # ----------
@@ -4755,8 +4741,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        min_warning=2.40,
-        min_alarm=2.37,
     )
     def currentFE0(self: MccsTile) -> float | None:
         """
@@ -4774,8 +4758,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        min_warning=2.40,
-        min_alarm=2.37,
     )
     def currentFE1(self: MccsTile) -> float | None:
         """
@@ -4889,7 +4871,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.26,
-        min_alarm=1.14,
+        min_alarm=1.104,
     )
     def voltageMGT_AVTT(self: MccsTile) -> float | None:
         """
@@ -8879,6 +8861,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
+        if self.get_state() == tango.DevState.ON:
+            return ([ResultCode.REJECTED], ["Device is already in ON state."])
+
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
         return super().execute_On()

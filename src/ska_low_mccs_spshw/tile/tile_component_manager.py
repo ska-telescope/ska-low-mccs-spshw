@@ -866,8 +866,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Dereference by one, to help with garbage collection.
         self.tile = None  # type: ignore[assignment]
 
-        self._synchronised_checker.abort()
-        self._synchronised_checker = None  # type: ignore[assignment]
+        self._synchronised_checker.shutdown()
 
         with self._poller._condition:
             self._poller._state = self._poller._State.KILLED
@@ -1568,7 +1567,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
 
-        def __check_channeliser_started() -> bool:
+        def _channeliser_started() -> bool:
             started = False
             try:
                 with acquire_timeout(
@@ -1582,21 +1581,43 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
             return started
 
-        while time.time() < deadline + 1:
-            if task_abort_event is not None:
-                if task_abort_event.is_set():
-                    self.logger.info("Waiter thread stopped.")
-                    return
-            started = __check_channeliser_started()
-            if started:
-                break
-            time.sleep(0.2)
-        else:
-            started = __check_channeliser_started()
-            if not started:
-                self.logger.warning("Acquisition not started in time.")
-                self._tile_time.set_reference_time(0)
-                return
+        def _wait_for_condition(
+            condition: Callable[[], bool],
+            timeout: float,
+            abort_event: Optional[threading.Event],
+            interval: float = 0.2,
+        ) -> Optional[bool]:
+            end_time = time.time() + timeout
+
+            while time.time() < end_time:
+                if condition():
+                    return True
+
+                remaining = end_time - time.time()
+                wait_time = min(interval, remaining)
+
+                if abort_event:
+                    if abort_event.wait(wait_time):
+                        return None
+                else:
+                    time.sleep(wait_time)
+
+            return False
+
+        result = _wait_for_condition(
+            condition=_channeliser_started,
+            timeout=(deadline + 1) - time.time(),
+            abort_event=task_abort_event,
+        )
+
+        if result is None:
+            self.logger.info("Synchronisation wait aborted.")
+            return
+
+        if not result:
+            self.logger.warning("Acquisition not started in time.")
+            self._tile_time.set_reference_time(0)
+            return
 
         self._tile_time.set_reference_time(self._fpga_reference_time)
         self._tpm_status = TpmStatus.SYNCHRONISED

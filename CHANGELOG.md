@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-390] Migrate from poetry to uv
 * [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
 * [THORN-454] Add background step to wipe threshold values in the database before tests
 * [THORN-459] Revert behaviour change after tango base update. Do not allow On when DevState is already ON.

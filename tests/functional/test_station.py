@@ -38,6 +38,36 @@ def command_info_fixture() -> dict[str, Any]:
     return {}
 
 
+@pytest.fixture(name="change_event_callbacks")
+def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
+    """
+    Return a dictionary of callables to be used as Tango change event callbacks.
+
+    :return: a dictionary of callables to be used as tango change event
+        callbacks.
+    """
+    return MockTangoEventCallbackGroup(
+        "pdu_state",
+        "subrack_state",
+        "subrack_fan_mode",
+        "subrack_fan_speeds",
+        "subrack_fan_speeds_percent",
+        "subrack_tpm_power_state",
+        "subrack_tpm_present",
+        "daq_state",
+        "daq_long_running_command_status",
+        "daq_long_running_command_result",
+        "daq_xPolBandpass",
+        "daq_yPolBandpass",
+        "data_received_callback",
+        "tile_adminMode",
+        "device_state",
+        "device_adminmode",
+        "tile_programming_state",
+        timeout=300.0,
+    )
+
+
 @scenario("features/station.feature", "Synchronising time stamping")
 def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
     """
@@ -153,6 +183,101 @@ def check_spsstation_state(
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
 
 
+@given("the SpsStation is STANDBY")
+def check_spsstation_state_standby(
+    station: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
+) -> None:
+    """
+    Check the SpsStation is STANDBY, and all devices are in ONLINE AdminMode.
+
+    :param station: a proxy to the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    """
+    station.subscribe_event(
+        "adminmode",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["device_adminmode"],
+    )
+    change_event_callbacks.assert_change_event(
+        "device_adminmode", Anything, consume_nonmatches=True
+    )
+    station.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["device_state"],
+    )
+    change_event_callbacks.assert_change_event("device_state", Anything)
+    initial_mode = station.adminmode
+    if initial_mode != AdminMode.ONLINE:
+        station.adminmode = AdminMode.ONLINE
+        change_event_callbacks["device_adminmode"].assert_change_event(AdminMode.ONLINE)
+        if initial_mode == AdminMode.OFFLINE:
+            change_event_callbacks["device_state"].assert_change_event(
+                tango.DevState.UNKNOWN
+            )
+
+    device_bar_station = [
+        dev for dev in stations_devices_exported if dev.dev_name() != station.dev_name()
+    ]
+
+    for device in device_bar_station:
+        if device.adminmode != AdminMode.ONLINE:
+            device.adminmode = AdminMode.ONLINE
+
+    if initial_mode == AdminMode.OFFLINE:
+        change_event_callbacks["device_state"].assert_change_event(Anything)
+
+    time.sleep(5)
+
+    if station.state() != tango.DevState.STANDBY:
+        state_callback = MockTangoEventCallbackGroup("state", timeout=300)
+        station.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            state_callback["state"],
+        )
+        state_callback.assert_change_event("state", Anything, consume_nonmatches=True)
+        station.Standby()
+        state_callback.assert_change_event(
+            "state", tango.DevState.STANDBY, consume_nonmatches=True, lookahead=3
+        )
+
+    iters = 0
+    while any(tile.state() not in [tango.DevState.OFF] for tile in station_tiles):
+        if iters >= 60:
+            pytest.fail(
+                "Not all tiles came OFF: "
+                f"""{[
+                    (tile.dev_name(), tile.state(), tile.tileprogrammingstate)
+                    for tile in station_tiles
+                ]}"""
+            )
+
+        time.sleep(1)
+        iters += 1
+
+    if station.state() != tango.DevState.STANDBY:
+        pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.STANDBY}")
+
+
+@when("the SpsStation is turned ON")
+def turn_station_on(station: tango.DeviceProxy) -> None:
+    """
+    Turn station on.
+
+    :param station: station device under test.
+    """
+    station.On()
+
+
 @when("the station is initialised")
 def station_not_synched(station: tango.DeviceProxy) -> None:
     """
@@ -174,6 +299,89 @@ def sync_station(station: tango.DeviceProxy) -> None:
         datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
     )
     station.StartAcquisition(json.dumps({"start_time": start_time}))
+
+
+@then("all TPMs directly transition to Synchronised state")
+def all_tpms_transition_to_synchronised_state(
+    station_tiles: list[tango.DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Assert all TPMs transition to Synchronised.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    """
+    for tile in station_tiles:
+        # Sub to state change event.
+        tile.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["device_state"],
+        )
+        # Expect OFF -> ON
+        for state in [tango.DevState.UNKNOWN, tango.DevState.OFF, tango.DevState.ON]:
+            change_event_callbacks["device_state"].assert_change_event(state)
+        # Sub to tileprogrammingstate change event
+        tile.subscribe_event(
+            "tileprogrammingstate",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        # Expect Unprogrammed -> Programmed -> Initialised -> Synchronised
+        for tile_programming_state in [
+            "Unprogrammed",
+            "Programmed",
+            "Initialised",
+            "Synchronised",
+        ]:
+            change_event_callbacks["tile_programming_state"].assert_change_event(
+                tile_programming_state
+            )
+    for tile in station_tiles:
+        assert tile.state() == tango.DevState.ON
+        assert tile.tileProgrammingState == "Synchronised"
+        # If state goes backwards in this chain then fail.
+    change_event_callbacks.assert_not_called()
+
+
+@then("all TPMs eventually transition to Synchronised state")
+def all_tpms_eventually_transition_to_synchronised_state(
+    station_tiles: list[tango.DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Check all TPMs reach Synchronised state.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    """
+    for tile in station_tiles:
+        # Sub to state change event.
+        tile.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["device_state"],
+        )
+        # Expect OFF -> ON
+        change_event_callbacks["device_state"].assert_change_event(
+            tango.DevState.ON, consume_nonmatches=True, lookahead=30
+        )
+        # Sub to tileprogrammingstate change event
+        tile.subscribe_event(
+            "tileprogrammingstate",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        # Expect Unprogrammed -> Programmed -> Initialised -> Synchronised
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised"
+        )
+    for tile in station_tiles:
+        assert tile.state() == tango.DevState.ON
+        assert tile.tileProgrammingState == "Synchronised"
 
 
 @then("the station becomes synchronised")

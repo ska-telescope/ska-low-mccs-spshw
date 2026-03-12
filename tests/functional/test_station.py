@@ -80,6 +80,38 @@ def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
         device.adminmode = AdminMode.ONLINE
 
 
+@scenario(
+    "features/station.feature",
+    "TPMs transition directly from OFF to ON to Synchronised",
+)
+def test_station_on(stations_devices_exported: list[tango.DeviceProxy]) -> None:
+    """
+    Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
+    "TPMs transition from OFF to ON to Synchronised (workaround allowed)",
+)
+def test_station_on_workaround(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
 @given("an SPS deployment against HW")
 def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """

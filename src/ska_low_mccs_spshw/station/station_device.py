@@ -103,7 +103,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
-    OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
+    # TODO: Confirm the default.
+    OnWorkaroundFlag = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # Initialisation

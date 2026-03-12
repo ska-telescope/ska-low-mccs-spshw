@@ -20,11 +20,11 @@ import time
 from collections import Counter, defaultdict
 from functools import partial
 from inspect import getfullargspec
-from typing import Any, Callable, Union
+from typing import Any, Generator
 
 import backoff
 import numpy as np
-import toolz
+import toolz  # type: ignore
 from ska_control_model import ResultCode
 from tango import DevFailed, DeviceProxy, DevSource, DevState, EventType, Group
 from tango.device_proxy import __update_enum_values
@@ -46,7 +46,6 @@ def _update_enum(dev: DeviceProxy, attr: str, value: Any) -> Any:
     :param value: Value to cast.
     :returns: The value cast to Enum type if applicable, otherwise unchanged.
     """
-    # pylint: disable=protected-access
     attr_info = dev.__get_attr_cache().get(attr.lower())
     if not attr_info:
         # this populates DeviceProxy's internal caches - see DeviceProxy.__getattr__
@@ -67,7 +66,9 @@ def single_prop(dev: DeviceProxy, prop_name: str) -> str:
     return dev.get_property(prop_name)[prop_name][0]
 
 
-def _yield_attr_values(devices: list[DeviceProxy], attr: str, timeout: float = None):
+def _yield_attr_values(
+    devices: list[DeviceProxy], attr: str, timeout: float | None = None
+) -> Generator[tuple[DeviceProxy, Any], None, None]:
     """
     Subscribe to attribute on each device and yield (device, attribute value) tuples.
 
@@ -77,14 +78,14 @@ def _yield_attr_values(devices: list[DeviceProxy], attr: str, timeout: float = N
     :yields: Tuple of (device, attribute value).
     """
 
-    def _evt_val(evt):
+    def _evt_val(evt: Any) -> tuple[DeviceProxy, Any] | None:
         if evt.err:
             return None
         if evt.attr_value is None:
             return evt.device, None
         return evt.device, _update_enum(evt.device, attr, evt.attr_value.value)
 
-    s_q = queue.SimpleQueue()
+    s_q: queue.SimpleQueue[Any] = queue.SimpleQueue()
     subscriptions = [
         dev.subscribe_event(attr, EventType.CHANGE_EVENT, s_q.put, stateless=True)
         for dev in devices
@@ -93,7 +94,7 @@ def _yield_attr_values(devices: list[DeviceProxy], attr: str, timeout: float = N
     if timeout is not None:
         deadline = time.time() + timeout
 
-        def get_fn():
+        def get_fn() -> Any:
             return s_q.get(timeout=max(0.0, deadline - time.time()))
 
     else:
@@ -107,11 +108,12 @@ def _yield_attr_values(devices: list[DeviceProxy], attr: str, timeout: float = N
 
 
 # pylint: disable=too-many-branches,no-value-for-parameter,too-many-statements
-def wait_for(  # noqa:C901
+# pylint: disable=too-many-arguments,too-many-locals
+def wait_for(  # noqa: C901
     devs: DeviceProxy | list[DeviceProxy],
     attr: str,
-    desired_value,
-    failed_value=None,
+    desired_value: Any,
+    failed_value: Any = None,
     timeout: float = 60.0,
     quiet: bool = False,
 ) -> None:
@@ -129,7 +131,7 @@ def wait_for(  # noqa:C901
     :raises exc: If devices fail to reach desired value or reach fail value.
     """
 
-    def default_predicate(expected, value, _):
+    def default_predicate(expected: Any, value: Any, _: Any) -> bool:
         match expected, value:
             case list() | np.ndarray(), np.ndarray():
                 return np.array_equal(value, expected)
@@ -139,28 +141,28 @@ def wait_for(  # noqa:C901
                 return value == expected
 
     # allow predicate to accept only value, or value and device
-    desired_predicate_vararg: Union[Any, Callable[[Any], bool]] = (
+    desired_predicate_vararg = (
         desired_value
         if callable(desired_value)
         else partial(default_predicate, desired_value)
     )
-    failed_predicate_vararg: Union[Any, Callable[[Any], bool]] = (
+    failed_predicate_vararg = (
         failed_value
         if callable(failed_value)
         else partial(default_predicate, failed_value)
     )
     if len(getfullargspec(desired_predicate_vararg).args) == 1:
 
-        def desired_predicate(vararg, _):
-            return desired_predicate_vararg(vararg)
+        def desired_predicate(vararg: Any, _: Any) -> bool:
+            return desired_predicate_vararg(vararg)  # type: ignore[call-arg]
 
     else:
         desired_predicate = desired_predicate_vararg
 
     if len(getfullargspec(failed_predicate_vararg).args) == 1:
 
-        def failed_predicate(vararg, _):
-            return failed_predicate_vararg(vararg)
+        def failed_predicate(vararg: Any, _: Any) -> bool:
+            return failed_predicate_vararg(vararg)  # type: ignore[call-arg]
 
     else:
         failed_predicate = failed_predicate_vararg
@@ -222,21 +224,21 @@ def wait_for(  # noqa:C901
             if devs_left:
                 errs.append(
                     f"didn't reach desired value {desired_value!r} "
-                    f"for {format_trls(devs_left)}"
+                    f"for {format_trls(list(devs_left))}"
                 )
             if devs_failed:
                 errs.append(
                     f"reached fail value {failed_value!r} "
-                    f"for {format_trls(devs_failed)}"
+                    f"for {format_trls(list(devs_failed))}"
                 )
             exc = ValueError(
                 f"After {timeout}s, attribute {attr} " + ", and ".join(errs)
             )
-            exc.failed_devices = devs_left.union(devs_failed)
+            setattr(exc, "failed_devices", devs_left.union(devs_failed))
             raise exc from None  # the queue.Empty is not useful information, drop it
 
 
-def format_trls(devs):
+def format_trls(devs: list[str | DeviceProxy]) -> str:
     """
     Return a compact representation of device names by factoring out a common prefix.
 
@@ -304,19 +306,19 @@ def restart_devices(devs: list[DeviceProxy], force_restartserver: bool = False) 
 class group(Group):  # noqa: N801 pylint: disable=invalid-name
     """Like a tango.Group, but iterable, and sets source and timeout."""
 
-    def get_device(self, name_or_index):
+    def get_device(self, name_or_index: Any) -> DeviceProxy:
         proxy = super().get_device(name_or_index)
         proxy.set_timeout_millis(10000)
         proxy.set_source(DevSource.DEV)
         return proxy
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[DeviceProxy, None, None]:
         # pylint: disable=no-member
         return (self.get_device(trl) for trl in self.get_device_list())
 
 
 @backoff.on_exception(backoff.expo, Exception, max_time=180.0)
-def ensure_tpms_on(tpms: list[DeviceProxy]):
+def ensure_tpms_on(tpms: list[DeviceProxy]) -> None:
     """
     Brute force method to get TPMs ON reliably.
 
@@ -348,14 +350,16 @@ def ensure_tpms_on(tpms: list[DeviceProxy]):
         ),
     )
     for state, state_tpms in states.items():
-        print(f"{state}: {format_trls(state_tpms)}")
+        print(f"{state}: {format_trls(list(state_tpms))}")
 
-    to_powercycle = set()
+    to_powercycle: set[Any] = set()
 
     if states["NotProgrammed"]:
-        print(f"Running Initialise for tpms {format_trls(states['NotProgrammed'])}")
+        print(
+            f"Running Initialise for tpms {format_trls(list(states['NotProgrammed']))}"
+        )
     for tpm in states["NotProgrammed"]:
-        if tpm.mcu_wd:
+        if getattr(tpm, "mcu_wd", False):
             print(f"TPM {tpm.dev_name()} has MCU_wd!")
             to_powercycle.add(tpm)
         else:
@@ -363,29 +367,28 @@ def ensure_tpms_on(tpms: list[DeviceProxy]):
 
     to_powercycle |= states["Off"] | states["Unconnected"]
     if to_powercycle:
-        print(f"Powercycling tpms {format_trls(to_powercycle)}")
+        print(f"Powercycling tpms {format_trls(list(to_powercycle))}")
     for tpm in to_powercycle:
         power_via_subrack(tpm, on=False)
     try:
-        wait_for(to_powercycle, "state", DevState.OFF, timeout=30)
+        wait_for(list(to_powercycle), "state", DevState.OFF, timeout=30)
     except ValueError as e:
-        print(f"Some TPMs didn't turn off: {format_trls(e.failed_devices)}")
+        failed_devices = getattr(e, "failed_devices", [])
+        print(f"Some TPMs didn't turn off: {format_trls(list(failed_devices))}")
     for tpm in to_powercycle:
         power_via_subrack(tpm, on=True)
     try:
-        wait_for(to_powercycle, "state", ON_STATES, timeout=30)
+        wait_for(list(to_powercycle), "state", ON_STATES, timeout=30)
     except ValueError as e:
-        print(f"Some TPMs didn't turn on: {format_trls(e.failed_devices)}")
+        failed_devices = getattr(e, "failed_devices", [])
+        print(f"Some TPMs didn't turn on: {format_trls(list(failed_devices))}")
 
     try:
         wait_for(tpms, "tileProgrammingState", INIT_STATES, timeout=45)
     except ValueError as e:
-        print(f"Some TPMs are still not initialised: {format_trls(e.failed_devices)}")
-        restart_devices(e.failed_devices, force_restartserver=True)
-        wait_for(tpms, "tileProgrammingState", INIT_STATES, timeout=60)
-
-        # </THORN-444 TPM Power Workaround Helpers>
-        wait_for(tpms, "tileProgrammingState", INIT_STATES, timeout=60)
-
-        # </THORN-444 TPM Power Workaround Helpers>
+        failed_devices = getattr(e, "failed_devices", [])
+        print(
+            f"Some TPMs are still not initialised: {format_trls(list(failed_devices))}"
+        )
+        restart_devices(list(failed_devices), force_restartserver=True)
         wait_for(tpms, "tileProgrammingState", INIT_STATES, timeout=60)

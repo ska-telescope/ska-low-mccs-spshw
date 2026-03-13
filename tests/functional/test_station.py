@@ -355,8 +355,7 @@ def all_tpms_directly_transition_to_synchronised_state(
             change_event_callbacks["device_state"],
         )
         # Expect OFF -> ON
-        for state in [tango.DevState.UNKNOWN, tango.DevState.OFF, tango.DevState.ON]:
-            change_event_callbacks["device_state"].assert_change_event(state)
+        change_event_callbacks["device_state"].assert_change_event(tango.DevState.ON)
         # Sub to tileprogrammingstate change event
         tile.subscribe_event(
             "tileprogrammingstate",

@@ -369,12 +369,11 @@ def all_tpms_directly_transition_to_synchronised_state(
                 tango.DevState.ON
             )
         except AssertionError:
-            assert tile.state() == tango.DevState.ON, (
-                tile.lrcexecuting,
-                tile.lrcfinished,
-                station.lrcexecuting,
-                station.lrcfinished,
-            )
+            print(f"{tile.lrcexecuting=}")
+            print(f"{tile.lrcfinished=}")
+            print(f"{station.lrcexecuting=}")
+            print(f"{station.lrcfinished=}")
+            assert tile.state() == tango.DevState.ON
 
         # Expect NotProgrammed -> Programmed -> Initialised -> Synchronised
         for tile_programming_state in [

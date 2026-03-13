@@ -363,10 +363,10 @@ def all_tpms_directly_transition_to_synchronised_state(
         # So long as the Tile is ON that's ok.
         try:
             change_event_callbacks["device_state"].assert_change_event(
-                tango.DevState.ON
+                tango.DevState.ON, lookahead=2
             )
         except AssertionError:
-            assert tile.state() == tango.DevState.ON
+            assert tile.state() == tango.DevState.ON, tile.lrcfinished
 
         # Expect NotProgrammed -> Programmed -> Initialised -> Synchronised
         for tile_programming_state in [

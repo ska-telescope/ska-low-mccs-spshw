@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 import tango
 from pytest_bdd import given, scenario, then, when
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -307,7 +307,8 @@ def turn_station_on(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    station.On()
+    ([result_code], [_]) = station.On()
+    assert result_code == ResultCode.QUEUED
 
 
 @when("the station is initialised")
@@ -336,6 +337,7 @@ def sync_station(station: tango.DeviceProxy) -> None:
 @then("all TPMs directly transition to Synchronised state")
 def all_tpms_directly_transition_to_synchronised_state(
     station_tiles: list[tango.DeviceProxy],
+    station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
@@ -344,6 +346,7 @@ def all_tpms_directly_transition_to_synchronised_state(
     We expect the state transitions to happen exactly once.
 
     :param station_tiles: List of TPM DeviceProxies.
+    :param station: Station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
@@ -363,10 +366,15 @@ def all_tpms_directly_transition_to_synchronised_state(
         # So long as the Tile is ON that's ok.
         try:
             change_event_callbacks["device_state"].assert_change_event(
-                tango.DevState.ON, lookahead=2
+                tango.DevState.ON
             )
         except AssertionError:
-            assert tile.state() == tango.DevState.ON, tile.lrcfinished
+            assert tile.state() == tango.DevState.ON, (
+                tile.lrcexecuting,
+                tile.lrcfinished,
+                station.lrcexecuting,
+                station.lrcfinished,
+            )
 
         # Expect NotProgrammed -> Programmed -> Initialised -> Synchronised
         for tile_programming_state in [

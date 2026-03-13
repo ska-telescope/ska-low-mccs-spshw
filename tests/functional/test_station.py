@@ -84,7 +84,7 @@ def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
     "features/station.feature",
     "TPMs transition directly from OFF to ON to Synchronised",
 )
-def test_station_on(stations_devices_exported: list[tango.DeviceProxy]) -> None:
+def test_station_on_strict(stations_devices_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the station device.
 

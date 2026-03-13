@@ -9,7 +9,7 @@ Feature: Test station
         Then the station becomes synchronised
 
 
-    @xfail
+
     Scenario: TPMs transition directly from OFF to ON to Synchronised
         Given an SPS deployment against HW
         And the SpsStation is STANDBY

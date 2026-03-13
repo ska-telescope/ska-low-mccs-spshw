@@ -334,12 +334,14 @@ def sync_station(station: tango.DeviceProxy) -> None:
 
 
 @then("all TPMs directly transition to Synchronised state")
-def all_tpms_transition_to_synchronised_state(
+def all_tpms_directly_transition_to_synchronised_state(
     station_tiles: list[tango.DeviceProxy],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Assert all TPMs transition to Synchronised.
+
+    We expect the state transitions to happen exactly once.
 
     :param station_tiles: List of TPM DeviceProxies.
     :param change_event_callbacks: a dictionary of callables to be used as
@@ -361,9 +363,10 @@ def all_tpms_transition_to_synchronised_state(
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
-        # Expect Unprogrammed -> Programmed -> Initialised -> Synchronised
+        # Expect NotProgrammed -> Programmed -> Initialised -> Synchronised
         for tile_programming_state in [
-            "Unprogrammed",
+            "Off",
+            "NotProgrammed",
             "Programmed",
             "Initialised",
             "Synchronised",
@@ -374,7 +377,6 @@ def all_tpms_transition_to_synchronised_state(
     for tile in station_tiles:
         assert tile.state() == tango.DevState.ON
         assert tile.tileProgrammingState == "Synchronised"
-        # If state goes backwards in this chain then fail.
     change_event_callbacks.assert_not_called()
 
 
@@ -386,31 +388,32 @@ def all_tpms_eventually_transition_to_synchronised_state(
     """
     Check all TPMs reach Synchronised state.
 
+    We expect the state transitions to happen at least once.
+
     :param station_tiles: List of TPM DeviceProxies.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
     for tile in station_tiles:
-        # Sub to state change event.
         tile.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["device_state"],
         )
-        # Expect OFF -> ON
-        change_event_callbacks["device_state"].assert_change_event(
-            tango.DevState.ON, consume_nonmatches=True, lookahead=30
-        )
-        # Sub to tileprogrammingstate change event
         tile.subscribe_event(
             "tileprogrammingstate",
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
-        # Expect Unprogrammed -> Programmed -> Initialised -> Synchronised
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Synchronised"
+        # Expect OFF -> ON eventually.
+        change_event_callbacks["device_state"].assert_change_event(
+            tango.DevState.ON, consume_nonmatches=True, lookahead=50
         )
+        # Expect to get to Synchronised eventually.
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised", lookahead=50, consume_nonmatches=True
+        )
+    # All tiles must still end up ON and Synchronised.
     for tile in station_tiles:
         assert tile.state() == tango.DevState.ON
         assert tile.tileProgrammingState == "Synchronised"

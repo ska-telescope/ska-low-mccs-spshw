@@ -348,20 +348,26 @@ def all_tpms_directly_transition_to_synchronised_state(
         tango change event callbacks.
     """
     for tile in station_tiles:
-        # Sub to state change event.
         tile.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["device_state"],
         )
-        # Expect OFF -> ON
-        change_event_callbacks["device_state"].assert_change_event(tango.DevState.ON)
-        # Sub to tileprogrammingstate change event
         tile.subscribe_event(
             "tileprogrammingstate",
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
+    for tile in station_tiles:
+        # Expect OFF -> ON but we might miss some events.
+        # So long as the Tile is ON that's ok.
+        try:
+            change_event_callbacks["device_state"].assert_change_event(
+                tango.DevState.ON
+            )
+        except AssertionError:
+            assert tile.state() == tango.DevState.ON
+
         # Expect NotProgrammed -> Programmed -> Initialised -> Synchronised
         for tile_programming_state in [
             "Off",

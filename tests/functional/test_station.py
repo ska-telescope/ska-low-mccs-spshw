@@ -46,6 +46,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     :return: a dictionary of callables to be used as tango change event
         callbacks.
     """
+
     return MockTangoEventCallbackGroup(
         "pdu_state",
         "subrack_state",
@@ -64,7 +65,23 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "device_state",
         "device_adminmode",
         "tile_programming_state",
-        timeout=500.0,
+        "tile_0_state",
+        "tile_1_state",
+        "tile_2_state",
+        "tile_3_state",
+        "tile_4_state",
+        "tile_5_state",
+        "tile_6_state",
+        "tile_7_state",
+        "tile_0_programming_state",
+        "tile_1_programming_state",
+        "tile_2_programming_state",
+        "tile_3_programming_state",
+        "tile_4_programming_state",
+        "tile_5_programming_state",
+        "tile_6_programming_state",
+        "tile_7_programming_state",
+        timeout=300.0,
     )
 
 
@@ -350,32 +367,29 @@ def all_tpms_directly_transition_to_synchronised_state(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
-    for tile in station_tiles:
+    for i, tile in enumerate(station_tiles):
         tile.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
+            change_event_callbacks[f"tile_{i}_state"],
         )
         tile.subscribe_event(
             "tileprogrammingstate",
             tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
+            change_event_callbacks[f"tile_{i}_programming_state"],
         )
-    for tile in station_tiles:
+    for i, tile in enumerate(station_tiles):
         # Expect OFF -> ON but we might miss some events.
-        # So long as the Tile is ON that's ok.
+        # So long as the Tile is ON and doesn't go OFF again that's ok.
         try:
-            change_event_callbacks["device_state"].assert_change_event(
+            change_event_callbacks[f"tile_{i}_state"].assert_change_event(
                 tango.DevState.ON
             )
         except AssertionError:
-            print(f"{tile.lrcexecuting=}")
-            print(f"{tile.lrcfinished=}")
-            print(f"{station.lrcexecuting=}")
-            print(f"{station.lrcfinished=}")
             assert tile.state() == tango.DevState.ON
 
         # Expect NotProgrammed -> Programmed -> Initialised -> Synchronised
+        # If these appear strictly in order then we know the TPM didn't powercycle.
         for tile_programming_state in [
             "Off",
             "NotProgrammed",
@@ -383,7 +397,7 @@ def all_tpms_directly_transition_to_synchronised_state(
             "Initialised",
             "Synchronised",
         ]:
-            change_event_callbacks["tile_programming_state"].assert_change_event(
+            change_event_callbacks[f"tile_{i}_programming_state"].assert_change_event(
                 tile_programming_state
             )
     for tile in station_tiles:

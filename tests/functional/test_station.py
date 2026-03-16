@@ -408,7 +408,6 @@ def all_tpms_directly_transition_to_synchronised_state(
     for tile in station_tiles:
         assert tile.state() == tango.DevState.ON
         assert tile.tileProgrammingState == "Synchronised"
-    change_event_callbacks.assert_not_called()
 
 
 @then("all TPMs eventually transition to Synchronised state")

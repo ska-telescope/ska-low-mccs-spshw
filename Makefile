@@ -33,7 +33,7 @@ include .make-uv/make/python-uv.mk
 # PYTHON_VARS_BEFORE_PYTEST = timeout --foreground -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
 # PYTHON_VARS_BEFORE_K8S_PYTEST = timeout --foreground -k 120 -s INT 4800
 # TODO: Revert the change below.
-K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/test_station.py
+K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/
 
 python-lint: mypy
 

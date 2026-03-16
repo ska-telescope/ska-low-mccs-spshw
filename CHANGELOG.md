@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 11.3.4
 
 * [THORN-444] Add Vulcan notebook workaround to SpsStation.On
 

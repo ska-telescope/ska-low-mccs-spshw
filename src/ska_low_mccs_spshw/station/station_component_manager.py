@@ -407,7 +407,7 @@ class SpsStationComponentManager(
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        on_workaround_flag: bool = True,  # TODO: Confirm default.
+        on_workaround_flag: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """

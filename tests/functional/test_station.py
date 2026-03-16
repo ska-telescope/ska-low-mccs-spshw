@@ -46,7 +46,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     :return: a dictionary of callables to be used as tango change event
         callbacks.
     """
-
     return MockTangoEventCallbackGroup(
         "pdu_state",
         "subrack_state",

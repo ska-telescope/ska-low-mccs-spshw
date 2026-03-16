@@ -381,7 +381,7 @@ def all_tpms_directly_transition_to_synchronised_state(
             change_event_callbacks[f"tile_{i}_programming_state"],
         )
     wait_for_lrcs_to_finish(
-        station, timeout=300
+        [station], timeout=300
     )  # Explicitly wait for Station.On to complete. ~ 2min
     for i, tile in enumerate(station_tiles):
         # Expect OFF -> ON but we might miss some events.

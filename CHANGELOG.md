@@ -1,5 +1,9 @@
 # Version History
 
+## 11.4.0
+
+* [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.
+
 ## 11.3.3
 
 * [THORN-466] Add temporary workaround for segfault (introduced after pytango update.)

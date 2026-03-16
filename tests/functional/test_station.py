@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 import tango
@@ -354,6 +354,7 @@ def sync_station(station: tango.DeviceProxy) -> None:
 def all_tpms_directly_transition_to_synchronised_state(
     station_tiles: list[tango.DeviceProxy],
     station: tango.DeviceProxy,
+    wait_for_lrcs_to_finish: Callable,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
@@ -363,6 +364,8 @@ def all_tpms_directly_transition_to_synchronised_state(
 
     :param station_tiles: List of TPM DeviceProxies.
     :param station: Station under test.
+    :param wait_for_lrcs_to_finish: A callable to wait for long running commands to
+        finish.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
@@ -377,6 +380,9 @@ def all_tpms_directly_transition_to_synchronised_state(
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks[f"tile_{i}_programming_state"],
         )
+    wait_for_lrcs_to_finish(
+        station, timeout=300
+    )  # Explicitly wait for Station.On to complete. ~ 2min
     for i, tile in enumerate(station_tiles):
         # Expect OFF -> ON but we might miss some events.
         # So long as the Tile is ON and doesn't go OFF again that's ok.

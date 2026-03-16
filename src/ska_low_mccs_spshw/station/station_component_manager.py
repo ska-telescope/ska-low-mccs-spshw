@@ -936,6 +936,7 @@ class SpsStationComponentManager(
             fqdn, communication_state
         )
 
+    # pylint: disable=too-many-branches
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
         logical_tile_id: int,
@@ -1023,9 +1024,10 @@ class SpsStationComponentManager(
                 if all(
                     not np.isnan(v).any() for v in self._hw_pointing_delays.values()
                 ):
-                    self._component_state_callback(
-                        pointingdelays=self._hw_pointing_delays.copy()
-                    )
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            pointingdelays=self._hw_pointing_delays.copy()
+                        )
                     for delays in self._hw_pointing_delays.values():
                         delays.fill(np.nan)
             case _:

@@ -487,6 +487,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas",
             "broadband_rfi_factor": "broadbandRfiFactor",
             "40g_packet_count": "fortyGPacketCount",
+            "pointing_delays": "pointingDelays",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -5486,6 +5487,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.component_manager.read_all_live_calibration_coefficients(),
             cls=NumpyEncoder,
         )
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=32,  # Channels
+        max_dim_y=8,  # Antennas
+        label="Pointing Delays",
+        rel_change=0.01,
+        archive_rel_change=0.01,
+    )
+    def pointingDelays(self: MccsTile) -> list[float]:
+        """
+        Get the pointing delays for beam 0.
+
+        :return: list of pointing delays for beam 0
+        """
+        return self._attribute_state["pointingDelays"].read()
 
     # --------
     # Commands

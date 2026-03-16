@@ -114,6 +114,7 @@ class _TileProxy(DeviceComponentManager):
             "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
+            "pointingDelays": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -476,10 +477,12 @@ class SpsStationComponentManager(
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        self._hw_pointing_delays: dict[int, np.ndarray] = {}
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
+            self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
@@ -1015,6 +1018,16 @@ class SpsStationComponentManager(
                         self._component_state_callback(
                             beamformerRegions=attribute_value
                         )
+            case "pointingdelays":
+                self._hw_pointing_delays[logical_tile_id] = attribute_value
+                if all(
+                    not np.isnan(v).any() for v in self._hw_pointing_delays.values()
+                ):
+                    self._component_state_callback(
+                        pointingdelays=self._hw_pointing_delays.copy()
+                    )
+                    for delays in self._hw_pointing_delays.values():
+                        delays.fill(np.nan)
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "

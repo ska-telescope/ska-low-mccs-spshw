@@ -486,5 +486,3 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
             break
     else:
         pytest.fail("Timeout in waiting for tiles to Synchronise")
-        pytest.fail("Timeout in waiting for tiles to Synchronise")
-        pytest.fail("Timeout in waiting for tiles to Synchronise")

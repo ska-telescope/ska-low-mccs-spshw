@@ -1483,7 +1483,6 @@ class SpsStationComponentManager(
                 task_callback, task_abort_event
             )
 
-        use_workaround = False
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
@@ -1496,11 +1495,8 @@ class SpsStationComponentManager(
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
             message = "On Command failed"
-            if self._on_workaround_flag:
-                # Regular On failed. Bruteforce it.
-                use_workaround = True
 
-        if use_workaround:
+        if task_status == TaskStatus.FAILED and self._on_workaround_flag:
             self.logger.info("Using On bruteforce workaround (timeout=3min).")
             try:
                 ensure_tpms_on(list(self._tile_proxies.values()))

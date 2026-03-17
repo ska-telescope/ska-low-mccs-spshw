@@ -16,11 +16,11 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Generator
 
 import pytest
 import tango
-from pytest_bdd import given, scenario, then, when
+from pytest_bdd import given, parsers, scenario, then, when
 from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
@@ -316,6 +316,27 @@ def check_spsstation_state_standby(
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.STANDBY}")
 
 
+@given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag:Boolean}"))
+def check_spsstation_on_workaround_flag_param(
+    station: tango.DeviceProxy, flag: bool
+) -> Generator:
+    """
+    Parametrised step to set the SpsStation OnWorkaroundFlag.
+
+    :param station: a proxy to the station under test.
+    :param flag: Boolean value to set OnWorkaroundFlag.
+
+    :yields: Control to the test then cleans up afterwards.
+    """
+    initial_workaround_flag = station.OnWorkaround
+    if station.OnWorkaround != flag:
+        station.OnWorkaround = flag
+
+    yield
+
+    station.OnWorkaround = initial_workaround_flag
+
+
 @when("the SpsStation is turned ON")
 def turn_station_on(station: tango.DeviceProxy) -> None:
     """
@@ -464,4 +485,6 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
         if all(status == "Synchronised" for status in station.tileProgrammingState):
             break
     else:
+        pytest.fail("Timeout in waiting for tiles to Synchronise")
+        pytest.fail("Timeout in waiting for tiles to Synchronise")
         pytest.fail("Timeout in waiting for tiles to Synchronise")

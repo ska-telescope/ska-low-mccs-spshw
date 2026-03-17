@@ -14,7 +14,7 @@ This test just checks that anything which can run passes.
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 import tango
@@ -72,7 +72,7 @@ def check_spsstation_state(
     change_event_callbacks: MockTangoEventCallbackGroup,
     stations_devices_exported: list[tango.DeviceProxy],
     station_tiles: list[tango.DeviceProxy],
-) -> None:
+) -> Generator:
     """
     Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
 
@@ -83,6 +83,8 @@ def check_spsstation_state(
         for all exported sps devices.
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: Control to the test then cleans up afterwards.
     """
     station.subscribe_event(
         "adminmode",
@@ -129,7 +131,17 @@ def check_spsstation_state(
         time.sleep(1)
         iters += 1
 
+    AttributeWaiter(timeout=300).wait_for_value(
+        station,
+        "state",
+        tango.DevState.ON,
+    )
     assert station.state() == tango.DevState.ON
+
+    yield
+
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
 
 
 @when("I run the SpsStation Self Check")

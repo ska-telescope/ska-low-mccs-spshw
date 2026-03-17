@@ -2,7 +2,7 @@
 
 ## 11.3.4
 
-* [THORN-444] Add Vulcan notebook workaround to SpsStation.On
+* [THORN-444] Add Vulcan notebook workaround to SpsStation.On controllable via SpsStation DeviceProperty `OnWorkaroundFlag` or attribute `OnWorkaround`.
 
 ## 11.3.3
 

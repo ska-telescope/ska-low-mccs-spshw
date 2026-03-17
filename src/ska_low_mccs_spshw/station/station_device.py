@@ -102,7 +102,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
-    # TODO: Confirm the default.
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
     # ---------------
@@ -832,6 +831,24 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.LMCDaqTRL = value
         self.component_manager._lmc_daq_trl = value
+
+    @attribute(dtype=bool)
+    def OnWorkaround(self: SpsStation) -> bool:  # noqa: F811
+        """
+        Report the status of the OnWorkaroundFlag.
+
+        :return: Return the current status of the OnWorkaroundFlag.
+        """
+        return self.OnWorkaroundFlag
+
+    @OnWorkaround.write  # type: ignore[no-redef]
+    def OnWorkaround(self: SpsStation, value: bool) -> None:
+        """
+        Set the status of the OnWorkaroundFlag.
+
+        :param value: The new status of the OnWorkaroundFlag.
+        """
+        self.OnWorkaroundFlag = value
 
     @attribute(dtype=str)
     def BandpassdaqTRL(self: SpsStation) -> str:

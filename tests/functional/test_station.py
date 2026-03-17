@@ -316,7 +316,7 @@ def check_spsstation_state_standby(
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.STANDBY}")
 
 
-@given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag:Boolean}"))
+@given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag}"))
 def check_spsstation_on_workaround_flag_param(
     station: tango.DeviceProxy, flag: bool
 ) -> Generator:

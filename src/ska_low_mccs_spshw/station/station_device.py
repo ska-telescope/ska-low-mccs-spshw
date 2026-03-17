@@ -23,6 +23,7 @@ from functools import wraps
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
+import ska_tango_base as stb
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -37,7 +38,7 @@ from ska_tango_base.commands import FastCommand, JsonValidator, SubmittedSlowCom
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ..version import version_info
+# from ..version import version_info
 from .station_component_manager import SpsStationComponentManager
 from .station_health_model import SpsStationHealthModel
 from .station_obs_state_model import SpsStationObsStateModel
@@ -75,6 +76,8 @@ def engineering_mode_required(func: Callable) -> Callable:
 # pylint: disable=too-many-instance-attributes, too-many-ancestors
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
+
+    InitCommand = None  # type: ignore[assignment]
 
     DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
     DEFAULT_CSP_DST_PORT: Final = 4660
@@ -146,6 +149,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         }
         super().init_device()
 
+        # These might need to be set somewhere.
+        # self._device._is_programmed = False
+        # self._device._test_generator_active = False
+        # self._device._is_beamformer_running = False
+        # self._device._current_beamformer_table = [[0] * 7] * 48
+        # self._device._desired_beamformer_table = [[0] * 7] * 48
+
+        self._is_calibrated = False
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
@@ -170,6 +181,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+        self.init_completed()
 
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
@@ -188,6 +200,25 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_thresholds | self._health_model.health_params
         )
         self.set_change_event("healthState", True, False)
+        self.set_change_event("xPolBandpass", True, False)
+        self.set_change_event("yPolBandpass", True, False)
+        self.set_change_event("antennaInfo", True, False)
+        self.set_change_event("ppsDelaySpread", True, False)
+        self.set_change_event("tileProgrammingState", True, False)
+        self.set_change_event("adcPower", True, False)
+        self.set_change_event("dataReceivedResult", True, False)
+        self.set_change_event("beamformerTable", True, False)
+        self.set_change_event("beamformerRegions", True, False)
+
+        self.set_archive_event("xPolBandpass", False)
+        self.set_archive_event("yPolBandpass", False)
+        self.set_archive_event("antennaInfo", True, True)
+        self.set_archive_event("tileProgrammingState", True, True)
+        self.set_archive_event("adcPower", True, True)
+        self.set_archive_event("dataReceivedResult", True, True)
+        self.set_archive_event("ppsDelaySpread", True, True)
+        self.set_archive_event("beamformerTable", True, True)
+        self.set_archive_event("beamformerRegions", True, True)
 
         # pylint: disable=attribute-defined-outside-init
         self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
@@ -352,68 +383,68 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 command_name, command_object(self.component_manager, self.logger)
             )
 
-    class InitCommand(SKAObsDevice.InitCommand):
-        """
-        A class for :py:class:`~.SpsStation`'s Init command.
+    # class InitCommand(SKAObsDevice.InitCommand):
+    #     """
+    #     A class for :py:class:`~.SpsStation`'s Init command.
 
-        The :py:meth:`~.SpsStation.InitCommand.do` method below is
-        called upon :py:class:`~.SpsStation`'s initialisation.
-        """
+    #     The :py:meth:`~.SpsStation.InitCommand.do` method below is
+    #     called upon :py:class:`~.SpsStation`'s initialisation.
+    #     """
 
-        def do(
-            self: SpsStation.InitCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Initialise the :py:class:`.SpsStation`.
+    #     def do(
+    #         self: SpsStation.InitCommand,
+    #         *args: Any,
+    #         **kwargs: Any,
+    #     ) -> tuple[ResultCode, str]:
+    #         """
+    #         Initialise the :py:class:`.SpsStation`.
 
-            :param args: positional args to the component manager method
-            :param kwargs: keyword args to the component manager method
+    #         :param args: positional args to the component manager method
+    #         :param kwargs: keyword args to the component manager method
 
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._device._is_calibrated = False
-            self._device._is_programmed = False
-            self._device._test_generator_active = False
-            self._device._is_beamformer_running = False
-            self._device._current_beamformer_table = [[0] * 7] * 48
-            self._device._desired_beamformer_table = [[0] * 7] * 48
+    #         :return: A tuple containing a return code and a string
+    #             message indicating status. The message is for
+    #             information purpose only.
+    #         """
+    #         self._device._is_calibrated = False
+    #         self._device._is_programmed = False
+    #         self._device._test_generator_active = False
+    #         self._device._is_beamformer_running = False
+    #         self._device._current_beamformer_table = [[0] * 7] * 48
+    #         self._device._desired_beamformer_table = [[0] * 7] * 48
 
-            self._device._build_state = ",".join(
-                [
-                    version_info["name"],
-                    version_info["version"],
-                    version_info["description"],
-                ]
-            )
-            self._device._version_id = version_info["version"]
+    #         self._device._build_state = ",".join(
+    #             [
+    #                 version_info["name"],
+    #                 version_info["version"],
+    #                 version_info["description"],
+    #             ]
+    #         )
+    #         self._device._version_id = version_info["version"]
 
-            self._device.set_change_event("xPolBandpass", True, False)
-            self._device.set_change_event("yPolBandpass", True, False)
-            self._device.set_change_event("antennaInfo", True, False)
-            self._device.set_change_event("ppsDelaySpread", True, False)
-            self._device.set_change_event("tileProgrammingState", True, False)
-            self._device.set_change_event("adcPower", True, False)
-            self._device.set_change_event("dataReceivedResult", True, False)
-            self._device.set_change_event("beamformerTable", True, False)
-            self._device.set_change_event("beamformerRegions", True, False)
+    #         self._device.set_change_event("xPolBandpass", True, False)
+    #         self._device.set_change_event("yPolBandpass", True, False)
+    #         self._device.set_change_event("antennaInfo", True, False)
+    #         self._device.set_change_event("ppsDelaySpread", True, False)
+    #         self._device.set_change_event("tileProgrammingState", True, False)
+    #         self._device.set_change_event("adcPower", True, False)
+    #         self._device.set_change_event("dataReceivedResult", True, False)
+    #         self._device.set_change_event("beamformerTable", True, False)
+    #         self._device.set_change_event("beamformerRegions", True, False)
 
-            self._device.set_archive_event("xPolBandpass", False)
-            self._device.set_archive_event("yPolBandpass", False)
-            self._device.set_archive_event("antennaInfo", True, True)
-            self._device.set_archive_event("tileProgrammingState", True, True)
-            self._device.set_archive_event("adcPower", True, True)
-            self._device.set_archive_event("dataReceivedResult", True, True)
-            self._device.set_archive_event("ppsDelaySpread", True, True)
-            self._device.set_archive_event("beamformerTable", True, True)
-            self._device.set_archive_event("beamformerRegions", True, True)
+    #         self._device.set_archive_event("xPolBandpass", False)
+    #         self._device.set_archive_event("yPolBandpass", False)
+    #         self._device.set_archive_event("antennaInfo", True, True)
+    #         self._device.set_archive_event("tileProgrammingState", True, True)
+    #         self._device.set_archive_event("adcPower", True, True)
+    #         self._device.set_archive_event("dataReceivedResult", True, True)
+    #         self._device.set_archive_event("ppsDelaySpread", True, True)
+    #         self._device.set_archive_event("beamformerTable", True, True)
+    #         self._device.set_archive_event("beamformerRegions", True, True)
 
-            super().do()
+    #         super().do()
 
-            return (ResultCode.OK, "Initialisation complete")
+    #         return (ResultCode.OK, "Initialisation complete")
 
     def _setup_health_rollup(
         self: SpsStation,

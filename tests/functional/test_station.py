@@ -318,7 +318,7 @@ def check_spsstation_state_standby(
 
 @given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag}"))
 def check_spsstation_on_workaround_flag_param(
-    station: tango.DeviceProxy, flag: bool
+    station: tango.DeviceProxy, flag: str
 ) -> Generator:
     """
     Parametrised step to set the SpsStation OnWorkaroundFlag.
@@ -329,8 +329,9 @@ def check_spsstation_on_workaround_flag_param(
     :yields: Control to the test then cleans up afterwards.
     """
     initial_workaround_flag = station.OnWorkaround
-    if station.OnWorkaround != flag:
-        station.OnWorkaround = flag
+    flag_bool = flag.lower() == "true"
+    if station.OnWorkaround != flag_bool:
+        station.OnWorkaround = flag_bool
 
     yield
 

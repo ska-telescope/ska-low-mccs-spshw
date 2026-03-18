@@ -49,6 +49,7 @@ class BaseDataReceivedHandler(abc.ABC):
         self._logger: logging.Logger = logger
         self._data_created_callback = data_created_callback
         self._nof_tiles = nof_tiles
+        self._received_files = set()
         self._base_path = ""
         self._tile_id = 0
         self.data: np.ndarray
@@ -74,6 +75,7 @@ class BaseDataReceivedHandler(abc.ABC):
         :param value: value of the data received event.
         :param quality: the tango.AttrQuality of the event.
         """
+        self._logger.error(f"Got event: {name}, {value}, {quality}")
         if self.ignore_next_event:
             self.ignore_next_event = False
             return
@@ -87,6 +89,10 @@ class BaseDataReceivedHandler(abc.ABC):
                 return
             self._logger.debug("Got data for all tiles, gathering data.")
             file = json.loads(value[1])["file_name"]
+            if file in self._received_files:
+                self._logger.debug(f"Already processed file {file}, ignoring.")
+                return
+            self._received_files.add(file)
             self._base_path = os.path.split(file)[0]
             try:
                 time.sleep(1)
@@ -101,6 +107,7 @@ class BaseDataReceivedHandler(abc.ABC):
     def reset(self: BaseDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""
         self._tile_id = 0
+        self._received_files = set()
         self.initialise_data()
 
 

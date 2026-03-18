@@ -149,17 +149,15 @@ class TpmSelfCheckTest(abc.ABC):
         self._clear_test_logs()
         if not self._proxies_constructed:
             self._setup_proxies()
-
-        requirements_met, requirements_check_message = self.check_requirements()
-
-        if not requirements_met:
-            self.test_logger.warning(
-                f"Not running test {self.__class__.__name__}"
-                f" : {requirements_check_message}"
-            )
-            return TestResult.NOT_RUN, self.stringio_handler.stream.getvalue()
-
         try:
+            requirements_met, requirements_check_message = self.check_requirements()
+            if not requirements_met:
+                self.test_logger.warning(
+                    f"Not running test {self.__class__.__name__}"
+                    f" : {requirements_check_message}"
+                )
+                return TestResult.NOT_RUN, self.stringio_handler.stream.getvalue()
+
             self.test()
             result = TestResult.PASSED
         except Exception as e:  # pylint: disable=broad-except

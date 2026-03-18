@@ -69,6 +69,7 @@ class TestStationBeamDataRate(BaseDaqTest):
 
     def _reset(self: TestStationBeamDataRate) -> None:
         self.component_manager._stop_beamformer(None)
+        self.component_manager.set_beamformer_table([[128, 0, 0, 0, 0, 0, 0]])
 
     def test(self: TestStationBeamDataRate) -> None:
         """

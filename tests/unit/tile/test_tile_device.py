@@ -997,6 +997,7 @@ class TestMccsTile:
             "ddr_rd_cnt",
             "ddr_wr_cnt",
             "ddr_rd_dat_cnt",
+            "pointingDelays",
         ]
 
         all_excluded_attribute = (

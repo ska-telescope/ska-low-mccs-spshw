@@ -1,5 +1,9 @@
 # Version History
 
+## 11.3.4
+
+* [THORN-444] Add Vulcan notebook workaround to SpsStation.On controllable via SpsStation DeviceProperty `OnWorkaroundFlag` or attribute `OnWorkaround`.
+
 ## 11.3.3
 
 * [THORN-466] Add temporary workaround for segfault (introduced after pytango update.)

@@ -225,3 +225,17 @@ class NpArrayAttributeManager(AttributeManager):
         :returns: whether or not the value has changed.
         """
         return not np.array_equal(value, self._value)
+
+
+class AlwaysPushAttributeManager(AttributeManager):
+    """An AttributeManager that always pushes on update, regardless of value change."""
+
+    def _value_changed(self: AlwaysPushAttributeManager, value: Any) -> bool:
+        """
+        Return True to indicate the value has changed.
+
+        :param value: the value we want to update attribute with.
+
+        :returns: True, indicating the value has changed.
+        """
+        return True

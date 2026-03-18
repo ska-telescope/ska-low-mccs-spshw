@@ -58,6 +58,7 @@ from .attribute_converters import (
     udp_error_count_to_list,
 )
 from .attribute_managers import (
+    AlwaysPushAttributeManager,
     AttributeManager,
     BoolAttributeManager,
     NpArrayAttributeManager,
@@ -629,6 +630,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "fortyGPacketCount": AttributeManager(
                     functools.partial(self.post_change_event, "fortyGPacketCount")
                 ),
+                "pointingDelays": AlwaysPushAttributeManager(
+                    functools.partial(self.post_change_event, "pointingDelays")
+                ),
             }
         )
 
@@ -892,8 +896,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
         for attr_name in self._attribute_state:
-            self.set_change_event(attr_name, True, self.VerifyEvents)
-            self.set_archive_event(attr_name, True, self.VerifyEvents)
+            verify_events = (
+                False if attr_name == "pointingDelays" else self.VerifyEvents
+            )
+            self.set_change_event(attr_name, True, verify_events)
+            self.set_archive_event(attr_name, True, verify_events)
 
         for attr_name in [
             "firmwareVoltageThresholds",

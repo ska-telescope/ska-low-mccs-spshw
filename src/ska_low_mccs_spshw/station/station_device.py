@@ -35,6 +35,7 @@ from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.commands import FastCommand, JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
+from tango import AttrQuality
 from tango.server import attribute, command, device_property
 
 from ..version import version_info
@@ -135,6 +136,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._data_received_result: Optional[tuple[str, str]] = ("", "")
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
+        self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -403,6 +405,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_change_event("beamformerTable", True, False)
             self._device.set_change_event("beamformerRegions", True, False)
+            self._device.set_change_event("pointingDelays", True, False)
 
             self._device.set_archive_event("xPolBandpass", False)
             self._device.set_archive_event("yPolBandpass", False)
@@ -413,6 +416,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._device.set_archive_event("ppsDelaySpread", True, True)
             self._device.set_archive_event("beamformerTable", True, True)
             self._device.set_archive_event("beamformerRegions", True, True)
+            self._device.set_archive_event("pointingDelays", True, False)
 
             super().do()
 
@@ -706,6 +710,25 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 self._health_rollup.health_changed(
                     "tile_programming_state", HealthState.FAILED
                 )
+        pointing_delays = state_change.get("pointingdelays")
+        if pointing_delays is not None:
+            for tile, delays in pointing_delays.items():
+                start = tile * 32
+                stop = start + 32
+                self._hw_pointing_delays[:, start:stop] = delays
+            event_time = time.time()
+            self.push_change_event(
+                "pointingDelays",
+                self._hw_pointing_delays,
+                event_time,
+                AttrQuality.ATTR_VALID,
+            )
+            self.push_archive_event(
+                "pointingDelays",
+                self._hw_pointing_delays,
+                event_time,
+                AttrQuality.ATTR_VALID,
+            )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -1601,6 +1624,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return json.loads(
             self.component_manager._lmc_daq_proxy._proxy.getconfiguration()
         )["directory"]
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=512,  # Channels
+        max_dim_y=8,  # Antennas
+    )
+    def pointingDelays(self: SpsStation) -> np.ndarray:
+        """
+        Read the last pointing delays received from HW.
+
+        :return: the last pointing delays received from HW.
+        """
+        return self._hw_pointing_delays
 
     # -------------
     # Slow Commands

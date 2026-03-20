@@ -58,6 +58,7 @@ from .attribute_converters import (
     udp_error_count_to_list,
 )
 from .attribute_managers import (
+    AlwaysPushAttributeManager,
     AttributeManager,
     BoolAttributeManager,
     NpArrayAttributeManager,
@@ -487,6 +488,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas",
             "broadband_rfi_factor": "broadbandRfiFactor",
             "40g_packet_count": "fortyGPacketCount",
+            "pointing_delays": "pointingDelays",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -627,6 +629,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 ),
                 "fortyGPacketCount": AttributeManager(
                     functools.partial(self.post_change_event, "fortyGPacketCount")
+                ),
+                "pointingDelays": AlwaysPushAttributeManager(
+                    functools.partial(self.post_change_event, "pointingDelays")
                 ),
             }
         )
@@ -891,8 +896,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
         for attr_name in self._attribute_state:
-            self.set_change_event(attr_name, True, self.VerifyEvents)
-            self.set_archive_event(attr_name, True, self.VerifyEvents)
+            verify_events = (
+                False if attr_name == "pointingDelays" else self.VerifyEvents
+            )
+            self.set_change_event(attr_name, True, verify_events)
+            self.set_archive_event(attr_name, True, verify_events)
 
         for attr_name in [
             "firmwareVoltageThresholds",
@@ -5486,6 +5494,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.component_manager.read_all_live_calibration_coefficients(),
             cls=NumpyEncoder,
         )
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=32,  # Channels
+        max_dim_y=8,  # Antennas
+        label="Pointing Delays",
+        rel_change=0.01,
+        archive_rel_change=0.01,
+    )
+    def pointingDelays(self: MccsTile) -> list[float]:
+        """
+        Get the pointing delays for beam 0.
+
+        :return: list of pointing delays for beam 0
+        """
+        return self._attribute_state["pointingDelays"].read()
 
     # --------
     # Commands

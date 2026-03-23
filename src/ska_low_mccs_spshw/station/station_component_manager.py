@@ -409,6 +409,7 @@ class SpsStationComponentManager(
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         on_workaround_flag: bool = False,
+        reorder_necessary: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
@@ -454,6 +455,8 @@ class SpsStationComponentManager(
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
         :param on_workaround_flag: whether to enable the workaround
+        :param reorder_necessary: whether to re-order delays received from MccsStation,
+            dependent on how MccsStation has been configured at deploy-time.
         :param event_serialiser: the event serialiser to be used by this object.
         """
         self._on_workaround_flag = on_workaround_flag
@@ -613,6 +616,7 @@ class SpsStationComponentManager(
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
 
+        self._reorder_necessary = reorder_necessary
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
         self.last_pointing_delays = [0.0] * 513
@@ -879,7 +883,7 @@ class SpsStationComponentManager(
             for channel_delay in channel_delays
         ]
 
-    def _calculate_delays_per_tile(
+    def _reorder_delays(
         self: SpsStationComponentManager,
         antenna_order_delays: list[float],
     ) -> dict[int, list[float]]:
@@ -922,6 +926,28 @@ class SpsStationComponentManager(
                 tile_delays[tile_no][(channel) * 2 + 2] = delay_rate
 
         return tile_delays
+
+    def _dont_reorder_delays(
+        self: SpsStationComponentManager,
+        tpm_order_delays: list[float],
+    ) -> dict[int, list[float]]:
+        tile_delays: dict[int, list] = {}
+        beam_index = tpm_order_delays.pop(0)
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = tile_proxy._proxy.logicalTileId
+            tile_delays[tile_no] = [beam_index] + tpm_order_delays[
+                tile_no : tile_no + 32
+            ]
+        return tile_delays
+
+    def _calculate_delays_per_tile(
+        self: SpsStationComponentManager,
+        antenna_order_delays: list[float],
+    ) -> dict[int, list[float]]:
+        if self._reorder_necessary:
+            return self._reorder_delays(antenna_order_delays)
+        return self._dont_reorder_delays(antenna_order_delays)
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""

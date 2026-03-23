@@ -104,6 +104,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
+    ReorderNecessary = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # Initialisation
@@ -170,6 +171,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
             f"\tParentTRL: {self.ParentTRL}\n"
             f"\tOnWorkaroundFlag: {self.OnWorkaroundFlag}\n"
+            f"\tReorderNecessary: {self.ReorderNecessary}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -227,6 +229,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
             self.OnWorkaroundFlag,
+            self.ReorderNecessary,
             event_serialiser=self._event_serialiser,
         )
 

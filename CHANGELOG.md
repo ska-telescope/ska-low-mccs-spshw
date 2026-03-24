@@ -1,5 +1,9 @@
 # Version History
 
+## 11.5.0
+
+* [THORN-494] Add SpsStation.ReorderDelays property to set whether or not MccsStation is sending delays in TPM order already. This is set by the helmfile templates if the helmfile templates have sent MccsStation the delays in TPM order.
+
 ## 11.4.0
 
 * [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.

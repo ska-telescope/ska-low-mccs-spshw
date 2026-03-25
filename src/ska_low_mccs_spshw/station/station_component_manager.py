@@ -409,7 +409,7 @@ class SpsStationComponentManager(
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         on_workaround_flag: bool = False,
-        reorder_necessary: bool = False,
+        reorder_necessary: bool = True,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """

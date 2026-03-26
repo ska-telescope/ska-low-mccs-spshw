@@ -134,6 +134,8 @@ nitpick_ignore = [
     ("py:class", "ska_tango_base.base.CommunicationStatusCallbackType"),
     ("py:class", "tango.StdStringVector"),
     ("py:class", "Database"),
+    ("py:class", "ska_tango_base.type_hints.DevVarLongStringArrayType"),
+    ("py:class", "ska_tango_base.type_hints.TaskFunctionType"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-421] Remove deprecated command objects.
+
 ## 11.3.3
 
 * [THORN-466] Add temporary workaround for segfault (introduced after pytango update.)

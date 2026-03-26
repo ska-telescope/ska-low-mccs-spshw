@@ -106,7 +106,7 @@ def wait_for_completed_command_to_clear_from_queue(
     device_proxy: tango.DeviceProxy,
 ) -> None:
     """
-    Wait for Long Running Commands to clear from queue.
+    Wait for Long Running Commands to complete.
 
     A completed command is expected to clear after 10 seconds.
 
@@ -116,15 +116,16 @@ def wait_for_completed_command_to_clear_from_queue(
     count = 0
     timeout = 20
 
-    while device_proxy.longRunningCommandsInQueue != ():
+    while device_proxy.lrcQueue != () or device_proxy.lrcExecuting != ():
         time.sleep(0.5)
         count += 1
         if count == timeout:
-            if device_proxy.longRunningCommandsInQueue != ():
+            if device_proxy.lrcQueue != () or device_proxy.lrcExecuting != ():
                 pytest.fail(
-                    f"LRCs still in queue after {timeout} seconds: "
+                    f"LRCs still in queue/executing after {timeout} seconds: "
                     f"{device_proxy.dev_name()} : "
-                    f"{device_proxy.longRunningCommandsInQueue}"
+                    f"queue={device_proxy.lrcQueue} "
+                    f"executing={device_proxy.lrcExecuting}"
                 )
 
 
@@ -166,6 +167,28 @@ def wait_for_lrc_result(
                 f"Expected {ResultCode(expected_result).name}!"
             )
     raise ValueError(f"uid '{uid}' not found in LrcFinished")
+
+
+def get_lrc_finished(
+    device_proxy: tango.DeviceProxy,
+    uid: str,
+) -> dict[str, Any]:
+    """
+    Return the finished LRC entry matching the given UID.
+
+    Asserts that an entry with the given UID exists in ``lrcfinished``.
+    The returned dict can be used to make further field-level assertions.
+
+    :param device_proxy: device proxy for use in the test.
+    :param uid: the UID of the LRC to look up.
+    :return: the parsed LRC finished entry.
+    """
+    for completed_task in device_proxy.lrcfinished:
+        completed_task = json.loads(completed_task)
+        if completed_task["uid"] == uid:
+            return completed_task
+    pytest.fail(f"No LRC with {uid=} found in lrcfinished: {device_proxy.lrcfinished=}")
+    return {}  # Unreachable, but satisfies type checker
 
 
 def execute_lrc_to_completion(

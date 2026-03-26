@@ -68,7 +68,7 @@ class TestStationBeamDataRate(BaseDaqTest):
         self.component_manager.set_beamformer_table(beamformer_table)
 
     def _reset(self: TestStationBeamDataRate) -> None:
-        self.component_manager._stop_beamformer(None)
+        self.component_manager.stop_beamformer(None)
 
     def test(self: TestStationBeamDataRate) -> None:
         """
@@ -88,7 +88,7 @@ class TestStationBeamDataRate(BaseDaqTest):
                 beamformer_start_time = datetime.strftime(
                     datetime.fromtimestamp(int(time.time()) + 3), TileTime.RFC_FORMAT
                 )
-                self.component_manager._start_beamformer(
+                self.component_manager.start_beamformer(
                     start_time=beamformer_start_time,
                     duration=-1,
                     channel_groups=None,
@@ -120,6 +120,6 @@ class TestStationBeamDataRate(BaseDaqTest):
                     time.sleep(1)
 
                 self.test_logger.info(f"Test passed for iteration {iteration + 1}")
-                self.component_manager._stop_beamformer(None)
+                self.component_manager.stop_beamformer(None)
 
         self.test_logger.info("Test station beamformer data rate passed!")

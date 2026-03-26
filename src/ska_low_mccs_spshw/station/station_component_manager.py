@@ -1494,39 +1494,11 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
-    def initialise(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        *,
-        start_bandpasses: Optional[bool] = None,
-        global_reference_time: Optional[str] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the _initialise method.
-
-        This method returns immediately after it submitted
-        `self._initialise` for execution.
-
-        :param task_callback: Update task state, defaults to None
-        :param start_bandpasses: Whether to configure TPMs to send
-            integrated data. Defaults to True.
-        :param global_reference_time: Common global reference time for all TPMs,
-            needs to be some time in the last 2 weeks.
-            If not provided, 8am on the most recent Monday AWST will be used.
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._initialise,
-            task_callback=task_callback,
-            args=[start_bandpasses, global_reference_time],
-        )
-
     @check_communicating
     # pylint: disable=too-many-branches
-    def _initialise(
+    def initialise(
         self: SpsStationComponentManager,
-        start_bandasses: Optional[bool] = None,
+        start_bandpasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1536,7 +1508,7 @@ class SpsStationComponentManager(
 
         The order to turn a station on is: subrack, then tiles
 
-        :param start_bandasses: Whether to configure TPMs to send
+        :param start_bandpasses: Whether to configure TPMs to send
             integrated data.
         :param global_reference_time: Common global reference time for all TPMs,
             needs to be some time in the last 2 weeks.
@@ -1593,7 +1565,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
             result_code = self._route_data(
-                start_bandasses,
+                start_bandpasses,
                 task_callback,
                 task_abort_event,
             )
@@ -1613,7 +1585,7 @@ class SpsStationComponentManager(
                 "Starting station beamformer with empty channel_groups "
                 "to start the beamformer daisy chain during station initialise"
             )
-            self._start_beamformer(
+            self.start_beamformer(
                 start_time=None, duration=-1, channel_groups=[], scan_id=0
             )
         else:
@@ -2066,23 +2038,14 @@ class SpsStationComponentManager(
     def self_check(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the _self_check method.
-
-        This method returns immediately after it submitted
-        `self._self_check` for execution.
-
-        :param task_callback: Update task state, defaults to None
-        :return: a task status and response message
-        """
-        return self.submit_task(self._self_check, task_callback=task_callback)
-
-    def _self_check(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
+        """
+        Run all self check tests.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -2109,34 +2072,29 @@ class SpsStationComponentManager(
 
     def run_test(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        *,
-        count: Optional[int] = 1,
-        test_name: str,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the _run_test method.
-
-        This method returns immediately after it submitted
-        `self._run_test` for execution.
-
-        :param task_callback: Update task state, defaults to None
-        :param count: how many times to run the test, default is 1.
-        :param test_name: which test to run.
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._run_test, args=[count, test_name], task_callback=task_callback
-        )
-
-    def _run_test(
-        self: SpsStationComponentManager,
         count: int,
         test_name: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
+        """
+        Run a specific self check test.
+
+        :param count: how many times to run the test.
+        :param test_name: which test to run.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if test_name not in self.test_list and task_callback is not None:
+            task_callback(
+                status=TaskStatus.REJECTED,
+                result=(
+                    ResultCode.REJECTED,
+                    f"{test_name} not in available tests: {self.test_list}",
+                ),
+            )
+            return
+
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -2930,32 +2888,6 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         calibration_coefficients: list[float],
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Load calibration coefficients for all antennas and specific channels.
-
-        These may include any rotation matrix (e.g. the
-        parallactic angle), but do not include the geometric delay.
-
-        :param calibration_coefficients: a tridimensional complex array of
-            coefficients, indexed by channels, antennas, polarizations,
-            flattened into a list.
-            Dimension of antennas is 256, in tile antenna order,
-            Dimension of polarizations is 4.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._load_calibration_coefficients_for_channels,
-            args=[calibration_coefficients],
-            task_callback=task_callback,
-        )
-
-    def _load_calibration_coefficients_for_channels(
-        self: SpsStationComponentManager,
-        calibration_coefficients: list[float],
-        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
@@ -2968,7 +2900,19 @@ class SpsStationComponentManager(
             Dimension of polarizations is 4.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises ValueError: when the number of coefficients is insufficient or
+            not a multiple of 2048 (i.e. 8 coefficients per channel per antenna)
         """
+        if len(calibration_coefficients) < 2047:
+            self.logger.error("Insufficient calibration coefficients")
+            raise ValueError("Insufficient calibration coefficients")
+        if len(calibration_coefficients) % 2048 != 1:
+            self.logger.error(
+                "Incomplete specification of coefficient. "
+                "Needs 8 values (4 complex Jones) per channel per antenna"
+            )
+            raise ValueError("Incomplete specification of coefficient")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -3051,37 +2995,6 @@ class SpsStationComponentManager(
 
     def start_beamformer(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        *,
-        start_time: Optional[str] = None,
-        duration: int = -1,
-        channel_groups: Optional[list[int]] = None,
-        scan_id: int = 0,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the _start_beamformer method.
-
-        This method returns immediately after it submitted
-        `self._start_beamformer` for execution.
-
-        :param task_callback: Update task state, defaults to None
-        :param start_time: time at which to start the beamformer,
-            defaults to 0
-        :param duration: duration for which to run the beamformer,
-            defaults to -1 (run forever)
-        :param channel_groups: Channel groups to which the command applies.
-        :param scan_id: ID of the scan which is started.
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._start_beamformer,
-            args=[start_time, duration, channel_groups, scan_id],
-            task_callback=task_callback,
-        )
-
-    def _start_beamformer(
-        self: SpsStationComponentManager,
         start_time: Optional[str] = None,
         duration: int = -1,
         channel_groups: Optional[list[int]] = None,
@@ -3129,48 +3042,28 @@ class SpsStationComponentManager(
                 result=(result, message),
             )
 
-    def stop_beamformer(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the _stop_beamformer method.
-
-        This method returns immediately after it submitted
-        `self._stop_beamformer` for execution.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._stop_beamformer, args=[None], task_callback=task_callback
-        )
-
     def stop_beamformer_for_channels(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
         *,
         channel_groups: Optional[list[int]] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
-        Submit the _stop_beamformer method.
-
-        This method returns immediately after it submitted
-        `self._stop_beamformer` for execution.
+        Run the stop_beamformer method.
 
         :param channel_groups: Channel groups to which the command applies.
-
         :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
+        :param task_abort_event: Check for abort, defaults to None
         """
         logging.info(f"stop_beamformer called for channel_groups {channel_groups}")
-        return self.submit_task(
-            self._stop_beamformer, args=[channel_groups], task_callback=task_callback
+        self.stop_beamformer(
+            channel_groups=channel_groups,
+            task_callback=task_callback,
+            task_abort_event=task_abort_event,
         )
 
-    def _stop_beamformer(
+    def stop_beamformer(
         self: SpsStationComponentManager,
         channel_groups: Optional[list[int]],
         task_callback: Optional[Callable] = None,
@@ -3356,38 +3249,8 @@ class SpsStationComponentManager(
         """
         return self._execute_async_on_tiles("ConfigureTestGenerator", argin)
 
-    def start_acquisition(
-        self: SpsStationComponentManager,
-        argin: str,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the start acquisition method.
-
-        This method returns immediately after it submitted
-        `self._on` for execution.
-
-        :param argin: json dictionary with optional keywords
-
-        * start_time - (str) start time
-        * delay - (int) delay start
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
-        """
-        params = json.loads(argin)
-        start_time = params.get("start_time", None)
-        delay = params.get("delay", 0)
-
-        return self.submit_task(
-            self._start_acquisition,
-            args=[start_time, delay],
-            task_callback=task_callback,
-        )
-
     @check_communicating
-    def _start_acquisition(
+    def start_acquisition(
         self: SpsStationComponentManager,
         start_time: Optional[str] = None,
         delay: Optional[int] = 2,
@@ -3431,37 +3294,6 @@ class SpsStationComponentManager(
                 )
             return
 
-    def acquire_data_for_calibration(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        *,
-        first_channel: int,
-        last_channel: int,
-        start_time: str | None = None,
-        daq_mode: str = "TCC",
-        nof_samples: int = 1835008,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the acquire data for calibration method.
-
-        This method returns immediately after it submitted
-        `self._acquire_data_for_calibration` for execution.
-
-        :param first_channel: first channel to calibrate for
-        :param last_channel: last channel to calibrate for
-        :param start_time: UTC Time for start sending data.
-        :param daq_mode: the correlator mode to start, xGPU or TCC.
-        :param nof_samples: the number of samples to integrate, only variable in TCC.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task staus and response message
-        """
-        return self.submit_task(
-            self._acquire_data_for_calibration,
-            args=[first_channel, last_channel, start_time, daq_mode, nof_samples],
-            task_callback=task_callback,
-        )
-
     def _start_daq(
         self: SpsStationComponentManager,
         daq_mode: str,
@@ -3481,7 +3313,7 @@ class SpsStationComponentManager(
 
     # pylint: disable = too-many-branches
     @check_communicating
-    def _acquire_data_for_calibration(
+    def acquire_data_for_calibration(
         self: SpsStationComponentManager,
         first_channel: int,
         last_channel: int,
@@ -3532,7 +3364,7 @@ class SpsStationComponentManager(
 
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
-            self._configure_station_for_calibration(
+            self.configure_station_for_calibration(
                 nof_correlator_samples=nof_samples,
                 nof_tiles=(
                     16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
@@ -3615,30 +3447,8 @@ class SpsStationComponentManager(
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
-    def configure_station_for_calibration(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        **daq_config: Any,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the configure station for calibration method.
-
-        This method returns immediately after it submitted
-        `self._configure_station_for_calibration` for execution.
-
-        :param task_callback: Update task state, defaults to None
-        :param daq_config: any extra config to configure DAQ with
-
-        :return: a task staus and response message
-        """
-        return self.submit_task(
-            self._configure_station_for_calibration,
-            task_callback=task_callback,
-            kwargs=daq_config,
-        )
-
     @check_communicating
-    def _configure_station_for_calibration(
+    def configure_station_for_calibration(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -3726,30 +3536,31 @@ class SpsStationComponentManager(
             assert proxy._proxy is not None  # for the type checker
             proxy._proxy.cspSpeadFormat = spead_format
 
+    # @check_communicating
+    # def set_channeliser_rounding(
+    #     self: SpsStationComponentManager,
+    #     channeliser_rounding: np.ndarray,
+    #     task_callback: Optional[Callable] = None,
+    # ) -> tuple[TaskStatus, str]:
+    #     """
+    #     Set the channeliserRounding in all Tiles.
+
+    #     :param channeliser_rounding: the number of LS bits dropped in
+    #         each channeliser frequency channel.
+    #     :param task_callback: Update task state, defaults to None
+
+    #     :return: a task status and response message
+    #     """
+    #     return self.submit_task(
+    #         self._set_channeliser_rounding,
+    #         args=[channeliser_rounding],
+    #         task_callback=task_callback,
+    #     )
+
     @check_communicating
     def set_channeliser_rounding(
         self: SpsStationComponentManager,
-        channeliser_rounding: np.ndarray,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Set the channeliserRounding in all Tiles.
-
-        :param channeliser_rounding: the number of LS bits dropped in
-            each channeliser frequency channel.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._set_channeliser_rounding,
-            args=[channeliser_rounding],
-            task_callback=task_callback,
-        )
-
-    def _set_channeliser_rounding(
-        self: SpsStationComponentManager,
-        channeliser_rounding: np.ndarray,
+        channeliser_rounding: np.ndarray | list[int],
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3796,34 +3607,8 @@ class SpsStationComponentManager(
                 result=(result_code, message),
             )
 
-    def trigger_adc_equalisation(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        *,
-        target_adc: Optional[float] = 17.0,
-        bias: Optional[float] = 0.0,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Submit the trigger adc equalisation method.
-
-        This method returns immediately after it submitted
-        `self._trigger_adc_equalisation` for execution.
-
-        :param task_callback: Update task state, defaults to None
-        :param target_adc: adc value in ADU units. Defaults to 17.
-        :param bias: user specifed bias in dB added to the antenna preadu levels.
-                Defaults to 0.
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._trigger_adc_equalisation,
-            args=[target_adc, bias],
-            task_callback=task_callback,
-        )
-
     @check_communicating
-    def _trigger_adc_equalisation(
+    def trigger_adc_equalisation(
         self: SpsStationComponentManager,
         target_adc: float = 17.0,
         bias: float = 0.0,

@@ -61,7 +61,7 @@ class InitialiseStation(TpmSelfCheckTest):
         self.test_logger.debug("Starting test, initialising station.")
 
         self._task_status = TaskStatus.NOT_FOUND
-        self.component_manager._initialise(None, task_callback=self._task_callback)
+        self.component_manager.initialise(None, task_callback=self._task_callback)
 
         assert self._task_status == TaskStatus.COMPLETED
 

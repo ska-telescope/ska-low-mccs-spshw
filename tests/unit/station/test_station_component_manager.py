@@ -278,7 +278,7 @@ def test_trigger_adc_equalisation(
     # in a non deterministic way
     # assert station_component_manager.preadu_levels == []
 
-    station_component_manager._trigger_adc_equalisation(target_adc, bias)
+    station_component_manager.trigger_adc_equalisation(target_adc, bias)
 
     assert station_component_manager._desired_preadu_levels is not None
     for value in station_component_manager._desired_preadu_levels:
@@ -486,7 +486,6 @@ def test_self_check(
 
     station_component_manager.self_check(task_callback=callbacks["task"])
 
-    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
     callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
 
     # This should fail as we have set up one FAIL test and one ERROR test.
@@ -529,7 +528,6 @@ def test_run_test(
         task_callback=callbacks["task"], test_name=test_name, count=1
     )
 
-    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
     callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
 
     if test_name == "PassTest":

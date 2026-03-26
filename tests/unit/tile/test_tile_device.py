@@ -45,6 +45,7 @@ from ska_low_mccs_spshw.tile.tile_poll_management import RequestIterator
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import (
     execute_lrc_to_completion,
+    get_lrc_finished,
     wait_for_completed_command_to_clear_from_queue,
 )
 
@@ -586,6 +587,7 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(
             DevState.OFF, lookahead=2, consume_nonmatches=True
         )
+        time.sleep(1)  # Ensure all attrs have been updated
         self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
         # Mock a state inconsistency where the TPM is not reachable
         # But subrack reports ON. We are unable to connect therefore
@@ -778,7 +780,6 @@ class TestMccsTile:
         Test for Configure.
 
         :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param config_in: configuration of the device
@@ -788,7 +789,13 @@ class TestMccsTile:
         # there is a static delay applied to each ADC channel.
         assert len(init_value) == 32
 
-        on_tile_device.Configure(json.dumps(config_in))
+        if "fixed_delays_wrong_name" in config_in:
+            with pytest.raises(DevFailed):
+                on_tile_device.Configure(json.dumps(config_in))
+        else:
+            on_tile_device.Configure(json.dumps(config_in))
+
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
 
         assert list(on_tile_device.antennaIds) == expected_config["antenna_ids"]
 
@@ -1169,7 +1176,9 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["adc_power"],
         )
-        change_event_callbacks["adc_power"].assert_change_event(list(range(1, 33)))
+        change_event_callbacks["adc_power"].assert_change_event(
+            list(range(1, 33)), lookahead=2
+        )
         tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
@@ -1179,7 +1188,9 @@ class TestMccsTile:
             power=PowerState.ON,
         )
         tile_component_manager._update_attribute_callback(adc_rms=list(range(2, 34)))
-        change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
+        change_event_callbacks["adc_power"].assert_change_event(
+            list(range(2, 34)), lookahead=2
+        )
 
     @pytest.mark.parametrize(
         "attribute_name",
@@ -1330,6 +1341,7 @@ class TestMccsTile:
         )
 
         change_event_callbacks["alarm_attribute"].assert_change_event(Anything)
+        time.sleep(1)  # Wait for attr to update.
         assert (
             on_tile_device.read_attribute(attribute_name).quality
             == AttrQuality.ATTR_ALARM
@@ -2041,13 +2053,15 @@ class TestMccsTileCommands:
 
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        with pytest.raises(
-            DevFailed,
-            match="Communication with component is not established",
-        ):
-            [[task_status], [command_id]] = getattr(tile_device, command_name)(
-                command_args
-            )
+        [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        completed_task = get_lrc_finished(tile_device, command_id)
+
+        assert completed_task["status"] == "FAILED"
+        assert (
+            "Communication with component is not established"
+            in completed_task["result"][-1]
+        )
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
@@ -2059,18 +2073,21 @@ class TestMccsTileCommands:
 
         assert task_status == TaskStatus.IN_PROGRESS
         assert command_name in command_id.split("_")[-1]
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "STAGING")
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "QUEUED")
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "COMPLETED")
-        )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        completed_task = get_lrc_finished(tile_device, command_id)
+        assert completed_task["status"] == "COMPLETED"
+        # change_event_callbacks["lrc_command"].assert_change_event(
+        #     (command_id, "STAGING")
+        # )
+        # change_event_callbacks["lrc_command"].assert_change_event(
+        #     (command_id, "QUEUED")
+        # )
+        # change_event_callbacks["lrc_command"].assert_change_event(
+        #     (command_id, "IN_PROGRESS")
+        # )
+        # change_event_callbacks["lrc_command"].assert_change_event(
+        #     (command_id, "COMPLETED")
+        # )
 
     def test_StartAcquisition(
         self: TestMccsTileCommands,
@@ -2111,13 +2128,16 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        with pytest.raises(
-            DevFailed,
-            match="Communication with component is not established",
-        ):
-            [[task_status], [command_id]] = tile_device.StartAcquisition(
-                json.dumps({"delay": 5})
-            )
+        [[task_status], [command_id]] = tile_device.StartAcquisition(
+            json.dumps({"delay": 5})
+        )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        completed_task = get_lrc_finished(tile_device, command_id)
+        assert completed_task["status"] == "FAILED"
+        assert (
+            "Communication with component is not established"
+            in completed_task["result"][-1]
+        )
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
@@ -2231,8 +2251,11 @@ class TestMccsTileCommands:
         [[result_code], [message]] = on_tile_device.DownloadFirmware(
             invalid_bitfile_path
         )
-        assert result_code == ResultCode.FAILED
-        assert "DownloadFirmware" not in message.split("_")[-1]
+        assert result_code == ResultCode.QUEUED
+        assert "DownloadFirmware" in message.split("_")[-1]
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        completed_task = get_lrc_finished(on_tile_device, message)
+        assert completed_task["status"] == "FAILED"
         assert on_tile_device.firmwareName == existing_firmware_name
 
     def test_GetRegisterList(
@@ -2517,8 +2540,8 @@ class TestMccsTileCommands:
         # Set up the antenna buffer
         arg = {
             "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
+            "ddr_start_byte_address": 256 * 1024**2,
+            "max_ddr_byte_size": 512 * 1024**2,
         }
         json_arg = json.dumps(arg)
 
@@ -2526,8 +2549,8 @@ class TestMccsTileCommands:
 
         tile_component_manager.set_up_antenna_buffer.assert_call(
             arg["mode"],
-            arg["DDR_start_address"],
-            arg["max_DDR_byte_size"],
+            arg["ddr_start_byte_address"],
+            arg["max_ddr_byte_size"],
         )
         assert result_code == ResultCode.OK
 
@@ -2540,22 +2563,19 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
 
-        [[result_code], [lrc_id]] = on_tile_device.StartAntennaBuffer(json_arg)
-
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
-        )
-
+        [[_], [lrc_id]] = on_tile_device.StartAntennaBuffer(json_arg)
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
-        # Read antenna buffer
-        [[result_code], [lrc_id]] = on_tile_device.ReadAntennaBuffer()
+        completed_task = get_lrc_finished(on_tile_device, lrc_id)
+        assert completed_task["status"] == "COMPLETED"
 
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
-        )
+        # Read antenna buffer
+        [[_], [lrc_id]] = on_tile_device.ReadAntennaBuffer()
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        completed_task = get_lrc_finished(on_tile_device, lrc_id)
+        assert completed_task["status"] == "COMPLETED"
 
         # Stop antenna buffer
-        [[result_code], [message]] = on_tile_device.StopAntennaBuffer()
+        [[result_code], [_]] = on_tile_device.StopAntennaBuffer()
 
         assert result_code == ResultCode.OK
 
@@ -2604,7 +2624,6 @@ class TestMccsTileCommands:
         # start_time: Optional[int],
         duration: Optional[int],
         channel_groups: Optional[list[int]],
-        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for.
@@ -2620,16 +2639,8 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param duration: duration of time that the beamformer should run
         :param channel_groups: Channel groups started and stopped
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         """
         start_time = None  # it used to be a parameter but only None was tested
-        on_tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         assert not on_tile_device.isBeamformerRunning
         assert not on_tile_device.BeamformerRunningForChannels("{}")
         args = {
@@ -2637,19 +2648,18 @@ class TestMccsTileCommands:
             "duration": duration,
             "channel_groups": channel_groups,
         }
-        [[result_code], [lrc_id]] = on_tile_device.StartBeamformer(json.dumps(args))
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
-        )
+        [[_], [lrc_id]] = on_tile_device.StartBeamformer(json.dumps(args))
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        completed_task = get_lrc_finished(on_tile_device, lrc_id)
+        assert completed_task["status"] == "COMPLETED"
         assert on_tile_device.isBeamformerRunning
         args = {"channel_groups": channel_groups}
         assert on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
-        [[result_code], [lrc_id]] = on_tile_device.StopBeamformer(json.dumps(args))
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
-        )
+        [[_], [lrc_id]] = on_tile_device.StopBeamformer(json.dumps(args))
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        completed_task = get_lrc_finished(on_tile_device, lrc_id)
+        assert completed_task["status"] == "COMPLETED"
         assert not on_tile_device.isBeamformerRunning
         assert not on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 

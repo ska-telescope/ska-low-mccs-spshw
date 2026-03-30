@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1225] Add a unit test to check that when SpsStation.StartBeamformer is called that it reports FAILED if the composite command fails on any Tile.
+
 ## 11.4.0
 
 * [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.

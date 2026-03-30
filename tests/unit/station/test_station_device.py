@@ -40,7 +40,7 @@ from tests.harness import (
     get_subrack_name,
     get_tile_name,
 )
-from tests.test_tools import execute_lrc_to_completion
+from tests.test_tools import execute_lrc_to_completion, wait_for_lrc_result
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -1208,6 +1208,47 @@ def test_station_tile_commands_lrc(
                 default_args=ANY,
             ),
         ]
+    )
+
+
+@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCompositeCommandProxy")
+@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCommandProxy")
+def test_start_beamformer_failure_reported_in_lrc_result(
+    mock_command_cls: unittest.mock.Mock,
+    mock_composite_cls: unittest.mock.Mock,
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+) -> None:
+    """
+    Test that when tile StartBeamformer fails, the station reports FAILED.
+
+    This guards against SpsStation silently reporting ResultCode.OK when
+    MccsTile.StartBeamformer fails on one or more tiles.
+
+    :param mock_command_cls: a patched MccsCommandProxy class.
+    :param mock_composite_cls: a patched MccsCompositeCommandProxy class.
+    :param station_device: The station device to use.
+    :param mock_tile_device_proxies: mock tile proxies.
+    """
+    mock_composite = MagicMock()
+    mock_composite_cls.return_value = mock_composite
+    mock_composite.__iadd__.return_value = mock_composite
+    mock_composite.return_value = (ResultCode.FAILED, "StartBeamformer failed on tile")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    for mock_tile_proxy in mock_tile_device_proxies:
+        mock_tile_proxy.tileProgrammingState = "Synchronised"
+    time.sleep(0.2)
+
+    ([result_code], [command_id]) = station_device.StartBeamformer("{}")
+    assert result_code == ResultCode.QUEUED
+
+    # Wait for the LRC to complete and verify the result reflects the tile failure
+    wait_for_lrc_result(
+        device=station_device,
+        uid=command_id,
+        expected_result=ResultCode.FAILED,
+        timeout=10,
     )
 
 

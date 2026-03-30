@@ -311,6 +311,7 @@ def ensure_subrack_fan_speed_percent(
         "subrack_fan_speeds_percent",
         expected_fan_speeds_percent,
         lookahead=4,
+        consume_nonmatches=True,
     )
 
     for fan in fan_number:
@@ -322,7 +323,10 @@ def ensure_subrack_fan_speed_percent(
             expected_fan_speeds_percent[fan - 1] = pytest.approx(90.0)
             expected_fan_speeds_percent[fan] = pytest.approx(90.0)
             change_event_callbacks.assert_change_event(
-                "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=4
+                "subrack_fan_speeds_percent",
+                expected_fan_speeds_percent,
+                lookahead=4,
+                consume_nonmatches=True,
             )
 
 
@@ -363,7 +367,10 @@ def ensure_subrack_fan_speed(
             change_event_callbacks["subrack_fan_speeds"],
         )
         change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds", expected_fan_speeds, lookahead=10
+            "subrack_fan_speeds",
+            expected_fan_speeds,
+            lookahead=10,
+            consume_nonmatches=True,
         )
 
 
@@ -487,7 +494,7 @@ def check_subrack_fan_speed_setting(
         expected_fan_speeds_percent[fan] = pytest.approx(100.0)
 
     change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
-        expected_fan_speeds_percent, lookahead=5
+        expected_fan_speeds_percent, lookahead=5, consume_nonmatches=True
     )
 
 
@@ -522,7 +529,10 @@ def check_subrack_fan_speed(
             for p in fan_speeds_percent
         ]
         change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds", expected_fan_speeds, lookahead=10
+            "subrack_fan_speeds",
+            expected_fan_speeds,
+            lookahead=10,
+            consume_nonmatches=True,
         )
 
 

@@ -62,3 +62,4 @@ testing/results/*
 docs/src/_build
 venv/
 tpm/
+docs/src/device-interfaces/**

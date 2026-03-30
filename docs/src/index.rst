@@ -39,6 +39,12 @@ prototype for the `Square Kilometre Array`_.
    reference/pointing.rst
    reference/station.rst
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Device Interfaces
+
+   Device Interfaces<device-interfaces/index>
+
 
 Indices and tables
 ------------------

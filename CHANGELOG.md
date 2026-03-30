@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-428] Add DIFDoc to documentation generation. Add fix to tile firmware threshold interface to not crash when no DB available (DIFDoc spins up device servers in the background with nodb). Change some `:example:` tags to `**Example**:` so Sphinx doesn't think it's a list and expects different indentation.
+
 ## 11.4.0
 
 * [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.

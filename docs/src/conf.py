@@ -134,6 +134,15 @@ nitpick_ignore = [
     ("py:class", "ska_tango_base.base.CommunicationStatusCallbackType"),
     ("py:class", "tango.StdStringVector"),
     ("py:class", "Database"),
+    ("py:class", "DevVarLongStringArray"),
+    ("py:class", "DevVoid"),
+    ("py:class", "DevBoolean"),
+    ("py:class", "DevUShort"),
+    ("py:class", "DevString"),
+    ("py:class", "DevLong"),
+    ("py:class", "DevVarULongArray"),
+    ("py:class", "DevVarLongArray"),
+    ("py:class", "DevVarStringArray"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -177,6 +186,10 @@ language = "En-en"
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = []
+
+suppress_warnings = [
+    "ref.docutils",
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"

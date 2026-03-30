@@ -13,9 +13,18 @@ include .make/base.mk
 include .make-uv/make/docs-uv.mk
 
 DOCS_SPHINXOPTS = -W --keep-going
+DOCGEN_TARGETS := html singlehtml
+DOCGEN_OUTPUT_DIR := docs/src/device-interfaces
 
+ifneq (,$(filter $(DOCS_TARGET_ARGS),$(DOCGEN_TARGETS)))
 docs-pre-build:
 	uv sync --frozen --group docs
+	@if [ -v CI_JOB_TOKEN ]; then \
+		uv pip install --no-deps -e .; \
+	fi
+	uv run tangodocgen --auto -o $(DOCGEN_OUTPUT_DIR)
+endif
+
 
 .PHONY: docs-pre-build
 

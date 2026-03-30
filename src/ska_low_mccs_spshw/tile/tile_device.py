@@ -1420,9 +1420,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information[
-                "firmware_configuration_status"
-            ] = self.db_configuration_fault[1]
+            self.status_information["firmware_configuration_status"] = (
+                self.db_configuration_fault[1]
+            )
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault
@@ -1679,9 +1679,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if PLL locked and loss of lock flag is low
             (lock has not fallen).
 
-        :example:
+        **Example**:
             >>> tile.adc_pll_lock_status
-            [[1]*16,[1]*16]
+                [[1]*16,[1]*16]
 
         :return: the pll status of all ADCs
         """
@@ -1694,7 +1694,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `True` if status OK.
 
-        :example:
+        **Example**:
             >>> tile.tile_beamformer_status
             True
 
@@ -1710,7 +1710,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `True` if status OK.
 
-        :example:
+        **Example**:
             >>> tile.station_beamformer_status
             True
 
@@ -1731,7 +1731,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no parity errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_station_beamformer_error_count
             0
 
@@ -1752,7 +1752,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no parity errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_station_beamformer_error_count
             0
 
@@ -1778,7 +1778,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no parity errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_station_beamformer_flagged_count
             0
 
@@ -1804,7 +1804,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no parity errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_station_beamformer_flagged_count
             0
 
@@ -1825,7 +1825,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_crc_error_count
             0
 
@@ -1846,7 +1846,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_crc_error_count
             0
 
@@ -1868,7 +1868,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no bit-interleaved parity (BIP) errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_bip_error_count
             [0, 0, 0, 0]
 
@@ -1890,7 +1890,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no bit-interleaved parity (BIP) errors detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_bip_error_count
             [0, 0, 0, 0]
 
@@ -1914,7 +1914,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             Note: This counter increments when at least one error is
             detected in a clock cycle.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_decode_error_count
             [0, 0, 0, 0]
 
@@ -1938,7 +1938,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             Note: This counter increments when at least one error is
             detected in a clock cycle.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_decode_error_count
             [0, 0, 0, 0]
 
@@ -1959,7 +1959,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no link loss events are detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_linkup_loss_count
             0
 
@@ -1980,7 +1980,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no link loss events are detected.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_linkup_loss_count
             0
 
@@ -2001,7 +2001,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no status OK.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_data_router_status
             0
 
@@ -2022,7 +2022,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no status OK.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_data_router_status
             0
 
@@ -2040,7 +2040,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no packets are discarded.
 
-        :example:
+        **Example**:
             >>> tile.data_router_discarded_packets
             '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
 
@@ -2060,7 +2060,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `True` if table entries are valid and resolved.
 
-        :example:
+        **Example**:
             >>> tile.arp
             True
 
@@ -2078,7 +2078,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `True` if virtual lanes aligned and no BIP or CRC errors.
 
-        :example:
+        **Example**:
             >>> tile.udp_status
             False
 
@@ -2096,7 +2096,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: True if DDR interface was successfully initialised.
 
-        :example:
+        **Example**:
             >>> tile.ddr_initialisation
             True
 
@@ -2117,7 +2117,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no reset events have occurred.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_ddr_reset_counter
             0
 
@@ -2138,7 +2138,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no reset events have occurred.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_ddr_reset_counter
             0
 
@@ -2160,7 +2160,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
 
-        :example:
+        **Example**:
             tile.f2f_soft_errors
             0
 
@@ -2184,7 +2184,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             Hard errors require the interface to be reset. This likely means
             reinitialising the TPM entirely due to the impact on beamformers.
 
-        :example:
+        **Example**:
             >>> tile.f2f_hard_errors
             0
 
@@ -2205,7 +2205,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no resync events have ocurred.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_resync_count
             0
 
@@ -2226,7 +2226,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 if no resync events have ocurred.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_resync_count
             0
 
@@ -2244,7 +2244,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `True` if no errors detected on any lane.
 
-        :example:
+        **Example**:
             >>> tile.lane_status
             True
 
@@ -2262,7 +2262,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `True` if link up and synchronised.
 
-        :example:
+        **Example**:
             >>> tile.link_status
             True
 
@@ -2285,7 +2285,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 for all lanes.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_lane_error_count
             [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
 
@@ -2309,7 +2309,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: 0 for all lanes.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_lane_error_count
             [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
 
@@ -2333,7 +2333,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `0` per interface if no lock loss events.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_clock_managers_count
             [0, 0, 0]
 
@@ -2357,7 +2357,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if MMCM clock locked `0` otherwise
 
-        :example:
+        **Example**:
             >>> tile.fpga0_clock_managers_status
             [0, 0, 0]
 
@@ -2382,7 +2382,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `0` per interface if no lock loss events.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_clock_managers_count
             [0, 0, 0]
 
@@ -2406,7 +2406,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if MMCM clock locked `0` otherwise
 
-        :example:
+        **Example**:
             >>> tile.fpga1_clock_managers_status
             [0, 0, 0]
 
@@ -2425,7 +2425,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Return the ddr write size obtained from running start_antenna_buffer.
 
-        :example:
+        **Example**:
             >>> tile.ddr_write_size
 
         :return: ddr write size of a frame
@@ -2442,7 +2442,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     #     Expected: `integer` number of times ddr interface has been read.
 
-    #     :example:
+    #     **Example**:
     #         >>> tile.ddr_rd_cnt
     #         '{"FPGA0": 0,
     #         "FPGA1": 0}'
@@ -2461,7 +2461,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     #     Expected: `integer` number of times ddr interface has been written to.
 
-    #     :example:
+    #     **Example**:
     #         >>> tile.ddr_wr_cnt
     #         '{"FPGA0": 0,
     #         "FPGA1": 0}'
@@ -2481,7 +2481,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     Expected: `integer` number of times ddr interface has responded to a read
     #     with valid data.
 
-    #     :example:
+    #     **Example**:
     #         >>> tile.ddr_rd_dat_cnt
     #         '{"FPGA0": 0,
     #         "FPGA1": 0}'
@@ -2506,7 +2506,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` per interface if status is OK. `0` if
         not OK.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_clocks
             [1, 1, 1]
 
@@ -2530,7 +2530,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` per interface if status is OK. `0` if
         not OK.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_clocks
             [1, 1, 1]
 
@@ -2554,7 +2554,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if SYSREF counter is incrementing (SYSREF is present),
         `0` if not present.
 
-        :example:
+        **Example**:
             >>> tile.adc_sysref_counter
             [1] * 16
 
@@ -2578,7 +2578,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if setup and hold requirements for SYSREF are met,
         else return `0`.
 
-        :example:
+        **Example**:
             >>> tile.adc_sysref_timing_requirements
             [1] * 16
 
@@ -2600,7 +2600,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if QPLL locked.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_qpll_status
             1
 
@@ -2622,7 +2622,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `0` if no lock loss events detected.
         Increments for each lock loss event.
 
-        :example:
+        **Example**:
             >>> tile.fpga0_qpll_counter
             0
 
@@ -2643,7 +2643,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if QPLL locked.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_qpll_status
             '1'
 
@@ -2665,7 +2665,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `0` if no lock loss events detected.
         Increments for each lock loss event.
 
-        :example:
+        **Example**:
             >>> tile.fpga1_qpll_counter
             0
 
@@ -2688,7 +2688,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if PLL locked, `0` otherwise.
 
-        :example:
+        **Example**:
             >>> tile.f2f_pll_lock_status
             '1'
 
@@ -2710,7 +2710,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `0` if no PLL lock loss events detected.
         Increments for each lock loss event.
 
-        :example:
+        **Example**:
             >>> tile.f2f_pll_counter
             '0'
 
@@ -2733,7 +2733,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if PLL locked, `0` otherwise.
 
-        :example:
+        **Example**:
             >>> tile.timing_pll_lock_status
             1
 
@@ -2756,7 +2756,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
         These are combined readings for both PLLs within the AD9528.
 
-        :example:
+        **Example**:
             >>> tile.timing_pll_count
             '0'
 
@@ -2779,7 +2779,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Expected: `1` if PLL 40G locked.
 
-        :example:
+        **Example**:
             >>> tile.timing_pll_40g_lock_status
             '1`
 
@@ -2802,7 +2802,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
         These are combined readings for both PLLs within the AD9528.
 
-        :example:
+        **Example**:
             >>> tile.timing_pll_40g_count
             '0'
 
@@ -2815,7 +2815,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Return all the tile info available.
 
-        :example:
+        **Example**:
             >>> tile.tile_info
             '{"hardware": {"ip_address_eep": "10.0.10.2",
             "netmask_eep": "255.255.255.0", "gateway_eep": "255.255.255.255",
@@ -4052,7 +4052,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Return True if communication is OK else False
 
-        :example:
+        **Example**:
 
         >>> core_communication_status = tile_proxy.coreCommunicationStatus
         >>> print(core_communication_status)
@@ -5430,35 +5430,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Get 40G packet counts.
 
         The return value depends on how many 40G cores are active.
-        Typically, only one core is active.
-
-        Example::
-
-            # 0 cores active
-            {}
-
-            # 1 core active
-            {
-                'FPGA0': {
-                    'rx_received': 2921,
-                    'rx_forwarded': 0,
-                    'tx_transmitted': 6973024
-                }
-            }
-
-            # 2 cores active
-            {
-                'FPGA0': {
-                    'rx_received': 3881,
-                    'rx_forwarded': 0,
-                    'tx_transmitted': 7321460
-                },
-                'FPGA1': {
-                    'rx_received': 1,
-                    'rx_forwarded': 0,
-                    'tx_transmitted': 3122
-                }
-            }
+        Typically, only one core is active. Returns a JSON-encoded dict keyed by
+        FPGA name (e.g. ``FPGA0``), each containing ``rx_received``,
+        ``rx_forwarded`` and ``tx_transmitted`` counters. Returns ``{}`` if no
+        cores are active.
 
         :return: Packet counts per active 40G core. Returns an empty dictionary
                 if no 40G cores are active.
@@ -5550,7 +5525,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("Initialise")
@@ -5724,7 +5699,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: a JSON-encoded dictionary of firmware details
 
-        :example:
+        **Example**:
             >>> dp = tango.DeviceProxy("mccs/tile/01")
             >>> jstr = dp.command_inout("GetFirmwareAvailable")
             >>> dict = json.load(jstr)
@@ -5753,7 +5728,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("DownloadFirmware", "/tmp/firmware/bitfile")
@@ -5805,7 +5780,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: a list of register names
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> reglist = dp.command_inout("GetRegisterList")
@@ -5863,7 +5838,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param register_name: full hyerarchic register name
         :return: a list of register values
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("fpga1./tile/01")
         >>> values = dp.command_inout("ReadRegister", "test-reg1")
@@ -5939,7 +5914,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"register_name": "test-reg1", "values": values,
@@ -6009,7 +5984,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: list of values
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> reglist = dp.command_inout("ReadAddress", [address, nvalues])
@@ -6075,7 +6050,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> values = [.....]
         >>> address = 0xfff
@@ -6162,7 +6137,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"core_id":2, "arp_table_entry":0, "source_mac":0x62000a0a01c9,
@@ -6265,7 +6240,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                  core_id, arp_table_entry, source_mac, source_ip, source_port,
                  destination_ip, destination_port, netmask, gateway_ip
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> core_id = 2
@@ -6368,7 +6343,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
         >> dict = {"mode": "1G", "payload_length": 4, "destination_ip": "10.0.1.23"}
@@ -6476,7 +6451,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"mode": "1G", "channel_payload_length":4,
@@ -6571,7 +6546,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"source_port": 4661, "destination_ip_1": "10.0.10.2",
@@ -6665,15 +6640,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: A tuple containing ResultCode and a message.
 
-        :example:
-
+        **Example**:
             >>> thresholds = {"boardTemperature" : {
-                >>>         "max_alarm": "79"
-                >>>         "min_alarm": "25"
-                >>>         "max_warning": "74"
-                >>>         "min_warning": "27"
-                >>>         },
-                >>>     }
+                         "max_alarm": "79"
+                         "min_alarm": "25"
+                         "max_warning": "74"
+                         "min_warning": "27"
+                         },
+                     }
             >>> tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
 
         :param argin: a serialised dictionary containing attribute names and
@@ -6725,15 +6699,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: a JSON-encoded dictionary of coreId and populated arpID table
 
-        :example:
-
+        **Example**:
         >>> argout = dp.command_inout("GetArpTable")
         >>> dict = json.loads(argout)
-        >>>    {
-        >>>    "core_id0": [0, 1],
-        >>>    "core_id1": [0],
-        >>>    "core_id3": [],
-        >>>    }
+            {
+            "core_id0": [0, 1],
+            "core_id1": [0],
+            "core_id3": [],
+            }
+
         """
         handler = self.get_command_object("GetArpTable")
         return handler()
@@ -6850,8 +6824,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
-
+        **Example**:
         >>> regions = [[4, 24, 0, 0, 0, 3, 1, 101], [26, 40, 1, 0, 24, 4, 2, 102]]
         >>> input = list(itertools.chain.from_iterable(regions))
         >>> dp = tango.DeviceProxy("mccs/tile/01")
@@ -6955,7 +6928,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
         >> dict = {"start_channel":64, "n_channels":10, "is_first":True,
@@ -7050,9 +7023,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             representing a normalized coefficient, with (1.0, 0.0) being the
             normal, expected response for an ideal antenna.
 
-            * channel - (int) channel is the index specifying the channels at the
-                              beamformer output, i.e. considering only those channels
-                              actually processed and beam assignments.
+            * channel - (int) channel index at the beamformer output (only processed channels and beam assignments).
+
             * polarization index ranges from 0 to 3.
 
                 * 0: X polarization direct element
@@ -7064,11 +7036,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
-
+        **Example**:
         >>> antenna = 2
         >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
-        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
+                    complex(4.6, 8.2), complex(6.8, 2.4)]]*5
         >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
         >>> out = ([v.real, v.imag] for v in inp]
         >>> coefficients = list(itertools.chain.from_iterable(out))
@@ -7172,11 +7143,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             calibration_coefficients[channel, antenna, polarization], with each element
             representing a normalized coefficient, with (1.0, 0.0) being the
             normal, expected response for an ideal antenna.
+            * channel - (int) channel index at the beamformer output (only processed channels and beam assignments).
 
-            * channel - (int) channel is the index specifying the channels at the
-                              beamformer output, i.e. considering only those channels
-                              actually processed and beam assignments.
             * antenna - index ranging 0 to 16, for the 16 antennas managed by the tile
+
             * polarization index ranges from 0 to 3.
 
                 * 0: X polarization direct element
@@ -7188,11 +7158,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
-
+        **Example**:
         >>> start_channel = 2
         >>> complex_coefficients =[[[complex(3.4, 1.2), complex(2.3, 4.1),
-        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*16]*4
+                    complex(4.6, 8.2), complex(6.8, 2.4)]]*16]*4
         >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
         >>> out = ([v.real, v.imag] for v in inp]
         >>> coefficients = list(itertools.chain.from_iterable(out))
@@ -7256,7 +7225,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ApplyCalibration", "")
@@ -7340,7 +7309,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> # example delays: 16 values from -2 to +2 ns, rates = 0
         >>> delays = [step * 0.25e-9 for step in list(range(-8, 8))]
@@ -7407,7 +7376,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ApplyPointingDelays", "")
@@ -7435,7 +7404,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"StartTime":10, "Duration":20, "channel_groups": [0,1,4] }
@@ -7461,7 +7430,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"channel_groups": [0,1,4] }
@@ -7539,7 +7508,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Whether the beamformer is running
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"channel_groups": [0,1,4,5]}
@@ -7633,7 +7602,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"integration_time": 0.2, "first_channel":0, "last_channel": 191}
@@ -7727,7 +7696,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"integration_time": 0.2, "first_channel":0, "last_channel": 191}
@@ -7867,15 +7836,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: json dictionary with optional keywords:
 
         * data_type - type of snapshot data (mandatory): "raw", "channel",
-                    "channel_continuous", "narrowband", "beam"
+            "channel_continuous", "narrowband", "beam"
         * start_time - Time (UTC string) to start sending data. Default immediately
         * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
 
         Depending on the data type:
         raw:
 
-        * sync: bool: send synchronised samples for all antennas, vs. round robin
-                larger snapshot from each antenna
+        * sync: (bool) send synchronised samples for all antennas (vs. round-robin larger snapshot per antenna)
 
         channel:
 
@@ -7898,7 +7866,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"data_type": "raw", "Sync":True, "Seconds": 0.2}
@@ -7954,7 +7922,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopDataTransmission")
@@ -8024,7 +7992,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"start_time":"2021-11-22, "delay":20}
@@ -8191,7 +8159,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"tone_frequency": 150e6, "tone_amplitude": 0.1,
@@ -8297,7 +8265,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> test_pattern = list(range(1024))
@@ -8374,7 +8342,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopPatternGenerator", "jesd")
@@ -8441,7 +8409,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StartPatternGenerator", "channel")
@@ -8489,7 +8457,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StartADCs")
@@ -8537,7 +8505,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopADCs")
@@ -8594,7 +8562,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         TODO THORN-68: Currently we can't verify if the flag has been set correctly,
         this functionality will get added later
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("EnableStationBeamFlagging")
@@ -8651,7 +8619,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         TODO THORN-68: Currently we can't verify if the flag has been set correctly,
         this functionality will get added later
 
-        :example:
+        **Example**:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("DisableStationBeamFlagging")

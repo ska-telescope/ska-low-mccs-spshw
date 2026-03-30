@@ -66,9 +66,16 @@ class FirmwareThresholdsDbAdapter:
         """
         self._device_name = device_name
         self._thresholds = thresholds
-        self._db_connection = db_connection or Database()
         self._logger = logger
-        self._sync_class_cache_with_db()
+        try:
+            self._db_connection = db_connection or Database()
+            self._sync_class_cache_with_db()
+        except Exception:  # noqa: BLE001
+            self._db_connection = None
+            if self._logger:
+                self._logger.warning(
+                    "Could not connect to DB; firmware thresholds not synced"
+                )
 
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Update threshold cache from database."""
@@ -87,12 +94,18 @@ class FirmwareThresholdsDbAdapter:
 
     def write_threshold_to_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Put thresholds into database."""
+        if self._db_connection is None:
+            self._logger.warning("No DB connection available.")
+            return
         self._db_connection.put_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_dict()
         )
 
     def resync_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Resync class with db values."""
+        if self._db_connection is None:
+            self._logger.warning("No DB connection available.")
+            return
         self._sync_class_cache_with_db()
 
 

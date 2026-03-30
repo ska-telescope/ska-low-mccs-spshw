@@ -230,6 +230,7 @@ class RequestIterator:
         "IO",
         "DSP",
         "40G_PACKET_COUNT",
+        "POINTING_DELAYS",
     ]
 
     def __init__(self: RequestIterator):

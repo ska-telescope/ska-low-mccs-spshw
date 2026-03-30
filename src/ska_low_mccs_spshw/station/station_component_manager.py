@@ -53,6 +53,7 @@ from tango.utils import PyTangoThreadPoolExecutor
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 from ..tile.tile_data import TileData
+from .station_on_workaround_utils import ensure_tpms_on
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
@@ -114,6 +115,7 @@ class _TileProxy(DeviceComponentManager):
             "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
+            "pointingDelays": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -406,6 +408,7 @@ class SpsStationComponentManager(
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        on_workaround_flag: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
@@ -450,8 +453,10 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param on_workaround_flag: whether to enable the workaround
         :param event_serialiser: the event serialiser to be used by this object.
         """
+        self._on_workaround_flag = on_workaround_flag
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
@@ -476,10 +481,12 @@ class SpsStationComponentManager(
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        self._hw_pointing_delays: dict[int, np.ndarray] = {}
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
+            self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
@@ -933,6 +940,7 @@ class SpsStationComponentManager(
             fqdn, communication_state
         )
 
+    # pylint: disable=too-many-branches
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
         logical_tile_id: int,
@@ -1015,6 +1023,17 @@ class SpsStationComponentManager(
                         self._component_state_callback(
                             beamformerRegions=attribute_value
                         )
+            case "pointingdelays":
+                self._hw_pointing_delays[logical_tile_id] = attribute_value
+                if all(
+                    not np.isnan(v).any() for v in self._hw_pointing_delays.values()
+                ):
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            pointingdelays=self._hw_pointing_delays.copy()
+                        )
+                    for delays in self._hw_pointing_delays.values():
+                        delays.fill(np.nan)
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "
@@ -1491,6 +1510,17 @@ class SpsStationComponentManager(
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
             message = "On Command failed"
+
+        if task_status == TaskStatus.FAILED and self._on_workaround_flag:
+            self.logger.info("Using On bruteforce workaround (timeout=3min).")
+            try:
+                ensure_tpms_on(list(self._tile_proxies.values()))
+                task_status = TaskStatus.COMPLETED
+                message = "On Command Completed"
+            except Exception as e:  # pylint:disable=broad-exception-caught
+                self.logger.error(f"On workaround timed out: {e}")
+                task_status = TaskStatus.FAILED
+                message = "On Command failed, workaround timed out."
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 

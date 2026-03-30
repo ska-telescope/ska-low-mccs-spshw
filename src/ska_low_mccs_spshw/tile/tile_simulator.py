@@ -3234,6 +3234,24 @@ class TileSimulator:
         """
         return self._broadband_rfi_factor
 
+    def get_pointing_delay(
+        self: TileSimulator, beam_index: int
+    ) -> list[list[list[float]]]:
+        """
+        Get pointing delay for a given beam.
+
+        :param beam_index: beam number
+
+        :return: pointing delay in seconds
+        """
+        return [
+            [[float(x * beam_index), float((x + 1) * beam_index)] for x in range(8)],
+            [
+                [float(x * beam_index), float((x + 1) * beam_index)]
+                for x in range(8, 16)
+            ],
+        ]
+
     @connected
     def __getattr__(self: TileSimulator, name: str) -> Any:
         """

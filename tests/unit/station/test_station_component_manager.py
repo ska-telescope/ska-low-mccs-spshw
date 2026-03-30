@@ -877,3 +877,34 @@ def test_beamformer_table(
         station_component_manager._beamformer_table,
         expected_initial_beamformer_table,
     )
+
+
+def test_pointing_delays(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles_to_add: int,
+    tile_initial_pointing_delays: np.ndarray,
+) -> None:
+    """
+    Test we record pointing delays correctly.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles_to_add: number of TPMs in the test.
+    :param tile_initial_pointing_delays: intial pointing delays the TPMs
+        are mocked to have
+    """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    expected_call = {
+        tile_id: tile_initial_pointing_delays for tile_id in range(num_tiles_to_add)
+    }
+
+    # Large lookahead as this is only done once we got data for all TPMs
+    callbacks["component_state"].assert_call(
+        pointingdelays=expected_call,
+        lookahead=50,
+    )

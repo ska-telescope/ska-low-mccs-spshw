@@ -34,8 +34,8 @@ from ska_control_model import (
 )
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
-from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
+from tango import AttrQuality
 from tango.server import attribute, command, device_property
 
 from .station_component_manager import SpsStationComponentManager
@@ -104,6 +104,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
+    OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
     # ---------------
     # Initialisation
@@ -136,6 +137,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._data_received_result: tuple[str, str] = ("", "")
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
+        self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -169,6 +171,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
             f"\tParentTRL: {self.ParentTRL}\n"
+            f"\tOnWorkaroundFlag: {self.OnWorkaroundFlag}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -245,6 +248,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._component_state_changed,
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
+            self.OnWorkaroundFlag,
             event_serialiser=self._event_serialiser,
         )
 
@@ -308,40 +312,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "SpsStation_BeamformerRunningForChannels.json",
         )
     )
-
-    def init_command_objects(self: SpsStation) -> None:
-        """Set up the handler objects for Commands."""
-        super().init_command_objects()
-
-        #
-        # Long running commands
-        #
-
-        for command_name, method_name, schema in [
-            ("SetChanneliserRounding", "set_channeliser_rounding", None),
-        ]:
-            validator = (
-                None
-                if schema is None
-                else JsonValidator(
-                    command_name,
-                    schema,
-                    logger=self.logger,
-                )
-            )
-
-            self.register_command_object(
-                command_name,
-                SubmittedSlowCommand(
-                    command_name,
-                    self._command_tracker,
-                    self.component_manager,
-                    method_name,
-                    callback=None,
-                    logger=self.logger,
-                    validator=validator,
-                ),
-            )
 
     def _setup_health_rollup(
         self: SpsStation,
@@ -631,6 +601,25 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 self._health_rollup.health_changed(
                     "tile_programming_state", HealthState.FAILED
                 )
+        pointing_delays = state_change.get("pointingdelays")
+        if pointing_delays is not None:
+            for tile, delays in pointing_delays.items():
+                start = tile * 32
+                stop = start + 32
+                self._hw_pointing_delays[:, start:stop] = delays
+            event_time = time.time()
+            self.push_change_event(
+                "pointingDelays",
+                self._hw_pointing_delays,
+                event_time,
+                AttrQuality.ATTR_VALID,
+            )
+            self.push_archive_event(
+                "pointingDelays",
+                self._hw_pointing_delays,
+                event_time,
+                AttrQuality.ATTR_VALID,
+            )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -756,6 +745,24 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.LMCDaqTRL = value
         self.component_manager._lmc_daq_trl = value
+
+    @attribute(dtype=bool)
+    def OnWorkaround(self: SpsStation) -> bool:  # noqa: F811
+        """
+        Report the status of the OnWorkaroundFlag.
+
+        :return: Return the current status of the OnWorkaroundFlag.
+        """
+        return self.OnWorkaroundFlag
+
+    @OnWorkaround.write  # type: ignore[no-redef]
+    def OnWorkaround(self: SpsStation, value: bool) -> None:
+        """
+        Set the status of the OnWorkaroundFlag.
+
+        :param value: The new status of the OnWorkaroundFlag.
+        """
+        self.OnWorkaroundFlag = value
 
     @attribute(dtype=str)
     def BandpassdaqTRL(self: SpsStation) -> str:
@@ -1508,6 +1515,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return json.loads(
             self.component_manager._lmc_daq_proxy._proxy.getconfiguration()
         )["directory"]
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=512,  # Channels
+        max_dim_y=8,  # Antennas
+    )
+    def pointingDelays(self: SpsStation) -> np.ndarray:
+        """
+        Read the last pointing delays received from HW.
+
+        :return: the last pointing delays received from HW.
+        """
+        return self._hw_pointing_delays
 
     # -------------
     # Slow Commands

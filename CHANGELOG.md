@@ -4,6 +4,14 @@
 
 * [THORN-421] Remove deprecated command objects.
 
+## 11.4.0
+
+* [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.
+
+## 11.3.4
+
+* [THORN-444] Add Vulcan notebook workaround to SpsStation.On controllable via SpsStation DeviceProperty `OnWorkaroundFlag` or attribute `OnWorkaround`.
+
 ## 11.3.3
 
 * [THORN-466] Add temporary workaround for segfault (introduced after pytango update.)
@@ -24,6 +32,8 @@
 ## 11.3.1
 
 * [SKB-1200] Update subrack simulator to push slightly varying backplane temps in order to trigger health updates properly when cycling adminMode.
+
+* [SKB-1231] SPS cold start after power cut, remove reference to power marshaller in subrack
 
 ## 11.3.0
 

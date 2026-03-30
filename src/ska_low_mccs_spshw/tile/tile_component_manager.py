@@ -89,6 +89,7 @@ _ATTRIBUTE_MAP: Final = {
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
     "40G_PACKET_COUNT": "40g_packet_count",
+    "POINTING_DELAYS": "pointing_delays",
 }
 _POLL_THREAD_STARTUP_DELAY: Final[float] = 0.2
 
@@ -558,6 +559,12 @@ class TileComponentManager(
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_40g_packet_counts,
+                    publish=True,
+                )
+            case "POINTING_DELAYS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.get_all_pointing_delays,
                     publish=True,
                 )
             case _:
@@ -4710,3 +4717,23 @@ class TileComponentManager(
             raise_exception=True,
         ):
             return self.tile.read_all_live_calibration_coefficients()
+
+    def get_all_pointing_delays(
+        self: TileComponentManager,
+    ) -> np.ndarray:
+        """
+        Read pointing delays from the TPM for all beams.
+
+        :return: pointing delays for all beams as (8, 32) ndarray.
+        """
+        delays = []
+
+        for beam in range(8):
+            with acquire_timeout(
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
+
+        return np.array(delays)

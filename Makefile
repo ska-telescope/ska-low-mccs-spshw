@@ -32,6 +32,7 @@ include .make-uv/make/python-uv.mk
 # PYTHON_TEST_FILE = tests
 # PYTHON_VARS_BEFORE_PYTEST = timeout --foreground -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
 # PYTHON_VARS_BEFORE_K8S_PYTEST = timeout --foreground -k 120 -s INT 4800
+
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/
 
 python-lint: mypy

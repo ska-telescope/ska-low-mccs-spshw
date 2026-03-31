@@ -16,7 +16,13 @@ import threading
 from typing import Any, Final, Optional
 
 import ska_tango_base as stb
-from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from tango import AttrQuality, DevFailed
 from tango.server import attribute, device_property
@@ -432,7 +438,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.component_manager.set_subrack_fan_speed(
                 subrack_fan_id,
                 speed_percent,
-                task_callback=task_callback,
+                task_callback=None,
+            )
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "SetSubrackFanSpeed completed."),
             )
 
         return task
@@ -470,7 +480,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.component_manager.set_subrack_fan_mode(
                 fan_id,
                 FanMode(mode),
-                task_callback=task_callback,
+                task_callback=None,
+            )
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "SetSubrackFanMode completed."),
             )
 
         return task
@@ -502,7 +516,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.component_manager.set_power_supply_fan_speed(
                 power_supply_fan_id,
                 speed_percent,
-                task_callback=task_callback,
+                task_callback=None,
+            )
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "SetPowerSupplyFanSpeed completed."),
             )
 
         return task

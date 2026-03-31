@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-421] Remove deprecated command objects.
+* [SKB-1225] Add a unit test to check that when SpsStation.StartBeamformer is called that it reports FAILED if the composite command fails on any Tile.
 
 ## 11.4.0
 

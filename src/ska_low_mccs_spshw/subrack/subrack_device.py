@@ -434,10 +434,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            self._fan_speed_set(subrack_fan_id, speed_percent)
+            fan_id = int(subrack_fan_id)
+            speed = int(speed_percent)
+            self._fan_speed_set(fan_id, speed)
             self.component_manager.set_subrack_fan_speed(
-                subrack_fan_id,
-                speed_percent,
+                fan_id,
+                speed,
                 task_callback=None,
             )
             task_callback(
@@ -513,9 +515,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
+            fan_id = int(power_supply_fan_id)
+            speed = int(speed_percent)
             self.component_manager.set_power_supply_fan_speed(
-                power_supply_fan_id,
-                speed_percent,
+                fan_id,
+                speed,
                 task_callback=None,
             )
             task_callback(

@@ -1345,8 +1345,7 @@ class TestMccsTile:
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test that a boolean alarm does not leave the device
-        stuck in ALARM after power off.
+        Test that a bool alarm does not leave device stuck in ALARM after power off.
 
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

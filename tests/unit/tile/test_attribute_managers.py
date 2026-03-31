@@ -95,7 +95,6 @@ def alarm_on_high_bool_attribute_manager_fixture(
     )
 
 
-# pylint: disable=too-few-public-methods
 class TestAttributeManager:
     """Test the base `AttributeManager` behaviour."""
 

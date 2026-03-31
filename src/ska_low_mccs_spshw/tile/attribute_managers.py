@@ -95,6 +95,9 @@ class AttributeManager:
 
         if _is_none_type(val=new_value):
             # Move to invalid and require event!
+            if self._value is not None:
+                self._value = None
+                is_event_required = True
             if self._quality != tango.AttrQuality.ATTR_INVALID:
                 self._quality = tango.AttrQuality.ATTR_INVALID
                 is_event_required = True

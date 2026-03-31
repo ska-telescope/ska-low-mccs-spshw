@@ -149,6 +149,52 @@ class TaskCompleteWaiter(TaskCallbackType):
             return self._status == self._expected_status
 
 
+# pylint: disable=too-few-public-methods
+class DuplicateFilter(logging.Filter):
+    """Filters out repeating logs within a given time frame."""
+
+    def __init__(self, cooldown_time: float = 5) -> None:
+        """
+        Initiate a new filter to remove duplicate messages.
+
+        Limits how soon a log message can appear to the cooldown time
+
+        :param cooldown_time: the cooldown in seconds, defaults to 5
+        """
+        self.cooldown_time: float = cooldown_time
+        self._log_tracker: dict = {}
+        super().__init__()
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa A003
+        """
+        Filter out repetitive messages to reduce error spam.
+
+        The filter logic used to keep track of each log.
+        This checks the message to be logged, and if it has occurred before in the
+        cooldown time it skips logging it. Once the cooldown time it's over, it
+        prints out the log with the number of occurrences
+        and resets the log.
+
+        :param record: the error logs
+        :return: if it logs the error or not
+        """
+        current_time = time.time()
+        log_id = record.msg
+
+        if log_id in self._log_tracker:
+            count, start_time = self._log_tracker[log_id]
+            if current_time - start_time < self.cooldown_time:
+                self._log_tracker[log_id][0] += 1
+                return False
+
+            if count > 1:
+                record.msg = f"{record.msg} (Repeated {count} times in the last \
+                    {self.cooldown_time}s)"
+
+        self._log_tracker[log_id] = [0, current_time]
+        return True
+
+
 # pylint: disable=too-many-instance-attributes, too-many-lines, too-many-public-methods
 class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     """A component manager for a Tile (simulator or driver) and its power supply."""
@@ -184,6 +230,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         default_lock_timeout: float = 0.4,
         poll_timeout: float = 6.0,
         power_callback_timeout: float = 6.0,
+        logger_cooldown_time: float = 10,
     ) -> None:
         """
         Initialise a new instance.
@@ -205,6 +252,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             as temperatures and voltages, making for a nice demo but not
             so easy to test against.
         :param logger: a logger for this object to use
+        :param logger_cooldown_time: cooldown time for repeating logs
         :param poll_rate: the poll rate
         :param tile_id: the unique ID for the tile
         :param station_id: the unique ID for the station to which this tile belongs.
@@ -294,6 +342,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._power_callback_timeout: float = power_callback_timeout
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
+
+        duplicate_filter = DuplicateFilter(logger_cooldown_time)
+        logger.addFilter(duplicate_filter)
 
         # We track the last known connection status to
         # avoid unnecessary connection attempts.

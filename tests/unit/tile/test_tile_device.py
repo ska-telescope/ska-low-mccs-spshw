@@ -1337,6 +1337,76 @@ class TestMccsTile:
         )
         assert on_tile_device.state() == DevState.ALARM
 
+    def test_bool_alarm_clears_when_tile_powers_off(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that a bool alarm does not leave device stuck in ALARM after power off.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        on_tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        on_tile_device.subscribe_event(
+            "ppsPresent",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["pps_present"],
+        )
+        change_event_callbacks["pps_present"].assert_change_event(Anything)
+        assert (
+            on_tile_device.read_attribute("ppsPresent").quality
+            == AttrQuality.ATTR_VALID
+        )
+
+        tile_component_manager._update_communication_state(
+            CommunicationStatus.ESTABLISHED
+        )
+        set_nested_value(
+            tile_simulator._tile_health_structure,
+            ["timing", "pps", "status"],
+            False,
+        )
+
+        change_event_callbacks["pps_present"].assert_change_event(Anything)
+        assert (
+            on_tile_device.read_attribute("ppsPresent").quality
+            == AttrQuality.ATTR_ALARM
+        )
+        assert on_tile_device.state() == DevState.ALARM
+
+        tile_simulator.mock_off(lock=True)
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            PowerState.OFF,
+            EventType.CHANGE_EVENT,
+        )
+
+        change_event_callbacks["state"].assert_change_event(
+            DevState.OFF, lookahead=5, consume_nonmatches=True
+        )
+        assert (
+            on_tile_device.read_attribute("ppsPresent").quality
+            == AttrQuality.ATTR_INVALID
+        )
+        assert on_tile_device.state() == DevState.OFF
+
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [

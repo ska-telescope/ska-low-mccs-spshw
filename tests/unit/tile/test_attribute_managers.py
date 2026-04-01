@@ -95,7 +95,6 @@ def alarm_on_high_bool_attribute_manager_fixture(
     )
 
 
-# pylint: disable=too-few-public-methods
 class TestAttributeManager:
     """Test the base `AttributeManager` behaviour."""
 
@@ -131,6 +130,28 @@ class TestAttributeManager:
         post_change_event_callback.reset_mock()
         attribute_manager_with_converter.update(test_dictionary)
         post_change_event_callback.assert_not_called()
+
+    def test_mark_stale_clears_cached_value(
+        self: TestAttributeManager,
+        attribute_manager: AttributeManager,
+        post_change_event_callback: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test that marking an attribute stale clears its cached value.
+
+        :param attribute_manager: an `AttributeManager` instance.
+        :param post_change_event_callback: a fixture containing
+            a mock to be called on change.
+        """
+        attribute_manager.update(2)
+        post_change_event_callback.reset_mock()
+
+        attribute_manager.mark_stale()
+
+        assert attribute_manager.read() is None
+        post_change_event_callback.assert_called_once_with(
+            None, ANY, tango.AttrQuality.ATTR_INVALID
+        )
 
 
 class TestBoolAttributeManager:

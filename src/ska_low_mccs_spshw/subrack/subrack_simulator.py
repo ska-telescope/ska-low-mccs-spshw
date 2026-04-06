@@ -17,6 +17,8 @@ import time
 from collections.abc import Iterator
 from typing import Any, Callable, Final, Optional, TypedDict, cast
 
+import tango
+
 from .subrack_api import SubrackProtocol
 from .subrack_data import FanMode, SubrackData
 
@@ -375,12 +377,13 @@ class SubrackSimulator(SubrackProtocol):
             self._command_is_running = True
 
             def simulate_async_command() -> None:
-                if self._aborted_event.wait(self._command_duration):
-                    self._aborted_event.clear()
-                else:
-                    assert command_method is not None  # for the type checker
-                    command_method(argument)
-                self._command_is_running = False
+                with tango.EnsureOmniThread():
+                    if self._aborted_event.wait(self._command_duration):
+                        self._aborted_event.clear()
+                    else:
+                        assert command_method is not None  # for the type checker
+                        command_method(argument)
+                    self._command_is_running = False
 
             threading.Thread(target=simulate_async_command).start()
             return "STARTED"

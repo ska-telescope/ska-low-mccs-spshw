@@ -1400,6 +1400,7 @@ class TestMccsTile:
         )
 
         change_event_callbacks["pps_present"].assert_change_event(Anything)
+        time.sleep(1)  # Wait for attr to update.
         assert (
             on_tile_device.read_attribute("ppsPresent").quality
             == AttrQuality.ATTR_ALARM

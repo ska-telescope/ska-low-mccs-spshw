@@ -344,6 +344,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
     )
 
+    SetUpAntennaBuffer_SCHEMA: Final = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "ddr_start_byte_address": {"type": "integer", "minimum": 0},
+            "max_ddr_byte_size": {"type": "integer"},
+            "mode": {"type": "string"},
+        },
+    }
+
     # ---------------
     # Initialisation
     # ---------------
@@ -5442,13 +5452,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Commands
     # --------
 
-    @stb.long_running_commands.long_running_command
+    @command(dtype_in="DevString")
     @stb.validators.validate_json_args
     def Configure(
         self: MccsTile,
         antenna_ids: Optional[list[int]] = None,
         fixed_delays: Optional[list[float]] = None,
-    ) -> stb.type_hints.TaskFunctionType:
+    ) -> None:
         """
         Configure the tile device attributes.
 
@@ -5458,30 +5468,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             If not provided, all antennas will be configured.
         :param fixed_delays: list of fixed delay values to apply to each channel
             If not provided, no static delays will be applied.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
         """
 
-        def task(
-            task_callback: stb.type_hints.TaskCallbackType,
-            task_abort_event: threading.Event,
-        ) -> None:
-            task_callback(TaskStatus.IN_PROGRESS)
+        def apply_if_valid(attr: Any, default: Any) -> Any:
+            if isinstance(attr, type(default)):
+                return attr
+            return default
 
-            def apply_if_valid(attr: Any, default: Any) -> Any:
-                if isinstance(attr, type(default)):
-                    return attr
-                return default
-
-            self._antenna_ids = apply_if_valid(antenna_ids, self._antenna_ids)
-            self.component_manager.configure(
-                fixed_delays,
-                task_callback=task_callback,
-            )
-
-        return task
+        self._antenna_ids = apply_if_valid(antenna_ids, self._antenna_ids)
+        if fixed_delays is not None:
+            self.component_manager.set_static_delays(fixed_delays)
 
     @stb.long_running_commands.long_running_command
     def Initialise(self: MccsTile) -> stb.type_hints.TaskFunctionType:
@@ -7228,7 +7224,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return task
 
     @stb.long_running_commands.long_running_command
-    # @stb.long_running_commands.submit_lrc_task
     def ReadAntennaBuffer(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Read the data from the antenna buffer.

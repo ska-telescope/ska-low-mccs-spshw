@@ -1827,8 +1827,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @stb.validators.validate_json_args
     def RunTest(
         self: SpsStation,
-        count: int,
         test_name: str,
+        count: int = 1,
     ) -> stb.type_hints.TaskFunctionType:
         """
         Run a self-check test an optional amount of times.
@@ -1854,8 +1854,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_abort_event: threading.Event,
         ) -> None:
             return self.component_manager.run_test(
-                count,
-                test_name,
+                count=count,
+                test_name=test_name,
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,
             )

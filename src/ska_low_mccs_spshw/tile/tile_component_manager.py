@@ -363,8 +363,6 @@ class TileComponentManager(
         )
         self._request_provider.enqueue_lrc(request)
         self.logger.info(f"Request {command_name} QUEUED.")
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED)
         return ([ResultCode.QUEUED], ["Task staged"])
 
     def get_request(  # type: ignore[override]
@@ -957,26 +955,6 @@ class TileComponentManager(
         with self._initialise_lock:
             self._request_provider.enqueue_lrc(request, priority=0)
         return TaskStatus.QUEUED, "Task staged"
-
-    def configure(
-        self: TileComponentManager,
-        fixed_delays: Optional[list[float]] = None,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[list[ResultCode], list[str]]:
-        """
-        Configure the tile.
-
-        :param fixed_delays: A list of fixed delays to set on the tile, in nanoseconds.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a result code and a message.
-        """
-        if fixed_delays:
-            self.set_static_delays(fixed_delays)
-        if task_callback:
-            task_callback(status=TaskStatus.COMPLETED, result="Configure completed OK")
-
-        return ([ResultCode.OK], ["Configure completed OK"])
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

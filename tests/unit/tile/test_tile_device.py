@@ -44,6 +44,9 @@ from ska_low_mccs_spshw.tile import (
 from ska_low_mccs_spshw.tile.tile_poll_management import RequestIterator
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import (
+    assert_against_lrc_executing,
+    assert_against_lrc_finished,
+    assert_against_lrc_queued,
     execute_lrc_to_completion,
     get_lrc_finished,
     wait_for_completed_command_to_clear_from_queue,
@@ -2074,21 +2077,15 @@ class TestMccsTileCommands:
 
         assert task_status == TaskStatus.IN_PROGRESS
         assert command_name in command_id.split("_")[-1]
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        completed_task = get_lrc_finished(tile_device, command_id)
-        assert completed_task["status"] == "COMPLETED"
-        # change_event_callbacks["lrc_command"].assert_change_event(
-        #     (command_id, "STAGING")
-        # )
-        # change_event_callbacks["lrc_command"].assert_change_event(
-        #     (command_id, "QUEUED")
-        # )
-        # change_event_callbacks["lrc_command"].assert_change_event(
-        #     (command_id, "IN_PROGRESS")
-        # )
-        # change_event_callbacks["lrc_command"].assert_change_event(
-        #     (command_id, "COMPLETED")
-        # )
+
+        assert_against_lrc_queued(tile_device, command_id)
+        try:
+            assert_against_lrc_executing(tile_device, command_id, "IN_PROGRESS")
+        except TimeoutError:
+            # DownloadFirmware doesn't get this one.
+            pass
+
+        assert_against_lrc_finished(tile_device, command_id, "COMPLETED")
 
     def test_StartAcquisition(
         self: TestMccsTileCommands,

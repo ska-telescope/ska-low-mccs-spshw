@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -725,7 +724,6 @@ class SubrackDriver(
             self._command_tick = 0
         return poll_request
 
-    # pylint: disable=too-many-statements
     def poll(self: SubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:
         """
         Poll the hardware.
@@ -794,25 +792,6 @@ class SubrackDriver(
                 poll_response.add_command_response(
                     command, command_response["retvalue"]
                 )
-            elif (
-                command_response["status"]
-                == HardwareClientResponseStatusCodes.BUSY.name
-            ):
-                # Hardware rejected this command while busy with another command.
-                # Requeue it so we retry once the board reports command_completed.
-                command_arg = " ".join(str(arg) for arg in args)
-                callback = self._active_callback
-                with self._write_lock:
-                    retry_key = f"retry_{command}_{command_arg}"
-                    self._commands_to_execute[retry_key] = (
-                        command,
-                        command_arg,
-                        callback,
-                    )
-                    self._commands_to_execute.move_to_end(retry_key, last=False)
-
-                self._active_callback = None
-                self._board_is_busy = True
             else:
                 if self._active_callback is not None:
                     self._active_callback(status=TaskStatus.FAILED)

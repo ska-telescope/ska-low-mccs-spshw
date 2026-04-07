@@ -187,8 +187,123 @@ def get_lrc_finished(
         completed_task = json.loads(completed_task)
         if completed_task["uid"] == uid:
             return completed_task
-    pytest.fail(f"No LRC with {uid=} found in lrcfinished: {device_proxy.lrcfinished=}")
-    return {}  # Unreachable, but satisfies type checker
+    return {}
+
+
+def get_lrc_queued(
+    device_proxy: tango.DeviceProxy,
+    uid: str,
+) -> dict[str, Any]:
+    """
+    Return the queued LRC entry matching the given UID.
+
+    Asserts that an entry with the given UID exists in ``lrcQueue``.
+    The returned dict can be used to make further field-level assertions.
+
+    :param device_proxy: device proxy for use in the test.
+    :param uid: the UID of the LRC to look up.
+    :return: the parsed LRC queue entry.
+    """
+    for queued_task in device_proxy.lrcQueue:
+        queued_task = json.loads(queued_task)
+        if queued_task["uid"] == uid:
+            return queued_task
+    return {}
+
+
+def get_lrc_executing(
+    device_proxy: tango.DeviceProxy,
+    uid: str,
+) -> dict[str, Any]:
+    """
+    Return the executing LRC entry matching the given UID.
+
+    Asserts that an entry with the given UID exists in ``lrcExecuting``.
+    The returned dict can be used to make further field-level assertions.
+
+    :param device_proxy: device proxy for use in the test.
+    :param uid: the UID of the LRC to look up.
+    :return: the parsed LRC executing entry.
+    """
+    for executing_task in device_proxy.lrcExecuting:
+        executing_task = json.loads(executing_task)
+        if executing_task["uid"] == uid:
+            return executing_task
+    return {}
+
+
+def assert_against_lrc_queued(
+    device: tango.DeviceProxy, command_id: str, timeout: float = 10.0
+) -> None:
+    """
+    Wait for command to enter the queue.
+
+    :param device: the tango device to monitor.
+    :param command_id: The command_id to look for in the queue.
+    :param timeout: An optional time to wait in seconds.
+
+    :raises TimeoutError: When the command failed to enter the queue in time.
+    """
+    queued_task = get_lrc_queued(device, command_id)
+    start_time = time.time()
+    while not queued_task:
+        time.sleep(0.1)
+        queued_task = get_lrc_queued(device, command_id)
+        if time.time() - start_time > timeout:
+            raise TimeoutError(
+                f"LRC '{command_id}' not found in queue after {timeout} seconds"
+            )
+
+
+def assert_against_lrc_executing(
+    device: tango.DeviceProxy, command_id: str, status: str, timeout: float = 10.0
+) -> None:
+    """
+    Wait for command to start executing and assert against the status.
+
+    :param device: the tango device to monitor.
+    :param command_id: The command_id to look for in the queue.
+    :param status: The expected status of the command in the queue.
+    :param timeout: An optional time to wait in seconds.
+
+    :raises TimeoutError: When the command failed to enter the queue in time.
+    """
+    executing_task = get_lrc_executing(device, command_id)
+    start_time = time.time()
+    while not executing_task:
+        time.sleep(0.01)
+        executing_task = get_lrc_executing(device, command_id)
+        if time.time() - start_time > timeout:
+            raise TimeoutError(
+                f"LRC '{command_id}' not found in executing after {timeout} seconds"
+            )
+    if "progress" in executing_task:
+        assert executing_task["progress"] == status
+
+
+def assert_against_lrc_finished(
+    device: tango.DeviceProxy, command_id: str, status: str, timeout: float = 10.0
+) -> None:
+    """
+    Wait for command to finish and assert against the status.
+
+    :param device: the tango device to monitor.
+    :param command_id: The command_id to look for in the queue.
+    :param status: The expected status of the command in the queue.
+    :param timeout: An optional time to wait in seconds.
+
+    :raises TimeoutError: When the command failed to enter the queue in time.
+    """
+    completed_task = get_lrc_finished(device, command_id)
+    start_time = time.time()
+    while not completed_task:
+        time.sleep(0.1)
+        completed_task = get_lrc_finished(device, command_id)
+        if time.time() - start_time > timeout:
+            raise TimeoutError(
+                f"LRC '{command_id}' not found in completed after {timeout} seconds"
+            )
+    assert completed_task["status"] == status
 
 
 def execute_lrc_to_completion(

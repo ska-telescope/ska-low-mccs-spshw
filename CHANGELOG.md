@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-509] Fix MccsTile getting stuck in `DevState.ALARM` after a failed power-on sequence when the tile subsequently reported as off. The bug presented as a tile with status and tileProgrammingState indicating the device was off, polling reporting normal connection errors to an off tile, and all attribute qualities clear, while the device state remained ALARM until `Init()` was called. Root cause was stale cached values in `AttributeManager`: invalidating a boolean attribute changed its quality to `ATTR_INVALID` but left the previous cached `False` value in place, so `MccsTile.dev_state()` continued to force ALARM from that stale boolean state. The fix clears the cached attribute value when an attribute is invalidated, removing the stale boolean latch. Added a device-level regression test for powering off after a boolean alarm and a focused attribute-manager unit test covering stale invalidation behaviour.
+* [SKB-1225] Add a unit test to check that when SpsStation.StartBeamformer is called that it reports FAILED if the composite command fails on any Tile.
+
 ## 11.4.0
 
 * [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.
@@ -28,6 +33,8 @@
 ## 11.3.1
 
 * [SKB-1200] Update subrack simulator to push slightly varying backplane temps in order to trigger health updates properly when cycling adminMode.
+
+* [SKB-1231] SPS cold start after power cut, remove reference to power marshaller in subrack
 
 ## 11.3.0
 

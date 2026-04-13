@@ -3566,27 +3566,6 @@ class SpsStationComponentManager(
             assert proxy._proxy is not None  # for the type checker
             proxy._proxy.cspSpeadFormat = spead_format
 
-    # @check_communicating
-    # def set_channeliser_rounding(
-    #     self: SpsStationComponentManager,
-    #     channeliser_rounding: np.ndarray,
-    #     task_callback: Optional[Callable] = None,
-    # ) -> tuple[TaskStatus, str]:
-    #     """
-    #     Set the channeliserRounding in all Tiles.
-
-    #     :param channeliser_rounding: the number of LS bits dropped in
-    #         each channeliser frequency channel.
-    #     :param task_callback: Update task state, defaults to None
-
-    #     :return: a task status and response message
-    #     """
-    #     return self.submit_task(
-    #         self._set_channeliser_rounding,
-    #         args=[channeliser_rounding],
-    #         task_callback=task_callback,
-    #     )
-
     @check_communicating
     def set_channeliser_rounding(
         self: SpsStationComponentManager,

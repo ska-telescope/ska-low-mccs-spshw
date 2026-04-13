@@ -5894,8 +5894,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def SetLmcIntegratedDownload(
         self: MccsTile,
         mode: str,
-        channel_payload_length: int,
-        beam_payload_length: int,
+        channel_payload_length: int = 1024,
+        beam_payload_length: int = 1024,
         destination_ip: str = "10.0.10.1",
         source_port: int = 0xF0D0,
         destination_port: int = 4660,

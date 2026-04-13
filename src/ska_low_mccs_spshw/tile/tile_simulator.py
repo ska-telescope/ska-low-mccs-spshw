@@ -1078,6 +1078,7 @@ class TileSimulator:
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
+        self._adcs_enabled: bool = True
         self._tpm_temperature_thresholds = dict(self.TPM_TEMPERATURE_THRESHOLDS)
         self._is_cpld_connectable = True
         self._is_fpga1_connectable = True
@@ -1116,6 +1117,8 @@ class TileSimulator:
             i: False for i in range(TileData.ANTENNA_COUNT)
         }
         self._broadband_rfi_factor: float = 1.0
+        self._test_generator_delays: list[float] = list(self.STATIC_DELAYS)
+        self._csp_download_config: dict[str, Any] = {}
         # Pols*2 for cross pol terms. (Should it technically be **2?)
         self._staged_calibration_coefficients: list[list[list[complex]]] = np.zeros(
             (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA * 2), dtype=complex
@@ -1646,9 +1649,9 @@ class TileSimulator:
         )
         # save values to buffer attributes
         self._antenna_buffer_tile_attribute["mode"] = mode
-        self._antenna_buffer_tile_attribute[
-            "DDR_start_address"
-        ] = ddr_start_byte_address
+        self._antenna_buffer_tile_attribute["DDR_start_address"] = (
+            ddr_start_byte_address
+        )
         self._antenna_buffer_tile_attribute["max_DDR_byte_size"] = max_ddr_byte_size
         self._antenna_buffer_tile_attribute["set_up_complete"] = True
 
@@ -1738,9 +1741,9 @@ class TileSimulator:
 
         # Save values to buffer attributes for testing
         self._antenna_buffer_tile_attribute["start_time"] = start_time
-        self._antenna_buffer_tile_attribute[
-            "timestamp_capture_duration"
-        ] = timestamp_capture_duration
+        self._antenna_buffer_tile_attribute["timestamp_capture_duration"] = (
+            timestamp_capture_duration
+        )
         self._antenna_buffer_tile_attribute["continuous_mode"] = continuous_mode
         self._antenna_buffer_tile_attribute["read_antenna_buffer"] = False
         self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = False
@@ -2184,6 +2187,18 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
+    def enable_all_adcs(self: TileSimulator) -> None:
+        """Enable all simulated ADC channels."""
+        self._adcs_enabled = True
+
+    @check_mocked_overheating
+    @connected
+    def disable_all_adcs(self: TileSimulator) -> None:
+        """Disable all simulated ADC channels."""
+        self._adcs_enabled = False
+
+    @check_mocked_overheating
+    @connected
     def current_tile_beamformer_frame(self: TileSimulator) -> int:
         """:return: beamformer frame."""
         return self.get_fpga_timestamp()
@@ -2201,6 +2216,42 @@ class TileSimulator:
         if self.is_csp_write_successful:
             self.csp_rounding = rounding
         return self.is_csp_write_successful
+
+    @check_mocked_overheating
+    @connected
+    def set_csp_download(
+        self: TileSimulator,
+        src_port: int | None = None,
+        dst_ip_1: str | None = None,
+        dst_ip_2: str | None = None,
+        dst_port: int | None = None,
+        is_last: bool = False,
+        netmask: str | None = None,
+        gateway: str | None = None,
+    ) -> None:
+        """
+        Set CSP Destination.
+
+        Determines where station beams are sent on the Science Data Network.
+
+        :param src_port: Source port
+        :param dst_ip_1: Destination IP FPGA1
+        :param dst_ip_2: Destination IP FPGA2
+        :param dst_port: Destination port
+        :param is_last: True for last tile in beamforming chain
+        :param netmask: Netmask
+        :param gateway: Gateway IP
+        """
+        self._csp_download_config = {
+            "src_port": src_port or 4661,
+            "dst_ip_1": dst_ip_1,
+            "dst_ip_2": dst_ip_2,
+            "dst_port": dst_port or 4660,
+            "is_last": is_last,
+            "netmask": netmask,
+            "gateway": gateway,
+        }
+        self.logger.debug(f"Set CSP download config: {self._csp_download_config}")
 
     @check_mocked_overheating
     @connected
@@ -2372,9 +2423,9 @@ class TileSimulator:
 
         # Assign calibration coefficients for this antenna across all channels
         for channel in range(len(calibration_coefficients)):
-            self._staged_calibration_coefficients[channel][
-                antenna
-            ] = calibration_coefficients[channel]
+            self._staged_calibration_coefficients[channel][antenna] = (
+                calibration_coefficients[channel]
+            )
 
         self.logger.debug(
             f"Simulator received calibration coefficients for antenna {antenna}"
@@ -2795,6 +2846,26 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
+    def test_generator_set_delay(self: TileSimulator, delays: list[float]) -> None:
+        """
+        Set delay values for test generator channels.
+
+        :param delays: one delay value per ADC channel (32 entries).
+
+        :raises ValueError: if delays does not contain exactly 32 entries.
+        """
+        if len(delays) != 32:
+            raise ValueError("test_generator_set_delay expects exactly 32 delays")
+
+        self._test_generator_delays = list(delays)
+        for i in range(16):
+            self[f"fpga1.test_generator.delay_{i}"] = int(delays[i] / 1.25 + 0.5) + 128
+            self[f"fpga2.test_generator.delay_{i}"] = (
+                int(delays[i + 16] / 1.25 + 0.5) + 128
+            )
+
+    @check_mocked_overheating
+    @connected
     def get_fpga_timestamp(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
         """
         Get timestamp from FPGA.
@@ -2912,6 +2983,10 @@ class TileSimulator:
         self._start_polling_event.set()
         self._polling_thread.join()
 
+    def disconnect(self) -> None:
+        """Disconnect the simulator by executing cleanup logic."""
+        self.cleanup()
+
     @check_mocked_overheating
     @connected
     def get_arp_table(self: TileSimulator) -> dict[int, list[int]]:
@@ -2994,27 +3069,27 @@ class TileSimulator:
 
         if max_board_alarm_threshold is not None:
             if _is_less_than_50(max_board_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "board_alarm_threshold"
-                ] = max_board_alarm_threshold
+                self._tpm_temperature_thresholds["board_alarm_threshold"] = (
+                    max_board_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_board_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga1_alarm_threshold is not None:
             if _is_less_than_50(max_fpga1_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga1_alarm_threshold"
-                ] = max_fpga1_alarm_threshold
+                self._tpm_temperature_thresholds["fpga1_alarm_threshold"] = (
+                    max_fpga1_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga1_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga2_alarm_threshold is not None:
             if _is_less_than_50(max_fpga2_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga2_alarm_threshold"
-                ] = max_fpga2_alarm_threshold
+                self._tpm_temperature_thresholds["fpga2_alarm_threshold"] = (
+                    max_fpga2_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga2_alarm_threshold=} not larger than 50. Doing nothing"
@@ -3072,6 +3147,16 @@ class TileSimulator:
             "FPGA0": self._is_fpga1_connectable,
             "FPGA1": self._is_fpga2_connectable,
         }
+
+    @check_mocked_overheating
+    @connected
+    def set_phase_terminal_count(self: TileSimulator, value: int) -> None:
+        """
+        Set PPS phase terminal count.
+
+        :param value: phase terminal count to apply.
+        """
+        self._phase_terminal_count = value
 
     @check_mocked_overheating
     @connected

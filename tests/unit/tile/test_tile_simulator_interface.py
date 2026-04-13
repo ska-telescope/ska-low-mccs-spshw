@@ -38,7 +38,12 @@ METHODS_TO_OMIT = [
 
 
 def _build_flattened_api() -> dict[str, FunctionType]:
-    """Build the combined AavsTile + TileHealthMonitor method dict."""
+    """
+    Build the combined AavsTile + TileHealthMonitor method dict.
+
+    :returns: dict mapping method name to function object for all methods in
+        AavsTile and TileHealthMonitor.
+    """
     flattened: dict[str, FunctionType] = {}
     flattened.update(
         {
@@ -65,11 +70,11 @@ def _build_cm_called_tile_methods() -> set[str]:
 
     Why this exists:
     - The simulator contract we care about is MCCS behaviour, not full upstream
-      API parity.
+    API parity.
     - Building the requirement set from CM call sites makes the test enforce the
-      methods MCCS actually depends on.
+    methods MCCS actually depends on.
     - Using AST keeps this robust against comments/whitespace and avoids brittle
-      regex-only parsing.
+    regex-only parsing.
 
     Scope intentionally excluded from this extractor:
     - Property reads (e.g. ``self.tile.some_property``)

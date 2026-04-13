@@ -131,6 +131,13 @@ def daq_ready_to_receive_beam(
     )
     change_event_callbacks["data_received_callback"].assert_change_event(Anything)
 
+    daq_device.subscribe_event(
+        "xPolBandpass",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["daq_xPolBandpass"],
+    )
+    change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
+
 
 @given("MccsTile is routed to daq")
 def tile_ready_to_send_to_daq(
@@ -204,6 +211,7 @@ def check_capture_integrated(
     get_hdf5_count: Callable,
     initial_hdf5_count: int,
     station_name: str,
+    daq_device: tango.DeviceProxy,
 ) -> None:
     """
     Confirm Daq has received the correct data.
@@ -214,22 +222,27 @@ def check_capture_integrated(
     :param initial_hdf5_count: the initial number of hdf5 files in directory.
     :param get_hdf5_count: A callable to return the number of hdf5 files
         in a directory.
+    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
     """
-    try:
-        change_event_callbacks["data_received_callback"].assert_change_event(
-            ("integrated_channel", Anything)
-        )
-    except AssertionError:
-        if station_name == "stfc-ral-2":
-            pytest.xfail(
-                reason=(
-                    "There is a discrepancy between the simulator and hardware."
-                    " the hardware sends burst_channel."
-                )
+    daq_config = json.loads(daq_device.GetConfiguration())
+    if daq_config["bandpass"]:
+        change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
+    else:
+        try:
+            change_event_callbacks["data_received_callback"].assert_change_event(
+                ("integrated_channel", Anything)
             )
-        pytest.fail("No integrated data received.")
-    final_hdf5_count = get_hdf5_count()
-    assert final_hdf5_count - initial_hdf5_count >= 1
+        except AssertionError:
+            if station_name == "stfc-ral-2":
+                pytest.xfail(
+                    reason=(
+                        "There is a discrepancy between the simulator and hardware."
+                        " the hardware sends burst_channel."
+                    )
+                )
+            pytest.fail("No integrated data received.")
+        final_hdf5_count = get_hdf5_count()
+        assert final_hdf5_count - initial_hdf5_count >= 1
 
 
 @then(parsers.cfparse("Daq receives data CHANNEL_DATA"))

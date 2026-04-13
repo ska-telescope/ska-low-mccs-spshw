@@ -518,6 +518,7 @@ def station_send_data(
 @then("the DAQ reports that it has received integrated channel data")
 def daq_received_data(
     change_event_callbacks: MockTangoEventCallbackGroup,
+    daq_device: tango.DeviceProxy,
     tile_device: tango.DeviceProxy,
     station_name: str,
     station: tango.DeviceProxy,
@@ -525,18 +526,23 @@ def daq_received_data(
     """
     Confirm Daq has received data.
 
+    :param daq_device: A 'tango.DeviceProxy' to the daq device.
     :param station: A 'tango.DeviceProxy' to the Station device.
     :param station_name: the name of the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
-    try:
-        change_event_callbacks["data_received_callback"].assert_change_event(
-            ("integrated_channel", Anything)
-        )
-    except AssertionError:
-        pytest.fail("No integrated_channel data was received")
+    daq_config = json.loads(daq_device.GetConfiguration())
+    if daq_config["bandpass"]:
+        change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
+    else:
+        try:
+            change_event_callbacks["data_received_callback"].assert_change_event(
+                ("integrated_channel", Anything)
+            )
+        except AssertionError:
+            pytest.fail("No integrated_channel data was received")
 
 
 @then("the DAQ saves bandpass data to its relevant attributes")

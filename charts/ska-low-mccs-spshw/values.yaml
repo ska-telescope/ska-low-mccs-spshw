@@ -397,17 +397,17 @@ ska-tango-devices:
           cpu: 20m
           memory: 50Mi
       livenessProbe:
-        initialDelaySeconds: 0
+        initialDelaySeconds: 30
         periodSeconds: 10
         timeoutSeconds: 3
         successThreshold: 1
-        failureThreshold: 3
+        failureThreshold: 5
       readinessProbe:
-        initialDelaySeconds: 0
+        initialDelaySeconds: 30
         periodSeconds: 10
         timeoutSeconds: 3
         successThreshold: 1
-        failureThreshold: 3
+        failureThreshold: 5
 
   # deviceServers:
   #   spshw:

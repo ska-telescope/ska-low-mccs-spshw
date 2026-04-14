@@ -1102,7 +1102,7 @@ class TileSimulator:
             "current_channel": 0,
         }
         self._rfi_count = np.zeros(
-            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
+            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=np.int32
         )
         self._antenna_buffer_tile_attribute: dict[str, Any] = {
             "DDR_start_address": 0,

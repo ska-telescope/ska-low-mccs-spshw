@@ -37,6 +37,7 @@ from ska_control_model import (
     TestMode,
 )
 from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.software_bus import AttrSignal, NoValue, attribute_from_signal
 from tango.server import attribute, command, device_property
 
 from .attribute_converters import (
@@ -148,6 +149,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
     InitCommand = None  # type: ignore[assignment]
+
+    # -------
+    # Signals
+    # -------
+    board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+
     # -----------------
     # Device Properties
     # -----------------
@@ -601,7 +608,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ),
             "core_communication": "coreCommunicationStatus",
             "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
-            "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
             "antenna_buffer_mode": "antennaBufferMode",
             "data_transmission_mode": "dataTransmissionMode",
@@ -727,12 +733,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "tileProgrammingState": AttributeManager(
                     functools.partial(self.post_change_event, "tileProgrammingState"),
                     initial_value=TpmStatus.UNKNOWN.pretty_name(),
-                ),
-                "boardTemperature": AttributeManager(
-                    functools.partial(self.post_change_event, "boardTemperature"),
-                    alarm_handler=functools.partial(
-                        self.shutdown_on_max_alarm, "boardTemperature"
-                    ),
                 ),
                 "fpga1Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga1Temperature"),
@@ -1329,6 +1329,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         exc,
                         exc_info=True,
                     )
+            self.board_temperature_signal = NoValue
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(
@@ -1358,9 +1359,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information[
-                "firmware_configuration_status"
-            ] = self.db_configuration_fault[1]
+            self.status_information["firmware_configuration_status"] = (
+                self.db_configuration_fault[1]
+            )
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault
@@ -1431,6 +1432,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if mark_invalid:
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
+                elif attribute_name == "boardTemperature":
+                    self.board_temperature_signal = NoValue
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1449,6 +1452,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             try:
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].update(attribute_value)
+                elif attribute_name == "boardTemperature":
+                    self.board_temperature_signal = (
+                        attribute_value if attribute_value is not None else NoValue
+                    )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
             except Exception as e:  # pylint: disable=broad-except
@@ -1488,7 +1495,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if not self._stopping:
             try:
                 attr = self.get_device_attr().get_attr_by_name(attr_name)
-                attr_value = self._attribute_state[attr_name].read()
+                attr_mgr = self._attribute_state.get(attr_name)
+                attr_value = attr_mgr.read() if attr_mgr is not None else "N/A"
                 if attr.is_max_alarm():
                     self.logger.warning(
                         f"Attribute {attr_name} changed to {attr_value}, "
@@ -1501,6 +1509,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     "Shutting down TPM."
                 )
                 self.component_manager.off()
+
+    def notify_emission(self: MccsTile, signal: str, value: Any) -> None:
+        """
+        Handle signal emissions, pushing tango events and checking alarms.
+
+        Overrides the base class to trigger alarm checking for signal-based
+        attributes after their tango events have been pushed.
+
+        :param signal: the absolute name of the signal that was emitted
+        :param value: the emitted value
+        """
+        super().notify_emission(signal, value)
+        if signal == MccsTile.board_temperature_signal._absolute_name_for(self):
+            self.shutdown_on_max_alarm("boardTemperature")
 
     def post_change_event(
         self: MccsTile,
@@ -1577,7 +1599,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    @attribute(
+    boardTemperature: attribute_from_signal = attribute_from_signal(
+        board_temperature_signal,
         dtype="DevDouble",
         abs_change=0.1,
         archive_abs_change=0.1,
@@ -1587,16 +1610,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=70.0,
         min_warning=16.0,
         max_warning=65.0,
+        doc="Board temperature in degrees Celsius.",
     )
-    def boardTemperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the board temperature.
-
-        :return: the board temperature
-        """
-        return self._attribute_state["boardTemperature"].read()
 
     @attribute(
         dtype=(("DevShort",),),

@@ -1487,19 +1487,23 @@ class TestMccsTile:
         """
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
-        with pytest.raises(DevFailed) as excinfo:
+        try:
             _ = getattr(tile_device, attribute)
-
-        assert (
-            "Communication with component is not established" in str(excinfo.value)
-            or f"Read value for attribute {attribute} has not been updated"
-            in str(excinfo.value)
-            or (
-                "To execute this command we must be in state "
-                "'Initialised' or 'Synchronised'!"
+            # signal-based attributes return a default value with ATTR_INVALID
+            # quality before the device has received any data
+            attr_data = tile_device.read_attribute(attribute)
+            assert attr_data.quality == AttrQuality.ATTR_INVALID
+        except DevFailed as excinfo:
+            assert (
+                "Communication with component is not established" in str(excinfo)
+                or f"Read value for attribute {attribute} has not been updated"
+                in str(excinfo)
+                or (
+                    "To execute this command we must be in state "
+                    "'Initialised' or 'Synchronised'!"
+                )
+                in str(excinfo)
             )
-            in str(excinfo.value)
-        )
 
         tile_device.subscribe_event(
             "state",
@@ -1531,7 +1535,13 @@ class TestMccsTile:
                     initial_value = np.array(initial_value)
                     assert (getattr(tile_device, attribute) == initial_value).all()
                     break
-                assert getattr(tile_device, attribute) == initial_value
+                current_value = getattr(tile_device, attribute)
+                if current_value is None:
+                    # signal-based attributes return None for ATTR_INVALID quality
+                    # before the first value has been pushed; retry
+                    time.sleep(0.5)
+                    continue
+                assert current_value == initial_value
                 break
             except tango.DevFailed as excinfo2:
                 time.sleep(1)

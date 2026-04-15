@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 11.4.1
 
 * [THORN-526] Add better error logging and result message for SpsStation.On()/Initialise()
 * [THORN-526] Fix ensure_tpms_on() workaround

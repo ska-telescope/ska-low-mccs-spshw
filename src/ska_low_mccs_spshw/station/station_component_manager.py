@@ -1492,7 +1492,7 @@ class SpsStationComponentManager(
         if result_code != ResultCode.OK and self._on_workaround_flag:
             self.logger.info("Using On bruteforce workaround (timeout=3min).")
             try:
-                ensure_tpms_on(list(self._tile_proxies.values()))
+                ensure_tpms_on(list(proxy._proxy._device for proxy in self._tile_proxies.values()))
                 result_code = ResultCode.OK
                 failure_step = ""
                 message = "On Command Completed"

@@ -1515,9 +1515,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map[
-            "fpga1.pps_manager.sync_time_val"
-        ] = mocked_sync_time
+        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
+            mocked_sync_time
+        )
 
         # Assert values have been updated.
         assert tile_component_manager.pps_delay == tile_simulator._pps_delay
@@ -2779,7 +2779,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check that a raised exception is caught and returns FAILED.
         tile_simulator.set_csp_download.side_effect = Exception("Mocked exception")
         result = tile_component_manager.set_csp_download(**mocked_input_params)
-        assert result[0] == ResultCode.FAILED
+        assert result[0] == [ResultCode.FAILED]
 
     def test_arp_table(
         self: TestStaticSimulator,

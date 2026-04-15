@@ -1492,7 +1492,13 @@ class SpsStationComponentManager(
         if result_code != ResultCode.OK and self._on_workaround_flag:
             self.logger.info("Using On bruteforce workaround (timeout=3min).")
             try:
-                ensure_tpms_on(list(proxy._proxy._device for proxy in self._tile_proxies.values()))
+                ensure_tpms_on(
+                    list(
+                        proxy._proxy._device
+                        for proxy in self._tile_proxies.values()
+                        if proxy._proxy is not None
+                    )
+                )
                 result_code = ResultCode.OK
                 failure_step = ""
                 message = "On Command Completed"
@@ -1629,7 +1635,7 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code = self._route_data(
+            result_code, failure_step = self._route_data(
                 start_bandpasses,
                 task_callback,
                 task_abort_event,

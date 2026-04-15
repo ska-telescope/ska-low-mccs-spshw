@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
-from typing import Any, Callable, Final, NoReturn, Optional
+from typing import Any, Callable, Final, NoReturn, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -154,6 +154,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Signals
     # -------
     board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+
+    # Maps each signal-backed attribute that needs alarm shutdown handling
+    # to its Tango attribute name. Extend this when migrating more attributes
+    # to AttrSignal so that notify_emission picks them up automatically.
+    _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
+        board_temperature_signal: "boardTemperature",
+    }
 
     # -----------------
     # Device Properties
@@ -462,6 +469,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             that is not callable.
         """
         self._stopping = False
+        # Pre-compute absolute signal names for alarm handling in notify_emission.
+        self._alarm_signal_map: dict[str, str] = {
+            sig._absolute_name_for(self): tango_attr_name
+            for sig, tango_attr_name in MccsTile._ALARM_SIGNAL_ATTRIBUTES.items()
+        }
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
@@ -1359,9 +1371,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information["firmware_configuration_status"] = (
-                self.db_configuration_fault[1]
-            )
+            self.status_information[
+                "firmware_configuration_status"
+            ] = self.db_configuration_fault[1]
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault
@@ -1454,7 +1466,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._attribute_state[attribute_name].update(attribute_value)
                 elif attribute_name == "boardTemperature":
                     self.board_temperature_signal = (
-                        attribute_value if attribute_value is not None else NoValue
+                        cast(float, attribute_value)
+                        if attribute_value is not None
+                        else NoValue
                     )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
@@ -1521,8 +1535,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param value: the emitted value
         """
         super().notify_emission(signal, value)
-        if signal == MccsTile.board_temperature_signal._absolute_name_for(self):
-            self.shutdown_on_max_alarm("boardTemperature")
+        if value is NoValue or signal not in self._alarm_signal_map:
+            return
+        tango_attr_name = self._alarm_signal_map[signal]
+        # on_emission only calls push_change_event; set_value + check_alarm are
+        # needed so that Tango's internal alarm state (is_max_alarm()) is updated,
+        # mirroring what post_change_event does for AttributeManager-backed attrs.
+        try:
+            self.get_device_attr().get_attr_by_name(tango_attr_name).set_value(
+                cast(float, value)
+            )
+            self.get_device_attr().check_alarm(tango_attr_name)
+        except tango.DevFailed:
+            pass
+        self.shutdown_on_max_alarm(tango_attr_name)
 
     def post_change_event(
         self: MccsTile,
@@ -1599,7 +1625,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    boardTemperature: attribute_from_signal = attribute_from_signal(
+    boardTemperature = attribute_from_signal(  # noqa: N815
         board_temperature_signal,
         dtype="DevDouble",
         abs_change=0.1,

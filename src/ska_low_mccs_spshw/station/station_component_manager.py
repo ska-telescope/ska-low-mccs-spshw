@@ -1354,7 +1354,16 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code, _ = self._turn_on_subracks(task_callback, task_abort_event)
+            result_code, message = self._turn_on_subracks(
+                task_callback, task_abort_event
+            )
+        if result_code != ResultCode.OK:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(result_code, f"Failed to turn on subracks: {message}"),
+                )
+                return
         self.logger.debug("Subracks now on")
         self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
         with self._power_state_lock:
@@ -1697,12 +1706,16 @@ class SpsStationComponentManager(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
             ):
-                results = []
+                results = {}
                 for proxy in self._subrack_proxies.values():
-                    result_code = proxy.on()
-                    results.append(result_code)
-                if ResultCode.FAILED in results:
-                    return ResultCode.FAILED, "subrack failed to power on"
+                    results[proxy._name] = proxy.on()
+                failed = [
+                    name for name, rc in results.items() if rc == ResultCode.FAILED
+                ]
+                if failed:
+                    msg = f"subracks failed to power on: {failed}"
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
         # wait for subracks to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -1735,15 +1748,22 @@ class SpsStationComponentManager(
                 power_state == PowerState.ON
                 for power_state in self._tile_power_states.values()
             ):
-                results = []
+                results = {}
                 for proxy in self._tile_proxies.values():
-                    assert proxy._proxy is not None
+                    if proxy._proxy is None:
+                        msg = f"tile proxy {proxy} not formed"
+                        self.logger.error(msg)
+                        return ResultCode.FAILED, msg
                     self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
-                    result_code = proxy.on()
+                    results[proxy._proxy.name()] = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
-                    results.append(result_code)
-                if TaskStatus.FAILED in results:
-                    return ResultCode.FAILED, "tile failed to power on"
+                failed = [
+                    name for name, rc in results.items() if rc == TaskStatus.FAILED
+                ]
+                if failed:
+                    msg = f"tiles failed to power on: {failed}"
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -2074,6 +2094,8 @@ class SpsStationComponentManager(
             else:
                 return ResultCode.OK, ""
 
+        # Loop over tiles, comparing tile n FPGA0, FPGA1 reference time to tile 1 FPGA0
+        # reference time, if they differ we add the to the erorr message.
         ref_time = result[0]
         not_synced = {
             trl: result[2 * i : 2 * i + 2]

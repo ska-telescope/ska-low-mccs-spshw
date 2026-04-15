@@ -557,26 +557,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         port_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Turn a pdu port on.
-
-        :param port_number: the port number
-            each channeliser frequency channel.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._power_pdu_port_on,
-            args=[port_number],
-            task_callback=task_callback,
-        )
-
-    def _power_pdu_port_on(
-        self: SubrackComponentManager,
-        port_number: int,
-        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
@@ -596,26 +576,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     @check_communicating
     def power_pdu_port_off(
-        self: SubrackComponentManager,
-        port_number: int,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Turn a pdu port off.
-
-        :param port_number: the port number
-            each channeliser frequency channel.
-        :param task_callback: Update task state, defaults to None
-
-        :return: a task status and response message
-        """
-        return self.submit_task(
-            self._power_pdu_port_off,
-            args=[port_number],
-            task_callback=task_callback,
-        )
-
-    def _power_pdu_port_off(
         self: SubrackComponentManager,
         port_number: int,
         task_callback: Optional[Callable] = None,
@@ -690,24 +650,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def schedule_on(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Schedule self on.
-
-        :param task_callback: callback to be called when the status of
-            the command changes
-
-        :return: the task status and a human-readable status message
-        """
-        return self.submit_task(
-            self._schedule_on,
-            args=[],
-            task_callback=task_callback,
-        )
-
-    def _schedule_on(
-        self: SubrackComponentManager,
-        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
@@ -731,24 +673,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             )
 
     def schedule_off(
-        self: SubrackComponentManager,
-        task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
-        """
-        Turn self off.
-
-        :param task_callback: callback to be called when the status of
-            the command changes
-
-        :return: the task status and a human-readable status message
-        """
-        return self.submit_task(
-            self._schedule_off,
-            args=[],
-            task_callback=task_callback,
-        )
-
-    def _schedule_off(
         self: SubrackComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,

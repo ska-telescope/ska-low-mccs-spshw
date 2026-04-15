@@ -28,5 +28,5 @@ helm_values:
           ParentTRL: ""
   # image:
   #   registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-  #   tag: 10.2.0-dirty
+  #   tag: 11.3.3-dirty
 

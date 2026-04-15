@@ -15,14 +15,15 @@ import importlib
 import ipaddress
 import itertools
 import json
-import logging
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
+import ska_tango_base as stb
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -33,12 +34,10 @@ from ska_control_model import (
 )
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
-from ska_tango_base.commands import FastCommand, JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango import AttrQuality
 from tango.server import attribute, command, device_property
 
-from ..version import version_info
 from .station_component_manager import SpsStationComponentManager
 from .station_health_model import SpsStationHealthModel
 from .station_obs_state_model import SpsStationObsStateModel
@@ -76,6 +75,8 @@ def engineering_mode_required(func: Callable) -> Callable:
 # pylint: disable=too-many-instance-attributes, too-many-ancestors
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
+
+    InitCommand = None  # type: ignore[assignment]
 
     DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
     DEFAULT_CSP_DST_PORT: Final = 4660
@@ -133,7 +134,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
-        self._data_received_result: Optional[tuple[str, str]] = ("", "")
+        self._data_received_result: tuple[str, str] = ("", "")
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
@@ -149,6 +150,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         }
         super().init_device()
 
+        self._is_calibrated = False
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
@@ -174,6 +176,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+        self.init_completed()
 
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
@@ -192,6 +195,25 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_thresholds | self._health_model.health_params
         )
         self.set_change_event("healthState", True, False)
+        self.set_change_event("xPolBandpass", True, False)
+        self.set_change_event("yPolBandpass", True, False)
+        self.set_change_event("antennaInfo", True, False)
+        self.set_change_event("ppsDelaySpread", True, False)
+        self.set_change_event("tileProgrammingState", True, False)
+        self.set_change_event("adcPower", True, False)
+        self.set_change_event("dataReceivedResult", True, False)
+        self.set_change_event("beamformerTable", True, False)
+        self.set_change_event("beamformerRegions", True, False)
+
+        self.set_archive_event("xPolBandpass", False)
+        self.set_archive_event("yPolBandpass", False)
+        self.set_archive_event("antennaInfo", True, True)
+        self.set_archive_event("tileProgrammingState", True, True)
+        self.set_archive_event("adcPower", True, True)
+        self.set_archive_event("dataReceivedResult", True, True)
+        self.set_archive_event("ppsDelaySpread", True, True)
+        self.set_archive_event("beamformerTable", True, True)
+        self.set_archive_event("beamformerRegions", True, True)
 
         # pylint: disable=attribute-defined-outside-init
         self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
@@ -230,197 +252,66 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             event_serialiser=self._event_serialiser,
         )
 
-    def init_command_objects(self: SpsStation) -> None:
-        """Set up the handler objects for Commands."""
-        super().init_command_objects()
-
-        #
-        # Long running commands
-        #
-
-        run_test_schema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "type": "object",
-            "properties": {
-                "test_name": {"type": "string"},
-                "count": {"type": "integer"},
-            },
-            "required": ["test_name"],
-        }
-
-        acquire_correlator_data_schema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "type": "object",
-            "properties": {
-                "first_channel": {"type": "integer", "minimum": 1, "maximum": 512},
-                "last_channel": {"type": "integer", "minimum": 1, "maximum": 512},
-                "start_time": {"type": "string"},
-                "nof_samples": {"type": "integer"},
-                "daq_mode": {"type": "string", "enum": ["xGPU", "TCC"]},
-            },
-            "required": ["first_channel", "last_channel"],
-        }
-
-        trigger_adc_equalisation_schema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "type": "object",
-            "properties": {
-                "target_adc": {"type": "number", "minimum": 0},
-                "bias": {"type": "number", "minimum": -32, "maximum": 32},
-            },
-            "required": [],
-        }
-
-        start_beamformer_schema: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.station",
-                "SpsStation_StartBeamformer.json",
-            )
+    ReInitialise_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.station",
+            "SpsStation_Initialise.json",
         )
+    )
 
-        stop_beamformer_for_channels_schema: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.station",
-                "SpsStation_StopBeamformerForChannels.json",
-            )
+    AcquireDataForCalibration_SCHEMA: Final = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "first_channel": {"type": "integer", "minimum": 1, "maximum": 512},
+            "last_channel": {"type": "integer", "minimum": 1, "maximum": 512},
+            "start_time": {"type": "string"},
+            "nof_samples": {"type": "integer"},
+            "daq_mode": {"type": "string", "enum": ["xGPU", "TCC"]},
+        },
+        "required": ["first_channel", "last_channel"],
+    }
+
+    TriggerAdcEqualisation_SCHEMA: Final = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "target_adc": {"type": "number", "minimum": 0},
+            "bias": {"type": "number", "minimum": -32, "maximum": 32},
+        },
+        "required": [],
+    }
+
+    RunTest_SCHEMA: Final = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "test_name": {"type": "string"},
+            "count": {"type": "integer"},
+        },
+        "required": ["test_name"],
+    }
+
+    StartBeamformer_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.station",
+            "SpsStation_StartBeamformer.json",
         )
+    )
 
-        initialise_schema: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.station",
-                "SpsStation_Initialise.json",
-            )
+    StopBeamformerForChannels_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.station",
+            "SpsStation_StopBeamformerForChannels.json",
         )
+    )
 
-        for command_name, method_name, schema in [
-            ("Initialise", "initialise", None),
-            ("ReInitialise", "initialise", initialise_schema),
-            ("StartAcquisition", "start_acquisition", None),
-            (
-                "AcquireDataForCalibration",
-                "acquire_data_for_calibration",
-                acquire_correlator_data_schema,
-            ),
-            (
-                "ConfigureStationForCalibration",
-                "configure_station_for_calibration",
-                None,
-            ),
-            (
-                "TriggerAdcEqualisation",
-                "trigger_adc_equalisation",
-                trigger_adc_equalisation_schema,
-            ),
-            (
-                "LoadCalibrationCoefficientsForChannels",
-                "load_calibration_coefficients_for_channels",
-                None,
-            ),
-            ("SetChanneliserRounding", "set_channeliser_rounding", None),
-            ("SelfCheck", "self_check", None),
-            ("RunTest", "run_test", run_test_schema),
-            ("StartBeamformer", "start_beamformer", start_beamformer_schema),
-            ("StopBeamformer", "stop_beamformer", None),
-            (
-                "StopBeamformerForChannels",
-                "stop_beamformer_for_channels",
-                stop_beamformer_for_channels_schema,
-            ),
-        ]:
-            validator = (
-                None
-                if schema is None
-                else JsonValidator(
-                    command_name,
-                    schema,
-                    logger=self.logger,
-                )
-            )
-
-            self.register_command_object(
-                command_name,
-                SubmittedSlowCommand(
-                    command_name,
-                    self._command_tracker,
-                    self.component_manager,
-                    method_name,
-                    callback=None,
-                    logger=self.logger,
-                    validator=validator,
-                ),
-            )
-        # Fast commands
-        for command_name, command_object in [
-            ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
-        ]:
-            self.register_command_object(
-                command_name, command_object(self.component_manager, self.logger)
-            )
-
-    class InitCommand(SKAObsDevice.InitCommand):
-        """
-        A class for :py:class:`~.SpsStation`'s Init command.
-
-        The :py:meth:`~.SpsStation.InitCommand.do` method below is
-        called upon :py:class:`~.SpsStation`'s initialisation.
-        """
-
-        def do(
-            self: SpsStation.InitCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Initialise the :py:class:`.SpsStation`.
-
-            :param args: positional args to the component manager method
-            :param kwargs: keyword args to the component manager method
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._device._is_calibrated = False
-            self._device._is_programmed = False
-            self._device._test_generator_active = False
-            self._device._is_beamformer_running = False
-            self._device._current_beamformer_table = [[0] * 7] * 48
-            self._device._desired_beamformer_table = [[0] * 7] * 48
-
-            self._device._build_state = ",".join(
-                [
-                    version_info["name"],
-                    version_info["version"],
-                    version_info["description"],
-                ]
-            )
-            self._device._version_id = version_info["version"]
-
-            self._device.set_change_event("xPolBandpass", True, False)
-            self._device.set_change_event("yPolBandpass", True, False)
-            self._device.set_change_event("antennaInfo", True, False)
-            self._device.set_change_event("ppsDelaySpread", True, False)
-            self._device.set_change_event("tileProgrammingState", True, False)
-            self._device.set_change_event("adcPower", True, False)
-            self._device.set_change_event("dataReceivedResult", True, False)
-            self._device.set_change_event("beamformerTable", True, False)
-            self._device.set_change_event("beamformerRegions", True, False)
-            self._device.set_change_event("pointingDelays", True, False)
-
-            self._device.set_archive_event("xPolBandpass", False)
-            self._device.set_archive_event("yPolBandpass", False)
-            self._device.set_archive_event("antennaInfo", True, True)
-            self._device.set_archive_event("tileProgrammingState", True, True)
-            self._device.set_archive_event("adcPower", True, True)
-            self._device.set_archive_event("dataReceivedResult", True, True)
-            self._device.set_archive_event("ppsDelaySpread", True, True)
-            self._device.set_archive_event("beamformerTable", True, True)
-            self._device.set_archive_event("beamformerRegions", True, True)
-            self._device.set_archive_event("pointingDelays", True, False)
-
-            super().do()
-
-            return (ResultCode.OK, "Initialisation complete")
+    BeamformerRunningForChannels_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.station",
+            "SpsStation_BeamformerRunningForChannels.json",
+        )
+    )
 
     def _setup_health_rollup(
         self: SpsStation,
@@ -609,7 +500,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.push_archive_event("adcPower", self._adc_power)
 
         if state_change.get("dataReceivedResult") is not None:
-            self._data_received_result = state_change.get("dataReceivedResult")
+            self._data_received_result = state_change.get("dataReceivedResult", "")
             self.push_change_event("dataReceivedResult", self._data_received_result)
             self.push_archive_event("dataReceivedResult", self._data_received_result)
 
@@ -1642,10 +1533,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # Slow Commands
     # -------------
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    def Initialise(self: SpsStation) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    def Initialise(
+        self: SpsStation,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Initialise the station.
 
@@ -1656,24 +1547,38 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
-        """  # noqa: E501
-        handler = self.get_command_object("Initialise")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        """  # noqa: E501, D202
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    def ReInitialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.initialise(
+                task_callback=task_callback, task_abort_event=task_abort_event
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
+    def ReInitialise(
+        self: SpsStation,
+        start_bandpasses: Optional[bool] = None,
+        global_reference_time: Optional[str] = None,
+    ) -> stb.type_hints.TaskFunctionType:
         """
-        Initialise the station with overridable defaults.
+        Reinitialise the station with overridable defaults.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
 
-        :param argin: A json-ified dictionary adhering to the initialise schema:
+        A json string adhering to the initialise schema:
+
+        :param start_bandpasses: whether to start the bandpasses after initialisation
+            defaults to true
+        :param global_reference_time: the global synchronization time, in ISO9660 format
+            or "" to use current time, defaults to ""
 
         .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/station/SpsStation_Initialise.json
             :language: json
@@ -1681,15 +1586,25 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
-        """  # noqa: E501
-        handler = self.get_command_object("ReInitialise")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        """  # noqa: E501, D202
 
-    @command(dtype_in=("DevLong",), dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.initialise(
+                start_bandpasses,
+                global_reference_time,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def SetChanneliserRounding(
-        self: SpsStation, channeliser_rounding: ndarray
-    ) -> DevVarLongStringArrayType:
+        self: SpsStation, channeliser_rounding: list[int]
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Set the ChanneliserRounding to all Tiles in this Station.
 
@@ -1707,21 +1622,31 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> dp = tango.DeviceProxy("low-mccs/station/aavs3")
             >>> dp.command_inout("SetChanneliserRounding", np.array([2]*512))
         """
-        handler = self.get_command_object("SetChanneliserRounding")
-        (return_code, message) = handler(channeliser_rounding)
-        return ([return_code], [message])
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    def StartAcquisition(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.set_channeliser_rounding(
+                channeliser_rounding,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
+    def StartAcquisition(
+        self: SpsStation, start_time: Optional[str] = None, delay: Optional[int] = None
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Start the acquisition synchronously for all tiles, checks for synchronisation.
 
         If a start time isn't given, it will default to 'now'.
 
-        :param argin: Start acquisition time in ISO9601 format
+        :param start_time: Start acquisition time in ISO9601 format
+        :param delay: Optional delay in seconds before starting acquisition
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
@@ -1729,22 +1654,45 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("StartAcquisition", "20230101T12:34:55.000Z")
         """
-        handler = self.get_command_object("StartAcquisition")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.start_acquisition(
+                start_time,
+                delay,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    # pylint: disable=too-many-arguments
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
     def AcquireDataForCalibration(
-        self: SpsStation, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: SpsStation,
+        first_channel: int,
+        last_channel: int,
+        start_time: str | None = None,
+        daq_mode: str = "TCC",
+        nof_samples: int = 1835008,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Start acquiring data for calibration.
 
-        :param argin: json-ified dictionary containing the keys first_channel
-            and last_channel
+        A JSON string containing the keys:
+
+        :param first_channel: the first channel to acquire, in the range 0-511
+        :param last_channel: the last channel to acquire, in the range 0-511
+        :param start_time: optional start acquisition time in ISO9601 format
+            defaults to 'now'
+        :param daq_mode: the DAQ mode to use for acquisition, either "TCC" or "DSS"
+            defaults to "TCC"
+        :param nof_samples: the number of samples to acquire
+            defaults to 1835008 (corresponding to 1 subband of data at 8kHz resolution)
+
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
@@ -1753,18 +1701,32 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> argin = json.dumps({"first_channel": 64, "last_channel": 448})
             >>> dp.command_inout("AcquireDataForCalibration", argin)
         """
-        handler = self.get_command_object("AcquireDataForCalibration")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray", dtype_in="DevString")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.acquire_data_for_calibration(
+                first_channel,
+                last_channel,
+                start_time,
+                daq_mode,
+                nof_samples,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def ConfigureStationForCalibration(
-        self: SpsStation, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: SpsStation,
+        daq_config: str,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Configure the station for calibration.
 
-        :param argin: a JSON-ified dictionary containing optional additions/overrides to
+        :param daq_config: a JSON string containing optional additions/overrides to
             default DAQ configuration.
 
         :return: A tuple containing a return code and a string message indicating
@@ -1775,31 +1737,43 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> json_arg = json.dumps({"description" : "Calibration data for s8-2"})
             >>> dp.command_inout("ConfigureStationForCalibration", json_arg)
         """
-        handler = self.get_command_object("ConfigureStationForCalibration")
-        (return_code, message) = handler(**json.loads(argin))
-        return ([return_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray", dtype_in="DevString")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.configure_station_for_calibration(
+                **json.loads(daq_config),
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
     def TriggerAdcEqualisation(
-        self: SpsStation, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: SpsStation,
+        target_adc: float = 17.0,
+        bias: float = 0.0,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Get the equalised ADC values.
 
         Getting the equalised values takes up to 20 seconds (to get an average to
         avoid spikes). So we trigger the collection and publish to dbmPowers
 
-        :param argin: a JSON-ified dictionary containing:
+        A JSON string containing:
 
-            - target_adc: the expected average power received by antennas in ADU units.
-                Has an input minimum of 0, but in code its limited to 4.2e-7
-                (corresponds to the maxiumum output of 31.75 dB). There is no maximum
-                value, however, 40 ADUs will result in 0 dB with no bias and 1600 ADUs
-                will result in 0 dB with the maxiumum bias allowed of 32dB.
-                Defaults to 17.
-            - bias: user specifed bias in dB added to the antenna preadu levels.
-                Bias input value rounded as part of value sanitation and as a result
-                it increases in steps of 0.25. Ranges from -32 to 32 with default 0.
+        :param target_adc: the expected average power received by antennas in ADU units.
+            Has an input minimum of 0, but in code its limited to 4.2e-7
+            (corresponds to the maxiumum output of 31.75 dB). There is no maximum
+            value, however, 40 ADUs will result in 0 dB with no bias and 1600 ADUs
+            will result in 0 dB with the maxiumum bias allowed of 32dB.
+            Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+            Bias input value rounded as part of value sanitation and as a result
+            it increases in steps of 0.25. Ranges from -32 to 32 with default 0.
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
@@ -1809,15 +1783,23 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> json_arg = json.dumps({"target_adc" : "18"})
             >>> dp.command_inout("TriggerAdcEqualisation", json_arg)
         """
-        handler = self.get_command_object("TriggerAdcEqualisation")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.trigger_adc_equalisation(
+                target_adc=target_adc,
+                bias=bias,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
 
     @engineering_mode_required
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    def SelfCheck(self: SpsStation) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    def SelfCheck(self: SpsStation) -> stb.type_hints.TaskFunctionType:
         """
         Run all the self-check tests once.
 
@@ -1828,21 +1810,36 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> dp = tango.DeviceProxy("low-mccs/spsstation/aavs3")
             >>> dp.SelfCheck()
         """
-        handler = self.get_command_object("SelfCheck")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.self_check(
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
 
     @engineering_mode_required
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    def RunTest(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
+    def RunTest(
+        self: SpsStation,
+        test_name: str,
+        count: int = 1,
+    ) -> stb.type_hints.TaskFunctionType:
         """
-        Run a self-check test and optional amount of times.
+        Run a self-check test an optional amount of times.
 
-        :param argin: json-ified args, containing a required 'test_name', and optional
+        A json-string containing a required 'test_name', and optional
             'count'
+
+        :param test_name: the name of the test to run,
+            should be one of the available tests in testList attribute.
+        :param count: the number of times to run the test,
+            defaults to 1 if not specified.
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
@@ -1851,19 +1848,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> dp = tango.DeviceProxy("low-mccs/spsstation/aavs3")
             >>> dp.RunTest(json.dumps({"test_name" : "my_test", "count" : 5}))
         """
-        test_name = json.loads(argin)["test_name"]
-        if test_name not in self.component_manager.test_list:
-            return (
-                [ResultCode.REJECTED],
-                [
-                    f"{test_name} not in available tests: "
-                    f"{self.component_manager.test_list}"
-                ],
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.run_test(
+                count=count,
+                test_name=test_name,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
             )
 
-        handler = self.get_command_object("RunTest")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        return task
 
     @command(
         dtype_in="DevString",
@@ -1884,10 +1881,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
 
         return self.component_manager.describe_test(test_name)
-
-    # -------------
-    # Fast Commands
-    # -------------
 
     @command(dtype_out="DevVarLongStringArray")
     def UpdateStaticDelays(self: SpsStation) -> DevVarLongStringArrayType:
@@ -2263,13 +2256,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         return ([ResultCode.OK], ["LoadCalibrationCoefficients command completed OK"])
 
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
+    @stb.long_running_commands.long_running_command
     def LoadCalibrationCoefficientsForChannels(
-        self: SpsStation, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+        self: SpsStation, calibration_coefficients: list[float]
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Load the calibration coefficients, but does not apply them.
 
@@ -2277,7 +2267,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         The calibration coefficients may include any rotation
         matrix (e.g. the parallactic angle), but do not include the geometric delay.
 
-        :param argin: list comprises:
+        :param calibration_coefficients: list comprises:
 
         * first_channel - (int) is the first channel in the block of channels
             to which the coefficients will be applied.
@@ -2303,7 +2293,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :raises ValueError: if parameters are illegal or inconsistent
 
         :example:
 
@@ -2318,19 +2307,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("LoadCalibrationCoefficientsForChannels", input)
         """
-        if len(argin) < 2047:
-            self.logger.error("Insufficient calibration coefficients")
-            raise ValueError("Insufficient calibration coefficients")
-        if len(argin) % 2048 != 1:
-            self.logger.error(
-                "Incomplete specification of coefficient. "
-                "Needs 8 values (4 complex Jones) per channel per antenna"
-            )
-            raise ValueError("Incomplete specification of coefficient")
 
-        handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.load_calibration_coefficients_for_channels(
+                calibration_coefficients,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
 
     @command(
         dtype_in="DevString",
@@ -2397,9 +2385,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self.component_manager.load_pointing_delays(argin)
         return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
-        # handler = self.get_command_object("LoadPointingDelays")
-        # (return_code, message) = handler(argin)
-        # return ([return_code], [message])
 
     @command(
         dtype_in="DevString",
@@ -2423,23 +2408,27 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.apply_pointing_delays(argin)
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    def StartBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
+    def StartBeamformer(
+        self: SpsStation,
+        start_time: Optional[str] = None,
+        duration: int = -1,
+        channel_groups: Optional[list[int]] = None,
+        scan_id: int = 0,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Start the beamformer at the specified time delay.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-        * start_time - (str, ISO UTC time) start time
-        * duration - (int) if > 0 is a duration in seconds
+        :param start_time: (str, ISO UTC time) start time
+        :param duration: (int) if > 0 is a duration in seconds
                if < 0 run forever
-        * channel_groups - (list(int)) : list of channel groups to be started
+        :param channel_groups: (list(int)) : list of channel groups to be started
                Command affects only beamformed channels for given groups
                Default: all channels
-        * scan_id - (int) The unique ID for the started scan. Default 0
+        :param scan_id: (int) The unique ID for the started scan. Default 0
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2452,14 +2441,24 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartBeamformer", jstr)
         """
-        handler = self.get_command_object("StartBeamformer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    def StopBeamformer(self: SpsStation) -> DevVarLongStringArrayType:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.start_beamformer(
+                start_time,
+                duration,
+                channel_groups,
+                scan_id,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    def StopBeamformer(self: SpsStation) -> stb.type_hints.TaskFunctionType:
         """
         Stop the beamformer for all channel groups.
 
@@ -2472,23 +2471,31 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopBeamformer")
         """
-        handler = self.get_command_object("StopBeamformer")
-        (return_code, message) = handler()
-        return ([return_code], [message])
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.stop_beamformer(
+                channel_groups=None,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
     def StopBeamformerForChannels(
-        self: SpsStation, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: SpsStation,
+        channel_groups: Optional[list[int]] = None,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Stop the beamformer for given channel groups.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-        * channel_groups - (list(int)) : list of channel groups to be started
+        :param channel_groups: (list(int)) : list of channel groups to be started
             Command affects only beamformed channels for given groups
             Default: all channels
 
@@ -2501,11 +2508,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"channel_groups": [0,1,4] }
         >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("StopBeamformerForChannels", dict)
+        >>> dp.command_inout("StopBeamformerForChannels", jstr)
         """
-        handler = self.get_command_object("StopBeamformerForChannels")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.stop_beamformer_for_channels(
+                channel_groups=channel_groups,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
 
     @command(
         dtype_in="DevString",
@@ -2768,68 +2784,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # -------------
     # Fast commands
     # -------------
-    class BeamformerRunningCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class to handle BeamformerRunningForChannels command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/station/SpsStation_BeamformerRunningForChannels.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.station",
-                "SpsStation_BeamformerRunningForChannels.json",
-            )
-        )
-
-        def __init__(
-            self: SpsStation.BeamformerRunningCommand,
-            component_manager: SpsStationComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new BeamformerRunningCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "BeamformerRunningForChannels", self.SCHEMA, logger
-            )
-            super().__init__(logger, validator)
-
-        def do(
-            self: SpsStation.BeamformerRunningCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> bool:
-            """
-            Implement :py:meth:`.SpsStation.BeamformerRunningForChannels` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: whether the beamformer is running in the specified
-            """
-            channel_groups = kwargs.get("channel_groups", None)
-            return self._component_manager.beamformer_running_for_channels(
-                channel_groups
-            )
-
     @command(dtype_in="DevString", dtype_out="DevBoolean")
-    def BeamformerRunningForChannels(self: SpsStation, argin: str) -> bool:
+    @stb.validators.validate_json_args
+    def BeamformerRunningForChannels(
+        self: SpsStation, channel_groups: list[int] | None = None
+    ) -> bool:
         """
         Check whether the beamformer is running for the given channel groups.
 
-        :param argin: json dictionary with optional keywords:
+        :param channel_groups: list of channel groups to check.
+            If None, check all channel groups.
 
         * channel_groups - (list) List of channel groups
 
@@ -2842,9 +2806,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> running = dp.command_inout("BeamformerRunningForChannels", jstr)
         """
-        handler = self.get_command_object("BeamformerRunningForChannels")
-        return_code = handler(argin)
-        return return_code
+        return self.component_manager.beamformer_running_for_channels(
+            channel_groups=channel_groups
+        )
 
 
 # ----------

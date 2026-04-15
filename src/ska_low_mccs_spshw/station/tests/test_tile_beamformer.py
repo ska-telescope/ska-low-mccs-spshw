@@ -310,7 +310,7 @@ class TestTileBeamformer(BaseDaqTest):
     def _reset(self: TestTileBeamformer) -> None:
         self.component_manager.start_adcs()
         self._reset_tpm_calibration()
-        self.component_manager._stop_beamformer(None)
+        self.component_manager.stop_beamformer(None)
         self._disable_test_generator()
         super()._reset()
 
@@ -318,7 +318,7 @@ class TestTileBeamformer(BaseDaqTest):
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
         test_channels = range(8)  # Test 8 channels
-        self.component_manager._set_channeliser_rounding(
+        self.component_manager.set_channeliser_rounding(
             np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
         )
         self.component_manager.stop_adcs()
@@ -327,7 +327,7 @@ class TestTileBeamformer(BaseDaqTest):
         start_time = datetime.strftime(
             datetime.fromtimestamp(int(time.time()) + 5), TileTime.RFC_FORMAT
         )
-        self.component_manager._start_beamformer(
+        self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )
         time.sleep(5)

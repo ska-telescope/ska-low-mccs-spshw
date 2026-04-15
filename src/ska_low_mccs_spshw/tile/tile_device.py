@@ -6,12 +6,12 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements the MCCS Tile device."""
+# pylint: disable=too-many-arguments
 from __future__ import annotations
 
 import functools
 import importlib  # allow forward references in type hints
 import json
-import logging
 import os.path
 import re
 import sys
@@ -21,9 +21,10 @@ from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
-from typing import Any, Callable, Final, NoReturn
+from typing import Any, Callable, Final, NoReturn, Optional
 
 import numpy as np
+import ska_tango_base as stb
 import tango
 from ska_control_model import (
     AdminMode,
@@ -32,16 +33,10 @@ from ska_control_model import (
     PowerState,
     ResultCode,
     SimulationMode,
+    TaskStatus,
     TestMode,
 )
 from ska_low_mccs_common import MccsBaseDevice
-from ska_tango_base.base import CommandTracker
-from ska_tango_base.commands import (
-    DeviceInitCommand,
-    FastCommand,
-    JsonValidator,
-    SubmittedSlowCommand,
-)
 from tango.server import attribute, command, device_property
 
 from .attribute_converters import (
@@ -152,6 +147,7 @@ class TileAttribute:
 class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
+    InitCommand = None  # type: ignore[assignment]
     # -----------------
     # Device Properties
     # -----------------
@@ -235,6 +231,129 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         default_value=True,
     )
 
+    # The CommandName_SCHEMA naming scheme relies on an implementation detail
+    # so we also specify them in the decorator for clarity.
+    WriteRegister_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_WriteRegister.json",
+        )
+    )
+
+    Configure40GCore_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_Configure40gCore.json",
+        )
+    )
+
+    Get40GCoreConfiguration_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_Get40gCoreConfiguration.json",
+        )
+    )
+
+    SetLmcDownload_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_SetLmcDownload.json",
+        )
+    )
+
+    SetLmcIntegratedDownload_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_SetLmcIntegratedDownload.json",
+        )
+    )
+
+    SetCspDownload_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_SetCspDownload.json",
+        )
+    )
+
+    ConfigureStationBeamformer_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ConfigureStationBeamformer.json",
+        )
+    )
+
+    BeamformerRunning_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_BeamformerRunningForChannels.json",
+        )
+    )
+
+    StartBeamformer_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_StartBeamformer.json",
+        )
+    )
+
+    StopBeamformer_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_StopBeamformer.json",
+        )
+    )
+
+    ConfigureIntegratedChannelData_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ConfigureIntegratedChannelData.json",
+        )
+    )
+
+    ConfigureIntegratedBeamData_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ConfigureIntegratedBeamData.json",
+        )
+    )
+
+    SendDataSamples_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile", "MccsTile_SendDataSamples.json"
+        )
+    )
+
+    StartAcquisition_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_StartAcquisition.json",
+        )
+    )
+
+    ConfigureTestGenerator_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ConfigureTestGenerator.json",
+        )
+    )
+
+    ConfigurePatternGenerator_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ConfigurePatternGenerator.json",
+        )
+    )
+
+    SetUpAntennaBuffer_SCHEMA: Final = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "ddr_start_byte_address": {"type": "integer", "minimum": 0},
+            "max_ddr_byte_size": {"type": "integer"},
+            "mode": {"type": "string"},
+        },
+    }
+
     # ---------------
     # Initialisation
     # ---------------
@@ -255,7 +374,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
-        self._antenna_ids: list[int]
+        self._antenna_ids: list[int] = []
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
         self._stopping: bool
@@ -282,6 +401,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "alarms": HealthState.UNKNOWN,
         }
         self._intermediate_attrs: dict[str, list[str]]
+        self._csp_destination_ip = ""
+        self._csp_destination_mac = ""
+        self._csp_destination_port = 0
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -857,7 +979,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 continue
             self._intermediate_attrs[path[0]].append(attr.lower())
 
-        super().init_device()
+        super().init_device()  # Must be before we try to use the logger.
 
         self.db_firmware_thresholds = FirmwareThresholds()
         self.hw_firmware_thresholds = FirmwareThresholds()
@@ -909,6 +1031,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ]:
             self.set_change_event(attr_name, True, self.VerifyEvents)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
+        self.init_completed()
 
     def _health_changed_new(
         self: MccsTile, health: HealthState, health_report: str
@@ -1034,199 +1157,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._communication_state_changed,
             self._component_state_changed,
             self._update_attribute_callback,
-            # self._tile_device_state_callback,
             event_serialiser=self._event_serialiser,
             default_lock_timeout=self.DefaultLockTimeout,
             poll_timeout=self.PollLockTimeout,
             power_callback_timeout=self.PowerCallbackLockTimeout,
         )
-
-    def init_command_objects(self: MccsTile) -> None:
-        """Set up the handler objects for Commands."""
-        super().init_command_objects()
-
-        for command_name, command_object in [
-            ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
-            ("EvaluateTileProgrammingState", self.EvaluateTileProgrammingStateCommand),
-            ("GetRegisterList", self.GetRegisterListCommand),
-            ("ReadRegister", self.ReadRegisterCommand),
-            ("WriteRegister", self.WriteRegisterCommand),
-            ("ReadAddress", self.ReadAddressCommand),
-            ("WriteAddress", self.WriteAddressCommand),
-            ("Configure40GCore", self.Configure40GCoreCommand),
-            ("Get40GCoreConfiguration", self.Get40GCoreConfigurationCommand),
-            ("GetArpTable", self.GetArpTableCommand),
-            ("SetAttributeThresholds", self.SetAttributeThresholdsCommand),
-            ("SetLmcDownload", self.SetLmcDownloadCommand),
-            ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
-            ("SetCspDownload", self.SetCspDownloadCommand),
-            ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
-            ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
-            ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
-            ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
-            (
-                "LoadCalibrationCoefficientsForChannels",
-                self.LoadCalibrationCoefficientsForChannelsCommand,
-            ),
-            ("ApplyCalibration", self.ApplyCalibrationCommand),
-            ("LoadPointingDelays", self.LoadPointingDelaysCommand),
-            ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
-            (
-                "ConfigureIntegratedChannelData",
-                self.ConfigureIntegratedChannelDataCommand,
-            ),
-            ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
-            ("StopIntegratedData", self.StopIntegratedDataCommand),
-            ("SendDataSamples", self.SendDataSamplesCommand),
-            ("StopDataTransmission", self.StopDataTransmissionCommand),
-            ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
-            ("ConfigurePatternGenerator", self.ConfigurePatternGeneratorCommand),
-            ("StartPatternGenerator", self.StartPatternGeneratorCommand),
-            ("StopPatternGenerator", self.StopPatternGeneratorCommand),
-            ("StartADCs", self.StartAdcsCommand),
-            ("StopADCs", self.StopAdcsCommand),
-            ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
-            ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
-            ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
-            ("StopAntennaBuffer", self.StopAntennaBufferCommand),
-            ("EnableBroadbandRfiBlanking", self.EnableBroadbandRfiBlankingCommand),
-            ("DisableBroadbandRfiBlanking", self.DisableBroadbandRfiBlankingCommand),
-            ("SetBroadbandRfiFactor", self.SetBroadbandRfiFactorCommand),
-            ("ReadBroadbandRfi", self.ReadBroadbandRfiCommand),
-            ("MaxBroadbandRfi", self.MaxBroadbandRfiCommand),
-            ("ClearBroadbandRfi", self.ClearBroadbandRfiCommand),
-        ]:
-            self.register_command_object(
-                command_name, command_object(self.component_manager, self.logger)
-            )
-        #
-        # Long running commands
-        #
-
-        start_beamformer_schema: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_StartBeamformer.json",
-            )
-        )
-
-        stop_beamformer_schema: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_StopBeamformer.json",
-            )
-        )
-
-        for command_name, method_name, schema in [
-            ("Initialise", "initialise", None),
-            ("DownloadFirmware", "download_firmware", None),
-            ("ReadAntennaBuffer", "read_antenna_buffer", None),
-            ("StartAntennaBuffer", "start_antenna_buffer", None),
-            ("Configure", "configure", None),
-            ("StartBeamformer", "start_beamformer", start_beamformer_schema),
-            ("StopBeamformer", "stop_beamformer", stop_beamformer_schema),
-        ]:
-            validator = (
-                None
-                if schema is None
-                else JsonValidator(
-                    command_name,
-                    schema,
-                    logger=self.logger,
-                )
-            )
-            self.register_command_object(
-                command_name,
-                SubmittedSlowCommand(
-                    command_name,
-                    self._command_tracker,
-                    self.component_manager,
-                    method_name,
-                    callback=None,
-                    logger=self.logger,
-                    validator=validator,
-                ),
-            )
-
-        self.register_command_object(
-            "StartAcquisition",
-            MccsTile.StartAcquisitionCommand(
-                self._command_tracker,
-                self.component_manager,
-                callback=None,
-                logger=self.logger,
-            ),
-        )
-        self.register_command_object(
-            command_name="UpdateThresholdCache",
-            command_object=MccsTile.UpdateThresholdCacheCommand(
-                device=self,
-                component_manager=self.component_manager,
-                logger=self.logger,
-            ),
-        )
-
-    class InitCommand(DeviceInitCommand):
-        """Class that implements device initialisation for the MCCS Tile device."""
-
-        def do(
-            self: MccsTile.InitCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Initialise the attributes and properties of the MCCS Tile device.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            assert (
-                not args and not kwargs
-            ), f"do method has unexpected arguments {args}, {kwargs}"
-            self._device._health_state = HealthState.UNKNOWN
-
-            self._device._csp_destination_ip = ""
-            self._device._csp_destination_mac = ""
-            self._device._csp_destination_port = 0
-            self._device._antenna_ids = []
-            return (ResultCode.OK, "Init command completed OK")
-
-    # class OnCommand(SKABaseDevice):
-    #     """
-    #     A class for the MccsTile's On() command.
-
-    #     This class overrides the SKABaseDevice OnCommand to allow for an
-    #     eventual consistency semantics. For example it is okay to call
-    #     On() before the subrack is on; this device will happily wait for
-    #     the subrack to come on, then tell it to turn on its TPM. This
-    #     change of semantics requires an override because the
-    #     SKABaseDevice OnCommand only allows On() to be run when in OFF
-    #     state.
-    #     """
-
-    #     def do(  # type: ignore[override]
-    #         self: MccsTile.OnCommand,
-    #     ) -> tuple[ResultCode, str]:
-    #         """
-    #         Stateless hook for On() command functionality.
-
-    #         :return: A tuple containing a return code and a string
-    #             message indicating status. The message is for
-    #             information purpose only.
-    #         """
-    #         # It's fine to complete this long-running command here
-    #         # (returning ResultCode.OK), even though the component manager
-    #         # may not actually be finished turning everything on.
-    #         # The completion of the original On command to MccsController
-    #         # is waiting for the various power mode callbacks to be received
-    #         # rather than completion of the various long-running commands.
-    #         _ = self.target.on()
-    #         message = "Tile On command completed OK"
-    #         return (ResultCode.OK, message)
 
     # ----------
     # Callbacks
@@ -1264,6 +1199,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.push_change_event(group_attribute_map[group], serialised_value)
             self.push_archive_event(group_attribute_map[group], serialised_value)
 
+    # pylint: disable=too-many-branches
     def _check_database_match(self: MccsTile) -> bool:
         """
         Compare firmware thresholds from the database against read values.
@@ -1315,6 +1251,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if attribute_name == "tile_health_structure":
                 if mark_invalid:
                     self.tile_health_structure = {}
+                elif attribute_value is None:
+                    pass
                 else:
                     merge(self.tile_health_structure, attribute_value)
                 if not self.UseAttributesForHealth:
@@ -3400,7 +3338,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.TestConfig
 
-    # pylint: disable=arguments-differ
     @testMode.write  # type: ignore[no-redef]
     def testMode(self: MccsTile, value: int) -> None:
         """
@@ -5516,28 +5453,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # --------
 
     @command(dtype_in="DevString")
-    def Configure(self: MccsTile, argin: str) -> None:
+    @stb.validators.validate_json_args
+    def Configure(
+        self: MccsTile,
+        antenna_ids: Optional[list[int]] = None,
+        fixed_delays: Optional[list[float]] = None,
+    ) -> None:
         """
         Configure the tile device attributes.
 
-        :param argin: the configuration for the device in stringified json format
-        """
-        config = json.loads(argin)
+        A json string with the keywords:
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Any:
-            value = config.get(attribute_name)
-            if isinstance(value, type(default)):
-                return value
+        :param antenna_ids: list of antenna ids to configure, indexed from 1.
+            If not provided, all antennas will be configured.
+        :param fixed_delays: list of fixed delay values to apply to each channel
+            If not provided, no static delays will be applied.
+        """
+
+        def apply_if_valid(attr: Any, default: Any) -> Any:
+            if isinstance(attr, type(default)):
+                return attr
             return default
 
-        static_delays = config.get("fixed_delays")
-        if static_delays:
-            self.component_manager.set_static_delays(static_delays)
+        self._antenna_ids = apply_if_valid(antenna_ids, self._antenna_ids)
+        if fixed_delays is not None:
+            self.component_manager.set_static_delays(fixed_delays)
 
-        self._antenna_ids = apply_if_valid("antenna_ids", self._antenna_ids)
-
-    @command(dtype_out="DevVarLongStringArray")
-    def Initialise(self: MccsTile) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    def Initialise(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Perform all required initialisation.
 
@@ -5555,57 +5498,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("Initialise")
         """
-        handler = self.get_command_object("Initialise")
-        (return_code, unique_id) = handler()
-        return ([return_code], [unique_id])
 
-    class UpdateThresholdCacheCommand(FastCommand):
-        """Class for handling the UpdateThresholdCacheCommand() command."""
-
-        def __init__(
-            self: MccsTile.UpdateThresholdCacheCommand,
-            device: MccsTile,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
         ) -> None:
-            """
-            Initialise a new UpdateThresholdCacheCommand instance.
-
-            :param device: the device this command belongs.
-            :param component_manager: the device component manager
-                to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._device = device
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.UpdateThresholdCacheCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> bool:
-            """
-            Implement :py:meth:`.MccsTile.UpdateThresholdCache` command.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: True if the firmware thresholds in the
-                database match the thresholds read from firmware.
-            """
-            # Update db firmware threshold cache from database.
-            self._device.firmware_threshold_db_interface.resync_with_db()
-
-            # Update hw firmware threshold cache from read.
-            self._device.hw_firmware_thresholds = (
-                self._component_manager.read_firmware_thresholds()
+            self.component_manager.initialise(
+                task_callback=task_callback,
             )
-            self._device._handle_firmware_read()
-            is_match: bool = self._device._check_database_match()
-            return is_match
+
+        return task
 
     @command(dtype_out="DevBoolean", fisallowed="is_engineering")
     def UpdateThresholdCache(self: MccsTile) -> bool:
@@ -5621,43 +5523,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: True if the database matches the firmware, False otherwise.
         """
-        handler = self.get_command_object("UpdateThresholdCache")
-        return handler()
+        self.logger.warning(
+            "UpdateThresholdCache command is deprecated, it has "
+            "been put in to alleviate potential issues with ADR-115 "
+            "firmware threshold work, in the case of bugs."
+        )
+        # Update db firmware threshold cache from database.
+        self.firmware_threshold_db_interface.resync_with_db()
 
-    class EvaluateTileProgrammingStateCommand(FastCommand):
-        """Class for handling the EvaluateTileProgrammingStateCommand() command."""
-
-        def __init__(
-            self: MccsTile.EvaluateTileProgrammingStateCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new EvaluateTileProgrammingStateCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.EvaluateTileProgrammingStateCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> bool:
-            """
-            Implement :py:meth:`.MccsTile.EvaluateTileProgrammingState` command.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: True if the re-evaluated TpmStatus differs from the
-                automated evaluation.
-            """
-            return self._component_manager.reevaluate_tpm_status()
+        # Update hw firmware threshold cache from read.
+        self.hw_firmware_thresholds = self.component_manager.read_firmware_thresholds()
+        self._handle_firmware_read()
+        is_match: bool = self._check_database_match()
+        return is_match
 
     @command(dtype_out="DevBoolean", fisallowed="is_engineering")
     def EvaluateTileProgrammingState(self: MccsTile) -> bool:
@@ -5672,42 +5550,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: True is the re-evaluation of TpmStatus returns a different value.
         """
-        handler = self.get_command_object("EvaluateTileProgrammingState")
-        return handler()
-
-    class GetFirmwareAvailableCommand(FastCommand):
-        """Class for handling the GetFirmwareAvailable() command."""
-
-        def __init__(
-            self: MccsTile.GetFirmwareAvailableCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new GetFirmwareAvailableCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.GetFirmwareAvailableCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> str:
-            """
-            Implement :py:meth:`.MccsTile.GetFirmwareAvailable` command functionality.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: json encoded string containing list of dictionaries
-            """
-            return json.dumps(self._component_manager.firmware_available)
+        return self.component_manager.reevaluate_tpm_status()
 
     @command(dtype_out="DevString", fisallowed="_is_programmed")
     def GetFirmwareAvailable(self: MccsTile) -> str:
@@ -5734,11 +5577,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "firmware3": {"design": "model3", "major": 2, "minor": 6},
             }
         """
-        handler = self.get_command_object("GetFirmwareAvailable")
-        return handler()
+        return json.dumps(self.component_manager.firmware_available)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def DownloadFirmware(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    def DownloadFirmware(self: MccsTile, argin: str) -> stb.type_hints.TaskFunctionType:
         """
         Download the firmware contained in bitfile to all FPGAs on the board.
 
@@ -5758,47 +5600,23 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("DownloadFirmware", "/tmp/firmware/bitfile")
         """
-        if os.path.isfile(argin):
-            handler = self.get_command_object("DownloadFirmware")
-            (return_code, unique_id) = handler(argin)
-            return ([return_code], [unique_id])
-        return ([ResultCode.FAILED], [f"{argin} doesn't exist"])
 
-    class GetRegisterListCommand(FastCommand):
-        """Class for handling the GetRegisterList() command."""
-
-        def __init__(
-            self: MccsTile.GetRegisterListCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
         ) -> None:
-            """
-            Initialise a new GetRegisterListCommand instance.
+            if not os.path.isfile(argin):
+                self.logger.error(f"Bitfile: `{argin}` doesn't exist")
+                task_callback(TaskStatus.FAILED, result=f"{argin} doesn't exist")
+                return
+            self.component_manager.download_firmware(
+                argin,
+                task_callback=task_callback,
+            )
 
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
+        return task
 
-        def do(
-            self: MccsTile.GetRegisterListCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> list[str]:
-            """
-            Implement :py:meth:`.MccsTile.GetRegisterList` command functionality.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: a list of firmware & cpld registers
-            """
-            return self._component_manager.register_list
-
-    @command(dtype_out="DevVarStringArray")
+    @command(dtype_out=("DevString",))
     def GetRegisterList(self: MccsTile) -> list[str]:
         """
         Return a list of descriptions of the exposed firmware (and CPLD) registers.
@@ -5810,50 +5628,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> reglist = dp.command_inout("GetRegisterList")
         """
-        handler = self.get_command_object("GetRegisterList")
-        return handler()
-
-    class ReadRegisterCommand(FastCommand):
-        """Class for handling the ReadRegister(argin) command."""
-
-        def __init__(
-            self: MccsTile.ReadRegisterCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ReadRegisterCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.ReadRegisterCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> list[int]:
-            """
-            Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
-
-            :param args: the register name
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: list of register values
-
-            :raises ValueError: if the name is invalid
-            """
-            name = args[0]
-            if name is None or name == "":
-                self.logger.error("register name is a mandatory parameter")
-                raise ValueError("register name is a mandatory parameter")
-            value = self._component_manager.read_register(name)
-            message = f"Register {name} = {value}"
-            self.logger.info(message)
-            return value
+        return self.component_manager.register_list
 
     @command(dtype_in="DevString", dtype_out="DevVarULongArray")
     def ReadRegister(self: MccsTile, register_name: str) -> list[int]:
@@ -5868,72 +5643,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("fpga1./tile/01")
         >>> values = dp.command_inout("ReadRegister", "test-reg1")
         """
-        handler = self.get_command_object("ReadRegister")
-        return handler(register_name)
-
-    class WriteRegisterCommand(FastCommand):
-        """
-        Class for handling the WriteRegister() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_WriteRegister.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_WriteRegister.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.WriteRegisterCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new WriteRegisterCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("WriteRegister", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        def do(
-            self: MccsTile.WriteRegisterCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.WriteRegister` command functionality.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.write_register(
-                kwargs["register_name"], kwargs["values"]
-            )
+        return self.component_manager.read_register(register_name)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def WriteRegister(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args(schema=WriteRegister_SCHEMA)
+    def WriteRegister(
+        self: MccsTile, register_name: str, values: list[int]
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Write values to the specified register.
 
-        :param argin: json dictionary with mandatory keywords:
+        A json dictionary with mandatory keywords:
 
-            * register_name - (string) register fully qualified string representation
-            * values - (list) is a list containing the 32-bit values to write
+        :param register_name: (string) register fully qualified string representation
+        :param values: (list) is a list containing the 32-bit values to write
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -5947,57 +5670,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("WriteRegister", jstr)
         """
-        handler = self.get_command_object("WriteRegister")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class ReadAddressCommand(FastCommand):
-        """Class for handling the ReadAddress(argin) command."""
-
-        def __init__(
-            self: MccsTile.ReadAddressCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ReadAddressCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(  # type: ignore[override]
-            self: MccsTile.ReadAddressCommand,
-            argin: list[int],
-            *args: Any,
-            **kwargs: Any,
-        ) -> list[int]:
-            """
-            Implement :py:meth:`.MccsTile.ReadAddress` command functionality.
-
-            :param argin: sequence of length two, containing an address and
-                a value
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: [values, ]
-
-            :raises ValueError: if the argin argument has the wrong length
-                or structure
-            """
-            if len(argin) < 1:
-                self.logger.error("At least one parameter is required")
-                raise ValueError("One or two parameters are required")
-            if len(argin) == 1:
-                nvalues = 1
-            else:
-                nvalues = argin[1]
-            address = argin[0]
-            return self._component_manager.read_address(address, nvalues)
+        return self.component_manager.write_register(
+            register_name,
+            values,
+        )
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarULongArray")
     def ReadAddress(self: MccsTile, argin: list[int]) -> list[int]:
@@ -6009,62 +5685,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: list of values
 
+        :raises ValueError: if no address is provided,
+            or if more than 2 parameters are provided
+
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> reglist = dp.command_inout("ReadAddress", [address, nvalues])
         """
-        handler = self.get_command_object("ReadAddress")
-        return handler(argin)
-
-    class WriteAddressCommand(FastCommand):
-        """Class for handling the WriteAddress(argin) command."""
-
-        def __init__(
-            self: MccsTile.WriteAddressCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new WriteAddressCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "WriteAddress command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.WriteAddressCommand,
-            argin: list[int],
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.WriteAddress` command functionality.
-
-            :param argin: sequence of length two, containing an address and
-                a value
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin has the wrong length/structure
-            """
-            if len(argin) < 2:
-                self.logger.error("A minimum of two parameters are required")
-                raise ValueError("A minium of two parameters are required")
-            return self._component_manager.write_address(argin[0], argin[1:])
+        if len(argin) < 1:
+            self.logger.error("At least one parameter is required")
+            raise ValueError("One or two parameters are required")
+        if len(argin) == 1:
+            nvalues = 1
+        else:
+            nvalues = argin[1]
+        address = argin[0]
+        return self.component_manager.read_address(address, nvalues)
 
     @command(dtype_in="DevVarULongArray", dtype_out="DevVarLongStringArray")
-    def WriteAddress(self: MccsTile, argin: list[int]) -> DevVarLongStringArrayType:
+    def WriteAddress(
+        self: MccsTile, argin: list[int]
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Write list of values at address.
 
@@ -6075,6 +5717,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
+        :raises ValueError: if less than 2 parameters are provided
+
         :example:
 
         >>> values = [.....]
@@ -6082,81 +5726,41 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("WriteAddress", [address, values])
         """
-        handler = self.get_command_object("WriteAddress")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class Configure40GCoreCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the Configure40GCore() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_Configure40gCore.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_Configure40gCore.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.Configure40GCoreCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new Configure40GCoreCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("Configure40GCore", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
-
-        def do(
-            self: MccsTile.Configure40GCoreCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.Configure40GCore` command functionality.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.configure_40g_core(**kwargs)
+        if len(argin) < 2:
+            self.logger.error("A minimum of two parameters are required")
+            raise ValueError("A minimum of two parameters are required")
+        return self.component_manager.write_address(argin[0], argin[1:])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def Configure40GCore(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args(schema=Configure40GCore_SCHEMA)
+    def Configure40GCore(
+        self: MccsTile,
+        core_id: int = 0,
+        arp_table_entry: int = 0,
+        source_mac: Optional[int] = None,
+        source_ip: Optional[str] = None,
+        source_port: Optional[int] = None,
+        destination_ip: Optional[str] = None,
+        destination_port: Optional[int] = None,
+        rx_port_filter: Optional[int] = None,
+        netmask: Optional[str] = None,
+        gateway_ip: Optional[str] = None,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Configure 40g core_id with specified parameters.
 
-        :param argin: json dictionary with only optional keywords:
+        A json dictionary with only optional keywords:
 
-            * core_id - (int) core id
-            * arp_table_entry - (int) ARP table entry ID
-            * source_mac - (int) mac address
-            * source_ip - (string) IP dot notation.
-            * source_port - (int) source port
-            * destination_ip - (string) IP dot notation
-            * destination_port - (int) destination port
-            * netmask - (int) 40g (science data) subnet mask
-            * gateway_ip - (int) IP address of 40g (science) subnet gateway
+        :param core_id: (int) core id
+        :param arp_table_entry: (int) ARP table entry ID
+        :param source_mac: (int) mac address
+        :param source_ip: (string) IP dot notation.
+        :param source_port: (int) source port
+        :param destination_ip: (string) IP dot notation
+        :param destination_port: (int) destination port
+        :param rx_port_filter: (int) Filter for incoming packets
+        :param netmask: (string) 40g (science data) subnet mask
+        :param gateway_ip: (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -6171,99 +5775,41 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("Configure40GCore", jstr)
         """
-        handler = self.get_command_object("Configure40GCore")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class Get40GCoreConfigurationCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the Get40GCoreConfiguration() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_Get40gCoreConfiguration.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_Get40gCoreConfiguration.json",
-            )
+        return self.component_manager.configure_40g_core(
+            core_id,
+            arp_table_entry,
+            source_mac,
+            source_ip,
+            source_port,
+            destination_ip,
+            destination_port,
+            rx_port_filter,
+            netmask,
+            gateway_ip,
         )
 
-        def __init__(
-            self: MccsTile.Get40GCoreConfigurationCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new Get40GCoreConfigurationCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("Get40GCoreConfiguration", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        def do(
-            self: MccsTile.Get40GCoreConfigurationCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> str:
-            """
-            Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: json string with configuration
-
-            :raises ValueError: if the argin is an invalid code id
-            """
-            item_list = self._component_manager.get_40g_configuration(**kwargs)
-            item_new = []
-            for item in item_list:
-                item_new.append(
-                    {
-                        "core_id": item.get("core_id", None),
-                        "arp_table_entry": item.get("arp_table_entry", None),
-                        "source_mac": item.get("src_mac", None),
-                        "source_ip": item.get("src_ip", None),
-                        "source_port": item.get("src_port", None),
-                        "destination_ip": item.get("dst_ip", None),
-                        "destination_port": item.get("dst_port", None),
-                        "netmask": item.get("netmask", None),
-                        "gateway_ip": item.get("gateway_ip", None),
-                    }
-                )
-            if len(item_new) == 0:
-                raise ValueError("Invalid core id or arp table id specified")
-            if len(item_new) == 1:
-                return json.dumps(item_new[0])
-            return json.dumps(item_new)
-
     @command(dtype_in="DevString", dtype_out="DevString")
-    def Get40GCoreConfiguration(self: MccsTile, argin: str) -> str:
+    @stb.validators.validate_json_args(schema=Get40GCoreConfiguration_SCHEMA)
+    def Get40GCoreConfiguration(
+        self: MccsTile, core_id: int = -1, arp_table_entry: int = 0
+    ) -> str:
         """
         Get 40g core configuration for core_id.
 
         This is required to chain up TPMs to form a station.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-        * core_id - (int) core id
-        * arp_table_entry - (int) ARP table entry ID to use
+        :param core_id: (int) core id
+        :param arp_table_entry: (int) ARP table entry ID to use
 
         :return: the configuration is a json string describilg a list (possibly empty)
                  Each list entry comprising:
                  core_id, arp_table_entry, source_mac, source_ip, source_port,
                  destination_ip, destination_port, netmask, gateway_ip
+
+        :raises ValueError: if no configuration is found for the specified
+            core_id and arp_table_entry
 
         :example:
 
@@ -6273,96 +5819,54 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> argout = dp.command_inout(Get40GCoreConfiguration, core_id, arp_table_entry)
         >>> params = json.loads(argout)
         """
-        handler = self.get_command_object("Get40GCoreConfiguration")
-        return handler(argin)
-
-    class SetLmcDownloadCommand(FastCommand):
-        """
-        Class for handling the SetLmcDownload() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetLmcDownload.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_SetLmcDownload.json",
-            )
+        item_list = self.component_manager.get_40g_configuration(
+            core_id=core_id, arp_table_entry=arp_table_entry
         )
-
-        def __init__(
-            self: MccsTile.SetLmcDownloadCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetLmcDownloadCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("SetLmcDownload", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
-
-        def do(
-            self: MccsTile.SetLmcDownloadCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetLmcDownload` command functionality.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            mode: str = kwargs["mode"]
-            payload_length = kwargs.get("payload_length", None)
-            if payload_length is None:
-                if mode.upper() == "10G":
-                    payload_length = 8192
-                else:
-                    payload_length = 1024
-            dst_ip = kwargs.get("destination_ip", "10.0.10.1")
-            src_port = kwargs.get("source_port", 0xF0D0)
-            dst_port = kwargs.get("destination_port", 4660)
-            netmask_40g = kwargs.get("netmask_40g", None)
-            gateway_40g = kwargs.get("gateway_40g", None)
-
-            return self._component_manager.set_lmc_download(
-                mode,
-                payload_length,
-                dst_ip,
-                src_port,
-                dst_port,
-                netmask_40g=netmask_40g,
-                gateway_40g=gateway_40g,
+        item_new = []
+        for item in item_list:
+            item_new.append(
+                {
+                    "core_id": item.get("core_id", None),
+                    "arp_table_entry": item.get("arp_table_entry", None),
+                    "source_mac": item.get("src_mac", None),
+                    "source_ip": item.get("src_ip", None),
+                    "source_port": item.get("src_port", None),
+                    "destination_ip": item.get("dst_ip", None),
+                    "destination_port": item.get("dst_port", None),
+                    "netmask": item.get("netmask", None),
+                    "gateway_ip": item.get("gateway_ip", None),
+                }
             )
+        if len(item_new) == 0:
+            raise ValueError("Invalid core id or arp table id specified")
+        if len(item_new) == 1:
+            return json.dumps(item_new[0])
+        return json.dumps(item_new)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetLmcDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args(schema=SetLmcDownload_SCHEMA)
+    def SetLmcDownload(
+        self: MccsTile,
+        mode: str,
+        payload_length: int = 1024,
+        destination_ip: str = "10.0.10.1",
+        source_port: Optional[int] = 0xF0D0,
+        destination_port: Optional[int] = 4660,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-            * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
-            * payload_length - (int) SPEAD payload length for channel data
-            * destination_ip - (string) Destination IP.
-            * source_port - (int) Source port for integrated data streams
-            * destination_port - (int) Destination port for integrated data streams
-            * netmask_40g - (string) 40g (science data) subnet mask
-            * gateway_40g - (string) IP address of 40g (science) subnet gateway
+        :param mode: (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
+        :param payload_length: (int) SPEAD payload length for channel data
+        :param destination_ip: (string) Destination IP.
+        :param source_port: (int) Source port for integrated data streams
+        :param destination_port: (int) Destination port for integrated data streams
+        :param netmask_40g: (string) 40g (science data) subnet mask
+        :param gateway_40g: (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -6375,102 +5879,43 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
-        handler = self.get_command_object("SetLmcDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SetLmcIntegratedDownloadCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the SetLmcIntegratedDownload() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetLmcIntegratedDownload.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_SetLmcIntegratedDownload.json",
-            )
+        return self.component_manager.set_lmc_download(
+            mode=mode,
+            payload_length=payload_length,
+            dst_ip=destination_ip,
+            src_port=source_port,
+            dst_port=destination_port,
+            netmask_40g=netmask_40g,
+            gateway_40g=gateway_40g,
         )
 
-        def __init__(
-            self: MccsTile.SetLmcIntegratedDownloadCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetLmcIntegratedDownloadCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("SetLmcIntegratedDownload", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
-
-        def do(
-            self: MccsTile.SetLmcIntegratedDownloadCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            mode = kwargs["mode"]
-            channel_payload_length = kwargs.get("channel_payload_length", 1024)
-            beam_payload_length = kwargs.get("beam_payload_length", 1024)
-            dst_ip = kwargs.get("destination_ip", "10.0.10.1")
-            src_port = kwargs.get("source_port", 0xF0D0)
-            dst_port = kwargs.get("destination_port", 4660)
-            netmask_40g = kwargs.get("netmask_40g", None)
-            gateway_40g = kwargs.get("gateway_40g", None)
-
-            self._component_manager.set_lmc_integrated_download(
-                mode,
-                channel_payload_length,
-                beam_payload_length,
-                dst_ip,
-                src_port,
-                dst_port,
-                netmask_40g=netmask_40g,
-                gateway_40g=gateway_40g,
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.validators.validate_json_args(schema=SetLmcIntegratedDownload_SCHEMA)
     def SetLmcIntegratedDownload(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: MccsTile,
+        mode: str,
+        channel_payload_length: int = 1024,
+        beam_payload_length: int = 1024,
+        destination_ip: str = "10.0.10.1",
+        source_port: int = 0xF0D0,
+        destination_port: int = 4660,
+        netmask_40g: str | None = None,
+        gateway_40g: str | None = None,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Configure link and size of control data.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-            * mode - (string) '1G' or '10G' (Mandatory)
-            * channel_payload_length - (int) SPEAD payload length for integrated
-                 channel data
-            * beam_payload_length - (int) SPEAD payload length for integrated beam data
-            * destination_ip - (string) Destination IP
-            * source_port - (int) Source port for integrated data streams
-            * destination_port - (int) Destination port for integrated data streams
-            * netmask_40g - (string) 40g (science data) subnet mask
-            * gateway_40g - (string) IP address of 40g (science) subnet gateway
+        :param mode: (string) '1G' or '10G' (Mandatory)
+        :param channel_payload_length: (int) SPEAD payload length for integrated
+                channel data
+        :param beam_payload_length: (int) SPEAD payload length for integrated beam data
+        :param destination_ip: (string) Destination IP
+        :param source_port: (int) Source port for integrated data streams
+        :param destination_port: (int) Destination port for integrated data streams
+        :param netmask_40g: (string) 40g (science data) subnet mask
+        :param gateway_40g: (string) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -6484,88 +5929,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SetCspDownloadCommand(FastCommand):
-        """
-        Class for handling the SetCspDownload() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetCspDownload.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_SetCspDownload.json",
-            )
+        self.component_manager.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip=destination_ip,
+            src_port=source_port,
+            dst_port=destination_port,
+            netmask_40g=netmask_40g,
+            gateway_40g=gateway_40g,
         )
-
-        def __init__(
-            self: MccsTile.SetCspDownloadCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetCspDownloadCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("SetCspDownload", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "SetCspDownload command completed OK"
-
-        def do(
-            self: MccsTile.SetCspDownloadCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetCspDownload` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            src_port = kwargs.get("source_port", None)
-            dst_ip_1 = kwargs["destination_ip_1"]
-            dst_ip_2 = kwargs["destination_ip_2"]
-            dst_port = kwargs.get("destination_port", None)
-            is_last = kwargs["is_last"]
-            netmask = kwargs.get("netmask", None)
-            gateway = kwargs.get("gateway", None)
-
-            return self._component_manager.set_csp_download(
-                src_port, dst_ip_1, dst_ip_2, dst_port, is_last, netmask, gateway
-            )
+        return ([ResultCode.OK], ["SetLmcIntegratedDownload command completed OK"])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetCspDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args(schema=SetCspDownload_SCHEMA)
+    def SetCspDownload(
+        self: MccsTile,
+        destination_ip_1: str,
+        destination_ip_2: str,
+        is_last: bool,
+        destination_port: int | None = None,
+        source_port: int | None = None,
+        netmask: str | None = None,
+        gateway: str | None = None,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set CSP Destination per tile.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-            * source_port - Source port
-            * destination_ip_1 - Destination IP FPGA1
-            * destination_ip_2 -  Destination IP FPGA2
-            * destination_port - Destination port
-            * is_last - True for last tile in beamforming chain
-            * netmask - Netmask
-            * gateway - Gateway IP
+        :param source_port: Source port
+        :param destination_ip_1: Destination IP FPGA1
+        :param destination_ip_2:  Destination IP FPGA2
+        :param destination_port: Destination port
+        :param is_last: True for last tile in beamforming chain
+        :param netmask: Netmask
+        :param gateway: Gateway IP
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -6575,91 +5974,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"source_port": 4661, "destination_ip_1": "10.0.10.2",
-                    "destination_ip_2": 10.0.10.3", "destination_port" 4660,
+                    "destination_ip_2": "10.0.10.3", "destination_port": 4660,
                     "is_last": False, "netmask": "255.255.255.0",
                     "gateway": "10.0.10.1"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetCspDownload", jstr)
         """
-        handler = self.get_command_object("SetCspDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SetAttributeThresholdsCommand(FastCommand):
-        """Class for setting Alarm thresholds on Attributes."""
-
-        def __init__(
-            self: MccsTile.SetAttributeThresholdsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetAttributeThresholdsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            super().__init__(logger)
-
-        # pylint: disable=too-many-locals
-        def do(  # type: ignore[override]
-            self: MccsTile.SetAttributeThresholdsCommand,
-            multi_attr: tango.MultiAttribute,
-            argin: str,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetAttributeThresholds` commands.
-
-            :param argin: a serialised string containing attribute names and
-                thresholds.
-            :param multi_attr: a `tango.MultiAttribute` for attribute access.
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing ResultCode and a message.
-            """
-            attribute_threshold = json.loads(argin)
-            message = ""
-            for attribute_name, thresholds in attribute_threshold.items():
-                try:
-                    attr = multi_attr.get_attr_by_name(attribute_name)
-                    max_alarm = thresholds.get("max_alarm")
-                    min_alarm = thresholds.get("min_alarm")
-                    max_warning = thresholds.get("max_warning")
-                    min_warning = thresholds.get("min_warning")
-
-                    information_message = f"Updated {attribute_name} thresholds: \n"
-                    if max_alarm is not None:
-                        attr.set_max_alarm(max_alarm)
-                        information_message += f"\t{max_alarm=}\n"
-                    if min_alarm is not None:
-                        attr.set_min_alarm(min_alarm)
-                        information_message += f"\t{min_alarm=}\n"
-                    if max_warning is not None:
-                        attr.set_max_warning(max_warning)
-                        information_message += f"\t{max_warning=}\n"
-                    if min_warning is not None:
-                        attr.set_min_warning(min_warning)
-                        information_message += f"\t{min_warning=}\n"
-                    self.logger.info(information_message)
-                except Exception as e:  # pylint: disable=broad-except
-                    self.logger.error(
-                        f"Failed to update thresholds for {attribute_name} "
-                        f"{repr(e)}"
-                    )
-                    message += f"Attribute {attribute_name} failed to update {e}"
-
-            if message != "":
-                return (ResultCode.FAILED, message)
-
-            return (ResultCode.OK, message)
+        return self.component_manager.set_csp_download(
+            source_port,
+            destination_ip_1,
+            destination_ip_2,
+            destination_port,
+            is_last,
+            netmask,
+            gateway,
+        )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetAttributeThresholds(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    def SetAttributeThresholds(
+        self: MccsTile, argin: str
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the ALARM and WARNING thresholds on attributes.
 
@@ -6679,39 +6013,41 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: a serialised dictionary containing attribute names and
             threshold limits.
         """
-        handler = self.get_command_object("SetAttributeThresholds")
-        (return_code, message) = handler(self.get_device_attr(), argin)
-        return ([return_code], [message])
+        attribute_threshold = json.loads(argin)
+        message = ""
+        multi_attr = self.get_device_attr()
+        for attribute_name, thresholds in attribute_threshold.items():
+            try:
+                attr = multi_attr.get_attr_by_name(attribute_name)
+                max_alarm = thresholds.get("max_alarm")
+                min_alarm = thresholds.get("min_alarm")
+                max_warning = thresholds.get("max_warning")
+                min_warning = thresholds.get("min_warning")
 
-    class GetArpTableCommand(FastCommand):
-        """Class for handling the GetArpTable() command."""
+                information_message = f"Updated {attribute_name} thresholds: \n"
+                if max_alarm is not None:
+                    attr.set_max_alarm(max_alarm)
+                    information_message += f"\t{max_alarm=}\n"
+                if min_alarm is not None:
+                    attr.set_min_alarm(min_alarm)
+                    information_message += f"\t{min_alarm=}\n"
+                if max_warning is not None:
+                    attr.set_max_warning(max_warning)
+                    information_message += f"\t{max_warning=}\n"
+                if min_warning is not None:
+                    attr.set_min_warning(min_warning)
+                    information_message += f"\t{min_warning=}\n"
+                self.logger.info(information_message)
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.error(
+                    f"Failed to update thresholds for {attribute_name} " f"{repr(e)}"
+                )
+                message += f"Attribute {attribute_name} failed to update {e}"
 
-        def __init__(
-            self: MccsTile.GetArpTableCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new GetArpTableCommand instance.
+        if message != "":
+            return ([ResultCode.FAILED], [message])
 
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(self: MccsTile.GetArpTableCommand, *args: Any, **kwargs: Any) -> str:
-            """
-            Implement :py:meth:`.MccsTile.GetArpTable` commands.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: a JSON-encoded dictionary of coreId and populated arpID table
-            """
-            return json.dumps(self._component_manager.arp_table)
+        return ([ResultCode.OK], [message])
 
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:
@@ -6735,100 +6071,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>>    "core_id3": [],
         >>>    }
         """
-        handler = self.get_command_object("GetArpTable")
-        return handler()
-
-    class SetBeamFormerRegionsCommand(FastCommand):
-        """Class for handling the SetBeamFormerRegions(argin) command."""
-
-        def __init__(
-            self: MccsTile.SetBeamFormerRegionsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetBeamFormerRegionsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetBeamFormerRegions command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetBeamFormerRegionsCommand,
-            argin: list[int],
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetBeamFormerRegions` command functionality.
-
-            :param argin: a region array
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < 8:
-                self.logger.error("Insufficient parameters specified")
-                raise ValueError("Insufficient parameters specified")
-            if len(argin) > (48 * 8):
-                self.logger.error("Too many regions specified")
-                raise ValueError("Too many regions specified")
-            if len(argin) % 8 != 0:
-                self.logger.error(
-                    "Incomplete specification of region. Regions specified by 8 values"
-                )
-                raise ValueError("Incomplete specification of region")
-            regions = []
-            total_chan = 0
-            for i in range(0, len(argin), 8):
-                region = argin[i : i + 8]  # noqa: E203
-                start_channel = region[0]
-                if start_channel % 2 != 0:
-                    self.logger.error("Start channel in region must be even")
-                    raise ValueError("Start channel in region must be even")
-                nchannels = region[1]
-                if nchannels % 8 != 0:
-                    self.logger.error(
-                        "Nos. of channels in region must be multiple of 8"
-                    )
-                    raise ValueError("Nos. of channels in region must be multiple of 8")
-                beam_index = region[2]
-                if beam_index < 0 or beam_index > 47:
-                    self.logger.error("Beam_index is out side of range 0-47")
-                    raise ValueError("Beam_index is out side of range 0-47")
-                total_chan += nchannels
-                if total_chan > 384:
-                    self.logger.error("Too many channels specified > 384")
-                    raise ValueError("Too many channels specified > 384")
-                regions.append(region)
-
-            if total_chan < 8:
-                self.logger.error("No channels specified")
-                raise ValueError("No channels specified")
-            nof_blocks = 0
-            for region in regions:
-                nof_blocks += region[1] // 8
-            if nof_blocks == 0:
-                self.logger.error("No valid beamformer regions specified")
-                raise ValueError("Empty channel table")
-            return self._component_manager.set_beamformer_regions(regions)
+        return json.dumps(self.component_manager.arp_table)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetBeamFormerRegions(
         self: MccsTile, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the frequency regions which are going to be beamformed into each beam.
 
@@ -6850,6 +6098,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
+        :raises ValueError: when the inputs are invalid
+
         :example:
 
         >>> regions = [[4, 24, 0, 0, 0, 3, 1, 101], [26, 40, 1, 0, 24, 4, 2, 102]]
@@ -6857,82 +6107,59 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SetBeamFormerRegions", input)
         """
-        handler = self.get_command_object("SetBeamFormerRegions")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class ConfigureStationBeamformerCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the ConfigureStationBeamformer() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureStationBeamformer.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_ConfigureStationBeamformer.json",
+        if len(argin) < 8:
+            self.logger.error("Insufficient parameters specified")
+            raise ValueError("Insufficient parameters specified")
+        if len(argin) > (48 * 8):
+            self.logger.error("Too many regions specified")
+            raise ValueError("Too many regions specified")
+        if len(argin) % 8 != 0:
+            self.logger.error(
+                "Incomplete specification of region. Regions specified by 8 values"
             )
-        )
+            raise ValueError("Incomplete specification of region")
+        regions = []
+        total_chan = 0
+        for i in range(0, len(argin), 8):
+            region = argin[i : i + 8]  # noqa: E203
+            start_channel = region[0]
+            if start_channel % 2 != 0:
+                self.logger.error("Start channel in region must be even")
+                raise ValueError("Start channel in region must be even")
+            nchannels = region[1]
+            if nchannels % 8 != 0:
+                self.logger.error("Nos. of channels in region must be multiple of 8")
+                raise ValueError("Nos. of channels in region must be multiple of 8")
+            beam_index = region[2]
+            if beam_index < 0 or beam_index > 47:
+                self.logger.error("Beam_index is out side of range 0-47")
+                raise ValueError("Beam_index is out side of range 0-47")
+            total_chan += nchannels
+            if total_chan > 384:
+                self.logger.error("Too many channels specified > 384")
+                raise ValueError("Too many channels specified > 384")
+            regions.append(region)
 
-        def __init__(
-            self: MccsTile.ConfigureStationBeamformerCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ConfigureStationBeamformerCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("ConfigureStationBeamformer", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
-
-        def do(
-            self: MccsTile.ConfigureStationBeamformerCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ConfigureStationBeamformer` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            start_channel = kwargs.get("start_channel", 192)
-            n_channels = kwargs.get("n_channels", 8)
-            if start_channel + n_channels > 511:
-                self.logger.error("Invalid specified observed region")
-                raise ValueError("Invalid specified observed region")
-            is_first = kwargs.get("is_first", False)
-            is_last = kwargs.get("is_last", False)
-            self._component_manager.initialise_beamformer(
-                start_channel, n_channels, is_first, is_last
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        if total_chan < 8:
+            self.logger.error("No channels specified")
+            raise ValueError("No channels specified")
+        nof_blocks = 0
+        for region in regions:
+            nof_blocks += region[1] // 8
+        if nof_blocks == 0:
+            self.logger.error("No valid beamformer regions specified")
+            raise ValueError("Empty channel table")
+        return self.component_manager.set_beamformer_regions(regions)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.validators.validate_json_args(schema=ConfigureStationBeamformer_SCHEMA)
     def ConfigureStationBeamformer(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: MccsTile,
+        start_channel: int = 192,
+        n_channels: int = 8,
+        is_first: bool = False,
+        is_last: bool = False,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Initialise and start the station beamformer.
 
@@ -6940,20 +6167,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Optionally set the observed region, Default is 6.25 MHz starting at 150 MHz,
         and set whether the tile is the first or last in the beamformer chain.
 
-        :param argin: json dictionary with mandatory keywords:
+        A json dictionary with mandatory keywords:
 
-            * start_channel - (int) start channel of the observed region
-              default = 192 (150 MHz)
-            * n_channels - (int) is the number of channels in the observed region
-              default = 8 (6.25 MHz)
-            * is_first - (bool) whether the tile is the first one in the station
-              default False
-            * is_last - (bool) whether the tile is the last one in the station
-              default False
+        :param start_channel: (int) start channel of the observed region
+            default = 192 (150 MHz)
+        :param n_channels: (int) is the number of channels in the observed region
+            default = 8 (6.25 MHz)
+        :param is_first: (bool) whether the tile is the first one in the station
+            default False
+        :param is_last: (bool) whether the tile is the last one in the station
+            default False
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+
+        :raises ValueError: when the specified observed region is invalid
 
         :example:
 
@@ -6963,78 +6192,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >> jstr = json.dumps(dict)
         >> dp.command_inout("ConfigureStationBeamformer", jstr)
         """
-        handler = self.get_command_object("ConfigureStationBeamformer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class LoadCalibrationCoefficientsCommand(FastCommand):
-        """Class for handling the LoadCalibrationCoefficients(argin) command."""
-
-        def __init__(
-            self: MccsTile.LoadCalibrationCoefficientsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new LoadCalibrationCoefficientsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCoefficientsCommand,
-            argin: list[float],
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
-
-            :param argin: calibration coefficients
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < 9:
-                self.logger.error("Insufficient calibration coefficients")
-                raise ValueError("Insufficient calibration coefficients")
-            if len(argin[1:]) % 8 != 0:
-                self.logger.error(
-                    "Incomplete specification of coefficient. "
-                    "Needs 8 values (4 complex Jones) per channel"
-                )
-                raise ValueError("Incomplete specification of coefficient")
-            antenna = int(argin[0])
-            calibration_coefficients = [
-                [
-                    complex(argin[i], argin[i + 1]),
-                    complex(argin[i + 2], argin[i + 3]),
-                    complex(argin[i + 4], argin[i + 5]),
-                    complex(argin[i + 6], argin[i + 7]),
-                ]
-                for i in range(1, len(argin), 8)
-            ]
-
-            result, message = self._component_manager.load_calibration_coefficients(
-                antenna, calibration_coefficients
-            )
-            return (result, message)
+        if start_channel + n_channels > 511:
+            self.logger.error("Invalid specified observed region")
+            raise ValueError("Invalid specified observed region")
+        self.component_manager.initialise_beamformer(
+            start_channel, n_channels, is_first, is_last
+        )
+        return ([ResultCode.OK], ["ConfigureStationBeamformer command completed OK"])
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadCalibrationCoefficients(
         self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Load the calibration coefficients, but does not apply them.
 
@@ -7064,6 +6233,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
+        :raises ValueError: when the inputs are invalid
+
         :example:
 
         >>> antenna = 2
@@ -7077,86 +6248,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
-        handler = self.get_command_object("LoadCalibrationCoefficients")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class LoadCalibrationCoefficientsForChannelsCommand(FastCommand):
-        """Class for handling the LoadCalibrationCoefficients(argin) command."""
-
-        def __init__(
-            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new LoadCalibrationCoefficientsForChannelsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(  # type: ignore[override]
-            self: MccsTile.LoadCalibrationCoefficientsForChannelsCommand,
-            argin: list[float],
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.LoadCalibrationCoefficientsForChannels` cmd.
-
-            :param argin: calibration coefficients
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < 129:
-                self.logger.error("Insufficient calibration coefficients")
-                raise ValueError("Insufficient calibration coefficients")
-            if len(argin[1:]) % 128 != 0:
-                self.logger.error(
-                    "Incomplete specification of coefficient. "
-                    "Needs 8 values (4 complex Jones) per channeli per antenna"
-                )
-                raise ValueError("Incomplete specification of coefficient")
-            start_channel = int(argin[0])
-            if (start_channel < 0) or (start_channel > 383):
-                raise ValueError("Start channel outside of range 0-383")
-            calibration_coefficients = [
-                [
-                    [
-                        complex(argin[ant + i], argin[ant + i + 1]),
-                        complex(argin[ant + i + 2], argin[ant + i + 3]),
-                        complex(argin[ant + i + 4], argin[ant + i + 5]),
-                        complex(argin[ant + i + 6], argin[ant + i + 7]),
-                    ]
-                    for ant in range(0, 128, 8)
-                ]
-                for i in range(1, len(argin), 128)
-            ]
-
-            (
-                result,
-                message,
-            ) = self._component_manager.load_calibration_coefficients_for_channels(
-                start_channel, calibration_coefficients
+        if len(argin) < 9:
+            self.logger.error("Insufficient calibration coefficients")
+            raise ValueError("Insufficient calibration coefficients")
+        if len(argin[1:]) % 8 != 0:
+            self.logger.error(
+                "Incomplete specification of coefficient. "
+                "Needs 8 values (4 complex Jones) per channel"
             )
-            return (result, message)
+            raise ValueError("Incomplete specification of coefficient")
+        antenna = int(argin[0])
+        calibration_coefficients = [
+            [
+                complex(argin[i], argin[i + 1]),
+                complex(argin[i + 2], argin[i + 3]),
+                complex(argin[i + 4], argin[i + 5]),
+                complex(argin[i + 6], argin[i + 7]),
+            ]
+            for i in range(1, len(argin), 8)
+        ]
+
+        return self.component_manager.load_calibration_coefficients(
+            antenna, calibration_coefficients
+        )
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadCalibrationCoefficientsForChannels(
         self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Load the calibration coefficients, but does not apply them.
 
@@ -7188,6 +6307,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
+        :raises ValueError: when the inputs are invalid
+
         :example:
 
         >>> start_channel = 2
@@ -7201,56 +6322,43 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("LoadCalibrationCoefficientsForChannels", input)
         """
-        handler = self.get_command_object("LoadCalibrationCoefficientsForChannels")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class ApplyCalibrationCommand(FastCommand):
-        """Class for handling the ApplyCalibration(argin) command."""
-
-        def __init__(
-            self: MccsTile.ApplyCalibrationCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ApplyCalibrationCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.ApplyCalibrationCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ApplyCalibration` command functionality.
-
-            :param args: switch time
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            switch_time = args[0]
-
-            return_code, message = self._component_manager.apply_calibration(
-                switch_time
+        if len(argin) < 129:
+            self.logger.error("Insufficient calibration coefficients")
+            raise ValueError("Insufficient calibration coefficients")
+        if len(argin[1:]) % 128 != 0:
+            self.logger.error(
+                "Incomplete specification of coefficient. "
+                "Needs 8 values (4 complex Jones) per channeli per antenna"
             )
-            return (return_code, message)
+            raise ValueError("Incomplete specification of coefficient")
+        start_channel = int(argin[0])
+        if (start_channel < 0) or (start_channel > 383):
+            raise ValueError("Start channel outside of range 0-383")
+        calibration_coefficients = [
+            [
+                [
+                    complex(argin[ant + i], argin[ant + i + 1]),
+                    complex(argin[ant + i + 2], argin[ant + i + 3]),
+                    complex(argin[ant + i + 4], argin[ant + i + 5]),
+                    complex(argin[ant + i + 6], argin[ant + i + 7]),
+                ]
+                for ant in range(0, 128, 8)
+            ]
+            for i in range(1, len(argin), 128)
+        ]
+
+        return self.component_manager.load_calibration_coefficients_for_channels(
+            start_channel, calibration_coefficients
+        )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    def ApplyCalibration(
+        self: MccsTile, switch_time: str
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Load the calibration coefficients at the specified time delay.
 
-        :param argin: switch time, in ISO formatted time
+        :param switch_time: switch time, in ISO formatted time
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -7261,71 +6369,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ApplyCalibration", "")
         """
-        handler = self.get_command_object("ApplyCalibration")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class LoadPointingDelaysCommand(FastCommand):
-        """Class for handling the LoadPointingDelays(argin) command."""
-
-        SUCCEEDED_MESSAGE = "LoadPointingDelays command completed OK"
-
-        def __init__(
-            self: MccsTile.LoadPointingDelaysCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new LoadPointingDelaysCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-            self._antennas_per_tile = 16
-
-        def do(  # type: ignore[override]
-            self: MccsTile.LoadPointingDelaysCommand,
-            argin: list[float],
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
-
-            :param argin: an array containing a beam index and antenna
-                delays. In tile channel order.
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-            :raises ValueError: if the argin argument does not have the
-                right length / structure
-            """
-            if len(argin) < self._antennas_per_tile * 2 + 1:
-                self.logger.error("Insufficient parameters")
-                raise ValueError("Insufficient parameters")
-            beam_index = int(argin[0])
-            if beam_index < 0 or beam_index > 7:
-                self.logger.error("Invalid beam index")
-                raise ValueError("Invalid beam index")
-            delay_array = []
-            for i in range(self._antennas_per_tile):
-                delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
-
-            return self._component_manager.load_pointing_delays(delay_array, beam_index)
+        return self.component_manager.apply_calibration(switch_time)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadPointingDelays(
         self: MccsTile, argin: list[float]
-    ) -> DevVarLongStringArrayType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -7340,6 +6389,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
 
+        :raises ValueError: If the number of parameters is insufficient or
+            if the beam index is invalid.
+
         :example:
 
         >>> # example delays: 16 values from -2 to +2 ns, rates = 0
@@ -7353,55 +6405,27 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>>   arg.append(rates[i])
         >>> dp.command_inout("LoadPointingDelays", arg)
         """
-        handler = self.get_command_object("LoadPointingDelays")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        if len(argin) < self.AntennasPerTile * 2 + 1:
+            self.logger.error("Insufficient parameters")
+            raise ValueError("Insufficient parameters")
+        beam_index = int(argin[0])
+        if beam_index < 0 or beam_index > 7:
+            self.logger.error("Invalid beam index")
+            raise ValueError("Invalid beam index")
+        delay_array = []
+        for i in range(self.AntennasPerTile):
+            delay_array.append([argin[i * 2 + 1], argin[i * 2 + 2]])
 
-    class ApplyPointingDelaysCommand(FastCommand):
-        """Class for handling the ApplyPointingDelays(argin) command."""
-
-        def __init__(
-            self: MccsTile.ApplyPointingDelaysCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ApplyPointingDelayommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "ApplyPointingDelays command completed OK"
-
-        def do(
-            self: MccsTile.ApplyPointingDelaysCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ApplyPointingDelays` command functionality.
-
-            :param args: load time
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            load_time = args[0]
-
-            return self._component_manager.apply_pointing_delays(load_time)
+        return self.component_manager.load_pointing_delays(delay_array, beam_index)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ApplyPointingDelays(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    def ApplyPointingDelays(
+        self: MccsTile, start_time: str
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Apply the pointing delays at the specified time delay.
 
-        :param argin: time for applying the delays (default = 0)
+        :param start_time: time for applying the delays (default = 0)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -7412,24 +6436,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("ApplyPointingDelays", "")
         """
-        handler = self.get_command_object("ApplyPointingDelays")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        return self.component_manager.apply_pointing_delays(start_time)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=StartBeamformer_SCHEMA)
+    def StartBeamformer(
+        self: MccsTile,
+        start_time: Optional[str] = None,
+        duration: int = -1,
+        channel_groups: Optional[list[int]] = None,
+        scan_id: int = 0,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Start the beamformer at the specified time delay.
 
-        :param argin: json dictionary with optional keywords:
-
-        * start_time - (str, ISO UTC time) start time
-        * duration - (int) if > 0 is a duration in CSP frames (2211.84 us)
-               if == -1 run forever
-        * channel_groups - (list(int)) : list of channel groups to be started
+        :param start_time: Start time as ISO formatted time
+        :param duration: Scan duration, in frames, default "forever"
+        :param channel_groups: Channel groups to be started
                 Command affects only beamformed channels for given groups
                 Default: all channels
-        * scan_id - (int) The unique ID for the started scan. Default 0
+        :param scan_id: ID of the scan to be started. Default 0
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -7442,18 +6468,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartBeamformer", jstr)
         """
-        handler = self.get_command_object("StartBeamformer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StopBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.start_beamformer(
+                start_time=start_time,
+                duration=duration,
+                channel_groups=channel_groups,
+                scan_id=scan_id,
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=StopBeamformer_SCHEMA)
+    def StopBeamformer(
+        self: MccsTile, channel_groups: Optional[list[int]] = None
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Stop the beamformer.
 
-        :param argin: json dictionary with optional keywords:
-
-        * channel_groups - (list(int)) : list of channel groups to be started
+        :param channel_groups: list of channel groups to be stopped
                 Command affects only beamformed channels for given groups
                 Default: all channels
 
@@ -7466,76 +6504,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"channel_groups": [0,1,4] }
         >>> jstr = json.dumps(dict)
-        >>> dp.command_inout("StopBeamformer", dict)
+        >>> dp.command_inout("StopBeamformer", jstr)
         """
-        handler = self.get_command_object("StopBeamformer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
-    class BeamformerRunningCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class to handle BeamformerRunningForChannels command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_BeamformerRunningForChannels.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_BeamformerRunningForChannels.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.BeamformerRunningCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
         ) -> None:
-            """
-            Initialise a new BeamformerRunningCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "BeamformerRunningForChannels", self.SCHEMA, logger
+            self.component_manager.stop_beamformer(
+                channel_groups=channel_groups,
+                task_callback=task_callback,
             )
-            super().__init__(logger, validator)
 
-        def do(
-            self: MccsTile.BeamformerRunningCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> bool:
-            """
-            Implement :py:meth:`.MccsTile.BeamformerRunningForChannels` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: whether the beamformer is running in the specified
-            """
-            channel_groups = kwargs.get("channel_groups", None)
-            return self._component_manager.beamformer_running_for_channels(
-                channel_groups
-            )
+        return task
 
     @command(dtype_in="DevString", dtype_out="DevBoolean")
-    def BeamformerRunningForChannels(self: MccsTile, argin: str) -> bool:
+    @stb.validators.validate_json_args(schema=BeamformerRunning_SCHEMA)
+    def BeamformerRunningForChannels(
+        self: MccsTile, channel_groups: list[int] | None = None
+    ) -> bool:
         """
         Check whether the beamformer is running for the given channel groups.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-        * channel_groups - (list) List of channel groups
+        :param channel_groups: (list) List of channel groups
 
         :return: Whether the beamformer is running
 
@@ -7546,88 +6539,27 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> running = dp.command_inout("BeamformerRunningForChannels", jstr)
         """
-        handler = self.get_command_object("BeamformerRunningForChannels")
-        return_code = handler(argin)
-        return return_code
-
-    class ConfigureIntegratedChannelDataCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the ConfigureIntegratedChannelData(argin) command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureIntegratedChannelData.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_ConfigureIntegratedChannelData.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.ConfigureIntegratedChannelDataCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ConfigureIntegratedChannelDataCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "ConfigureIntegratedChannelData", self.SCHEMA, logger
-            )
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
-
-        def do(
-            self: MccsTile.ConfigureIntegratedChannelDataCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ConfigureIntegratedChannelData` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            integration_time = kwargs.get("integration_time", 0.5)
-            first_channel = kwargs.get("first_channel", 0)
-            last_channel = kwargs.get("last_channel", 511)
-
-            return self._component_manager.configure_integrated_channel_data(
-                integration_time, first_channel, last_channel
-            )
+        return self.component_manager.beamformer_running_for_channels(channel_groups)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.validators.validate_json_args(schema=ConfigureIntegratedChannelData_SCHEMA)
     def ConfigureIntegratedChannelData(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: MccsTile,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 511,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Configure and start the transmission of integrated channel data.
 
         Using the provided integration time, first channel and last channel.
         Data are sent continuously until the StopIntegratedData command is run.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-        * integration_time - (float) in seconds (default = 0.5)
-        * first_channel - (int) default 0
-        * last_channel - (int) default 511
+        :param integration_time: (float) in seconds (default = 0.5)
+        :param first_channel: (int) default 0
+        :param last_channel: (int) default 511
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -7640,88 +6572,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("ConfigureIntegratedChannelData", jstr)
         """
-        handler = self.get_command_object("ConfigureIntegratedChannelData")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class ConfigureIntegratedBeamDataCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the ConfigureIntegratedBeamData() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureIntegratedBeamData.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_ConfigureIntegratedBeamData.json",
-            )
+        return self.component_manager.configure_integrated_channel_data(
+            integration_time, first_channel, last_channel
         )
 
-        def __init__(
-            self: MccsTile.ConfigureIntegratedBeamDataCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ConfigureIntegratedBeamDataCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator(
-                "ConfigureIntegratedBeamData", self.SCHEMA, logger
-            )
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
-
-        def do(
-            self: MccsTile.ConfigureIntegratedBeamDataCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ConfigureIntegratedBeamData` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            integration_time = kwargs.get("integration_time", 0.5)
-            first_channel = kwargs.get("first_channel", 0)
-            last_channel = kwargs.get("last_channel", 191)
-
-            return self._component_manager.configure_integrated_beam_data(
-                integration_time, first_channel, last_channel
-            )
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.validators.validate_json_args(schema=ConfigureIntegratedBeamData_SCHEMA)
     def ConfigureIntegratedBeamData(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: MccsTile,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 191,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Configure the transmission of integrated beam data.
 
         Using the provided integration time, the first channel and the last channel.
         The data are sent continuously until the StopIntegratedData command is run.
 
-        :param argin: json dictionary with optional keywords:
+        A json dictionary with optional keywords:
 
-        * integration_time - (float) in seconds (default = 0.5)
-        * first_channel - (int) default 0
-        * last_channel - (int) default 191
+        :param integration_time: (float) in seconds (default = 0.5)
+        :param first_channel: (int) default 0
+        :param last_channel: (int) default 191
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -7734,137 +6607,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("ConfigureIntegratedBeamData", jstr)
         """
-        handler = self.get_command_object("ConfigureIntegratedBeamData")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class StopIntegratedDataCommand(FastCommand):
-        """Class for handling the StopIntegratedData command."""
-
-        def __init__(
-            self: MccsTile.StopIntegratedDataCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StopIntegratedDataCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
-
-        def do(
-            self: MccsTile.StopIntegratedDataCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StopIntegratedData` command functionality.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.stop_integrated_data()
+        return self.component_manager.configure_integrated_beam_data(
+            integration_time, first_channel, last_channel
+        )
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopIntegratedData(self: MccsTile) -> DevVarLongStringArrayType:
+    def StopIntegratedData(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
-        Stop the integrated  data.
+        Stop the integrated data.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("StopIntegratedData")
-        (return_code, message) = handler()
-        return ([return_code], [message])
-
-    class SendDataSamplesCommand(FastCommand):
-        """
-        Class for handling the SendDataSamples() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SendDataSamples.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile", "MccsTile_SendDataSamples.json"
-            )
-        )
-
-        def __init__(
-            self: MccsTile.SendDataSamplesCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SendDataSamplesCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("SendDataSamples", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "SendDataSamples command completed OK"
-
-        def do(
-            self: MccsTile.SendDataSamplesCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SendDataSamples` command functionality.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            :raises ValueError: if mandatory parameters are missing
-            """
-            data_type = kwargs["data_type"]
-            if data_type == "channel":
-                first_ch = kwargs.get("first_channel", 0)
-                last_ch = kwargs.get("last_channel", 511)
-                if last_ch < first_ch:
-                    err = (
-                        f"last channel ({last_ch}) cannot be less than first "
-                        f"channel ({first_ch})."
-                    )
-                    self.logger.error(err)
-                    raise ValueError(err)
-
-            if data_type in ["channel", "narrowband"]:
-                kwargs.setdefault("n_samples", 1024)
-            elif data_type == "channel_continuous":
-                kwargs.setdefault("n_samples", 128)
-            else:
-                kwargs.setdefault("n_samples", None)
-
-            self._component_manager.send_data_samples(**kwargs)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        return self.component_manager.stop_integrated_data()
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SendDataSamples(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args(schema=SendDataSamples_SCHEMA)
+    def SendDataSamples(
+        self: MccsTile,
+        **kwargs: Optional[Any],
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Transmit a snapshot containing raw antenna data.
 
-        :param argin: json dictionary with optional keywords:
+        :param kwargs: json dictionary with optional keywords:
 
         * data_type - type of snapshot data (mandatory): "raw", "channel",
                     "channel_continuous", "narrowband", "beam"
@@ -7891,12 +6658,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         narrowband:
 
         * frequency - (int) Sky frequency for band centre, in Hz (Mandatory)
-        * round_bits - (int)  Specify whow many bits to round
+        * round_bits - (int)  Specify how many bits to round
         * n_samples -  (int) number of spectra to send
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+
+        :raises ValueError: if the provided arguments are invalid
 
         :example:
 
@@ -7905,48 +6674,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendDataSamples", jstr)
         """
-        handler = self.get_command_object("SendDataSamples")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        data_type = kwargs["data_type"]
+        if data_type == "channel":
+            first_ch = kwargs.get("first_channel", 0)
+            last_ch = kwargs.get("last_channel", 511)
+            if last_ch < first_ch:  # type: ignore[operator]
+                err = (
+                    f"last channel ({last_ch}) cannot be less than first "
+                    f"channel ({first_ch})."
+                )
+                self.logger.error(err)
+                raise ValueError(err)
 
-    class StopDataTransmissionCommand(FastCommand):
-        """Class for handling the StopDataTransmission() command."""
+        if data_type in ["channel", "narrowband"]:
+            kwargs.setdefault("n_samples", 1024)
+        elif data_type == "channel_continuous":
+            kwargs.setdefault("n_samples", 128)
+        else:
+            kwargs.setdefault("n_samples", None)
 
-        def __init__(
-            self: MccsTile.StopDataTransmissionCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StopDataTransmissionCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StopDataTransmission command completed OK"
-
-        def do(
-            self: MccsTile.StopDataTransmissionCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StopDataTransmission` command functionality.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.stop_data_transmission()
+        self.component_manager.send_data_samples(**kwargs)  # type: ignore[arg-type]
+        return ([ResultCode.OK], ["SendDataSamples command completed OK"])
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopDataTransmission(self: MccsTile) -> DevVarLongStringArrayType:
+    def StopDataTransmission(
+        self: MccsTile,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Stop data transmission from board.
 
@@ -7959,66 +6712,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopDataTransmission")
         """
-        handler = self.get_command_object("StopDataTransmission")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        return self.component_manager.stop_data_transmission()
 
-    class StartAcquisitionCommand(SubmittedSlowCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the StartAcquisition() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_StartAcquisition.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_StartAcquisition.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.StartAcquisitionCommand,
-            command_tracker: CommandTracker,
-            component_manager: TileComponentManager,
-            callback: Callable | None = None,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param command_tracker: the device's command tracker
-            :param component_manager: the device's component manager
-            :param callback: an optional callback to be called when this
-                command starts and finishes.
-            :param logger: a logger for this command to log with.
-            """
-            validator = JsonValidator("StartAcquisition", self.SCHEMA, logger)
-            super().__init__(
-                "StartAcquisition",
-                command_tracker,
-                component_manager,
-                "start_acquisition",
-                callback=callback,
-                logger=logger,
-                validator=validator,
-            )
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartAcquisition(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=StartAcquisition_SCHEMA)
+    def StartAcquisition(
+        self: MccsTile,
+        start_time: Optional[str] = None,
+        global_reference_time: Optional[str] = None,
+        delay: Optional[int] = 2,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Start data acquisition.
 
-        :param argin: json dictionary with optional keywords:
+        json dictionary with optional keywords:
 
-        * start_time - (ISO UTC time) start time
-        * global_reference_time - (ISO UTC time) reference time for the SPS
-        * delay - (int) delay start if StartTime is not specified, default 0.2s
+        :param start_time: the acquisition start time
+        :param delay: a delay to the acquisition start (default 2s)
+        :param global_reference_time: the start time assumed for starting the timestamp
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -8031,118 +6742,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartAcquisition", jstr)
         """
-        handler = self.get_command_object("StartAcquisition")
-        (return_code, unique_id) = handler(argin)
-        return ([return_code], [unique_id])
 
-    class ConfigureTestGeneratorCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the ConfigureTestGenerator() command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureTestGenerator.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_ConfigureTestGenerator.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.ConfigureTestGeneratorCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
         ) -> None:
-            """
-            Initialise a new ConfigureTestGeneratorCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("ConfigureTestGenerator", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
-
-        def do(
-            self: MccsTile.ConfigureTestGeneratorCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ConfigureTestGenerator` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                   message indicating status. The message is for
-                   information purpose only.
-            """
-            active = False
-            set_time = kwargs.get("set_time", None)
-            if "tone_frequency" in kwargs:
-                frequency0 = kwargs["tone_frequency"]
-                amplitude0 = kwargs.get("tone_amplitude", 1.0)
-                active = True
-            else:
-                frequency0 = 0.0
-                amplitude0 = 0.0
-
-            if "tone_2_frequency" in kwargs:
-                frequency1 = kwargs["tone_2_frequency"]
-                amplitude1 = kwargs.get("tone_2_amplitude", 1.0)
-                active = True
-            else:
-                frequency1 = 0.0
-                amplitude1 = 0.0
-
-            if "noise_amplitude" in kwargs:
-                amplitude_noise = kwargs["noise_amplitude"]
-                active = True
-            else:
-                amplitude_noise = 0.0
-
-            if "pulse_frequency" in kwargs:
-                pulse_code = kwargs["pulse_frequency"]
-                amplitude_pulse = kwargs.get("pulse_amplitude", 1.0)
-                active = True
-            else:
-                pulse_code = 7
-                amplitude_pulse = 0.0
-
-            self._component_manager.configure_test_generator(
-                frequency0,
-                amplitude0,
-                frequency1,
-                amplitude1,
-                amplitude_noise,
-                pulse_code,
-                amplitude_pulse,
-                kwargs.get("delays"),
-                set_time,
+            self.component_manager.start_acquisition(
+                start_time=start_time,
+                global_reference_time=global_reference_time,
+                delay=delay if delay is not None else 2,
+                task_callback=task_callback,
             )
 
-            chans = kwargs.get("adc_channels")
-            inputs = 0
-            if chans is None:
-                if active:
-                    inputs = 0xFFFFFFFF
-            else:
-                for channel in chans:
-                    inputs = inputs | (1 << channel)
-            self._component_manager.test_generator_input_select(inputs)
-            self._component_manager.test_generator_active = active
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        return task
 
     def is_ConfigureTestGenerator_allowed(self: MccsTile) -> bool:
         """
@@ -8154,38 +6766,54 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.admin_mode_model.admin_mode == AdminMode.ENGINEERING
 
+    # pylint: disable=too-many-locals
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args(schema=ConfigureTestGenerator_SCHEMA)
+    def ConfigureTestGenerator(
+        self: MccsTile,
+        set_time: Optional[str] = None,
+        tone_frequency: Optional[float] = None,
+        tone_amplitude: Optional[float] = None,
+        tone_2_frequency: Optional[float] = None,
+        tone_2_amplitude: Optional[float] = None,
+        noise_amplitude: Optional[float] = None,
+        pulse_frequency: Optional[int] = None,
+        pulse_amplitude: Optional[float] = None,
+        adc_channels: Optional[list[int]] = None,
+        **kwargs: Optional[Any],
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the test signal generator.
 
-        :param argin: json dictionary with keywords:
+        A json dictionary with keywords:
 
-        * tone_frequency: first tone frequency, in Hz. The frequency
+        :param tone_frequency: first tone frequency, in Hz. The frequency
             is rounded to the resolution of the generator. If this
             is not specified, the tone generator is disabled.
-        * tone_amplitude: peak tone amplitude, normalized to 31.875 ADC
+        :param tone_amplitude: peak tone amplitude, normalized to 31.875 ADC
             units. The amplitude is rounded to 1/8 ADC unit. Default
             is 1.0. A value of -1.0 keeps the previously set value.
-        * tone_2_frequency: frequency for the second tone. Same
+        :param tone_2_frequency: frequency for the second tone. Same
             as ToneFrequency.
-        * tone_2_amplitude: peak tone amplitude for the second tone.
+        :param tone_2_amplitude: peak tone amplitude for the second tone.
             Same as ToneAmplitude.
-        * noise_amplitude: RMS amplitude of the pseudorandom Gaussian
+        :param noise_amplitude: RMS amplitude of the pseudorandom Gaussian
             white noise, normalized to 26.03 ADC units.
-        * pulse_frequency: frequency of the periodic pulse. A code
+        :param pulse_frequency: frequency of the periodic pulse. A code
             in the range 0 to 7, corresponding to (16, 12, 8, 6, 4, 3, 2)
             times the ADC frame frequency.
-        * pulse_amplitude: peak amplitude of the periodic pulse, normalized
+        :param pulse_amplitude: peak amplitude of the periodic pulse, normalized
             to 127 ADC units. Default is 1.0. A value of -1.0 keeps the
             previously set value.
-        * set_time: time at which the generator is set, for synchronization
+        :param set_time: time at which the generator is set, for synchronization
             among different TPMs. In UTC ISO format (string)
-        * adc_channels: list of adc channels which will be substituted with
+        :param adc_channels: list of adc channels which will be substituted with
             the generated signal. It is a 32 integer, with each bit representing
             an input channel. Default: all if at least q source is specified,
             none otherwises.
+        :param kwargs: optional keyword arguments:
+            Currently supports: delays
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -8200,98 +6828,103 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """
-        handler = self.get_command_object("ConfigureTestGenerator")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        active = False
+        if tone_frequency is not None:
+            frequency0 = tone_frequency
+            amplitude0 = tone_amplitude if tone_amplitude is not None else 1.0
+            active = True
+        else:
+            frequency0 = 0.0
+            amplitude0 = 0.0
 
-    class ConfigurePatternGeneratorCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the ConfigurePatternGenerator() command.
+        if tone_2_frequency is not None:
+            frequency1 = tone_2_frequency
+            amplitude1 = tone_2_amplitude if tone_2_amplitude is not None else 1.0
+            active = True
+        else:
+            frequency1 = 0.0
+            amplitude1 = 0.0
 
-        This command takes as input a JSON string that conforms to the
-        following schema:
+        if noise_amplitude is not None:
+            amplitude_noise = noise_amplitude
+            active = True
+        else:
+            amplitude_noise = 0.0
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigurePatternGenerator.json
-           :language: json
-        """  # noqa: E501
+        if pulse_frequency is not None:
+            pulse_code = pulse_frequency
+            amplitude_pulse = pulse_amplitude if pulse_amplitude is not None else 1.0
+            active = True
+        else:
+            pulse_code = 7
+            amplitude_pulse = 0.0
 
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.schemas.tile",
-                "MccsTile_ConfigurePatternGenerator.json",
-            )
+        self.component_manager.configure_test_generator(
+            frequency0,
+            amplitude0,
+            frequency1,
+            amplitude1,
+            amplitude_noise,
+            pulse_code,
+            amplitude_pulse,
+            kwargs.get("delays", None),
+            set_time,
         )
 
-        def __init__(
-            self: MccsTile.ConfigurePatternGeneratorCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ConfigurePatternGeneratorCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("ConfigurePatternGenerator", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "ConfigurePatternGenerator command completed OK"
-
-        def do(
-            self: MccsTile.ConfigurePatternGeneratorCommand,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ConfigurePatternGenerator` commands.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                   message indicating status. The message is for
-                   information purpose only.
-            """
-            self._component_manager.configure_pattern_generator(**kwargs)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        chans = adc_channels
+        inputs = 0
+        if chans is None:
+            if active:
+                inputs = 0xFFFFFFFF
+        else:
+            for channel in chans:
+                inputs = inputs | (1 << channel)
+        self.component_manager.test_generator_input_select(inputs)
+        self.component_manager.test_generator_active = active
+        return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.validators.validate_json_args(schema=ConfigurePatternGenerator_SCHEMA)
     def ConfigurePatternGenerator(
-        self: MccsTile, argin: str
-    ) -> DevVarLongStringArrayType:
+        self: MccsTile,
+        stage: str,
+        pattern: list[int],
+        adders: list[int],
+        start: bool = False,
+        shift: int = 0,
+        zero: int = 0,
+        ramp1: dict[str, int] | None = None,
+        ramp2: dict[str, int] | None = None,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the test pattern generator using the provided configuration.
 
-        :param argin: JSON dictionary with the following keywords:
+        A JSON dictionary with the following keywords:
 
-        * stage: The stage in the signal chain where the pattern is injected.
+        :param stage: The stage in the signal chain where the pattern is injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of the
             channelizer), or 'beamf' (output of the tile beamformer).
-        * pattern: The data pattern in time order. Must be an array of length 1
+        :param pattern: The data pattern in time order. Must be an array of length 1
             to 1024. Represents values in time order, not for antennas or
             polarizations.
-        * adders: A list of 32 integers that expands the pattern to cover 16
+        :param adders: A list of 32 integers that expands the pattern to cover 16
             antennas and 2 polarizations. The adders map the pattern to hardware
             signals.
-        * start: Boolean flag to indicate whether to start the pattern
+        :param start: Boolean flag to indicate whether to start the pattern
             immediately. If False, the pattern can be started manually later.
-        * shift: Optional bit shift (divides by 2^shift). Must not be used in
+        :param shift: Optional bit shift (divides by 2^shift). Must not be used in
             'beamf' stage, where it is always overridden to 4.
-            * zero: Integer (0-65535) used as a mask to disable the pattern on
+        :param zero: Integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. Applied to both FPGAs, supports
             up to 8 antennas and 2 polarizations.
-        * ramp1: An optional ramp1 applied after pattern.
-            * polarisation: The polarisation to apply the ramp for.
-                This must be 0, 1 or -1 to use all stages.
-        * ramp2: An optional ramp2 applied after pattern. (note: ramp2 = ramp1 + 1234)
-            * polarisation: The polarisation to apply the ramp for.
-                This must be 0, 1 or -1 to use all stages.
+        :param ramp1: An optional ramp1 applied after pattern.
+            polarisation: The polarisation to apply the ramp for.
+            This must be 0, 1 or -1 to use all stages.
+        :param ramp2: An optional ramp2 applied after pattern.
+            (note: ramp2 = ramp1 + 1234)
+            polarisation: The polarisation to apply the ramp for.
+            This must be 0, 1 or -1 to use all stages.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -8312,55 +6945,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(config)
         >>> values = dp.command_inout("ConfigurePatternGenerator", jstr)
         """
-        handler = self.get_command_object("ConfigurePatternGenerator")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class StopPatternGeneratorCommand(FastCommand):
-        """
-        Class for handling the StopPatternGenerator(argin) command.
-
-        This command takes as input a positional argument specifying the stage in the
-        signal chain where the pattern was injected.
-        """
-
-        def __init__(
-            self: MccsTile.StopPatternGeneratorCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StopPatternGeneratorCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StopPatternGenerator command completed OK"
-
-        def do(
-            self: MccsTile.StopPatternGeneratorCommand,
-            stage: str,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StopPatternGenerator` commands.
-
-            :param stage: The stage in the signal chain where the pattern was injected.
-                Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
-                or 'beamf' (output of tile beamformer), or 'all' for all stages.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.stop_pattern_generator(stage)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.configure_pattern_generator(
+            stage, pattern, adders, start, shift, zero, ramp1, ramp2
+        )
+        return ([ResultCode.OK], ["ConfigurePatternGenerator command completed OK"])
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StopPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
+    def StopPatternGenerator(
+        self: MccsTile, stage: str
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Stop the pattern generator at the specified stage.
 
@@ -8379,55 +6973,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopPatternGenerator", "jesd")
         """
-        handler = self.get_command_object("StopPatternGenerator")
-        (return_code, message) = handler(stage)
-        return ([return_code], [message])
-
-    class StartPatternGeneratorCommand(FastCommand):
-        """
-        Class for handling the StartPatternGenerator(argin) command.
-
-        This command takes as input a positional argument specifying the stage in the
-        signal chain where the pattern should be injected.
-        """
-
-        def __init__(
-            self: MccsTile.StartPatternGeneratorCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StartPatternGeneratorCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StartPatternGenerator command completed OK"
-
-        def do(
-            self: MccsTile.StartPatternGeneratorCommand,
-            stage: str,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StartPatternGenerator` commands.
-
-            :param stage: The stage in the signal chain where the pattern was injected.
-                Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
-                or 'beamf' (output of tile beamformer), or 'all' for all stages.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.start_pattern_generator(stage)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.stop_pattern_generator(stage)
+        return ([ResultCode.OK], ["StopPatternGenerator command completed OK"])
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
+    def StartPatternGenerator(
+        self: MccsTile, stage: str
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Start the pattern generator at the specified stage.
 
@@ -8446,43 +6999,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StartPatternGenerator", "channel")
         """
-        handler = self.get_command_object("StartPatternGenerator")
-        (return_code, message) = handler(stage)
-        return ([return_code], [message])
-
-    class StartAdcsCommand(FastCommand):
-        """Class for handling the StartAdcs command."""
-
-        def __init__(
-            self: MccsTile.StartAdcsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StartAdcsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StartAdcs command completed OK"
-
-        def do(self: MccsTile.StartAdcsCommand) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StartADCs` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.start_adcs()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.start_pattern_generator(stage)
+        return ([ResultCode.OK], ["StartPatternGenerator command completed OK"])
 
     @engineering_mode_required
     @command(dtype_out="DevVarLongStringArray")
-    def StartADCs(self: MccsTile) -> DevVarLongStringArrayType:
+    def StartADCs(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Start the ADCs.
 
@@ -8494,43 +7016,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StartADCs")
         """
-        handler = self.get_command_object("StartADCs")
-        (return_code, message) = handler()
-        return ([return_code], [message])
-
-    class StopAdcsCommand(FastCommand):
-        """Class for handling the StopAdcs command."""
-
-        def __init__(
-            self: MccsTile.StopAdcsCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StopAdcsCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StopAdcs command completed OK"
-
-        def do(self: MccsTile.StopAdcsCommand) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StopADCs` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.stop_adcs()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.start_adcs()
+        return ([ResultCode.OK], ["StartAdcs command completed OK"])
 
     @engineering_mode_required
     @command(dtype_out="DevVarLongStringArray")
-    def StopADCs(self: MccsTile) -> DevVarLongStringArrayType:
+    def StopADCs(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Stop the ADCs.
 
@@ -8542,49 +7033,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopADCs")
         """
-        handler = self.get_command_object("StopADCs")
-        (return_code, message) = handler()
-        return ([return_code], [message])
-
-    class EnableStationBeamFlaggingCommand(FastCommand):
-        """Class for handling the EnableStationBeamFlagging command."""
-
-        def __init__(
-            self: MccsTile.EnableStationBeamFlaggingCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new EnableStationBeamFlaggingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "EnableStationBeamFlagging command completed OK"
-        FAILED_MESSAGE = "EnableStationBeamFlagging failed to execute"
-
-        def do(
-            self: MccsTile.EnableStationBeamFlaggingCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.EnableStationBeamFlagging` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.enable_station_beam_flagging()
-            beam_flag_values = self._component_manager.is_station_beam_flagging_enabled
-
-            if all(value for value in beam_flag_values):
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+        self.component_manager.stop_adcs()
+        return ([ResultCode.OK], ["StopAdcs command completed OK"])
 
     @command(dtype_out="DevVarLongStringArray")
-    def EnableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
+    def EnableStationBeamFlagging(
+        self: MccsTile,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Enable station beam flagging.
 
@@ -8599,49 +7054,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("EnableStationBeamFlagging")
         """
-        handler = self.get_command_object("EnableStationBeamFlagging")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        self.component_manager.enable_station_beam_flagging()
+        beam_flag_values = self.component_manager.is_station_beam_flagging_enabled
 
-    class DisableStationBeamFlaggingCommand(FastCommand):
-        """Class for handling the DisableStationBeamFlagging command."""
-
-        def __init__(
-            self: MccsTile.DisableStationBeamFlaggingCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new DisableStationBeamFlaggingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "DisableStationBeamFlagging command completed OK"
-        FAILED_MESSAGE = "DisableStationBeamFlagging failed to execute"
-
-        def do(
-            self: MccsTile.DisableStationBeamFlaggingCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.DisableStationBeamFlagging` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.disable_station_beam_flagging()
-            beam_flag_values = self._component_manager.is_station_beam_flagging_enabled
-
-            if all(not value for value in beam_flag_values):
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+        if all(value for value in beam_flag_values):
+            return ([ResultCode.OK], ["EnableStationBeamFlagging command completed OK"])
+        return ([ResultCode.FAILED], ["EnableStationBeamFlagging failed to execute"])
 
     @command(dtype_out="DevVarLongStringArray")
-    def DisableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
+    def DisableStationBeamFlagging(
+        self: MccsTile,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Disable station beam flagging.
 
@@ -8656,9 +7079,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("DisableStationBeamFlagging")
         """
-        handler = self.get_command_object("DisableStationBeamFlagging")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        self.component_manager.disable_station_beam_flagging()
+        beam_flag_values = self.component_manager.is_station_beam_flagging_enabled
+
+        if all(not value for value in beam_flag_values):
+            return (
+                [ResultCode.OK],
+                ["DisableStationBeamFlagging command completed OK"],
+            )
+        return ([ResultCode.FAILED], ["DisableStationBeamFlagging failed to execute"])
 
     def __str__(self: MccsTile) -> str:
         """
@@ -8724,157 +7153,106 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # AntennaBuffer
     # -------------
 
-    class SetUpAntennaBufferCommand(FastCommand):
-        """Class for handling the SetUpAntennaBuffer(argin) command."""
-
-        def __init__(
-            self: MccsTile.SetUpAntennaBufferCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new SetUpAntennaBufferCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetUpAntennaBuffer command completed OK"
-        FAILED_MESSAGE = "SetUpAntennaBuffer command failed to compelte"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.SetUpAntennaBufferCommand,
-            *args: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetUpAntennaBuffer` command.
-
-            :param args: a string containing a json serialised dictionary
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            decoded_dict = json.loads(args[0])
-            mode = decoded_dict.get("mode", "SDN")
-            ddr_start_byte_address = decoded_dict.get(
-                "DDR_start_address", 512 * 1024**2
-            )
-            max_ddr_byte_size = decoded_dict.get("max_DDR_byte_size", None)
-
-            if self._component_manager.set_up_antenna_buffer(
-                mode, ddr_start_byte_address, max_ddr_byte_size
-            ):
-                result = self._component_manager.tile._antenna_buffer_tile_attribute
-                return (ResultCode.OK, str(result))
-            return (ResultCode.FAILED, self.FAILED_MESSAGE)
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetUpAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.validators.validate_json_args
+    def SetUpAntennaBuffer(
+        self: MccsTile,
+        mode: str = "SDN",
+        ddr_start_byte_address: int = 512 * 1024**2,
+        max_ddr_byte_size: int | None = None,
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """Set up the antenna buffer.
 
-        :param argin: a json serialised dictionary containing the following keys:
+        A json serialised dictionary containing the following keys:
 
-            * mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
-                (Science Data Network) and 'NSDN' (Non-Science Data Network)
-            * ddr_start_byte_address: first address in the DDR for antenna buffer
-                data to be written in (in bytes).
-            * max_ddr_byte_size: last address for writing antenna buffer data
-                (in bytes). If 'None' is chosen, the method will assume the last
-                address to be the final address of the DDR chip
+        :param mode: network to transmit antenna buffer data to. Options: 'SDN'
+            (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+            data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+            (in bytes). If 'None' is chosen, the method will assume the last
+            address to be the final address of the DDR chip
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
         """
-        handler = self.get_command_object("SetUpAntennaBuffer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        if self.component_manager.set_up_antenna_buffer(
+            mode, ddr_start_byte_address, max_ddr_byte_size
+        ):
+            result = self.component_manager.tile._antenna_buffer_tile_attribute
+            return ([ResultCode.OK], [str(result)])
+        return ([ResultCode.FAILED], ["SetUpAntennaBuffer command failed to complete"])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args
+    def StartAntennaBuffer(
+        self: MccsTile,
+        antennas: list[int],
+        start_time: int = -1,
+        timestamp_capture_duration: int = 75,
+        continuous_mode: bool = False,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Start recording to the antenna buffer.
 
-        :param argin: a json serialised dictionary containing the following keys:
-
-            * antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
-                One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
-            * start_time: the first time stamp that will be written into the DDR.
-                When set to -1, the buffer will begin writing as soon as possible.
-            * timestamp_capture_duration: the capture duration in timestamps.
-                Timestamps are in units of 256 ADC samples (256*1.08us).
-            * continuous_mode: "True" for continous capture. If enabled, time capture
-                durations is ignored
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+            Timestamps are in units of 256 ADC samples (256*1.08us).
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
         """
-        handler = self.get_command_object("StartAntennaBuffer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def ReadAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.start_antenna_buffer(
+                antennas=antennas,
+                start_time=start_time,
+                timestamp_capture_duration=timestamp_capture_duration,
+                continuous_mode=continuous_mode,
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    def ReadAntennaBuffer(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Read the data from the antenna buffer.
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
         """
-        handler = self.get_command_object("ReadAntennaBuffer")
-        (return_code, message) = handler()
-        return ([return_code], [message])
 
-    class StopAntennaBufferCommand(FastCommand):
-        """Class for handling the StopAntennaBuffer command."""
-
-        def __init__(
-            self: MccsTile.StopAntennaBufferCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger,
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
         ) -> None:
-            """
-            Initialise a new StopAntennaBufferCommand instance.
+            self.component_manager.read_antenna_buffer(
+                task_callback=task_callback,
+            )
 
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StopAntennaBuffer command completed OK"
-        FAILED_MESSAGE = "StopAntennaBuffer command failed to compelte"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.StopAntennaBufferCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StopAntennaBuffer` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            if self._component_manager.stop_antenna_buffer():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+        return task
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+    def StopAntennaBuffer(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Stop writting to the antenna buffer.
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
         """
-        handler = self.get_command_object("StopAntennaBuffer")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        if self.component_manager.stop_antenna_buffer():
+            return ([ResultCode.OK], ["StopAntennaBuffer command completed OK"])
+        return ([ResultCode.FAILED], ["StopAntennaBuffer command failed to complete"])
 
     # ---------------
     # On/Off commands
@@ -8913,45 +7291,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_model._ignore_power_state = False
         return super().execute_On()
 
-    class EnableBroadbandRfiBlankingCommand(FastCommand):
-        """Class for handling the EnableBroadbandRfiBlanking command."""
-
-        def __init__(
-            self: MccsTile.EnableBroadbandRfiBlankingCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new EnableBroadbandRfiBlankingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "EnableBroadbandRfiBlanking command completed OK"
-        FAILED_MESSAGE = "EnableBroadbandRfiBlanking failed to execute"
-
-        def do(
-            self: MccsTile.EnableBroadbandRfiBlankingCommand,
-            argin: list[int],
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.EnableBroadbandRfiBlanking` command.
-
-            :param argin: List of antenna IDs to enable blanking on (0-15).
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.enable_broadband_rfi_blanking(argin)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def EnableBroadbandRfiBlanking(
         self: MccsTile, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Enable broadband RFI blanking on specified antennas.
 
@@ -8963,49 +7306,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return ([ResultCode.REJECTED], ["Cannot specify more than 16 antennas"])
         if max(argin) > 15 or min(argin) < 0:
             return ([ResultCode.REJECTED], ["Antenna IDs must be between 0 and 15"])
-        handler = self.get_command_object("EnableBroadbandRfiBlanking")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class DisableBroadbandRfiBlankingCommand(FastCommand):
-        """Class for handling the DisableBroadbandRfiBlanking command."""
-
-        def __init__(
-            self: MccsTile.DisableBroadbandRfiBlankingCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new DisableBroadbandRfiBlankingCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "DisableBroadbandRfiBlanking command completed OK"
-        FAILED_MESSAGE = "DisableBroadbandRfiBlanking failed to execute"
-
-        def do(
-            self: MccsTile.DisableBroadbandRfiBlankingCommand,
-            argin: list[int],
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.DisableBroadbandRfiBlanking` command.
-
-            :param argin: List of antenna IDs to disable blanking on (0-15).
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.disable_broadband_rfi_blanking(argin)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.enable_broadband_rfi_blanking(argin)
+        return ([ResultCode.OK], ["EnableBroadbandRfiBlanking command completed OK"])
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def DisableBroadbandRfiBlanking(
         self: MccsTile, argin: list[int]
-    ) -> DevVarLongStringArrayType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Disable broadband RFI blanking on specified antennas.
 
@@ -9017,49 +7324,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return ([ResultCode.REJECTED], ["Cannot specify more than 16 antennas"])
         if max(argin) > 15 or min(argin) < 0:
             return ([ResultCode.REJECTED], ["Antenna IDs must be between 0 and 15"])
-        handler = self.get_command_object("DisableBroadbandRfiBlanking")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class SetBroadbandRfiFactorCommand(FastCommand):
-        """Class for handling the SetBroadbandRfiFactor command."""
-
-        def __init__(
-            self: MccsTile.SetBroadbandRfiFactorCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new SetBroadbandRfiFactorCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetBroadbandRfiFactor command completed OK"
-        FAILED_MESSAGE = "SetBroadbandRfiFactor failed to execute"
-
-        def do(
-            self: MccsTile.SetBroadbandRfiFactorCommand,
-            rfi_factor: float,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetBroadbandRfiFactor` command.
-
-            :param rfi_factor: the sensitivity value for the RFI detection
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.set_broadband_rfi_factor(rfi_factor)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.disable_broadband_rfi_blanking(argin)
+        return ([ResultCode.OK], ["DisableBroadbandRfiBlanking command completed OK"])
 
     @command(dtype_in="DevFloat", dtype_out="DevVarLongStringArray")
     def SetBroadbandRfiFactor(
-        self: MccsTile, argin: float
-    ) -> DevVarLongStringArrayType:
+        self: MccsTile, rfi_factor: float
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the RFI factor for broadband RFI detection.
 
@@ -9067,45 +7338,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This is because data is flagged if the short term power is greater than
         the long term power * RFI factor * 32/27
 
-        :param argin: the sensitivity value for the RFI detection
-        :type argin: float
+        :param rfi_factor: the sensitivity value for the RFI detection
 
         :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
         """
-        handler = self.get_command_object("SetBroadbandRfiFactor")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
-
-    class ReadBroadbandRfiCommand(FastCommand):
-        """Class for handling the ReadBroadbandRfi command."""
-
-        def __init__(
-            self: MccsTile.ReadBroadbandRfiCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ReadBroadbandRfiCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.ReadBroadbandRfiCommand,
-            argin: list[int],
-        ) -> np.ndarray:
-            """
-            Implement :py:meth:`.MccsTile.ReadBroadbandRfi` command.
-
-            :param argin: list antennas of which RFI counters to read
-            :return: RFI counters
-            """
-            return self._component_manager.read_broadband_rfi(argin)
+        self.component_manager.set_broadband_rfi_factor(rfi_factor)
+        return ([ResultCode.OK], ["SetBroadbandRfiFactor command completed OK"])
 
     @command(
         dtype_in="DevVarLongArray",
@@ -9124,38 +7364,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             raise ValueError("Cannot specify more than 16 antennas")
         if max(argin) > 15 or min(argin) < 0:
             raise ValueError("Antenna IDs must be between 0 and 15")
-        handler = self.get_command_object("ReadBroadbandRfi")
-        return handler(argin).flatten().tolist()
-
-    class MaxBroadbandRfiCommand(FastCommand):
-        """Class for handling the MaxBroadbandRfi command."""
-
-        def __init__(
-            self: MccsTile.MaxBroadbandRfiCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new MaxBroadbandRfiCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.MaxBroadbandRfiCommand,
-            argin: list[int],
-        ) -> int:
-            """
-            Implement :py:meth:`.MccsTile.MaxBroadbandRfi` command.
-
-            :param argin: list antennas whose RFI counters to read
-            :return: Maximum RFI counts
-            :rtype: int
-            """
-            return self._component_manager.max_broadband_rfi(argin)
+        return self.component_manager.read_broadband_rfi(argin).flatten().tolist()
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevLong")
     def MaxBroadbandRfi(self: MccsTile, argin: list[int]) -> int:
@@ -9174,50 +7383,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             raise ValueError("Cannot specify more than 16 antennas")
         if max(argin) > 15 or min(argin) < 0:
             raise ValueError("Antenna IDs must be between 0 and 15")
-        handler = self.get_command_object("MaxBroadbandRfi")
-        return handler(argin)
-
-    class ClearBroadbandRfiCommand(FastCommand):
-        """Class for handling the ClearBroadbandRfi command."""
-
-        def __init__(
-            self: MccsTile.ClearBroadbandRfiCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new ClearBroadbandRfiCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(
-            self: MccsTile.ClearBroadbandRfiCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ClearBroadbandRfi` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purposes only.
-            """
-            self._component_manager.clear_broadband_rfi()
-            return (ResultCode.OK, "ClearBroadbandRfi command completed OK")
+        return self.component_manager.max_broadband_rfi(argin)
 
     @command(dtype_out="DevVarLongStringArray")
-    def ClearBroadbandRfi(self: MccsTile) -> DevVarLongStringArrayType:
+    def ClearBroadbandRfi(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Clear all RFI counts registers.
 
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
         """
-        handler = self.get_command_object("ClearBroadbandRfi")
-        (return_code, message) = handler()
-        return ([return_code], [message])
+        self.component_manager.clear_broadband_rfi()
+        return ([ResultCode.OK], ["ClearBroadbandRfi command completed OK"])
 
 
 # ----------

@@ -858,10 +858,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.download_firmware(mock_bitfile, callbacks["task_lrc"])
 
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         assert tile_component_manager.tile.is_programmed()
 
@@ -967,19 +971,27 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert not tile_component_manager.is_beamformer_running
         tile_component_manager.start_beamformer(callbacks["task_lrc"])
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
 
         assert tile_component_manager.is_beamformer_running
         tile_component_manager.stop_beamformer(callbacks["task_lrc"])
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         assert not tile_component_manager.is_beamformer_running
 
@@ -991,10 +1003,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block1,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         assert tile_component_manager.beamformer_running_for_channels(block1)
         assert not tile_component_manager.beamformer_running_for_channels(block2)
@@ -1003,10 +1019,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block2,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         assert tile_component_manager.beamformer_running_for_channels(block1)
         assert tile_component_manager.beamformer_running_for_channels(block2)
@@ -1016,10 +1036,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block1,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         assert not tile_component_manager.beamformer_running_for_channels(block1)
         assert tile_component_manager.beamformer_running_for_channels(block2)
@@ -1029,10 +1053,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block2,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         assert not tile_component_manager.beamformer_running_for_channels(block1)
         assert not tile_component_manager.beamformer_running_for_channels(block2)
@@ -1239,10 +1267,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         time.sleep(future_time)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS, lookahead=5)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=5,
         )
 
         # check the fpga timestamp is moving
@@ -2127,10 +2156,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["task_lrc"], start_time=start_time, duration=4
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
 
         assert tile_component_manager.is_beamformer_running
@@ -2163,10 +2196,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         tile_component_manager.stop_beamformer(callbacks["task_lrc"])
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
+        )
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         tile_simulator.stop_beamformer.assert_called()
 

@@ -1,8 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://skao.int/MccsTile_ConfigureTestGenerator.json",
-	"title": "MccsTile ConfigureTestGenerator schema",
-	"description": "Schema for MccsTile's ConfigureTestGenerator command",
+	"$id": "https://skao.int/MccsTile_ConfigurePatternGenerator.json",
+	"title": "MccsTile ConfigurePatternGenerator schema",
+	"description": "Schema for MccsTile's ConfigurePatternGenerator command",
 	"type": "object",
 	"properties": {
 		"stage": {

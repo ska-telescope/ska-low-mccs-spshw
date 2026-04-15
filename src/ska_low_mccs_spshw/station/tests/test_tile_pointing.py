@@ -192,7 +192,7 @@ class TestTilePointing(BaseDaqTest):
     def _reset(self: TestTilePointing) -> None:
         self.component_manager.start_adcs()
         self._reset_tpm_calibration(1.0)
-        self.component_manager._stop_beamformer(None)
+        self.component_manager.stop_beamformer(None)
         self._disable_test_generator()
         super()._reset()
 
@@ -200,7 +200,7 @@ class TestTilePointing(BaseDaqTest):
         """Test to verify HW pointing offsets delays in the test generator."""
         self.test_logger.debug("Testing tile pointing.")
         test_channels = range(8)
-        self.component_manager._set_channeliser_rounding(
+        self.component_manager.set_channeliser_rounding(
             np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
         )
         self.component_manager.stop_adcs()
@@ -210,7 +210,7 @@ class TestTilePointing(BaseDaqTest):
         start_time = datetime.strftime(
             datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
         )
-        self.component_manager._start_beamformer(
+        self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )
         time.sleep(2)

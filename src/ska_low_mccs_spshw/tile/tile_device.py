@@ -1093,10 +1093,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self._stopping:
             return
         if self.UseAttributesForHealth:
-            value_cache = self._attribute_state[attribute_name].read()
-            if value_cache is not None:
-                self.push_change_event(attribute_name, value_cache[0])
-                self.push_archive_event(attribute_name, value_cache[0])
+            if attribute_name in self._attribute_state:
+                value_cache = self._attribute_state[attribute_name].read()
+                if value_cache is not None:
+                    self.push_change_event(attribute_name, value_cache[0])
+                    self.push_archive_event(attribute_name, value_cache[0])
+            else:
+                # Signal-backed attributes store their last value in the SignalBusMixin
+                # cache. Re-pushing without explicit quality lets Tango recompute it
+                # against the newly configured thresholds.
+                signal_cache = self._SignalBusMixin__attr_values.get(attribute_name)
+                if signal_cache is not None:
+                    self.push_change_event(attribute_name, signal_cache.value)
+                    self.push_archive_event(attribute_name, signal_cache.value)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -1107,6 +1116,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if self.UseAttributesForHealth:
             healthful_attrs = set(self._attribute_state.keys())
+            # Add signal-backed attributes that are not in _attribute_state.
+            healthful_attrs |= set(MccsTile._ALARM_SIGNAL_ATTRIBUTES.values())
 
             healthful_attrs = healthful_attrs - {
                 "dataTransmissionMode",

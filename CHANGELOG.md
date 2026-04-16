@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 5.3.8.
+
 ## 11.4.4
 
 * [THORN-532] Update ska-tango-base to bring in WOM-1114 fixes, remove MCCS workarounds.

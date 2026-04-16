@@ -2736,6 +2736,51 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.set_lmc_download.side_effect = Exception("Mocked exception")
         tile_component_manager.set_lmc_download(**mocked_input_params)
 
+    def test_set_csp_download(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the set_csp_download function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        # Arrange
+        tile_simulator.connect()
+        tile_simulator.set_csp_download = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
+        mocked_input_params: dict[str, Any] = {
+            "src_port": 4661,
+            "dst_ip_1": "10.0.10.1",
+            "dst_ip_2": "10.0.10.2",
+            "dst_port": 4660,
+            "is_last": False,
+            "netmask": "255.255.255.0",
+            "gateway": "10.0.10.254",
+        }
+
+        # Act
+        tile_component_manager.set_csp_download(**mocked_input_params)
+
+        # Assert
+        tile_simulator.set_csp_download.assert_called_once_with(
+            mocked_input_params["src_port"],
+            mocked_input_params["dst_ip_1"],
+            mocked_input_params["dst_ip_2"],
+            mocked_input_params["dst_port"],
+            mocked_input_params["is_last"],
+            mocked_input_params["netmask"],
+            mocked_input_params["gateway"],
+        )
+
+        # Check that a raised exception is caught and returns FAILED.
+        tile_simulator.set_csp_download.side_effect = Exception("Mocked exception")
+        result = tile_component_manager.set_csp_download(**mocked_input_params)
+        assert result[0] == [ResultCode.FAILED]
+
     def test_arp_table(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,

@@ -1541,13 +1541,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # on_emission only calls push_change_event; set_value + check_alarm are
         # needed so that Tango's internal alarm state (is_max_alarm()) is updated,
         # mirroring what post_change_event does for AttributeManager-backed attrs.
-        try:
-            self.get_device_attr().get_attr_by_name(tango_attr_name).set_value(
-                cast(float, value)
-            )
-            self.get_device_attr().check_alarm(tango_attr_name)
-        except tango.DevFailed:
-            pass
+        self.get_device_attr().get_attr_by_name(tango_attr_name).set_value(
+            cast(float, value)
+        )
+        self.get_device_attr().check_alarm(tango_attr_name)
         self.shutdown_on_max_alarm(tango_attr_name)
 
     def post_change_event(

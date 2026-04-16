@@ -1354,7 +1354,16 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code = self._turn_on_subracks(task_callback, task_abort_event)
+            result_code, message = self._turn_on_subracks(
+                task_callback, task_abort_event
+            )
+        if result_code != ResultCode.OK:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(result_code, f"Failed to turn on subracks: {message}"),
+                )
+                return
         self.logger.debug("Subracks now on")
         self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
         with self._power_state_lock:
@@ -1429,6 +1438,7 @@ class SpsStationComponentManager(
         """
         # pylint: disable=too-many-branches
         message: str = ""
+        failure_step: str = ""
         self.logger.debug("Starting on sequence.")
         self.logger.debug("State transitions suppressed during power command.")
         if task_callback:
@@ -1455,12 +1465,16 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code = self._turn_on_subracks(task_callback, task_abort_event)
+            result_code, failure_step = self._turn_on_subracks(
+                task_callback, task_abort_event
+            )
         self.logger.debug("Subracks now on")
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting tile source IPs before initialisation")
-            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
+            result_code, failure_step = self._set_tile_source_ips(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting global reference time")
@@ -1471,30 +1485,56 @@ class SpsStationComponentManager(
             for power_state in self._tile_power_states.values()
         ):
             self.logger.debug("Starting on sequence on tiles")
-            result_code = self._turn_on_tiles(task_callback, task_abort_event)
+            result_code, failure_step = self._turn_on_tiles(
+                task_callback, task_abort_event
+            )
+
+        if result_code != ResultCode.OK and self._on_workaround_flag:
+            self.logger.info("Using On bruteforce workaround (timeout=3min).")
+            try:
+                ensure_tpms_on(
+                    list(
+                        proxy._proxy._device
+                        for proxy in self._tile_proxies.values()
+                        if proxy._proxy is not None
+                    )
+                )
+                result_code = ResultCode.OK
+                failure_step = ""
+                message = "On Command Completed"
+            except Exception as e:  # pylint:disable=broad-exception-caught
+                self.logger.error(f"On workaround timed out: {e}")
+                failure_step = f"turning on tiles (workaround timed out: {e})"
+                message = f"On Command failed: {failure_step}"
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
-            result_code = self._initialise_tile_parameters(
+            result_code, failure_step = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
             # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
-            result_code = self._initialise_station(task_callback, task_abort_event)
+            result_code, failure_step = self._initialise_station(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Waiting for ARP table")
-            result_code = self._wait_for_arp_table(task_callback, task_abort_event)
+            result_code, failure_step = self._wait_for_arp_table(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code = self._route_data(None, task_callback, task_abort_event)
+            result_code, failure_step = self._route_data(
+                None, task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
-            result_code = self._check_station_synchronisation(
+            result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
@@ -1503,24 +1543,14 @@ class SpsStationComponentManager(
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
         elif result_code is ResultCode.ABORTED:
-            self.logger.error("Initialisation aborted")
+            self.logger.error(f"Initialisation aborted at: {failure_step}")
             task_status = TaskStatus.ABORTED
-            message = "On Command aborted"
+            message = f"On Command aborted: {failure_step}"
         else:
-            self.logger.error("Initialisation failed")
+            self.logger.error(f"Initialisation failed at: {failure_step}")
             task_status = TaskStatus.FAILED
-            message = "On Command failed"
+            message = f"On Command failed: {failure_step}"
 
-        if task_status == TaskStatus.FAILED and self._on_workaround_flag:
-            self.logger.info("Using On bruteforce workaround (timeout=3min).")
-            try:
-                ensure_tpms_on(list(self._tile_proxies.values()))
-                task_status = TaskStatus.COMPLETED
-                message = "On Command Completed"
-            except Exception as e:  # pylint:disable=broad-exception-caught
-                self.logger.error(f"On workaround timed out: {e}")
-                task_status = TaskStatus.FAILED
-                message = "On Command failed, workaround timed out."
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
@@ -1547,6 +1577,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         message: str = ""
+        failure_step: str = ""
         self.logger.debug("Starting initialise sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1557,6 +1588,7 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Subracks not on.")
             result_code = ResultCode.FAILED
+            failure_step = "subracks not on"
 
         if not all(
             power_state == PowerState.ON
@@ -1564,10 +1596,13 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Tiles not on.")
             result_code = ResultCode.FAILED
+            failure_step = "tiles not on"
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting tile source IPs before initialisation")
-            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
+            result_code, failure_step = self._set_tile_source_ips(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting global reference time")
@@ -1575,26 +1610,32 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
-            result_code = self._reinitialise_tiles(task_callback, task_abort_event)
+            result_code, failure_step = self._reinitialise_tiles(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
-            result_code = self._initialise_tile_parameters(
+            result_code, failure_step = self._initialise_tile_parameters(
                 task_callback,
                 task_abort_event,
             )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
-            result_code = self._initialise_station(task_callback, task_abort_event)
+            result_code, failure_step = self._initialise_station(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Waiting for ARP table")
-            result_code = self._wait_for_arp_table(task_callback, task_abort_event)
+            result_code, failure_step = self._wait_for_arp_table(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code = self._route_data(
+            result_code, failure_step = self._route_data(
                 start_bandpasses,
                 task_callback,
                 task_abort_event,
@@ -1602,7 +1643,7 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
-            result_code = self._check_station_synchronisation(
+            result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
@@ -1619,9 +1660,9 @@ class SpsStationComponentManager(
                 start_time=None, duration=-1, channel_groups=[], scan_id=0
             )
         else:
-            self.logger.error("Initialisation failed")
+            self.logger.error(f"Initialisation failed: {failure_step}")
             task_status = TaskStatus.FAILED
-            message = "Initialisation Failed"
+            message = f"Initialisation Failed: {failure_step}"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
@@ -1630,25 +1671,29 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Turn on subracks if not already on.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         with self._power_state_lock:
             if not all(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
             ):
-                results = []
+                results = {}
                 for proxy in self._subrack_proxies.values():
-                    result_code = proxy.on()
-                    results.append(result_code)
-                if ResultCode.FAILED in results:
-                    return ResultCode.FAILED
+                    results[proxy._name] = proxy.on()
+                failed = [
+                    name for name, rc in results.items() if rc == ResultCode.FAILED
+                ]
+                if failed:
+                    msg = f"subracks failed to power on: {failed}"
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
         # wait for subracks to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -1659,37 +1704,44 @@ class SpsStationComponentManager(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
             ):
-                return ResultCode.OK
+                return ResultCode.OK, ""
         self.logger.error("Timed out waiting for subracks to come up")
-        return ResultCode.FAILED
+        return ResultCode.FAILED, "timed out waiting for subracks to come up"
 
     @check_communicating
     def _turn_on_tiles(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Turn on tiles if not already on.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         with self._power_state_lock:
             if not all(
                 power_state == PowerState.ON
                 for power_state in self._tile_power_states.values()
             ):
-                results = []
+                results = {}
                 for proxy in self._tile_proxies.values():
-                    assert proxy._proxy is not None
+                    if proxy._proxy is None:
+                        msg = f"tile proxy {proxy} not formed"
+                        self.logger.error(msg)
+                        return ResultCode.FAILED, msg
                     self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
-                    result_code = proxy.on()
+                    results[proxy._proxy.name()] = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
-                    results.append(result_code)
-                if TaskStatus.FAILED in results:
-                    return ResultCode.FAILED
+                failed = [
+                    name for name, rc in results.items() if rc == TaskStatus.FAILED
+                ]
+                if failed:
+                    msg = f"tiles failed to power on: {failed}"
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -1701,37 +1753,49 @@ class SpsStationComponentManager(
             time.sleep(tick)
             if task_abort_event and task_abort_event.is_set():
                 self.logger.info("_turn_on_tiles task has been aborted")
-                return ResultCode.ABORTED
+                return ResultCode.ABORTED, "task aborted"
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
-                return ResultCode.OK
+                return ResultCode.OK, ""
 
-        return ResultCode.FAILED
+        states = self.tile_programming_state()
+        not_ready = {
+            trl: state
+            for trl, state in zip(self._tile_proxies.keys(), states)
+            if state not in desired_states
+        }
+        msg = (
+            f"timed out waiting for tiles to reach {desired_states}: "
+            f"tiles not in desired state: {not_ready}"
+        )
+        self.logger.error(msg)
+        return ResultCode.FAILED, msg
 
     @check_communicating
     def _set_tile_source_ips(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Set source IPs on tiles before initialising.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         for tile_id, tile_proxy in enumerate(list(self._tile_proxies.values())):
             tile = tile_proxy._proxy
             if tile is None:
-                self.logger.error(f"Tile {tile_id} proxy not formed.")
-                return ResultCode.FAILED
+                msg = f"tile {tile_id} proxy not formed"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
             src_ip1 = str(self._sdn_first_address + 2 * tile_id)
             src_ip2 = str(self._sdn_first_address + 2 * tile_id + 1)
             tile.srcip40gfpga1 = src_ip1
             tile.srcip40gfpga2 = src_ip2
-        return ResultCode.OK
+        return ResultCode.OK, ""
 
     @check_communicating
     def _set_global_reference_time(
@@ -1763,13 +1827,13 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Wait for ARP tables on tiles before continuing.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         timeout = 30
         tick = 2
@@ -1777,25 +1841,27 @@ class SpsStationComponentManager(
             last_time = time.time() + timeout
             tile = tile_proxy._proxy
             if tile is None:
-                self.logger.error(f"{tile_trl} proxy not set up.")
-                return ResultCode.FAILED
+                msg = f"{tile_trl} proxy not set up"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
             while time.time() < last_time:
                 self.logger.debug(f"Waiting on {tile_trl} ARP table.")
                 if tile.GetArpTable() != '{"0": [], "1": []}':
                     break
                 time.sleep(tick)
             if tile.GetArpTable() == '{"0": [], "1": []}':
-                self.logger.error(f"Failed to populate ARP table of {tile_trl}")
-                return ResultCode.FAILED
+                msg = f"failed to populate ARP table of {tile_trl}"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
             self.logger.debug(f"Got ARP table for {tile_trl}")
-        return ResultCode.OK
+        return ResultCode.OK, ""
 
     @check_communicating
     def _reinitialise_tiles(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Initialise tiles.
 
@@ -1804,19 +1870,24 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
 
         """
         with self._power_state_lock:
             results = []
             for proxy in self._tile_proxies.values():
-                assert proxy._proxy is not None
+                if proxy._proxy is None:
+                    msg = f"tile proxy {proxy} not formed"
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
                 result_code = proxy._proxy.initialise()
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:
-            return ResultCode.FAILED
+            msg = "one or more tiles failed to initialise"
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
 
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
@@ -1830,16 +1901,17 @@ class SpsStationComponentManager(
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
-                return ResultCode.OK
-        self.logger.error("Timed out waiting for tiles to come up")
-        return ResultCode.FAILED
+                return ResultCode.OK, ""
+        msg = "timed out waiting for tiles to come up"
+        self.logger.error(msg)
+        return ResultCode.FAILED, msg
 
     @check_communicating
     def _initialise_tile_parameters(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Initialise tile parameters.
 
@@ -1848,13 +1920,16 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         tile_no = 0
         last_tile = len(self._tile_proxies.values()) - 1
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
-            assert tile is not None
+            if tile is None:
+                msg = f"tile proxy {proxy} not formed"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
             i1 = (
                 tile_no * TileData.ADC_CHANNELS
             )  # indexes for parameters for individual signals
@@ -1883,14 +1958,14 @@ class SpsStationComponentManager(
             )
             tile_no = tile_no + 1
         self._set_beamformer_table()
-        return ResultCode.OK
+        return ResultCode.OK, ""
 
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Initialise complete station.
 
@@ -1898,7 +1973,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         tiles = list(self._tile_proxies.values())
         #
@@ -1911,7 +1986,10 @@ class SpsStationComponentManager(
         # base_ip3 = int(ip_tail)
         last_tile_id = len(tiles) - 1
         for tile_id, proxy in enumerate(tiles):
-            assert proxy._proxy is not None
+            if proxy._proxy is None:
+                msg = f"tile proxy {proxy} not formed"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
 
             if tile_id == last_tile_id:
                 is_last_tile = True
@@ -1949,14 +2027,14 @@ class SpsStationComponentManager(
                     }
                 )
             )
-        return ResultCode.OK
+        return ResultCode.OK, ""
 
     @check_communicating
     def _check_station_synchronisation(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Check tile synchronization.
 
@@ -1964,7 +2042,7 @@ class SpsStationComponentManager(
         the same time
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         tiles = list(self._tile_proxies.values())
         tile0 = tiles[0]._proxy
@@ -1976,7 +2054,10 @@ class SpsStationComponentManager(
             while (tile0.fpgasUnixTime)[0] == time0:
                 if timeout == 0:
                     self.logger.error("Timeout waiting for FPGA time second tick")
-                    return ResultCode.FAILED
+                    return (
+                        ResultCode.FAILED,
+                        "timeout waiting for FPGA time second tick",
+                    )
                 time.sleep(0.1)
                 timeout = timeout - 1
             result: list[int] = []
@@ -1989,17 +2070,29 @@ class SpsStationComponentManager(
                 self.logger.error("FPGA time counters not synced, try again")
                 time.sleep(1)
             else:
-                return ResultCode.OK
+                return ResultCode.OK, ""
 
-        self.logger.error("FPGA time counters not synced after 5 retries")
-        return ResultCode.FAILED
+        # Loop over tiles, comparing tile n FPGA0, FPGA1 reference time to tile 1 FPGA0
+        # reference time, if they differ we add the to the erorr message.
+        ref_time = result[0]
+        not_synced = {
+            trl: result[2 * i : 2 * i + 2]
+            for i, trl in enumerate(self._tile_proxies.keys())
+            if any(t != ref_time for t in result[2 * i : 2 * i + 2])
+        }
+        msg = (
+            f"FPGA time counters not synced after 5 retries "
+            f"(ref={ref_time}): {not_synced}"
+        )
+        self.logger.error(msg)
+        return ResultCode.FAILED, msg
 
     def _route_data(
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> ResultCode:
+    ) -> tuple[ResultCode, str]:
         """
         Route data streams to relevant DAQs.
 
@@ -2010,7 +2103,7 @@ class SpsStationComponentManager(
             integrated data, defaults to deployed default.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code
+        :return: a result code and message
         """
         if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
             lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
@@ -2053,7 +2146,7 @@ class SpsStationComponentManager(
                 first_channel=0,
                 last_channel=511,
             )
-        return ResultCode.OK
+        return ResultCode.OK, ""
 
     @property  # type:ignore[misc]
     @check_communicating

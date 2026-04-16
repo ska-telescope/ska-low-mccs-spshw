@@ -1,5 +1,14 @@
 # Version History
 
+## 11.4.3
+
+* [SKB-1285] Reworked tile simulator interface compliance to be driven by TileComponentManager usage. `test_tile_simulator_interface` now derives required methods from `self.tile.<method>(...)` call sites in `tile_component_manager.py` (AST-based extraction), and enforces all CM-required API methods as strict pass/fail. Added simulator implementations for `enable_all_adcs`, `disable_all_adcs`, `set_phase_terminal_count`, `test_generator_set_delay`, and `disconnect` (as a `cleanup()` alias).
+
+## 11.4.2
+
+* [THORN-526] Add better error logging and result message for SpsStation.On()/Initialise()
+* [THORN-526] Fix ensure_tpms_on() workaround
+
 ## 11.4.1
 
 * [THORN-421] Remove deprecated command objects.

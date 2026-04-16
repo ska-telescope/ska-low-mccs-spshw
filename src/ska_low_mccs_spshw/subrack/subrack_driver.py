@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable=too-many-lines
 """This module provides for monitoring and control of an SPS subrack."""
 from __future__ import annotations
 
@@ -743,6 +744,12 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
+        self.logger.debug(
+            f"Polling subrack: {len(poll_request.commands)} command(s), "
+            f"{len(poll_request.getattributes)} read(s), "
+            f"{len(poll_request.setattributes)} write(s), "
+            f"tick={self._tick}/{self._max_tick}."
+        )
         poll_response = HttpPollResponse()
 
         for command, args in poll_request.commands:

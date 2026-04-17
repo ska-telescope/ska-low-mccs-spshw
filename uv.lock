@@ -2008,8 +2008,8 @@ health-rollup = [
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "4.4.6"
-source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+version = "4.5.1"
+source = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/?rev=thorn-532#fd77c63e406a0035e0e96e2b59ed3517e5b6912c" }
 dependencies = [
     { name = "attrs" },
     { name = "backoff" },
@@ -2026,10 +2026,6 @@ dependencies = [
     { name = "ska-tango-base" },
     { name = "ska-tango-testing" },
     { name = "transitions" },
-]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.4.6/ska_low_mccs_common-4.4.6.tar.gz", hash = "sha256:3008aaf24a837cc9a72bd27344a653f0a1db9951939f6952654946d1c4f45ceb" }
-wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.4.6/ska_low_mccs_common-4.4.6-py3-none-any.whl", hash = "sha256:f5f408cafe1d95b748e131307bf967d8136bb83ba28c7e910351f490d4bb4d77" },
 ]
 
 [[package]]
@@ -2208,7 +2204,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.2,<2.0.0" },
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
-    { name = "ska-low-mccs-common", specifier = ">=4.4.6,<5.0.0" },
+    { name = "ska-low-mccs-common", git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/?rev=thorn-532" },
     { name = "ska-low-mccs-daq", specifier = ">=3.2.0,<4.0.0" },
     { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.0.0" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
@@ -2337,7 +2333,7 @@ wheels = [
 
 [[package]]
 name = "ska-tango-base"
-version = "1.4.2"
+version = "1.5.0"
 source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "debugpy" },
@@ -2348,9 +2344,9 @@ dependencies = [
     { name = "ska-ser-logging" },
     { name = "transitions" },
 ]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.4.2/ska_tango_base-1.4.2.tar.gz", hash = "sha256:5bf3fd2d10761eaa09306920e918ec248815f9e86fd49b128df7bb7552163561" }
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.5.0/ska_tango_base-1.5.0.tar.gz", hash = "sha256:90a1ab76e31e166fdb1e5aff248781ff91a82840e59d50d6f41746a830a73cc0" }
 wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.4.2/ska_tango_base-1.4.2-py3-none-any.whl", hash = "sha256:8695944ffddc3cfc8655c9a90c3c03599e8836e87a83f9d24443002297f60d9d" },
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.5.0/ska_tango_base-1.5.0-py3-none-any.whl", hash = "sha256:08545f08f2fe780d6d8fbe98fb17a8440f7f8a07b32caf3b358a33b359c0ea9f" },
 ]
 
 [[package]]

@@ -37,7 +37,7 @@ from ska_control_model import (
     TestMode,
 )
 from ska_low_mccs_common import MccsBaseDevice
-from ska_tango_base.software_bus import AttrSignal, NoValue, attribute_from_signal
+from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango.server import attribute, command, device_property
 
 from .attribute_converters import (
@@ -1352,7 +1352,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         exc,
                         exc_info=True,
                     )
-            self.board_temperature_signal = NoValue
+            self.board_temperature_signal = None
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(
@@ -1456,7 +1456,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
                 elif attribute_name == "boardTemperature":
-                    self.board_temperature_signal = NoValue
+                    self.board_temperature_signal = None
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1479,7 +1479,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.board_temperature_signal = (
                         cast(float, attribute_value)
                         if attribute_value is not None
-                        else NoValue
+                        else None
                     )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
@@ -1546,7 +1546,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param value: the emitted value
         """
         super().notify_emission(signal, value)
-        if value is NoValue or signal not in self._alarm_signal_map:
+        if value is None or signal not in self._alarm_signal_map:
             return
         tango_attr_name = self._alarm_signal_map[signal]
         # on_emission only calls push_change_event; set_value + check_alarm are

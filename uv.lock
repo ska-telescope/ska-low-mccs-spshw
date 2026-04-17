@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = "==3.10.*"
 
 [[package]]
@@ -2210,7 +2210,7 @@ requires-dist = [
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
     { name = "ska-low-mccs-common", specifier = ">=4.4.6,<5.0.0" },
     { name = "ska-low-mccs-daq", specifier = ">=3.2.0,<4.0.0" },
-    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.0.0" },
+    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=janus-367-rebased-tpm-bios-api" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
     { name = "ska-tango-base", specifier = ">=1.4.2,<2.0.0" },
@@ -2275,7 +2275,7 @@ docs = [
 [[package]]
 name = "ska-low-sps-tpm-api"
 version = "3.0.0"
-source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.0.0#3582d293cd9bd83bb7384dec9c162529a0017b04" }
+source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=janus-367-rebased-tpm-bios-api#4e0ad62c468d3212d228d246613c3fd01167fb1d" }
 dependencies = [
     { name = "future" },
     { name = "numpy" },

@@ -45,7 +45,7 @@ python-lint: mypy
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 9.0.0
+FIRMWARE_VERSION = 11.0.0-rc1
 DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
 
 install-firmware:

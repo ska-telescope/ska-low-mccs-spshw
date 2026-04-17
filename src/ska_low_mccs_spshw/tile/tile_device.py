@@ -1102,6 +1102,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "integratedDataTransmissionMode",
                 "antennaBufferMode",
                 "coreCommunicationStatus",
+                # Pointing delay readback is operational metadata, not a health signal.
+                # It can be unavailable in valid startup/runtime windows.
+                "pointingDelays",
             }
 
             if is_v1(self.HardwareVersion):

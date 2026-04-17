@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [REL-2780] Exclude pointingDelays from health evaluation.
+
 ## 11.4.4
 
 * [THORN-532] Update ska-tango-base to bring in WOM-1114 fixes, remove MCCS workarounds.

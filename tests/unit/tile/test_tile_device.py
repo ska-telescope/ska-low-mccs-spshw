@@ -392,6 +392,8 @@ class TestMccsTile:
         """
         return [
             "healthState",
+            "healthInfo",
+            "loggingFilter",
             "adminMode",
             "longRunningCommandResult",
             "longRunningCommandStatus",
@@ -3000,7 +3002,7 @@ class TestMccsTileCommands:
 
         if expect_failure:
             with pytest.raises(
-                DevFailed, match="jsonschema.exceptions.ValidationError"
+                DevFailed, match="ska_tango_base.faults.ValidateJSONArgsError"
             ):
                 tile_device.ConfigurePatternGenerator(json.dumps(default_parameters))
         else:

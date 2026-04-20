@@ -135,7 +135,7 @@ def tile_device_fixture(station_name: str, subrack_id: int) -> Generator:
 
     :yields: a ``tango.DeviceProxy`` to the Tile device under test.
     """
-    tile_id =2 + 8*(subrack_id-1) # the second tile in the current cluster 
+    tile_id = 2 + 8 * (subrack_id - 1)  # the second tile in the current cluster
     yield tango.DeviceProxy(get_tile_name(tile_id, station_name))
 
 

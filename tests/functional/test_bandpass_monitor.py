@@ -126,15 +126,17 @@ def set_daq_device_online_fixture(
 
 
 @given("the Tile is available", target_fixture="tile_device")
-def tile_device_fixture(station_name: str) -> Generator:
+def tile_device_fixture(station_name: str, subrack_id: int) -> Generator:
     """
     Return a ``tango.DeviceProxy`` to the Tile device under test.
 
     :param station_name: the name of the station under test.
+    :param subrack_id: the current subrack id.
 
     :yields: a ``tango.DeviceProxy`` to the Tile device under test.
     """
-    yield tango.DeviceProxy(get_tile_name(10, station_name))
+    tile_id =2 + 8*(subrack_id-1) # the second tile in the current cluster 
+    yield tango.DeviceProxy(get_tile_name(tile_id, station_name))
 
 
 @given("the Subrack is available", target_fixture="subrack_device")

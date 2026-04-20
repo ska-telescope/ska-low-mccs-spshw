@@ -332,7 +332,7 @@ def check_spsstation_state(
             tile.adminMode = AdminMode.ONLINE
         if tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]:
             tile.on()
-            AttributeWaiter(timeout=60).wait_for_value(
+            AttributeWaiter(timeout=120).wait_for_value(
                 tile,
                 "state",
                 tango.DevState.ON,

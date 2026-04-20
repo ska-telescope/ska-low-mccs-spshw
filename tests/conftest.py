@@ -646,11 +646,21 @@ def subrack_id_fixture() -> int:
 
     :return: the id of the subrack under test.
     """
-    if os.getenv("STATION_LABEL") == "stfc-ral-2":
-        # This is not the most elegant solution,
-        # but, it is a single place we need to change.
-        return 2
-    return 1
+    # This is not the most elegant solution,
+    # but it is a single place we need to change.
+    match os.getenv("STATION_LABEL"):
+        case "stfc-ral-1":
+            return 1
+        case "stfc-ral-2":
+            return 2
+        case "stfc-ral-3":
+            return 3
+        case "stfc-ral-4":
+            return 4
+        case "stfc-ral-5":
+            return 5
+        case _:
+            return 1
 
 
 @pytest.fixture(name="tile_id", scope="session")

@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
-from typing import Any, Callable, Final, NoReturn, Optional
+from typing import Any, Callable, Final, NoReturn, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -37,6 +37,7 @@ from ska_control_model import (
     TestMode,
 )
 from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango.server import attribute, command, device_property
 
 from .attribute_converters import (
@@ -148,6 +149,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
     InitCommand = None  # type: ignore[assignment]
+
+    # -------
+    # Signals
+    # -------
+    board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+
+    # Maps each signal-backed attribute that needs alarm shutdown handling
+    # to its Tango attribute name. Extend this when migrating more attributes
+    # to AttrSignal so that notify_emission picks them up automatically.
+    _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
+        board_temperature_signal: "boardTemperature",
+    }
+
     # -----------------
     # Device Properties
     # -----------------
@@ -455,6 +469,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             that is not callable.
         """
         self._stopping = False
+        # Pre-compute absolute signal names for alarm handling in notify_emission.
+        self._alarm_signal_map: dict[str, str] = {
+            sig._absolute_name_for(self): tango_attr_name
+            for sig, tango_attr_name in MccsTile._ALARM_SIGNAL_ATTRIBUTES.items()
+        }
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
@@ -601,7 +620,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ),
             "core_communication": "coreCommunicationStatus",
             "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
-            "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
             "antenna_buffer_mode": "antennaBufferMode",
             "data_transmission_mode": "dataTransmissionMode",
@@ -727,12 +745,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "tileProgrammingState": AttributeManager(
                     functools.partial(self.post_change_event, "tileProgrammingState"),
                     initial_value=TpmStatus.UNKNOWN.pretty_name(),
-                ),
-                "boardTemperature": AttributeManager(
-                    functools.partial(self.post_change_event, "boardTemperature"),
-                    alarm_handler=functools.partial(
-                        self.shutdown_on_max_alarm, "boardTemperature"
-                    ),
                 ),
                 "fpga1Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga1Temperature"),
@@ -1081,10 +1093,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self._stopping:
             return
         if self.UseAttributesForHealth:
-            value_cache = self._attribute_state[attribute_name].read()
-            if value_cache is not None:
-                self.push_change_event(attribute_name, value_cache[0])
-                self.push_archive_event(attribute_name, value_cache[0])
+            if attribute_name in self._attribute_state:
+                value_cache = self._attribute_state[attribute_name].read()
+                if value_cache is not None:
+                    self.push_change_event(attribute_name, value_cache[0])
+                    self.push_archive_event(attribute_name, value_cache[0])
+            else:
+                # Signal-backed attributes store their last value in the SignalBusMixin
+                # cache. Re-pushing without explicit quality lets Tango recompute it
+                # against the newly configured thresholds.
+                signal_cache = self._SignalBusMixin__attr_values.get(attribute_name)
+                if signal_cache is not None:
+                    self.push_change_event(attribute_name, signal_cache.value)
+                    self.push_archive_event(attribute_name, signal_cache.value)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -1095,6 +1116,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if self.UseAttributesForHealth:
             healthful_attrs = set(self._attribute_state.keys())
+            # Add signal-backed attributes that are not in _attribute_state.
+            healthful_attrs |= set(MccsTile._ALARM_SIGNAL_ATTRIBUTES.values())
 
             healthful_attrs = healthful_attrs - {
                 "dataTransmissionMode",
@@ -1329,6 +1352,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         exc,
                         exc_info=True,
                     )
+            self.board_temperature_signal = None
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(
@@ -1431,6 +1455,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if mark_invalid:
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
+                elif attribute_name == "boardTemperature":
+                    self.board_temperature_signal = None
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1449,6 +1475,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             try:
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].update(attribute_value)
+                elif attribute_name == "boardTemperature":
+                    self.board_temperature_signal = (
+                        cast(float, attribute_value)
+                        if attribute_value is not None
+                        else None
+                    )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
             except Exception as e:  # pylint: disable=broad-except
@@ -1488,7 +1520,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if not self._stopping:
             try:
                 attr = self.get_device_attr().get_attr_by_name(attr_name)
-                attr_value = self._attribute_state[attr_name].read()
+                attr_mgr = self._attribute_state.get(attr_name)
+                attr_value = attr_mgr.read() if attr_mgr is not None else "N/A"
                 if attr.is_max_alarm():
                     self.logger.warning(
                         f"Attribute {attr_name} changed to {attr_value}, "
@@ -1501,6 +1534,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     "Shutting down TPM."
                 )
                 self.component_manager.off()
+
+    def notify_emission(self: MccsTile, signal: str, value: Any) -> None:
+        """
+        Handle signal emissions, pushing tango events and checking alarms.
+
+        Overrides the base class to trigger alarm checking for signal-based
+        attributes after their tango events have been pushed.
+
+        :param signal: the absolute name of the signal that was emitted
+        :param value: the emitted value
+        """
+        super().notify_emission(signal, value)
+        if value is None or signal not in self._alarm_signal_map:
+            return
+        tango_attr_name = self._alarm_signal_map[signal]
+        # on_emission only calls push_change_event; set_value + check_alarm are
+        # needed so that Tango's internal alarm state (is_max_alarm()) is updated,
+        # mirroring what post_change_event does for AttributeManager-backed attrs.
+        self.get_device_attr().get_attr_by_name(tango_attr_name).set_value(
+            cast(float, value)
+        )
+        self.get_device_attr().check_alarm(tango_attr_name)
+        self.shutdown_on_max_alarm(tango_attr_name)
 
     def post_change_event(
         self: MccsTile,
@@ -1577,7 +1633,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    @attribute(
+    boardTemperature = attribute_from_signal(  # noqa: N815
+        board_temperature_signal,
         dtype="DevDouble",
         abs_change=0.1,
         archive_abs_change=0.1,
@@ -1587,16 +1644,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=70.0,
         min_warning=16.0,
         max_warning=65.0,
+        doc="Board temperature in degrees Celsius.",
     )
-    def boardTemperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the board temperature.
-
-        :return: the board temperature
-        """
-        return self._attribute_state["boardTemperature"].read()
 
     @attribute(
         dtype=(("DevShort",),),

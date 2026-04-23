@@ -50,6 +50,19 @@ def tile_initial_beamformer_table_fixture() -> list[int]:
     return [128, 1, 1, 1, 1, 1, 101, 64, 2, 2, 2, 2, 2, 102]
 
 
+@pytest.fixture(name="tile_initial_pointing_delays")
+def tile_initial_pointing_delays_fixture() -> np.ndarray:
+    """
+    Return an example initial pointing delays for a tile.
+
+    :returns: an example initial pointing delays for a tile.
+    """
+    delays = []
+    for beam in range(8):
+        delays.append([float(beam * antenna) for antenna in range(32)])
+    return np.array(delays, dtype=float)
+
+
 @pytest.fixture(name="tile_initial_beamformer_regions")
 def tile_initial_beamformer_regions_fixture(
     tile_initial_beamformer_table: list[int],
@@ -73,6 +86,7 @@ def mock_tile_builder_fixture(
     tile_id: int,
     tile_initial_beamformer_table: list[int],
     tile_initial_beamformer_regions: list[int],
+    tile_initial_pointing_delays: np.ndarray,
 ) -> MockDeviceBuilder:
     """
     Fixture that provides a builder for a mock MccsTile device.
@@ -80,6 +94,7 @@ def mock_tile_builder_fixture(
     :param tile_id: ID of the tile under test.
     :param tile_initial_beamformer_table: an initial beamformer table for a tile.
     :param tile_initial_beamformer_regions: an initial beamformer regions for a tile.
+    :param tile_initial_pointing_delays: an initial pointing delays for a tile.
 
     :return: a mock MccsSubrack device builder.
     """
@@ -98,6 +113,7 @@ def mock_tile_builder_fixture(
     builder.add_attribute("beamformerTable", tile_initial_beamformer_table)
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
     builder.add_attribute("tileProgrammingState", "Unknown")
+    builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
@@ -158,6 +174,7 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
             }
         ),
     )
+    builder.add_attribute("dataReceivedResult", ("", ""))
     builder.add_result_command(
         "Stop", result_code=ResultCode.QUEUED, status="Task queued"
     )

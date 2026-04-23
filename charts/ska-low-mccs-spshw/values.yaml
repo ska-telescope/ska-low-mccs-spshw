@@ -21,7 +21,7 @@ global:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 11.3.0
+  tag: 11.4.4
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -223,7 +223,7 @@ ska-tango-devices:
       voltageMGT_AVCC->min_alarm: 0.83
 
       voltageMGT_AVTT->max_alarm: 1.26
-      voltageMGT_AVTT->min_alarm: 1.14
+      voltageMGT_AVTT->min_alarm: 1.104
 
       voltageMon5V0->max_alarm: 5.19
       voltageMon5V0->min_alarm: 4.69
@@ -387,7 +387,7 @@ ska-tango-devices:
       image:
         registry: artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 11.3.0
+        tag: 11.4.4
         pullPolicy: IfNotPresent
       command: spshw
       resources:
@@ -397,17 +397,17 @@ ska-tango-devices:
           cpu: 20m
           memory: 50Mi
       livenessProbe:
-        initialDelaySeconds: 0
+        initialDelaySeconds: 30
         periodSeconds: 10
         timeoutSeconds: 3
         successThreshold: 1
-        failureThreshold: 3
+        failureThreshold: 5
       readinessProbe:
-        initialDelaySeconds: 0
+        initialDelaySeconds: 30
         periodSeconds: 10
         timeoutSeconds: 3
         successThreshold: 1
-        failureThreshold: 3
+        failureThreshold: 5
 
   # deviceServers:
   #   spshw:

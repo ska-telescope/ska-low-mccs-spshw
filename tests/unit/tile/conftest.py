@@ -509,7 +509,7 @@ def patched_tile_device_class_fixture(
     this, we only want to fix it in this one place.
     """
 
-    class PatchedTileDevice(MccsTile):
+    class PatchedTileDevice(MccsTile):  # pylint: disable=too-many-ancestors
         """
         MccsTile patched with extra commands for testing purposes.
 
@@ -596,11 +596,12 @@ def patched_tile_device_class_fixture(
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
             """Mock power on the tpm."""
+            self.component_manager.tile.mock_on()
             self.component_manager._subrack_says_tpm_power_changed(
                 f"tpm{tile_id}PowerState",
                 PowerState.ON,
                 tango.EventType.CHANGE_EVENT,
             )
-            self.component_manager.tile.mock_on()
+            # self.component_manager.tile.mock_on()
 
     return PatchedTileDevice

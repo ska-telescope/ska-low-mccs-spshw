@@ -1,6 +1,55 @@
 # Version History
 
-## Unreleased
+## 11.4.4
+
+* [THORN-532] Update ska-tango-base to bring in WOM-1114 fixes, remove MCCS workarounds.
+
+## 11.4.3
+
+* [SKB-1285] Reworked tile simulator interface compliance to be driven by TileComponentManager usage. `test_tile_simulator_interface` now derives required methods from `self.tile.<method>(...)` call sites in `tile_component_manager.py` (AST-based extraction), and enforces all CM-required API methods as strict pass/fail. Added simulator implementations for `enable_all_adcs`, `disable_all_adcs`, `set_phase_terminal_count`, `test_generator_set_delay`, and `disconnect` (as a `cleanup()` alias).
+
+## 11.4.2
+
+* [THORN-526] Add better error logging and result message for SpsStation.On()/Initialise()
+* [THORN-526] Fix ensure_tpms_on() workaround
+
+## 11.4.1
+
+* [THORN-512] Convert MccsTile boardTemperature to use attribute_from_signal
+* [THORN-421] Remove deprecated command objects.
+* [THORN-509] Fix MccsTile getting stuck in `DevState.ALARM` after a failed power-on sequence when the tile subsequently reported as off. The bug presented as a tile with status and tileProgrammingState indicating the device was off, polling reporting normal connection errors to an off tile, and all attribute qualities clear, while the device state remained ALARM until `Init()` was called. Root cause was stale cached values in `AttributeManager`: invalidating a boolean attribute changed its quality to `ATTR_INVALID` but left the previous cached `False` value in place, so `MccsTile.dev_state()` continued to force ALARM from that stale boolean state. The fix clears the cached attribute value when an attribute is invalidated, removing the stale boolean latch. Added a device-level regression test for powering off after a boolean alarm and a focused attribute-manager unit test covering stale invalidation behaviour.
+* [SKB-1225] Add a unit test to check that when SpsStation.StartBeamformer is called that it reports FAILED if the composite command fails on any Tile.
+
+## 11.4.0
+
+* [THORN-475] Add HW readback for pointing. SpsStation has a TPM/adc channel ordered set of per beam pointing delays.
+
+## 11.3.4
+
+* [THORN-444] Add Vulcan notebook workaround to SpsStation.On controllable via SpsStation DeviceProperty `OnWorkaroundFlag` or attribute `OnWorkaround`.
+
+## 11.3.3
+
+* [THORN-466] Add temporary workaround for segfault (introduced after pytango update.)
+* [THORN-455] Remove all calls to setting Tango serial model to NO_SYNC. This turns off the tango serialisation monitor which we should not be doing.
+* [THORN-390] Migrate from poetry to uv
+* [THORN-464] Fix TriggerAdcEqualisation so you can pass in empty args
+* [THORN-454] Add background step to wipe threshold values in the database before tests
+* [THORN-459] Revert behaviour change after tango base update. Do not allow On when DevState is already ON.
+* [THORN-459] Improve synchronisation checker thread cleanup to remove sleep.
+* [SPRTS-859] update thresholds for currentFE0, currentFE1 and voltageMGT_AVTT according to the latest information from suppliers.
+
+## 11.3.2
+
+* [THORN-413] update pytango 10.0.3 -> 10.1.3
+* [THORN-413] update ska-tango-base 1.3.2 -> 1.4.2
+* [THORN-413] update ska-low-mccs-common 4.4.5 -> 4.4.6
+
+## 11.3.1
+
+* [SKB-1200] Update subrack simulator to push slightly varying backplane temps in order to trigger health updates properly when cycling adminMode.
+
+* [SKB-1231] SPS cold start after power cut, remove reference to power marshaller in subrack
 
 ## 11.3.0
 

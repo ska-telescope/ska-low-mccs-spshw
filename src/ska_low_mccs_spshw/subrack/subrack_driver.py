@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable=too-many-lines
 """This module provides for monitoring and control of an SPS subrack."""
 from __future__ import annotations
 
@@ -143,6 +144,34 @@ class SubrackDriver(
             f"Poll rate is {self._poll_rate}. "
             f"Attributes will be updated roughly each {self._max_tick} polls."
         )
+
+    def _update_communication_state(
+        self: SubrackDriver,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        """
+        Override base communication state handling.
+
+        In ska-tango-base 1.4.2, communication state updates became coupled
+        to power state transitions. For the Subrack device this resulted in
+        undesirable state update behaviour.
+
+        This override decouples communication state handling from power state
+        updates, preserving the existing behaviour of the Subrack device while
+        allowing other devices (e.g. MccsTile and MccsStation) to adopt the
+        updated ska-tango-base implementation.
+
+        NOTE:
+            This introduces technical debt for Subrack, as it diverges from
+            the base class behaviour.
+
+        :param communication_state: the new communication status of the
+            component manager.
+        """
+        with self._communication_state_lock:
+            if self._communication_state != communication_state:
+                self._communication_state = communication_state
+                self._push_communication_state_update(communication_state)
 
     def off(
         self: SubrackDriver, task_callback: Optional[Callable] = None
@@ -710,6 +739,12 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
+        self.logger.debug(
+            f"Polling subrack: {len(poll_request.commands)} command(s), "
+            f"{len(poll_request.getattributes)} read(s), "
+            f"{len(poll_request.setattributes)} write(s), "
+            f"tick={self._tick}/{self._max_tick}."
+        )
         poll_response = HttpPollResponse()
 
         for command, args in poll_request.commands:

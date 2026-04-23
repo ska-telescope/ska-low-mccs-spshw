@@ -36,7 +36,7 @@ from ska_low_sps_tpm_api.base.definitions import (
 )
 from ska_low_sps_tpm_api.tile import Tile
 from ska_tango_base.base import TaskCallbackType, check_communicating
-from ska_tango_base.executor import TaskExecutor
+from ska_tango_base.executor import TaskExecutor, TaskExecutorComponentManager
 from ska_tango_base.poller import PollingComponentManager
 
 from .exception_codes import HardwareVerificationError
@@ -89,6 +89,7 @@ _ATTRIBUTE_MAP: Final = {
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
     "40G_PACKET_COUNT": "40g_packet_count",
+    "POINTING_DELAYS": "pointing_delays",
 }
 
 
@@ -148,7 +149,9 @@ class TaskCompleteWaiter(TaskCallbackType):
 
 
 # pylint: disable=too-many-instance-attributes, too-many-lines, too-many-public-methods
-class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
+class TileComponentManager(
+    MccsBaseComponentManager, PollingComponentManager, TaskExecutorComponentManager
+):
     """A component manager for a Tile (simulator or driver) and its power supply."""
 
     # This firmware name is generic to versions supported by
@@ -332,7 +335,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         command_object: Callable,
         task_callback: Optional[Callable] = None,
         **kwargs: Any,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit a LRC request to the polling loop.
 
@@ -347,7 +350,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if task_callback:
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
-            return None
+            return ([ResultCode.REJECTED], ["task REJECTED no request_provider"])
         request = TileLRCRequest(
             name=command_name,
             command_object=command_object,
@@ -356,7 +359,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         self._request_provider.enqueue_lrc(request)
         self.logger.info(f"Request {command_name} QUEUED.")
-        return TaskStatus.QUEUED, "Task staged"
+        return ([ResultCode.QUEUED], ["Task staged"])
 
     def get_request(  # type: ignore[override]
         self: TileComponentManager,
@@ -550,6 +553,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_40g_packet_counts,
+                    publish=True,
+                )
+            case "POINTING_DELAYS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.get_all_pointing_delays,
                     publish=True,
                 )
             case _:
@@ -862,18 +871,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Dereference by one, to help with garbage collection.
         self.tile = None  # type: ignore[assignment]
 
-        self._synchronised_checker.abort()
-        self._synchronised_checker = None  # type: ignore[assignment]
-
-        with self._poller._condition:
-            self._poller._state = self._poller._State.KILLED
-            self._poller._condition.notify()
-        self._poller._polling_thread.join(max_poll_time)
-        if self._poller._polling_thread.is_alive():
-            self.logger.warning(
-                "Failed waiting for polling thread to die "
-                f"(timeout=={max_poll_time} [s])."
-            )
+        self._synchronised_checker.shutdown()
+        super().cleanup()
 
     def _cleanup_subscriptions(self: TileComponentManager) -> None:
         """Clean up subscriptions."""
@@ -1242,7 +1241,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
         force_reprogramming: bool = True,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit the initialise slow task.
 
@@ -1259,7 +1258,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if task_callback:
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
-            return None
+            return [ResultCode.REJECTED], ["No request provider"]
         request = TileLRCRequest(
             name="initialise",
             command_object=self._execute_initialise,
@@ -1270,7 +1269,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with self._initialise_lock:
             self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Initialise command placed initialise in poll QUEUE")
-        return TaskStatus.QUEUED, "Task staged"
+        return [ResultCode.QUEUED], ["Task staged"]
 
     @contextmanager
     def _initialising(self: TileComponentManager) -> Iterator[None]:
@@ -1391,7 +1390,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def download_firmware(
         self: TileComponentManager, argin: str, task_callback: Optional[Callable]
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit the download_firmware slow task.
 
@@ -1402,14 +1401,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             file
         :param task_callback: Update task state, defaults to None
 
-        :returns: A tuple containing a task status and a unique id string to
+        :returns: A tuple containing a result code and a unique id string to
             identify the command
         """
         if not self._request_provider:
             if task_callback:
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
-            return None
+            return ([ResultCode.REJECTED], ["No request provider"])
         request = TileLRCRequest(
             name="download_firmware",
             command_object=self._download_firmware,
@@ -1418,7 +1417,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Download_firmware command placed in poll QUEUE")
-        return TaskStatus.QUEUED, "Task staged"
+        if task_callback:
+            task_callback(status=TaskStatus.QUEUED, result="Task staged")
+        return ([ResultCode.QUEUED], ["Task staged"])
 
     @check_communicating
     def _download_firmware(
@@ -1445,11 +1446,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def start_acquisition(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-        *,
         start_time: Optional[str] = None,
         delay: int = 2,
         global_reference_time: Optional[str] = None,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit the start_acquisition slow task.
 
@@ -1458,7 +1458,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param delay: a delay to the acquisition start
         :param global_reference_time: the start time assumed for starting the timestamp
 
-        :return: A tuple containing a task status and a unique id string to
+        :return: A tuple containing a result code and a unique id string to
             identify the command
         """
         if start_time is None:
@@ -1564,7 +1564,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
 
-        def __check_channeliser_started() -> bool:
+        def _channeliser_started() -> bool:
             started = False
             try:
                 with acquire_timeout(
@@ -1578,21 +1578,43 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
             return started
 
-        while time.time() < deadline + 1:
-            if task_abort_event is not None:
-                if task_abort_event.is_set():
-                    self.logger.info("Waiter thread stopped.")
-                    return
-            started = __check_channeliser_started()
-            if started:
-                break
-            time.sleep(0.2)
-        else:
-            started = __check_channeliser_started()
-            if not started:
-                self.logger.warning("Acquisition not started in time.")
-                self._tile_time.set_reference_time(0)
-                return
+        def _wait_for_condition(
+            condition: Callable[[], bool],
+            timeout: float,
+            abort_event: Optional[threading.Event],
+            interval: float = 0.2,
+        ) -> Optional[bool]:
+            end_time = time.time() + timeout
+
+            while time.time() < end_time:
+                if condition():
+                    return True
+
+                remaining = end_time - time.time()
+                wait_time = min(interval, remaining)
+
+                if abort_event:
+                    if abort_event.wait(wait_time):
+                        return None
+                else:
+                    time.sleep(wait_time)
+
+            return False
+
+        result = _wait_for_condition(
+            condition=_channeliser_started,
+            timeout=(deadline + 1) - time.time(),
+            abort_event=task_abort_event,
+        )
+
+        if result is None:
+            self.logger.info("Synchronisation wait aborted.")
+            return
+
+        if not result:
+            self.logger.warning("Acquisition not started in time.")
+            self._tile_time.set_reference_time(0)
+            return
 
         self._tile_time.set_reference_time(self._fpga_reference_time)
         self._tpm_status = TpmStatus.SYNCHRONISED
@@ -1644,6 +1666,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
+        adc_rms = None
+        tile_health_structure = None
+        preadu_levels = None
+        pps_delay_correction = None
         if is_programmed:
             channeliser_rounding = self.channeliser_truncation
             static_delays = self._with_hardware_lock(self.get_static_delays)
@@ -1658,6 +1684,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             broadband_rfi_factor = self._with_hardware_lock(
                 lambda: self.tile.broadband_rfi_factor
             )
+            adc_rms = self._with_hardware_lock(self.tile.get_adc_rms)
+            tile_health_structure = self._with_hardware_lock(
+                self.tile.get_health_status
+            )
+            preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
+            pps_delay_correction = self._get_pps_delay_correction()
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1671,6 +1703,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             firmware_thresholds=firmware_thresholds,
             rfi_blanking_enabled_antennas=rfi_blanking_enabled_antennas,
             broadband_rfi_factor=broadband_rfi_factor,
+            adc_rms=adc_rms,
+            tile_health_structure=tile_health_structure,
+            preadu_levels=preadu_levels,
+            pps_delay_correction=pps_delay_correction,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2124,17 +2160,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def start_antenna_buffer(
         self: TileComponentManager,
-        argin: str,
+        antennas: list[int],
+        start_time: int = -1,
+        timestamp_capture_duration: int = 75,
+        continuous_mode: bool = False,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """Submit the start antenna buffer method.
 
         This method returns immediately after it submitted
         `self._start_antenna_buffer` for execution.
 
-        :param argin: can either be the design name returned from
-            GetFirmwareAvailable command, or a path to a
-            file
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+            Timestamps are in units of 256 ADC samples (256*1.08us).
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
         :param task_callback: Update task state, defaults to None
 
         :return: A tuple containing a task status and a unique id string to
@@ -2144,16 +2188,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if task_callback:
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
-            return None
-        kwargs = json.loads(argin)
+            return ([ResultCode.REJECTED], ["No request provider"])
         request = TileLRCRequest(
             name="start_antenna_buffer",
             command_object=self._start_antenna_buffer,
             task_callback=task_callback,
-            **kwargs,
+            antennas=antennas,
+            start_time=start_time,
+            timestamp_capture_duration=timestamp_capture_duration,
+            continuous_mode=continuous_mode,
         )
         self._request_provider.enqueue_lrc(request)
-        return TaskStatus.QUEUED, "Task staged"
+        return ([ResultCode.QUEUED], ["Task staged"])
 
     @check_communicating
     def _start_antenna_buffer(
@@ -2219,7 +2265,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def read_antenna_buffer(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """Read from the antenna buffer.
 
         :param task_callback: Update task state, defaults to None
@@ -2231,14 +2277,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if task_callback:
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
-            return None
+            return ([ResultCode.REJECTED], ["No request provider"])
         request = TileLRCRequest(
             name="read_antenna_buffer",
             command_object=self._read_antenna_buffer,
             task_callback=task_callback,
         )
         self._request_provider.enqueue_lrc(request)
-        return TaskStatus.QUEUED, "Task staged"
+        return ([ResultCode.QUEUED], ["Task staged"])
 
     @check_communicating
     def _read_antenna_buffer(
@@ -2395,7 +2441,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
-    def stop_integrated_data(self: TileComponentManager) -> tuple[ResultCode, str]:
+    def stop_integrated_data(
+        self: TileComponentManager,
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Stop the integrated data.
 
@@ -2416,10 +2464,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+                return (
+                    [ResultCode.FAILED],
+                    ["TileComponentManager: Tile access failed"],
+                )
+        return ([ResultCode.OK], ["Stop integrated data completed OK"])
 
-    def stop_data_transmission(self: TileComponentManager) -> tuple[ResultCode, str]:
+    def stop_data_transmission(
+        self: TileComponentManager,
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Stop data transmission for send_channelised_data_continuous.
 
@@ -2439,8 +2492,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+                return (
+                    [ResultCode.FAILED],
+                    ["TileComponentManager: Tile access failed"],
+                )
+        return ([ResultCode.OK], ["Stop data transmission completed OK"])
 
     @check_communicating
     def send_data_samples(  # pylint: disable=too-many-branches
@@ -2680,7 +2736,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         integration_time: float = 0.5,
         first_channel: int = 0,
         last_channel: int = 191,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2707,8 +2763,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Stop integrated data completed OK")
+                return (
+                    [ResultCode.FAILED],
+                    ["TileComponentManager: Tile access failed"],
+                )
+        return ([ResultCode.OK], ["Stop integrated data completed OK"])
 
     @check_communicating
     def configure_integrated_channel_data(
@@ -2716,7 +2775,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         integration_time: float = 0.5,
         first_channel: int = 0,
         last_channel: int = 511,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2743,8 +2802,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "Configure integrated channel data completed OK")
+                return (
+                    [ResultCode.FAILED],
+                    ["TileComponentManager: Tile access failed"],
+                )
+        return ([ResultCode.OK], ["Configure integrated channel data completed OK"])
 
     @check_communicating
     def set_csp_download(
@@ -2756,7 +2818,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_last: bool,
         netmask: str | None,
         gateway: str | None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Set CSP Destination per tile.
 
@@ -2796,18 +2858,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
-                    ResultCode.FAILED,
-                    f"TileComponentManager: Tile access failed {e}",
+                    [ResultCode.FAILED],
+                    [f"TileComponentManager: Tile access failed {e}"],
                 )
 
-        return (ResultCode.OK, "set csp download completed OK")
+        return ([ResultCode.OK], ["set csp download completed OK"])
 
     def stop_beamformer(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-        *,
         channel_groups: Optional[list[int]] = None,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Stop the beamformer.
 
@@ -2816,7 +2877,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 Command affects only beamformed channels for given groups
                 Default: all channels
 
-        :return: A tuple containing a task status and a unique id string to
+        :return: A tuple containing a result code and a unique id string to
 
         """
         if channel_groups is None:
@@ -2833,12 +2894,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def start_beamformer(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-        *,
         start_time: Optional[str] = None,
         duration: int = -1,
         channel_groups: Optional[list[int]] = None,
         scan_id: int = 0,
-    ) -> tuple[TaskStatus, str] | None:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Start beamforming on a specific subset of the beamformed channels.
 
@@ -2889,7 +2949,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def apply_pointing_delays(
         self: TileComponentManager, load_time: str = ""
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Load the pointing delays at the specified time delay.
 
@@ -2925,13 +2985,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-                return (ResultCode.FAILED, "TileComponentManager: Tile access failed")
-        return (ResultCode.OK, "apply_pointing_delays completed OK")
+                return (
+                    [ResultCode.FAILED],
+                    ["TileComponentManager: Tile access failed"],
+                )
+        return ([ResultCode.OK], ["apply_pointing_delays completed OK"])
 
     @check_communicating
     def load_pointing_delays(
         self: TileComponentManager, delay_array: list[list[float]], beam_index: int
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -2964,19 +3027,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"TileComponentManager: Tile access failed: {e}"
                     )
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "LoadPointingDelays command completed OK")
+        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
 
     @check_communicating
     def apply_calibration(
         self: TileComponentManager, load_time: str = ""
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Load the calibration coefficients at the specified time delay.
 
@@ -2991,9 +3054,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
             if load_frame < 0:
-                return (ResultCode.REJECTED, f"Invalid time {load_time}")
+                return ([ResultCode.REJECTED], [f"Invalid time {load_time}"])
             if (load_frame - self.fpga_current_frame) < 20:
-                return (ResultCode.REJECTED, "Time too early")
+                return ([ResultCode.REJECTED], ["Time too early"])
 
         self.logger.debug("TileComponentManager: switch_calibration_bank")
         with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
@@ -3003,19 +3066,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "ApplyCalibration command completed OK")
+        return ([ResultCode.OK], ["ApplyCalibration command completed OK"])
 
     def load_calibration_coefficients(
         self: TileComponentManager,
         antenna: int,
         calibration_coefficients: list[list[complex]],
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Load calibration coefficients.
 
@@ -3038,19 +3101,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "LoadCalibrationCoefficents command completed OK")
+        return ([ResultCode.OK], ["LoadCalibrationCoefficents command completed OK"])
 
     def load_calibration_coefficients_for_channels(
         self: TileComponentManager,
         start_channel: int,
         calibration_coefficients: list[list[list[complex]]],
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Load calibration coefficients for all antennas and a subset of channels.
 
@@ -3080,13 +3143,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 return (
-                    ResultCode.FAILED,
-                    f"TileComponentManager: Tile access failed: {e}",
+                    [ResultCode.FAILED],
+                    [f"TileComponentManager: Tile access failed: {e}"],
                 )
 
         return (
-            ResultCode.OK,
-            "LoadCalibrationCoefficentsForChannels command completed OK",
+            [ResultCode.OK],
+            ["LoadCalibrationCoefficentsForChannels command completed OK"],
         )
 
     def initialise_beamformer(
@@ -3123,7 +3186,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def set_beamformer_regions(
         self: TileComponentManager, regions: list[list[int]]
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Set the frequency regions to be beamformed into a single beam.
 
@@ -3185,14 +3248,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"TileComponentManager: Tile access failed: {e}"
                     )
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "SetBeamFormerRegions command completed OK")
+        return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
 
     @property
     @check_communicating
@@ -3374,7 +3437,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         dst_port: Optional[int] = 4660,
         netmask_40g: str | None = None,
         gateway_40g: str | None = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
@@ -3411,14 +3474,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"TileComponentManager: Tile access failed: {e}"
                     )
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "SetLmcDownload command completed OK")
+        return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
     def get_40g_configuration(
         self: TileComponentManager, core_id: int = -1, arp_table_entry: int = 0
@@ -3487,7 +3550,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         rx_port_filter: Optional[int] = None,
         netmask: Optional[str] = None,
         gateway_ip: Optional[str] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Configure the 40G code.
 
@@ -3528,18 +3591,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"TileComponentManager: Tile access failed: {e}"
                     )
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "Configure40GCore command completed OK")
+        return ([ResultCode.OK], ["Configure40GCore command completed OK"])
 
     def write_address(
         self: TileComponentManager, address: int, values: list[int]
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Write a list of values to a given address.
 
@@ -3561,14 +3624,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 except Exception as e:
                     self.logger.warning(f"TileComponentManager: Tile access failed {e}")
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "WriteAddress command completed OK")
+        return ([ResultCode.OK], ["WriteAddress command completed OK"])
 
     def read_register(self: TileComponentManager, register_name: str) -> list[int]:
         """
@@ -3580,6 +3643,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
+        if register_name == "":
+            self.logger.error("register name is a mandatory parameter")
+            raise ValueError("register name is a mandatory parameter")
         if self.tile.tpm is None:
             raise ValueError("Cannot read register on unconnected TPM.")
         with acquire_timeout(
@@ -3607,12 +3673,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             lvalue = cast(list, value)
         else:
             lvalue = [value]
-        # self.logger.debug(f"Read value: {value} = {hex(value)}")
+        self.logger.info(f"Register {register_name} = {lvalue}")
         return lvalue
 
     def write_register(
         self: TileComponentManager, register_name: str, values: list[Any] | int
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[list[ResultCode], list[str]]:
         """
         Read the values in a register.
 
@@ -3637,8 +3703,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     if len(self.tile.find_register(regname)) == 0:
                         self.logger.error("Register '" + regname + "' not present")
                         return (
-                            ResultCode.FAILED,
-                            "Register '" + regname + "' not present",
+                            [ResultCode.FAILED],
+                            ["Register '" + regname + "' not present"],
                         )
 
                     self.tile.write_register(register_name, values)
@@ -3648,14 +3714,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         f"TileComponentManager: Tile access failed: {e}"
                     )
                     return (
-                        ResultCode.FAILED,
-                        f"TileComponentManager: Tile access failed: {e}",
+                        [ResultCode.FAILED],
+                        [f"TileComponentManager: Tile access failed: {e}"],
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+                return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return (ResultCode.OK, "WriteRegister command completed OK")
+        return ([ResultCode.OK], ["WriteRegister command completed OK"])
 
     def read_address(
         self: TileComponentManager, address: int, nvalues: int
@@ -4507,7 +4573,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._update_attribute_callback(broadband_rfi_factor=broadband_rfi_factor)
 
     def read_broadband_rfi(
-        self: TileComponentManager, antennas: list[int]
+        self: TileComponentManager, antennas: range | list[int]
     ) -> np.ndarray:
         """
         Read the broadband RFI levels for a list of antennas.
@@ -4616,3 +4682,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             return self.tile.read_all_live_calibration_coefficients()
+
+    def get_all_pointing_delays(
+        self: TileComponentManager,
+    ) -> np.ndarray:
+        """
+        Read pointing delays from the TPM for all beams.
+
+        :return: pointing delays for all beams as (8, 32) ndarray.
+        """
+        delays = []
+
+        for beam in range(8):
+            with acquire_timeout(
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
+
+        return np.array(delays)

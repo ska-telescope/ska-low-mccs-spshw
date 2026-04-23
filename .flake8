@@ -20,6 +20,7 @@ per-file-ignores =
     src/ska_low_mccs_spshw/subrack/demo_subrack_device.py: N802
     src/ska_low_mccs_spshw/subrack/subrack_device.py: N802
     src/ska_low_mccs_spshw/tile/tile_device.py: N802
+    src/ska_low_mccs_spshw/tile/tile_device.py: N815
     src/ska_low_mccs_spshw/tile/demo_tile_device.py: N802
     src/ska_low_mccs_spshw/tile/tile_cli.py: N802
     src/ska_low_mccs_spshw/daq_receiver/daq_receiver_device.py: N802

@@ -278,7 +278,7 @@ def test_trigger_adc_equalisation(
     # in a non deterministic way
     # assert station_component_manager.preadu_levels == []
 
-    station_component_manager._trigger_adc_equalisation(target_adc, bias)
+    station_component_manager.trigger_adc_equalisation(target_adc, bias)
 
     assert station_component_manager._desired_preadu_levels is not None
     for value in station_component_manager._desired_preadu_levels:
@@ -486,7 +486,6 @@ def test_self_check(
 
     station_component_manager.self_check(task_callback=callbacks["task"])
 
-    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
     callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
 
     # This should fail as we have set up one FAIL test and one ERROR test.
@@ -529,7 +528,6 @@ def test_run_test(
         task_callback=callbacks["task"], test_name=test_name, count=1
     )
 
-    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
     callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
 
     if test_name == "PassTest":
@@ -680,7 +678,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=subrack._name,
             health=HealthState.OK,
-            lookahead=20,
+            lookahead=25,
         )
 
     for tile in station_component_manager._tile_proxies.values():
@@ -689,15 +687,15 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             health=HealthState.OK,
-            lookahead=20,
+            lookahead=25,
         )
         # Need to wait for this event to come through before we turn a tile OFF.
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             power=PowerState.ON,
-            lookahead=20,
+            lookahead=25,
         )
-    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=10)
+    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=25)
     assert station_component_manager._component_state["power"] == PowerState.ON
 
     tile_names = list(station_component_manager._tile_proxies.keys())
@@ -864,7 +862,7 @@ def test_beamformer_table(
     # Component state callback is getting called by many many sources.
     callbacks["component_state"].assert_call(
         beamformerTable=tile_initial_beamformer_table,
-        lookahead=25,
+        lookahead=29,
         consume_nonmatches=True,
     )
     callbacks["component_state"].assert_call(
@@ -878,4 +876,35 @@ def test_beamformer_table(
     np.testing.assert_array_equal(
         station_component_manager._beamformer_table,
         expected_initial_beamformer_table,
+    )
+
+
+def test_pointing_delays(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles_to_add: int,
+    tile_initial_pointing_delays: np.ndarray,
+) -> None:
+    """
+    Test we record pointing delays correctly.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles_to_add: number of TPMs in the test.
+    :param tile_initial_pointing_delays: intial pointing delays the TPMs
+        are mocked to have
+    """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    expected_call = {
+        tile_id: tile_initial_pointing_delays for tile_id in range(num_tiles_to_add)
+    }
+
+    # Large lookahead as this is only done once we got data for all TPMs
+    callbacks["component_state"].assert_call(
+        pointingdelays=expected_call,
+        lookahead=50,
     )

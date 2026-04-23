@@ -11,21 +11,15 @@ from __future__ import annotations
 
 import importlib
 import json
-import logging
 import sys
-from typing import Any, Callable, Final, Optional
+import threading
+from typing import Any, Final, Optional
 
+import ska_tango_base as stb
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
-from ska_tango_base.base import BaseComponentManager
-from ska_tango_base.commands import (
-    CommandTrackerProtocol,
-    DeviceInitCommand,
-    JsonValidator,
-    ResultCode,
-    SubmittedSlowCommand,
-)
-from tango.server import attribute, command, device_property
+from tango import AttrQuality, DevFailed
+from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 
@@ -33,256 +27,19 @@ from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
 
-class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
-    # pylint: disable=line-too-long
-    """
-    Class for handling the SetSubrackFanSpeed command.
-
-    This command sets the selected subrack fan speed.
-
-    Note: Fans are controlled in pairs, so setting fan 1 or fan 2 sets both 1 and 2,
-        similarly for fans 3 and 4.
-
-
-    This command takes as input a JSON string that conforms to the
-    following schema:
-
-    .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/subrack/MccsSubrack_SetSubrackFanSpeed.json
-       :language: json
-    """  # noqa: E501
-
-    SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.subrack",
-            "MccsSubrack_SetSubrackFanSpeed.json",
-        )
-    )
-
-    def __init__(
-        self: SetSubrackFanSpeedCommand,
-        command_tracker: CommandTrackerProtocol,
-        component_manager: BaseComponentManager,
-        fan_speed_set: Callable,
-        logger: Optional[logging.Logger] = None,
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param command_tracker: the device's command tracker
-        :param component_manager: the component manager on which this
-            command acts.
-        :param fan_speed_set: callback to be called when fan speed is set.
-        :param logger: a logger for this command to use.
-        """
-        validator = JsonValidator("SetSubrackFanSpeed", self.SCHEMA, logger)
-        self._fan_speed_set = fan_speed_set
-        super().__init__(
-            "SetSubrackFanSpeed",
-            command_tracker,
-            component_manager,
-            "set_subrack_fan_speed",
-            callback=None,
-            logger=logger,
-            validator=validator,
-        )
-
-    # pylint: disable=arguments-differ
-    def do(  # type: ignore[override]
-        self: SetSubrackFanSpeedCommand,
-        *args: Any,
-        subrack_fan_id: int,
-        speed_percent: int,
-        **kwargs: Any,
-    ) -> tuple[ResultCode, str]:
-        """
-        Implement :py:meth:`.MccsSubrack.SetSubrackFanSpeed` command.
-
-        :param args: unspecified positional arguments. This should be
-            empty and is provided for typehinting purposes only.
-        :param subrack_fan_id: id of the subrack (1-4).
-        :param speed_percent: fan speed in percent
-        :param kwargs: unspecified keyword arguments. This should be
-            empty and is provided for typehinting purposes only.
-
-        :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-        """
-        assert (
-            not args and not kwargs
-        ), f"do method has unexpected arguments: {args}, {kwargs}"
-        self.logger.info(
-            f"Setting fan ({subrack_fan_id}) speed to {int(speed_percent)}"
-        )
-        self._fan_speed_set(subrack_fan_id, int(speed_percent))
-
-        return super().do(subrack_fan_id, int(speed_percent))
-
-
-class SetSubrackFanModeCommand(SubmittedSlowCommand):
-    # pylint: disable=line-too-long
-    """
-    Class for handling the SetSubrackFanMode command.
-
-    This command set the selected subrack fan mode.
-
-    This command takes as input a JSON string that conforms to the
-    following schema:
-
-    .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/subrack/MccsSubrack_SetSubrackFanMode.json
-       :language: json
-    """  # noqa: E501
-
-    SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.subrack",
-            "MccsSubrack_SetSubrackFanMode.json",
-        )
-    )
-
-    def __init__(
-        self: SetSubrackFanModeCommand,
-        command_tracker: CommandTrackerProtocol,
-        component_manager: BaseComponentManager,
-        logger: Optional[logging.Logger] = None,
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param command_tracker: the device's command tracker
-        :param component_manager: the component manager on which this
-            command acts.
-        :param logger: a logger for this command to use.
-        """
-        validator = JsonValidator("SetSubrackFanMode", self.SCHEMA, logger)
-        super().__init__(
-            "SetSubrackFanMode",
-            command_tracker,
-            component_manager,
-            "set_subrack_fan_mode",
-            callback=None,
-            logger=logger,
-            validator=validator,
-        )
-
-    # pylint: disable=arguments-differ
-    def do(  # type: ignore[override]
-        self: SetSubrackFanModeCommand,
-        *args: Any,
-        fan_id: int,
-        mode: int,
-        **kwargs: Any,
-    ) -> tuple[ResultCode, str]:
-        """
-        Implement :py:meth:`.MccsSubrack.SetSubrackFanMode` command.
-
-        :param args: unspecified positional arguments. This should be
-            empty and is provided for typehinting purposes only.
-        :param fan_id: id of the subrack (1-4).
-        :param mode: fan mode
-        :param kwargs: unspecified keyword arguments. This should be
-            empty and is provided for typehinting purposes only.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        assert (
-            not args and not kwargs
-        ), f"do method has unexpected arguments: {args}, {kwargs}"
-
-        return super().do(fan_id, FanMode(mode))
-
-
-class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
-    # pylint: disable=line-too-long
-    """
-    Class for handling the SetPowerSupplyFanSpeed command.
-
-    This command set the selected power supply fan speed.
-
-    Note: Fans are controlled in pairs, so setting fan 1 or fan 2 sets both 1 and 2,
-        similarly for fans 3 and 4.
-
-    This command takes as input a JSON string that conforms to the
-    following schema:
-
-    .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/subrack/MccsSubrack_SetPowerSupplyFanSpeed.json
-       :language: json
-    """  # noqa: E501
-
-    SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.subrack",
-            "MccsSubrack_SetPowerSupplyFanSpeed.json",
-        )
-    )
-
-    def __init__(
-        self: SetPowerSupplyFanSpeedCommand,
-        command_tracker: CommandTrackerProtocol,
-        component_manager: BaseComponentManager,
-        logger: Optional[logging.Logger] = None,
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param command_tracker: the device's command tracker
-        :param component_manager: the component manager on which this
-            command acts.
-        :param logger: a logger for this command to use.
-        """
-        validator = JsonValidator("SetPowerSupplyFanSpeed", self.SCHEMA, logger)
-        super().__init__(
-            "SetPowerSupplyFanSpeed",
-            command_tracker,
-            component_manager,
-            "set_power_supply_fan_speed",
-            callback=None,
-            logger=logger,
-            validator=validator,
-        )
-
-    # pylint: disable=arguments-differ
-    def do(  # type: ignore[override]
-        self: SetPowerSupplyFanSpeedCommand,
-        *args: Any,
-        power_supply_fan_id: int,
-        speed_percent: int,
-        **kwargs: Any,
-    ) -> tuple[ResultCode, str]:
-        """
-        Implement :py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
-
-        :param args: unspecified positional arguments. This should be
-            empty and is provided for typehinting purposes only.
-        :param power_supply_fan_id: id of the power supply (1 or 2).
-        :param speed_percent: fan speed in percent
-        :param kwargs: unspecified keyword arguments. This should be
-            empty and is provided for typehinting purposes only.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        """
-        assert (
-            not args and not kwargs
-        ), f"do method has unexpected arguments: {args}, {kwargs}"
-
-        return super().do(power_supply_fan_id, int(speed_percent))
-
-
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
+# pylint: disable=too-many-ancestors
 class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of an SPS subrack."""
 
+    InitCommand = None  # type: ignore[assignment]
     # ----------
     # Properties
     # ----------
     SubrackIp = device_property(dtype=str)
     SubrackPort = device_property(dtype=int, default_value=8081)
     UpdateRate = device_property(dtype=float, default_value=15.0)
-    PowerMarshallerTrl = device_property(dtype=str)
+    PowerMarshallerTrl = device_property(dtype=str, default_value="")
     PduTrl = device_property(dtype=str, default_value="")
     PduPorts = device_property(dtype=(int,), default_value=[])
     SimulatedPDU = device_property(dtype=bool, default_value=True)
@@ -340,6 +97,27 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
     }
 
+    SetSubrackFanMode_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.subrack",
+            "MccsSubrack_SetSubrackFanMode.json",
+        )
+    )
+
+    SetPowerSupplyFanSpeed_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.subrack",
+            "MccsSubrack_SetPowerSupplyFanSpeed.json",
+        )
+    )
+
+    SetSubrackFanSpeed_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.subrack",
+            "MccsSubrack_SetSubrackFanSpeed.json",
+        )
+    )
+
     # --------------
     # Initialization
     # --------------
@@ -384,6 +162,20 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         super().init_device()
 
+        self.set_change_event("tpmPresent", True)
+        self.set_archive_event("tpmPresent", True)
+        self.set_change_event("tpmCount", True)
+        self.set_archive_event("tpmCount", True)
+        for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+            self.set_change_event(f"tpm{tpm_number}PowerState", True)
+            self.set_archive_event(f"tpm{tpm_number}PowerState", True)
+        for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
+            self.set_change_event(attribute_name, True)
+            self.set_archive_event(attribute_name, True)
+        for attribute_name in MccsSubrack._HEALTH_STATUS_MAP:
+            self.set_change_event(attribute_name, True)
+            self.set_archive_event(attribute_name, True)
+
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
@@ -402,6 +194,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+        self.init_completed()
 
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
@@ -413,48 +206,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_recorder.cleanup()
             self._health_recorder = None
 
-        self.component_manager._task_executor._executor.shutdown()
         super().delete_device()
-
-    class InitCommand(DeviceInitCommand):
-        """Initialisation command class for this base device."""
-
-        # pylint: disable=protected-access
-        def do(
-            self: MccsSubrack.InitCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Initialise the attributes of this MccsSubrack.
-
-            :param args: additional positional arguments; unused here
-            :param kwargs: additional keyword arguments; unused here
-            :return: a resultcode, message tuple
-            """
-            self._device._tpm_present = None
-            self._device._tpm_count = 0
-            self._device._tpm_power_states = [
-                PowerState.UNKNOWN
-            ] * SubrackData.TPM_BAY_COUNT
-            self._device._hardware_attributes = {}
-
-            self._device.set_change_event("tpmPresent", True)
-            self._device.set_archive_event("tpmPresent", True)
-            self._device.set_change_event("tpmCount", True)
-            self._device.set_archive_event("tpmCount", True)
-            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
-                self._device.set_change_event(f"tpm{tpm_number}PowerState", True)
-                self._device.set_archive_event(f"tpm{tpm_number}PowerState", True)
-            for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
-                self._device.set_change_event(attribute_name, True)
-                self._device.set_archive_event(attribute_name, True)
-            for attribute_name in MccsSubrack._HEALTH_STATUS_MAP:
-                self._device.set_change_event(attribute_name, True)
-                self._device.set_archive_event(attribute_name, True)
-
-            message = "MccsSubrack init complete."
-            self._device.logger.info(message)
-            self._completed()
-            return (ResultCode.OK, message)
 
     def _health_changed_new(
         self: MccsSubrack, health: HealthState, health_report: str
@@ -472,8 +224,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_report = health_report
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
 
     def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
         """
@@ -552,62 +302,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             update_rate=self.UpdateRate,
         )
 
-    def init_command_objects(self: MccsSubrack) -> None:
-        """Initialise the command handlers for this device."""
-        super().init_command_objects()
-
-        #
-        # Long running commands
-        #
-
-        for command_name, method_name in [
-            ("PowerOnTpm", "turn_on_tpm"),
-            ("PowerOffTpm", "turn_off_tpm"),
-            ("PowerUpTpms", "turn_on_tpms"),
-            ("PowerDownTpms", "turn_off_tpms"),
-            ("PowerPduPortOn", "power_pdu_port_on"),
-            ("PowerPduPortOff", "power_pdu_port_off"),
-            ("ScheduleOn", "schedule_on"),
-            ("ScheduleOff", "schedule_off"),
-            ("UpdateHealthAttributes", "get_health_status"),
-        ]:
-            self.register_command_object(
-                command_name,
-                SubmittedSlowCommand(
-                    command_name,
-                    self._command_tracker,
-                    self.component_manager,
-                    method_name,
-                    callback=None,
-                    logger=self.logger,
-                ),
-            )
-        for command_name, command_class in [
-            ("SetSubrackFanMode", SetSubrackFanModeCommand),
-            ("SetPowerSupplyFanSpeed", SetPowerSupplyFanSpeedCommand),
-        ]:
-            self.register_command_object(
-                command_name,
-                command_class(
-                    self._command_tracker, self.component_manager, logger=self.logger
-                ),
-            )
-        self.register_command_object(
-            "SetSubrackFanSpeed",
-            SetSubrackFanSpeedCommand(
-                self._command_tracker,
-                self.component_manager,
-                self._fan_speed_set,
-                logger=self.logger,
-            ),
-        )
-
-    def _fan_speed_set(self: MccsSubrack, fan_id: int, fan_speed_set: float) -> None:
-        if self._desired_fan_speeds is None:
-            self._desired_fan_speeds = [0.0] * 4
-        self._desired_fan_speeds[fan_id - 1] = fan_speed_set
-        self._update_health_data()
-
     # ----------
     # Commands
     # ----------
@@ -616,44 +310,60 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # Long running commands
     # ----------------------
 
-    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    @stb.long_running_commands.long_running_command
     def PowerOnTpm(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: int
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack, tpm_number: int
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Power up a TPM.
 
-        :param argin: the logical id of the TPM to power up
+        :param tpm_number: the logical id of the TPM to power up
 
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes
             only.
         """
-        handler = self.get_command_object("PowerOnTpm")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.turn_on_tpm(
+                tpm_number,
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def PowerOffTpm(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: int
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack, tpm_number: int
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Power down a TPM.
 
-        :param argin: the logical id of the TPM to power down
+        :param tpm_number: the logical id of the TPM to power down
 
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes
             only.
         """
-        handler = self.get_command_object("PowerOffTpm")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.turn_off_tpm(
+                tpm_number,
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def PowerUpTpms(  # pylint: disable=invalid-name
         self: MccsSubrack,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Power up all TPMs.
 
@@ -661,14 +371,21 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             indicating status. The message is for information purposes
             only.
         """
-        handler = self.get_command_object("PowerUpTpms")
-        result_code, message = handler()
-        return ([result_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.turn_on_tpms(
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def PowerDownTpms(  # pylint: disable=invalid-name
         self: MccsSubrack,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Power down all TPMs.
 
@@ -676,72 +393,126 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             indicating status. The message is for information purposes
             only.
         """
-        handler = self.get_command_object("PowerDownTpms")
-        result_code, message = handler()
-        return ([result_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.turn_off_tpms(
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=SetSubrackFanSpeed_SCHEMA)
     def SetSubrackFanSpeed(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: str
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack,
+        subrack_fan_id: int,
+        speed_percent: int,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Set the selected subrack backplane fan speed.
 
-        :param argin: json dictionary with mandatory keywords
+        A json dictionary with mandatory keywords
 
-            * `subrack_fan_id` (int) fan id from 1 to 4
-            * `speed_percent` - (int) fan speed in percent
+        :param subrack_fan_id: (int) fan id from 1 to 4
+        :param speed_percent: (int) fan speed in percent
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("SetSubrackFanSpeed")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            fan_id = int(subrack_fan_id)
+            speed = int(speed_percent)
+            self._fan_speed_set(fan_id, speed)
+            self.component_manager.set_subrack_fan_speed(
+                fan_id,
+                speed,
+                task_callback=task_callback,
+            )
+
+        return task
+
+    def _fan_speed_set(self: MccsSubrack, fan_id: int, fan_speed_set: float) -> None:
+        if self._desired_fan_speeds is None:
+            self._desired_fan_speeds = [0.0] * 4
+        self._desired_fan_speeds[fan_id - 1] = fan_speed_set
+        self._update_health_data()
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=SetSubrackFanMode_SCHEMA)
     def SetSubrackFanMode(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: str
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack,
+        fan_id: int,
+        mode: FanMode,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Set the selected subrack backplane fan mode.
 
-        :param argin: json dictionary with mandatory keywords
+        A json dictionary with mandatory keywords
 
-            * `fan_id` (int) fan id from 1 to 4
-            * `mode` - (int) mode: 0=MANUAL, 1=AUTO
+        :param fan_id: (int) fan id from 1 to 4
+        :param mode: (int) mode: 0=MANUAL, 1=AUTO
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("SetSubrackFanMode")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.set_subrack_fan_mode(
+                fan_id,
+                FanMode(mode),
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=SetPowerSupplyFanSpeed_SCHEMA)
     def SetPowerSupplyFanSpeed(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: str
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack,
+        power_supply_fan_id: int,
+        speed_percent: int,
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Set the selected power supply fan speed.
 
-        :param argin: json dictionary with mandatory keywords
+        A json dictionary with mandatory keywords
 
-            * `power_supply_id` (int) power supply id from 1 to 2
-            * `speed_percent` - (int) fan speed in percent
+        :param power_supply_fan_id: (int) power supply fan id from 1 to 2
+        :param speed_percent: (int) fan speed in percent
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("SetPowerSupplyFanSpeed")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def ScheduleOn(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            fan_id = int(power_supply_fan_id)
+            speed = int(speed_percent)
+            self.component_manager.set_power_supply_fan_speed(
+                fan_id,
+                speed,
+                task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    def ScheduleOn(self: MccsSubrack) -> stb.type_hints.TaskFunctionType:
         """
         Turn self on.
 
@@ -749,12 +520,20 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("ScheduleOn")
-        result_code, message = handler()
-        return ([result_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def ScheduleOff(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.schedule_on(
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    def ScheduleOff(self: MccsSubrack) -> stb.type_hints.TaskFunctionType:
         """
         Turn self off.
 
@@ -762,48 +541,74 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("ScheduleOff")
-        result_code, message = handler()
-        return ([result_code], [message])
 
-    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.schedule_off(
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def PowerPduPortOn(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: int
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack, port_number: int
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Turn the selected pdu port on.
 
-        :param argin: pdu port number
+        :param port_number: pdu port number
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("PowerPduPortOn")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.power_pdu_port_on(
+                port_number,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def PowerPduPortOff(  # pylint: disable=invalid-name
-        self: MccsSubrack, argin: int
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        self: MccsSubrack, port_number: int
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Turn the selected pdu port off.
 
-        :param argin: pdu port number
+        :param port_number: pdu port number
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        handler = self.get_command_object("PowerPduPortOff")
-        result_code, message = handler(argin)
-        return ([result_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            return self.component_manager.power_pdu_port_off(
+                port_number,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
     def UpdateHealthAttributes(  # pylint: disable=invalid-name
         self: MccsSubrack,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> stb.type_hints.TaskFunctionType:
         """
         Request the subrack driver to poll the health status attributes.
 
@@ -811,9 +616,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             indicating status. The message is for information purposes
             only.
         """
-        handler = self.get_command_object("UpdateHealthAttributes")
-        result_code, message = handler()
-        return ([result_code], [message])
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.get_health_status(
+                task_callback=task_callback,
+            )
+
+        return task
 
     # ----------
     # Attributes
@@ -1633,8 +1445,29 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             if special_update_method is None:
                 tango_attribute_name = self._ATTRIBUTE_MAP[key]
                 self._hardware_attributes[tango_attribute_name] = value
-                self.push_change_event(tango_attribute_name, value)
-                self.push_archive_event(tango_attribute_name, value)
+                if tango_attribute_name == "subrackBoardInfo":
+                    if isinstance(value, dict):
+                        # Serialise value to match attribute definition.
+                        value = json.dumps(value)
+                if value is None:
+                    self.get_device_attr().get_attr_by_name(
+                        tango_attribute_name
+                    ).set_quality(quality=AttrQuality.ATTR_INVALID, send_event=True)
+                    continue
+                try:
+                    self.push_change_event(tango_attribute_name, value)
+                    self.push_archive_event(tango_attribute_name, value)
+                except DevFailed as e:
+                    # TODO: Anything that appears here is undesired
+                    # and a ticket should be created to resolve.
+                    self.logger.warning(
+                        "Failed to push Tango events for "
+                        "attribute '%s' with value '%s': %s",
+                        tango_attribute_name,
+                        value,
+                        e,
+                        exc_info=True,
+                    )
             else:
                 special_update_method(value)
 
@@ -1678,7 +1511,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if not self.UseAttributesForHealth:
             if self._health_state != health:
                 self._health_state = health
-                self.push_change_event("healthState", health)
 
     def _update_board_current(self: MccsSubrack, board_current: float) -> None:
         if board_current is None:

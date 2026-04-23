@@ -12,7 +12,7 @@ The Monitoring Control and Calibration (MCCS) subsystem is responsible
 for, amongst other things, monitoring and control of LFAA.
 """
 
-__version__ = "11.3.0"
+__version__ = "11.4.4"
 __version_info__ = str(
     (
         "ska-low-mccs-spshw",
@@ -60,7 +60,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
             SpsStation,
         ),
         args=args or None,
-        **kwargs
+        **kwargs,
     )
 
 

@@ -170,7 +170,7 @@ def patched_tile_device_class_fixture(
     this, we only want to fix it in this one place.
     """
 
-    class PatchedTileDevice(MccsTile):
+    class PatchedTileDevice(MccsTile):  # pylint: disable=too-many-ancestors
         """
         MccsTile patched with extra commands for testing purposes.
 

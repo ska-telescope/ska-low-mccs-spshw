@@ -61,7 +61,7 @@ class TestTileComponentManager:
                 "tpm_firmware_9.0.0.bit",
             ),
             (
-                ("v1.0.0 " "(CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
+                ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
                 "tpm_firmware_11.0.0-rc1.bit",
             ),
             ("v0.9.0 (dummy)", "tpm_firmware_9.0.0.bit"),
@@ -1851,7 +1851,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm
         tile_simulator.tpm._bios_version = (
-            "v1.0.0 " "(CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
+            "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
         )
         tile_simulator.tpm._is_programmed = False
 

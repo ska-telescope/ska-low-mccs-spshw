@@ -5,7 +5,6 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-# pylint: disable=too-many-lines
 """This module provides for monitoring and control of an SPS subrack."""
 from __future__ import annotations
 

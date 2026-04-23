@@ -45,16 +45,29 @@ python-lint: mypy
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 11.0.0
+# Do not change. Legacy firmware will be loaded if older TPM BIOS detected
+# BIOS < 1.0.0 does not support firmware > 10.0.0
+LEGACY_BIOS_FIRMWARE_VERSION = 10.0.0
+
+# Firmware loaded when TPM BIOS > 1.0.0 detected
+LATEST_FIRMWARE_VERSION = 11.0.0-rc1
+
+DESIRED_LEGACY_FIRMWARE_FILE_NAME = tpm_legacy_firmware.bit
 DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
 
-install-firmware:
-	mkdir temp_firmware
-	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$(FIRMWARE_VERSION).tar.gz
-	gzip -d temp_firmware/firmware_files.tar.gz
-	tar -xvf temp_firmware/firmware_files.tar -C temp_firmware
-	cp temp_firmware/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
+define download_firmware_from_car
+	mkdir -p temp_firmware
+	curl -sSL --retry 3 --connect-timeout 15 \
+		--output temp_firmware/fw.tar.gz \
+		https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$1.tar.gz
+	tar -xzf temp_firmware/fw.tar.gz -C temp_firmware
+	cp temp_firmware/tpm_firmware.bit $2
 	rm -rf temp_firmware
+endef
+
+install-firmware:
+	$(call download_firmware_from_car,$(LEGACY_BIOS_FIRMWARE_VERSION),$(DESIRED_LEGACY_FIRMWARE_FILE_NAME))
+	$(call download_firmware_from_car,$(LATEST_FIRMWARE_VERSION),$(DESIRED_FIRMWARE_FILE_NAME))
 
 ########################################################################
 # HELM

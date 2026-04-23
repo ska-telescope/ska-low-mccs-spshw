@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
 import numpy as np
+import semver
 import tango
 from ska_control_model import (
     CommunicationStatus,
@@ -157,7 +159,10 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
+
     FIRMWARE_NAME: str = "tpm_firmware.bit"
+    LEGACY_FIRMWARE_NAME = "tpm_legacy_firmware.bit"
+
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
@@ -286,7 +291,6 @@ class TileComponentManager(
         self.integrated_data_transmission_mode: str = "Not transmitting"
         self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -321,6 +325,16 @@ class TileComponentManager(
                 logger=logger,
                 tpm_version=_tpm_version,
             )
+
+        bios_ver = re.findall(
+            r"v?(\d+\.\d+\.\d+)", self.tile_info()["hardware"]["bios"]
+        )[0]
+        self._bios_version = semver.Version.parse(bios_ver)
+        self._firmware_name: str = (
+            self.FIRMWARE_NAME
+            if self._bios_version >= "1.0.0"
+            else self.LEGACY_FIRMWARE_NAME
+        )
 
         super().__init__(
             logger,

@@ -449,6 +449,9 @@ class MockTpmFirmwareInformation:
 class MockTpm:
     """Simulator for a ska_low_sps_tpm_api.boards::Tpm class."""
 
+    BIOS_VERSION_OLD = "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)"
+    BIOS_VERSION_NEW = "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
+
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
@@ -512,6 +515,7 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+        self._bios_version = self.BIOS_VERSION_OLD
         self._station_beam_flagging = False
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
         self.tpm_monitor = TpmMonitor(logger)
@@ -614,7 +618,7 @@ class MockTpm:
 
         :return: A string bios version.
         """
-        return "TileSimulatorBios"
+        return self._bios_version
 
     def get_40g_core_configuration(
         self: MockTpm,
@@ -1015,7 +1019,7 @@ class TileSimulator:
         "fpga2_alarm_threshold": 90.0,
     }
 
-    FIRMWARE_NAME = "tpm_firmware.bit"
+    FIRMWARE_NAME = "tpm_firmware_9.0.0.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},

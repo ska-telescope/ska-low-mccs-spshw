@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-547] Add dual TPM firmware support with BIOS-based selection during Tile initialise. Keep legacy firmware for BIOS < 1.0.0, add support for firmware 11.0.0-rc1 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.
+
 ## 11.4.5
 
 * [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`

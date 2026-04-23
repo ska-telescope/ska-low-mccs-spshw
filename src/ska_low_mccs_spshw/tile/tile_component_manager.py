@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from contextlib import contextmanager
@@ -59,6 +60,27 @@ from .tpm_status import TpmStatus
 from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
+
+FIRMWARE_NAME_V9 = "tpm_firmware_9.0.0.bit"
+FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0-rc1.bit"
+_BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
+
+
+def _select_firmware_name(bios: str) -> str:
+    """
+    Select the firmware file to use for a TPM BIOS string.
+
+    :param bios: BIOS string reported by tile.info.
+
+    :return: firmware filename to program.
+    """
+    match = _BIOS_VERSION_PATTERN.search(bios)
+    if match is None:
+        return FIRMWARE_NAME_V9
+
+    version = tuple(int(part) for part in match.group(1).split("."))
+    return FIRMWARE_NAME_V11 if version >= (1, 0, 0) else FIRMWARE_NAME_V9
+
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
 # TileComponentManager have different names for things? It seems clearer for them
@@ -157,7 +179,9 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
-    FIRMWARE_NAME: str = "tpm_firmware.bit"
+    FIRMWARE_NAME_V9: str = FIRMWARE_NAME_V9
+    FIRMWARE_NAME_V11: str = FIRMWARE_NAME_V11
+    FIRMWARE_NAME: str = FIRMWARE_NAME_V9
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
@@ -1305,6 +1329,9 @@ class TileComponentManager(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                     )
                 prog_status = False
+                tile_info = self.tile.info
+                bios = tile_info.get("hardware", {}).get("bios", "")
+                self._firmware_name = _select_firmware_name(bios)
 
                 if self.tile.is_programmed() is False:
                     self.logger.error(

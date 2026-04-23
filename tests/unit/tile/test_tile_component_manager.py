@@ -38,6 +38,7 @@ from ska_low_mccs_spshw.tile import (
     TileSimulator,
     TpmStatus,
 )
+from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -51,6 +52,33 @@ class TestTileComponentManager:
     we just perform tests of functionality in the tile component manager
     itself.
     """
+
+    @pytest.mark.parametrize(
+        ("bios", "expected_firmware_name"),
+        [
+            (
+                "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
+                "tpm_firmware_9.0.0.bit",
+            ),
+            (
+                ("v1.0.0 " "(CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
+                "tpm_firmware_11.0.0-rc1.bit",
+            ),
+            ("v0.9.0 (dummy)", "tpm_firmware_9.0.0.bit"),
+        ],
+    )
+    def test_select_firmware_name(
+        self: TestTileComponentManager,
+        bios: str,
+        expected_firmware_name: str,
+    ) -> None:
+        """
+        Test that the firmware file is selected from the TPM BIOS string.
+
+        :param bios: the BIOS string reported by tile_info.
+        :param expected_firmware_name: the firmware file expected for that BIOS.
+        """
+        assert _select_firmware_name(bios) == expected_firmware_name
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize("power_state", PowerState)
@@ -1769,7 +1797,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
             assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
-        assert tile_component_manager.firmware_name == "tpm_firmware.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_9.0.0.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
         time.sleep(1.5)
@@ -1806,6 +1834,38 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check TpmStatus is UNPROGRAMMED.
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+
+    def test_initialise_selects_new_firmware_for_new_bios(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test that initialise selects the new firmware for BIOS >= 1.0.0.
+
+        :param tile_component_manager: The tile_component_manager under test.
+        :param tile_simulator: A mock object representing a simulated tile.
+        :param callbacks: dictionary of mock callbacks.
+        """
+        tile_simulator.connect()
+        assert tile_simulator.tpm
+        tile_simulator.tpm._bios_version = (
+            "v1.0.0 " "(CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
+        )
+        tile_simulator.tpm._is_programmed = False
+
+        tile_component_manager.initialise(
+            force_reprogramming=True, task_callback=callbacks["task"]
+        )
+
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
+        assert tile_component_manager.firmware_name == "tpm_firmware_11.0.0-rc1.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,

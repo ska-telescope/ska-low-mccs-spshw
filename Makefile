@@ -46,14 +46,20 @@ python-lint: mypy
 include .make/oci.mk
 
 FIRMWARE_VERSION = 9.0.0
-DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
+FIRMWARE_VERSION_NEW = 11.0.0-rc1
+DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_9.0.0.bit
+DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_11.0.0-rc1.bit
 
 install-firmware:
-	mkdir temp_firmware
-	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$(FIRMWARE_VERSION).tar.gz
-	gzip -d temp_firmware/firmware_files.tar.gz
-	tar -xvf temp_firmware/firmware_files.tar -C temp_firmware
-	cp temp_firmware/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
+	mkdir -p temp_firmware/v9 temp_firmware/v11
+	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/v9/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$(FIRMWARE_VERSION).tar.gz
+	gzip -d temp_firmware/v9/firmware_files.tar.gz
+	tar -xvf temp_firmware/v9/firmware_files.tar -C temp_firmware/v9
+	cp temp_firmware/v9/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
+	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/v11/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$(FIRMWARE_VERSION_NEW).tar.gz
+	gzip -d temp_firmware/v11/firmware_files.tar.gz
+	tar -xvf temp_firmware/v11/firmware_files.tar -C temp_firmware/v11
+	cp temp_firmware/v11/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME_NEW)
 	rm -rf temp_firmware
 
 ########################################################################

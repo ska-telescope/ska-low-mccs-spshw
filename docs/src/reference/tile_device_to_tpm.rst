@@ -37,7 +37,7 @@ The code checks that the file exists and then passes this file path down
 to the hardware (either real or simulated).
 
 
-If no name is specified, the name defaults to "tpm_firmware.bit".
+If no name is specified, the name defaults to "tpm_firmware_9.0.0.bit".
 
 Ursula's Sequence Diagram
 =========================

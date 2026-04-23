@@ -1,5 +1,12 @@
 # Version History
 
+## 12.0.0
+> [!CAUTION]
+> This version adopts TPM FPGA firmware 11.0.0 which introduces a **Chip-to-Chip physical layer refactoring** that is **not backward compatible** with earlier TPM BIOS.
+> Flash TPM boards to BIOS >= 1.0.0 prior to deployment of MCCS.
+
+* [JANUS-370] Bumping TPM FPGA firmware to 11.0.0 and TPM API to 3.1.0 to support TPM BIOS 1.0.0.
+
 ## 11.4.5
 
 * [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`

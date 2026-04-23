@@ -2075,7 +2075,7 @@ wheels = [
 
 [[package]]
 name = "ska-low-mccs-spshw"
-version = "11.4.5"
+version = "12.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },

@@ -49,7 +49,7 @@ class BaseDataReceivedHandler(abc.ABC):
         self._logger: logging.Logger = logger
         self._data_created_callback = data_created_callback
         self._nof_tiles = nof_tiles
-        self._received_files = set()
+        self._received_files: set[str] = set()
         self._base_path = ""
         self._tile_id = 0
         self.data: np.ndarray

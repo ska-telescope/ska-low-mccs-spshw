@@ -1318,6 +1318,7 @@ class TileSimulator:
         use_internal_pps: bool = False,
         pps_delay: int = 0,
         time_delays: float | int | list = 0,
+        pps_period: int = 1,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
         qsfp_detection: str = "auto",
@@ -1355,6 +1356,7 @@ class TileSimulator:
         :param use_internal_pps: use internal PPS generator synchronised across FPGAs
         :param pps_delay: PPS delay correction in 625ps units
         :param time_delays: time domain delays for 32 inputs
+        :param pps_period: PPS period in seconds
         :param is_first_tile: True if this tile is the first tile in the
             beamformer chain
         :param is_last_tile: True if this tile is the last tile in the beamformer chain

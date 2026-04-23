@@ -1125,6 +1125,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "integratedDataTransmissionMode",
                 "antennaBufferMode",
                 "coreCommunicationStatus",
+                # Pointing delay readback is operational metadata, not a health signal.
+                # It can be unavailable in valid startup/runtime windows.
+                "pointingDelays",
             }
 
             if is_v1(self.HardwareVersion):
@@ -4120,8 +4123,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: Return the PPS delay in 1.25ns units.
         """
         if self._attribute_state["ppsDelay"].read() is None:
-            power = self.component_manager.pps_delay
-            self._attribute_state["ppsDelay"].update(power, post=False)
+            pps_delay = self.component_manager.pps_delay
+            # Post an event so health tracking can recover from stale/invalid state.
+            self._attribute_state["ppsDelay"].update(pps_delay)
         return self._attribute_state["ppsDelay"].read()
 
     @attribute(

@@ -1,5 +1,9 @@
 # Version History
 
+## 11.4.5
+
+* [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`
+
 ## 11.4.4
 
 * [THORN-532] Update ska-tango-base to bring in WOM-1114 fixes, remove MCCS workarounds.

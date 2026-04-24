@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
 import numpy as np
+import semver
 import tango
 from ska_control_model import (
     CommunicationStatus,
@@ -61,9 +62,10 @@ from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
 
-FIRMWARE_NAME_V9 = "tpm_firmware_9.0.0.bit"
-FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0-rc1.bit"
+FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
+FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
+_MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -76,10 +78,10 @@ def _select_firmware_name(bios: str) -> str:
     """
     match = _BIOS_VERSION_PATTERN.search(bios)
     if match is None:
-        return FIRMWARE_NAME_V9
+        return FIRMWARE_NAME_V10
 
-    version = tuple(int(part) for part in match.group(1).split("."))
-    return FIRMWARE_NAME_V11 if version >= (1, 0, 0) else FIRMWARE_NAME_V9
+    version = semver.Version.parse(match.group(1))
+    return FIRMWARE_NAME_V11 if version >= _MIN_V11_BIOS_VERSION else FIRMWARE_NAME_V10
 
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
@@ -179,9 +181,9 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
-    FIRMWARE_NAME_V9: str = FIRMWARE_NAME_V9
+    FIRMWARE_NAME_V10: str = FIRMWARE_NAME_V10
     FIRMWARE_NAME_V11: str = FIRMWARE_NAME_V11
-    FIRMWARE_NAME: str = FIRMWARE_NAME_V9
+    FIRMWARE_NAME: str = FIRMWARE_NAME_V10
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 

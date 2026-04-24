@@ -58,13 +58,13 @@ class TestTileComponentManager:
         [
             (
                 "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
-                "tpm_firmware_9.0.0.bit",
+                "tpm_firmware_10.0.0.bit",
             ),
             (
                 ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
-                "tpm_firmware_11.0.0-rc1.bit",
+                "tpm_firmware_11.0.0.bit",
             ),
-            ("v0.9.0 (dummy)", "tpm_firmware_9.0.0.bit"),
+            ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
         ],
     )
     def test_select_firmware_name(
@@ -1797,7 +1797,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
             assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
-        assert tile_component_manager.firmware_name == "tpm_firmware_9.0.0.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_10.0.0.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
         time.sleep(1.5)
@@ -1865,7 +1865,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
-        assert tile_component_manager.firmware_name == "tpm_firmware_11.0.0-rc1.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_11.0.0.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,

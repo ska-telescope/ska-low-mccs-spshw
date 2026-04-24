@@ -1382,7 +1382,7 @@ class TestMccsTileTpmDriver:
         # We are mocking the TPM in a prexisting SYNCHRONISED state.
         # To check we do not re-initialise.
         tile_simulator.mock_on(lock=True)
-        tile_simulator.program_fpgas("tpm_firmware_9.0.0.bit")
+        tile_simulator.program_fpgas("tpm_firmware_10.0.0.bit")
         tile_simulator.initialise()
         tile_simulator.start_acquisition(delay=0)
         tile_simulator._mocked_tpm = tile_simulator.tpm

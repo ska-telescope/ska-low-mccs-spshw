@@ -1019,7 +1019,7 @@ class TileSimulator:
         "fpga2_alarm_threshold": 90.0,
     }
 
-    FIRMWARE_NAME = "tpm_firmware_9.0.0.bit"
+    FIRMWARE_NAME = "tpm_firmware_10.0.0.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},

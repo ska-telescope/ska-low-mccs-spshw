@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [THORN-547] Add dual TPM firmware support with BIOS-based selection during Tile initialise. Keep legacy firmware for BIOS < 1.0.0, add support for firmware 11.0.0-rc1 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.
+* [THORN-547] Add dual TPM firmware support with BIOS-based selection during Tile initialise. Keep default firmware 10.0.0 for BIOS < 1.0.0, add support for firmware 11.0.0 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.
 
 ## 11.4.5
 

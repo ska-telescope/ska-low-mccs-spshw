@@ -533,8 +533,8 @@ def daq_received_data(
         tango change event callbacks.
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
-    daq_config = json.loads(daq_device.GetConfiguration())
-    if daq_config["bandpass"]:
+    daq_status = json.loads(daq_device.DaqStatus())
+    if daq_status["Bandpass Monitor"]:
         change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     else:
         try:

@@ -379,7 +379,7 @@ ska-tango-devices:
         component: daq
       image:
         registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-        tag: 5.3.8-dev.c03bedd4b
+        tag: 5.3.8-dev.c829b843c
         name: ska-low-mccs-daq
     spshw:
       metadata:

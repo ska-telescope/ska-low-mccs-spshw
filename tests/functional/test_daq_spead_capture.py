@@ -233,6 +233,10 @@ def check_capture_integrated(
             change_event_callbacks["data_received_callback"].assert_change_event(
                 ("integrated_channel", Anything)
             )
+            # This check is moved to here as we no longer expect files
+            # to be created in bandpass mode.
+            final_hdf5_count = get_hdf5_count()
+            assert final_hdf5_count - initial_hdf5_count >= 1
         except AssertionError:
             if station_name == "stfc-ral-2":
                 pytest.xfail(
@@ -242,8 +246,6 @@ def check_capture_integrated(
                     )
                 )
             pytest.fail("No integrated data received.")
-        final_hdf5_count = get_hdf5_count()
-        assert final_hdf5_count - initial_hdf5_count >= 1
 
 
 @then(parsers.cfparse("Daq receives data CHANNEL_DATA"))

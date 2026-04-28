@@ -275,6 +275,14 @@ def on_tile_device_fixture(
     for subscription_id in subscription_ids:
         tile_device.unsubscribe_event(subscription_id)
     wait_for_completed_command_to_clear_from_queue(tile_device)
+
+    # Wait for health to settle at OK after signal-backed attributes push real values.
+    deadline = time.time() + 10
+    while tile_device.healthState != HealthState.OK:
+        if time.time() > deadline:
+            break
+        time.sleep(0.05)
+
     yield tile_device
 
 
@@ -1156,7 +1164,10 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
-        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        time.sleep(0.5)
+        change_event_callbacks["health_state"].assert_change_event(
+            HealthState.OK, lookahead=10
+        )
         assert tile_device.healthState == HealthState.OK
 
     def test_adcPower(
@@ -1613,11 +1624,19 @@ class TestMccsTile:
         tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
-        with pytest.raises(
-            DevFailed,
-            match=f"Read value for attribute {attribute} has not been updated",
-        ):
+        try:
             _ = getattr(tile_device, attribute)
+            # attribute_from_signal returns 0.0 with ATTR_INVALID/ATTR_ALARM
+            # instead of raising DevFailed when the signal is unset.
+            attr_result = tile_device.read_attribute(attribute)
+            assert attr_result.quality in (
+                AttrQuality.ATTR_INVALID,
+                AttrQuality.ATTR_ALARM,
+            )
+        except DevFailed as e:
+            assert f"Read value for attribute {attribute} has not been updated" in str(
+                e
+            ), str(e)
 
         tile_device.subscribe_event(
             "state",

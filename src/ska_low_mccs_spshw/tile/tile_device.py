@@ -154,12 +154,125 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Signals
     # -------
     board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+    fpga1_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+    fpga2_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc0_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc1_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc2_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc3_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc4_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc5_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc6_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc7_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc8_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc9_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc10_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc11_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc12_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc13_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc14_signal: AttrSignal[float] = AttrSignal[float]()
+    temperature_adc15_signal: AttrSignal[float] = AttrSignal[float]()
+    current_fe0_signal: AttrSignal[float] = AttrSignal[float]()
+    current_fe1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_avdd3_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vref_ddr0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vref_ddr1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_man1v2_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_mgt_avcc_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_mgt_avtt_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_mon5v0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_mon3v3_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_mon1v8_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_sw_avdd1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_sw_avdd2_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vin_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp2_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp3_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp4_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp5_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp6_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_agp7_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_clk0b_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_clk1b_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_ddr0_vtt_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_ddr1_vdd_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_ddr1_vtt_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_drvdd_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_dvdd_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_fe0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_fe1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_mgt0_aux_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_mgt1_aux_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_pll_signal: AttrSignal[float] = AttrSignal[float]()
+    voltage_vm_sw_amp_signal: AttrSignal[float] = AttrSignal[float]()
 
     # Maps each signal-backed attribute that needs alarm shutdown handling
-    # to its Tango attribute name. Extend this when migrating more attributes
-    # to AttrSignal so that notify_emission picks them up automatically.
+    # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
         board_temperature_signal: "boardTemperature",
+        fpga1_temperature_signal: "fpga1Temperature",
+        fpga2_temperature_signal: "fpga2Temperature",
+    }
+
+    # Maps each health-monitoring attribute name to its signal attribute name,
+    # used by update_tile_health_attributes to route updates generically.
+    _HEALTH_SIGNAL_MAP: dict[str, str] = {
+        "boardTemperature": "board_temperature_signal",
+        "fpga1Temperature": "fpga1_temperature_signal",
+        "fpga2Temperature": "fpga2_temperature_signal",
+        "temperatureADC0": "temperature_adc0_signal",
+        "temperatureADC1": "temperature_adc1_signal",
+        "temperatureADC2": "temperature_adc2_signal",
+        "temperatureADC3": "temperature_adc3_signal",
+        "temperatureADC4": "temperature_adc4_signal",
+        "temperatureADC5": "temperature_adc5_signal",
+        "temperatureADC6": "temperature_adc6_signal",
+        "temperatureADC7": "temperature_adc7_signal",
+        "temperatureADC8": "temperature_adc8_signal",
+        "temperatureADC9": "temperature_adc9_signal",
+        "temperatureADC10": "temperature_adc10_signal",
+        "temperatureADC11": "temperature_adc11_signal",
+        "temperatureADC12": "temperature_adc12_signal",
+        "temperatureADC13": "temperature_adc13_signal",
+        "temperatureADC14": "temperature_adc14_signal",
+        "temperatureADC15": "temperature_adc15_signal",
+        "currentFE0": "current_fe0_signal",
+        "currentFE1": "current_fe1_signal",
+        "voltageAVDD3": "voltage_avdd3_signal",
+        "voltageVrefDDR0": "voltage_vref_ddr0_signal",
+        "voltageVrefDDR1": "voltage_vref_ddr1_signal",
+        "voltageMan1V2": "voltage_man1v2_signal",
+        "voltageMGT_AVCC": "voltage_mgt_avcc_signal",
+        "voltageMGT_AVTT": "voltage_mgt_avtt_signal",
+        "voltageMon5V0": "voltage_mon5v0_signal",
+        "voltageMon3V3": "voltage_mon3v3_signal",
+        "voltageMon1V8": "voltage_mon1v8_signal",
+        "voltageSW_AVDD1": "voltage_sw_avdd1_signal",
+        "voltageSW_AVDD2": "voltage_sw_avdd2_signal",
+        "voltageVIN": "voltage_vin_signal",
+        "voltageVM_AGP0": "voltage_vm_agp0_signal",
+        "voltageVM_AGP1": "voltage_vm_agp1_signal",
+        "voltageVM_AGP2": "voltage_vm_agp2_signal",
+        "voltageVM_AGP3": "voltage_vm_agp3_signal",
+        "voltageVM_AGP4": "voltage_vm_agp4_signal",
+        "voltageVM_AGP5": "voltage_vm_agp5_signal",
+        "voltageVM_AGP6": "voltage_vm_agp6_signal",
+        "voltageVM_AGP7": "voltage_vm_agp7_signal",
+        "voltageVM_CLK0B": "voltage_vm_clk0b_signal",
+        "voltageVM_CLK1B": "voltage_vm_clk1b_signal",
+        "voltageVM_DDR0_VTT": "voltage_vm_ddr0_vtt_signal",
+        "voltageVM_DDR1_VDD": "voltage_vm_ddr1_vdd_signal",
+        "voltageVM_DDR1_VTT": "voltage_vm_ddr1_vtt_signal",
+        "voltageVM_DRVDD": "voltage_vm_drvdd_signal",
+        "voltageVM_DVDD": "voltage_vm_dvdd_signal",
+        "voltageVM_FE0": "voltage_vm_fe0_signal",
+        "voltageVM_FE1": "voltage_vm_fe1_signal",
+        "voltageVM_MGT0_AUX": "voltage_vm_mgt0_aux_signal",
+        "voltageVM_MGT1_AUX": "voltage_vm_mgt1_aux_signal",
+        "voltageVM_PLL": "voltage_vm_pll_signal",
+        "voltageVM_SW_AMP": "voltage_vm_sw_amp_signal",
     }
 
     # -----------------
@@ -503,61 +616,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "dsp": "dsp",
             "voltages": "voltages",
             "temperatures": "temperatures",
-            "temperature_adc0": "temperatureADC0",
-            "temperature_adc1": "temperatureADC1",
-            "temperature_adc2": "temperatureADC2",
-            "temperature_adc3": "temperatureADC3",
-            "temperature_adc4": "temperatureADC4",
-            "temperature_adc5": "temperatureADC5",
-            "temperature_adc6": "temperatureADC6",
-            "temperature_adc7": "temperatureADC7",
-            "temperature_adc8": "temperatureADC8",
-            "temperature_adc9": "temperatureADC9",
-            "temperature_adc10": "temperatureADC10",
-            "temperature_adc11": "temperatureADC11",
-            "temperature_adc12": "temperatureADC12",
-            "temperature_adc13": "temperatureADC13",
-            "temperature_adc14": "temperatureADC14",
-            "temperature_adc15": "temperatureADC15",
             "adcs": "adcs",
             "timing": "timing",
             "currents": "currents",
-            "current_fe0_mva": "currentFE0",
-            "current_fe1_mva": "currentFE1",
-            "voltage_avdd3": "voltageAVDD3",
-            "voltage_vref_ddr0": "voltageVrefDDR0",
-            "voltage_vref_ddr1": "voltageVrefDDR1",
-            # "voltage_vref_2v5": "voltageVref2V5",
-            "voltage_man_1V2": "voltageMan1V2",
-            "voltage_mgt_avcc": "voltageMGT_AVCC",
-            "voltage_mgt_avtt": "voltageMGT_AVTT",
-            "voltage_mon_5V0": "voltageMon5V0",
-            "voltage_mon_3V3": "voltageMon3V3",
-            "voltage_mon_1V8": "voltageMon1V8",
-            "voltage_sw_avdd1": "voltageSW_AVDD1",
-            "voltage_sw_avdd2": "voltageSW_AVDD2",
-            "voltage_vin": "voltageVIN",
-            "voltage_vm_agp0": "voltageVM_AGP0",
-            "voltage_vm_agp1": "voltageVM_AGP1",
-            "voltage_vm_agp2": "voltageVM_AGP2",
-            "voltage_vm_agp3": "voltageVM_AGP3",
-            "voltage_vm_agp4": "voltageVM_AGP4",
-            "voltage_vm_agp5": "voltageVM_AGP5",
-            "voltage_vm_agp6": "voltageVM_AGP6",
-            "voltage_vm_agp7": "voltageVM_AGP7",
-            "voltage_vm_clk0b": "voltageVM_CLK0B",
-            "voltage_vm_clk1b": "voltageVM_CLK1B",
-            "voltage_vm_ddr0_vtt": "voltageVM_DDR0_VTT",
-            "voltage_vm_ddr1_vdd": "voltageVM_DDR1_VDD",
-            "voltage_vm_ddr1_vtt": "voltageVM_DDR1_VTT",
-            "voltage_vm_drvdd": "voltageVM_DRVDD",
-            "voltage_vm_dvdd": "voltageVM_DVDD",
-            "voltage_vm_fe0": "voltageVM_FE0",
-            "voltage_vm_fe1": "voltageVM_FE1",
-            "voltage_vm_mgt0_aux": "voltageVM_MGT0_AUX",
-            "voltage_vm_mgt1_aux": "voltageVM_MGT1_AUX",
-            "voltage_vm_pll": "voltageVM_PLL",
-            "voltage_vm_sw_amp": "voltageVM_SW_AMP",
             "tile_id": "logicalTileId",
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
@@ -745,18 +806,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "tileProgrammingState": AttributeManager(
                     functools.partial(self.post_change_event, "tileProgrammingState"),
                     initial_value=TpmStatus.UNKNOWN.pretty_name(),
-                ),
-                "fpga1Temperature": AttributeManager(
-                    functools.partial(self.post_change_event, "fpga1Temperature"),
-                    alarm_handler=functools.partial(
-                        self.shutdown_on_max_alarm, "fpga1Temperature"
-                    ),
-                ),
-                "fpga2Temperature": AttributeManager(
-                    functools.partial(self.post_change_event, "fpga2Temperature"),
-                    alarm_handler=functools.partial(
-                        self.shutdown_on_max_alarm, "fpga2Temperature"
-                    ),
                 ),
                 "rfiCount": NpArrayAttributeManager(
                     functools.partial(self.post_change_event, "rfiCount")
@@ -1117,7 +1166,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self.UseAttributesForHealth:
             healthful_attrs = set(self._attribute_state.keys())
             # Add signal-backed attributes that are not in _attribute_state.
-            healthful_attrs |= set(MccsTile._ALARM_SIGNAL_ATTRIBUTES.values())
+            healthful_attrs |= set(MccsTile._HEALTH_SIGNAL_MAP.keys())
 
             healthful_attrs = healthful_attrs - {
                 "dataTransmissionMode",
@@ -1355,7 +1404,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         exc,
                         exc_info=True,
                     )
-            self.board_temperature_signal = None
+            for signal in self._HEALTH_SIGNAL_MAP.values():
+                setattr(self, signal, None)
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(
@@ -1458,8 +1508,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             if mark_invalid:
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
-                elif attribute_name == "boardTemperature":
-                    self.board_temperature_signal = None
+                elif attribute_name in self._HEALTH_SIGNAL_MAP:
+                    setattr(self, self._HEALTH_SIGNAL_MAP[attribute_name], None)
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1478,11 +1528,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             try:
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].update(attribute_value)
-                elif attribute_name == "boardTemperature":
-                    self.board_temperature_signal = (
-                        cast(float, attribute_value)
-                        if attribute_value is not None
-                        else None
+                elif attribute_name in self._HEALTH_SIGNAL_MAP:
+                    setattr(
+                        self,
+                        self._HEALTH_SIGNAL_MAP[attribute_name],
+                        attribute_value,
                     )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
@@ -2875,7 +2925,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.UseAttributesForHealth
 
-    @attribute(
+    temperatureADC0 = attribute_from_signal(  # noqa: N815
+        temperature_adc0_signal,
         dtype="DevDouble",
         label="ADC 0",
         unit="Celsius",
@@ -2883,16 +2934,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 0 temperature in degrees Celsius.",
     )
-    def temperatureADC0(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 0 temperature.
 
-        :return: ADC 0 temperature
-        """
-        return self._attribute_state["temperatureADC0"].read()
-
-    @attribute(
+    temperatureADC1 = attribute_from_signal(  # noqa: N815
+        temperature_adc1_signal,
         dtype="DevDouble",
         label="ADC 1",
         unit="Celsius",
@@ -2900,16 +2946,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 1 temperature in degrees Celsius.",
     )
-    def temperatureADC1(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 1 temperature.
 
-        :return: ADC 1 temperature
-        """
-        return self._attribute_state["temperatureADC1"].read()
-
-    @attribute(
+    temperatureADC2 = attribute_from_signal(  # noqa: N815
+        temperature_adc2_signal,
         dtype="DevDouble",
         label="ADC 2",
         unit="Celsius",
@@ -2917,16 +2958,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 2 temperature in degrees Celsius.",
     )
-    def temperatureADC2(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 2 temperature.
 
-        :return: ADC 2 temperature
-        """
-        return self._attribute_state["temperatureADC2"].read()
-
-    @attribute(
+    temperatureADC3 = attribute_from_signal(  # noqa: N815
+        temperature_adc3_signal,
         dtype="DevDouble",
         label="ADC 3",
         unit="Celsius",
@@ -2934,16 +2970,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 3 temperature in degrees Celsius.",
     )
-    def temperatureADC3(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 3 temperature.
 
-        :return: ADC 3 temperature
-        """
-        return self._attribute_state["temperatureADC3"].read()
-
-    @attribute(
+    temperatureADC4 = attribute_from_signal(  # noqa: N815
+        temperature_adc4_signal,
         dtype="DevDouble",
         label="ADC 4",
         unit="Celsius",
@@ -2951,16 +2982,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 4 temperature in degrees Celsius.",
     )
-    def temperatureADC4(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 4 temperature.
 
-        :return: ADC 4 temperature
-        """
-        return self._attribute_state["temperatureADC4"].read()
-
-    @attribute(
+    temperatureADC5 = attribute_from_signal(  # noqa: N815
+        temperature_adc5_signal,
         dtype="DevDouble",
         label="ADC 5",
         unit="Celsius",
@@ -2968,16 +2994,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 5 temperature in degrees Celsius.",
     )
-    def temperatureADC5(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 5 temperature.
 
-        :return: ADC 5 temperature
-        """
-        return self._attribute_state["temperatureADC5"].read()
-
-    @attribute(
+    temperatureADC6 = attribute_from_signal(  # noqa: N815
+        temperature_adc6_signal,
         dtype="DevDouble",
         label="ADC 6",
         unit="Celsius",
@@ -2985,16 +3006,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 6 temperature in degrees Celsius.",
     )
-    def temperatureADC6(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 6 temperature.
 
-        :return: ADC 6 temperature
-        """
-        return self._attribute_state["temperatureADC6"].read()
-
-    @attribute(
+    temperatureADC7 = attribute_from_signal(  # noqa: N815
+        temperature_adc7_signal,
         dtype="DevDouble",
         label="ADC 7",
         unit="Celsius",
@@ -3002,16 +3018,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 7 temperature in degrees Celsius.",
     )
-    def temperatureADC7(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 7 temperature.
 
-        :return: ADC 7 temperature
-        """
-        return self._attribute_state["temperatureADC7"].read()
-
-    @attribute(
+    temperatureADC8 = attribute_from_signal(  # noqa: N815
+        temperature_adc8_signal,
         dtype="DevDouble",
         label="ADC 8",
         unit="Celsius",
@@ -3019,16 +3030,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 8 temperature in degrees Celsius.",
     )
-    def temperatureADC8(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 8 temperature.
 
-        :return: ADC 8 temperature
-        """
-        return self._attribute_state["temperatureADC8"].read()
-
-    @attribute(
+    temperatureADC9 = attribute_from_signal(  # noqa: N815
+        temperature_adc9_signal,
         dtype="DevDouble",
         label="ADC 9",
         unit="Celsius",
@@ -3036,16 +3042,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 9 temperature in degrees Celsius.",
     )
-    def temperatureADC9(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 9 temperature.
 
-        :return: ADC 9 temperature
-        """
-        return self._attribute_state["temperatureADC9"].read()
-
-    @attribute(
+    temperatureADC10 = attribute_from_signal(  # noqa: N815
+        temperature_adc10_signal,
         dtype="DevDouble",
         label="ADC 10",
         unit="Celsius",
@@ -3053,16 +3054,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 10 temperature in degrees Celsius.",
     )
-    def temperatureADC10(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 10 temperature.
 
-        :return: ADC 10 temperature
-        """
-        return self._attribute_state["temperatureADC10"].read()
-
-    @attribute(
+    temperatureADC11 = attribute_from_signal(  # noqa: N815
+        temperature_adc11_signal,
         dtype="DevDouble",
         label="ADC 11",
         unit="Celsius",
@@ -3070,16 +3066,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 11 temperature in degrees Celsius.",
     )
-    def temperatureADC11(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 11 temperature.
 
-        :return: ADC 11 temperature
-        """
-        return self._attribute_state["temperatureADC11"].read()
-
-    @attribute(
+    temperatureADC12 = attribute_from_signal(  # noqa: N815
+        temperature_adc12_signal,
         dtype="DevDouble",
         label="ADC 12",
         unit="Celsius",
@@ -3087,16 +3078,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 12 temperature in degrees Celsius.",
     )
-    def temperatureADC12(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 12 temperature.
 
-        :return: ADC 12 temperature
-        """
-        return self._attribute_state["temperatureADC12"].read()
-
-    @attribute(
+    temperatureADC13 = attribute_from_signal(  # noqa: N815
+        temperature_adc13_signal,
         dtype="DevDouble",
         label="ADC 13",
         unit="Celsius",
@@ -3104,16 +3090,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 13 temperature in degrees Celsius.",
     )
-    def temperatureADC13(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 13 temperature.
 
-        :return: ADC 13 temperature
-        """
-        return self._attribute_state["temperatureADC13"].read()
-
-    @attribute(
+    temperatureADC14 = attribute_from_signal(  # noqa: N815
+        temperature_adc14_signal,
         dtype="DevDouble",
         label="ADC 14",
         unit="Celsius",
@@ -3121,16 +3102,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 14 temperature in degrees Celsius.",
     )
-    def temperatureADC14(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 14 temperature.
 
-        :return: ADC 14 temperature
-        """
-        return self._attribute_state["temperatureADC14"].read()
-
-    @attribute(
+    temperatureADC15 = attribute_from_signal(  # noqa: N815
+        temperature_adc15_signal,
         dtype="DevDouble",
         label="ADC 15",
         unit="Celsius",
@@ -3138,14 +3114,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        doc="ADC 15 temperature in degrees Celsius.",
     )
-    def temperatureADC15(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ADC 15 temperature.
-
-        :return: ADC 15 temperature
-        """
-        return self._attribute_state["temperatureADC15"].read()
 
     @attribute(
         dtype="DevString",
@@ -3870,39 +3840,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    @attribute(
+    fpga1Temperature = attribute_from_signal(  # noqa: N815
+        fpga1_temperature_signal,
         dtype="DevDouble",
         abs_change=0.1,
         archive_abs_change=0.1,
         min_alarm=10.0,
         max_alarm=95.0,
+        doc="Temperature of FPGA 1 in degrees Celsius.",
     )
-    def fpga1Temperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the temperature of FPGA 1.
 
-        :return: the temperature of FPGA 1
-        """
-        return self._attribute_state["fpga1Temperature"].read()
-
-    @attribute(
+    fpga2Temperature = attribute_from_signal(  # noqa: N815
+        fpga2_temperature_signal,
         dtype="DevDouble",
         abs_change=0.2,
         archive_abs_change=0.2,
         min_alarm=10.0,
         max_alarm=95.0,
+        doc="Temperature of FPGA 2 in degrees Celsius.",
     )
-    def fpga2Temperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the temperature of FPGA 2.
-
-        :return: the temperature of FPGA 2
-        """
-        return self._attribute_state["fpga2Temperature"].read()
 
     @attribute(
         dtype=("DevLong",),
@@ -4752,7 +4708,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.running_beams
 
-    @attribute(
+    currentFE0 = attribute_from_signal(  # noqa: N815
+        current_fe0_signal,
         dtype="DevDouble",
         label="FE0 current",
         unit="Amp",
@@ -4760,16 +4717,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
+        doc="FE0 current in Amps.",
     )
-    def currentFE0(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the FE0 current.
 
-        :return: FE0 current
-        """
-        return self._attribute_state["currentFE0"].read()
-
-    @attribute(
+    currentFE1 = attribute_from_signal(  # noqa: N815
+        current_fe1_signal,
         dtype="DevDouble",
         label="FE1 current",
         unit="Amp",
@@ -4777,16 +4729,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
+        doc="FE1 current in Amps.",
     )
-    def currentFE1(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the FE1 current.
 
-        :return: FE1 current
-        """
-        return self._attribute_state["currentFE1"].read()
-
-    @attribute(
+    voltageAVDD3 = attribute_from_signal(  # noqa: N815
+        voltage_avdd3_signal,
         dtype="DevDouble",
         label="Analog 2.5 V",
         unit="Volt",
@@ -4796,16 +4743,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_warning=2.57,
         min_warning=2.40,
         min_alarm=2.37,
+        doc="Analog 2.5 V voltage in Volts.",
     )
-    def voltageAVDD3(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the Analog 2.5 V voltage.
 
-        :return: Analog 2.5 V voltage
-        """
-        return self._attribute_state["voltageAVDD3"].read()
-
-    @attribute(
+    voltageVrefDDR0 = attribute_from_signal(  # noqa: N815
+        voltage_vref_ddr0_signal,
         dtype="DevDouble",
         label="Vref voltage for DDR0",
         unit="Volt",
@@ -4813,16 +4755,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
+        doc="Vref voltage for DDR0 in Volts.",
     )
-    def voltageVrefDDR0(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the Vref voltage for DDR0.
 
-        :return: Vref voltage for DDR0
-        """
-        return self._attribute_state["voltageVrefDDR0"].read()
-
-    @attribute(
+    voltageVrefDDR1 = attribute_from_signal(  # noqa: N815
+        voltage_vref_ddr1_signal,
         dtype="DevDouble",
         label="Vref voltage for DDR1",
         unit="Volt",
@@ -4830,14 +4767,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
+        doc="Vref voltage for DDR1 in Volts.",
     )
-    def voltageVrefDDR1(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the Vref voltage for DDR1.
-
-        :return: Vref voltage for DDR1
-        """
-        return self._attribute_state["voltageVrefDDR1"].read()
 
     # TODO: add back when available in BIOS.
     # @attribute(dtype="DevDouble", label="voltage VREF_2V5")
@@ -4849,7 +4780,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     """
     #     return self._attribute_state["voltageVref2V5"].read()
 
-    @attribute(
+    voltageMan1V2 = attribute_from_signal(  # noqa: N815
+        voltage_man1v2_signal,
         dtype="DevDouble",
         label="Management 1.2V",
         unit="Volt",
@@ -4857,16 +4789,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.26,
         min_alarm=1.14,
+        doc="Management 1.2V voltage in Volts.",
     )
-    def voltageMan1V2(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the Management 1.2V voltage.
 
-        :return: Management 1.2V voltage
-        """
-        return self._attribute_state["voltageMan1V2"].read()
-
-    @attribute(
+    voltageMGT_AVCC = attribute_from_signal(  # noqa: N815
+        voltage_mgt_avcc_signal,
         dtype="DevDouble",
         label="FPGA MGT AV",
         unit="Volt",
@@ -4874,16 +4801,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.97,
         min_alarm=0.83,
+        doc="FPGA MGT AV voltage in Volts.",
     )
-    def voltageMGT_AVCC(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the FPGA MGT AV voltage.
 
-        :return: FPGA MGT AV voltage
-        """
-        return self._attribute_state["voltageMGT_AVCC"].read()
-
-    @attribute(
+    voltageMGT_AVTT = attribute_from_signal(  # noqa: N815
+        voltage_mgt_avtt_signal,
         dtype="DevDouble",
         label="FPGA MGT AVTT",
         unit="Volt",
@@ -4891,16 +4813,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.26,
         min_alarm=1.104,
+        doc="FPGA MGT AVTT voltage in Volts.",
     )
-    def voltageMGT_AVTT(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the FPGA MGT AVTT voltage.
 
-        :return: FPGA MGT AVTT voltage
-        """
-        return self._attribute_state["voltageMGT_AVTT"].read()
-
-    @attribute(
+    voltageMon5V0 = attribute_from_signal(  # noqa: N815
+        voltage_mon5v0_signal,
         dtype="DevDouble",
         label="Management 5V0",
         unit="Volt",
@@ -4908,16 +4825,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=5.19,
         min_alarm=4.69,
+        doc="Management 5V supply of the TPM in Volts.",
     )
-    def voltageMon5V0(self: MccsTile) -> float | None:
-        """
-        Return the Management 5V supply of the TPM.
 
-        :return: Management supply of the TPM
-        """
-        return self._attribute_state["voltageMon5V0"].read()
-
-    @attribute(
+    voltageMon3V3 = attribute_from_signal(  # noqa: N815
+        voltage_mon3v3_signal,
         dtype="DevDouble",
         label="Management 3V3",
         unit="Volt",
@@ -4925,18 +4837,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.88,
         min_alarm=3.51,
+        doc="Management 3.3 V supply of the TPM in Volts.",
     )
-    def voltageMon3V3(self: MccsTile) -> float | None:
-        """
-        Return the Management 3.3 V supply of the TPM.
 
-        Note: sensor values have a measurement bias.
-
-        :return: Management supply of the TPM
-        """
-        return self._attribute_state["voltageMon3V3"].read()
-
-    @attribute(
+    voltageMon1V8 = attribute_from_signal(  # noqa: N815
+        voltage_mon1v8_signal,
         dtype="DevDouble",
         label="Management 1V8",
         unit="Volt",
@@ -4944,18 +4849,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.10,
         min_alarm=1.90,
+        doc="Management 1.8 V supply of the TPM in Volts.",
     )
-    def voltageMon1V8(self: MccsTile) -> float | None:
-        """
-        Return the Management 1.8 V supply of the TPM.
 
-        Note: sensor values have a measurement bias.
-
-        :return: Management supply of the TPM
-        """
-        return self._attribute_state["voltageMon1V8"].read()
-
-    @attribute(
+    voltageSW_AVDD1 = attribute_from_signal(  # noqa: N815
+        voltage_sw_avdd1_signal,
         dtype="DevDouble",
         label="SW Analog 1.1 V",
         unit="Volt",
@@ -4963,16 +4861,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.16,
         min_alarm=1.04,
+        doc="SW Analog 1.1 V voltage in Volts.",
     )
-    def voltageSW_AVDD1(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the SW Analog 1.1 V voltage.
 
-        :return: SW Analog 1.1 V voltage
-        """
-        return self._attribute_state["voltageSW_AVDD1"].read()
-
-    @attribute(
+    voltageSW_AVDD2 = attribute_from_signal(  # noqa: N815
+        voltage_sw_avdd2_signal,
         dtype="DevDouble",
         label="SW Analog 2.3 V",
         unit="Volt",
@@ -4980,16 +4873,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.42,
         min_alarm=2.18,
+        doc="SW Analog 2.3 V voltage in Volts.",
     )
-    def voltageSW_AVDD2(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the SW Analog 2.3 V voltage.
 
-        :return: SW Analog 2.3 V voltage
-        """
-        return self._attribute_state["voltageSW_AVDD2"].read()
-
-    @attribute(
+    voltageVIN = attribute_from_signal(  # noqa: N815
+        voltage_vin_signal,
         dtype="DevDouble",
         label="input supply",
         unit="Volt",
@@ -4997,16 +4885,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=12.6,
         min_alarm=11.4,
+        doc="Input supply voltage in Volts.",
     )
-    def voltageVIN(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the input supply voltage.
 
-        :return: input supply voltage
-        """
-        return self._attribute_state["voltageVIN"].read()
-
-    @attribute(
+    voltageVM_AGP0 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp0_signal,
         dtype="DevDouble",
         label="AD AGP group 0",
         unit="Volt",
@@ -5014,16 +4897,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 0 voltage in Volts.",
     )
-    def voltageVM_AGP0(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 0 Voltage Monitor.
 
-        :return: AD AGP group 0 voltage
-        """
-        return self._attribute_state["voltageVM_AGP0"].read()
-
-    @attribute(
+    voltageVM_AGP1 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp1_signal,
         dtype="DevDouble",
         label="AD AGP group 1",
         unit="Volt",
@@ -5031,16 +4909,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 1 voltage in Volts.",
     )
-    def voltageVM_AGP1(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 1 Voltage Monitor.
 
-        :return: AD AGP group 1 voltage
-        """
-        return self._attribute_state["voltageVM_AGP1"].read()
-
-    @attribute(
+    voltageVM_AGP2 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp2_signal,
         dtype="DevDouble",
         label="AD AGP group 2",
         unit="Volt",
@@ -5048,16 +4921,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 2 voltage in Volts.",
     )
-    def voltageVM_AGP2(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 2 Voltage Monitor.
 
-        :return: AD AGP group 2 voltage
-        """
-        return self._attribute_state["voltageVM_AGP2"].read()
-
-    @attribute(
+    voltageVM_AGP3 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp3_signal,
         dtype="DevDouble",
         label="AD AGP group 3",
         unit="Volt",
@@ -5065,16 +4933,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 3 voltage in Volts.",
     )
-    def voltageVM_AGP3(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 3 Voltage Monitor.
 
-        :return: AD AGP group 3 voltage
-        """
-        return self._attribute_state["voltageVM_AGP3"].read()
-
-    @attribute(
+    voltageVM_AGP4 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp4_signal,
         dtype="DevDouble",
         label="AD AGP group 4",
         unit="Volt",
@@ -5082,16 +4945,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 4 voltage in Volts.",
     )
-    def voltageVM_AGP4(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 4 Voltage Monitor.
 
-        :return: AD AGP group 4 voltage
-        """
-        return self._attribute_state["voltageVM_AGP4"].read()
-
-    @attribute(
+    voltageVM_AGP5 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp5_signal,
         dtype="DevDouble",
         label="AD AGP group 5",
         unit="Volt",
@@ -5099,16 +4957,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 5 voltage in Volts.",
     )
-    def voltageVM_AGP5(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 5 Voltage Monitor.
 
-        :return: AD AGP group 5 voltage
-        """
-        return self._attribute_state["voltageVM_AGP5"].read()
-
-    @attribute(
+    voltageVM_AGP6 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp6_signal,
         dtype="DevDouble",
         label="AD AGP group 6",
         unit="Volt",
@@ -5116,16 +4969,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 6 voltage in Volts.",
     )
-    def voltageVM_AGP6(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 6 Voltage Monitor.
 
-        :return: AD AGP group 6 voltage
-        """
-        return self._attribute_state["voltageVM_AGP6"].read()
-
-    @attribute(
+    voltageVM_AGP7 = attribute_from_signal(  # noqa: N815
+        voltage_vm_agp7_signal,
         dtype="DevDouble",
         label="AD AGP group 7",
         unit="Volt",
@@ -5133,16 +4981,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        doc="AD AGP group 7 voltage in Volts.",
     )
-    def voltageVM_AGP7(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the AD AGP group 7 Voltage Monitor.
 
-        :return: AD AGP group 7 voltage
-        """
-        return self._attribute_state["voltageVM_AGP7"].read()
-
-    @attribute(
+    voltageVM_CLK0B = attribute_from_signal(  # noqa: N815
+        voltage_vm_clk0b_signal,
         dtype="DevDouble",
         label="Clock Buffer0 3.3V",
         unit="Volt",
@@ -5150,16 +4993,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
+        doc="Clock Buffer0 3.3V voltage in Volts.",
     )
-    def voltageVM_CLK0B(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of Clock Buffer0 3.3V Voltage Monitor.
 
-        :return: Clock Buffer0 3.3V voltage
-        """
-        return self._attribute_state["voltageVM_CLK0B"].read()
-
-    @attribute(
+    voltageVM_CLK1B = attribute_from_signal(  # noqa: N815
+        voltage_vm_clk1b_signal,
         dtype="DevDouble",
         label="Clock Buffer1 3.3V",
         unit="Volt",
@@ -5167,16 +5005,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
+        doc="Clock Buffer1 3.3V voltage in Volts.",
     )
-    def voltageVM_CLK1B(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of Clock Buffer1 3.3V Voltage Monitor.
 
-        :return: Clock Buffer1 3.3V voltage
-        """
-        return self._attribute_state["voltageVM_CLK1B"].read()
-
-    @attribute(
+    voltageVM_DDR0_VTT = attribute_from_signal(  # noqa: N815
+        voltage_vm_ddr0_vtt_signal,
         dtype="DevDouble",
         label="DDR FPGA0 Vtt",
         unit="Volt",
@@ -5184,16 +5017,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.65,
         min_alarm=0.55,
+        doc="DDR FPGA0 Vtt voltage in Volts.",
     )
-    def voltageVM_DDR0_VTT(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of DDR FPGA0 Vtt Voltage Monitor.
 
-        :return: DDR FPGA0 Vtt voltage
-        """
-        return self._attribute_state["voltageVM_DDR0_VTT"].read()
-
-    @attribute(
+    voltageVM_DDR1_VDD = attribute_from_signal(  # noqa: N815
+        voltage_vm_ddr1_vdd_signal,
         dtype="DevDouble",
         label="DDR4",
         unit="Volt",
@@ -5201,16 +5029,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.30,
         min_alarm=1.10,
+        doc="DDR4 voltage in Volts.",
     )
-    def voltageVM_DDR1_VDD(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of DDR4 Voltage Monitor.
 
-        :return: DDR4 voltage
-        """
-        return self._attribute_state["voltageVM_DDR1_VDD"].read()
-
-    @attribute(
+    voltageVM_DDR1_VTT = attribute_from_signal(  # noqa: N815
+        voltage_vm_ddr1_vtt_signal,
         dtype="DevDouble",
         label="DDR FPGA1 Vtt",
         unit="Volt",
@@ -5218,16 +5041,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.65,
         min_alarm=0.55,
+        doc="DDR FPGA1 Vtt voltage in Volts.",
     )
-    def voltageVM_DDR1_VTT(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of DDR FPGA1 Vtt Voltage Monitor.
 
-        :return: DDR FPGA1 Vtt voltage
-        """
-        return self._attribute_state["voltageVM_DDR1_VTT"].read()
-
-    @attribute(
+    voltageVM_DRVDD = attribute_from_signal(  # noqa: N815
+        voltage_vm_drvdd_signal,
         dtype="DevDouble",
         label="SW DRVDD 1.8V",
         unit="Volt",
@@ -5235,16 +5053,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.89,
         min_alarm=1.71,
+        doc="SW DRVDD 1.8V voltage in Volts.",
     )
-    def voltageVM_DRVDD(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the SW DRVDD 1.8V voltage.
 
-        :return: SW DRVDD 1.8V voltage
-        """
-        return self._attribute_state["voltageVM_DRVDD"].read()
-
-    @attribute(
+    voltageVM_DVDD = attribute_from_signal(  # noqa: N815
+        voltage_vm_dvdd_signal,
         dtype="DevDouble",
         label="AD DVDD",
         unit="Volt",
@@ -5252,16 +5065,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.19,
         min_alarm=1.01,
+        doc="AD DVDD voltage in Volts.",
     )
-    def voltageVM_DVDD(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of AD DVDD Voltage Monitor.
 
-        :return: AD DVDD voltage
-        """
-        return self._attribute_state["voltageVM_DVDD"].read()
-
-    @attribute(
+    voltageVM_FE0 = attribute_from_signal(  # noqa: N815
+        voltage_vm_fe0_signal,
         dtype="DevDouble",
         label="FE0",
         unit="Volt",
@@ -5269,18 +5077,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
+        doc="FE0 voltage in Volts. PreADU must be on.",
     )
-    def voltageVM_FE0(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of FE0 Voltage Monitor.
 
-        Note: PreADU must be on.
-
-        :return: FE0 voltage
-        """
-        return self._attribute_state["voltageVM_FE0"].read()
-
-    @attribute(
+    voltageVM_FE1 = attribute_from_signal(  # noqa: N815
+        voltage_vm_fe1_signal,
         dtype="DevDouble",
         label="FE1",
         unit="Volt",
@@ -5288,18 +5089,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
+        doc="FE1 voltage in Volts. PreADU must be on.",
     )
-    def voltageVM_FE1(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of FE1 Voltage Monitor.
 
-        Note: PreADU must be on.
-
-        :return: FE1 voltage
-        """
-        return self._attribute_state["voltageVM_FE1"].read()
-
-    @attribute(
+    voltageVM_MGT0_AUX = attribute_from_signal(  # noqa: N815
+        voltage_vm_mgt0_aux_signal,
         dtype="DevDouble",
         label="FPGA MGT0 AUX",
         unit="Volt",
@@ -5307,16 +5101,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.94,
         min_alarm=1.66,
+        doc="FPGA MGT0 AUX voltage in Volts.",
     )
-    def voltageVM_MGT0_AUX(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of FPGA MGT0 AUX Voltage Monitor.
 
-        :return: FPGA MGT0 AUX voltage
-        """
-        return self._attribute_state["voltageVM_MGT0_AUX"].read()
-
-    @attribute(
+    voltageVM_MGT1_AUX = attribute_from_signal(  # noqa: N815
+        voltage_vm_mgt1_aux_signal,
         dtype="DevDouble",
         label="FPGA MGT1 AUX",
         unit="Volt",
@@ -5324,16 +5113,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.94,
         min_alarm=1.66,
+        doc="FPGA MGT1 AUX voltage in Volts.",
     )
-    def voltageVM_MGT1_AUX(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of FPGA MGT1 AUX Voltage Monitor.
 
-        :return: FPGA MGT1 AUX voltage
-        """
-        return self._attribute_state["voltageVM_MGT1_AUX"].read()
-
-    @attribute(
+    voltageVM_PLL = attribute_from_signal(  # noqa: N815
+        voltage_vm_pll_signal,
         dtype="DevDouble",
         label="ANALOG PLL",
         unit="Volt",
@@ -5341,16 +5125,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
+        doc="ANALOG PLL voltage in Volts.",
     )
-    def voltageVM_PLL(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of the ANALOG PLL Voltage Monitor.
 
-        :return: ANALOG PLL voltage
-        """
-        return self._attribute_state["voltageVM_PLL"].read()
-
-    @attribute(
+    voltageVM_SW_AMP = attribute_from_signal(  # noqa: N815
+        voltage_vm_sw_amp_signal,
         dtype="DevDouble",
         label="VGA DC-DC",
         unit="Volt",
@@ -5358,14 +5137,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
+        doc="VGA DC-DC voltage in Volts.",
     )
-    def voltageVM_SW_AMP(self: MccsTile) -> float | None:
-        """
-        Handle a Tango attribute read of VGA DC-DC Voltage Monitor.
-
-        :return: VGA DC-DC voltage
-        """
-        return self._attribute_state["voltageVM_SW_AMP"].read()
 
     @attribute(dtype="DevString", label="Polyphase Filter Version")
     def pfbVersion(self: MccsTile) -> str:

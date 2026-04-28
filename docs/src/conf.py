@@ -22,6 +22,62 @@ import sphinx.ext.autodoc
 from sphinx.ext.autodoc.mock import _MockObject
 
 
+# Sphinx's autodoc unconditionally skips any class member where ismock() is
+# True (it checks for __sphinx_mock__).  _MockObject carries that flag, so
+# returning one for attribute_from_signal() calls means those attributes are
+# silently dropped from the generated docs.
+#
+# _TangoAttrStub subclasses property so that Sphinx uses PropertyDocumenter:
+# it shows only the description with no "= <value>" repr, and picks up the
+# return type annotation from fget for the ":type:" field.
+class _TangoAttrStub(property):
+    pass
+
+
+# Mapping from Tango DevType strings to Python types, used to populate the
+# PropertyDocumenter's ":type:" field via fget.__annotations__['return'].
+_TANGO_DTYPE_MAP: dict = {
+    "DevDouble": float,
+    "DevFloat": float,
+    "DevLong": int,
+    "DevLong64": int,
+    "DevULong": int,
+    "DevULong64": int,
+    "DevShort": int,
+    "DevUShort": int,
+    "DevBoolean": bool,
+    "DevString": str,
+}
+
+
+def _make_attr_stub(kw: dict) -> "_TangoAttrStub":
+    """Build a _TangoAttrStub from attribute_from_signal keyword arguments."""
+    # Append unit and alarm/warning thresholds to the docstring as RST fields.
+    doc_lines = [kw["doc"], ""]
+    if "unit" in kw:
+        doc_lines.append(f":unit: {kw['unit']}")
+    for key, label in [
+        ("min_warning", "min warning"),
+        ("max_warning", "max warning"),
+        ("min_alarm", "min alarm"),
+        ("max_alarm", "max alarm"),
+    ]:
+        if kw.get(key) is not None:
+            doc_lines.append(f":{label}: {kw[key]}")
+
+    # Create a per-attribute fget function so each stub has its own annotations.
+    def fget(self):  # type: ignore[no-untyped-def]
+        pass
+
+    py_type = _TANGO_DTYPE_MAP.get(kw.get("dtype", ""))
+    if py_type is not None:
+        fget.__annotations__["return"] = py_type
+
+    stub = _TangoAttrStub(fget)
+    stub.__doc__ = "\n".join(doc_lines).rstrip()
+    return stub
+
+
 # Removing some simulator code from autodoc.
 # Normally we could use  @functools.wraps, but in this specific case
 # the decorator antenna_buffer_implemented cannot use as it changes
@@ -49,6 +105,11 @@ def call_mock(self, *args, **kw):
         # Appears to be a decorator, pass through unchanged
         args[0].write = lambda x: x
         return args[0]
+    # attribute_from_signal(signal, ..., doc="...") and similar descriptor
+    # factories.  Return a _TangoAttrStub (not a _MockObject) so that Sphinx's
+    # ismock() check does NOT fire and the attribute is included in the docs.
+    if "doc" in kw:
+        return _make_attr_stub(kw)
     return self
 
 

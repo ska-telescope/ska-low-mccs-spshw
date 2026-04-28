@@ -225,6 +225,7 @@ def check_capture_integrated(
     :param daq_device: A 'tango.DeviceProxy' to the Daq device.
     """
     daq_status = json.loads(daq_device.DaqStatus())
+    # Bandpass mode uses a different callback so we expect a different event.
     if daq_status["Bandpass Monitor"]:
         change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     else:

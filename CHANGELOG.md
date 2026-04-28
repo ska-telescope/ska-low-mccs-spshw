@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
+
 ## 11.4.5
 
 * [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`

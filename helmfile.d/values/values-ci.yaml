@@ -18,7 +18,7 @@ helm_values:
         daq:
           image:
             registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-            tag: 5.3.8-dev.c829b843c
+            tag: 5.3.8-dev.c583c4f58
   ska-tango-devices:
     devices:
       SpsStation:

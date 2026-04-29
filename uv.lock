@@ -2009,7 +2009,7 @@ health-rollup = [
 [[package]]
 name = "ska-low-mccs-common"
 version = "4.5.1"
-source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+source = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/?rev=skb-1318#6de0d5420cad1fefee03d28253d68294cee8faee" }
 dependencies = [
     { name = "attrs" },
     { name = "backoff" },
@@ -2026,10 +2026,6 @@ dependencies = [
     { name = "ska-tango-base" },
     { name = "ska-tango-testing" },
     { name = "transitions" },
-]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.5.1/ska_low_mccs_common-4.5.1.tar.gz", hash = "sha256:3f0c6f0a16768d2c32b98b55e7b88b281ae40ebd0816e960202ecbb801ee526d" }
-wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.5.1/ska_low_mccs_common-4.5.1-py3-none-any.whl", hash = "sha256:ffdaf4b4ca8831806828c7877c81fde0b00418ac532df8ce3843279511984ed4" },
 ]
 
 [[package]]
@@ -2208,12 +2204,12 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.2,<2.0.0" },
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
-    { name = "ska-low-mccs-common", specifier = ">=4.4.6,<5.0.0" },
+    { name = "ska-low-mccs-common", git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/?rev=skb-1318" },
     { name = "ska-low-mccs-daq", specifier = ">=3.2.0,<4.0.0" },
     { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.0.0" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
-    { name = "ska-tango-base", specifier = ">=1.4.2,<2.0.0" },
+    { name = "ska-tango-base", git = "https://gitlab.com/ska-telescope/ska-tango-base/?rev=skb-1318" },
     { name = "ska-telmodel", specifier = ">=1.11.0,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<1.0.0" },
     { name = "types-icalendar", specifier = ">=6.3.1.20250521,<7.0.0" },
@@ -2337,8 +2333,8 @@ wheels = [
 
 [[package]]
 name = "ska-tango-base"
-version = "1.5.0"
-source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+version = "1.7.0.dev0"
+source = { git = "https://gitlab.com/ska-telescope/ska-tango-base.git?rev=skb-1318#48044a7e39041fd4c185a3b10ebd954853a6c9a0" }
 dependencies = [
     { name = "debugpy" },
     { name = "jsonschema" },
@@ -2347,10 +2343,6 @@ dependencies = [
     { name = "ska-control-model" },
     { name = "ska-ser-logging" },
     { name = "transitions" },
-]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.5.0/ska_tango_base-1.5.0.tar.gz", hash = "sha256:90a1ab76e31e166fdb1e5aff248781ff91a82840e59d50d6f41746a830a73cc0" }
-wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.5.0/ska_tango_base-1.5.0-py3-none-any.whl", hash = "sha256:08545f08f2fe780d6d8fbe98fb17a8440f7f8a07b32caf3b358a33b359c0ea9f" },
 ]
 
 [[package]]

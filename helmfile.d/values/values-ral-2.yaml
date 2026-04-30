@@ -73,10 +73,10 @@ helm_values:
     #       tag: 10.2.0-dev.c4bbc06f3
     #       pullPolicy: Always
 
-  ska-low-mccs-daq:
-      ska-tango-devices:
-        deviceServerTypes:
-          daq:
-            image:
-              registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-              tag: 5.3.8-dev.c583c4f58
+  # ska-low-mccs-daq:
+  #     ska-tango-devices:
+  #       deviceServerTypes:
+  #         daq:
+  #           image:
+  #             registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+  #             tag: 5.3.8-dev.c583c4f58

@@ -1164,7 +1164,6 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
-        time.sleep(0.5)
         change_event_callbacks["health_state"].assert_change_event(
             HealthState.OK, lookahead=10
         )

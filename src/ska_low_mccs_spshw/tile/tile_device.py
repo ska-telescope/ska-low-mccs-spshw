@@ -1532,7 +1532,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     setattr(
                         self,
                         self._HEALTH_SIGNAL_MAP[attribute_name],
-                        attribute_value,
+                        cast(float, attribute_value),
                     )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")

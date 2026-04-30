@@ -270,9 +270,6 @@ def station_in_synchronised_state(
     if station.adminMode not in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
-        AttributeWaiter(timeout=60).wait_for_value(
-            station, "state", tango.DevState.UNKNOWN
-        )
         AttributeWaiter(timeout=300).wait_for_value(
             station, "state", tango.DevState.ON, lookahead=5
         )

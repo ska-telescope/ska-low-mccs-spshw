@@ -1,8 +1,8 @@
 # Version History
 
-## Unreleased
+## 11.4.6
 
-* [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 5.3.8.
+* [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 6.0.0.
 
 ## 11.4.5
 

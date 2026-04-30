@@ -18,6 +18,7 @@ from typing import Any, Final, Optional
 import ska_tango_base as stb
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
+from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango import AttrQuality, DevFailed
 from tango.server import attribute, device_property
 
@@ -48,6 +49,36 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=bool,
         default_value=True,
     )
+
+    # Signals backing the internalVoltages* attributes.
+    internal_voltages_1v1_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_1v5_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_2v5_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_2v8_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_3v_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_3v3_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_5v_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_arm_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_core_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_ddr_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_powerin_signal: AttrSignal[float] = AttrSignal[float]()
+    internal_voltages_soc_signal: AttrSignal[float] = AttrSignal[float]()
+
+    # Maps each signal-backed internalVoltages attribute name to its signal name.
+    _HEALTH_SIGNAL_MAP: dict[str, str] = {
+        "internalVoltages1V1": "internal_voltages_1v1_signal",
+        "internalVoltages1V5": "internal_voltages_1v5_signal",
+        "internalVoltages2V5": "internal_voltages_2v5_signal",
+        "internalVoltages2V8": "internal_voltages_2v8_signal",
+        "internalVoltages3V": "internal_voltages_3v_signal",
+        "internalVoltages3V3": "internal_voltages_3v3_signal",
+        "internalVoltages5V": "internal_voltages_5v_signal",
+        "internalVoltagesARM": "internal_voltages_arm_signal",
+        "internalVoltagesCORE": "internal_voltages_core_signal",
+        "internalVoltagesDDR": "internal_voltages_ddr_signal",
+        "internalVoltagesPOWERIN": "internal_voltages_powerin_signal",
+        "internalVoltagesSOC": "internal_voltages_soc_signal",
+    }
 
     # A map from the component manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
@@ -172,9 +203,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
             self.set_change_event(attribute_name, True)
             self.set_archive_event(attribute_name, True)
-        for attribute_name in MccsSubrack._HEALTH_STATUS_MAP:
-            self.set_change_event(attribute_name, True)
-            self.set_archive_event(attribute_name, True)
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -238,7 +266,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             configuration has changed.
         """
         if self.UseAttributesForHealth:
-            if attribute_name in self._hardware_attributes:
+            if attribute_name in self._HEALTH_SIGNAL_MAP:
+                signal_name = self._HEALTH_SIGNAL_MAP[attribute_name]
+                signal_value = getattr(self, signal_name)
+                if signal_value is not None:
+                    self.push_change_event(attribute_name, signal_value)
+                    self.push_archive_event(attribute_name, signal_value)
+            elif attribute_name in self._hardware_attributes:
                 value_cache = self._hardware_attributes[attribute_name]
                 if value_cache is not None:
                     self.push_change_event(attribute_name, value_cache)
@@ -300,6 +334,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._communication_state_changed,
             self._component_state_changed,
             update_rate=self.UpdateRate,
+            command_update_rate=self.UpdateRate,
         )
 
     # ----------
@@ -1083,113 +1118,125 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return json.dumps(self.component_manager.read_health_status())
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltagesV_1V1")
-    def internalVoltages1V1(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltagesV_1V1 attribute.
+    internalVoltages1V1 = attribute_from_signal(  # noqa: N815
+        internal_voltages_1v1_signal,
+        dtype="DevDouble",
+        label="V_1V1",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 1V1 supply voltage in Volts.",
+    )
 
-        :return: voltage value on 1V1 connector
-        """
-        return self._hardware_attributes.get("internalVoltages1V1", None)
+    internalVoltages1V5 = attribute_from_signal(  # noqa: N815
+        internal_voltages_1v5_signal,
+        dtype="DevDouble",
+        label="V_1V5",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 1V5 supply voltage in Volts.",
+    )
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltagesV_1V5")
-    def internalVoltages1V5(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltagesV_1V5 attribute.
+    internalVoltages2V5 = attribute_from_signal(  # noqa: N815
+        internal_voltages_2v5_signal,
+        dtype="DevDouble",
+        label="V_2V5",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 2V5 supply voltage in Volts.",
+    )
 
-        :return: internalVoltagesV_1V5
-        """
-        return self._hardware_attributes.get("internalVoltages1V5", None)
+    internalVoltages2V8 = attribute_from_signal(  # noqa: N815
+        internal_voltages_2v8_signal,
+        dtype="DevDouble",
+        label="V_2V8",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 2V8 supply voltage in Volts.",
+    )
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltagesV_2V5")
-    def internalVoltages2V5(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_2V5 attribute.
+    internalVoltages3V = attribute_from_signal(  # noqa: N815
+        internal_voltages_3v_signal,
+        dtype="DevDouble",
+        label="V_3V",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 3V supply voltage in Volts.",
+    )
 
-        :return: internalVoltages_2V5
-        """
-        return self._hardware_attributes.get("internalVoltages2V5", None)
+    internalVoltages3V3 = attribute_from_signal(  # noqa: N815
+        internal_voltages_3v3_signal,
+        dtype="DevDouble",
+        label="V_3V3",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 3V3 supply voltage in Volts.",
+    )
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_2V8")
-    def internalVoltages2V8(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_2V8 attribute.
+    internalVoltages5V = attribute_from_signal(  # noqa: N815
+        internal_voltages_5v_signal,
+        dtype="DevDouble",
+        label="V_5V",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal 5V supply voltage in Volts.",
+    )
 
-        :return: internalVoltages_2V8
-        """
-        return self._hardware_attributes.get("internalVoltages2V8", None)
+    internalVoltagesARM = attribute_from_signal(  # noqa: N815
+        internal_voltages_arm_signal,
+        dtype="DevDouble",
+        label="V_ARM",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal ARM supply voltage in Volts.",
+    )
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_3V")
-    def internalVoltages3V(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_3V attribute.
+    internalVoltagesCORE = attribute_from_signal(  # noqa: N815
+        internal_voltages_core_signal,
+        dtype="DevDouble",
+        label="V_CORE",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal CORE supply voltage in Volts.",
+    )
 
-        :return: internalVoltages_3V
-        """
-        return self._hardware_attributes.get("internalVoltages3V", None)
+    internalVoltagesDDR = attribute_from_signal(  # noqa: N815
+        internal_voltages_ddr_signal,
+        dtype="DevDouble",
+        label="V_DDR",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal DDR supply voltage in Volts.",
+    )
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_3V3")
-    def internalVoltages3V3(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_3V3 attribute.
+    internalVoltagesPOWERIN = attribute_from_signal(  # noqa: N815
+        internal_voltages_powerin_signal,
+        dtype="DevDouble",
+        label="V_POWERIN",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack power input voltage in Volts.",
+    )
 
-        :return: internalVoltages_3V3
-        """
-        return self._hardware_attributes.get("internalVoltages3V3", None)
-
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_5V")
-    def internalVoltages5V(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages5V attribute.
-
-        :return: internalVoltages5V
-        """
-        return self._hardware_attributes.get("internalVoltages5V", None)
-
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_ARM")
-    def internalVoltagesARM(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_ARM attribute.
-
-        :return: internalVoltages_ARM
-        """
-        return self._hardware_attributes.get("internalVoltagesARM", None)
-
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_CORE")
-    def internalVoltagesCORE(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_CORE attribute.
-
-        :return: internalVoltages_CORE
-        """
-        return self._hardware_attributes.get("internalVoltagesCORE", None)
-
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_DDR")
-    def internalVoltagesDDR(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_DDR attribute.
-
-        :return: internalVoltages_DDR
-        """
-        return self._hardware_attributes.get("internalVoltagesDDR", None)
-
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_POWERIN")
-    def internalVoltagesPOWERIN(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_POWERIN attribute.
-
-        :return: internalVoltages_POWERIN
-        """
-        return self._hardware_attributes.get("internalVoltagesPOWERIN", None)
-
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_SOC")
-    def internalVoltagesSOC(self: MccsSubrack) -> float | None:
-        """
-        Handle a Tango attribute read of the internalVoltages_SOC attribute.
-
-        :return: internalVoltages_SOC
-        """
-        return self._hardware_attributes.get("internalVoltagesSOC", None)
+    internalVoltagesSOC = attribute_from_signal(  # noqa: N815
+        internal_voltages_soc_signal,
+        dtype="DevDouble",
+        label="V_SOC",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Subrack internal SOC supply voltage in Volts.",
+    )
 
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
     # Need to revisit
@@ -1380,10 +1427,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return json.dumps(self._hardware_attributes.get("subrackBoardInfo", None))
 
     def _clear_hardware_attributes(self: MccsSubrack) -> None:
-        # TODO: It should would be nice to push change events here,
-        # but it seems pytango does not permit pushing change events
-        # for None / invalid values.
         self._hardware_attributes.clear()
+        for signal_name in self._HEALTH_SIGNAL_MAP.values():
+            setattr(self, signal_name, None)
         self._update_tpm_present(None)
 
     # ----------
@@ -1491,9 +1537,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 for path in dict_path:
                     if value:
                         value = value.get(path, None)
-                self._hardware_attributes[key] = value
-                self.push_change_event(key, value)
-                self.push_archive_event(key, value)
+                setattr(self, self._HEALTH_SIGNAL_MAP[key], value)
 
         self._update_health_data()
 

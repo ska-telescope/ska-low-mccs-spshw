@@ -241,6 +241,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_rate: float = 5.0,
+        command_update_rate: float = 20.0,
         _driver: Optional[SubrackDriver] = None,
         _initial_power_state: PowerState = PowerState.ON,
         _initial_fail: bool = False,
@@ -269,6 +270,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             However, if the `update_rate` is 5.0, then routine reads of
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
+        :param command_update_rate: similar to update_rate but for polled
+            commands such as get_health_status.
         :param _driver: for testing only, we can inject a driver rather
             then letting the component manager create its own. If
             provided, this overrides driver-specific arguments such as
@@ -290,6 +293,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self._hardware_communication_state_changed,
             component_state_changed_callback,
             update_rate=update_rate,
+            command_update_rate=command_update_rate,
         )
 
         self.pdu_trl = pdu_trl

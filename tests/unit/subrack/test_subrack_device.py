@@ -133,6 +133,8 @@ def test_context_fixture(
             """
             _temp_attr_dict = json.loads(argin)
             for name, value in _temp_attr_dict.items():
+                if name in self._HEALTH_SIGNAL_MAP:
+                    setattr(self, self._HEALTH_SIGNAL_MAP[name], value)
                 self._hardware_attributes[name] = value
                 self.push_change_event(name, value)
                 self.push_archive_event(name, value)

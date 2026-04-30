@@ -994,6 +994,7 @@ class SubrackDriver(
         elif isinstance(exception, RequestError):
             self.logger.exception(f"Poll failed: {exception}")
             self._update_component_state(power=PowerState.UNKNOWN, fault=False)
+            self.__clear_hardware_state(fault=False)
             self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         else:
             self.logger.exception(f"Poll failed unexpected exception: {exception}")

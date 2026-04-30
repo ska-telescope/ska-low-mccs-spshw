@@ -40,6 +40,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     SubrackIp = device_property(dtype=str)
     SubrackPort = device_property(dtype=int, default_value=8081)
     UpdateRate = device_property(dtype=float, default_value=15.0)
+    CommandUpdateRate = device_property(dtype=float, default_value=20.0)
     PowerMarshallerTrl = device_property(dtype=str, default_value="")
     PduTrl = device_property(dtype=str, default_value="")
     PduPorts = device_property(dtype=(int,), default_value=[])
@@ -213,6 +214,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             f"\tSubrackIP: {self.SubrackIp}\n"
             f"\tSubrackPort: {self.SubrackPort}\n"
             f"\tUpdateRate: {self.UpdateRate}\n"
+            f"\tCommandUpdateRate: {self.CommandUpdateRate}\n"
             f"\tPowerMarshallerTrl: {self.PowerMarshallerTrl}\n"
             f"\tPduTrl: {self.PduTrl}\n"
             f"\tPduPorts: {self.PduPorts}\n"
@@ -334,7 +336,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._communication_state_changed,
             self._component_state_changed,
             update_rate=self.UpdateRate,
-            command_update_rate=self.UpdateRate,
+            command_update_rate=self.CommandUpdateRate,
         )
 
     # ----------

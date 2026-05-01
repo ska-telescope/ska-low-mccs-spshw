@@ -73,7 +73,7 @@ def daq_config_fixture() -> dict[str, Any]:
     """
     return {
         "directory": "/product/test_eb_id/ska-low-mccs/test_scan_id/",
-        "nof_tiles": 1,
+        "nof_tiles": 8,
         "append_integrated": False,
     }
 
@@ -242,7 +242,10 @@ def station_in_synchronised_state(
     :param station_tiles: A list of 'tango.DeviceProxy' to all Station's Tile devices.
     :param wait_for_lrcs_to_finish: Callable that waits for LRCs on specified devices.
     """
-    if station.adminMode != AdminMode.ONLINE or AdminMode.ENGINEERING:
+    if (
+        station.adminMode != AdminMode.ONLINE
+        and station.adminMode != AdminMode.ENGINEERING
+    ):
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
         AttributeWaiter(timeout=60).wait_for_value(

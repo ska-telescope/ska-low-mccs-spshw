@@ -242,10 +242,7 @@ def station_in_synchronised_state(
     :param station_tiles: A list of 'tango.DeviceProxy' to all Station's Tile devices.
     :param wait_for_lrcs_to_finish: Callable that waits for LRCs on specified devices.
     """
-    if (
-        station.adminMode != AdminMode.ONLINE
-        and station.adminMode != AdminMode.ENGINEERING
-    ):
+    if station.adminMode not in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
         AttributeWaiter(timeout=60).wait_for_value(

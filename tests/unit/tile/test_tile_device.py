@@ -497,6 +497,7 @@ class TestMccsTile:
             "firmwareTemperatureThresholds",
             "firmwareVoltageThresholds",
             "firmwareCurrentThresholds",
+            "loggingFilter",
         ]
 
     @pytest.fixture(name="active_read_attributes")

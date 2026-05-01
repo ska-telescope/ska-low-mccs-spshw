@@ -60,6 +60,10 @@ from .tests.base_tpm_test import TestResult
 __all__ = ["SpsStationComponentManager"]
 
 
+_LMC_INTEGRATED_MODE_RETRY_DELAY = 0.1
+_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
+
+
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -585,7 +589,14 @@ class SpsStationComponentManager(
             "netmask_40g": self._sdn_netmask,
             "gateway_40g": self._sdn_gateway,
         }
+        self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
+        mode = self._read_lmc_integrated_mode_from_bandpass_daq(
+            log_context="init", logger=logger
+        )
+        if mode is not None:
+            self._lmc_integrated_mode = mode
+            self._lmc_integrated_mode_locked = True
         self._lmc_integrated_ip = "0.0.0.0"
         self._lmc_integrated_port = self._destination_port
         self._lmc_channel_payload_length = 1024
@@ -686,6 +697,76 @@ class SpsStationComponentManager(
         # Superclass cleanup currently not implemented.
         # Expected in future versions.
         # super().cleanup()
+
+    def _read_lmc_integrated_mode_from_bandpass_daq(
+        self: SpsStationComponentManager,
+        log_context: str,
+        logger: logging.Logger | None = None,
+    ) -> str | None:
+        """
+        Read integrated mode selection from the bandpass DAQ device.
+
+        :param log_context: short string describing the caller for logging.
+
+        :param logger: logger to use before base-class logger exists.
+
+        :returns: "1G" or "40G" on successful attribute read, else None.
+        """
+        active_logger = logger or self.logger
+
+        for attempt in range(1, _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS + 1):
+            if (
+                self._bandpass_daq_proxy is None
+                or self._bandpass_daq_proxy._proxy is None
+            ):
+                if attempt == _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS:
+                    if active_logger is not None:
+                        active_logger.warning(
+                            "Bandpass DAQ proxy not ready during "
+                            f"{log_context}; keeping integrated mode fallback 1G."
+                        )
+                    return None
+                if active_logger is not None:
+                    active_logger.debug(
+                        "Bandpass DAQ proxy not ready during "
+                        f"{log_context} (attempt {attempt}/"
+                        f"{_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS}). Retrying."
+                    )
+                time.sleep(_LMC_INTEGRATED_MODE_RETRY_DELAY)
+                continue
+            try:
+                use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
+                mode = "1G" if use_1g else "40G"
+                if active_logger is not None:
+                    active_logger.debug(
+                        "Resolved LMC integrated mode from bandpass DAQ during "
+                        f"{log_context}: {mode}"
+                    )
+                return mode
+            except AttributeError:
+                if active_logger is not None:
+                    active_logger.info(
+                        "Bandpass DAQ does not expose bandpassLoadBalancerEnabled "
+                        f"during {log_context}; defaulting integrated mode to 1G."
+                    )
+                return None
+            except tango.DevFailed as exc:
+                if attempt == _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS:
+                    if active_logger is not None:
+                        active_logger.warning(
+                            "Unable to read bandpassLoadBalancerEnabled during "
+                            f"{log_context}; keeping integrated mode fallback 1G. "
+                            f"Last error: {exc}"
+                        )
+                    return None
+                if active_logger is not None:
+                    active_logger.debug(
+                        "Bandpass DAQ not ready to read bandpassLoadBalancerEnabled "
+                        f"during {log_context} (attempt {attempt}/"
+                        f"{_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS}). Retrying."
+                    )
+                time.sleep(_LMC_INTEGRATED_MODE_RETRY_DELAY)
+        return None
 
     def _port_to_antenna_order(
         self: SpsStationComponentManager,
@@ -2118,6 +2199,13 @@ class SpsStationComponentManager(
             )
             self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
             self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
+        if not self._lmc_integrated_mode_locked:
+            mode = self._read_lmc_integrated_mode_from_bandpass_daq(
+                log_context="route_data"
+            )
+            if mode is not None:
+                self._lmc_integrated_mode = mode
+                self._lmc_integrated_mode_locked = True
         self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
         self.logger.debug(
             "Configuring LMC Integrated Download: "
@@ -2129,6 +2217,7 @@ class SpsStationComponentManager(
             dst_port=self._lmc_integrated_port,
             channel_payload_length=self._lmc_channel_payload_length,
             beam_payload_length=self._lmc_beam_payload_length,
+            lock_mode=False,
         )
         self.set_lmc_download(
             mode=self._lmc_mode,
@@ -2840,6 +2929,7 @@ class SpsStationComponentManager(
         dst_ip: str = "",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
+        lock_mode: bool = True,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of integrated LMC channel.
@@ -2852,12 +2942,15 @@ class SpsStationComponentManager(
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param lock_mode: whether this call should lock integrated-mode auto refresh.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
         self._lmc_integrated_mode = mode
+        if lock_mode:
+            self._lmc_integrated_mode_locked = True
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
         if dst_ip == "":

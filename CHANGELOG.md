@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-434] Update SpsStation to route integrated channel data over the 40G link instead of the 1G link if possible. This is determined by the daq attribute `bandpassLoadbalancerEnabled` - if `True` or the attribute is not present then we default to using the 1G link, if `False` then we default to using the 40G link. Any user-provided value via `SetLmcIntegratedDownload` will override this.
+
 ## 11.4.3
 
 * [SKB-1285] Reworked tile simulator interface compliance to be driven by TileComponentManager usage. `test_tile_simulator_interface` now derives required methods from `self.tile.<method>(...)` call sites in `tile_component_manager.py` (AST-based extraction), and enforces all CM-required API methods as strict pass/fail. Added simulator implementations for `enable_all_adcs`, `disable_all_adcs`, `set_phase_terminal_count`, `test_generator_set_delay`, and `disconnect` (as a `cleanup()` alias).

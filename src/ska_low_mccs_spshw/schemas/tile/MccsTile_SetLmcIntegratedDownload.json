@@ -6,13 +6,15 @@
     "type": "object",
     "properties": {
         "mode": {
-            "description": "Mode: 1G or 10G",
+            "description": "Mode: 1G, 10G or 40G",
             "type": "string",
             "enum": [
                 "1g",
                 "1G",
                 "10g",
-                "10G"
+                "10G",
+                "40g",
+                "40G"
             ]
         },
         "channel_payload_length": {
@@ -47,7 +49,10 @@
         },
         "gateway_40g": {
             "description": "IP address of the 40g (science data) subnet gateway",
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "format": "ipv4"
         }
     },

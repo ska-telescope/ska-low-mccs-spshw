@@ -727,7 +727,7 @@ class SpsStationComponentManager(
                         )
                     return None
                 if active_logger is not None:
-                    active_logger.debug(
+                    active_logger.info(
                         "Bandpass DAQ proxy not ready during "
                         f"{log_context} (attempt {attempt}/"
                         f"{_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS}). Retrying."
@@ -738,7 +738,7 @@ class SpsStationComponentManager(
                 use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
                 mode = "1G" if use_1g else "40G"
                 if active_logger is not None:
-                    active_logger.debug(
+                    active_logger.info(
                         "Resolved LMC integrated mode from bandpass DAQ during "
                         f"{log_context}: {mode}"
                     )
@@ -760,7 +760,7 @@ class SpsStationComponentManager(
                         )
                     return None
                 if active_logger is not None:
-                    active_logger.debug(
+                    active_logger.info(
                         "Bandpass DAQ not ready to read bandpassLoadBalancerEnabled "
                         f"during {log_context} (attempt {attempt}/"
                         f"{_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS}). Retrying."

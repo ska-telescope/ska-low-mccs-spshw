@@ -736,7 +736,8 @@ class SpsStationComponentManager(
                 continue
             try:
                 use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
-                mode = "1G" if use_1g else "40G"
+                print(f"{use_1g=}")
+                mode = "40G" if use_1g is False else "1G"
                 if active_logger is not None:
                     active_logger.info(
                         "Resolved LMC integrated mode from bandpass DAQ during "

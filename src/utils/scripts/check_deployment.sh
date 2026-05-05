@@ -18,7 +18,7 @@ namespaces=(
 for namespace in "${namespaces[@]}"; do
     if namespace_has_pods "$namespace"; then
         echo "There is already a deployment in use in namespace '$namespace', tear down before running tests"
-        exit -1
+        exit 1
     fi
 done
 

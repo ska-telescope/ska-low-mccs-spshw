@@ -61,6 +61,12 @@ def clear_hdf5_directory(hdf5_directory: str) -> None:
 
     :param hdf5_directory: directory to clear.
     """
+    if not os.path.isdir(hdf5_directory):
+        pytest.fail(
+            f"HDF5 directory does not exist: {hdf5_directory}. "
+            "Ensure persister output path is available before test execution."
+        )
+
     for file_name in os.listdir(hdf5_directory):
         if file_name.endswith(".hdf5"):
             os.remove(os.path.join(hdf5_directory, file_name))

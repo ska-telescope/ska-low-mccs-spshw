@@ -91,7 +91,6 @@ _ATTRIBUTE_MAP: Final = {
     "40G_PACKET_COUNT": "40g_packet_count",
     "POINTING_DELAYS": "pointing_delays",
 }
-_POLL_THREAD_STARTUP_DELAY: Final[float] = 0.2
 
 
 class TaskCompleteWaiter(TaskCallbackType):
@@ -329,9 +328,6 @@ class TileComponentManager(
             component_state_changed_callback,
             poll_rate=poll_rate,
         )
-        # See WOM-1114. Temporary delay to avoid missed Condition.notify()
-        # race in upstream poller implementation (ska-tango-base 1.4.2).
-        time.sleep(_POLL_THREAD_STARTUP_DELAY)
 
     def _submit_lrc_request(
         self: TileComponentManager,
@@ -876,16 +872,7 @@ class TileComponentManager(
         self.tile = None  # type: ignore[assignment]
 
         self._synchronised_checker.shutdown()
-
-        with self._poller._condition:
-            self._poller._state = self._poller._State.KILLED
-            self._poller._condition.notify()
-        self._poller._polling_thread.join(max_poll_time)
-        if self._poller._polling_thread.is_alive():
-            self.logger.warning(
-                "Failed waiting for polling thread to die "
-                f"(timeout=={max_poll_time} [s])."
-            )
+        super().cleanup()
 
     def _cleanup_subscriptions(self: TileComponentManager) -> None:
         """Clean up subscriptions."""

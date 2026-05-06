@@ -969,12 +969,20 @@ def test_attribute_alarm_health_model(
         EventType.CHANGE_EVENT,
         change_event_callbacks["healthState"],
     )
-    change_event_callbacks["healthState"].assert_change_event(HealthState.UNKNOWN)
+    # ska-tango-base 1.5.0 calls report_health(FAILED) in on_new_shared_bus after
+    # _init_state_model. The HealthRecorder fires UNKNOWN before the stored value
+    # changes to FAILED, so _health_changed_new skips the push (no state change).
+    # The initial subscription event is therefore FAILED, not UNKNOWN.
+    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
 
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+    # Use lookahead to consume any intermediate UNKNOWN events from the HealthRecorder
+    # if HealthRecorder fires UNKNOWN after stored=FAILED, it precedes OK
+    change_event_callbacks["healthState"].assert_change_event(
+        HealthState.OK, lookahead=2, consume_nonmatches=True
+    )
     change_event_callbacks["healthState"].assert_not_called()
 
     # Change attribute limits

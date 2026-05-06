@@ -4,6 +4,14 @@
 
 * [THORN-434] Update SpsStation to route integrated channel data over the 40G link instead of the 1G link if possible. This is determined by the daq attribute `bandpassLoadbalancerEnabled` - if `True` or the attribute is not present then we default to using the 1G link, if `False` then we default to using the 40G link. Any user-provided value via `SetLmcIntegratedDownload` will override this.
 
+## 11.4.5
+
+* [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`
+
+## 11.4.4
+
+* [THORN-532] Update ska-tango-base to bring in WOM-1114 fixes, remove MCCS workarounds.
+
 ## 11.4.3
 
 * [SKB-1285] Reworked tile simulator interface compliance to be driven by TileComponentManager usage. `test_tile_simulator_interface` now derives required methods from `self.tile.<method>(...)` call sites in `tile_component_manager.py` (AST-based extraction), and enforces all CM-required API methods as strict pass/fail. Added simulator implementations for `enable_all_adcs`, `disable_all_adcs`, `set_phase_terminal_count`, `test_generator_set_delay`, and `disconnect` (as a `cleanup()` alias).
@@ -15,6 +23,7 @@
 
 ## 11.4.1
 
+* [THORN-512] Convert MccsTile boardTemperature to use attribute_from_signal
 * [THORN-421] Remove deprecated command objects.
 * [THORN-509] Fix MccsTile getting stuck in `DevState.ALARM` after a failed power-on sequence when the tile subsequently reported as off. The bug presented as a tile with status and tileProgrammingState indicating the device was off, polling reporting normal connection errors to an off tile, and all attribute qualities clear, while the device state remained ALARM until `Init()` was called. Root cause was stale cached values in `AttributeManager`: invalidating a boolean attribute changed its quality to `ATTR_INVALID` but left the previous cached `False` value in place, so `MccsTile.dev_state()` continued to force ALARM from that stale boolean state. The fix clears the cached attribute value when an attribute is invalidated, removing the stale boolean latch. Added a device-level regression test for powering off after a boolean alarm and a focused attribute-manager unit test covering stale invalidation behaviour.
 * [SKB-1225] Add a unit test to check that when SpsStation.StartBeamformer is called that it reports FAILED if the composite command fails on any Tile.

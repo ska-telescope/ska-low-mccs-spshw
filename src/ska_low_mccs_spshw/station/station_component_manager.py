@@ -736,7 +736,6 @@ class SpsStationComponentManager(
                 continue
             try:
                 use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
-                print(f"{use_1g=}")
                 mode = "40G" if use_1g is False else "1G"
                 if active_logger is not None:
                     active_logger.info(
@@ -1087,7 +1086,7 @@ class SpsStationComponentManager(
                         self.logger.warning(
                             "Received HW readback of beamformer "
                             "table which doesn't match local cache. "
-                            "Overwritting local cache with HW table. "
+                            "Overwriting local cache with HW table. "
                             f"\nNew table: \n{filtered_new} "
                             f"\nOld table: \n{filtered_old}"
                         )

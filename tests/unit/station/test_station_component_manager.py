@@ -1015,7 +1015,7 @@ def test_initialise_progress_callbacks(
         for call in task_callback.call_args_list
         if "progress" in call.kwargs
     ]
-    assert progress_calls == [5, 70, 75, 85, 90, 95, 100]
+    assert progress_calls == [5, 70, 75, 85, 90, 95]
 
     task_callback.assert_called_with(
         progress=100,

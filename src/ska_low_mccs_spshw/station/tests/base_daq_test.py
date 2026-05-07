@@ -249,6 +249,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         assert self.daq_proxy is not None
         assert self._data_handler is not None
         self._data_handler.ignore_next_event = True
+        self._data_handler.reset()
         self.daq_proxy.add_change_event_callback(
             "datareceivedresult", self._data_handler.on_created
         )

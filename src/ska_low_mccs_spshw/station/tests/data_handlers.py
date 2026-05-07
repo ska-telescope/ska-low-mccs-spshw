@@ -65,6 +65,23 @@ class BaseDataReceivedHandler(abc.ABC):
     def handle_data(self: BaseDataReceivedHandler) -> None:
         """Handle reading the data from received HDF5."""
 
+    def _handle_data_with_backoff(self: BaseDataReceivedHandler) -> None:
+        deadline = time.monotonic() + 5
+        delay = 0.25
+        while True:
+            try:
+                self.handle_data()
+                return
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+                self._logger.warning(
+                    f"handle_data failed, retrying in {delay:.2f}s: {repr(e)}"
+                )
+                time.sleep(min(delay, remaining))
+                delay = min(delay * 2, remaining)
+
     def on_created(
         self: BaseDataReceivedHandler, name: str, value: list[str], quality: AttrQuality
     ) -> None:
@@ -75,7 +92,7 @@ class BaseDataReceivedHandler(abc.ABC):
         :param value: value of the data received event.
         :param quality: the tango.AttrQuality of the event.
         """
-        self._logger.error(f"Got event: {name}, {value}, {quality}")
+        self._logger.debug(f"Got event: {name}, {value}, {quality}")
         if self.ignore_next_event:
             self.ignore_next_event = False
             return
@@ -87,7 +104,7 @@ class BaseDataReceivedHandler(abc.ABC):
             if self._tile_id < self._nof_tiles:
                 self._logger.debug(f"Got {self._tile_id} files so far.")
                 return
-            self._logger.debug("Got data for all tiles, gathering data.")
+            self._logger.info("Got data for all tiles, gathering data.")
             file = json.loads(value[1])["file_name"]
             if file in self._received_files:
                 self._logger.debug(f"Already processed file {file}, ignoring.")
@@ -96,7 +113,7 @@ class BaseDataReceivedHandler(abc.ABC):
             self._base_path = os.path.split(file)[0]
             try:
                 time.sleep(1)
-                self.handle_data()
+                self._handle_data_with_backoff()
                 self._logger.debug("Handled data, calling back.")
                 self._data_created_callback(data=self.data)
                 self.reset()

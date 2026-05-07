@@ -2017,6 +2017,8 @@ class SpsStationComponentManager(
             self.logger.debug(f"tileProgrammingState: {states}")
             ready_count = sum(state in desired_states for state in states)
             if ready_count == n_tiles:
+                if task_callback:
+                    task_callback(progress=progress_end)
                 return ResultCode.OK, ""
             if task_callback and ready_count != last_reported_count:
                 # Fire a callback only when another tile reaches the desired state,

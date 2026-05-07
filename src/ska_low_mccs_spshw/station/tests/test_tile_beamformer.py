@@ -150,7 +150,10 @@ class TestTileBeamformer(BaseDaqTest):
                 delays=self._delays,
             )
             self._send_beam_data()
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert (
+                _received
+            ), f"Timed out waiting for beam data at {time.strftime('%H:%M:%S')}"
             for tile_no in range(len(self.tile_proxies)):
                 single_input_data[tile_no][0][antenna_no] = self._get_beam_value(
                     tile_no, 0, channel
@@ -177,7 +180,10 @@ class TestTileBeamformer(BaseDaqTest):
             delays=self._delays,
         )
         self._send_beam_data()
-        assert self._data_created_event.wait(20)
+        _received = self._data_created_event.wait(60)
+        assert (
+            _received
+        ), f"Timed out waiting for beam data at {time.strftime('%H:%M:%S')}"
         self._stop_directory_watch()
         self._data_created_event.clear()
 

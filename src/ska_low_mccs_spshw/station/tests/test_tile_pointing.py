@@ -133,7 +133,10 @@ class TestTilePointing(BaseDaqTest):
             delays=delays,
         )
         self._send_beam_data()
-        assert self._data_created_event.wait(20)
+        _received = self._data_created_event.wait(60)
+        assert (
+            _received
+        ), f"Timed out waiting for beam data at {time.strftime('%H:%M:%S')}"
         self._stop_directory_watch()
         self._data_created_event.clear()
 

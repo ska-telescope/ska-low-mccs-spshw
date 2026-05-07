@@ -95,7 +95,7 @@ class TestTileBeamformer(BaseDaqTest):
 
     def _configure_daq_for_send(self: TestTileBeamformer) -> None:
         """Reconfigure DAQ with a fresh directory for this send."""
-        directory = f"/beam_send_{self._daq_send_count}/"
+        directory = f"beam_send_{self._daq_send_count}/"
         self._daq_send_count += 1
         self._configure_daq("BEAM_DATA", directory=directory)
 

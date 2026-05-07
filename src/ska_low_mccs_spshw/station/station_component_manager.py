@@ -2009,7 +2009,7 @@ class SpsStationComponentManager(
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
-        last_reported_count = -1
+        last_reported_count = 0
         n_tiles = len(self._tile_proxies)
         while time.time() < last_time:
             time.sleep(tick)

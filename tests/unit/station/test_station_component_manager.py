@@ -1083,9 +1083,8 @@ def test_reinitialise_tiles_progress_callbacks(
 
     expected_progress = [
         int(progress_start + (progress_end - progress_start) * i / num_tiles_to_add)
-        for i in range(num_tiles_to_add)
+        for i in range(1, num_tiles_to_add + 1)
     ]
-    expected_progress.append(progress_end)
     assert progress_calls == expected_progress
 
 

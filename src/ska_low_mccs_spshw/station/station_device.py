@@ -1396,8 +1396,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("DevShort",),
         max_dim_x=32,
-        memorized=True,
-        hw_memorized=True,
     )
     def testResults(self: SpsStation) -> list[int]:
         """

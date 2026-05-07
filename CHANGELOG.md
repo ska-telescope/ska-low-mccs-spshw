@@ -1,5 +1,9 @@
 # Version History
 
+## 11.4.6
+
+* [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 6.0.0.
+
 ## 11.4.5
 
 * [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`

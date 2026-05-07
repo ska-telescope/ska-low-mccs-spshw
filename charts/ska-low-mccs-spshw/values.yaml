@@ -21,7 +21,7 @@ global:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 11.4.5
+  tag: 11.4.6
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -378,8 +378,8 @@ ska-tango-devices:
     #   metadata:
     #     component: daq
     #   image:
-    #     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-    #     tag: 4.3.1-dirty
+    #     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+    #     tag: 5.3.8-dev.c583c4f58
     #     name: ska-low-mccs-daq
     spshw:
       metadata:
@@ -387,7 +387,7 @@ ska-tango-devices:
       image:
         registry: artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 11.4.5
+        tag: 11.4.6
         pullPolicy: IfNotPresent
       command: spshw
       resources:

@@ -73,7 +73,7 @@ def daq_config_fixture() -> dict[str, Any]:
     """
     return {
         "directory": "/product/test_eb_id/ska-low-mccs/test_scan_id/",
-        "nof_tiles": 1,
+        "nof_tiles": 8,
         "append_integrated": False,
     }
 
@@ -242,7 +242,7 @@ def station_in_synchronised_state(
     :param station_tiles: A list of 'tango.DeviceProxy' to all Station's Tile devices.
     :param wait_for_lrcs_to_finish: Callable that waits for LRCs on specified devices.
     """
-    if station.adminMode != AdminMode.ONLINE:
+    if station.adminMode not in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
         AttributeWaiter(timeout=60).wait_for_value(
@@ -518,6 +518,7 @@ def station_send_data(
 @then("the DAQ reports that it has received integrated channel data")
 def daq_received_data(
     change_event_callbacks: MockTangoEventCallbackGroup,
+    daq_device: tango.DeviceProxy,
     tile_device: tango.DeviceProxy,
     station_name: str,
     station: tango.DeviceProxy,
@@ -525,18 +526,23 @@ def daq_received_data(
     """
     Confirm Daq has received data.
 
+    :param daq_device: A 'tango.DeviceProxy' to the daq device.
     :param station: A 'tango.DeviceProxy' to the Station device.
     :param station_name: the name of the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
-    try:
-        change_event_callbacks["data_received_callback"].assert_change_event(
-            ("integrated_channel", Anything)
-        )
-    except AssertionError:
-        pytest.fail("No integrated_channel data was received")
+    daq_status = json.loads(daq_device.DaqStatus())
+    if daq_status["Bandpass Monitor"]:
+        change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
+    else:
+        try:
+            change_event_callbacks["data_received_callback"].assert_change_event(
+                ("integrated_channel", Anything)
+            )
+        except AssertionError:
+            pytest.fail("No integrated_channel data was received")
 
 
 @then("the DAQ saves bandpass data to its relevant attributes")

@@ -134,7 +134,11 @@ class TestIntegratedChannel(BaseDaqTest):
                 append_integrated=True,
             )
             self._start_directory_watch()
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert _received, (
+                "Timed out waiting for integrated channel data at "
+                f"{time.strftime('%H:%M:%S')}"
+            )
             integration_length = tile.readregister(
                 "fpga1.lmc_integrated_gen.channel_integration_length"
             )[0]

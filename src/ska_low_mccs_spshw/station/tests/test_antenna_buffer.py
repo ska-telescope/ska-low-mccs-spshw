@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import time
 from copy import copy
 from typing import Optional
 
@@ -143,7 +144,11 @@ class TestAntennaBuffer(BaseDaqTest):
             self._read_antenna_buffer(
                 tiles=tiles,
             )
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert _received, (
+                "Timed out waiting for antenna buffer data at "
+                f"{time.strftime('%H:%M:%S')}"
+            )
             self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)

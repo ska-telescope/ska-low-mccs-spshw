@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 from copy import copy
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
@@ -100,7 +100,7 @@ class TestAntennaBuffer(BaseDaqTest):
         for tile_id in tile_ids:
             tiles.append(self.tile_proxies[tile_id])
 
-        daq_config = {
+        daq_config: dict[str, Any] = {
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "nof_tiles": len(tiles),
@@ -183,8 +183,8 @@ class TestAntennaBuffer(BaseDaqTest):
                 json.dumps(
                     {
                         "mode": mode,
-                        "DDR_start_address": ddr_start_byte_address,
-                        "max_DDR_byte_size": max_ddr_byte_size,
+                        "ddr_start_byte_address": ddr_start_byte_address,
+                        "max_ddr_byte_size": max_ddr_byte_size,
                     }
                 )
             )

@@ -237,6 +237,10 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
+            assert isinstance(tile_data, np.ndarray), (
+                f"Failed to read beam data for tile {tile_id}: "
+                "read_data returned an empty result (check logs for addr overflow)"
+            )
             self.data[tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
             self.data[tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
 

@@ -64,7 +64,6 @@ def station_name_fixture(
         station.ping()
     except tango.DevFailed as e:
         pytest.fail(f"Target station is not reachable {e}")
-    print(f"Using station: {station_name}")
     return station_name
 
 

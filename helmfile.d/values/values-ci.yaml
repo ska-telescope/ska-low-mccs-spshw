@@ -14,11 +14,11 @@ helm_values:
         # It was added here for to ensure that daq pods are waited for in the k8s-wait stage
         # on pipeline
         app: ska-low-mccs-spshw # This label is used by the make infrastructure (e.g. k8s-wait.)
-      deviceServerTypes:
-        daq:
-          image:
-            registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-            tag: 6.0.0-dev.cb82dcc01
+      # deviceServerTypes:
+      #   daq:
+      #     image:
+      #       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+      #       tag: 6.0.0-dev.cb82dcc01
   ska-tango-devices:
     devices:
       SpsStation:

@@ -17,19 +17,13 @@ import time
 import traceback
 from typing import Callable
 
+import h5py  # type: ignore[import-untyped]
 import numpy as np
-from ska_low_mccs_daq.pydaq.persisters import (  # type: ignore
-    BeamFormatFileManager,
-    ChannelFormatFileManager,
-    FileDAQModes,
-    RawFormatFileManager,
-)
 from tango import AttrQuality
 
 from ...tile.tile_data import TileData
 
 
-# pylint: disable=too-many-instance-attributes
 class BaseDataReceivedHandler(abc.ABC):
     """Base class for the data received handler."""
 
@@ -49,9 +43,7 @@ class BaseDataReceivedHandler(abc.ABC):
         self._logger: logging.Logger = logger
         self._data_created_callback = data_created_callback
         self._nof_tiles = nof_tiles
-        self._received_files: set[str] = set()
-        self._base_path = ""
-        self._tile_id = 0
+        self._tile_files: dict[int, str] = {}
         self.data: np.ndarray
         self._callback_lock = threading.Lock()
         self.ignore_next_event = False
@@ -100,17 +92,16 @@ class BaseDataReceivedHandler(abc.ABC):
             return
         with self._callback_lock:
             assert name.lower() == "datareceivedresult"
-            self._tile_id += 1
-            if self._tile_id < self._nof_tiles:
-                self._logger.debug(f"Got {self._tile_id} files so far.")
+            file = json.loads(value[1])["file_name"]
+            if file in self._tile_files.values():
+                self._logger.debug(f"Already received file {file}, ignoring.")
+                return
+            tile_id = int(os.path.basename(file).split("_")[2])
+            self._tile_files[tile_id] = file
+            if len(self._tile_files) < self._nof_tiles:
+                self._logger.debug(f"Got {len(self._tile_files)} files so far.")
                 return
             self._logger.info("Got data for all tiles, gathering data.")
-            file = json.loads(value[1])["file_name"]
-            if file in self._received_files:
-                self._logger.debug(f"Already processed file {file}, ignoring.")
-                return
-            self._received_files.add(file)
-            self._base_path = os.path.split(file)[0]
             try:
                 time.sleep(1)
                 self._handle_data_with_backoff()
@@ -123,8 +114,7 @@ class BaseDataReceivedHandler(abc.ABC):
 
     def reset(self: BaseDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""
-        self._tile_id = 0
-        self._received_files = set()
+        self._tile_files = {}
         self.initialise_data()
 
 
@@ -149,14 +139,12 @@ class RawDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: RawDataReceivedHandler) -> None:
         """Handle the reading of raw data."""
-        raw_file = RawFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=[0, 1],
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_pols = int(f["root"].attrs["n_pols"])
+                # shape: (n_antennas * n_pols, n_samples), row = antenna * n_pols + pol
+                raw = f["raw_"]["data"][:, : self._nof_samples]
+            tile_data = raw.reshape(TileData.ANTENNA_COUNT, n_pols, self._nof_samples)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
@@ -194,19 +182,23 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: ChannelDataReceivedHandler) -> None:
         """Handle the reading of channel data."""
-        raw_file = ChannelFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(TileData.NUM_FREQUENCY_CHANNELS),
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_chans = int(f["root"].attrs["n_chans"])
+                n_pols = int(f["root"].attrs["n_pols"])
+                # shape: (n_samples, n_chans * n_antennas * n_pols)
+                # col = chan * (n_antennas * n_pols) + antenna * n_pols + pol
+                raw = f["chan_"]["data"][: self._nof_samples, :]
+            reshaped = raw.reshape(
+                self._nof_samples, n_chans, TileData.ANTENNA_COUNT, n_pols
             )
+            # → (n_chans, n_antennas, n_pols, n_samples)
+            real = reshaped["real"].transpose(1, 2, 3, 0)
+            imag = reshaped["imag"].transpose(1, 2, 3, 0)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
-            self.data[:, start_idx:end_idx, :, :, 0] = tile_data["real"]
-            self.data[:, start_idx:end_idx, :, :, 1] = tile_data["imag"]
+            self.data[:, start_idx:end_idx, :, :, 0] = real
+            self.data[:, start_idx:end_idx, :, :, 1] = imag
 
     def initialise_data(self: ChannelDataReceivedHandler) -> None:
         """Initialise empty channel data struct."""
@@ -246,20 +238,20 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: BeamDataReceivedHandler) -> None:
         """Handle the reading of beam data."""
-        raw_file = BeamFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            assert isinstance(tile_data, np.ndarray), (
-                f"Failed to read beam data for tile {tile_id}: "
-                "read_data returned an empty result (check logs for addr overflow)"
-            )
-            self.data[tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
-            self.data[tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                # shape: (n_samples, n_chans, n_beams), dtype complex16
+                pol0 = f["polarization_0"]["data"][
+                    : self._nof_samples, : self._nof_channels, :
+                ]
+                pol1 = f["polarization_1"]["data"][
+                    : self._nof_samples, : self._nof_channels, :
+                ]
+            # pol["real"][:, :, 0] → (n_samples, n_chans) → .T → (n_chans, n_samples)
+            self.data[tile_id, 0, :, :, 0] = pol0["real"][:, :, 0].T
+            self.data[tile_id, 0, :, :, 1] = pol0["imag"][:, :, 0].T
+            self.data[tile_id, 1, :, :, 0] = pol1["real"][:, :, 0].T
+            self.data[tile_id, 1, :, :, 1] = pol1["imag"][:, :, 0].T
 
     def initialise_data(self: BeamDataReceivedHandler) -> None:
         """Initialise empty beam data struct."""
@@ -296,16 +288,15 @@ class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: IntegratedChannelDataReceivedHandler) -> None:
         """Handle the reading of integrated channel data."""
-        raw_file = ChannelFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Integrated
-        )
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_chans = int(f["root"].attrs["n_chans"])
+                n_pols = int(f["root"].attrs["n_pols"])
+                raw = f["chan_"]["data"][: self._nof_samples, :]
+            # → (n_chans, n_antennas, n_pols, n_samples)
+            tile_data = raw.reshape(
+                self._nof_samples, n_chans, TileData.ANTENNA_COUNT, n_pols
+            ).transpose(1, 2, 3, 0)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[:, start_idx:end_idx, :, :] = tile_data
@@ -344,17 +335,14 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: IntegratedBeamDataReceivedHandler) -> None:
         """Handle the reading of integrated beam data."""
-        raw_file = BeamFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Integrated
-        )
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(TileData.NUM_BEAMFORMER_CHANNELS),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            self.data[:, :, tile_id, :] = tile_data[:, :, 0, :]
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                # shape: (n_samples, n_chans, n_beams), dtype uint32
+                pol0 = f["polarization_0"]["data"][: self._nof_samples, :, :]
+                pol1 = f["polarization_1"]["data"][: self._nof_samples, :, :]
+            # pol0[:, :, 0] → (n_samples, n_chans) → .T → (n_chans, n_samples)
+            self.data[0, :, tile_id, :] = pol0[:, :, 0].T
+            self.data[1, :, tile_id, :] = pol1[:, :, 0].T
 
     def initialise_data(self: IntegratedBeamDataReceivedHandler) -> None:
         """Initialise empty integrated beam data struct."""
@@ -395,19 +383,14 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         """Handle the reading of antenna buffer data."""
         # TODO: Understand this behaviour. Seems without a sleep
         # the file lock is claimed by another process.
-        sleep_time = 10
-        time.sleep(sleep_time)
+        time.sleep(10)
 
-        raw_file = RawFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Burst
-        )
         self._logger.info("+=+= Handle data for tile")
         for tile_id in range(self._nof_tiles):
-            tile_data, _ = raw_file.read_data(
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_pols = int(f["root"].attrs["n_pols"])
+                raw = f["raw_"]["data"][:, : self._nof_samples]
+            tile_data = raw.reshape(TileData.ANTENNA_COUNT, n_pols, self._nof_samples)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data

@@ -1696,10 +1696,10 @@ class SpsStationComponentManager(
             result_code, failure_step = self._set_tile_source_ips(
                 task_callback, task_abort_event
             )
-            if task_callback:
-                task_callback(progress=5)
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=5)
             self.logger.debug("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
             # This is very quick to complete so no progress update here
@@ -1717,18 +1717,18 @@ class SpsStationComponentManager(
                 task_callback,
                 task_abort_event,
             )
-            if task_callback:
-                task_callback(progress=70)
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=70)
             self.logger.debug("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
-            if task_callback:
-                task_callback(progress=75)
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=75)
             self.logger.debug("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
@@ -1743,18 +1743,18 @@ class SpsStationComponentManager(
                 task_callback,
                 task_abort_event,
             )
-            if task_callback:
-                task_callback(progress=90)
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=90)
             self.logger.debug("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
-            if task_callback:
-                task_callback(progress=95)
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            if task_callback:
+                task_callback(progress=95)
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
@@ -1771,9 +1771,7 @@ class SpsStationComponentManager(
             task_status = TaskStatus.FAILED
             message = f"Initialisation Failed: {failure_step}"
         if task_callback:
-            task_callback(
-                progress=100, status=task_status, result=(result_code, message)
-            )
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def _turn_on_subracks(

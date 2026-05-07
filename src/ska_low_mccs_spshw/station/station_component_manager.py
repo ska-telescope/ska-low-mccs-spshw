@@ -2779,6 +2779,15 @@ class SpsStationComponentManager(
         return self.self_check_manager._tpm_test_names
 
     @property
+    def last_test_results(self: SpsStationComponentManager) -> list[int]:
+        """
+        Get the last result of each self-check test in testList order.
+
+        :return: list of TestResult integer values, one per test.
+        """
+        return self.self_check_manager.last_test_results
+
+    @property
     def keep_test_data(self: "SpsStationComponentManager") -> bool:
         """
         Get whether test data will be kept from the self_check_manager.

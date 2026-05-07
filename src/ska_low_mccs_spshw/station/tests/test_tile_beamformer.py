@@ -90,7 +90,14 @@ class TestTileBeamformer(BaseDaqTest):
         self._ref_pol = randomiser.randrange(0, TileData.POLS_PER_ANTENNA, 1)
 
         self._start_freq = 156.25e6  # Hz
+        self._daq_send_count = 0
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
+
+    def _configure_daq_for_send(self: TestTileBeamformer) -> None:
+        """Reconfigure DAQ with a fresh directory for this send."""
+        directory = f"/beam_send_{self._daq_send_count}/"
+        self._daq_send_count += 1
+        self._configure_daq("BEAM_DATA", directory=directory)
 
     def _send_beam_data(self: TestTileBeamformer) -> None:
         """Send beam data to the DAQ."""
@@ -137,6 +144,7 @@ class TestTileBeamformer(BaseDaqTest):
             dtype="complex",
         )
         for antenna_no in range(TileData.ANTENNA_COUNT):
+            self._configure_daq_for_send()
             self._start_directory_watch()
             self.test_logger.debug(f"Sending beam data for {antenna_no=}")
             frequency = self._start_freq + (channel * TileData.CHANNEL_WIDTH)
@@ -171,6 +179,7 @@ class TestTileBeamformer(BaseDaqTest):
 
         :param channel: the channel to get the beam data for.
         """
+        self._configure_daq_for_send()
         self._start_directory_watch()
         self.test_logger.debug("Sending beam data for all antennas")
         frequency = self._start_freq + (channel * TileData.CHANNEL_WIDTH)
@@ -337,7 +346,6 @@ class TestTileBeamformer(BaseDaqTest):
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )
         time.sleep(5)
-        self._configure_daq("BEAM_DATA")
         self._data_handler = BeamDataReceivedHandler(
             self.test_logger,
             len(self.tile_proxies),

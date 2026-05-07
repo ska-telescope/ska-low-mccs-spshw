@@ -98,6 +98,9 @@ class SpsStationSelfCheckManager:
         self._tpm_tests: dict[str, TpmSelfCheckTest] = {
             tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests
         }
+        self._last_test_results: dict[str, TestResult] = {
+            name: TestResult.NOT_RUN for name in self._tpm_test_names
+        }
         for test in self._tpm_tests:
             if isinstance(test, BaseDaqTest):
                 test.keep_data = self._keep_test_data
@@ -117,6 +120,7 @@ class SpsStationSelfCheckManager:
         start_time = time.time()
         for test_no, tpm_test in enumerate(self._tpm_tests.values()):
             test_results[test_no], test_log = tpm_test.run_test()
+            self._last_test_results[tpm_test.__class__.__name__] = test_results[test_no]
             self._test_logs += f"\n{'#'*5} {tpm_test.__class__.__name__} {'#'*5}\n"
             self._test_logs += test_log
             self._update_report(
@@ -144,6 +148,7 @@ class SpsStationSelfCheckManager:
         tpm_test = self._tpm_tests[test_name]
         for test_run in range(count):
             test_results[test_run], test_log = tpm_test.run_test()
+            self._last_test_results[test_name] = test_results[test_run]
             self._test_logs += f"\n{'#'*5} {test_name} {'#'*5}\n"
             self._test_logs += test_log
             self._update_report(
@@ -195,6 +200,15 @@ class SpsStationSelfCheckManager:
         self: SpsStationSelfCheckManager, test_result: TestResult, test_name: str
     ) -> None:
         self._test_report += f"Test: {test_name}," f" Result: {test_result.name}\n"
+
+    @property
+    def last_test_results(self: SpsStationSelfCheckManager) -> list[int]:
+        """
+        Return the last result of each self-check test in testList order.
+
+        :return: list of TestResult integer values, one per test.
+        """
+        return [self._last_test_results[name].value for name in self._tpm_test_names]
 
     @property
     def keep_test_data(self) -> bool:

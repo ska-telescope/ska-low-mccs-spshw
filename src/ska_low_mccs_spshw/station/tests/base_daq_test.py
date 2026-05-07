@@ -83,6 +83,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self: BaseDaqTest,
         daq_mode: str,
         integrated: bool = False,
+        directory: str = "/",
         **daq_config: Any,
     ) -> None:
         assert self.daq_proxy is not None
@@ -91,7 +92,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         time.sleep(1)
         daq_config.update(
             {
-                "directory": "/",
+                "directory": directory,
                 "description": "self-check data",
             }
         )

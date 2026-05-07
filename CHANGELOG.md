@@ -4,6 +4,10 @@
 
 * [THORN-434] Update SpsStation to route integrated channel data over the 40G link instead of the 1G link if possible. This is determined by the daq attribute `bandpassLoadbalancerEnabled` - if `True` or the attribute is not present then we default to using the 1G link, if `False` then we default to using the 40G link. Any user-provided value via `SetLmcIntegratedDownload` will override this. Note: This will require TPMs to be re-initialised in existing deployments.
 
+## 11.4.6
+
+* [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 6.0.0.
+
 ## 11.4.5
 
 * [REL-2780] Exclude pointingDelays from health evaluation. Post updates for `ppsDelay` after cache invalidation (e.g. during adminMode cycle.) to prevent Tiles getting stuck in `HealthState.UNKNOWN`

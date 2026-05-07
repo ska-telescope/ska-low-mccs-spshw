@@ -986,7 +986,7 @@ def test_Standby(
             "SetLmcIntegratedDownload",
             json.dumps(
                 {
-                    "mode": "10G",
+                    "mode": "40G",
                     "channel_payload_length": 1024,
                     "beam_payload_length": 1024,
                     "destination_ip": "127.0.0.1",

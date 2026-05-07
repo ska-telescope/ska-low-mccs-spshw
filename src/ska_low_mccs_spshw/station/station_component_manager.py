@@ -591,12 +591,6 @@ class SpsStationComponentManager(
         }
         self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
-        mode = self._read_lmc_integrated_mode_from_bandpass_daq(
-            log_context="init", logger=logger
-        )
-        if mode is not None:
-            self._lmc_integrated_mode = mode
-            self._lmc_integrated_mode_locked = True
         self._lmc_integrated_ip = "0.0.0.0"
         self._lmc_integrated_port = self._destination_port
         self._lmc_channel_payload_length = 1024

@@ -1018,7 +1018,6 @@ def test_initialise_progress_callbacks(
     assert progress_calls == [5, 70, 75, 85, 90, 95]
 
     task_callback.assert_called_with(
-        progress=100,
         status=TaskStatus.COMPLETED,
         result=(ResultCode.OK, "Initialisation Complete"),
     )

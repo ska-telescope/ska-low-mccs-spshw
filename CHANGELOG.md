@@ -1,5 +1,9 @@
 # Version History
 
+## 11.4.7
+
+* [SKB-1318] Update ska-tango-base to bring in fix to PollingComponenentManager.
+
 ## 11.4.6
 
 * [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 6.0.0.

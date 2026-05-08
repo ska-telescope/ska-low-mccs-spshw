@@ -3,6 +3,7 @@
 ## 11.4.7
 
 * [SKB-1318] Update ska-tango-base to bring in fix to PollingComponentManager.
+* [THORN-562] Update Sonar project key
 
 ## 11.4.6
 

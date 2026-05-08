@@ -13,6 +13,7 @@ import json
 import logging
 import random
 import unittest.mock
+from types import SimpleNamespace
 from typing import Iterator
 
 import numpy as np
@@ -32,6 +33,7 @@ from ska_low_mccs_spshw.station import (
     SpsStationComponentManager,
     SpsStationSelfCheckManager,
 )
+from ska_low_mccs_spshw.station import station_component_manager as station_cm
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
@@ -407,6 +409,74 @@ def test_find_by_key(
 
     result = station_component_manager._find_by_key(generic_nested_dict, "key4")
     assert result == {"key5": "some string", "key6": ["string1", "string2"]}
+
+
+def test_read_lmc_integrated_mode_returns_40g_when_load_balancer_disabled(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test reading 40G integrated mode from bandpass DAQ attribute.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    station_component_manager._bandpass_daq_proxy = SimpleNamespace(
+        _proxy=SimpleNamespace(bandpassLoadBalancerEnabled=False)
+    )  # type: ignore[assignment]
+
+    assert (
+        station_component_manager._read_lmc_integrated_mode_from_bandpass_daq(
+            log_context="test"
+        )
+        == "40G"
+    )
+
+
+def test_read_lmc_integrated_mode_returns_none_when_attribute_missing(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test fallback when bandpass DAQ does not expose the feature attribute.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    station_component_manager._bandpass_daq_proxy = SimpleNamespace(
+        _proxy=object()  # type: ignore[assignment]
+    )
+
+    assert (
+        station_component_manager._read_lmc_integrated_mode_from_bandpass_daq(
+            log_context="test"
+        )
+        is None
+    )
+
+
+def test_read_lmc_integrated_mode_retries_proxy_not_ready_then_returns_none(
+    station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test retry/fallback path when bandpass DAQ proxy is unavailable.
+
+    :param station_component_manager: the SPS station component manager under test.
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    logger = unittest.mock.Mock()
+    station_component_manager.logger = logger
+    station_component_manager._bandpass_daq_proxy = None
+
+    monkeypatch.setattr(station_cm, "_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS", 3)
+    monkeypatch.setattr(station_cm, "_LMC_INTEGRATED_MODE_RETRY_DELAY", 0.0)
+
+    assert (
+        station_component_manager._read_lmc_integrated_mode_from_bandpass_daq(
+            log_context="test"
+        )
+        is None
+    )
+
+    assert logger.info.call_count == 3
+    logger.warning.assert_called_once()
 
 
 def test_get_static_delays(

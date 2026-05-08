@@ -35,6 +35,7 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import EventSerialiser
+from ska_low_mccs_common.backoff import exp_backoff
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     CompositeCommandResultEvaluator,
@@ -62,6 +63,10 @@ __all__ = ["SpsStationComponentManager"]
 
 _LMC_INTEGRATED_MODE_RETRY_DELAY = 0.1
 _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
+
+
+class _BandpassDaqReadRetryError(RuntimeError):
+    """Raised to trigger retry when reading bandpass DAQ integrated mode."""
 
 
 class _TileProxy(DeviceComponentManager):
@@ -695,72 +700,85 @@ class SpsStationComponentManager(
     def _read_lmc_integrated_mode_from_bandpass_daq(
         self: SpsStationComponentManager,
         log_context: str,
-        logger: logging.Logger | None = None,
     ) -> str | None:
         """
         Read integrated mode selection from the bandpass DAQ device.
 
         :param log_context: short string describing the caller for logging.
 
-        :param logger: logger to use before base-class logger exists.
-
         :returns: "1G" or "40G" on successful attribute read, else None.
         """
-        active_logger = logger or self.logger
-
-        for attempt in range(1, _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS + 1):
+        try:
+            return self._read_lmc_integrated_mode_from_bandpass_daq_with_retry(
+                log_context
+            )
+        except _BandpassDaqReadRetryError as exc:
             if (
                 self._bandpass_daq_proxy is None
                 or self._bandpass_daq_proxy._proxy is None
             ):
-                if attempt == _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS:
-                    if active_logger is not None:
-                        active_logger.warning(
-                            "Bandpass DAQ proxy not ready during "
-                            f"{log_context}; keeping integrated mode fallback 1G."
-                        )
-                    return None
-                if active_logger is not None:
-                    active_logger.info(
-                        "Bandpass DAQ proxy not ready during "
-                        f"{log_context} (attempt {attempt}/"
-                        f"{_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS}). Retrying."
-                    )
-                time.sleep(_LMC_INTEGRATED_MODE_RETRY_DELAY)
-                continue
-            try:
-                use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
-                mode = "40G" if use_1g is False else "1G"
-                if active_logger is not None:
-                    active_logger.info(
-                        "Resolved LMC integrated mode from bandpass DAQ during "
-                        f"{log_context}: {mode}"
-                    )
-                return mode
-            except AttributeError:
-                if active_logger is not None:
-                    active_logger.info(
-                        "Bandpass DAQ does not expose bandpassLoadBalancerEnabled "
-                        f"during {log_context}; defaulting integrated mode to 1G."
-                    )
-                return None
-            except tango.DevFailed as exc:
-                if attempt == _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS:
-                    if active_logger is not None:
-                        active_logger.warning(
-                            "Unable to read bandpassLoadBalancerEnabled during "
-                            f"{log_context}; keeping integrated mode fallback 1G. "
-                            f"Last error: {exc}"
-                        )
-                    return None
-                if active_logger is not None:
-                    active_logger.info(
-                        "Bandpass DAQ not ready to read bandpassLoadBalancerEnabled "
-                        f"during {log_context} (attempt {attempt}/"
-                        f"{_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS}). Retrying."
-                    )
-                time.sleep(_LMC_INTEGRATED_MODE_RETRY_DELAY)
-        return None
+                self.logger.warning(
+                    "Bandpass DAQ proxy not ready during "
+                    f"{log_context}; defaulting integrated mode to 1G."
+                )
+            else:
+                last_error = exc.__cause__ or exc
+                self.logger.warning(
+                    "Unable to read bandpassLoadBalancerEnabled during "
+                    f"{log_context}; defaulting integrated mode to 1G. "
+                    f"Last error: {last_error}"
+                )
+            return None
+
+    @exp_backoff(
+        _BandpassDaqReadRetryError,
+        max_tries=_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS,
+        initial_delay=_LMC_INTEGRATED_MODE_RETRY_DELAY,
+        factor=1.0,
+    )
+    def _read_lmc_integrated_mode_from_bandpass_daq_with_retry(
+        self: SpsStationComponentManager,
+        log_context: str,
+    ) -> str | None:
+        """
+        Read integrated mode selection from the bandpass DAQ device with retry.
+
+        This is just so the calling func does not raise exceptions on retry exhaust.
+
+        :param log_context: short string describing the caller for logging.
+
+        :returns: "1G" or "40G" on successful attribute read, else None.
+
+        :raises _BandpassDaqReadRetryError: if the bandpass DAQ proxy is not ready or
+            the attribute read fails.
+        """
+        if self._bandpass_daq_proxy is None or self._bandpass_daq_proxy._proxy is None:
+            self.logger.info(
+                "Bandpass DAQ proxy not ready during " f"{log_context}. Retrying."
+            )
+            raise _BandpassDaqReadRetryError("Bandpass DAQ proxy not ready")
+        try:
+            use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
+            mode = "40G" if use_1g is False else "1G"
+            self.logger.info(
+                "Resolved LMC integrated mode from bandpass DAQ during "
+                f"{log_context}: {mode}"
+            )
+            return mode
+        except AttributeError:
+            self.logger.info(
+                "Bandpass DAQ does not expose bandpassLoadBalancerEnabled "
+                f"during {log_context}; defaulting integrated mode to 1G."
+            )
+            return None
+        except tango.DevFailed as exc:
+            self.logger.info(
+                "Bandpass DAQ not ready to read bandpassLoadBalancerEnabled "
+                f"during {log_context}. Retrying."
+            )
+            raise _BandpassDaqReadRetryError(
+                "Unable to read bandpassLoadBalancerEnabled"
+            ) from exc
 
     def _port_to_antenna_order(
         self: SpsStationComponentManager,
@@ -2194,12 +2212,29 @@ class SpsStationComponentManager(
             self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
             self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
         if not self._lmc_integrated_mode_locked:
-            mode = self._read_lmc_integrated_mode_from_bandpass_daq(
-                log_context="route_data"
-            )
-            if mode is not None:
-                self._lmc_integrated_mode = mode
-                self._lmc_integrated_mode_locked = True
+            try:
+                mode = self._read_lmc_integrated_mode_from_bandpass_daq(
+                    log_context="route_data"
+                )
+                if mode is not None:
+                    self._lmc_integrated_mode = mode
+                    self._lmc_integrated_mode_locked = True
+            except _BandpassDaqReadRetryError as exc:
+                if (
+                    self._bandpass_daq_proxy is None
+                    or self._bandpass_daq_proxy._proxy is None
+                ):
+                    self.logger.warning(
+                        "Bandpass DAQ proxy not ready during route_data; "
+                        "keeping integrated mode fallback 1G."
+                    )
+                else:
+                    last_error = exc.__cause__ or exc
+                    self.logger.warning(
+                        "Unable to read bandpassLoadBalancerEnabled during "
+                        "route_data; keeping integrated mode fallback 1G. "
+                        f"Last error: {last_error}"
+                    )
         self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
         self.logger.debug(
             "Configuring LMC Integrated Download: "

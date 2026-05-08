@@ -3,6 +3,7 @@
 ## 11.5.0
 
 * [THORN-434] Update SpsStation to route integrated channel data over the 40G link instead of the 1G link if possible. This is determined by the daq attribute `bandpassLoadbalancerEnabled` - if `True` or the attribute is not present then we default to using the 1G link, if `False` then we default to using the 40G link. Any user-provided value via `SetLmcIntegratedDownload` will override this. Note: This will require TPMs to be re-initialised in existing deployments.
+* [THORN-562] Update Sonar project key
 
 ## 11.4.6
 

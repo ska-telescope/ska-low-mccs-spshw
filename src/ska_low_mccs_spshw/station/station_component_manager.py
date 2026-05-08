@@ -2977,6 +2977,10 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
+        if mode.upper() == "40G":
+            # 1G means NSDN, 10G means 40G (now 100G) SDN
+            # Terminology needs refactoring.
+            mode = "10G"
         self._lmc_integrated_mode = mode
         if lock_mode:
             self._lmc_integrated_mode_locked = True

@@ -6,15 +6,13 @@
     "type": "object",
     "properties": {
         "mode": {
-            "description": "Mode: 1G, 10G or 40G",
+            "description": "Mode: 1G or 10G",
             "type": "string",
             "enum": [
                 "1g",
                 "1G",
                 "10g",
-                "10G",
-                "40g",
-                "40G"
+                "10G"
             ]
         },
         "channel_payload_length": {

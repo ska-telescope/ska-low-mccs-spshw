@@ -787,7 +787,7 @@ def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
     assert (
         daq_status["Running Consumers"] == [["INTEGRATED_CHANNEL_DATA", 5]]
         if state
-        else []
+        else daq_status["Running Consumers"] == []
     )
 
 

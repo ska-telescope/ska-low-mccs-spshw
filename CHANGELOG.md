@@ -2,7 +2,7 @@
 
 ## 11.4.7
 
-* [SKB-1318] Update ska-tango-base to bring in fix to PollingComponenentManager.
+* [SKB-1318] Update ska-tango-base to bring in fix to PollingComponentManager.
 
 ## 11.4.6
 

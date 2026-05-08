@@ -1,4 +1,8 @@
 # Version History
+
+## Unreleased
+* [LOW-2275] Fix PDU device for Raritan PDUs.
+
 ## 12.1.0
 
 * [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles. 

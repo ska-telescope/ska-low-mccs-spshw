@@ -63,7 +63,7 @@ attributes:
     dtype: float
     description: The rms voltage outlet sensor value.
 
-  - name: pduPort{}OnOff
+  - name: pduPort{1}OnOff
     oid: [PDU2-MIB, switchingOperation]
     access: write
     indexes:

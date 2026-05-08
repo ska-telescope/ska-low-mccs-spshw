@@ -2212,29 +2212,12 @@ class SpsStationComponentManager(
             self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
             self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
         if not self._lmc_integrated_mode_locked:
-            try:
-                mode = self._read_lmc_integrated_mode_from_bandpass_daq(
-                    log_context="route_data"
-                )
-                if mode is not None:
-                    self._lmc_integrated_mode = mode
-                    self._lmc_integrated_mode_locked = True
-            except _BandpassDaqReadRetryError as exc:
-                if (
-                    self._bandpass_daq_proxy is None
-                    or self._bandpass_daq_proxy._proxy is None
-                ):
-                    self.logger.warning(
-                        "Bandpass DAQ proxy not ready during route_data; "
-                        "keeping integrated mode fallback 1G."
-                    )
-                else:
-                    last_error = exc.__cause__ or exc
-                    self.logger.warning(
-                        "Unable to read bandpassLoadBalancerEnabled during "
-                        "route_data; keeping integrated mode fallback 1G. "
-                        f"Last error: {last_error}"
-                    )
+            mode = self._read_lmc_integrated_mode_from_bandpass_daq(
+                log_context="route_data"
+            )
+            if mode is not None:
+                self._lmc_integrated_mode = mode
+                self._lmc_integrated_mode_locked = True
         self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
         self.logger.debug(
             "Configuring LMC Integrated Download: "

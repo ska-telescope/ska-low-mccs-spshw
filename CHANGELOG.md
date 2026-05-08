@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-562] Update Sonar project key
+
 ## 11.4.6
 
 * [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 6.0.0.

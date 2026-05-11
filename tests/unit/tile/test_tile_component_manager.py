@@ -65,6 +65,7 @@ class TestTileComponentManager:
                 "tpm_firmware_11.0.0.bit",
             ),
             ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
+            ("TileSimulatorBios", "tpm_firmware_10.0.0.bit"),
         ],
     )
     def test_select_firmware_name(

@@ -1336,7 +1336,7 @@ class TileComponentManager(
                 self._firmware_name = _select_firmware_name(bios)
 
                 if self.tile.is_programmed() is False:
-                    self.logger.error(
+                    self.logger.info(
                         f"Programming tile with firmware {self._firmware_name}"
                     )
 

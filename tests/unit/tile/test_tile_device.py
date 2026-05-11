@@ -1576,23 +1576,25 @@ class TestMccsTile:
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
-        ("attribute", "initial_value", "write_value"),
+        ("attribute", "initial_value", "write_value", "is_signal_backed"),
         [
             (
                 "voltageMon5V0",
                 TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
                 None,
+                True,
             ),
             (
                 "adcPower",
                 # pytest.approx(tuple(float(i) for i in range(32))),
                 TileSimulator.ADC_RMS,
                 None,
+                False,
             ),
-            ("preaduLevels", PREADU_ATTENUATION, [5] * 32),
-            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32),
-            ("pllLocked", True, None),
-            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
+            ("preaduLevels", PREADU_ATTENUATION, [5] * 32, False),
+            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32, False),
+            ("pllLocked", True, None, False),
+            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384, False),
         ],
     )
     def test_component_cached_attribute(
@@ -1603,6 +1605,7 @@ class TestMccsTile:
         initial_value: Any,
         mock_subrack_device_proxy: unittest.mock.Mock,
         write_value: Any,
+        is_signal_backed: bool,
     ) -> None:
         """
         Test device attributes that map through to the component.
@@ -1620,24 +1623,25 @@ class TestMccsTile:
         :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
             device.
         :param write_value: value to be written as part of the test.
+        :param is_signal_backed: True if the attribute uses attribute_from_signal
+            (returns degraded quality when unset) rather than raising DevFailed.
         """
         max_wait: int = 14  # seconds
         tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
-        try:
-            _ = getattr(tile_device, attribute)
-            # attribute_from_signal returns 0.0 with ATTR_INVALID/ATTR_ALARM
-            # instead of raising DevFailed when the signal is unset.
+        if is_signal_backed:
             attr_result = tile_device.read_attribute(attribute)
             assert attr_result.quality in (
                 AttrQuality.ATTR_INVALID,
                 AttrQuality.ATTR_ALARM,
             )
-        except DevFailed as e:
-            assert f"Read value for attribute {attribute} has not been updated" in str(
-                e
-            ), str(e)
+        else:
+            with pytest.raises(
+                DevFailed,
+                match=f"Read value for attribute {attribute} has not been updated",
+            ):
+                _ = getattr(tile_device, attribute)
 
         tile_device.subscribe_event(
             "state",

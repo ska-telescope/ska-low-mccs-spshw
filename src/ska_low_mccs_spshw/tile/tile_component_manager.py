@@ -4182,24 +4182,21 @@ class TileComponentManager(
             + str(frequency1)
             + " Hz"
         )
-        # If load time not specified, is "now" + 30 ms
-        end_time: int = 0
-        if load_frame == 0:
-            with acquire_timeout(
-                self._hardware_lock,
-                timeout=self._default_lock_timeout,
-                raise_exception=True,
-            ):
-                load_frame = self.tile.get_fpga_timestamp() + 180
-            self.logger.info(f"Tile generator uses asynchronous timestamp {load_frame}")
-        else:
-            self.logger.info(f"Test generator load time: {load_frame}")
 
         with acquire_timeout(
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
             if acquired:
                 try:
+                    # If load time not specified, is "now" + 30 ms
+                    end_time: int = 0
+                    if load_frame == 0:
+                        load_frame = self.tile.get_fpga_timestamp() + 180
+                        self.logger.info(
+                            f"Tile generator uses asynchronous timestamp {load_frame}"
+                        )
+                    else:
+                        self.logger.info(f"Test generator load time: {load_frame}")
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
                     # Set everything at same time

@@ -784,6 +784,10 @@ def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
         time.sleep(1)
         time_elapsed += 1
     assert daq_status["Bandpass Monitor"] == state
+    if state:
+        assert daq_status["Running Consumers"] == [["INTEGRATED_CHANNEL_DATA", 5]]
+    else:
+        assert daq_status["Running Consumers"] == []
 
 
 @pytest.fixture(name="synchronised_tile_device")

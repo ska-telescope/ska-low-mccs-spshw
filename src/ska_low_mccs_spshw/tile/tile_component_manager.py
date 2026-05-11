@@ -736,7 +736,7 @@ class TileComponentManager(
         # Publish all responses to TANGO interface.
         try:
             if poll_response.publish:
-                self._update_attribute_callback(  # type: ignore[misc]
+                self._update_attribute_callback(  # type: ignore[arg-type]
                     **{poll_response.command: poll_response.data},
                 )
         except Exception as e:  # pylint: disable=broad-except

@@ -58,7 +58,7 @@ class BaseDataReceivedHandler(abc.ABC):
         """Handle reading the data from received HDF5."""
 
     def _handle_data_with_backoff(self: BaseDataReceivedHandler) -> None:
-        deadline = time.monotonic() + 5
+        deadline = time.monotonic() + 30
         delay = 0.25
         while True:
             try:

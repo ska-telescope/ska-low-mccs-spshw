@@ -1992,7 +1992,7 @@ wheels = [
 
 [[package]]
 name = "ska-low-mccs-spshw"
-version = "11.5.0"
+version = "12.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -2126,8 +2126,8 @@ requires-dist = [
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
     { name = "ska-low-mccs-common", specifier = ">=4.4.6,<5.0.0" },
-    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.1.0" },
     { name = "ska-low-mccs-daq", specifier = ">=6.0.0,<7.0.0" },
+    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.1.0" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
     { name = "ska-tango-base", specifier = ">=1.4.2,<2.0.0" },

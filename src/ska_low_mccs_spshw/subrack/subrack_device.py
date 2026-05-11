@@ -272,8 +272,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 signal_name = self._HEALTH_SIGNAL_MAP[attribute_name]
                 signal_value = getattr(self, signal_name)
                 if signal_value is not None:
-                    self.push_change_event(attribute_name, signal_value)
-                    self.push_archive_event(attribute_name, signal_value)
+                    setattr(self, signal_name, signal_value)
             elif attribute_name in self._hardware_attributes:
                 value_cache = self._hardware_attributes[attribute_name]
                 if value_cache is not None:

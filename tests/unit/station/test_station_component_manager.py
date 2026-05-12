@@ -864,14 +864,15 @@ def test_pps_delay_spread(
     assert station_component_manager._pps_delays == [0] * 16
     assert station_component_manager._pps_delay_spread == 0
 
-    # Set 1 Tile's ppsDelay to 4 for a delta of 4.
+    # Only tile 1 has reported; spread is computed from reported tiles only,
+    # so max([4]) - min([4]) == 0 (no artificial spread from uninitialised slots).
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=1,
         attribute_name="ppsDelay",
         attribute_value=4,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
-    assert station_component_manager._pps_delay_spread == 4
+    assert station_component_manager._pps_delay_spread == 0
 
     # Set all tiles to a delay of 4 for a delta of 0.
     for tile_id in range(0, num_tiles_to_add):

@@ -618,6 +618,7 @@ class SpsStationComponentManager(
         self._beamformer_regions = np.zeros(shape=(48, 8), dtype=int)
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
+        self._pps_delays_reported: set[int] = set()
         self._pps_delay_corrections = [0] * 16
         self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
@@ -1072,13 +1073,21 @@ class SpsStationComponentManager(
             case "ppsdelay":
                 # Only calc for TPMs actually present.
                 self._pps_delays[logical_tile_id] = attribute_value
-                self._pps_delay_spread = max(
-                    self._pps_delays[0 : self._number_of_tiles]
-                ) - min(self._pps_delays[0 : self._number_of_tiles])
-                if self._component_state_callback:
-                    self._component_state_callback(
-                        ppsDelaySpread=self._pps_delay_spread
-                    )
+                self._pps_delays_reported.add(logical_tile_id)
+                # Only include tiles that have reported at least once to avoid
+                # comparing real values against the uninitialized zero default,
+                # which would produce a spurious spread during startup.
+                reported = [
+                    self._pps_delays[i]
+                    for i in range(self._number_of_tiles)
+                    if i in self._pps_delays_reported
+                ]
+                if reported:
+                    self._pps_delay_spread = max(reported) - min(reported)
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            ppsDelaySpread=self._pps_delay_spread
+                        )
             case "tileprogrammingstate":
                 self._tile_programming_state[logical_tile_id] = attribute_value
 

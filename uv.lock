@@ -2130,7 +2130,7 @@ requires-dist = [
     { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.1.0" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
-    { name = "ska-tango-base", specifier = ">=1.4.2,<2.0.0" },
+    { name = "ska-tango-base", specifier = ">=1.6.1,<2.0.0" },
     { name = "ska-telmodel", specifier = ">=1.11.0,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<1.0.0" },
     { name = "types-icalendar", specifier = ">=6.3.1.20250521,<7.0.0" },

@@ -89,7 +89,9 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
 
 
 @scenario("features/station.feature", "Synchronising time stamping")
-def test_tile(stations_devices_exported: list[tango.DeviceProxy]) -> None:
+def test_station_syncs_and_bandpasses_start(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
     """
     Run a test scenario that tests the station device.
 
@@ -354,12 +356,41 @@ def turn_station_on(station: tango.DeviceProxy) -> None:
 
 
 @when("the station is initialised")
-def station_not_synched(station: tango.DeviceProxy) -> None:
+def station_not_synched(
+    station: tango.DeviceProxy,
+    bandpass_daq_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
     """
     Verify that a device is in the desired state.
 
+    Subscribe to bandpass attributes before Initialise so we can
+    detect updates emitted during station bring-up.
+
     :param station: station device under test.
+    :param bandpass_daq_device: a proxy to the bandpass DAQ device.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
     """
+    bandpass_daq_device.subscribe_event(
+        "xPolBandpass",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["daq_xPolBandpass"],
+    )
+    bandpass_daq_device.subscribe_event(
+        "yPolBandpass",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["daq_yPolBandpass"],
+    )
+    # Consume initial subscription snapshots so subsequent assertions
+    # are about updates that happen during/after initialise.
+    change_event_callbacks["daq_xPolBandpass"].assert_change_event(
+        Anything, consume_nonmatches=True
+    )
+    change_event_callbacks["daq_yPolBandpass"].assert_change_event(
+        Anything, consume_nonmatches=True
+    )
+
     station.Initialise()
 
 
@@ -523,17 +554,12 @@ def bandpass_daq_receiving(
     """
     verify_bandpass_state(bandpass_daq_device, True)
 
-    bandpass_daq_device.subscribe_event(
-        "xPolBandpass",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["daq_xPolBandpass"],
-    )
-    # Consume the initial subscription event (may carry a null value).
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(
         Anything, consume_nonmatches=True
     )
-    # Wait for a data-bearing update.
-    change_event_callbacks["daq_xPolBandpass"].assert_change_event(
+    change_event_callbacks["daq_yPolBandpass"].assert_change_event(
         Anything, consume_nonmatches=True
     )
+
     assert np.count_nonzero(bandpass_daq_device.xPolBandpass) > 0
+    assert np.count_nonzero(bandpass_daq_device.yPolBandpass) > 0

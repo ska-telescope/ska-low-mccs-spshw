@@ -540,6 +540,26 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
         pytest.fail("Timeout in waiting for tiles to Synchronise")
 
 
+@then(
+    "the Station is commanded to send integrated channel data",
+)
+def station_send_data(
+    station: tango.DeviceProxy,
+) -> Generator:
+    """
+    Command the station to start sending data.
+
+    :param station: A 'tango.DeviceProxy' to the Station device.
+
+    :yields: Nothing, just for cleanup.
+    """
+    # station.ConfigureIntegratedChannelData("{}")
+    station.SendDataSamples(json.dumps({"data_type": "channel"}))
+    yield
+    # Stop the data transmission, else it will continue forever.
+    station.StopIntegratedData()
+
+
 @then("the bandpass daq is receiving bandpasses")
 def bandpass_daq_receiving(
     bandpass_daq_device: tango.DeviceProxy,

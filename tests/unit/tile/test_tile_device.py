@@ -57,11 +57,13 @@ from .conftest import PREADU_ATTENUATION, STATIC_TIME_DELAYS
 gc.disable()
 
 
-def is_signal_backed_check(attr_name):
+def is_signal_backed_check(attr_name: str) -> bool:
     """
     Find if an attribute is backed by a signal.
 
     :param attr_name: The attribute.
+
+    :return: If the attribute is signal backed.
     """
     for cls in MccsTile.__mro__:
         obj = vars(cls).get(attr_name)

@@ -30,6 +30,7 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import MccsDeviceProxy
+from ska_tango_base.software_bus import attribute_from_signal
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
@@ -54,6 +55,19 @@ from .conftest import PREADU_ATTENUATION, STATIC_TIME_DELAYS
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
+
+
+def is_signal_backed_check(attr_name):
+    """
+    Find if an attribute is backed by a signal.
+
+    :param attr_name: The attribute.
+    """
+    for cls in MccsTile.__mro__:
+        obj = vars(cls).get(attr_name)
+        if obj is not None:
+            return isinstance(obj, attribute_from_signal)
+    return False
 
 
 def set_nested_value(d: dict[str, Any], keys: list[str], value: Any) -> None:
@@ -1631,12 +1645,14 @@ class TestMccsTile:
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
         if is_signal_backed:
+            assert is_signal_backed_check(attribute)
             attr_result = tile_device.read_attribute(attribute)
             assert attr_result.quality in (
                 AttrQuality.ATTR_INVALID,
                 AttrQuality.ATTR_ALARM,
             )
         else:
+            assert not is_signal_backed_check(attribute)
             with pytest.raises(
                 DevFailed,
                 match=f"Read value for attribute {attribute} has not been updated",

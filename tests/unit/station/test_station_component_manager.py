@@ -874,6 +874,14 @@ def test_pps_delay_spread(
     )
     assert station_component_manager._pps_delay_spread == 0
 
+    station_component_manager._on_tile_attribute_change(
+        logical_tile_id=0,
+        attribute_name="ppsDelay",
+        attribute_value=8,
+        attribute_quality=tango.AttrQuality.ATTR_VALID,
+    )
+    assert station_component_manager._pps_delay_spread == 4
+
     # Set all tiles to a delay of 4 for a delta of 0.
     for tile_id in range(0, num_tiles_to_add):
         station_component_manager._on_tile_attribute_change(

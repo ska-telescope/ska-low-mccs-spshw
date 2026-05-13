@@ -554,7 +554,9 @@ def station_send_data(
     :yields: Nothing, just for cleanup.
     """
     # station.ConfigureIntegratedChannelData("{}")
-    station.SendDataSamples(json.dumps({"data_type": "channel"}))
+    for _ in range(5):
+        station.SendDataSamples(json.dumps({"data_type": "channel"}))
+        time.sleep(1)
     yield
     # Stop the data transmission, else it will continue forever.
     station.StopIntegratedData()

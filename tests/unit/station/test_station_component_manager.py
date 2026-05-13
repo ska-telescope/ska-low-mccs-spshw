@@ -864,20 +864,24 @@ def test_pps_delay_spread(
     assert station_component_manager._pps_delays == [0] * 16
     assert station_component_manager._pps_delay_spread == 0
 
-    # Only tile 1 has reported; spread is computed from reported tiles only,
-    # so max([4]) - min([4]) == 0 (no artificial spread from uninitialised slots).
+    # Explicitly seed all tiles to 0 to create a deterministic baseline.
+    # Mock startup subscription events (ppsDelay=0) may have already fired
+    # for some tiles asynchronously; seeding all tiles here ensures every tile
+    # is in _pps_delays_reported with a known value before we test changes.
+    for tile_id in range(0, num_tiles_to_add):
+        station_component_manager._on_tile_attribute_change(
+            logical_tile_id=tile_id,
+            attribute_name="ppsDelay",
+            attribute_value=0,
+            attribute_quality=tango.AttrQuality.ATTR_VALID,
+        )
+    assert station_component_manager._pps_delay_spread == 0
+
+    # Change one tile and verify the spread is computed correctly (4 - 0 == 4).
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=1,
         attribute_name="ppsDelay",
         attribute_value=4,
-        attribute_quality=tango.AttrQuality.ATTR_VALID,
-    )
-    assert station_component_manager._pps_delay_spread == 0
-
-    station_component_manager._on_tile_attribute_change(
-        logical_tile_id=0,
-        attribute_name="ppsDelay",
-        attribute_value=8,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
     assert station_component_manager._pps_delay_spread == 4

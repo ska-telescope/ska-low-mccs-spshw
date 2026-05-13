@@ -1539,10 +1539,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].update(attribute_value)
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
+                    emit_value = (
+                        cast(float, attribute_value) if attribute_value else None
+                    )
                     setattr(
                         self,
                         self._HEALTH_SIGNAL_MAP[attribute_name],
-                        cast(float, attribute_value),
+                        emit_value,
                     )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")

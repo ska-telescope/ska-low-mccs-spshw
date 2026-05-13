@@ -864,10 +864,16 @@ def test_pps_delay_spread(
     assert station_component_manager._pps_delays == [0] * 16
     assert station_component_manager._pps_delay_spread == 0
 
-    # Explicitly seed all tiles to 0 to create a deterministic baseline.
-    # Mock startup subscription events (ppsDelay=0) may have already fired
-    # for some tiles asynchronously; seeding all tiles here ensures every tile
-    # is in _pps_delays_reported with a known value before we test changes.
+    # Spread is computed only from Synchronised tiles; move all tiles there first.
+    for tile_id in range(0, num_tiles_to_add):
+        station_component_manager._on_tile_attribute_change(
+            logical_tile_id=tile_id,
+            attribute_name="tileProgrammingState",
+            attribute_value="Synchronised",
+            attribute_quality=tango.AttrQuality.ATTR_VALID,
+        )
+
+    # Seed all tiles to 0 to create a deterministic baseline.
     for tile_id in range(0, num_tiles_to_add):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,

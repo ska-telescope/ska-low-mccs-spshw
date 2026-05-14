@@ -242,10 +242,48 @@ def get_device_online(
     return _get_device_online
 
 
-@given("the Station is online")
-def station_online(
+@pytest.fixture(name="get_device_offline")
+def get_device_offline(
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> Callable:
+    """
+    Put a given device offline if it isn't already.
+
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+
+    :returns: a callable to call when we want a device OFFLINE.
+    """
+
+    def _get_device_offline(device_proxy: tango.DeviceProxy) -> None:
+        """
+        Move a device to OFFLINE.
+
+        :param device_proxy: the tango DeviceProxy we want
+            to bring OFFLINE.
+        """
+        print(f"Turning {device_proxy.dev_name()} offline")
+        _state_tracker = MockTangoEventCallbackGroup("track_state", timeout=10)
+
+        with tango_event_subscription(
+            device_proxy,
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            _state_tracker["track_state"],
+        ):
+            if device_proxy.adminMode == AdminMode.ONLINE:
+                device_proxy.adminMode = AdminMode.OFFLINE
+
+            _state_tracker.assert_change_event("track_state", Anything)
+
+    return _get_device_offline
+
+
+@given("the Station has been reset")
+def station_reset(
     station_devices: dict[str, list[tango.DeviceProxy]],
     get_device_online: Callable,
+    get_device_offline: Callable,
     station_name: str,
     reset_attribute_configs: dict[str, Callable],
 ) -> None:
@@ -254,6 +292,7 @@ def station_online(
 
     :param station_devices: A fixture with the station devices.
     :param get_device_online: a fixture to call to bring a device ONLINE
+    :param get_device_offline: a fixture to call to bring a device OFFLINE
     :param station_name: the name of the station under test.
     :param reset_attribute_configs: Functions to reset attribute configs.
     """
@@ -265,6 +304,53 @@ def station_online(
             reset_attribute_configs["subrack"](subrack)
         for tile in station_devices["Tiles"]:
             reset_attribute_configs["tile"](tile)
+    # Force the station OFFLINE so stop_communicating() is called, which
+    # clears _pps_delays_reported.
+    for subrack in station_devices["Subracks"]:
+        get_device_offline(subrack)
+    for tile in station_devices["Tiles"]:
+        get_device_offline(tile)
+    for daq in station_devices["DAQs"]:
+        get_device_offline(daq)
+    for station in station_devices["Station"]:
+        get_device_offline(station)
+
+    for subrack in station_devices["Subracks"]:
+        get_device_online(subrack)
+    for tile in station_devices["Tiles"]:
+        get_device_online(tile)
+    for daq in station_devices["DAQs"]:
+        get_device_online(daq)
+    for station in station_devices["Station"]:
+        get_device_online(station)
+
+
+@given("the Station is online")
+def station_online(
+    station_devices: dict[str, list[tango.DeviceProxy]],
+    get_device_online: Callable,
+    get_device_offline: Callable,
+    station_name: str,
+    reset_attribute_configs: dict[str, Callable],
+) -> None:
+    """
+    Put a station ONLINE.
+
+    :param station_devices: A fixture with the station devices.
+    :param get_device_online: a fixture to call to bring a device ONLINE
+    :param get_device_offline: a fixture to call to bring a device OFFLINE
+    :param station_name: the name of the station under test.
+    :param reset_attribute_configs: Functions to reset attribute configs.
+    """
+    if station_name == "stfc-ral-2":
+        # We reset attr configs here so that we can be reasonably sure we'll
+        # be using the defaults.
+        # This can be removed once the health tests are cleaning up properly.
+        for subrack in station_devices["Subracks"]:
+            reset_attribute_configs["subrack"](subrack)
+        for tile in station_devices["Tiles"]:
+            reset_attribute_configs["tile"](tile)
+
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:

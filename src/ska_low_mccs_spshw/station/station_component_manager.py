@@ -1028,6 +1028,7 @@ class SpsStationComponentManager(
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
+        self._pps_delays_reported.clear()
         self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
@@ -1080,7 +1081,11 @@ class SpsStationComponentManager(
                 self._fire_pps_delay_spread()
             case "tileprogrammingstate":
                 self._tile_programming_state[logical_tile_id] = attribute_value
-
+                if attribute_value not in ("Initialised", "Synchronised"):
+                    # State dropped below Initialised: the cached pps delay is
+                    # stale (tile has power-cycled or re-programmed).  Evict it
+                    # so spread is not polluted by the old reading.
+                    self._pps_delays_reported.discard(logical_tile_id)
                 if self._component_state_callback:
                     self._component_state_callback(
                         tileProgrammingState=self._tile_programming_state

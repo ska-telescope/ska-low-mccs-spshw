@@ -2469,10 +2469,11 @@ class SpsStationComponentManager(
             if i in self._pps_delays_reported
             and self._tile_programming_state[i] == "Synchronised"
         ]
-        if reported_sync:
-            self._pps_delay_spread = max(reported_sync) - min(reported_sync)
-            if self._component_state_callback:
-                self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
+        self._pps_delay_spread = (
+            max(reported_sync) - min(reported_sync) if reported_sync else 0
+        )
+        if self._component_state_callback:
+            self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
 
     @property
     def pps_delay_spread(self: SpsStationComponentManager) -> int:

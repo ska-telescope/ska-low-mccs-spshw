@@ -7,7 +7,6 @@ Feature: Test station
         And the SpsStation is ON
         When the station is initialised
         Then the station becomes synchronised
-        And the Station is commanded to send integrated channel data
         And the bandpass daq is receiving bandpasses
 
 

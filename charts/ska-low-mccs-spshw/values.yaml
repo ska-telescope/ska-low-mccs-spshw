@@ -19,9 +19,9 @@ global:
 
 # Image to be used for simulators etc.
 image:
-  registry: artefact.skao.int
+  registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw # artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 11.5.0
+  tag: 11.5.0-dev.cc0c85b8d # 11.5.0
   pullPolicy: IfNotPresent
 
 # Resources for simulators etc
@@ -385,9 +385,9 @@ ska-tango-devices:
       metadata:
         component: spshw
       image:
-        registry: artefact.skao.int
+        registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw # artefact.skao.int
         name: ska-low-mccs-spshw
-        tag: 11.5.0
+        tag: 11.5.0-dev.cc0c85b8d # 11.5.0
         pullPolicy: IfNotPresent
       command: spshw
       resources:

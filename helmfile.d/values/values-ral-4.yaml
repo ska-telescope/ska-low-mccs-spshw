@@ -61,14 +61,15 @@ helm_values:
           HardwareVersion: v1.6.7a
           BiosVersion: 0.6.0
           PreAduFitted: [true, true]
-    # deviceServerTypes:
-    #   spshw:
-    #     image:
-    #       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw #localhost:5000
-    #       tag: 10.2.0-dev.c4bbc06f3
-    #       pullPolicy: Always
-
-  # ska-low-mccs-daq:
+    deviceServerTypes:
+      spshw:
+        image:
+          registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw #localhost:5000
+          tag: 11.5.0-dev.cc0c85b8d
+          pullPolicy: Always
+  ska-low-mccs-daq:
+    bandpassLoadBalancer:
+      enabled: false
   #     ska-tango-devices:
   #       deviceServerTypes:
   #         daq:

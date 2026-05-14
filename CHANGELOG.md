@@ -4,6 +4,10 @@
 
 * [THORN-420] Report progress during SPSStation initialise()
 
+## 12.0.1
+
+* [SKB-1318] Update ska-tango-base to bring in fix to PollingComponentManager.
+
 ## 12.0.0
 
 * [THORN-547] Add dual TPM firmware support with automated BIOS-based selection during Tile initialise. Keep default firmware 10.0.0 for BIOS < 1.0.0, add support for firmware 11.0.0 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.

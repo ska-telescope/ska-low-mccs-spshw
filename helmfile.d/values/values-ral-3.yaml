@@ -60,7 +60,9 @@ helm_values:
     #       tag: 3.1.1-dirty
     #       pullPolicy: Always
 
-  # ska-low-mccs-daq:
+  ska-low-mccs-daq:
+    bandpassLoadBalancer:
+      enabled: false
   #     ska-tango-devices:
   #       deviceServerTypes:
   #         daq:

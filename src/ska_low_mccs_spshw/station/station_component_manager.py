@@ -2242,6 +2242,7 @@ class SpsStationComponentManager(
             if start_bandpasses is not None
             else self._start_bandpasses_in_initialise
         ):
+            self.logger.info("Starting integrated channel data stream.")
             self.configure_integrated_channel_data(
                 integration_time=self._bandpass_integration_time,
                 first_channel=0,

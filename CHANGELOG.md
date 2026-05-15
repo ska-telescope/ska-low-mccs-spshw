@@ -1,5 +1,9 @@
 # Version History
 
+## 12.0.3
+
+* [THORN-449] Update functional tests to cover automatic transmission and reception of bandpasses after Station.Initialise.
+
 ## 12.0.2
 
 * [SKB-1128] Add `RfiCount` and `TileBeamformerFrame` to Tile's Initialised polling list. This fixes an issue where a Tile would get into `HealthState.UNKNOWN` when `Initialise` is called in `TileProgrammingState.SYNCHRONISED` with `globalReferenceTime` not set.

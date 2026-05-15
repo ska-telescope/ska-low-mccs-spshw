@@ -57,7 +57,7 @@ helm_values:
 
   ska-low-mccs-daq:
     bandpassLoadBalancer:
-        enabled: false
+      enabled: false
   #     ska-tango-devices:
   #       deviceServerTypes:
   #         daq:

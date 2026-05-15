@@ -2243,8 +2243,6 @@ class SpsStationComponentManager(
             else self._start_bandpasses_in_initialise
         ):
             self.logger.info("Starting integrated channel data stream.")
-            # Do we need to stop data transmission here first?
-            # Or maybe before we setlmcintegdownload?
             self.configure_integrated_channel_data(
                 integration_time=self._bandpass_integration_time,
                 first_channel=0,

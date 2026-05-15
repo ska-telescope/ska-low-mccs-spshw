@@ -4,6 +4,10 @@
 
 * [THORN-420] Report progress during SPSStation initialise()
 
+## 12.0.2
+
+* [SKB-1128] Add `RfiCount` and `TileBeamformerFrame` to Tile's Initialised polling list. This fixes an issue where a Tile would get into `HealthState.UNKNOWN` when `Initialise` is called in `TileProgrammingState.SYNCHRONISED` with `globalReferenceTime` not set.
+
 ## 12.0.1
 
 * [SKB-1318] Update ska-tango-base to bring in fix to PollingComponentManager.

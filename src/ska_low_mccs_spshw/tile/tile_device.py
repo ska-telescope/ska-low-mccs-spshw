@@ -2833,9 +2833,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._info = self.component_manager.tile_info()
         self._convert_ip_to_str(self._info)
         info: dict[str, Any] = self._info
-        if info != {}:
-            # Prints out a nice table to the logs if populated.
-            self.logger.info(str(self))
         return json.dumps(info)
 
     @attribute(

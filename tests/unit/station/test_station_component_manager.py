@@ -36,6 +36,8 @@ from ska_low_mccs_spshw.station import (
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
+# pylint: disable=too-many-lines
+
 
 @pytest.fixture(name="num_tiles_to_add")
 def num_tiles_to_add_fixture() -> int:
@@ -947,6 +949,143 @@ def test_beamformer_table(
         station_component_manager._beamformer_table,
         expected_initial_beamformer_table,
     )
+
+
+def test_initialise_progress_callbacks(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test that initialise fires progress callbacks at each step in the right order.
+
+    The per-tile incremental progress inside ``_reinitialise_tiles`` is
+    covered by the dedicated test below.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param callbacks: dictionary of driver callbacks.
+    """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # All subracks and tiles must report ON for initialise to proceed.
+    for fqdn in station_component_manager._subrack_power_states:
+        station_component_manager._subrack_power_states[fqdn] = PowerState.ON
+    for fqdn in station_component_manager._tile_power_states:
+        station_component_manager._tile_power_states[fqdn] = PowerState.ON
+
+    task_callback = unittest.mock.Mock()
+
+    ok = (ResultCode.OK, "")
+    with (
+        unittest.mock.patch.object(
+            station_component_manager, "_set_tile_source_ips", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager,
+            "_set_global_reference_time",
+            return_value=ResultCode.OK,
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_reinitialise_tiles", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_initialise_tile_parameters", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_initialise_station", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_wait_for_arp_table", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_route_data", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager,
+            "_check_station_synchronisation",
+            return_value=ok,
+        ),
+        unittest.mock.patch.object(station_component_manager, "start_beamformer"),
+    ):
+        station_component_manager.initialise(task_callback=task_callback)
+
+    progress_calls = [
+        call.kwargs["progress"]
+        for call in task_callback.call_args_list
+        if "progress" in call.kwargs
+    ]
+    assert progress_calls == [5, 70, 75, 85, 90, 95]
+
+    task_callback.assert_called_with(
+        status=TaskStatus.COMPLETED,
+        result=(ResultCode.OK, "Initialisation Complete"),
+    )
+
+
+def test_reinitialise_tiles_progress_callbacks(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles_to_add: int,
+) -> None:
+    """
+    Test that _reinitialise_tiles fires progress callbacks.
+
+    Progress should be interpolated between progress_start and progress_end
+    based on how many tiles have reached the desired state, and a callback
+    should only fire when that count changes.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles_to_add: number of TPMs in the test.
+    """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # Set a non-empty global reference time so the desired state is only "Synchronised"
+    station_component_manager._global_reference_time = "2026-01-01T00:00:00.000000Z"
+
+    task_callback = unittest.mock.Mock()
+
+    # The mock tile programming state function simulates tiles coming up one at a time.
+    # call_count tracks how many tiles have reached "Synchronised" so far.
+    call_count = 0
+
+    def mock_tile_programming_state() -> list[str]:
+        nonlocal call_count
+        n_ready = min(call_count, num_tiles_to_add)
+        call_count += 1
+        return ["Synchronised"] * n_ready + ["Unknown"] * (num_tiles_to_add - n_ready)
+
+    progress_start = 10
+    progress_end = 70
+
+    with (
+        unittest.mock.patch(
+            "ska_low_mccs_spshw.station.station_component_manager.time.sleep"
+        ),
+        unittest.mock.patch.object(
+            station_component_manager,
+            "tile_programming_state",
+            mock_tile_programming_state,
+        ),
+    ):
+        result_code, _ = station_component_manager._reinitialise_tiles(
+            task_callback=task_callback,
+            progress_start=progress_start,
+            progress_end=progress_end,
+        )
+
+    assert result_code == ResultCode.OK
+
+    progress_calls = [call.kwargs["progress"] for call in task_callback.call_args_list]
+
+    expected_progress = [
+        int(progress_start + (progress_end - progress_start) * i / num_tiles_to_add)
+        for i in range(1, num_tiles_to_add + 1)
+    ]
+    assert progress_calls == expected_progress
 
 
 def test_pointing_delays(

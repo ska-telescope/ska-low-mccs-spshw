@@ -1698,14 +1698,18 @@ class SpsStationComponentManager(
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=5)
             self.logger.debug("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
+            # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event
+                task_callback, task_abort_event, progress_start=5, progress_end=65
             )
+            # Progress is reported incrementally inside _reinitialise_tiles
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
@@ -1715,16 +1719,22 @@ class SpsStationComponentManager(
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=70)
             self.logger.debug("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=75)
             self.logger.debug("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
             )
+            if task_callback:
+                task_callback(progress=85)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
@@ -1735,12 +1745,16 @@ class SpsStationComponentManager(
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=90)
             self.logger.debug("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            if task_callback:
+                task_callback(progress=95)
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
@@ -1954,6 +1968,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
+        progress_start: int = 0,
+        progress_end: int = 100,
     ) -> tuple[ResultCode, str]:
         """
         Initialise tiles.
@@ -1963,9 +1979,13 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
+        :param progress_start: progress percentage at the start of this step,
+            used to interpolate progress callbacks during the polling wait.
+        :param progress_end: progress percentage reported once tiles are ready.
         :return: a result code and message
 
         """
+        progress_window = progress_end - progress_start
         with self._power_state_lock:
             results = []
             for proxy in self._tile_proxies.values():
@@ -1989,12 +2009,23 @@ class SpsStationComponentManager(
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
+        last_reported_count = 0
+        n_tiles = len(self._tile_proxies)
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in desired_states for state in states):
+            ready_count = sum(state in desired_states for state in states)
+            if ready_count == n_tiles:
+                if task_callback:
+                    task_callback(progress=progress_end)
                 return ResultCode.OK, ""
+            if task_callback and ready_count != last_reported_count:
+                # Fire a callback only when another tile reaches the desired state,
+                # interpolating the progress window across the number of tiles.
+                progress = int(progress_start + progress_window * ready_count / n_tiles)
+                task_callback(progress=progress)
+                last_reported_count = ready_count
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg

@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-420] Report progress during SPSStation initialise()
+
 ## 12.0.3
 
 * [THORN-449] Update functional tests to cover automatic transmission and reception of bandpasses after Station.Initialise.

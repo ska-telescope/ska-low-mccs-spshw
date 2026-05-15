@@ -413,7 +413,7 @@ class TestTileComponentManager:
 
         callbacks["component_state"].assert_not_called()
 
-        tile_component_manager.on()
+        tile_component_manager.do_on()
         # Manually report the Subrack turning on
         tile_component_manager._subrack_says_tpm_power_changed(
             f"tpm{tile_id}powerstate",
@@ -442,7 +442,7 @@ class TestTileComponentManager:
             assert not tile_component_manager._component_state["fault"]
             callbacks["component_state"].assert_not_called()
 
-        tile_component_manager.off()
+        tile_component_manager.do_off()
         # Manually report the Subrack turning on
         tile_component_manager._subrack_says_tpm_power_changed(
             f"tpm{tile_id}powerstate",
@@ -495,7 +495,7 @@ class TestTileComponentManager:
         """
         tile_simulator.mock_off()
         with pytest.raises(AssertionError):
-            tile_component_manager.on(task_callback=callbacks["task"])
+            tile_component_manager.do_on(task_callback=callbacks["task"])
         callbacks["task"].assert_call(
             status=TaskStatus.REJECTED,
             result=(ResultCode.REJECTED, "No request provider"),
@@ -519,9 +519,7 @@ class TestTileComponentManager:
         )
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
-        result_code, message = tile_component_manager.on(callbacks["task"])
-        assert result_code == TaskStatus.QUEUED
-        assert message == "Task staged"
+        tile_component_manager.do_on(task_callback=callbacks["task"])
         time.sleep(0.2)
 
         # We initially submit the on command to the Subrack and place a
@@ -583,7 +581,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        tile_component_manager.on(task_callback=callbacks["task"])
+        tile_component_manager.do_on(task_callback=callbacks["task"])
         try:
             callbacks["component_state"].assert_call(
                 power=PowerState.ON, fault=False, lookahead=2
@@ -3501,7 +3499,7 @@ class TestDynamicSimulator:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        dynamic_tile_component_manager.on(task_callback=callbacks["task"])
+        dynamic_tile_component_manager.do_on(task_callback=callbacks["task"])
         try:
             callbacks["component_state"].assert_call(
                 power=PowerState.ON, fault=False, lookahead=2

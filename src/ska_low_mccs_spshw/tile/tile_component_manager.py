@@ -903,15 +903,19 @@ class TileComponentManager(
             self._subrack_proxy.unsubscribe_all_change_events()
             self._subrack_proxy = None
 
-    def off(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    def do_off(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
-        :param task_callback: Update task state, defaults to None
+        Submits the blocking subrack call to the task executor so the
+        Tango serialization monitor is not held during the network round-trip.
 
-        :return: a result code and a unique_id or message.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         subrack_off_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOffTpm", self.logger
@@ -921,18 +925,22 @@ class TileComponentManager(
             arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
         )
 
-        return TaskStatus.QUEUED, ""
-
-    def on(
+    def do_on(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
-        :param task_callback: Update task state, defaults to None
+        Submits the blocking subrack call to the task executor so the
+        Tango serialization monitor is not held during the network round-trip.
+        task_callback is not passed to submit_task; instead it is forwarded
+        to TileLRCRequest, which owns the full QUEUED→IN_PROGRESS→COMPLETED
+        lifecycle once the TPM becomes connectable.
 
-        :return: a result code and a unique_id or message.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :raises AssertionError: request_provider is not yet initialised.
         """
@@ -964,7 +972,6 @@ class TileComponentManager(
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
             self._request_provider.enqueue_lrc(request, priority=0)
-        return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

@@ -55,8 +55,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_tpm_power_state",
         "subrack_tpm_present",
         "daq_state",
-        "daq_long_running_command_status",
-        "daq_long_running_command_result",
         "daq_xPolBandpass",
         "daq_yPolBandpass",
         "data_received_callback",

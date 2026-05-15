@@ -4136,6 +4136,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Return the observed drift in the ppsDelay of this Tile.
 
+        `ppsDrift` measures the difference between the TPM's currently reported
+        `ppsDelay` and the value it had when the Tile Tango device was initialised.
+        This will initially be zero and then will increase as reported value of
+        `ppsDelay` changes over time.
+
         :return: Return the pps delay drift in 1.25ns units or `None` if not initialised
         """
         return self._attribute_state["ppsDrift"].read()

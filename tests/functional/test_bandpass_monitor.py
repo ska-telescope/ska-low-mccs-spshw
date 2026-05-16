@@ -32,7 +32,12 @@ from tests.harness import (
     get_subrack_name,
     get_tile_name,
 )
-from tests.test_tools import AttributeWaiter, retry_communication
+from tests.test_tools import (
+    AttributeWaiter,
+    assert_against_lrc_finished,
+    get_lrc_finished,
+    retry_communication,
+)
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -447,20 +452,10 @@ def daq_bandpass_monitor_running(
         # Allow a rejection if already running.
         assert start_bandpass_result[1][0] == "Bandpass monitor already started."
     else:
-        sub_id = daq_device.subscribe_event(
-            "longRunningCommandResult",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["daq_long_running_command_result"],
-        )
-        change_event_callbacks["daq_long_running_command_result"].assert_change_event(
-            (
-                start_bandpass_result[1][0],
-                json.dumps([ResultCode.OK, "Bandpass monitor active"]),
-            ),
-            lookahead=12,
-            consume_nonmatches=True,
-        )
-        daq_device.unsubscribe_event(sub_id)
+        cmd_id = start_bandpass_result[1][0]
+        assert_against_lrc_finished(daq_device, cmd_id, "COMPLETED", timeout=120.0)
+        completed_task = get_lrc_finished(daq_device, cmd_id)
+        assert completed_task["result"] == [ResultCode.OK, "Bandpass monitor active"]
 
     verify_bandpass_state(daq_device, True)
 

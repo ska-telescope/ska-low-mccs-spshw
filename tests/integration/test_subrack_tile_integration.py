@@ -25,6 +25,9 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
 from tests.test_tools import (
+    assert_against_lrc_executing,
+    assert_against_lrc_finished,
+    assert_against_lrc_queued,
     execute_lrc_to_completion,
     wait_for_completed_command_to_clear_from_queue,
 )
@@ -384,32 +387,14 @@ class TestMccsTileTpmDriver:
         # so it transitions to OFF state.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
 
-        # Now the tile device can turn its TPM on,
-        # but first let's subscribe to change events on command status,
-        # so that we can track the status of the command
-        tile_subs.append(
-            tile_device.subscribe_event(
-                "longRunningCommandStatus",
-                tango.EventType.CHANGE_EVENT,
-                change_event_callbacks["tile_command_status"],
-            )
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(())
-
+        # Now the tile device can turn its TPM on.
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Off", lookahead=2, consume_nonmatches=True
         )
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "QUEUED")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "IN_PROGRESS")
-        )
+        assert_against_lrc_queued(tile_device, on_command_id)
+        assert_against_lrc_executing(tile_device, on_command_id, "IN_PROGRESS")
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed", lookahead=2, consume_nonmatches=True
         )
@@ -438,9 +423,7 @@ class TestMccsTileTpmDriver:
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "COMPLETED")
-        )
+        assert_against_lrc_finished(tile_device, on_command_id, "COMPLETED")
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(subrack_device)
 

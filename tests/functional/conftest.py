@@ -660,9 +660,9 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
         return
 
     if no_of_iters == 1:
-        msg = f'Consumers not stopped: {status["Running Consumers"]}.\n'
-        msg += f"CommandResult: {daq.longRunningCommandResult}\n"
-        msg += f"CommandQueue: {daq.longRunningCommandsInQueue}\n"
+        msg = f'Consumers not stopped: {status["Running Consumers"]}\n'
+        msg += f"CommandResult: {daq.lrcFinished}\n"
+        msg += f"CommandQueue: {daq.lrcQueue}\n"
         pytest.fail(msg)
 
     sleep(2)
@@ -683,19 +683,17 @@ def poll_until_command_result(
     :param no_of_iters: number of times to iterate
     """
     lrc_result = None
-    lrc_status = device.longRunningCommandStatus
-    try:
-        # Extract the result of the cmd_id.
-        lrc_result = lrc_status[lrc_status.index(cmd_id) + 1]
-    except ValueError as e:
-        lrc_result = e
-        # pass
+    for entry_json in device.lrcfinished:
+        entry = json.loads(entry_json)
+        if entry["uid"] == cmd_id:
+            lrc_result = entry["status"]
+            break
     if lrc_result == expected_result:
         return
     if no_of_iters == 1:
         pytest.fail(
             f"Command {cmd_id} did not reach desired state: "
-            f"{device.longRunningCommandStatus}\n"
+            f"{[json.loads(e) for e in device.lrcfinished]}\n"
             f"Result: {lrc_result}"
         )
     if lrc_result != expected_result:

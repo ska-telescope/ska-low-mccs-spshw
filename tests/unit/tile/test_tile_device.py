@@ -395,12 +395,6 @@ class TestMccsTile:
             "healthInfo",
             "loggingFilter",
             "adminMode",
-            "longRunningCommandResult",
-            "longRunningCommandStatus",
-            "longRunningCommandsInQueue",
-            "longRunningCommandIDsInQueue",
-            "longRunningCommandInProgress",
-            "longRunningCommandProgress",
             "lrcProtocolVersions",
             "lrcFinished",
             "_lrcEvent",
@@ -2126,12 +2120,6 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-        tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
@@ -2152,8 +2140,6 @@ class TestMccsTileCommands:
             "Communication with component is not established"
             in completed_task["result"][-1]
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
@@ -2196,12 +2182,6 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-        tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
@@ -2222,8 +2202,6 @@ class TestMccsTileCommands:
             "Communication with component is not established"
             in completed_task["result"][-1]
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
@@ -2614,13 +2592,6 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        # create callbacks to monitor changes in states
-        on_tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
-
         # Set up the antenna buffer
         arg = {
             "mode": "NSDN",

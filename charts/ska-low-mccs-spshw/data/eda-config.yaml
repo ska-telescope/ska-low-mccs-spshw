@@ -269,9 +269,6 @@ configuration:
       lrcFinished:
         code_push_event: true
         archive_period: 0
-      longRunningCommandResult:
-        code_push_event: true
-        archive_period: 0
       commandedState:
         code_push_event: true
         archive_period: 0
@@ -720,21 +717,6 @@ configuration:
         code_push_event: true
         archive_period: 0
       lrcExecuting:
-        code_push_event: true
-        archive_period: 0
-      longRunningCommandStatus:
-        code_push_event: true
-        archive_period: 0
-      longRunningCommandsInQueue:
-        code_push_event: true
-        archive_period: 0
-      longRunningCommandIDsInQueue:
-        code_push_event: true
-        archive_period: 0
-      longRunningCommandInProgress:
-        code_push_event: true
-        archive_period: 0
-      longRunningCommandProgress:
         code_push_event: true
         archive_period: 0
       State:

@@ -27,6 +27,12 @@ from ska_low_mccs_spshw.subrack import (
     SubrackSimulator,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.test_tools import (
+    assert_against_lrc_executing,
+    assert_against_lrc_finished,
+    assert_against_lrc_queued,
+    get_lrc_finished,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -341,46 +347,18 @@ def test_off_on(
     )
 
     # It's on, so let's turn it off.
-    subrack_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
-    )
-
-    change_event_callbacks["command_status"].assert_change_event(())
-
-    subrack_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
     ([result_code], [off_command_id]) = subrack_device.off()
     assert result_code == ResultCode.QUEUED
 
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "QUEUED")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "IN_PROGRESS")
-    )
+    assert_against_lrc_queued(subrack_device, off_command_id)
+    assert_against_lrc_executing(subrack_device, off_command_id, "IN_PROGRESS")
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
     assert subrack_device.state() == DevState.OFF
 
-    change_event_callbacks["command_result"].assert_change_event(
-        (
-            off_command_id,
-            json.dumps([int(ResultCode.OK), "Command completed"]),
-        ),
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED")
-    )
+    assert_against_lrc_finished(subrack_device, off_command_id, "COMPLETED")
+    completed_task = get_lrc_finished(subrack_device, off_command_id)
+    assert completed_task["result"] == [int(ResultCode.OK), "Command completed"]
 
     change_event_callbacks["boardCurrent"].assert_change_event([])
     with pytest.raises(tango.DevFailed):
@@ -542,21 +520,6 @@ def test_monitoring_and_control(
     )
 
     # Now let's try a command
-    subrack_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
-    )
-
-    change_event_callbacks["command_status"].assert_change_event(())
-
-    subrack_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
     tpm_present = list(subrack_device.tpmPresent)
     tpm_to_power = tpm_present.index(True) + 1
     power_state = getattr(subrack_device, f"tpm{tpm_to_power}PowerState")
@@ -566,29 +529,22 @@ def test_monitoring_and_control(
         ([result_code], [tpm_on_command_id]) = subrack_device.PowerOnTpm(tpm_to_power)
         assert result_code == ResultCode.QUEUED
 
-        change_event_callbacks["command_status"].assert_change_event(
-            (tpm_on_command_id, "STAGING")
-        )
-        change_event_callbacks["command_status"].assert_change_event(
-            (tpm_on_command_id, "QUEUED")
-        )
-        change_event_callbacks["command_status"].assert_change_event(
-            (tpm_on_command_id, "IN_PROGRESS")
-        )
+        assert_against_lrc_queued(subrack_device, tpm_on_command_id)
+        try:
+            assert_against_lrc_executing(
+                subrack_device, tpm_on_command_id, "IN_PROGRESS"
+            )
+        except TimeoutError:
+            # This command can complete before it is observable in lrcExecuting.
+            pass
 
         change_event_callbacks[f"tpm{tpm_to_power}PowerState"].assert_change_event(
             PowerState.ON, lookahead=5, consume_nonmatches=True
         )
 
-        change_event_callbacks["command_result"].assert_change_event(
-            (
-                tpm_on_command_id,
-                json.dumps([int(ResultCode.OK), "Command completed."]),
-            ),
-        )
-        change_event_callbacks["command_status"].assert_change_event(
-            (tpm_on_command_id, "COMPLETED")
-        )
+        assert_against_lrc_finished(subrack_device, tpm_on_command_id, "COMPLETED")
+        completed_task = get_lrc_finished(subrack_device, tpm_on_command_id)
+        assert completed_task["result"] == [int(ResultCode.OK), "Command completed."]
 
     _ = subrack_device.PowerDownTpms()
     # There may be many TPMs that power down,

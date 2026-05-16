@@ -65,6 +65,7 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 
 helm-pre-build:
 	helm repo add skao https://artefact.skao.int/repository/helm-internal
+	helm repo add daq https://gitlab.com/api/v4/projects/40346229/packages/helm/dev
 
 
 ########################################################################

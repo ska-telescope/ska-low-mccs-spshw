@@ -22,7 +22,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
-from tests.test_tools import tango_event_subscription
+from tests.test_tools import assert_against_lrc_finished, tango_event_subscription
 
 scenarios("./features/health.feature")
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -373,15 +373,7 @@ def wait_for_command_completion_fixture() -> Callable:
         device: tango.DeviceProxy, command: str, command_info: dict[str, Any]
     ) -> None:
         command_id = command_info[device.dev_name() + command]
-        count = 0
-        while device.CheckLongRunningCommandStatus(command_id) != "COMPLETED":
-            time.sleep(1)
-            count += 1
-            if count > 90:
-                pytest.fail(
-                    f"{device.dev_name()}.{command} did not complete: "
-                    f"{device.CheckLongRunningCommandStatus(command_id)}"
-                )
+        assert_against_lrc_finished(device, command_id, "COMPLETED", timeout=90.0)
 
     return _wait_for_command_completion
 

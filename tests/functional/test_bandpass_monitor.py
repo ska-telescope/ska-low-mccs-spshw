@@ -35,7 +35,6 @@ from tests.harness import (
 from tests.test_tools import (
     AttributeWaiter,
     assert_against_lrc_finished,
-    get_lrc_finished,
     retry_communication,
 )
 
@@ -453,8 +452,9 @@ def daq_bandpass_monitor_running(
         assert start_bandpass_result[1][0] == "Bandpass monitor already started."
     else:
         cmd_id = start_bandpass_result[1][0]
-        assert_against_lrc_finished(daq_device, cmd_id, "COMPLETED", timeout=120.0)
-        completed_task = get_lrc_finished(daq_device, cmd_id)
+        completed_task = assert_against_lrc_finished(
+            daq_device, cmd_id, "COMPLETED", timeout=120.0
+        )
         assert completed_task["result"] == [ResultCode.OK, "Bandpass monitor active"]
 
     verify_bandpass_state(daq_device, True)

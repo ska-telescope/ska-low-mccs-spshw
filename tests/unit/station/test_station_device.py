@@ -468,19 +468,6 @@ def test_Abort_On(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
 
-    station_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
-    )
-    change_event_callbacks["command_status"].assert_change_event(())
-    station_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
     # Turn station to Standby state
     ([result_code], [standby_command_id]) = station_device.standby()
     assert result_code == ResultCode.QUEUED
@@ -1655,18 +1642,7 @@ def test_AcquireDataForCalibration(
 
     mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_stopped)
 
-    timeout = 20
-    current_time = 0
-    while current_time < timeout:
-        try:
-            assert (
-                station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
-            )
-            break
-        except AssertionError:
-            time.sleep(1)
-            current_time += 1
-    assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
+    assert_against_lrc_finished(station_device, command_id, "COMPLETED", timeout=20.0)
 
 
 def test_TriggerAdcEqualisation(

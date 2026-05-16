@@ -31,7 +31,6 @@ from tests.test_tools import (
     assert_against_lrc_executing,
     assert_against_lrc_finished,
     assert_against_lrc_queued,
-    get_lrc_finished,
 )
 
 # TODO: Weird hang-at-garbage-collection bug
@@ -356,8 +355,9 @@ def test_off_on(
 
     assert subrack_device.state() == DevState.OFF
 
-    assert_against_lrc_finished(subrack_device, off_command_id, "COMPLETED")
-    completed_task = get_lrc_finished(subrack_device, off_command_id)
+    completed_task = assert_against_lrc_finished(
+        subrack_device, off_command_id, "COMPLETED"
+    )
     assert completed_task["result"] == [int(ResultCode.OK), "Command completed"]
 
     change_event_callbacks["boardCurrent"].assert_change_event([])
@@ -530,20 +530,14 @@ def test_monitoring_and_control(
         assert result_code == ResultCode.QUEUED
 
         assert_against_lrc_queued(subrack_device, tpm_on_command_id)
-        try:
-            assert_against_lrc_executing(
-                subrack_device, tpm_on_command_id, "IN_PROGRESS"
-            )
-        except TimeoutError:
-            # This command can complete before it is observable in lrcExecuting.
-            pass
 
         change_event_callbacks[f"tpm{tpm_to_power}PowerState"].assert_change_event(
             PowerState.ON, lookahead=5, consume_nonmatches=True
         )
 
-        assert_against_lrc_finished(subrack_device, tpm_on_command_id, "COMPLETED")
-        completed_task = get_lrc_finished(subrack_device, tpm_on_command_id)
+        completed_task = assert_against_lrc_finished(
+            subrack_device, tpm_on_command_id, "COMPLETED"
+        )
         assert completed_task["result"] == [int(ResultCode.OK), "Command completed."]
 
     _ = subrack_device.PowerDownTpms()

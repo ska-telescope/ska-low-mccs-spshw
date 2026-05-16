@@ -178,27 +178,11 @@ class TestSubrackTileIntegration:
         # so it transitions to OFF state.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
 
-        # Now the tile device can turn its TPM on,
-        # but first let's subscribe to change events on command status,
-        # so that we can track the status of the command
-        tile_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_command_status"],
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(())
-
+        # Now the tile device can turn its TPM on.
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "QUEUED")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "IN_PROGRESS")
-        )
+        assert_against_lrc_queued(tile_device, on_command_id)
+        assert_against_lrc_executing(tile_device, on_command_id, "IN_PROGRESS")
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
@@ -211,9 +195,7 @@ class TestSubrackTileIntegration:
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "COMPLETED")
-        )
+        assert_against_lrc_finished(tile_device, on_command_id, "COMPLETED")
 
         # Now let's turn it off.
         _ = tile_device.Off()

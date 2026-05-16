@@ -195,8 +195,6 @@ class RequestIterator:
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
         "PREADU_LEVELS",
-        "RFI_COUNT",
-        "TILE_BEAMFORMER_FRAME",
         "TEMPERATURES",
         "VOLTAGES",
         "CURRENTS",

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
@@ -26,6 +27,7 @@ from .http_stack import HttpPollRequest, HttpPollResponse
 from .subrack_data import FanMode, SubrackData
 
 PDU_DATA_NO_PORTS = 24
+_POLL_THREAD_STARTUP_DELAY: Final[float] = 0.2
 
 
 class HttpError(Exception):
@@ -143,6 +145,9 @@ class SubrackDriver(
             f"Poll rate is {self._poll_rate}. "
             f"Attributes will be updated roughly each {self._max_tick} polls."
         )
+        # See WOM-1114. Temporary delay to avoid missed Condition.notify()
+        # race in upstream poller implementation (ska-tango-base 1.4.2).
+        time.sleep(_POLL_THREAD_STARTUP_DELAY)
 
     def _update_communication_state(
         self: SubrackDriver,
@@ -738,12 +743,6 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
-        self.logger.debug(
-            f"Polling subrack: {len(poll_request.commands)} command(s), "
-            f"{len(poll_request.getattributes)} read(s), "
-            f"{len(poll_request.setattributes)} write(s), "
-            f"tick={self._tick}/{self._max_tick}."
-        )
         poll_response = HttpPollResponse()
 
         for command, args in poll_request.commands:

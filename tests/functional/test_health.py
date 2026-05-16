@@ -377,7 +377,7 @@ def wait_for_command_completion_fixture() -> Callable:
         while device.CheckLongRunningCommandStatus(command_id) != "COMPLETED":
             time.sleep(1)
             count += 1
-            if count > 90:
+            if count > 40:
                 pytest.fail(
                     f"{device.dev_name()}.{command} did not complete: "
                     f"{device.CheckLongRunningCommandStatus(command_id)}"

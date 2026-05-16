@@ -38,7 +38,6 @@ from ska_low_mccs_spshw.tile import (
     TileSimulator,
     TpmStatus,
 )
-from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -52,34 +51,6 @@ class TestTileComponentManager:
     we just perform tests of functionality in the tile component manager
     itself.
     """
-
-    @pytest.mark.parametrize(
-        ("bios", "expected_firmware_name"),
-        [
-            (
-                "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
-                "tpm_firmware_10.0.0.bit",
-            ),
-            (
-                ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
-                "tpm_firmware_11.0.0.bit",
-            ),
-            ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
-            ("TileSimulatorBios", "tpm_firmware_10.0.0.bit"),
-        ],
-    )
-    def test_select_firmware_name(
-        self: TestTileComponentManager,
-        bios: str,
-        expected_firmware_name: str,
-    ) -> None:
-        """
-        Test that the firmware file is selected from the TPM BIOS string.
-
-        :param bios: the BIOS string reported by tile_info.
-        :param expected_firmware_name: the firmware file expected for that BIOS.
-        """
-        assert _select_firmware_name(bios) == expected_firmware_name
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize("power_state", PowerState)
@@ -887,14 +858,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.download_firmware(mock_bitfile, callbacks["task_lrc"])
 
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         assert tile_component_manager.tile.is_programmed()
 
@@ -1000,27 +967,19 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert not tile_component_manager.is_beamformer_running
         tile_component_manager.start_beamformer(callbacks["task_lrc"])
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
 
         assert tile_component_manager.is_beamformer_running
         tile_component_manager.stop_beamformer(callbacks["task_lrc"])
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         assert not tile_component_manager.is_beamformer_running
 
@@ -1032,14 +991,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block1,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         assert tile_component_manager.beamformer_running_for_channels(block1)
         assert not tile_component_manager.beamformer_running_for_channels(block2)
@@ -1048,14 +1003,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block2,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         assert tile_component_manager.beamformer_running_for_channels(block1)
         assert tile_component_manager.beamformer_running_for_channels(block2)
@@ -1065,14 +1016,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block1,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         assert not tile_component_manager.beamformer_running_for_channels(block1)
         assert tile_component_manager.beamformer_running_for_channels(block2)
@@ -1082,14 +1029,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             channel_groups=block2,
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         assert not tile_component_manager.beamformer_running_for_channels(block1)
         assert not tile_component_manager.beamformer_running_for_channels(block2)
@@ -1296,11 +1239,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         time.sleep(future_time)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS, lookahead=5)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=5,
         )
 
         # check the fpga timestamp is moving
@@ -1798,7 +1740,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
             assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
-        assert tile_component_manager.firmware_name == "tpm_firmware_10.0.0.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
         time.sleep(1.5)
@@ -1835,38 +1777,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check TpmStatus is UNPROGRAMMED.
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
-
-    def test_initialise_selects_new_firmware_for_new_bios(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test that initialise selects the new firmware for BIOS >= 1.0.0.
-
-        :param tile_component_manager: The tile_component_manager under test.
-        :param tile_simulator: A mock object representing a simulated tile.
-        :param callbacks: dictionary of mock callbacks.
-        """
-        tile_simulator.connect()
-        assert tile_simulator.tpm
-        tile_simulator.tpm._bios_version = (
-            "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
-        )
-        tile_simulator.tpm._is_programmed = False
-
-        tile_component_manager.initialise(
-            force_reprogramming=True, task_callback=callbacks["task"]
-        )
-
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.COMPLETED,
-            result=(ResultCode.OK, "Command executed to completion."),
-        )
-        assert tile_component_manager.firmware_name == "tpm_firmware_11.0.0.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,
@@ -2217,14 +2127,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["task_lrc"], start_time=start_time, duration=4
         )
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
 
         assert tile_component_manager.is_beamformer_running
@@ -2257,14 +2163,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         tile_component_manager.stop_beamformer(callbacks["task_lrc"])
         callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task_lrc"].assert_call(
-            status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
-        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
-            lookahead=2,
-            consume_nonmatches=True,
         )
         tile_simulator.stop_beamformer.assert_called()
 
@@ -2796,51 +2698,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check that a raised exception is caught.
         tile_simulator.set_lmc_download.side_effect = Exception("Mocked exception")
         tile_component_manager.set_lmc_download(**mocked_input_params)
-
-    def test_set_csp_download(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Unit test for the set_csp_download function.
-
-        :param tile_component_manager: The TileComponentManager instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        # Arrange
-        tile_simulator.connect()
-        tile_simulator.set_csp_download = (  # type: ignore[assignment]
-            unittest.mock.Mock()
-        )
-        mocked_input_params: dict[str, Any] = {
-            "src_port": 4661,
-            "dst_ip_1": "10.0.10.1",
-            "dst_ip_2": "10.0.10.2",
-            "dst_port": 4660,
-            "is_last": False,
-            "netmask": "255.255.255.0",
-            "gateway": "10.0.10.254",
-        }
-
-        # Act
-        tile_component_manager.set_csp_download(**mocked_input_params)
-
-        # Assert
-        tile_simulator.set_csp_download.assert_called_once_with(
-            mocked_input_params["src_port"],
-            mocked_input_params["dst_ip_1"],
-            mocked_input_params["dst_ip_2"],
-            mocked_input_params["dst_port"],
-            mocked_input_params["is_last"],
-            mocked_input_params["netmask"],
-            mocked_input_params["gateway"],
-        )
-
-        # Check that a raised exception is caught and returns FAILED.
-        tile_simulator.set_csp_download.side_effect = Exception("Mocked exception")
-        result = tile_component_manager.set_csp_download(**mocked_input_params)
-        assert result[0] == [ResultCode.FAILED]
 
     def test_arp_table(
         self: TestStaticSimulator,

@@ -45,24 +45,16 @@ python-lint: mypy
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 10.0.0
-FIRMWARE_VERSION_NEW = 11.0.0
-DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_10.0.0.bit
-DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_11.0.0.bit
-
-define download_firmware_from_car
-	mkdir -p temp_firmware
-	curl -sSL --retry 3 --connect-timeout 15 \
-		--output temp_firmware/fw.tar.gz \
-		https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$1.tar.gz
-	tar -xzf temp_firmware/fw.tar.gz -C temp_firmware
-	cp temp_firmware/tpm_firmware.bit $2
-	rm -rf temp_firmware
-endef
+FIRMWARE_VERSION = 9.0.0
+DESIRED_FIRMWARE_FILE_NAME = tpm_firmware.bit
 
 install-firmware:
-	$(call download_firmware_from_car,$(FIRMWARE_VERSION),$(DESIRED_FIRMWARE_FILE_NAME))
-	$(call download_firmware_from_car,$(FIRMWARE_VERSION_NEW),$(DESIRED_FIRMWARE_FILE_NAME_NEW))
+	mkdir temp_firmware
+	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$(FIRMWARE_VERSION).tar.gz
+	gzip -d temp_firmware/firmware_files.tar.gz
+	tar -xvf temp_firmware/firmware_files.tar -C temp_firmware
+	cp temp_firmware/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
+	rm -rf temp_firmware
 
 ########################################################################
 # HELM
@@ -73,7 +65,6 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 
 helm-pre-build:
 	helm repo add skao https://artefact.skao.int/repository/helm-internal
-	helm repo add daq https://gitlab.com/api/v4/projects/40346229/packages/helm/dev
 
 
 ########################################################################

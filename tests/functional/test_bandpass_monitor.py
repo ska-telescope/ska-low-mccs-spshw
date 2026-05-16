@@ -26,12 +26,7 @@ from tests.functional.conftest import (
     poll_until_state_change,
     verify_bandpass_state,
 )
-from tests.harness import (
-    get_lmc_daq_name,
-    get_sps_station_name,
-    get_subrack_name,
-    get_tile_name,
-)
+from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
 from tests.test_tools import AttributeWaiter, retry_communication
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -44,12 +39,14 @@ scenarios("./features/bandpass_monitor.feature")
     target_fixture="station_name",
 )
 def station_name_fixture(
+    station: tango.DeviceProxy | None,
     station_label: str | None,
     true_context: bool,
 ) -> str:
     """
     Return an available station to test against.
 
+    :param station: the station we are testing against.
     :param station_label: a fixture returning the station label passed
         in from the environment.
     :param true_context: whether to test against an existing Tango deployment
@@ -58,42 +55,25 @@ def station_name_fixture(
     """
     if not true_context:
         pytest.skip("This needs to be run in a true-context")
-    station_name = station_label or "real-daq-1"
     try:
-        station = tango.DeviceProxy(get_sps_station_name(station_name))
+        if station is None:
+            pytest.skip("No station to test against.")
         station.ping()
     except tango.DevFailed as e:
         pytest.fail(f"Target station is not reachable {e}")
-    return station_name
-
-
-@pytest.fixture(name="station")
-def station_fixture(station_name: str, true_context: bool) -> tango.DeviceProxy | None:
-    """
-    Return a station proxy aligned with this module's station_name.
-
-    :param station_name: the station under test.
-    :param true_context: whether to test against an existing Tango deployment.
-
-    :return: a proxy to the station under test.
-    """
-    if not true_context:
-        return None
-    return tango.DeviceProxy(get_sps_station_name(station_name))
+    return station_label or "real-daq-1"
 
 
 @pytest.fixture(name="daq_config")
-def daq_config_fixture(station_tiles: list[tango.DeviceProxy]) -> dict[str, Any]:
+def daq_config_fixture() -> dict[str, Any]:
     """
     Get the config to configure the daq with.
-
-    :param station_tiles: the tiles available in the station under test.
 
     :return: the config to configure the DAQ with.
     """
     return {
         "directory": "/product/test_eb_id/ska-low-mccs/test_scan_id/",
-        "nof_tiles": max(len(station_tiles), 1),
+        "nof_tiles": 1,
         "append_integrated": False,
     }
 
@@ -262,7 +242,7 @@ def station_in_synchronised_state(
     :param station_tiles: A list of 'tango.DeviceProxy' to all Station's Tile devices.
     :param wait_for_lrcs_to_finish: Callable that waits for LRCs on specified devices.
     """
-    if station.adminMode not in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
+    if station.adminMode != AdminMode.ONLINE:
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
         AttributeWaiter(timeout=60).wait_for_value(
@@ -284,14 +264,11 @@ def station_in_synchronised_state(
     except AssertionError:
         # Hardware can be in the ALARM state, we should still continue.
         assert station.state() in [tango.DevState.ON, tango.DevState.ALARM]
-    try:
-        for tile in station_tiles:
-            AttributeWaiter(timeout=300).wait_for_value(
-                tile, "tileProgrammingState", "Synchronised", lookahead=10
-            )
-    except AssertionError:
-        # Check if we missed an event and tiles are sync'd anyway.
-        pass
+
+    for tile in station_tiles:
+        AttributeWaiter(timeout=300).wait_for_value(
+            tile, "tileProgrammingState", "Synchronised", lookahead=5
+        )
 
     try:
         assert all(status == "Synchronised" for status in station.tileProgrammingState)
@@ -541,7 +518,6 @@ def station_send_data(
 @then("the DAQ reports that it has received integrated channel data")
 def daq_received_data(
     change_event_callbacks: MockTangoEventCallbackGroup,
-    daq_device: tango.DeviceProxy,
     tile_device: tango.DeviceProxy,
     station_name: str,
     station: tango.DeviceProxy,
@@ -549,23 +525,18 @@ def daq_received_data(
     """
     Confirm Daq has received data.
 
-    :param daq_device: A 'tango.DeviceProxy' to the daq device.
     :param station: A 'tango.DeviceProxy' to the Station device.
     :param station_name: the name of the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     :param tile_device: A 'tango.DeviceProxy' to the Tile device.
     """
-    daq_status = json.loads(daq_device.DaqStatus())
-    if daq_status["Bandpass Monitor"]:
-        change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
-    else:
-        try:
-            change_event_callbacks["data_received_callback"].assert_change_event(
-                ("integrated_channel", Anything)
-            )
-        except AssertionError:
-            pytest.fail("No integrated_channel data was received")
+    try:
+        change_event_callbacks["data_received_callback"].assert_change_event(
+            ("integrated_channel", Anything)
+        )
+    except AssertionError:
+        pytest.fail("No integrated_channel data was received")
 
 
 @then("the DAQ saves bandpass data to its relevant attributes")

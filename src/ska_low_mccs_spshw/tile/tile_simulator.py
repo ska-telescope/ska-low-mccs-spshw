@@ -449,9 +449,6 @@ class MockTpmFirmwareInformation:
 class MockTpm:
     """Simulator for a ska_low_sps_tpm_api.boards::Tpm class."""
 
-    BIOS_VERSION_OLD = "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)"
-    BIOS_VERSION_NEW = "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
-
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
@@ -515,7 +512,6 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
-        self._bios_version = self.BIOS_VERSION_OLD
         self._station_beam_flagging = False
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
         self.tpm_monitor = TpmMonitor(logger)
@@ -618,7 +614,7 @@ class MockTpm:
 
         :return: A string bios version.
         """
-        return self._bios_version
+        return "TileSimulatorBios"
 
     def get_40g_core_configuration(
         self: MockTpm,
@@ -1019,7 +1015,7 @@ class TileSimulator:
         "fpga2_alarm_threshold": 90.0,
     }
 
-    FIRMWARE_NAME = "tpm_firmware_10.0.0.bit"
+    FIRMWARE_NAME = "tpm_firmware.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -1082,7 +1078,6 @@ class TileSimulator:
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
-        self._adcs_enabled: bool = True
         self._tpm_temperature_thresholds = dict(self.TPM_TEMPERATURE_THRESHOLDS)
         self._is_cpld_connectable = True
         self._is_fpga1_connectable = True
@@ -1107,7 +1102,7 @@ class TileSimulator:
             "current_channel": 0,
         }
         self._rfi_count = np.zeros(
-            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=np.int32
+            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
         )
         self._antenna_buffer_tile_attribute: dict[str, Any] = {
             "DDR_start_address": 0,
@@ -1121,8 +1116,6 @@ class TileSimulator:
             i: False for i in range(TileData.ANTENNA_COUNT)
         }
         self._broadband_rfi_factor: float = 1.0
-        self._test_generator_delays: list[float] = list(self.STATIC_DELAYS)
-        self._csp_download_config: dict[str, Any] = {}
         # Pols*2 for cross pol terms. (Should it technically be **2?)
         self._staged_calibration_coefficients: list[list[list[complex]]] = np.zeros(
             (384, TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA * 2), dtype=complex
@@ -1318,7 +1311,6 @@ class TileSimulator:
         use_internal_pps: bool = False,
         pps_delay: int = 0,
         time_delays: float | int | list = 0,
-        pps_period: int = 1,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
         qsfp_detection: str = "auto",
@@ -1356,7 +1348,6 @@ class TileSimulator:
         :param use_internal_pps: use internal PPS generator synchronised across FPGAs
         :param pps_delay: PPS delay correction in 625ps units
         :param time_delays: time domain delays for 32 inputs
-        :param pps_period: PPS period in seconds
         :param is_first_tile: True if this tile is the first tile in the
             beamformer chain
         :param is_last_tile: True if this tile is the last tile in the beamformer chain
@@ -2193,18 +2184,6 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def enable_all_adcs(self: TileSimulator) -> None:
-        """Enable all simulated ADC channels."""
-        self._adcs_enabled = True
-
-    @check_mocked_overheating
-    @connected
-    def disable_all_adcs(self: TileSimulator) -> None:
-        """Disable all simulated ADC channels."""
-        self._adcs_enabled = False
-
-    @check_mocked_overheating
-    @connected
     def current_tile_beamformer_frame(self: TileSimulator) -> int:
         """:return: beamformer frame."""
         return self.get_fpga_timestamp()
@@ -2222,42 +2201,6 @@ class TileSimulator:
         if self.is_csp_write_successful:
             self.csp_rounding = rounding
         return self.is_csp_write_successful
-
-    @check_mocked_overheating
-    @connected
-    def set_csp_download(
-        self: TileSimulator,
-        src_port: int | None = None,
-        dst_ip_1: str | None = None,
-        dst_ip_2: str | None = None,
-        dst_port: int | None = None,
-        is_last: bool = False,
-        netmask: str | None = None,
-        gateway: str | None = None,
-    ) -> None:
-        """
-        Set CSP Destination.
-
-        Determines where station beams are sent on the Science Data Network.
-
-        :param src_port: Source port
-        :param dst_ip_1: Destination IP FPGA1
-        :param dst_ip_2: Destination IP FPGA2
-        :param dst_port: Destination port
-        :param is_last: True for last tile in beamforming chain
-        :param netmask: Netmask
-        :param gateway: Gateway IP
-        """
-        self._csp_download_config = {
-            "src_port": src_port or 4661,
-            "dst_ip_1": dst_ip_1,
-            "dst_ip_2": dst_ip_2,
-            "dst_port": dst_port or 4660,
-            "is_last": is_last,
-            "netmask": netmask,
-            "gateway": gateway,
-        }
-        self.logger.debug(f"Set CSP download config: {self._csp_download_config}")
 
     @check_mocked_overheating
     @connected
@@ -2852,26 +2795,6 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def test_generator_set_delay(self: TileSimulator, delays: list[float]) -> None:
-        """
-        Set delay values for test generator channels.
-
-        :param delays: one delay value per ADC channel (32 entries).
-
-        :raises ValueError: if delays does not contain exactly 32 entries.
-        """
-        if len(delays) != 32:
-            raise ValueError("test_generator_set_delay expects exactly 32 delays")
-
-        self._test_generator_delays = list(delays)
-        for i in range(16):
-            self[f"fpga1.test_generator.delay_{i}"] = int(delays[i] / 1.25 + 0.5) + 128
-            self[f"fpga2.test_generator.delay_{i}"] = (
-                int(delays[i + 16] / 1.25 + 0.5) + 128
-            )
-
-    @check_mocked_overheating
-    @connected
     def get_fpga_timestamp(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
         """
         Get timestamp from FPGA.
@@ -2988,10 +2911,6 @@ class TileSimulator:
         self._timed_thread_stop.set()
         self._start_polling_event.set()
         self._polling_thread.join()
-
-    def disconnect(self) -> None:
-        """Disconnect the simulator by executing cleanup logic."""
-        self.cleanup()
 
     @check_mocked_overheating
     @connected
@@ -3153,16 +3072,6 @@ class TileSimulator:
             "FPGA0": self._is_fpga1_connectable,
             "FPGA1": self._is_fpga2_connectable,
         }
-
-    @check_mocked_overheating
-    @connected
-    def set_phase_terminal_count(self: TileSimulator, value: int) -> None:
-        """
-        Set PPS phase terminal count.
-
-        :param value: phase terminal count to apply.
-        """
-        self._phase_terminal_count = value
 
     @check_mocked_overheating
     @connected

@@ -35,7 +35,6 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import EventSerialiser
-from ska_low_mccs_common.backoff import exp_backoff
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     CompositeCommandResultEvaluator,
@@ -59,14 +58,6 @@ from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
-
-
-_LMC_INTEGRATED_MODE_RETRY_DELAY = 0.1
-_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
-
-
-class _BandpassDaqReadRetryError(RuntimeError):
-    """Raised to trigger retry when reading bandpass DAQ integrated mode."""
 
 
 class _TileProxy(DeviceComponentManager):
@@ -594,7 +585,6 @@ class SpsStationComponentManager(
             "netmask_40g": self._sdn_netmask,
             "gateway_40g": self._sdn_gateway,
         }
-        self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
         self._lmc_integrated_ip = "0.0.0.0"
         self._lmc_integrated_port = self._destination_port
@@ -696,89 +686,6 @@ class SpsStationComponentManager(
         # Superclass cleanup currently not implemented.
         # Expected in future versions.
         # super().cleanup()
-
-    def _read_lmc_integrated_mode_from_bandpass_daq(
-        self: SpsStationComponentManager,
-        log_context: str,
-    ) -> str | None:
-        """
-        Read integrated mode selection from the bandpass DAQ device.
-
-        :param log_context: short string describing the caller for logging.
-
-        :returns: "1G" or "40G" on successful attribute read, else None.
-        """
-        try:
-            return self._read_lmc_integrated_mode_from_bandpass_daq_with_retry(
-                log_context
-            )
-        except _BandpassDaqReadRetryError as exc:
-            if (
-                self._bandpass_daq_proxy is None
-                or self._bandpass_daq_proxy._proxy is None
-            ):
-                self.logger.warning(
-                    "Bandpass DAQ proxy not ready during "
-                    f"{log_context}; defaulting integrated mode to 1G."
-                )
-            else:
-                last_error = exc.__cause__ or exc
-                self.logger.warning(
-                    "Unable to read bandpassLoadBalancerEnabled during "
-                    f"{log_context}; defaulting integrated mode to 1G. "
-                    f"Last error: {last_error}"
-                )
-            return None
-
-    @exp_backoff(
-        _BandpassDaqReadRetryError,
-        max_tries=_LMC_INTEGRATED_MODE_RETRY_ATTEMPTS,
-        initial_delay=_LMC_INTEGRATED_MODE_RETRY_DELAY,
-        factor=1.0,
-    )
-    def _read_lmc_integrated_mode_from_bandpass_daq_with_retry(
-        self: SpsStationComponentManager,
-        log_context: str,
-    ) -> str | None:
-        """
-        Read integrated mode selection from the bandpass DAQ device with retry.
-
-        This is just so the calling func does not raise exceptions on retry exhaust.
-
-        :param log_context: short string describing the caller for logging.
-
-        :returns: "1G" or "40G" on successful attribute read, else None.
-
-        :raises _BandpassDaqReadRetryError: if the bandpass DAQ proxy is not ready or
-            the attribute read fails.
-        """
-        if self._bandpass_daq_proxy is None or self._bandpass_daq_proxy._proxy is None:
-            self.logger.info(
-                "Bandpass DAQ proxy not ready during " f"{log_context}. Retrying."
-            )
-            raise _BandpassDaqReadRetryError("Bandpass DAQ proxy not ready")
-        try:
-            use_1g = self._bandpass_daq_proxy._proxy.bandpassLoadBalancerEnabled
-            mode = "40G" if use_1g is False else "1G"
-            self.logger.info(
-                "Resolved LMC integrated mode from bandpass DAQ during "
-                f"{log_context}: {mode}"
-            )
-            return mode
-        except AttributeError:
-            self.logger.info(
-                "Bandpass DAQ does not expose bandpassLoadBalancerEnabled "
-                f"during {log_context}; defaulting integrated mode to 1G."
-            )
-            return None
-        except tango.DevFailed as exc:
-            self.logger.info(
-                "Bandpass DAQ not ready to read bandpassLoadBalancerEnabled "
-                f"during {log_context}. Retrying."
-            )
-            raise _BandpassDaqReadRetryError(
-                "Unable to read bandpassLoadBalancerEnabled"
-            ) from exc
 
     def _port_to_antenna_order(
         self: SpsStationComponentManager,
@@ -1098,7 +1005,7 @@ class SpsStationComponentManager(
                         self.logger.warning(
                             "Received HW readback of beamformer "
                             "table which doesn't match local cache. "
-                            "Overwriting local cache with HW table. "
+                            "Overwritting local cache with HW table. "
                             f"\nNew table: \n{filtered_new} "
                             f"\nOld table: \n{filtered_old}"
                         )
@@ -1447,16 +1354,7 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code, message = self._turn_on_subracks(
-                task_callback, task_abort_event
-            )
-        if result_code != ResultCode.OK:
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result=(result_code, f"Failed to turn on subracks: {message}"),
-                )
-                return
+            result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
         self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
         with self._power_state_lock:
@@ -1531,7 +1429,6 @@ class SpsStationComponentManager(
         """
         # pylint: disable=too-many-branches
         message: str = ""
-        failure_step: str = ""
         self.logger.debug("Starting on sequence.")
         self.logger.debug("State transitions suppressed during power command.")
         if task_callback:
@@ -1558,16 +1455,12 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code, failure_step = self._turn_on_subracks(
-                task_callback, task_abort_event
-            )
+            result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting tile source IPs before initialisation")
-            result_code, failure_step = self._set_tile_source_ips(
-                task_callback, task_abort_event
-            )
+            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting global reference time")
@@ -1578,56 +1471,30 @@ class SpsStationComponentManager(
             for power_state in self._tile_power_states.values()
         ):
             self.logger.debug("Starting on sequence on tiles")
-            result_code, failure_step = self._turn_on_tiles(
-                task_callback, task_abort_event
-            )
-
-        if result_code != ResultCode.OK and self._on_workaround_flag:
-            self.logger.info("Using On bruteforce workaround (timeout=3min).")
-            try:
-                ensure_tpms_on(
-                    list(
-                        proxy._proxy._device
-                        for proxy in self._tile_proxies.values()
-                        if proxy._proxy is not None
-                    )
-                )
-                result_code = ResultCode.OK
-                failure_step = ""
-                message = "On Command Completed"
-            except Exception as e:  # pylint:disable=broad-exception-caught
-                self.logger.error(f"On workaround timed out: {e}")
-                failure_step = f"turning on tiles (workaround timed out: {e})"
-                message = f"On Command failed: {failure_step}"
+            result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
-            result_code, failure_step = self._initialise_tile_parameters(
+            result_code = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
             # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
-            result_code, failure_step = self._initialise_station(
-                task_callback, task_abort_event
-            )
+            result_code = self._initialise_station(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Waiting for ARP table")
-            result_code, failure_step = self._wait_for_arp_table(
-                task_callback, task_abort_event
-            )
+            result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code, failure_step = self._route_data(
-                None, task_callback, task_abort_event
-            )
+            result_code = self._route_data(None, task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
-            result_code, failure_step = self._check_station_synchronisation(
+            result_code = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
@@ -1636,22 +1503,60 @@ class SpsStationComponentManager(
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
         elif result_code is ResultCode.ABORTED:
-            self.logger.error(f"Initialisation aborted at: {failure_step}")
+            self.logger.error("Initialisation aborted")
             task_status = TaskStatus.ABORTED
-            message = f"On Command aborted: {failure_step}"
+            message = "On Command aborted"
         else:
-            self.logger.error(f"Initialisation failed at: {failure_step}")
+            self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
-            message = f"On Command failed: {failure_step}"
+            message = "On Command failed"
 
+        if task_status == TaskStatus.FAILED and self._on_workaround_flag:
+            self.logger.info("Using On bruteforce workaround (timeout=3min).")
+            try:
+                ensure_tpms_on(list(self._tile_proxies.values()))
+                task_status = TaskStatus.COMPLETED
+                message = "On Command Completed"
+            except Exception as e:  # pylint:disable=broad-exception-caught
+                self.logger.error(f"On workaround timed out: {e}")
+                task_status = TaskStatus.FAILED
+                message = "On Command failed, workaround timed out."
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
-    @check_communicating
-    # pylint: disable=too-many-branches
     def initialise(
         self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
         start_bandpasses: Optional[bool] = None,
+        global_reference_time: Optional[str] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _initialise method.
+
+        This method returns immediately after it submitted
+        `self._initialise` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param start_bandpasses: Whether to configure TPMs to send
+            integrated data. Defaults to True.
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._initialise,
+            task_callback=task_callback,
+            args=[start_bandpasses, global_reference_time],
+        )
+
+    @check_communicating
+    # pylint: disable=too-many-branches
+    def _initialise(
+        self: SpsStationComponentManager,
+        start_bandasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1661,7 +1566,7 @@ class SpsStationComponentManager(
 
         The order to turn a station on is: subrack, then tiles
 
-        :param start_bandpasses: Whether to configure TPMs to send
+        :param start_bandasses: Whether to configure TPMs to send
             integrated data.
         :param global_reference_time: Common global reference time for all TPMs,
             needs to be some time in the last 2 weeks.
@@ -1670,7 +1575,6 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         message: str = ""
-        failure_step: str = ""
         self.logger.debug("Starting initialise sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1681,7 +1585,6 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Subracks not on.")
             result_code = ResultCode.FAILED
-            failure_step = "subracks not on"
 
         if not all(
             power_state == PowerState.ON
@@ -1689,72 +1592,49 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Tiles not on.")
             result_code = ResultCode.FAILED
-            failure_step = "tiles not on"
 
         if result_code == ResultCode.OK:
             self.logger.debug("Setting tile source IPs before initialisation")
-            result_code, failure_step = self._set_tile_source_ips(
-                task_callback, task_abort_event
-            )
+            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=5)
             self.logger.debug("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
-            # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
-            result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=5, progress_end=65
-            )
-            # Progress is reported incrementally inside _reinitialise_tiles
+            result_code = self._reinitialise_tiles(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
-            result_code, failure_step = self._initialise_tile_parameters(
+            result_code = self._initialise_tile_parameters(
                 task_callback,
                 task_abort_event,
             )
 
         if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=70)
             self.logger.debug("Initialising station")
-            result_code, failure_step = self._initialise_station(
-                task_callback, task_abort_event
-            )
+            result_code = self._initialise_station(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=75)
             self.logger.debug("Waiting for ARP table")
-            result_code, failure_step = self._wait_for_arp_table(
-                task_callback, task_abort_event
-            )
-            if task_callback:
-                task_callback(progress=85)
+            result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code, failure_step = self._route_data(
-                start_bandpasses,
+            result_code = self._route_data(
+                start_bandasses,
                 task_callback,
                 task_abort_event,
             )
 
         if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=90)
             self.logger.debug("Checking synchronisation")
-            result_code, failure_step = self._check_station_synchronisation(
+            result_code = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            if task_callback:
-                task_callback(progress=95)
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
@@ -1763,13 +1643,13 @@ class SpsStationComponentManager(
                 "Starting station beamformer with empty channel_groups "
                 "to start the beamformer daisy chain during station initialise"
             )
-            self.start_beamformer(
+            self._start_beamformer(
                 start_time=None, duration=-1, channel_groups=[], scan_id=0
             )
         else:
-            self.logger.error(f"Initialisation failed: {failure_step}")
+            self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
-            message = f"Initialisation Failed: {failure_step}"
+            message = "Initialisation Failed"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
@@ -1778,29 +1658,25 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Turn on subracks if not already on.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         with self._power_state_lock:
             if not all(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
             ):
-                results = {}
+                results = []
                 for proxy in self._subrack_proxies.values():
-                    results[proxy._name] = proxy.on()
-                failed = [
-                    name for name, rc in results.items() if rc == ResultCode.FAILED
-                ]
-                if failed:
-                    msg = f"subracks failed to power on: {failed}"
-                    self.logger.error(msg)
-                    return ResultCode.FAILED, msg
+                    result_code = proxy.on()
+                    results.append(result_code)
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
         # wait for subracks to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -1811,44 +1687,37 @@ class SpsStationComponentManager(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
             ):
-                return ResultCode.OK, ""
+                return ResultCode.OK
         self.logger.error("Timed out waiting for subracks to come up")
-        return ResultCode.FAILED, "timed out waiting for subracks to come up"
+        return ResultCode.FAILED
 
     @check_communicating
     def _turn_on_tiles(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Turn on tiles if not already on.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         with self._power_state_lock:
             if not all(
                 power_state == PowerState.ON
                 for power_state in self._tile_power_states.values()
             ):
-                results = {}
+                results = []
                 for proxy in self._tile_proxies.values():
-                    if proxy._proxy is None:
-                        msg = f"tile proxy {proxy} not formed"
-                        self.logger.error(msg)
-                        return ResultCode.FAILED, msg
+                    assert proxy._proxy is not None
                     self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
-                    results[proxy._proxy.name()] = proxy.on()
+                    result_code = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
-                failed = [
-                    name for name, rc in results.items() if rc == TaskStatus.FAILED
-                ]
-                if failed:
-                    msg = f"tiles failed to power on: {failed}"
-                    self.logger.error(msg)
-                    return ResultCode.FAILED, msg
+                    results.append(result_code)
+                if TaskStatus.FAILED in results:
+                    return ResultCode.FAILED
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -1860,49 +1729,37 @@ class SpsStationComponentManager(
             time.sleep(tick)
             if task_abort_event and task_abort_event.is_set():
                 self.logger.info("_turn_on_tiles task has been aborted")
-                return ResultCode.ABORTED, "task aborted"
+                return ResultCode.ABORTED
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
-                return ResultCode.OK, ""
+                return ResultCode.OK
 
-        states = self.tile_programming_state()
-        not_ready = {
-            trl: state
-            for trl, state in zip(self._tile_proxies.keys(), states)
-            if state not in desired_states
-        }
-        msg = (
-            f"timed out waiting for tiles to reach {desired_states}: "
-            f"tiles not in desired state: {not_ready}"
-        )
-        self.logger.error(msg)
-        return ResultCode.FAILED, msg
+        return ResultCode.FAILED
 
     @check_communicating
     def _set_tile_source_ips(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Set source IPs on tiles before initialising.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         for tile_id, tile_proxy in enumerate(list(self._tile_proxies.values())):
             tile = tile_proxy._proxy
             if tile is None:
-                msg = f"tile {tile_id} proxy not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
+                self.logger.error(f"Tile {tile_id} proxy not formed.")
+                return ResultCode.FAILED
             src_ip1 = str(self._sdn_first_address + 2 * tile_id)
             src_ip2 = str(self._sdn_first_address + 2 * tile_id + 1)
             tile.srcip40gfpga1 = src_ip1
             tile.srcip40gfpga2 = src_ip2
-        return ResultCode.OK, ""
+        return ResultCode.OK
 
     @check_communicating
     def _set_global_reference_time(
@@ -1934,13 +1791,13 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Wait for ARP tables on tiles before continuing.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         timeout = 30
         tick = 2
@@ -1948,29 +1805,25 @@ class SpsStationComponentManager(
             last_time = time.time() + timeout
             tile = tile_proxy._proxy
             if tile is None:
-                msg = f"{tile_trl} proxy not set up"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
+                self.logger.error(f"{tile_trl} proxy not set up.")
+                return ResultCode.FAILED
             while time.time() < last_time:
                 self.logger.debug(f"Waiting on {tile_trl} ARP table.")
                 if tile.GetArpTable() != '{"0": [], "1": []}':
                     break
                 time.sleep(tick)
             if tile.GetArpTable() == '{"0": [], "1": []}':
-                msg = f"failed to populate ARP table of {tile_trl}"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
+                self.logger.error(f"Failed to populate ARP table of {tile_trl}")
+                return ResultCode.FAILED
             self.logger.debug(f"Got ARP table for {tile_trl}")
-        return ResultCode.OK, ""
+        return ResultCode.OK
 
     @check_communicating
     def _reinitialise_tiles(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-        progress_start: int = 0,
-        progress_end: int = 100,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Initialise tiles.
 
@@ -1979,28 +1832,19 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :param progress_start: progress percentage at the start of this step,
-            used to interpolate progress callbacks during the polling wait.
-        :param progress_end: progress percentage reported once tiles are ready.
-        :return: a result code and message
+        :return: a result code
 
         """
-        progress_window = progress_end - progress_start
         with self._power_state_lock:
             results = []
             for proxy in self._tile_proxies.values():
-                if proxy._proxy is None:
-                    msg = f"tile proxy {proxy} not formed"
-                    self.logger.error(msg)
-                    return ResultCode.FAILED, msg
+                assert proxy._proxy is not None
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
                 result_code = proxy._proxy.initialise()
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:
-            msg = "one or more tiles failed to initialise"
-            self.logger.error(msg)
-            return ResultCode.FAILED, msg
+            return ResultCode.FAILED
 
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
@@ -2009,33 +1853,21 @@ class SpsStationComponentManager(
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
-        last_reported_count = 0
-        n_tiles = len(self._tile_proxies)
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            ready_count = sum(state in desired_states for state in states)
-            if ready_count == n_tiles:
-                if task_callback:
-                    task_callback(progress=progress_end)
-                return ResultCode.OK, ""
-            if task_callback and ready_count != last_reported_count:
-                # Fire a callback only when another tile reaches the desired state,
-                # interpolating the progress window across the number of tiles.
-                progress = int(progress_start + progress_window * ready_count / n_tiles)
-                task_callback(progress=progress)
-                last_reported_count = ready_count
-        msg = "timed out waiting for tiles to come up"
-        self.logger.error(msg)
-        return ResultCode.FAILED, msg
+            if all(state in desired_states for state in states):
+                return ResultCode.OK
+        self.logger.error("Timed out waiting for tiles to come up")
+        return ResultCode.FAILED
 
     @check_communicating
     def _initialise_tile_parameters(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Initialise tile parameters.
 
@@ -2044,16 +1876,13 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         tile_no = 0
         last_tile = len(self._tile_proxies.values()) - 1
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
-            if tile is None:
-                msg = f"tile proxy {proxy} not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
+            assert tile is not None
             i1 = (
                 tile_no * TileData.ADC_CHANNELS
             )  # indexes for parameters for individual signals
@@ -2082,14 +1911,14 @@ class SpsStationComponentManager(
             )
             tile_no = tile_no + 1
         self._set_beamformer_table()
-        return ResultCode.OK, ""
+        return ResultCode.OK
 
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Initialise complete station.
 
@@ -2097,7 +1926,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         tiles = list(self._tile_proxies.values())
         #
@@ -2110,10 +1939,7 @@ class SpsStationComponentManager(
         # base_ip3 = int(ip_tail)
         last_tile_id = len(tiles) - 1
         for tile_id, proxy in enumerate(tiles):
-            if proxy._proxy is None:
-                msg = f"tile proxy {proxy} not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
+            assert proxy._proxy is not None
 
             if tile_id == last_tile_id:
                 is_last_tile = True
@@ -2151,14 +1977,14 @@ class SpsStationComponentManager(
                     }
                 )
             )
-        return ResultCode.OK, ""
+        return ResultCode.OK
 
     @check_communicating
     def _check_station_synchronisation(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Check tile synchronization.
 
@@ -2166,7 +1992,7 @@ class SpsStationComponentManager(
         the same time
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         tiles = list(self._tile_proxies.values())
         tile0 = tiles[0]._proxy
@@ -2178,10 +2004,7 @@ class SpsStationComponentManager(
             while (tile0.fpgasUnixTime)[0] == time0:
                 if timeout == 0:
                     self.logger.error("Timeout waiting for FPGA time second tick")
-                    return (
-                        ResultCode.FAILED,
-                        "timeout waiting for FPGA time second tick",
-                    )
+                    return ResultCode.FAILED
                 time.sleep(0.1)
                 timeout = timeout - 1
             result: list[int] = []
@@ -2194,29 +2017,17 @@ class SpsStationComponentManager(
                 self.logger.error("FPGA time counters not synced, try again")
                 time.sleep(1)
             else:
-                return ResultCode.OK, ""
+                return ResultCode.OK
 
-        # Loop over tiles, comparing tile n FPGA0, FPGA1 reference time to tile 1 FPGA0
-        # reference time, if they differ we add the to the erorr message.
-        ref_time = result[0]
-        not_synced = {
-            trl: result[2 * i : 2 * i + 2]
-            for i, trl in enumerate(self._tile_proxies.keys())
-            if any(t != ref_time for t in result[2 * i : 2 * i + 2])
-        }
-        msg = (
-            f"FPGA time counters not synced after 5 retries "
-            f"(ref={ref_time}): {not_synced}"
-        )
-        self.logger.error(msg)
-        return ResultCode.FAILED, msg
+        self.logger.error("FPGA time counters not synced after 5 retries")
+        return ResultCode.FAILED
 
     def _route_data(
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> ResultCode:
         """
         Route data streams to relevant DAQs.
 
@@ -2227,7 +2038,7 @@ class SpsStationComponentManager(
             integrated data, defaults to deployed default.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code
         """
         if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
             lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
@@ -2242,13 +2053,6 @@ class SpsStationComponentManager(
             )
             self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
             self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
-        if not self._lmc_integrated_mode_locked:
-            mode = self._read_lmc_integrated_mode_from_bandpass_daq(
-                log_context="route_data"
-            )
-            if mode is not None:
-                self._lmc_integrated_mode = mode
-                self._lmc_integrated_mode_locked = True
         self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
         self.logger.debug(
             "Configuring LMC Integrated Download: "
@@ -2260,7 +2064,6 @@ class SpsStationComponentManager(
             dst_port=self._lmc_integrated_port,
             channel_payload_length=self._lmc_channel_payload_length,
             beam_payload_length=self._lmc_beam_payload_length,
-            lock_mode=False,
         )
         self.set_lmc_download(
             mode=self._lmc_mode,
@@ -2273,13 +2076,12 @@ class SpsStationComponentManager(
             if start_bandpasses is not None
             else self._start_bandpasses_in_initialise
         ):
-            self.logger.info("Starting integrated channel data stream.")
             self.configure_integrated_channel_data(
                 integration_time=self._bandpass_integration_time,
                 first_channel=0,
                 last_channel=511,
             )
-        return ResultCode.OK, ""
+        return ResultCode.OK
 
     @property  # type:ignore[misc]
     @check_communicating
@@ -2294,14 +2096,23 @@ class SpsStationComponentManager(
     def self_check(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
+    ) -> tuple[TaskStatus, str]:
         """
-        Run all self check tests.
+        Submit the _self_check method.
+
+        This method returns immediately after it submitted
+        `self._self_check` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
+        :return: a task status and response message
         """
+        return self.submit_task(self._self_check, task_callback=task_callback)
+
+    def _self_check(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -2328,29 +2139,34 @@ class SpsStationComponentManager(
 
     def run_test(
         self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        count: Optional[int] = 1,
+        test_name: str,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _run_test method.
+
+        This method returns immediately after it submitted
+        `self._run_test` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param count: how many times to run the test, default is 1.
+        :param test_name: which test to run.
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._run_test, args=[count, test_name], task_callback=task_callback
+        )
+
+    def _run_test(
+        self: SpsStationComponentManager,
         count: int,
         test_name: str,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
-        """
-        Run a specific self check test.
-
-        :param count: how many times to run the test.
-        :param test_name: which test to run.
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        if test_name not in self.test_list and task_callback is not None:
-            task_callback(
-                status=TaskStatus.REJECTED,
-                result=(
-                    ResultCode.REJECTED,
-                    f"{test_name} not in available tests: {self.test_list}",
-                ),
-            )
-            return
-
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -2973,7 +2789,6 @@ class SpsStationComponentManager(
         dst_ip: str = "",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        lock_mode: bool = True,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of integrated LMC channel.
@@ -2986,19 +2801,12 @@ class SpsStationComponentManager(
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param lock_mode: whether this call should lock integrated-mode auto refresh.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        if mode.upper() == "40G":
-            # 1G means NSDN, 10G means 40G (now 100G) SDN
-            # Terminology needs refactoring.
-            mode = "10G"
         self._lmc_integrated_mode = mode
-        if lock_mode:
-            self._lmc_integrated_mode_locked = True
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
         if dst_ip == "":
@@ -3152,6 +2960,32 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         calibration_coefficients: list[float],
         task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Load calibration coefficients for all antennas and specific channels.
+
+        These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
+
+        :param calibration_coefficients: a tridimensional complex array of
+            coefficients, indexed by channels, antennas, polarizations,
+            flattened into a list.
+            Dimension of antennas is 256, in tile antenna order,
+            Dimension of polarizations is 4.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._load_calibration_coefficients_for_channels,
+            args=[calibration_coefficients],
+            task_callback=task_callback,
+        )
+
+    def _load_calibration_coefficients_for_channels(
+        self: SpsStationComponentManager,
+        calibration_coefficients: list[float],
+        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
@@ -3164,19 +2998,7 @@ class SpsStationComponentManager(
             Dimension of polarizations is 4.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :raises ValueError: when the number of coefficients is insufficient or
-            not a multiple of 2048 (i.e. 8 coefficients per channel per antenna)
         """
-        if len(calibration_coefficients) < 2047:
-            self.logger.error("Insufficient calibration coefficients")
-            raise ValueError("Insufficient calibration coefficients")
-        if len(calibration_coefficients) % 2048 != 1:
-            self.logger.error(
-                "Incomplete specification of coefficient. "
-                "Needs 8 values (4 complex Jones) per channel per antenna"
-            )
-            raise ValueError("Incomplete specification of coefficient")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -3259,6 +3081,37 @@ class SpsStationComponentManager(
 
     def start_beamformer(
         self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        start_time: Optional[str] = None,
+        duration: int = -1,
+        channel_groups: Optional[list[int]] = None,
+        scan_id: int = 0,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _start_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._start_beamformer` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param start_time: time at which to start the beamformer,
+            defaults to 0
+        :param duration: duration for which to run the beamformer,
+            defaults to -1 (run forever)
+        :param channel_groups: Channel groups to which the command applies.
+        :param scan_id: ID of the scan which is started.
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._start_beamformer,
+            args=[start_time, duration, channel_groups, scan_id],
+            task_callback=task_callback,
+        )
+
+    def _start_beamformer(
+        self: SpsStationComponentManager,
         start_time: Optional[str] = None,
         duration: int = -1,
         channel_groups: Optional[list[int]] = None,
@@ -3306,28 +3159,48 @@ class SpsStationComponentManager(
                 result=(result, message),
             )
 
+    def stop_beamformer(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _stop_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._stop_beamformer` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._stop_beamformer, args=[None], task_callback=task_callback
+        )
+
     def stop_beamformer_for_channels(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
         *,
         channel_groups: Optional[list[int]] = None,
-    ) -> None:
+    ) -> tuple[TaskStatus, str]:
         """
-        Run the stop_beamformer method.
+        Submit the _stop_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._stop_beamformer` for execution.
 
         :param channel_groups: Channel groups to which the command applies.
+
         :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
+
+        :return: a task status and response message
         """
         logging.info(f"stop_beamformer called for channel_groups {channel_groups}")
-        self.stop_beamformer(
-            channel_groups=channel_groups,
-            task_callback=task_callback,
-            task_abort_event=task_abort_event,
+        return self.submit_task(
+            self._stop_beamformer, args=[channel_groups], task_callback=task_callback
         )
 
-    def stop_beamformer(
+    def _stop_beamformer(
         self: SpsStationComponentManager,
         channel_groups: Optional[list[int]],
         task_callback: Optional[Callable] = None,
@@ -3513,8 +3386,38 @@ class SpsStationComponentManager(
         """
         return self._execute_async_on_tiles("ConfigureTestGenerator", argin)
 
-    @check_communicating
     def start_acquisition(
+        self: SpsStationComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the start acquisition method.
+
+        This method returns immediately after it submitted
+        `self._on` for execution.
+
+        :param argin: json dictionary with optional keywords
+
+        * start_time - (str) start time
+        * delay - (int) delay start
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        params = json.loads(argin)
+        start_time = params.get("start_time", None)
+        delay = params.get("delay", 0)
+
+        return self.submit_task(
+            self._start_acquisition,
+            args=[start_time, delay],
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _start_acquisition(
         self: SpsStationComponentManager,
         start_time: Optional[str] = None,
         delay: Optional[int] = 2,
@@ -3558,6 +3461,37 @@ class SpsStationComponentManager(
                 )
             return
 
+    def acquire_data_for_calibration(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        first_channel: int,
+        last_channel: int,
+        start_time: str | None = None,
+        daq_mode: str = "TCC",
+        nof_samples: int = 1835008,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the acquire data for calibration method.
+
+        This method returns immediately after it submitted
+        `self._acquire_data_for_calibration` for execution.
+
+        :param first_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
+        :param start_time: UTC Time for start sending data.
+        :param daq_mode: the correlator mode to start, xGPU or TCC.
+        :param nof_samples: the number of samples to integrate, only variable in TCC.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._acquire_data_for_calibration,
+            args=[first_channel, last_channel, start_time, daq_mode, nof_samples],
+            task_callback=task_callback,
+        )
+
     def _start_daq(
         self: SpsStationComponentManager,
         daq_mode: str,
@@ -3577,7 +3511,7 @@ class SpsStationComponentManager(
 
     # pylint: disable = too-many-branches
     @check_communicating
-    def acquire_data_for_calibration(
+    def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
         first_channel: int,
         last_channel: int,
@@ -3628,7 +3562,7 @@ class SpsStationComponentManager(
 
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
-            self.configure_station_for_calibration(
+            self._configure_station_for_calibration(
                 nof_correlator_samples=nof_samples,
                 nof_tiles=(
                     16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
@@ -3711,8 +3645,30 @@ class SpsStationComponentManager(
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
-    @check_communicating
     def configure_station_for_calibration(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        **daq_config: Any,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the configure station for calibration method.
+
+        This method returns immediately after it submitted
+        `self._configure_station_for_calibration` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param daq_config: any extra config to configure DAQ with
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._configure_station_for_calibration,
+            task_callback=task_callback,
+            kwargs=daq_config,
+        )
+
+    @check_communicating
+    def _configure_station_for_calibration(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -3803,7 +3759,27 @@ class SpsStationComponentManager(
     @check_communicating
     def set_channeliser_rounding(
         self: SpsStationComponentManager,
-        channeliser_rounding: np.ndarray | list[int],
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._set_channeliser_rounding,
+            args=[channeliser_rounding],
+            task_callback=task_callback,
+        )
+
+    def _set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -3850,8 +3826,34 @@ class SpsStationComponentManager(
                 result=(result_code, message),
             )
 
-    @check_communicating
     def trigger_adc_equalisation(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        target_adc: Optional[float] = 17.0,
+        bias: Optional[float] = 0.0,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the trigger adc equalisation method.
+
+        This method returns immediately after it submitted
+        `self._trigger_adc_equalisation` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param target_adc: adc value in ADU units. Defaults to 17.
+        :param bias: user specifed bias in dB added to the antenna preadu levels.
+                Defaults to 0.
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._trigger_adc_equalisation,
+            args=[target_adc, bias],
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _trigger_adc_equalisation(
         self: SpsStationComponentManager,
         target_adc: float = 17.0,
         bias: float = 0.0,

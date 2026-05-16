@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from typing import Callable
 
 import pytest
@@ -29,47 +28,6 @@ from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
 from ..test_tools import retry_communication
 
 scenarios("./features/daq_spead_capture.feature")
-
-
-def wait_for_hdf5_file_count_increment(
-    get_hdf5_count: Callable,
-    initial_hdf5_count: int,
-    timeout_seconds: float = 15.0,
-    poll_interval_seconds: float = 1.0,
-) -> int:
-    """
-    Wait for the HDF5 file count to increase.
-
-    :param get_hdf5_count: callable to get current HDF5 file count.
-    :param initial_hdf5_count: baseline HDF5 file count.
-    :param timeout_seconds: maximum time to wait before timing out.
-    :param poll_interval_seconds: interval between count checks.
-
-    :return: the final HDF5 file count observed.
-    """
-    deadline = time.monotonic() + timeout_seconds
-    final_hdf5_count = get_hdf5_count()
-    while final_hdf5_count - initial_hdf5_count < 1 and time.monotonic() < deadline:
-        time.sleep(poll_interval_seconds)
-        final_hdf5_count = get_hdf5_count()
-    return final_hdf5_count
-
-
-def clear_hdf5_directory(hdf5_directory: str) -> None:
-    """
-    Remove all HDF5 files from the target directory.
-
-    :param hdf5_directory: directory to clear.
-    """
-    if not os.path.isdir(hdf5_directory):
-        pytest.fail(
-            f"HDF5 directory does not exist: {hdf5_directory}. "
-            "Ensure persister output path is available before test execution."
-        )
-
-    for file_name in os.listdir(hdf5_directory):
-        if file_name.endswith(".hdf5"):
-            os.remove(os.path.join(hdf5_directory, file_name))
 
 
 @given(
@@ -173,13 +131,6 @@ def daq_ready_to_receive_beam(
     )
     change_event_callbacks["data_received_callback"].assert_change_event(Anything)
 
-    daq_device.subscribe_event(
-        "xPolBandpass",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["daq_xPolBandpass"],
-    )
-    change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
-
 
 @given("MccsTile is routed to daq")
 def tile_ready_to_send_to_daq(
@@ -232,7 +183,6 @@ def daq_device_has_no_running_consumers(
 def send_simulated_data(
     tile_device: tango.DeviceProxy,
     get_hdf5_count: Callable,
-    hdf5_directory: str,
 ) -> int:
     """
     Start sending simulated data.
@@ -241,13 +191,9 @@ def send_simulated_data(
     :param get_hdf5_count: A callable to return the number of hdf5 files
         in a directory.
 
-    :param hdf5_directory: path of the hdf5 output directory.
-
     :return: the initial number of hdf5 files in directory.
     """
-    clear_hdf5_directory(hdf5_directory)
     initial_count = get_hdf5_count()
-    assert initial_count == 0
     tile_device.SendDataSamples(json.dumps({"data_type": "channel"}))
     return initial_count
 
@@ -258,7 +204,6 @@ def check_capture_integrated(
     get_hdf5_count: Callable,
     initial_hdf5_count: int,
     station_name: str,
-    daq_device: tango.DeviceProxy,
 ) -> None:
     """
     Confirm Daq has received the correct data.
@@ -269,31 +214,22 @@ def check_capture_integrated(
     :param initial_hdf5_count: the initial number of hdf5 files in directory.
     :param get_hdf5_count: A callable to return the number of hdf5 files
         in a directory.
-    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
     """
-    daq_status = json.loads(daq_device.DaqStatus())
-    # Bandpass mode uses a different callback so we expect a different event.
-    if daq_status["Bandpass Monitor"]:
-        change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
-    else:
-        try:
-            change_event_callbacks["data_received_callback"].assert_change_event(
-                ("integrated_channel", Anything)
-            )
-        except AssertionError:
-            if station_name == "stfc-ral-2":
-                pytest.xfail(
-                    reason=(
-                        "There is a discrepancy between the simulator and hardware."
-                        " the hardware sends burst_channel."
-                    )
-                )
-            pytest.fail("No integrated data received.")
-        final_hdf5_count = wait_for_hdf5_file_count_increment(
-            get_hdf5_count,
-            initial_hdf5_count,
+    try:
+        change_event_callbacks["data_received_callback"].assert_change_event(
+            ("integrated_channel", Anything)
         )
-        assert final_hdf5_count - initial_hdf5_count >= 1
+    except AssertionError:
+        if station_name == "stfc-ral-2":
+            pytest.xfail(
+                reason=(
+                    "There is a discrepancy between the simulator and hardware."
+                    " the hardware sends burst_channel."
+                )
+            )
+        pytest.fail("No integrated data received.")
+    final_hdf5_count = get_hdf5_count()
+    assert final_hdf5_count - initial_hdf5_count >= 1
 
 
 @then(parsers.cfparse("Daq receives data CHANNEL_DATA"))
@@ -319,10 +255,7 @@ def check_capture_channel(
         )
     except AssertionError:
         pytest.fail("No burst data received.")
-    final_hdf5_count = wait_for_hdf5_file_count_increment(
-        get_hdf5_count,
-        initial_hdf5_count,
-    )
+    final_hdf5_count = get_hdf5_count()
     assert final_hdf5_count - initial_hdf5_count >= 1
 
 

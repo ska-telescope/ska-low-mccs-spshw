@@ -17,8 +17,8 @@ helm_values:
       # deviceServerTypes:
       #   daq:
       #     image:
-      #       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-      #       tag: 6.0.0-dev.cb82dcc01
+      #       registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+      #       tag: 4.3.1-dirty
   ska-tango-devices:
     devices:
       SpsStation:
@@ -27,6 +27,6 @@ helm_values:
         low-mccs/spsstation/real-daq-1:
           ParentTRL: ""
   # image:
-  #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw # docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-  #   tag: 11.4.3-dev.c2a4b0594 # 11.4.3
+  #   registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+  #   tag: 10.2.0-dirty
 

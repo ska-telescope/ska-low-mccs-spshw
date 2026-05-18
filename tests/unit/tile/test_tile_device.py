@@ -400,6 +400,12 @@ class TestMccsTile:
             "_lrcEvent",
             "lrcQueue",
             "lrcExecuting",
+            "longRunningCommandsInQueue",
+            "longRunningCommandResult",
+            "longRunningCommandIDsInQueue",
+            "longRunningCommandStatus",
+            "longRunningCommandProgress",
+            "longRunningCommandInProgress",
         ]
 
     @pytest.fixture(name="not_implemented_attributes")

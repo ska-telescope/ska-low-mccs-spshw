@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines, too-many-public-methods
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -1138,7 +1138,9 @@ class LRCManager:
                 return completed_task
         return {}
 
-    def _wait_for_lrc_queue(self, timeout, polling_frequency: float = 1) -> dict:
+    def _wait_for_lrc_queue(
+        self, timeout: float = 5, polling_frequency: float = 1
+    ) -> dict:
         """
         Continously polls lrcFinished for the command id.
 
@@ -1158,7 +1160,7 @@ class LRCManager:
         return lrc_result
 
     def _wait_for_lrc_finished(
-        self, timeout: float, polling_frequency: float = 1
+        self, timeout: float = 5, polling_frequency: float = 1
     ) -> dict:
         """
         Continously polls lrcFinished for the command id.
@@ -1179,7 +1181,7 @@ class LRCManager:
         return lrc_result
 
     def _wait_for_lrc_executing(
-        self, timeout: float, polling_frequency: float = 1
+        self, timeout: float = 5, polling_frequency: float = 1
     ) -> dict:
         """
         Continously polls lrcFinished for the command id.

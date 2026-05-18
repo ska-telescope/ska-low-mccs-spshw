@@ -661,46 +661,201 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
 
     if no_of_iters == 1:
         msg = f'Consumers not stopped: {status["Running Consumers"]}.\n'
-        msg += f"CommandResult: {daq.longRunningCommandResult}\n"
-        msg += f"CommandQueue: {daq.longRunningCommandsInQueue}\n"
+        msg += f"CommandResult: {daq.lrcFinished}\n"
+        msg += f"CommandQueue: {daq.lrcQueue}\n"
         pytest.fail(msg)
 
     sleep(2)
     return poll_until_consumers_stopped(daq, no_of_iters - 1)
 
 
+def _extract_lrc_status_from_attribute(
+    lrc_attribute: Any, cmd_id: str, default_status: str
+) -> str | None:
+    """
+    Parse an LRC attribute and return the status for a command.
+
+    Supports JSON encoded dict entries, plain dict entries, and a
+    fallback alternating pair format like (cmd_id, status, ...).
+
+    :param lrc_attribute: the raw attribute payload to inspect.
+    :param cmd_id: the command ID to locate.
+    :param default_status: status returned when command is present but
+        no explicit status field is available.
+    :return: status string if command is found, else None.
+    """
+    entries: list[Any]
+    if isinstance(lrc_attribute, (tuple, list)):
+        entries = list(lrc_attribute)
+    elif lrc_attribute:
+        entries = [lrc_attribute]
+    else:
+        entries = []
+
+    # Handle alternating pair formats such as (cmd_id, status, ...).
+    if len(entries) >= 2:
+        for index in range(0, len(entries) - 1, 2):
+            if str(entries[index]) == cmd_id:
+                return str(entries[index + 1])
+
+    for entry in entries:
+        parsed_entry = entry
+        if isinstance(entry, str):
+            try:
+                parsed_entry = json.loads(entry)
+            except (TypeError, json.JSONDecodeError):
+                continue
+
+        if isinstance(parsed_entry, dict) and str(parsed_entry.get("uid")) == cmd_id:
+            status = parsed_entry.get("status")
+            if status is not None:
+                return str(status)
+            return default_status
+
+    return None
+
+
+def get_lrc_queue_status(device: tango.DeviceProxy, cmd_id: str) -> str | None:
+    """
+    Return command status parsed from lrcQueue.
+
+    :param device: the TANGO device.
+    :param cmd_id: the command ID to inspect.
+    :return: parsed command status, or None if command not in queue.
+    """
+    return _extract_lrc_status_from_attribute(device.lrcQueue, cmd_id, "QUEUED")
+
+
+def get_lrc_executing_status(device: tango.DeviceProxy, cmd_id: str) -> str | None:
+    """
+    Return command status parsed from lrcExecuting.
+
+    :param device: the TANGO device.
+    :param cmd_id: the command ID to inspect.
+    :return: parsed command status, or None if command not executing.
+    """
+    return _extract_lrc_status_from_attribute(
+        device.lrcExecuting, cmd_id, "IN_PROGRESS"
+    )
+
+
+def get_lrc_finished_status(device: tango.DeviceProxy, cmd_id: str) -> str | None:
+    """
+    Return command status parsed from lrcFinished.
+
+    :param device: the TANGO device.
+    :param cmd_id: the command ID to inspect.
+    :return: parsed command status, or None if command not finished.
+    """
+    return _extract_lrc_status_from_attribute(device.lrcFinished, cmd_id, "COMPLETED")
+
+
+def poll_lrc_for_expected_state(
+    device: tango.DeviceProxy,
+    cmd_id: str,
+    expected_state: str,
+    *,
+    finished_timeout: float = 30.0,
+    queued_executing_timeout: float = 15.0,
+    poll_interval: float = 1.0,
+) -> bool:
+    """
+    Poll LRC attributes until command reaches expected state or times out.
+
+    Commands are expected to transition in order:
+    ``lrcQueue -> lrcExecuting -> lrcFinished`` with no backward transition.
+
+    :param device: the TANGO device.
+    :param cmd_id: the command ID to inspect.
+    :param expected_state: expected command state.
+    :param finished_timeout: timeout used for terminal states.
+    :param queued_executing_timeout: timeout used for queued/executing states.
+    :param poll_interval: delay between polls, in seconds.
+    :return: True if expected state is reached within timeout, else False.
+    """
+    expected = expected_state.upper()
+    terminal_states = {"COMPLETED", "FAILED", "ABORTED", "REJECTED"}
+    queued_states = {"QUEUED", "STAGING"}
+    executing_states = {"IN_PROGRESS"}
+
+    timeout = (
+        finished_timeout if expected in terminal_states else queued_executing_timeout
+    )
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        queue_status = get_lrc_queue_status(device, cmd_id)
+        executing_status = get_lrc_executing_status(device, cmd_id)
+        finished_status = get_lrc_finished_status(device, cmd_id)
+
+        queue_status_normalized = queue_status.upper() if queue_status else None
+        executing_status_normalized = (
+            executing_status.upper() if executing_status else None
+        )
+        finished_status_normalized = (
+            finished_status.upper() if finished_status else None
+        )
+
+        if expected in terminal_states and expected == finished_status_normalized:
+            return True
+        if expected in executing_states and expected == executing_status_normalized:
+            return True
+        if expected in queued_states and expected == queue_status_normalized:
+            return True
+
+        time.sleep(poll_interval)
+
+    return False
+
+
 def poll_until_command_result(
-    device: tango.DeviceProxy, cmd_id: str, expected_result: str, no_of_iters: int = 5
+    device: tango.DeviceProxy,
+    cmd_id: str,
+    expected_result: str,
+    *,
+    finished_timeout: float = 30.0,
+    queued_executing_timeout: float = 15.0,
+    poll_interval: float = 1.0,
 ) -> None:
     """
-    Poll until command has reached state.
+    Poll command LRC attributes until an expected state is reached.
 
-    This function recursively calls itself up to `no_of_iters` times.
-
-    :param device: the TANGO device
-    :param expected_result: the command state we're waiting for
-    :param cmd_id: The command ID we're interested in.
-    :param no_of_iters: number of times to iterate
+    :param device: the TANGO device.
+    :param expected_result: the command state we're waiting for.
+    :param cmd_id: the command ID we're interested in.
+    :param finished_timeout: timeout used for terminal states.
+    :param queued_executing_timeout: timeout used for queued/executing states.
+    :param poll_interval: delay between polls, in seconds.
     """
-    lrc_result = None
-    lrc_status = device.longRunningCommandStatus
-    try:
-        # Extract the result of the cmd_id.
-        lrc_result = lrc_status[lrc_status.index(cmd_id) + 1]
-    except ValueError as e:
-        lrc_result = e
-        # pass
-    if lrc_result == expected_result:
+    command_reached_expected_state = poll_lrc_for_expected_state(
+        device,
+        cmd_id,
+        expected_result,
+        finished_timeout=finished_timeout,
+        queued_executing_timeout=queued_executing_timeout,
+        poll_interval=poll_interval,
+    )
+    if command_reached_expected_state:
         return
-    if no_of_iters == 1:
-        pytest.fail(
-            f"Command {cmd_id} did not reach desired state: "
-            f"{device.longRunningCommandStatus}\n"
-            f"Result: {lrc_result}"
-        )
-    if lrc_result != expected_result:
-        time.sleep(1)
-        poll_until_command_result(device, cmd_id, expected_result, no_of_iters - 1)
+
+    queue_status = get_lrc_queue_status(device, cmd_id)
+    executing_status = get_lrc_executing_status(device, cmd_id)
+    finished_status = get_lrc_finished_status(device, cmd_id)
+    expected = expected_result.upper()
+    terminal_states = {"COMPLETED", "FAILED", "ABORTED", "REJECTED"}
+    timeout = (
+        finished_timeout if expected in terminal_states else queued_executing_timeout
+    )
+
+    pytest.fail(
+        f"Command {cmd_id} did not reach desired state: expected={expected_result}\n"
+        f"polled_for={timeout}s interval={poll_interval}s\n"
+        f"parsed_statuses: queue={queue_status}, "
+        f"executing={executing_status}, finished={finished_status}\n"
+        f"lrcQueue={device.lrcQueue}\n"
+        f"lrcExecuting={device.lrcExecuting}\n"
+        f"lrcFinished={device.lrcFinished}"
+    )
 
 
 # pylint: disable=inconsistent-return-statements

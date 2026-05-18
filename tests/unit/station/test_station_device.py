@@ -279,11 +279,11 @@ def test_Off(
     change_event_callbacks["command_status"].assert_change_event(())
 
     station_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     ([result_code], [off_command_id]) = station_device.off()
     assert result_code == ResultCode.QUEUED
@@ -395,11 +395,11 @@ def test_On(
     change_event_callbacks["command_status"].assert_change_event(())
 
     station_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     ([result_code], [off_command_id]) = station_device.off()
     assert result_code == ResultCode.QUEUED
@@ -535,11 +535,11 @@ def test_Abort_On(
     )
     change_event_callbacks["command_status"].assert_change_event(())
     station_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     # Turn station to Standby state
     ([result_code], [standby_command_id]) = station_device.standby()
@@ -665,11 +665,11 @@ def test_Initialise(
 
     change_event_callbacks["command_status"].assert_change_event(())
     station_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     ([result_code], [command_id]) = station_device.Initialise()
     assert result_code == ResultCode.QUEUED
@@ -786,11 +786,11 @@ def test_Standby(
 
     change_event_callbacks["command_status"].assert_change_event(())
     station_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     ([result_code], [command_id]) = station_device.standby()
     assert result_code == ResultCode.QUEUED

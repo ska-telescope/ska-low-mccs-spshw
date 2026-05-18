@@ -448,18 +448,26 @@ def daq_bandpass_monitor_running(
         assert start_bandpass_result[1][0] == "Bandpass monitor already started."
     else:
         sub_id = daq_device.subscribe_event(
-            "longRunningCommandResult",
+            "lrcFinished",
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["daq_long_running_command_result"],
         )
         change_event_callbacks["daq_long_running_command_result"].assert_change_event(
-            (
-                start_bandpass_result[1][0],
-                json.dumps([ResultCode.OK, "Bandpass monitor active"]),
-            ),
+            Anything,
             lookahead=12,
             consume_nonmatches=True,
         )
+        lrc_result = next(
+            (
+                json.loads(result)
+                for result in daq_device.lrcFinished
+                if json.loads(result)["uid"] == start_bandpass_result[1][0]
+            ),
+            None,
+        )
+        assert lrc_result is not None
+        assert lrc_result["result"][0] == int(ResultCode.OK)
+        assert lrc_result["result"][1] == "Bandpass monitor active"
         daq_device.unsubscribe_event(sub_id)
 
     verify_bandpass_state(daq_device, True)

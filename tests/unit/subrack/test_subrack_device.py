@@ -17,6 +17,7 @@ from typing import Any, Iterator
 import pytest
 import tango
 from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
+from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType, server
 
@@ -350,11 +351,11 @@ def test_off_on(
     change_event_callbacks["command_status"].assert_change_event(())
 
     subrack_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     ([result_code], [off_command_id]) = subrack_device.off()
     assert result_code == ResultCode.QUEUED
@@ -372,12 +373,11 @@ def test_off_on(
 
     assert subrack_device.state() == DevState.OFF
 
-    change_event_callbacks["command_result"].assert_change_event(
-        (
-            off_command_id,
-            json.dumps([int(ResultCode.OK), "Command completed"]),
-        ),
-    )
+    # lrcFinished now emits a list of JSON blobs, not the old (uid, result) 2-tuple
+    change_event_callbacks["command_result"].assert_change_event(Anything)
+    lrc_result = json.loads(subrack_device.lrcFinished[0])
+    assert lrc_result["uid"] == off_command_id
+    assert lrc_result["result"][0] == int(ResultCode.OK)
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "COMPLETED")
     )
@@ -551,11 +551,11 @@ def test_monitoring_and_control(
     change_event_callbacks["command_status"].assert_change_event(())
 
     subrack_device.subscribe_event(
-        "longRunningCommandResult",
+        "lrcFinished",
         EventType.CHANGE_EVENT,
         change_event_callbacks["command_result"],
     )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
+    change_event_callbacks["command_result"].assert_change_event(())
 
     tpm_present = list(subrack_device.tpmPresent)
     tpm_to_power = tpm_present.index(True) + 1
@@ -580,12 +580,11 @@ def test_monitoring_and_control(
             PowerState.ON, lookahead=5, consume_nonmatches=True
         )
 
-        change_event_callbacks["command_result"].assert_change_event(
-            (
-                tpm_on_command_id,
-                json.dumps([int(ResultCode.OK), "Command completed."]),
-            ),
-        )
+        # lrcFinished now emits a list of JSON blobs, not the old (uid, result) 2-tuple
+        change_event_callbacks["command_result"].assert_change_event(Anything)
+        lrc_result = json.loads(subrack_device.lrcFinished[0])
+        assert lrc_result["uid"] == tpm_on_command_id
+        assert lrc_result["result"][0] == int(ResultCode.OK)
         change_event_callbacks["command_status"].assert_change_event(
             (tpm_on_command_id, "COMPLETED")
         )

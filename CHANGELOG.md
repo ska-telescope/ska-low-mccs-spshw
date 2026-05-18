@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+
+* [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.
 * [THORN-420] Report progress during SPSStation initialise()
 
 ## 12.0.3

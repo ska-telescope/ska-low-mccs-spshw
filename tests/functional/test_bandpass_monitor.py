@@ -300,6 +300,16 @@ def station_in_synchronised_state(
     except AssertionError:
         pytest.fail(f"Not all tiles are Synchronised: {station.tileProgrammingState}")
 
+    # FPGA re-lock is non-deterministic: a tile can land at a different PPS
+    # sample each time. Normalise all synchronised tiles to the minimum delay
+    # so ppsDelaySpread stays below the DEGRADED threshold.
+    delays = list(station.ppsDelays)
+    synchronised_delays = [d for d in delays if d != 0]
+    if synchronised_delays:
+        reference = min(synchronised_delays)
+        corrections = [int(d - reference) if d != 0 else 0 for d in delays]
+        station.ppsDelayCorrections = corrections
+
 
 @given("no consumers are running")
 def daq_device_has_no_running_consumers(
@@ -321,18 +331,15 @@ def daq_device_has_no_running_consumers(
 
 
 @given("the bandpass monitor is not running")
-def monitor_not_running(
-    daq_device: tango.DeviceProxy, station: tango.DeviceProxy
-) -> None:
+def monitor_not_running(daq_device: tango.DeviceProxy) -> None:
     """
     Ensure that the bandpass monitor is not running.
 
     :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param station: A 'tango.DeviceProxy' to the Station device.
     """
     if json.loads(daq_device.DaqStatus())["Bandpass Monitor"]:
         daq_device.StopBandpassMonitor()
-        daq_monitor_stopped(daq_device, station)
+        daq_monitor_stopped(daq_device)
 
 
 @given("the DAQ is configured")
@@ -411,19 +418,13 @@ def check_daq_integrated_channel_running(
 @then("the bandpass DAQ has the bandpass monitor running")
 def bandpass_daq_bandpass_monitor_running(
     bandpass_daq_device: tango.DeviceProxy,
-    station: tango.DeviceProxy,
 ) -> None:
     """
     Check the bandpass monitor is running.
 
     :param bandpass_daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param station: A 'tango.DeviceProxy' to the Station device.
     """
     verify_bandpass_state(bandpass_daq_device, True)
-    print("test 2")
-    print(f"ppsDelays == {station.ppsDelays}")
-    print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
-    print(f"ppsDelaySpread == {station.ppsDelaySpread}")
 
 
 @given("the bandpass monitor is running")
@@ -487,19 +488,13 @@ def daq_stop_bandpass_monitor(daq_device: tango.DeviceProxy) -> None:
 @then("the DAQ reports that it is stopping monitoring bandpasses")
 def daq_monitor_stopped(
     daq_device: tango.DeviceProxy,
-    station: tango.DeviceProxy,
 ) -> None:
     """
     Confirm that the bandpass monitor process has stopped.
 
     :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param station: A 'tango.DeviceProxy' to the Station device.
     """
     verify_bandpass_state(daq_device, False)
-    print("test 3")
-    print(f"ppsDelays == {station.ppsDelays}")
-    print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
-    print(f"ppsDelaySpread == {station.ppsDelaySpread}")
 
 
 @when(
@@ -573,18 +568,12 @@ def daq_received_data(
         except AssertionError:
             pytest.fail("No integrated_channel data was received")
 
-    print("test 4")
-    print(f"ppsDelays == {station.ppsDelays}")
-    print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
-    print(f"ppsDelaySpread == {station.ppsDelaySpread}")
-
 
 @then("the DAQ saves bandpass data to its relevant attributes")
 def daq_bandpasses_saved(
     daq_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     station_name: str,
-    station: tango.DeviceProxy,
 ) -> None:
     """
     Confirm the DAQ has stored bandpass data to its attributes.
@@ -593,7 +582,6 @@ def daq_bandpasses_saved(
     :param daq_device: A 'tango.DeviceProxy' to the Daq device.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
-    :param station: A 'tango.DeviceProxy' to the Station device.
     """
     try:
         change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
@@ -602,8 +590,3 @@ def daq_bandpasses_saved(
         assert np.count_nonzero(daq_device.yPolBandpass) > 0
     except AssertionError:
         pytest.fail("Bandpass callbacks got no update")
-
-    print("test 5")
-    print(f"ppsDelays == {station.ppsDelays}")
-    print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
-    print(f"ppsDelaySpread == {station.ppsDelaySpread}")

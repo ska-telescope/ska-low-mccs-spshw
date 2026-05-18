@@ -2,8 +2,8 @@ Feature: Test health
     Test that health is being computed and aggregated correctly
 
     Scenario: Healthy when everything is on and operational
-        Given the Station has been reset
-        Given the Station is online
+        Given the Station ppsDelays are corrected
+        And the Station is online
         And the Station has been commanded to turn to Standby
         And the Station reports that its state is STANDBY
         And the Tiles reports that its state is OFF

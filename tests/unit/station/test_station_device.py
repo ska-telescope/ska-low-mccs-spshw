@@ -578,7 +578,6 @@ def test_Initialise(
     station_lrc_manager.run_command_with_checks(
         "Initialise", expected_status=ResultCode.QUEUED
     )
-    # station_lrc_manager.assert_command_queued()
     station_lrc_manager.assert_command_in_progress()
 
     time.sleep(12)
@@ -681,7 +680,6 @@ def test_Standby(
     station_lrc_manager.run_command_with_checks(
         "Standby", expected_status=ResultCode.QUEUED
     )
-    # station_lrc_manager.assert_command_queued()
     station_lrc_manager.assert_command_in_progress()
 
     change_event_callbacks["state"].assert_not_called()

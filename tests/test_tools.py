@@ -1150,7 +1150,7 @@ class LRCManager:
         self, timeout: float = 1, polling_frequency: float = 1
     ) -> dict:
         """
-        Continously polls lrcFinished for the command id.
+        Continously polls lrcQueued for the command id.
 
         :param timeout: the amount of time it will wait for
         :param polling_frequency: how often it polls per second
@@ -1192,7 +1192,7 @@ class LRCManager:
         self, timeout: float = 1, polling_frequency: float = 1
     ) -> dict:
         """
-        Continously polls lrcFinished for the command id.
+        Continously polls lrcExecuting for the command id.
 
         :param timeout: the amount of time it will wait for
         :param polling_frequency: how often it polls per second

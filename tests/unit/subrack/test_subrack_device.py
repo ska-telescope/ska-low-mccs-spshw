@@ -366,9 +366,7 @@ def test_off_on(
     subrack_lrc_manager._wait_for_lrc_queue(timeout=5)
     subrack_lrc_manager._wait_for_lrc_executing(timeout=5)
     subrack_lrc_manager.assert_command_finished(
-        status="COMPLETED",
-        result_code=ResultCode.OK,
-        timeout=10
+        status="COMPLETED", result_code=ResultCode.OK, timeout=10
     )
 
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)

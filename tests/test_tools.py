@@ -1096,9 +1096,9 @@ class LRCManager:
         completed_task = self._wait_for_lrc_finished(timeout)
         if completed_task == {}:
             raise AssertionError(
-                    f"Command {self.command_name} timed out waiting for command to "
-                    "reach lrcFinishing"
-                )
+                f"Command {self.command_name} timed out waiting for command to "
+                "reach lrcFinishing"
+            )
 
         if status is not None and status != completed_task["status"]:
             missing_items_log += (

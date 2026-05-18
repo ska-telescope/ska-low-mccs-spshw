@@ -296,6 +296,13 @@ def station_reset(
     :param station_name: the name of the station under test.
     :param reset_attribute_configs: Functions to reset attribute configs.
     """
+    print("test 8")
+    for station in station_devices["Station"]:
+        print(f"station == {station}")
+        print(f"ppsDelays == {station.ppsDelays}")
+        print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
+        print(f"ppsDelaySpread == {station.ppsDelaySpread}")
+
     if station_name == "stfc-ral-2":
         # We reset attr configs here so that we can be reasonably sure we'll
         # be using the defaults.

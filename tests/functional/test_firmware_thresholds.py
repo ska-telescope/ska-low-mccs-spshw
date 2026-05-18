@@ -486,6 +486,7 @@ def check_for_configuration_missmatch(
     tile_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     initial_tile_programmingstate: str,
+    station: tango.DeviceProxy,
 ) -> None:
     """
     Check for configuration missmatch.
@@ -495,6 +496,7 @@ def check_for_configuration_missmatch(
         tango change event callbacks.
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
+    :param station: a proxy to the station under test.
     """
     lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
 
@@ -548,6 +550,10 @@ def check_for_configuration_missmatch(
     change_event_callbacks["device_state"].assert_not_called()
 
     tile_device.unsubscribe_event(sub_id)
+    print("test 6")
+    print(f"ppsDelays == {station.ppsDelays}")
+    print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
+    print(f"ppsDelaySpread == {station.ppsDelaySpread}")
 
 
 @then("the Tile reports it has no configuration mismatch")
@@ -555,6 +561,7 @@ def tile_reports_on(
     tile_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     initial_tile_programmingstate: str,
+    station: tango.DeviceProxy,
 ) -> None:
     """
     Check that the tile is ON.
@@ -564,6 +571,7 @@ def tile_reports_on(
         tango change event callbacks.
     :param initial_tile_programmingstate: the initial programming state
         of the tile device
+    :param station: a proxy to the station under test.
     """
     lookahead = 6 if tile_device.simulationMode == SimulationMode.TRUE else 2
     AttributeWaiter(timeout=45).wait_for_value(
@@ -583,3 +591,8 @@ def tile_reports_on(
     change_event_callbacks["device_state"].assert_not_called()
 
     tile_device.unsubscribe_event(sub_id)
+
+    print("test 7")
+    print(f"ppsDelays == {station.ppsDelays}")
+    print(f"ppsDelayCorrections == {station.ppsDelayCorrections}")
+    print(f"ppsDelaySpread == {station.ppsDelaySpread}")

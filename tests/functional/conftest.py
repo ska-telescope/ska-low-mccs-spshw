@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable = too-many-lines
 """This module contains pytest-specific test harness for SPSHW functional tests."""
 from __future__ import annotations
 
@@ -750,6 +751,7 @@ def get_lrc_finished_status(device: tango.DeviceProxy, cmd_id: str) -> str | Non
     return _extract_lrc_status_from_attribute(device.lrcFinished, cmd_id, "COMPLETED")
 
 
+# pylint: disable = too-many-locals
 def poll_lrc_for_expected_state(
     device: tango.DeviceProxy,
     cmd_id: str,

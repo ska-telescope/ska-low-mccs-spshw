@@ -1,5 +1,30 @@
 # Version History
 
+## Unreleased
+
+* [THORN-420] Report progress during SPSStation initialise()
+
+## 12.0.3
+
+* [THORN-449] Update functional tests to cover automatic transmission and reception of bandpasses after Station.Initialise.
+
+## 12.0.2
+
+* [SKB-1128] Add `RfiCount` and `TileBeamformerFrame` to Tile's Initialised polling list. This fixes an issue where a Tile would get into `HealthState.UNKNOWN` when `Initialise` is called in `TileProgrammingState.SYNCHRONISED` with `globalReferenceTime` not set.
+
+## 12.0.1
+
+* [SKB-1318] Update ska-tango-base to bring in fix to PollingComponentManager.
+
+## 12.0.0
+
+* [THORN-547] Add dual TPM firmware support with automated BIOS-based selection during Tile initialise. Keep default firmware 10.0.0 for BIOS < 1.0.0, add support for firmware 11.0.0 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.
+
+## 11.5.0
+
+* [THORN-434] Update SpsStation to route integrated channel data over the 40G link instead of the 1G link if possible. This is determined by the daq attribute `bandpassLoadbalancerEnabled` - if `True` or the attribute is not present then we default to using the 1G link, if `False` then we default to using the 40G link. Any user-provided value via `SetLmcIntegratedDownload` will override this. Note: This will require TPMs to be re-initialised in existing deployments.
+* [THORN-562] Update Sonar project key
+
 ## 11.4.6
 
 * [THORN-518] Reintegrate spshw with daq. Bump daq version: 5.0.1 -> 6.0.0.

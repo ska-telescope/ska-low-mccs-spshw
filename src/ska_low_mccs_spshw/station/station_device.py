@@ -1978,8 +1978,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         params = json.loads(argin)
         mode: str = params.get("mode", "40G")
 
-        if mode.upper() == "40G":
-            mode = "10G"
         channel_payload_length = params.get("channel_payload_length", 1024)
         beam_payload_length = params.get("beam_payload_length", 1024)
         dst_ip = params.get("destination_ip", None)

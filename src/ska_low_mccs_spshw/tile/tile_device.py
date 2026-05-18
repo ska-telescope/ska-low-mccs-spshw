@@ -2833,9 +2833,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._info = self.component_manager.tile_info()
         self._convert_ip_to_str(self._info)
         info: dict[str, Any] = self._info
-        if info != {}:
-            # Prints out a nice table to the logs if populated.
-            self.logger.info(str(self))
         return json.dumps(info)
 
     @attribute(
@@ -4138,6 +4135,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def ppsDrift(self: MccsTile) -> int:
         """
         Return the observed drift in the ppsDelay of this Tile.
+
+        `ppsDrift` measures the difference between the TPM's currently reported
+        `ppsDelay` and the value it had when the Tile Tango device was initialised.
+        This will initially be zero and then will increase as reported value of
+        `ppsDelay` changes over time.
 
         :return: Return the pps delay drift in 1.25ns units or `None` if not initialised
         """

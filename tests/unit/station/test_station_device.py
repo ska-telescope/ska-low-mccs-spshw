@@ -66,7 +66,7 @@ def invoke_lrc_patch(
         command_args: Any | None = None,
         logger: Logger | None = None,
     ) -> None:
-        getattr(proxy, command)(*command_args)
+        getattr(proxy, command)(*command_args)  # type: ignore[misc]
 
         def _task_thread() -> None:
             try:

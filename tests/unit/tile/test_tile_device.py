@@ -498,6 +498,7 @@ class TestMccsTile:
             "firmwareTemperatureThresholds",
             "firmwareVoltageThresholds",
             "firmwareCurrentThresholds",
+            "loggingFilter",
         ]
 
     @pytest.fixture(name="active_read_attributes")
@@ -1156,7 +1157,7 @@ class TestMccsTile:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(
-            HealthState.OK, lookahead=5
+            HealthState.OK, lookahead=2
         )
         assert tile_device.healthState == HealthState.OK
 

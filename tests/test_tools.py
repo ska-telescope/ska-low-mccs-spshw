@@ -820,6 +820,7 @@ class JSONRepresenting:  # noqa: PLW1641 # eq-without-hash
 class LRCManager:
     """A class to manage lrc callbacks and track command progress."""
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         device: tango.DeviceProxy,
@@ -836,6 +837,7 @@ class LRCManager:
                             executing, finished order.
         """
         self._device = device
+        self._device_name = device.dev_name
 
         if callback_keys:
             self.lrcQueue = callback_group[callback_keys[0]]
@@ -935,36 +937,35 @@ class LRCManager:
         Check the lrcQueue attribute directly for the command.
 
         :param timeout: the amount of time the test will wait on the
-            command to reach the finished state.
+            command to reach lrcQueue.
 
-        :raises AssertionError: raises an assertion error if the lrc return
-            values don't match the expected values.
+        :raises AssertionError: raises an assertion error if:
+                - the lrc return values don't match the expected values.
+                - fails to reach lrcQueue before timeout.
+                - already reached lrcFinished or lrcExecuting.
         """
         lrc_values = self._get_lrc_attribute_values(self._device.lrcQueue)
-
+        report_string = f"Command {self._device_name}.{self.command_name}"
         if lrc_values == {}:
             lrc_values = self._get_lrc_attribute_values(self._device.lrcExecuting)
             if lrc_values != {}:
                 raise AssertionError(
-                    f"Command {self.command_name} appeared in lrc executing "
-                    "before lrc queue"
+                    report_string + " appeared in lrcExecuting before lrcQueue"
                 )
             lrc_values = self._get_lrc_attribute_values(self._device.lrcFinished)
             if lrc_values != {}:
                 raise AssertionError(
-                    f"Command {self.command_name} appeared in lrc finished "
-                    "before lrc queue"
+                    report_string + " appeared in lrcFinished before lrcQueue"
                 )
             lrc_values = self._wait_for_lrc_queue(timeout)
             if lrc_values == {}:
                 raise AssertionError(
-                    f"Command {self.command_name} timed out waiting for command "
-                    "to reach lrcQueue"
+                    report_string + " timed out waiting to reach lrcQueue"
                 )
 
         if lrc_values["name"].lower() != self.command_name.lower():
             raise AssertionError(
-                f"Command name {self.command_name} != lrc value "
+                report_string + " name doesn't correspond to lrcQueue value: "
                 f"{lrc_values['name']}"
             )
 
@@ -995,32 +996,34 @@ class LRCManager:
         """
         Check the lrcExecuting attribute directly for the command.
 
-        :param timeout: the amount of time the test will wait on the command to reach
-            the finished state.
+        :param timeout: the amount of time the test will wait on the command
+            to reach lrcExecuting.
 
-        :raises AssertionError: raises an assertion error if the lrc return values
-                                don't match the expected values.
+        :raises AssertionError: raises an assertion error if:
+                - the lrc return values don't match the expected values.
+                - fails to reach lrcExecuting before timeout.
+                - already reached lrcFinished.
         """
         lrc_values = self._get_lrc_attribute_values(self._device.lrcExecuting)
+        report_string = f"Command {self._device_name}.{self.command_name}"
 
         if lrc_values == {}:
             lrc_values = self._get_lrc_attribute_values(self._device.lrcFinished)
             if lrc_values != {}:
                 raise AssertionError(
-                    f"Command {self.command_name} appeared in lrc finished before lrc"
-                    " executing"
+                    report_string + " appeared in lrcFinished before lrcExecuting"
                 )
             lrc_values = self._wait_for_lrc_executing(timeout)
             if lrc_values == {}:
                 raise AssertionError(
-                    f"Command {self.command_name} timed out waiting for command to "
-                    "reach lrcExecuting"
+                    report_string + " timed out waiting to reach lrcExecuting"
                 )
 
         # Check the values
         if lrc_values["name"].lower() != self.command_name.lower():
             raise AssertionError(
-                f"Command name {self.command_name} != lrc value {lrc_values['name']}"
+                report_string + " name doesn't correspond to lrcExecuting"
+                f" value: {lrc_values['name']}"
             )
 
     # pylint: disable = too-many-arguments
@@ -1081,23 +1084,24 @@ class LRCManager:
         timeout: float = 1,
     ) -> None:
         """
-        Check the lrc finished attribute for the correct value.
+        Check the lrcFinished attribute directly for the command and its values.
 
-        :param status: expected TaskStatus at the end of the command
-        :param result_code: expected result code to be returned by the command
-        :param result_message: expected result message of the command
+        :param status: expected TaskStatus string at the end of the command.
+        :param result_code: expected ResultCode to be returned by the command.
+        :param result_message: expected result message of the command.
         :param timeout: the amount of time the test will wait on the command to
-            reach the finished state.
+            reach the lrcFinished.
 
-        :raises AssertionError: raises an assertion error if the lrc return values
-                                don't match the expected values.
+        :raises AssertionError: raises an assertion error if:
+                - the lrc return values don't match the expected values.
+                - fails to reach lrcFinished before timeout.
         """
         missing_items_log = ""
         completed_task = self._wait_for_lrc_finished(timeout)
+        report_string = f"Command {self._device_name}.{self.command_name}"
         if completed_task == {}:
             raise AssertionError(
-                f"Command {self.command_name} timed out waiting for command to "
-                "reach lrcFinishing"
+                report_string + " timed out waiting to reach lrcFinishing"
             )
 
         if status is not None and status != completed_task["status"]:
@@ -1121,7 +1125,8 @@ class LRCManager:
 
         if missing_items_log != "":
             raise AssertionError(
-                f"LRC Result is different than expected: \n {missing_items_log}"
+                report_string
+                + f" has values different than expected: \n {missing_items_log}"
             )
 
     def _get_lrc_attribute_values(

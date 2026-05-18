@@ -1013,10 +1013,11 @@ class TileComponentManager(
                 self.logger.error("Request provider not available")
                 if task_callback:
                     task_callback(status=TaskStatus.FAILED)
-                orig_task_callback(
-                    status=TaskStatus.FAILED,
-                    result="Request provider not available",
-                )
+                if orig_task_callback:
+                    orig_task_callback(
+                        status=TaskStatus.FAILED,
+                        result="Request provider not available",
+                    )
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

@@ -1005,7 +1005,10 @@ class TileComponentManager(
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            self._request_provider.enqueue_lrc(request, priority=0)
+            if self._request_provider is not None:
+                self._request_provider.enqueue_lrc(request, priority=0)
+            else:
+                self.logger.error("Request provider not available")
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

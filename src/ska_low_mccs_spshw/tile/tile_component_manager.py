@@ -1007,8 +1007,16 @@ class TileComponentManager(
         with self._initialise_lock:
             if self._request_provider is not None:
                 self._request_provider.enqueue_lrc(request, priority=0)
+                if task_callback:
+                    task_callback(status=TaskStatus.COMPLETED)
             else:
                 self.logger.error("Request provider not available")
+                if task_callback:
+                    task_callback(status=TaskStatus.FAILED)
+                orig_task_callback(
+                    status=TaskStatus.FAILED,
+                    result="Request provider not available",
+                )
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

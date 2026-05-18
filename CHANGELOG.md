@@ -9,6 +9,10 @@
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.
 * [SKB-1047] Add beamformer daisy chain health to SpsStation rollup.
 
+## Unreleased
+
+* [SKB-1341] Error getting tile.longRunningCommandStatus
+
 ## 12.0.4
 
 * [SKB-1347] Integrate fix via update to ska-low-mccs-common.

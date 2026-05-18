@@ -818,7 +818,7 @@ class JSONRepresenting:  # noqa: PLW1641 # eq-without-hash
 
 
 class LRCManager:
-    """A class to manage lrc callbacks."""
+    """A class to manage lrc callbacks and track command progress."""
 
     def __init__(
         self,
@@ -875,9 +875,9 @@ class LRCManager:
         arguments: Any = None,
     ) -> None:
         """
-        Run the command and save the id.
+        Run the command and save the code and command id.
 
-        :param command_name: name of the command to be run
+        :param command_name: name of the tango command to be run
         :param arguments: arguments of the command as a kwargs dictionary,
                           defaults to None
         """
@@ -898,8 +898,8 @@ class LRCManager:
         :param command_name: name of the command to be run
         :param arguments: arguments of the command as a kwargs dictionary,
                           defaults to None
-        :param expected_status: the expected status code returned by the command,
-                          defaults to None, in which case this value is not checked
+        :param expected_status: if specified the result code will be asserted
+            to be equal to this value.
         """
         self.run_command(command_name, arguments)
         id_name = self.command_id.split("_")[-1]
@@ -912,7 +912,7 @@ class LRCManager:
         Assert that the command has been Queued.
 
         :param timeout: the amount of time the test will wait on the
-            command to reach the finished state.
+            command to reach the queued state.
         """
         try:
             self.lrcQueue.assert_change_event(
@@ -955,7 +955,7 @@ class LRCManager:
                     f"Command {self.command_name} appeared in lrc finished "
                     "before lrc queue"
                 )
-            lrc_values = self._wait_for_lrc_executing(timeout)
+            lrc_values = self._wait_for_lrc_queue(timeout)
             if lrc_values == {}:
                 raise AssertionError(
                     f"Command {self.command_name} timed out waiting for command "
@@ -1008,7 +1008,7 @@ class LRCManager:
             if lrc_values != {}:
                 raise AssertionError(
                     f"Command {self.command_name} appeared in lrc finished before lrc"
-                    " queue"
+                    " executing"
                 )
             lrc_values = self._wait_for_lrc_executing(timeout)
             if lrc_values == {}:
@@ -1046,9 +1046,9 @@ class LRCManager:
         :raises AssertionError: raises an assertion error if the lrc return values
                                 don't match the expected values.
         """
-        _status = status or Anything
-        _result_code = result_code or Anything
-        _result_message = result_message or Anything
+        _status = status if status is not None else Anything
+        _result_code = result_code if result_code is not None else Anything
+        _result_message = result_message if result_message is not None else Anything
 
         try:
             self.lrcFinished.assert_change_event(
@@ -1093,9 +1093,12 @@ class LRCManager:
                                 don't match the expected values.
         """
         missing_items_log = ""
-        completed_task = self._get_lrc_attribute_values(self._device.lrcFinished)
+        completed_task = self._wait_for_lrc_finished(timeout)
         if completed_task == {}:
-            completed_task = self._wait_for_lrc_finished(timeout)
+            raise AssertionError(
+                    f"Command {self.command_name} timed out waiting for command to "
+                    "reach lrcFinishing"
+                )
 
         if status is not None and status != completed_task["status"]:
             missing_items_log += (
@@ -1112,8 +1115,8 @@ class LRCManager:
             )
         if result_code is not None and completed_task["result"][0] != result_code:
             missing_items_log += (
-                f"Returned result code: {completed_task['result'][-1]} is"
-                " different than expected: {result_code}\n"
+                f"Returned result code: {completed_task['result'][0]} is"
+                f" different than expected: {result_code}\n"
             )
 
         if missing_items_log != "":
@@ -1139,7 +1142,7 @@ class LRCManager:
         return {}
 
     def _wait_for_lrc_queue(
-        self, timeout: float = 5, polling_frequency: float = 1
+        self, timeout: float = 1, polling_frequency: float = 1
     ) -> dict:
         """
         Continously polls lrcFinished for the command id.
@@ -1160,7 +1163,7 @@ class LRCManager:
         return lrc_result
 
     def _wait_for_lrc_finished(
-        self, timeout: float = 5, polling_frequency: float = 1
+        self, timeout: float = 1, polling_frequency: float = 1
     ) -> dict:
         """
         Continously polls lrcFinished for the command id.
@@ -1181,7 +1184,7 @@ class LRCManager:
         return lrc_result
 
     def _wait_for_lrc_executing(
-        self, timeout: float = 5, polling_frequency: float = 1
+        self, timeout: float = 1, polling_frequency: float = 1
     ) -> dict:
         """
         Continously polls lrcFinished for the command id.

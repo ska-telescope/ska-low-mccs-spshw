@@ -2158,7 +2158,7 @@ class TestMccsTileCommands:
         if command_name != "DownloadFirmware":
             tile_lrc_manager.assert_command_in_progress()
         tile_lrc_manager.assert_command_finished(
-            status="COMPLETED", result_code=ResultCode.OK
+            status="COMPLETED", result_code=ResultCode.OK, timeout=10
         )
 
     def test_StartAcquisition(

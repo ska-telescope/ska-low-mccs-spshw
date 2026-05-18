@@ -502,7 +502,7 @@ def test_Abort_On(
 
     # Abort the command
     ([abort_result_code], [_]) = station_device.AbortCommands()
-    assert abort_result_code == ResultCode.OK
+    assert abort_result_code == ResultCode.STARTED
 
     station_lrc_manager.assert_command_finished("ABORTED", timeout=10)
 

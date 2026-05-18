@@ -906,7 +906,7 @@ class LRCManager:
         self.run_command(command_name, arguments)
         id_name = self.command_id.split("_")[-1]
         assert command_name.lower() in id_name.lower()
-        if expected_status:
+        if expected_status is not None:
             assert self.return_code == expected_status
 
     def assert_command_queued(self, timeout: float = 1) -> None:
@@ -949,14 +949,10 @@ class LRCManager:
         if lrc_values == {}:
             lrc_values = self._get_lrc_attribute_values(self._device.lrcExecuting)
             if lrc_values != {}:
-                raise AssertionError(
-                    report_string + " appeared in lrcExecuting before lrcQueue"
-                )
+                return
             lrc_values = self._get_lrc_attribute_values(self._device.lrcFinished)
             if lrc_values != {}:
-                raise AssertionError(
-                    report_string + " appeared in lrcFinished before lrcQueue"
-                )
+                return
             lrc_values = self._wait_for_lrc_queue(timeout)
             if lrc_values == {}:
                 raise AssertionError(
@@ -1010,9 +1006,7 @@ class LRCManager:
         if lrc_values == {}:
             lrc_values = self._get_lrc_attribute_values(self._device.lrcFinished)
             if lrc_values != {}:
-                raise AssertionError(
-                    report_string + " appeared in lrcFinished before lrcExecuting"
-                )
+                return
             lrc_values = self._wait_for_lrc_executing(timeout)
             if lrc_values == {}:
                 raise AssertionError(

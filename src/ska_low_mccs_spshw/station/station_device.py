@@ -995,7 +995,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.pps_delay_spread
 
-    @attribute(dtype="DevBoolean", archive_period=5000)
+    @attribute(dtype="DevBoolean")
     def beamformerDaisyChainValid(self: SpsStation) -> bool:
         """
         Return whether all TPMs are correctly daisy-chained for beamforming.

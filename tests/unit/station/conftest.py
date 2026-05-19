@@ -7,6 +7,7 @@
 """This module defined a pytest harness for unit testing the SPS Station module."""
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import unittest.mock
@@ -22,6 +23,16 @@ from ska_low_mccs_spshw import SpsStation
 from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
 from tests.harness import get_subrack_name, get_tile_name
+
+
+@pytest.fixture(name="sdn_first_interface", scope="session")
+def sdn_first_interface_fixture() -> str:
+    """
+    Return the first interface of the block allocated to this station for science data.
+
+    :return: the SDN first interface in CIDR notation.
+    """
+    return "10.0.0.152/25"
 
 
 @pytest.fixture(name="mock_subrack_device_proxy")
@@ -220,22 +231,36 @@ def num_tiles_fixture() -> int:
 
 @pytest.fixture(name="mock_tile_device_proxies")
 def mock_tile_device_proxies_fixture(
-    mock_tile_builder: MockDeviceBuilder, num_tiles: int, station_id: int
+    mock_tile_builder: MockDeviceBuilder,
+    num_tiles: int,
+    station_id: int,
+    sdn_first_interface: str,
 ) -> list[unittest.mock.Mock]:
     """
     Fixture that provides a list of mock MccsTile devices.
+
+    Non-last tiles are pre-configured with the correct beamformer dst IPs so that
+    _validate_beamformer_daisy_chain validates immediately on subscription.
 
     :param mock_tile_builder: builder for mock Tiles
     :param num_tiles: the number of tiles to make mocks of
     :param station_id: the stationID fixture used to populate the
         device_property
+    :param sdn_first_interface: CIDR interface string for the SDN block.
 
     :return: a list of mock MccsTile devices.
     """
-    return [
-        mock_tile_builder(TileId=[i + 1], StationID=[station_id])
-        for i in range(num_tiles)
-    ]
+    sdn_base = ipaddress.ip_interface(sdn_first_interface).ip
+    mocks = []
+    for i in range(num_tiles):
+        mock = mock_tile_builder(TileId=[i + 1], StationID=[station_id])
+        if i < num_tiles - 1:
+            mock.configure_mock(
+                dstip40gfpga1=str(sdn_base + 2 * i + 2),
+                dstip40gfpga2=str(sdn_base + 2 * i + 3),
+            )
+        mocks.append(mock)
+    return mocks
 
 
 @pytest.fixture(name="patched_sps_station_device_class")

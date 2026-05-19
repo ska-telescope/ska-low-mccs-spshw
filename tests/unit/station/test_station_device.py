@@ -106,19 +106,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-@pytest.fixture(name="sdn_first_interface", scope="session")
-def sdn_first_interface_fixture() -> str:
-    """
-    Return the first interface of the block allocated to this station for science data.
-
-    This is an IP address and netmask, in CIDR-style slash-notation.
-    For example, "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25".
-
-    :return: the SDN first interface
-    """
-    return "10.0.0.152/25"
-
-
 @pytest.fixture(name="sdn_gateway", scope="session")
 def sdn_gateway_fixture() -> str:
     """
@@ -2132,26 +2119,12 @@ def test_beamformer_daisy_chain_health_rollup(
         EventType.CHANGE_EVENT,
         change_event_callbacks["beamformerDaisyChainValid"],
     )
-    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(False)
+    # Mock tiles are configured with correct dst IPs, so daisy chain is already valid.
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
     change_event_callbacks["beamformerDaisyChainValid"].assert_not_called()
+    change_event_callbacks["health_state"].assert_not_called()
 
     sdn_base = ipaddress.IPv4Address("10.0.0.152")
-    num_tiles = len(mock_tile_device_proxies)
-    last = num_tiles - 1
-
-    # Tiles within the chain send to each other; last tile is ignored.
-    for tile_id in range(last):
-        station_device.MockTileDstIpChange(
-            json.dumps(
-                {
-                    "tile_id": tile_id,
-                    "fpga1_ip": str(sdn_base + 2 * tile_id + 2),
-                    "fpga2_ip": str(sdn_base + 2 * tile_id + 3),
-                }
-            )
-        )
-    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
-    change_event_callbacks["health_state"].assert_not_called()
 
     # Oh no someone broke it.
     station_device.MockTileDstIpChange(

@@ -1593,13 +1593,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         f"Attribute {attr_name} changed to {attr_value}, "
                         "this is above maximum alarm, Shutting down TPM."
                     )
-                    self.component_manager.off()
+                    self.execute_Off()
             except Exception as e:  # pylint: disable=broad-except
                 self.logger.error(
                     f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
                     "Shutting down TPM."
                 )
-                self.component_manager.off()
+                self.execute_Off()
 
     def notify_emission(self: MccsTile, signal: str, value: Any) -> None:
         """
@@ -7123,7 +7123,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # On/Off commands
     # ---------------
 
-    def execute_Off(self: MccsTile) -> DevVarLongStringArrayType:
+    @stb.long_running_commands.submit_lrc_task
+    def execute_Off(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Turn the device off.
 
@@ -7136,25 +7137,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = True
-        return super().execute_Off()
 
-    def execute_On(self: MccsTile) -> DevVarLongStringArrayType:
+        def _off_task(
+            task_callback: Optional[Callable] = None,
+            task_abort_event: Optional[threading.Event] = None,
+        ) -> None:
+            self.component_manager.off(task_callback, task_abort_event)
+
+        return _off_task
+
+    @stb.long_running_commands.submit_lrc_task
+    def execute_On(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Turn device on.
 
         To modify behaviour for this command, modify the do() method of
         the command class.
 
+        :raises ValueError: if device is already on
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
         if self.get_state() == tango.DevState.ON:
-            return ([ResultCode.REJECTED], ["Device is already in ON state."])
+            raise ValueError("Device is already in ON state.")
 
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
-        return super().execute_On()
+
+        def _on_task(
+            task_callback: Optional[Callable] = None,
+            task_abort_event: Optional[threading.Event] = None,
+        ) -> None:
+            self.component_manager.on(task_callback, task_abort_event)
+
+        return _on_task
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def EnableBroadbandRfiBlanking(

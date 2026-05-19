@@ -907,7 +907,9 @@ class TileComponentManager(
             self._subrack_proxy = None
 
     def off(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm off.
@@ -916,21 +918,9 @@ class TileComponentManager(
         Tango serialization monitor is not held during the network round-trip.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code and a unique_id or message.
-        """
-        return self.submit_task(self._off, task_callback=task_callback)
-
-    def _off(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Execute the PowerOffTpm subrack command in a worker thread.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Unused; present for task executor compatibility.
         """
         subrack_off_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOffTpm", self.logger
@@ -938,10 +928,12 @@ class TileComponentManager(
         subrack_off_command_proxy(
             arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
         )
+        return TaskStatus.QUEUED, ""
 
     def on(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
@@ -953,6 +945,7 @@ class TileComponentManager(
         lifecycle once the TPM becomes connectable.
 
         :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :return: a result code and a unique_id or message.
 
@@ -968,26 +961,6 @@ class TileComponentManager(
                 "Cannot execute 'TileComponentManager.on'. "
                 "request provider is not yet initialised."
             )
-        self.submit_task(self._on, kwargs={"orig_task_callback": task_callback})
-        return TaskStatus.QUEUED, "Task staged"
-
-    def _on(
-        self: TileComponentManager,
-        orig_task_callback: Optional[Callable] = None,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Execute the PowerOnTpm subrack call and enqueue initialise in a worker thread.
-
-        task_callback is the submit_task-injected callback (unused here because
-        TileLRCRequest owns the lifecycle). orig_task_callback is the caller's
-        callback forwarded via kwargs.
-
-        :param orig_task_callback: the task callback from the On() command caller.
-        :param task_callback: Injected by task executor; unused.
-        :param task_abort_event: Unused; present for task executor compatibility.
-        """
         subrack_on_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOnTpm", self.logger
         )
@@ -998,26 +971,15 @@ class TileComponentManager(
         request = TileLRCRequest(
             name="initialise",
             command_object=self._execute_initialise,
-            task_callback=orig_task_callback,
+            task_callback=task_callback,
             force_reprogramming=False,
             pps_delay_correction=self._pps_delay_correction,
         )
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            if self._request_provider is not None:
-                self._request_provider.enqueue_lrc(request, priority=0)
-                if task_callback:
-                    task_callback(status=TaskStatus.COMPLETED)
-            else:
-                self.logger.error("Request provider not available")
-                if task_callback:
-                    task_callback(status=TaskStatus.FAILED)
-                if orig_task_callback:
-                    orig_task_callback(
-                        status=TaskStatus.FAILED,
-                        result="Request provider not available",
-                    )
+            self._request_provider.enqueue_lrc(request, priority=0)
+        return TaskStatus.QUEUED, "Task queued"
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

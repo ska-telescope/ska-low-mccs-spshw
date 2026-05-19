@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1048] Add beamformer daisy chain health to SpsStation rollup.
+
 ## 12.0.4
 
 * [SKB-1347] Integrate fix via update to ska-low-mccs-common.

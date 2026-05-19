@@ -114,6 +114,8 @@ def mock_tile_builder_fixture(
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
     builder.add_attribute("tileProgrammingState", "Unknown")
     builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
+    builder.add_attribute("dstip40gfpga1", "")
+    builder.add_attribute("dstip40gfpga2", "")
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
@@ -384,6 +386,25 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 args["value"],
                 tango.AttrQuality.ATTR_VALID,
             )
+
+        @command(dtype_in="DevString")
+        def MockTileDstIpChange(self: PatchedSpsStationDevice, argin: str) -> None:
+            """
+            Mock a tile reporting its beamformer destination IPs.
+
+            :param argin: JSON with tile_id, fpga1_ip, fpga2_ip.
+            """
+            args = json.loads(argin)
+            for attr, key in (
+                ("dstip40gfpga1", "fpga1_ip"),
+                ("dstip40gfpga2", "fpga2_ip"),
+            ):
+                self.component_manager._on_tile_attribute_change(
+                    args["tile_id"],
+                    attr,
+                    args[key],
+                    tango.AttrQuality.ATTR_VALID,
+                )
 
     return PatchedSpsStationDevice
 

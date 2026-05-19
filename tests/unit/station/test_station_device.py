@@ -95,6 +95,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
     return MockTangoEventCallbackGroup(
         "admin_mode",
+        "beamformerDaisyChainValid",
         "command_result",
         "command_status",
         "health_state",
@@ -2085,3 +2086,95 @@ def test_csp_set_reset(
     rc, _ = on_station_device.ResetCspIngest()
     assert rc == ResultCode.OK
     assert initial_csp_config == on_station_device.cspIngestConfig
+
+
+def test_beamformer_daisy_chain_health_rollup(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that beamformer daisy-chain validation feeds into the health rollup.
+
+    Verifies that an invalid daisy chain drives healthState to FAILED and that
+    restoring correct IPs brings it back to OK. Subscribes to beamformerDaisyChainValid
+    AFTER health is OK so the event queue starts with exactly one item (the current
+    value) and assert_change_event serves as a proper async synchronization point.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+
+    station_device.subscribe_event(
+        "beamformerDaisyChainValid",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["beamformerDaisyChainValid"],
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(False)
+    change_event_callbacks["beamformerDaisyChainValid"].assert_not_called()
+
+    sdn_base = ipaddress.IPv4Address("10.0.0.152")
+    num_tiles = len(mock_tile_device_proxies)
+    last = num_tiles - 1
+
+    # Tiles within the chain send to each other; last tile is ignored.
+    for tile_id in range(last):
+        station_device.MockTileDstIpChange(
+            json.dumps(
+                {
+                    "tile_id": tile_id,
+                    "fpga1_ip": str(sdn_base + 2 * tile_id + 2),
+                    "fpga2_ip": str(sdn_base + 2 * tile_id + 3),
+                }
+            )
+        )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["health_state"].assert_not_called()
+
+    # Oh no someone broke it.
+    station_device.MockTileDstIpChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "fpga1_ip": "1.2.3.4",
+                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+            }
+        )
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(False)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+
+    # Yay they fixed it.
+    station_device.MockTileDstIpChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "fpga1_ip": str(sdn_base + 2 * 1 + 2),
+                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+            }
+        )
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)

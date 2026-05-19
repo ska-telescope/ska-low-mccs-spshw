@@ -177,7 +177,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
-        self.logger.error("joe start")
         self.init_completed()
 
     def _init_state_model(self: SpsStation) -> None:

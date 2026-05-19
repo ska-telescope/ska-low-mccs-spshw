@@ -1050,6 +1050,9 @@ class SpsStationComponentManager(
     ) -> None:
         # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            if attribute_name.lower() == "ppsdelay":
+                self._pps_delays_reported.discard(logical_tile_id)
+                self._fire_pps_delay_spread()
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
                 f"has quality {attribute_quality}. "

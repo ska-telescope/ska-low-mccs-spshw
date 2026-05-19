@@ -2,8 +2,11 @@
 
 ## Unreleased
 
-
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.
+
+## 12.0.4
+
+* [SKB-1347] Integrate fix via update to ska-low-mccs-common.
 * [THORN-420] Report progress during SPSStation initialise()
 
 ## 12.0.3

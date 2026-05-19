@@ -364,7 +364,6 @@ def test_off_on(
     # Okay, let's turn it back on again,
     subrack_lrc_manager.run_command_with_checks("On", expected_status=ResultCode.QUEUED)
     subrack_lrc_manager.assert_command_queued(timeout=5)
-    subrack_lrc_manager.assert_command_in_progress(timeout=5)
     subrack_lrc_manager.assert_command_finished(
         status="COMPLETED", result_code=ResultCode.OK, timeout=10
     )

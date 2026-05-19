@@ -837,7 +837,7 @@ class LRCManager:
                             executing, finished order.
         """
         self._device = device
-        self._device_name = device.dev_name
+        self._device_name = device.dev_name()
 
         if callback_keys:
             self.lrcQueue = callback_group[callback_keys[0]]

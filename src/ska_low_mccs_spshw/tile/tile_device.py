@@ -7154,14 +7154,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         To modify behaviour for this command, modify the do() method of
         the command class.
 
-        :raises ValueError: if device is already on
+        :raises tango.DevFailed: if device is already in ON state
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
         if self.get_state() == tango.DevState.ON:
-            raise ValueError("Device is already in ON state.")
+            tango.Except.throw_exception(
+                "CommandNotAllowed",
+                "Device is already in ON state.",
+                "MccsTile.execute_On",
+            )
 
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False

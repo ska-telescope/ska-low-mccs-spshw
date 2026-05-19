@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1347] Integrate fix via update to ska-low-mccs-common.
 * [THORN-420] Report progress during SPSStation initialise()
 
 ## 12.0.3

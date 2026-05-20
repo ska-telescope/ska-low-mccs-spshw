@@ -1593,13 +1593,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         f"Attribute {attr_name} changed to {attr_value}, "
                         "this is above maximum alarm, Shutting down TPM."
                     )
-                    self.execute_Off()
+                    self.component_manager.off()
             except Exception as e:  # pylint: disable=broad-except
                 self.logger.error(
                     f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
                     "Shutting down TPM."
                 )
-                self.execute_Off()
+                self.component_manager.off()
 
     def notify_emission(self: MccsTile, signal: str, value: Any) -> None:
         """
@@ -7153,8 +7153,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         To modify behaviour for this command, modify the do() method of
         the command class.
-
-        :raises tango.DevFailed: if device is already in ON state
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

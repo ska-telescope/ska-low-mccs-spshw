@@ -11,7 +11,7 @@
 
 ## Unreleased
 
-* [SKB-1341] Error getting tile.longRunningCommandStatus
+* [SKB-1341] Tile `On` and `Off` commands are now enqueued as LRCs rather than executed synchronously.
 
 ## 12.0.4
 

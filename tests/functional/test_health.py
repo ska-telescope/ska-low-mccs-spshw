@@ -243,6 +243,7 @@ def get_device_online(
 
 
 @given("the Station ppsDelays are corrected")
+@then("the Station ppsDelays are corrected")
 def station_delays_corrected(
     station_devices: dict[str, list[tango.DeviceProxy]],
 ) -> None:

@@ -2,8 +2,7 @@ Feature: Test health
     Test that health is being computed and aggregated correctly
 
     Scenario: Healthy when everything is on and operational
-        Given the Station ppsDelays are corrected
-        And the Station is online
+        Given the Station is online
         And the Station has been commanded to turn to Standby
         And the Station reports that its state is STANDBY
         And the Tiles reports that its state is OFF
@@ -11,6 +10,7 @@ Feature: Test health
         When the Station has been commanded to turn On
         Then the Station reports that its state is ON
         And the Tiles reports that its state is ON
+        And the Station ppsDelays are corrected
         And the DAQs reports that its HealthState is OK
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
@@ -21,6 +21,7 @@ Feature: Test health
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
+        And the Station ppsDelays are corrected
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is OK
@@ -34,6 +35,7 @@ Feature: Test health
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
+        And the Station ppsDelays are corrected
         And the subracks thresholds are normal
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
@@ -48,6 +50,7 @@ Feature: Test health
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
+        And the Station ppsDelays are corrected
         And the subracks thresholds are normal
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK

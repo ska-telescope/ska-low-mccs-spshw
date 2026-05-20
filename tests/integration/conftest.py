@@ -422,7 +422,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_result",
         "subrack_tpm_power_state",
         "tile_state",
-        "tile_command_status",
         "tile_programming_state",
         timeout=5.0,
     )

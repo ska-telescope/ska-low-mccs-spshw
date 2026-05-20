@@ -44,9 +44,7 @@ from ska_low_mccs_spshw.tile import (
 from ska_low_mccs_spshw.tile.tile_poll_management import RequestIterator
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import (
-    assert_against_lrc_executing,
-    assert_against_lrc_finished,
-    assert_against_lrc_queued,
+    LRCManager,
     execute_lrc_to_completion,
     get_lrc_finished,
     wait_for_completed_command_to_clear_from_queue,
@@ -85,11 +83,12 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "communication_state",
         "tile_programming_state",
-        "lrc_command",
+        "lrc_finished",
+        "lrc_queue",
+        "lrc_executing",
         "alarms",
         "adc_power",
         "pps_present",
-        "track_lrc_command",
         "alarm_attribute",
         "attribute_state",
         "fpga0_clock",
@@ -2107,7 +2106,7 @@ class TestMccsTileCommands:
         command_args: Optional[str],
     ) -> None:
         """
-        Test that LongRunningCommand can execute.
+        Test that Long Running Commands can execute.
 
         Here we are testing the 'Initialise' and 'DownloadFirmware' command the start
         acquisition is tested in 'test_StartAcquisition'
@@ -2128,12 +2127,10 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-        tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
+        tile_lrc_manager = LRCManager(
+            tile_device,
+            change_event_callbacks,
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
@@ -2145,35 +2142,27 @@ class TestMccsTileCommands:
 
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        completed_task = get_lrc_finished(tile_device, command_id)
-
-        assert completed_task["status"] == "FAILED"
-        assert (
-            "Communication with component is not established"
-            in completed_task["result"][-1]
+        tile_lrc_manager.run_command(command_name=command_name, arguments=command_args)
+        tile_lrc_manager.assert_command_queued()
+        # tile_lrc_manager.assert_command_in_progress()
+        tile_lrc_manager.assert_command_finished(
+            status="FAILED",
+            result_message_contains="Communication with component is not established",
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-        [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
-
-        assert task_status == TaskStatus.IN_PROGRESS
-        assert command_name in command_id.split("_")[-1]
-
-        assert_against_lrc_queued(tile_device, command_id)
-        try:
-            assert_against_lrc_executing(tile_device, command_id, "IN_PROGRESS")
-        except TimeoutError:
-            # DownloadFirmware doesn't get this one.
-            pass
-
-        assert_against_lrc_finished(tile_device, command_id, "COMPLETED")
+        tile_lrc_manager.run_command_with_checks(
+            command_name, command_args, TaskStatus.IN_PROGRESS
+        )
+        tile_lrc_manager.assert_command_queued()
+        if command_name != "DownloadFirmware":
+            tile_lrc_manager.assert_command_in_progress()
+        tile_lrc_manager.assert_command_finished(
+            status="COMPLETED", result_code=ResultCode.OK, timeout=10
+        )
 
     def test_StartAcquisition(
         self: TestMccsTileCommands,
@@ -2198,12 +2187,10 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-        tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
+        tile_lrc_manager = LRCManager(
+            tile_device,
+            change_event_callbacks,
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
@@ -2214,19 +2201,13 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        [[task_status], [command_id]] = tile_device.StartAcquisition(
-            json.dumps({"delay": 5})
+        tile_lrc_manager.run_command(
+            command_name="StartAcquisition", arguments=json.dumps({"delay": 5})
         )
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        completed_task = get_lrc_finished(tile_device, command_id)
-        assert completed_task["status"] == "FAILED"
-        assert (
-            "Communication with component is not established"
-            in completed_task["result"][-1]
+        tile_lrc_manager.assert_command_finished(
+            status="FAILED",
+            result_message_contains="Communication with component is not established",
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
 
@@ -2617,11 +2598,6 @@ class TestMccsTileCommands:
             callbacks with asynchrony support.
         """
         # create callbacks to monitor changes in states
-        on_tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
 
         # Set up the antenna buffer
         arg = {

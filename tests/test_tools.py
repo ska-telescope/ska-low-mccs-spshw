@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -16,6 +17,7 @@ from __future__ import annotations
 import enum
 import json
 import time
+import typing
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Callable, Generator, Optional, Union
@@ -23,7 +25,7 @@ from typing import Any, Callable, Generator, Optional, Union
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, ResultCode
+from ska_control_model import AdminMode, ResultCode, TaskStatus
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -767,3 +769,436 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
         self.tile_programming_state = programming_state
         for kwarg, val in kwargs.items():
             setattr(self, kwarg, val)
+
+
+class JSONRepresenting:  # noqa: PLW1641 # eq-without-hash
+    """
+    A representation of a JSON string using a python object.
+
+    This object will compare equal to to any JSON string, which when
+    loaded as a python object, is equal to the provide :py:attr:`!obj`.
+
+    Allows using the :py:class`~ska_tango_testing.mock.placeholders.Anything`
+    object with JSON data.
+
+    For example:
+
+        >>> JSONRepresenting(
+        ...     {"foo": "bar", "qux": Anything}
+        ... ) == '{"foo": "bar", "qux": "baz"}'
+        True
+    """
+
+    def __init__(self, obj: Any):
+        """
+        Initialise the object.
+
+        :param obj: python object to compare to
+        """
+        self.obj = obj
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation for logging purposes.
+
+        :return: string of object
+        """
+        return f"JSONRepresenting({self.obj!r})"
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Return True if other is JSON representing something equal to obj.
+
+        :param other: the object used to compare
+        :return: result of asserion
+        """
+        if not isinstance(other, str):
+            return False
+        return typing.cast(bool, self.obj == json.loads(other))
+
+
+class LRCManager:
+    """A class to manage lrc callbacks and track command progress."""
+
+    # pylint: disable=too-many-instance-attributes
+    def __init__(
+        self,
+        device: tango.DeviceProxy,
+        callback_group: MockTangoEventCallbackGroup,
+        callback_keys: list[str] | None = None,
+    ) -> None:
+        """
+        Subscribe the lrc callbacks to the device and initialise them.
+
+        :param device: tango deviceProxy to the device
+        :param callback_group: tango event callback fixture containing all the
+                                required callbacks.
+        :param callback_keys: list of keys for the callback group, in queue,
+                            executing, finished order.
+        """
+        self._device = device
+        self._device_name = device.dev_name()
+
+        if callback_keys:
+            self.lrcQueue = callback_group[callback_keys[0]]
+            self.lrcExecuting = callback_group[callback_keys[1]]
+            self.lrcFinished = callback_group[callback_keys[2]]
+        else:
+            self.lrcQueue = callback_group["lrc_queue"]
+            self.lrcExecuting = callback_group["lrc_executing"]
+            self.lrcFinished = callback_group["lrc_finished"]
+
+        device.subscribe_event(
+            "lrcQueue",
+            tango.EventType.CHANGE_EVENT,
+            self.lrcQueue,
+        )
+        device.subscribe_event(
+            "lrcExecuting",
+            tango.EventType.CHANGE_EVENT,
+            self.lrcExecuting,
+        )
+        device.subscribe_event(
+            "lrcFinished",
+            tango.EventType.CHANGE_EVENT,
+            self.lrcFinished,
+        )
+        self.lrcExecuting.assert_change_event(())
+        self.lrcQueue.assert_change_event(())
+        self.lrcFinished.assert_change_event(())
+
+        self.command_name: str
+        self.return_code: ResultCode | TaskStatus
+        self.command_id: str
+
+    def run_command(
+        self,
+        command_name: str,
+        arguments: Any = None,
+    ) -> None:
+        """
+        Run the command and save the code and command id.
+
+        :param command_name: name of the tango command to be run
+        :param arguments: arguments of the command as a kwargs dictionary,
+                          defaults to None
+        """
+        self.command_name = command_name
+        [self.return_code], [self.command_id] = self._device.command_inout(
+            command_name, arguments
+        )
+
+    def run_command_with_checks(
+        self,
+        command_name: str,
+        arguments: Any = None,
+        expected_status: TaskStatus | ResultCode | None = None,
+    ) -> None:
+        """
+        Run the command and check the returned values.
+
+        :param command_name: name of the command to be run
+        :param arguments: arguments of the command as a kwargs dictionary,
+                          defaults to None
+        :param expected_status: if specified the result code will be asserted
+            to be equal to this value.
+        """
+        self.run_command(command_name, arguments)
+        id_name = self.command_id.split("_")[-1]
+        assert command_name.lower() in id_name.lower()
+        if expected_status is not None:
+            assert self.return_code == expected_status
+
+    def assert_command_queued(self, timeout: float = 1) -> None:
+        """
+        Assert that the command has been Queued.
+
+        :param timeout: the amount of time the test will wait on the
+            command to reach the queued state.
+        """
+        try:
+            self.lrcQueue.assert_change_event(
+                (
+                    JSONRepresenting(
+                        {
+                            "uid": self.command_id,
+                            "name": self.command_name,
+                            "submitted_time": Anything,
+                        }
+                    )
+                )
+            )
+        except AssertionError:
+            # Sometimes assert change event will miss a match.
+            self.check_lrc_queue(timeout)
+
+    def check_lrc_queue(self, timeout: float = 1) -> None:
+        """
+        Check the lrcQueue attribute directly for the command.
+
+        :param timeout: the amount of time the test will wait on the
+            command to reach lrcQueue.
+
+        :raises AssertionError: raises an assertion error if:
+                - the lrc return values don't match the expected values.
+                - fails to reach lrcQueue before timeout.
+                - already reached lrcFinished or lrcExecuting.
+        """
+        lrc_values = self._get_lrc_attribute_values(self._device.lrcQueue)
+        report_string = f"Command {self._device_name}.{self.command_name}"
+        if lrc_values == {}:
+            lrc_values = self._get_lrc_attribute_values(self._device.lrcExecuting)
+            if lrc_values != {}:
+                return
+            lrc_values = self._get_lrc_attribute_values(self._device.lrcFinished)
+            if lrc_values != {}:
+                return
+            lrc_values = self._wait_for_lrc_queue(timeout)
+            if lrc_values == {}:
+                raise AssertionError(
+                    report_string + " timed out waiting to reach lrcQueue"
+                )
+
+        if lrc_values["name"].lower() != self.command_name.lower():
+            raise AssertionError(
+                report_string + " name doesn't correspond to lrcQueue value: "
+                f"{lrc_values['name']}"
+            )
+
+    def assert_command_in_progress(self, timeout: float = 1) -> None:
+        """
+        Assert that the command has reach lrcExecuting.
+
+        :param timeout: the amount of time the test will wait on the command to reach
+            the finished state.
+        """
+        try:
+            self.lrcExecuting.assert_change_event(
+                (
+                    JSONRepresenting(
+                        {
+                            "uid": self.command_id,
+                            "name": self.command_name,
+                            "submitted_time": Anything,
+                            "started_time": Anything,
+                        }
+                    )
+                )
+            )
+        except AssertionError:
+            self.check_lrc_executing(timeout)
+
+    def check_lrc_executing(self, timeout: float = 1) -> None:
+        """
+        Check the lrcExecuting attribute directly for the command.
+
+        :param timeout: the amount of time the test will wait on the command
+            to reach lrcExecuting.
+
+        :raises AssertionError: raises an assertion error if:
+                - the lrc return values don't match the expected values.
+                - fails to reach lrcExecuting before timeout.
+                - already reached lrcFinished.
+        """
+        lrc_values = self._get_lrc_attribute_values(self._device.lrcExecuting)
+        report_string = f"Command {self._device_name}.{self.command_name}"
+
+        if lrc_values == {}:
+            lrc_values = self._get_lrc_attribute_values(self._device.lrcFinished)
+            if lrc_values != {}:
+                return
+            lrc_values = self._wait_for_lrc_executing(timeout)
+            if lrc_values == {}:
+                raise AssertionError(
+                    report_string + " timed out waiting to reach lrcExecuting"
+                )
+
+        # Check the values
+        if lrc_values["name"].lower() != self.command_name.lower():
+            raise AssertionError(
+                report_string + " name doesn't correspond to lrcExecuting"
+                f" value: {lrc_values['name']}"
+            )
+
+    # pylint: disable = too-many-arguments
+    def assert_command_finished(
+        self,
+        status: str | None = None,
+        result_code: ResultCode | None = None,
+        result_message: str | None = None,
+        result_message_contains: str | None = None,
+        timeout: float = 1,
+    ) -> None:
+        """
+        Assert the command reached the finished state with the correct values.
+
+        :param status: expected TaskStatus at the end of the command
+        :param result_code: expected result code to be returned by the command
+        :param result_message: expected result message of the command
+        :param result_message_contains: if supplied, the code will check if the
+            result message contains this string
+        :param timeout: the amount of time the test will wait on the command to
+            reach the finished state.
+
+        :raises AssertionError: raises an assertion error if the lrc return values
+                                don't match the expected values.
+        """
+        _status = status if status is not None else Anything
+        _result_code = result_code if result_code is not None else Anything
+        _result_message = result_message if result_message is not None else Anything
+
+        try:
+            self.lrcFinished.assert_change_event(
+                (
+                    JSONRepresenting(
+                        {
+                            "uid": self.command_id,
+                            "name": self.command_name,
+                            "status": _status,
+                            "submitted_time": Anything,
+                            "started_time": Anything,
+                            "finished_time": Anything,
+                            "result": [_result_code, _result_message],
+                        }
+                    )
+                )
+            )
+        except AssertionError:
+            self.check_lrc_finished(status, result_code, result_message, timeout)
+
+        if result_message_contains is not None:
+            completed_task = get_lrc_finished(self._device, self.command_id)
+            assert result_message_contains in completed_task["result"][-1]
+
+    def check_lrc_finished(
+        self,
+        status: str | Any = None,
+        result_code: ResultCode | None = None,
+        result_message: str | None = None,
+        timeout: float = 1,
+    ) -> None:
+        """
+        Check the lrcFinished attribute directly for the command and its values.
+
+        :param status: expected TaskStatus string at the end of the command.
+        :param result_code: expected ResultCode to be returned by the command.
+        :param result_message: expected result message of the command.
+        :param timeout: the amount of time the test will wait on the command to
+            reach the lrcFinished.
+
+        :raises AssertionError: raises an assertion error if:
+                - the lrc return values don't match the expected values.
+                - fails to reach lrcFinished before timeout.
+        """
+        missing_items_log = ""
+        completed_task = self._wait_for_lrc_finished(timeout)
+        report_string = f"Command {self._device_name}.{self.command_name}"
+        if completed_task == {}:
+            raise AssertionError(
+                report_string + " timed out waiting to reach lrcFinishing"
+            )
+
+        if status is not None and status != completed_task["status"]:
+            missing_items_log += (
+                f"Returned status: {completed_task['status']} is different"
+                f" than expected: {status}\n"
+            )
+        if (
+            result_message is not None
+            and completed_task["result"][-1] != result_message
+        ):
+            missing_items_log += (
+                f"Returned result message: '{completed_task['result'][-1]}"
+                f"' is different than expected: '{result_message}'\n"
+            )
+        if result_code is not None and completed_task["result"][0] != result_code:
+            missing_items_log += (
+                f"Returned result code: {completed_task['result'][0]} is"
+                f" different than expected: {result_code}\n"
+            )
+
+        if missing_items_log != "":
+            raise AssertionError(
+                report_string
+                + f" has values different than expected: \n {missing_items_log}"
+            )
+
+    def _get_lrc_attribute_values(
+        self,
+        attribute: list[str],
+    ) -> dict:
+        """
+        Get the lrc dictionary from attribute directly.
+
+        :param attribute: the values returned byt the lrc attribute
+
+        :return: the lrc dictioanry corresponding to the current id
+        """
+        for completed_task in attribute:
+            completed_task = json.loads(completed_task)
+            if completed_task["uid"] == self.command_id:
+                return completed_task
+        return {}
+
+    def _wait_for_lrc_queue(
+        self, timeout: float = 1, polling_frequency: float = 1
+    ) -> dict:
+        """
+        Continously polls lrcQueued for the command id.
+
+        :param timeout: the amount of time it will wait for
+        :param polling_frequency: how often it polls per second
+        :return: the command values
+        """
+        uid_found = False
+        start_time = time.time()
+        current_time = start_time
+        while not uid_found and (current_time - start_time < timeout):
+            lrc_result = self._get_lrc_attribute_values(self._device.lrcQueue)
+            if lrc_result != {}:
+                uid_found = True
+            time.sleep(1 / polling_frequency)
+            current_time = time.time()
+        return lrc_result
+
+    def _wait_for_lrc_finished(
+        self, timeout: float = 1, polling_frequency: float = 1
+    ) -> dict:
+        """
+        Continously polls lrcFinished for the command id.
+
+        :param timeout: the amount of time it will wait for
+        :param polling_frequency: how often it polls per second
+        :return: the command values
+        """
+        uid_found = False
+        start_time = time.time()
+        current_time = start_time
+        while not uid_found and (current_time - start_time < timeout):
+            lrc_result = self._get_lrc_attribute_values(self._device.lrcFinished)
+            if lrc_result != {}:
+                uid_found = True
+            time.sleep(1 / polling_frequency)
+            current_time = time.time()
+        return lrc_result
+
+    def _wait_for_lrc_executing(
+        self, timeout: float = 1, polling_frequency: float = 1
+    ) -> dict:
+        """
+        Continously polls lrcExecuting for the command id.
+
+        :param timeout: the amount of time it will wait for
+        :param polling_frequency: how often it polls per second
+        :return: the command values
+        """
+        uid_found = False
+        start_time = time.time()
+        current_time = start_time
+        while not uid_found and (current_time - start_time < timeout):
+            lrc_result = self._get_lrc_attribute_values(self._device.lrcExecuting)
+            if lrc_result != {}:
+                uid_found = True
+            time.sleep(1 / polling_frequency)
+            current_time = time.time()
+        return lrc_result

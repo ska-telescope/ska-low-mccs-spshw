@@ -72,7 +72,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_state",
         "tile_state",
         "tile_programming_state",
-        "sps_station_command_status",
         "sps_adc_power",
         "tile_static_delays",
         "tile_preadu_levels",

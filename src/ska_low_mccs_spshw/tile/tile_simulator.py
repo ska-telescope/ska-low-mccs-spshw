@@ -622,18 +622,17 @@ class MockTpm:
 
     def get_40g_core_configuration(
         self: MockTpm,
-        core_id: int = -1,
+        core_id: int = 0,
         arp_table_entry: int = 0,
     ) -> dict[str, Any]:
         """
         Return a 40G configuration.
 
         :param core_id: id of the core for which a configuration is to
-            be returned. Defaults to -1, in which case all core
-            configurations are returned, defaults to -1
+            be returned
         :param arp_table_entry: ARP table entry to use
 
-        :return: core configuration or list of core configurations or none
+        :return: core configuration
         """
         # Fake some values. In reality we'd query the TPM here.
         self._40g_configuration = {
@@ -1927,32 +1926,16 @@ class TileSimulator:
         self: TileSimulator,
         core_id: int,
         arp_table_entry: int = 0,
-    ) -> dict[str, Any] | list[dict] | None:
+    ) -> dict[str, Any] | None:
         """
         Return a 40G configuration.
 
         :param core_id: id of the core for which a configuration is to
-            be returned. Defaults to -1, in which case all core
-            configurations are returned, defaults to -1
+            be returned
         :param arp_table_entry: ARP table entry to use
 
-        :return: core configuration or list of core configurations or none
+        :return: core configuration or None if not found
         """
-        # Fake some values. In reality we'd query the TPM here.
-        if self.tpm is not None:
-            self._40g_configuration = {
-                "core_id": core_id,
-                "arp_table_entry": arp_table_entry,
-                "src_mac": self.tpm._get_src_mac(),
-                "src_ip": self.tpm._get_src_ip(),
-                "dst_ip": self.tpm._get_dst_ip(),
-                "src_port": self.tpm._get_src_port(),
-                "dst_port": self.tpm._get_dst_port(),
-                "netmask": self.tpm._get_netmask(),
-                "gateway_ip": self.tpm._get_gateway_ip(),
-            }
-        if core_id == -1:
-            return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
             if item.get("core_id") == core_id:
                 if item.get("arp_table_entry") == arp_table_entry:
@@ -2258,6 +2241,15 @@ class TileSimulator:
             "gateway": gateway,
         }
         self.logger.debug(f"Set CSP download config: {self._csp_download_config}")
+        for core_id, dst_ip in [(0, dst_ip_1 or ""), (1, dst_ip_2 or "")]:
+            for item in self._forty_gb_core_list:
+                if item.get("core_id") == core_id and item.get("arp_table_entry") == 0:
+                    item["dst_ip"] = dst_ip
+                    break
+            else:
+                self._forty_gb_core_list.append(
+                    {"core_id": core_id, "arp_table_entry": 0, "dst_ip": dst_ip}
+                )
 
     @check_mocked_overheating
     @connected

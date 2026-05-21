@@ -125,6 +125,8 @@ class _TileProxy(DeviceComponentManager):
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
             "pointingDelays": self._on_attribute_change,
+            "dstip40gfpga1": self._on_attribute_change,
+            "dstip40gfpga2": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -491,11 +493,14 @@ class SpsStationComponentManager(
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
+        self._tile_dst_ips: dict[int, tuple[str, str]] = {}
+        self._beamformer_daisy_chain_valid: Optional[bool] = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
             self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+            self._tile_dst_ips[logical_tile_id] = ("", "")
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
@@ -1127,11 +1132,63 @@ class SpsStationComponentManager(
                         )
                     for delays in self._hw_pointing_delays.values():
                         delays.fill(np.nan)
+            case "dstip40gfpga1":
+                ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = (str(attribute_value), ip2)
+                self.logger.debug(
+                    f"Tile {logical_tile_id} updated dstip40gfpga1 to "
+                    f"{attribute_value}"
+                )
+                self._validate_beamformer_daisy_chain()
+            case "dstip40gfpga2":
+                ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = (ip1, str(attribute_value))
+                self.logger.debug(
+                    f"Tile {logical_tile_id} updated dstip40gfpga2 to "
+                    f"{attribute_value}"
+                )
+                self._validate_beamformer_daisy_chain()
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "
                     "Nothing is updated."
                 )
+
+    def _validate_beamformer_daisy_chain(
+        self: SpsStationComponentManager,
+    ) -> None:
+        """
+        Validate the station beamformer daisy chain configuration.
+
+        Check whether non-last tiles have their beamformer destination IPs
+        configured to form a correct daisy chain.
+
+        For every tile except the last the expected destinations are the source
+        IPs of the next tile.  The last tile's destination IPs are not validated
+        (it is free to point wherever the operator configures).  If any checked
+        tile's IPs are empty or not yet known the check is deferred.
+        """
+        last = self._number_of_tiles - 1
+        for tile_id in range(last):
+            ip1, ip2 = self._tile_dst_ips.get(tile_id, ("", ""))
+            if not ip1 or not ip2:
+                return
+            exp1 = str(self._sdn_first_address + 2 * tile_id + 2)
+            exp2 = str(self._sdn_first_address + 2 * tile_id + 3)
+            if ip1 != exp1 or ip2 != exp2:
+                self.logger.warning(
+                    f"Tile {tile_id} has incorrect beamformer destination IPs: "
+                    f"Expected ({exp1}, {exp2}), got ({ip1}, {ip2})"
+                )
+                valid = False
+                break
+        else:
+            valid = True
+        if valid == self._beamformer_daisy_chain_valid:
+            return
+        self._beamformer_daisy_chain_valid = valid
+        if self._component_state_callback:
+            self._component_state_callback(beamformerDaisyChainValid=valid)
 
     def _update_communication_state(
         self: SpsStationComponentManager,

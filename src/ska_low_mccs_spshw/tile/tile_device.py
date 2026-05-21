@@ -629,6 +629,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "broadband_rfi_factor": "broadbandRfiFactor",
             "40g_packet_count": "fortyGPacketCount",
             "pointing_delays": "pointingDelays",
+            "dst_ip_40g_fpga1": "dstip40gfpga1",
+            "dst_ip_40g_fpga2": "dstip40gfpga2",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -766,6 +768,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 ),
                 "pointingDelays": AlwaysPushAttributeManager(
                     functools.partial(self.post_change_event, "pointingDelays")
+                ),
+                "dstip40gfpga1": AttributeManager(
+                    functools.partial(self.post_change_event, "dstip40gfpga1"),
+                    initial_value="",
+                ),
+                "dstip40gfpga2": AttributeManager(
+                    functools.partial(self.post_change_event, "dstip40gfpga2"),
+                    initial_value="",
                 ),
             }
         )
@@ -3339,6 +3349,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the port of the csp destination
         """
         return self._csp_destination_port
+
+    @attribute(dtype="DevString", label="dstip40gfpga1")
+    def dstip40gfpga1(self: MccsTile) -> Any:
+        """
+        Return the 40G destination IP for FPGA1, set via SetCspDownload.
+
+        For non-last tiles this points at the next tile's FPGA1 source IP;
+        for the last tile it is the CSP ingest address.
+
+        :return: the destination IP for FPGA1
+        """
+        return self._attribute_state["dstip40gfpga1"].read()
+
+    @attribute(dtype="DevString", label="dstip40gfpga2")
+    def dstip40gfpga2(self: MccsTile) -> Any:
+        """
+        Return the 40G destination IP for FPGA2, set via SetCspDownload.
+
+        For non-last tiles this points at the next tile's FPGA2 source IP;
+        for the last tile it is the CSP ingest address.
+
+        :return: the destination IP for FPGA2
+        """
+        return self._attribute_state["dstip40gfpga2"].read()
 
     @attribute(
         dtype=SimulationMode,

@@ -934,7 +934,7 @@ def test_beamformer_table(
     # Component state callback is getting called by many many sources.
     callbacks["component_state"].assert_call(
         beamformerTable=tile_initial_beamformer_table,
-        lookahead=29,
+        lookahead=30,
         consume_nonmatches=True,
     )
     callbacks["component_state"].assert_call(
@@ -1117,3 +1117,52 @@ def test_pointing_delays(
         pointingdelays=expected_call,
         lookahead=50,
     )
+
+
+def test_beamformer_daisy_chain(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles_to_add: int,
+) -> None:
+    """
+    Test that the station validates beamformer daisy-chain routing.
+
+    Verifies that the component manager emits beamformerDaisyChainValid=True
+    once all tiles report the expected destination IPs, and flips to False when
+    a tile reports a wrong IP.
+
+    Calls _on_tile_attribute_change directly without start_communicating() to
+    avoid race conditions with background Tango subscription event threads.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles_to_add: number of TPMs in the test.
+    """
+    # Fixture uses IPv4Interface("10.0.0.152/16").
+    sdn_base = ipaddress.IPv4Address("10.0.0.152")
+    last = num_tiles_to_add - 1
+
+    def set_dst_ips(tile_id: int, fpga1: str, fpga2: str) -> None:
+        station_component_manager._on_tile_attribute_change(
+            tile_id, "dstip40gfpga1", fpga1, tango.AttrQuality.ATTR_VALID
+        )
+        station_component_manager._on_tile_attribute_change(
+            tile_id, "dstip40gfpga2", fpga2, tango.AttrQuality.ATTR_VALID
+        )
+
+    # Tiles within the chain send to each other; last tile is ignored.
+    for tile_id in range(last):
+        set_dst_ips(
+            tile_id,
+            str(sdn_base + 2 * tile_id + 2),
+            str(sdn_base + 2 * tile_id + 3),
+        )
+    callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)
+
+    # Oh no someone broke it.
+    set_dst_ips(1, "1.2.3.4", str(sdn_base + 2 * 1 + 3))
+    callbacks["component_state"].assert_call(beamformerDaisyChainValid=False)
+
+    # Yay they fixed it.
+    set_dst_ips(1, str(sdn_base + 2 * 1 + 2), str(sdn_base + 2 * 1 + 3))
+    callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)

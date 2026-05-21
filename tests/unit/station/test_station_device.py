@@ -95,6 +95,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
     return MockTangoEventCallbackGroup(
         "admin_mode",
+        "beamformerDaisyChainValid",
         "lrc_finished",
         "lrc_executing",
         "lrc_queue",
@@ -104,19 +105,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "track_lrc_command",
         timeout=20.0,
     )
-
-
-@pytest.fixture(name="sdn_first_interface", scope="session")
-def sdn_first_interface_fixture() -> str:
-    """
-    Return the first interface of the block allocated to this station for science data.
-
-    This is an IP address and netmask, in CIDR-style slash-notation.
-    For example, "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25".
-
-    :return: the SDN first interface
-    """
-    return "10.0.0.152/25"
 
 
 @pytest.fixture(name="sdn_gateway", scope="session")
@@ -1963,3 +1951,81 @@ def test_csp_set_reset(
     rc, _ = on_station_device.ResetCspIngest()
     assert rc == ResultCode.OK
     assert initial_csp_config == on_station_device.cspIngestConfig
+
+
+def test_beamformer_daisy_chain_health_rollup(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that beamformer daisy-chain validation feeds into the health rollup.
+
+    Verifies that an invalid daisy chain drives healthState to FAILED and that
+    restoring correct IPs brings it back to OK. Subscribes to beamformerDaisyChainValid
+    AFTER health is OK so the event queue starts with exactly one item (the current
+    value) and assert_change_event serves as a proper async synchronization point.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+
+    station_device.subscribe_event(
+        "beamformerDaisyChainValid",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["beamformerDaisyChainValid"],
+    )
+    # Mock tiles are configured with correct dst IPs, so daisy chain is already valid.
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["beamformerDaisyChainValid"].assert_not_called()
+    change_event_callbacks["health_state"].assert_not_called()
+
+    sdn_base = ipaddress.IPv4Address("10.0.0.152")
+
+    # Oh no someone broke it.
+    station_device.MockTileDstIpChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "fpga1_ip": "1.2.3.4",
+                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+            }
+        )
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(False)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+
+    # Yay they fixed it.
+    station_device.MockTileDstIpChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "fpga1_ip": str(sdn_base + 2 * 1 + 2),
+                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+            }
+        )
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)

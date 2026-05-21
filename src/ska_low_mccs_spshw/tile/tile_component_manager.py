@@ -1692,6 +1692,8 @@ class TileComponentManager(
         pfb_version = None
         rfi_blanking_enabled_antennas = None
         broadband_rfi_factor = None
+        dst_ip_40g_fpga1 = ""
+        dst_ip_40g_fpga2 = ""
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
@@ -1719,6 +1721,14 @@ class TileComponentManager(
             )
             preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
             pps_delay_correction = self._get_pps_delay_correction()
+            core0 = self._with_hardware_lock(
+                lambda: self.tile.get_40g_core_configuration(0, 0) or {}
+            )
+            core1 = self._with_hardware_lock(
+                lambda: self.tile.get_40g_core_configuration(1, 0) or {}
+            )
+            dst_ip_40g_fpga1 = core0.get("dst_ip", "")
+            dst_ip_40g_fpga2 = core1.get("dst_ip", "")
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1736,6 +1746,8 @@ class TileComponentManager(
             tile_health_structure=tile_health_structure,
             preadu_levels=preadu_levels,
             pps_delay_correction=pps_delay_correction,
+            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2883,6 +2895,8 @@ class TileComponentManager(
                     netmask,
                     gateway,
                 )
+                core0 = self.tile.get_40g_core_configuration(0, 0) or {}
+                core1 = self.tile.get_40g_core_configuration(1, 0) or {}
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
@@ -2891,6 +2905,10 @@ class TileComponentManager(
                     [f"TileComponentManager: Tile access failed {e}"],
                 )
 
+        self._update_attribute_callback(
+            dst_ip_40g_fpga1=core0.get("dst_ip", ""),
+            dst_ip_40g_fpga2=core1.get("dst_ip", ""),
+        )
         return ([ResultCode.OK], ["set csp download completed OK"])
 
     def stop_beamformer(
@@ -3546,7 +3564,7 @@ class TileComponentManager(
 
     def _get_40g_core_configuration(
         self: TileComponentManager, core_id: int, arp_table_entry: int
-    ) -> dict[str, Any] | list[dict] | None:
+    ) -> dict[str, Any] | None:
         """
         Return a 40G configuration.
 

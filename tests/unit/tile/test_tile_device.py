@@ -488,6 +488,8 @@ class TestMccsTile:
             "antennaIds",
             "srcip40gfpga1",
             "srcip40gfpga2",
+            "dstip40gfpga1",
+            "dstip40gfpga2",
             "lastPointingDelays",
             "cspSpeadFormat",
             "parentTRL",
@@ -3359,6 +3361,49 @@ class TestMccsTileCommands:
 
         with pytest.raises(DevFailed, match="Antenna IDs must be between 0 and 15"):
             on_tile_device.command_inout(cmd_name, [2, 3, 15, 16])
+
+    def test_set_csp_download_updates_dst_ip_attributes(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test that SetCspDownload updates dstip40gfpga1/2 and fires change events.
+
+        :param on_tile_device: device proxy to the MccsTile under test.
+        """
+        assert on_tile_device.dstip40gfpga1 == ""
+        assert on_tile_device.dstip40gfpga2 == ""
+
+        dst_ip_cb = MockTangoEventCallbackGroup(
+            "dstip40gfpga1",
+            "dstip40gfpga2",
+            timeout=9.0,
+        )
+        on_tile_device.subscribe_event(
+            "dstip40gfpga1", EventType.CHANGE_EVENT, dst_ip_cb["dstip40gfpga1"]
+        )
+        on_tile_device.subscribe_event(
+            "dstip40gfpga2", EventType.CHANGE_EVENT, dst_ip_cb["dstip40gfpga2"]
+        )
+        dst_ip_cb["dstip40gfpga1"].assert_change_event("")
+        dst_ip_cb["dstip40gfpga2"].assert_change_event("")
+
+        dst_ip_1 = "10.130.0.10"
+        dst_ip_2 = "10.130.0.11"
+        on_tile_device.SetCspDownload(
+            json.dumps(
+                {
+                    "destination_ip_1": dst_ip_1,
+                    "destination_ip_2": dst_ip_2,
+                    "is_last": False,
+                }
+            )
+        )
+
+        assert on_tile_device.dstip40gfpga1 == dst_ip_1
+        assert on_tile_device.dstip40gfpga2 == dst_ip_2
+        dst_ip_cb["dstip40gfpga1"].assert_change_event(dst_ip_1)
+        dst_ip_cb["dstip40gfpga2"].assert_change_event(dst_ip_2)
 
 
 class TestDataBaseInteraction:

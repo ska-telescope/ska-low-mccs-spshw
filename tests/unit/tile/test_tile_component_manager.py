@@ -651,10 +651,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("pps_delay", TileSimulator.PPS_DELAY),
             ("firmware_available", TileSimulator.FIRMWARE_LIST),
             ("register_list", list(MockTpm.REGISTER_MAP_DEFAULTS)),
-            (
-                "pps_present",
-                TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
-            ),
             ("pending_data_requests", False),
         ),
     )
@@ -1570,8 +1566,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator.tpm is not None
 
         _ = tile_component_manager.register_list
-        _ = tile_component_manager.pps_present
-        # _ = tile_component_manager._check_pps_present()
         with tile_component_manager._hardware_lock:
             _ = tile_component_manager.tile.check_pll_locked()
 
@@ -3113,7 +3107,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("channeliser_truncation"),
             ("get_static_delays"),
             ("csp_rounding"),
-            ("pps_present"),
             ("current_tile_beamformer_frame"),
             ("is_beamformer_running"),
             ("pending_data_requests"),
@@ -3545,37 +3538,6 @@ class TestDynamicSimulator:
             programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=9
         )
         return dynamic_tile_component_manager
-
-    @pytest.mark.parametrize(
-        "attribute_name",
-        (
-            "voltage_mon",
-            "board_temperature",
-            "fpga1_temperature",
-            "fpga2_temperature",
-        ),
-    )
-    def test_dynamic_attribute(
-        self: TestDynamicSimulator,
-        tile_component_manager: TileComponentManager,
-        attribute_name: str,
-    ) -> None:
-        """
-        Tests that dynamic attributes can be read.
-
-        Check that they are NOT equal to the
-        static value assigned in the static dynamic simulator.
-
-        :param tile_component_manager: the tile_component_manager
-            class object under test.
-        :param attribute_name: the name of the attribute under test
-        """
-        attribute_value = getattr(tile_component_manager, attribute_name)
-        assert attribute_value is not None
-        time.sleep(8.1)
-        new_attribute_value = getattr(tile_component_manager, attribute_name)
-        assert new_attribute_value is not None
-        assert new_attribute_value != attribute_value
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),

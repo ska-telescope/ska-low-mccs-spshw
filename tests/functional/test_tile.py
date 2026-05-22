@@ -856,7 +856,11 @@ def tile_overheats(
     tile_device: tango.DeviceProxy, request: pytest.FixtureRequest
 ) -> queue.SimpleQueue:
     """
-    Simulate an overheat by subscribing to temperature_alm then dropping the threshold.
+    Simulate an overheat by subscribing to temperature_alm then driving to UNPROGRAMMED.
+
+    TileWrapper.set_state(UNPROGRAMMED) handles switching to ENGINEERING mode, lowering
+    the board alarm threshold to 30°C, restoring adminMode, and waiting for the
+    tileProgrammingState to reach NotProgrammed.
 
     :param tile_device: tile device under test.
     :param request: pytest fixture request (used to register cleanup).
@@ -869,11 +873,7 @@ def tile_overheats(
         tango.EventType.CHANGE_EVENT,
         _queue.put,
     )
-    if tile_device.adminMode != AdminMode.ENGINEERING:
-        tile_device.adminMode = AdminMode.ENGINEERING
-    tile_device.firmwareTemperatureThresholds = json.dumps(
-        {"board_alarm_threshold": 30}
-    )
+    TileWrapper(tile_device).set_state(programming_state=TpmStatus.UNPROGRAMMED)
 
     def restore_threshold() -> None:
         tile_device.firmwareTemperatureThresholds = json.dumps(

@@ -564,8 +564,8 @@ class _ProgrammingStateAccess:
                 # trigger a overheating event.
                 cached_adminmode = obj._tile_device.adminMode
                 obj._tile_device.adminMode = AdminMode.ENGINEERING
-                obj._tile_device.SetFirmwareTemperatureThresholds(
-                    json.dumps({"board_temperature_threshold": 32.0})
+                obj._tile_device.firmwareTemperatureThresholds = json.dumps(
+                    {"board_alarm_threshold": 30}
                 )
                 obj._tile_device.adminMode = cached_adminmode
 

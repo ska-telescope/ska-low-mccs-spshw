@@ -1,6 +1,8 @@
 # Version History
 ## Unreleased
 
+* [THORN-125] Improve observability when UNPROGRAMMED.
+* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [THORN-416] Changed datatypes of tile and subrack attributes to match hardware datatypes
 
 ## 12.1.0

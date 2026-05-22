@@ -17,6 +17,7 @@ import os.path
 import re
 import sys
 import threading
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
@@ -4248,10 +4249,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # we are keeping this attribute for now.
         # It will be removed in the future and
         # users should migrate to using timing_pll_lock_status instead.
-        self.logger.warning(
+        warnings.warn(
             "MccsTile's pllLocked attribute is deprecated "
             "and will be removed in a future release. "
-            "Please use timing_pll_lock_status instead."
+            "Please use timing_pll_lock_status instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
         return self._attribute_state["pllLocked"].read()
 

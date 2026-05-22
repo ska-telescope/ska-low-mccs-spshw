@@ -178,6 +178,7 @@ class RequestIterator:
     PROGRAMMED_POLLED_ATTRIBUTES = [
         "CHECK_CPLD_COMMS",
         "IS_PROGRAMMED",
+        "PLL_LOCKED",
         "TEMPERATURES",
         "VOLTAGES",
         "CURRENTS",
@@ -196,6 +197,7 @@ class RequestIterator:
         "IS_PROGRAMMED",
         "PENDING_DATA_REQUESTS",
         "PHASE_TERMINAL_COUNT",
+        "PLL_LOCKED",
         "PPS_DELAY",
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
@@ -221,6 +223,7 @@ class RequestIterator:
         "IS_PROGRAMMED",
         "PENDING_DATA_REQUESTS",
         "PHASE_TERMINAL_COUNT",
+        "PLL_LOCKED",
         "PPS_DELAY",
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",

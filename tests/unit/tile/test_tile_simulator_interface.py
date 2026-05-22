@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the Tile Simulator interface."""
+
 from __future__ import annotations
 
 import ast
@@ -29,6 +30,7 @@ SIMULATOR_ONLY_METHODS = [
     "simulate_health_value",
     "_timed_thread",
     "_TileSimulator__is_connectable",  # mangled
+    "_filter_cpld_only",
     "evaluate_mcu_action",
 ]
 METHODS_TO_OMIT = [

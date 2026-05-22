@@ -98,6 +98,7 @@ _ATTRIBUTE_MAP: Final = {
     "IO": "tile_health_structure",
     "DSP": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
+    "PLL_LOCKED": "pll_locked",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
     "IS_BEAMFORMER_RUNNING": "beamformer_running",
     "FPGA_REFERENCE_TIME": "fpga_reference_time",
@@ -502,6 +503,12 @@ class TileComponentManager(
             case "ADC_RMS":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec], self.tile.get_adc_rms, publish=True
+                )
+            case "PLL_LOCKED":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.check_pll_locked,
+                    publish=True,
                 )
             case "PENDING_DATA_REQUESTS":
                 request = TileRequest(
@@ -1323,8 +1330,6 @@ class TileComponentManager(
                     self._update_attribute_callback(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                     )
-                    # This is just for testing.
-                    return
 
                 prog_status = False
                 tile_info = self.tile.info

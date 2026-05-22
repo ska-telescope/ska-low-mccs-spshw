@@ -7,6 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the tile component manage."""
+
 from __future__ import annotations
 
 import datetime
@@ -35,6 +36,7 @@ from ska_low_mccs_spshw.tile import (
     DynamicTileSimulator,
     MockTpm,
     TileComponentManager,
+    TileData,
     TileSimulator,
     TpmStatus,
 )
@@ -1649,6 +1651,78 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
             tile_simulator.tpm._is_programmed = False
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+
+    def test_health_status_unprogrammed_returns_cpld_only(
+        self: TestStaticSimulator,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test that when unprogrammed we can collect CPLD-only health.
+
+        :param tile_simulator: A mock object representing a simulated tile.
+        """
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+        tile_simulator.tpm._is_programmed = False
+
+        health = tile_simulator.get_health_status()
+
+        assert set(health.get("temperatures", {}).keys()) == {"board"}
+
+        assert (
+            set(health.get("voltages", {}).keys())
+            == TileData.CPLD_ONLY_HEALTH_KEYS["voltages"]
+        )
+
+        assert "currents" not in health
+
+        assert set(health.get("alarms", {}).keys()) == {
+            "I2C_access_alm",
+            "temperature_alm",
+            "voltage_alm",
+            "SEM_wd",
+            "MCU_wd",
+        }
+
+        adcs = health.get("adcs", {})
+        assert "pll_status" in adcs
+        assert "sysref_timing_requirements" in adcs
+        assert "sysref_counter" in adcs
+
+        assert set(health.get("timing", {}).keys()) == {"pll", "pll_40g"}
+
+        assert "io" not in health
+        assert "dsp" not in health
+
+    def test_health_status_programmed_returns_full_structure(
+        self: TestStaticSimulator,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Regression: get_health_status returns the full structure when programmed.
+
+        :param tile_simulator: A mock object representing a simulated tile.
+        """
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+        tile_simulator.tpm._is_programmed = True
+
+        health = tile_simulator.get_health_status()
+
+        for group in (
+            "temperatures",
+            "voltages",
+            "currents",
+            "alarms",
+            "adcs",
+            "timing",
+            "io",
+            "dsp",
+        ):
+            assert group in health, f"Expected '{group}' in full health structure"
+
+        assert "FPGA0" in health["temperatures"]
+        assert "VM_AGP0" in health["voltages"]
 
     def test_load_time_delays(
         self: TestStaticSimulator,

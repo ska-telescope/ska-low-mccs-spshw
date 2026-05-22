@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements the MCCS Tile device."""
+
 # pylint: disable=too-many-arguments
 from __future__ import annotations
 
@@ -1194,6 +1195,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # Pointing delay readback is operational metadata, not a health signal.
                 # It can be unavailable in valid startup/runtime windows.
                 "pointingDelays",
+                "dstip40gfpga1",
+                "dstip40gfpga2",
             }
 
             if is_v1(self.HardwareVersion):
@@ -4240,6 +4243,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: PLL lock state
         """
+        # NOTE: duplication of timing_pll_lock_status. This is undesired
+        # but to assist with migration to new API,
+        # we are keeping this attribute for now.
+        # It will be removed in the future and
+        # users should migrate to using timing_pll_lock_status instead.
+        self.logger.warning(
+            "MccsTile's pllLocked attribute is deprecated "
+            "and will be removed in a future release. "
+            "Please use timing_pll_lock_status instead."
+        )
         return self._attribute_state["pllLocked"].read()
 
     @attribute(

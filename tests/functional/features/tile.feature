@@ -60,6 +60,17 @@ Feature: Test tile
         Then the live calibration coefficients can be read back correctly from the Tile
         And the staged calibration coefficients can be read back correctly from the Tile
 
+    Scenario: Tile overheat causes alarm and power-off state transitions
+        Given an SPS deployment against HW
+        And the SpsStation and tiles are ON
+        And the Tile is available
+        When the Tile overheats
+        Then the Tile reports the overheat condition as expected
+        And the expected CPLD attributes are VALID
+        When the Tile is powered OFF
+        Then the tile reports it is in the OFF state
+
+
 # Scenario: Tile state recovered after dev_init
 #     Given an SPS deployment against HW
 #     And the SpsStation and tiles are ON

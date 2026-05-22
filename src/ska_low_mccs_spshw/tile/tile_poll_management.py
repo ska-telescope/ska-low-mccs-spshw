@@ -172,6 +172,7 @@ class RequestIterator:
         "CHECK_ALARM_STATUS",
         "TEMPERATURES",
         "VOLTAGES",
+        "ALARMS",
         "ADCS",
         "TIMING",
     ]

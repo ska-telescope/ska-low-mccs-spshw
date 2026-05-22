@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements polling management for a TileComponentManager."""
+
 from __future__ import annotations
 
 import time
@@ -167,7 +168,13 @@ class RequestIterator:
     UNCONNECTED_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
     OFF_POLLED_ATTRIBUTES = ["CONNECT"]
     UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
-    UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
+    UNPROGRAMMED_POLLED_ATTRIBUTES = [
+        "CHECK_CPLD_COMMS",
+        "TEMPERATURES",
+        "VOLTAGES",
+        "ADCS",
+        "TIMING",
+    ]
     PROGRAMMED_POLLED_ATTRIBUTES = [
         "CHECK_CPLD_COMMS",
         "IS_PROGRAMMED",

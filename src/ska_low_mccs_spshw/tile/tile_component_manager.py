@@ -6,9 +6,9 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for tiles."""
+
 from __future__ import annotations
 
-import json
 import logging
 import re
 import threading
@@ -1323,6 +1323,9 @@ class TileComponentManager(
                     self._update_attribute_callback(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                     )
+                    # This is just for testing.
+                    return
+
                 prog_status = False
                 tile_info = self.tile.info
                 bios = tile_info.get("hardware", {}).get("bios", "")

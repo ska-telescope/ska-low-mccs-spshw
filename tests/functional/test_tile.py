@@ -334,8 +334,7 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         assert first_tile.data_router_discarded_packets == json.dumps(
             {"FPGA0": [0, 0], "FPGA1": [0, 0]}
         )
-    # pylint: disable=broad-except
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # Allow time to in case of first read.
         time.sleep(10)
         assert first_tile.data_router_discarded_packets == json.dumps(
@@ -868,7 +867,7 @@ def tile_overheats(
     :return: a queue that will receive temperature_alm change events.
     """
     _queue: queue.SimpleQueue[tango.EventData] = queue.SimpleQueue()
-    tile_device.subscribe_event(
+    sub_id = tile_device.subscribe_event(
         "temperature_alm",
         tango.EventType.CHANGE_EVENT,
         _queue.put,
@@ -876,10 +875,12 @@ def tile_overheats(
     TileWrapper(tile_device).set_state(programming_state=TpmStatus.UNPROGRAMMED)
 
     def restore_threshold() -> None:
+        tile_device.unsubscribe_event(sub_id)
         tile_device.adminMode = AdminMode.ENGINEERING
         tile_device.firmwareTemperatureThresholds = json.dumps(
             {"board_alarm_threshold": "Undefined"}
         )
+        tile_device.adminMode = AdminMode.ONLINE
 
     request.addfinalizer(restore_threshold)
     return _queue
@@ -978,4 +979,6 @@ def verify_tile_off_state(tile_device: tango.DeviceProxy) -> None:
     """
     AttributeWaiter(timeout=30).wait_for_value(tile_device, "state", tango.DevState.OFF)
     assert tile_device.tileProgrammingState == "Off"
-    assert tile_device.healthState == HealthState.UNKNOWN
+    AttributeWaiter(timeout=30).wait_for_value(
+        tile_device, "healthState", HealthState.UNKNOWN, lookahead=5
+    )

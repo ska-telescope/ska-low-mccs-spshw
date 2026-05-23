@@ -876,6 +876,7 @@ def tile_overheats(
     TileWrapper(tile_device).set_state(programming_state=TpmStatus.UNPROGRAMMED)
 
     def restore_threshold() -> None:
+        tile_device.adminMode = AdminMode.ENGINEERING
         tile_device.firmwareTemperatureThresholds = json.dumps(
             {"board_alarm_threshold": "Undefined"}
         )
@@ -929,12 +930,11 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
     """
     valid_attrs = [
         "boardTemperature",
-        "voltage_mgt_avcc",
-        "voltage_mgt_avtt",
-        "voltage_sw_avdd1",
-        "voltage_sw_avdd2",
-        "voltage_avdd3",
-        "timing_pll_40g_lock_status",
+        "voltageMGT_AVCC",
+        "voltageMGT_AVTT",
+        "voltageSW_AVDD1",
+        "voltageSW_AVDD2",
+        "voltageAVDD3",
         "timing_pll_40g_count",
         "adc_pll_lock_status",
         "adc_sysref_timing_requirements",

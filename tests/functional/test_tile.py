@@ -917,6 +917,7 @@ def verify_overheat_condition(
         tile_device, "healthState", HealthState.FAILED, lookahead=5
     )
     assert "temperature_alm" in tile_device.healthReport
+    time.sleep(5)  # Allow time for all attributes to update after overheat
 
 
 @then("the expected CPLD attributes are VALID")

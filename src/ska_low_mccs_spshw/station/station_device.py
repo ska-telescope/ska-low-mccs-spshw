@@ -587,14 +587,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.push_archive_event("ppsDelaySpread", pps_delay_spread)
             self._health_model.update_state(pps_delay_spread=pps_delay_spread)
             # Check if pps_delay_spread is beyond thresholds, update health.
-            if (
-                self._health_thresholds["pps_delta_degraded"]
-                <= pps_delay_spread
-                <= self._health_thresholds["pps_delta_failed"]
-            ):
-                self._health_rollup.health_changed("self", HealthState.DEGRADED)
-            elif pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
+            if pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
                 self._health_rollup.health_changed("self", HealthState.FAILED)
+            elif pps_delay_spread >= self._health_thresholds["pps_delta_degraded"]:
+                self._health_rollup.health_changed("self", HealthState.DEGRADED)
             else:
                 self._health_rollup.health_changed("self", HealthState.OK)
 

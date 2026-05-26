@@ -30,6 +30,7 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import MccsDeviceProxy
+from ska_tango_base.software_bus import attribute_from_signal
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
@@ -54,6 +55,21 @@ from .conftest import PREADU_ATTENUATION, STATIC_TIME_DELAYS
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
+
+
+def is_signal_backed_check(attr_name: str) -> bool:
+    """
+    Find if an attribute is backed by a signal.
+
+    :param attr_name: The attribute.
+
+    :return: If the attribute is signal backed.
+    """
+    for cls in MccsTile.__mro__:
+        obj = vars(cls).get(attr_name)
+        if obj is not None:
+            return isinstance(obj, attribute_from_signal)
+    return False
 
 
 def set_nested_value(d: dict[str, Any], keys: list[str], value: Any) -> None:
@@ -274,6 +290,14 @@ def on_tile_device_fixture(
     for subscription_id in subscription_ids:
         tile_device.unsubscribe_event(subscription_id)
     wait_for_completed_command_to_clear_from_queue(tile_device)
+
+    # Wait for health to settle at OK after signal-backed attributes push real values.
+    deadline = time.time() + 10
+    while tile_device.healthState != HealthState.OK:
+        if time.time() > deadline:
+            break
+        time.sleep(0.05)
+
     yield tile_device
 
 
@@ -1159,7 +1183,7 @@ class TestMccsTile:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(
-            HealthState.OK, lookahead=2
+            HealthState.OK, lookahead=10
         )
         assert tile_device.healthState == HealthState.OK
 
@@ -1568,23 +1592,25 @@ class TestMccsTile:
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
-        ("attribute", "initial_value", "write_value"),
+        ("attribute", "initial_value", "write_value", "is_signal_backed"),
         [
             (
                 "voltageMon5V0",
                 TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
                 None,
+                True,
             ),
             (
                 "adcPower",
                 # pytest.approx(tuple(float(i) for i in range(32))),
                 TileSimulator.ADC_RMS,
                 None,
+                False,
             ),
-            ("preaduLevels", PREADU_ATTENUATION, [5] * 32),
-            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32),
-            ("pllLocked", True, None),
-            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
+            ("preaduLevels", PREADU_ATTENUATION, [5] * 32, False),
+            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32, False),
+            ("pllLocked", True, None, False),
+            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384, False),
         ],
     )
     def test_component_cached_attribute(
@@ -1595,6 +1621,7 @@ class TestMccsTile:
         initial_value: Any,
         mock_subrack_device_proxy: unittest.mock.Mock,
         write_value: Any,
+        is_signal_backed: bool,
     ) -> None:
         """
         Test device attributes that map through to the component.
@@ -1612,16 +1639,27 @@ class TestMccsTile:
         :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
             device.
         :param write_value: value to be written as part of the test.
+        :param is_signal_backed: True if the attribute uses attribute_from_signal
+            (returns degraded quality when unset) rather than raising DevFailed.
         """
         max_wait: int = 14  # seconds
         tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
-        with pytest.raises(
-            DevFailed,
-            match=f"Read value for attribute {attribute} has not been updated",
-        ):
-            _ = getattr(tile_device, attribute)
+        if is_signal_backed:
+            assert is_signal_backed_check(attribute)
+            attr_result = tile_device.read_attribute(attribute)
+            assert attr_result.quality in (
+                AttrQuality.ATTR_INVALID,
+                AttrQuality.ATTR_ALARM,
+            )
+        else:
+            assert not is_signal_backed_check(attribute)
+            with pytest.raises(
+                DevFailed,
+                match=f"Read value for attribute {attribute} has not been updated",
+            ):
+                _ = getattr(tile_device, attribute)
 
         tile_device.subscribe_event(
             "state",

@@ -618,6 +618,7 @@ class SpsStationComponentManager(
         self._beamformer_regions = np.zeros(shape=(48, 8), dtype=int)
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
+        self._pps_delays_reported: set[int] = set()
         self._pps_delay_corrections = [0] * 16
         self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
@@ -1027,6 +1028,7 @@ class SpsStationComponentManager(
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
+        self._pps_delays_reported.clear()
         self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
@@ -1048,6 +1050,9 @@ class SpsStationComponentManager(
     ) -> None:
         # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            if attribute_name.lower() == "ppsdelay":
+                self._pps_delays_reported.discard(logical_tile_id)
+                self._fire_pps_delay_spread()
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
                 f"has quality {attribute_quality}. "
@@ -1070,22 +1075,26 @@ class SpsStationComponentManager(
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = list(attribute_value)
             case "ppsdelay":
-                # Only calc for TPMs actually present.
+                # Cache the value regardless of tile state so that when the
+                # tile later becomes Synchronised the value is available.
                 self._pps_delays[logical_tile_id] = attribute_value
-                self._pps_delay_spread = max(
-                    self._pps_delays[0 : self._number_of_tiles]
-                ) - min(self._pps_delays[0 : self._number_of_tiles])
-                if self._component_state_callback:
-                    self._component_state_callback(
-                        ppsDelaySpread=self._pps_delay_spread
-                    )
+                self._pps_delays_reported.add(logical_tile_id)
+                # Spread is computed only from currently-Synchronised tiles to
+                # avoid pre-sync divergent values causing spurious DEGRADED.
+                self._fire_pps_delay_spread()
             case "tileprogrammingstate":
                 self._tile_programming_state[logical_tile_id] = attribute_value
-
+                if attribute_value not in ("Initialised", "Synchronised"):
+                    # State dropped below Initialised: the cached pps delay is
+                    # stale (tile has power-cycled or re-programmed).  Evict it
+                    # so spread is not polluted by the old reading.
+                    self._pps_delays_reported.discard(logical_tile_id)
                 if self._component_state_callback:
                     self._component_state_callback(
                         tileProgrammingState=self._tile_programming_state
                     )
+                # Re-compute spread: the Synchronised set may have changed.
+                self._fire_pps_delay_spread()
 
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:
@@ -2459,6 +2468,20 @@ class SpsStationComponentManager(
             assert proxy._proxy.ppsDelay is not None
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
+
+    def _fire_pps_delay_spread(self: SpsStationComponentManager) -> None:
+        """Recompute ppsDelaySpread from Synchronised tiles and fire callback."""
+        reported_sync = [
+            self._pps_delays[i]
+            for i in range(self._number_of_tiles)
+            if i in self._pps_delays_reported
+            and self._tile_programming_state[i] == "Synchronised"
+        ]
+        self._pps_delay_spread = (
+            max(reported_sync) - min(reported_sync) if reported_sync else 0
+        )
+        if self._component_state_callback:
+            self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
 
     @property
     def pps_delay_spread(self: SpsStationComponentManager) -> int:

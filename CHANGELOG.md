@@ -1,4 +1,7 @@
 # Version History
+## Unreleased
+
+* [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 
 ## Unreleased
 

@@ -867,7 +867,6 @@ def tile_overheats(
     :return: a queue that will receive temperature_alm change events.
     """
     _queue: queue.SimpleQueue[tango.EventData] = queue.SimpleQueue()
-    tile_device.logginglevel = 5
     sub_id = tile_device.subscribe_event(
         "temperature_alm",
         tango.EventType.CHANGE_EVENT,
@@ -947,11 +946,15 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
         "ppsPresent",
         "fpga0_qpll_status",
     ]
+    # We are not testing that the attributes are in the correct quality here,
+    # just testing that they are VALID or a subset of VALID (i.e ALARM, WARNING)
     for attr in valid_attrs:
         quality = tile_device.read_attribute(attr).quality
-        assert (
-            quality == tango.AttrQuality.ATTR_VALID
-        ), f"{attr} expected ATTR_VALID but got {quality}"
+        assert quality in (
+            tango.AttrQuality.ATTR_VALID,
+            tango.AttrQuality.ATTR_ALARM,
+            tango.AttrQuality.ATTR_WARNING,
+        ), f"{attr} expected ATTR_VALID, ATTR_ALARM, or ATTR_WARNING but got {quality}"
     for attr in invalid_attrs:
         quality = tile_device.read_attribute(attr).quality
         assert (

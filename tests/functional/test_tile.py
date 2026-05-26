@@ -867,6 +867,7 @@ def tile_overheats(
     :return: a queue that will receive temperature_alm change events.
     """
     _queue: queue.SimpleQueue[tango.EventData] = queue.SimpleQueue()
+    tile_device.logginglevel = 5
     sub_id = tile_device.subscribe_event(
         "temperature_alm",
         tango.EventType.CHANGE_EVENT,

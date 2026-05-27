@@ -501,14 +501,12 @@ class TestMccsTile:
         :returns: a list of attributes that are software configuration.
         """
         return [
-            "channeliserRounding",  # There is no read, therefore this is all software
             "testGeneratorActive",
             "firmwareName",
             "globalReferenceTime",
             "cspDestinationIp",
             "cspDestinationMac",
             "cspDestinationPort",
-            "cspRounding",
             "antennaIds",
             "srcip40gfpga1",
             "srcip40gfpga2",
@@ -1080,7 +1078,7 @@ class TestMccsTile:
                 pass
             except Exception as e:  # pylint: disable=broad-except
                 pytest.fail(f"Unexpected exception {attr=} raised. {repr(e)}")
-
+        assert tile_device.healthState == HealthState.UNKNOWN
         tile_device.On()
         tile_component_manager._subrack_says_tpm_power_changed(
             "tpm1PowerState",

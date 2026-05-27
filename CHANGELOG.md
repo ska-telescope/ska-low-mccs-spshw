@@ -1,6 +1,7 @@
 # Version History
 ## Unreleased
 
+* [THORN-581] Report hardware reading for CspRounding and ChanneliserRounding instead of cache.
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 

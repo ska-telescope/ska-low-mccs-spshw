@@ -203,6 +203,7 @@ class StationBeamformer:
         self._last_frame = 0
         self.station_beam_flag = False
         self._group_is_running = [False] * 48
+        self._csp_rounding: int = 2
 
     def define_channel_table(self: StationBeamformer, table: list[list[int]]) -> None:
         """
@@ -398,6 +399,15 @@ class StationBeamformer:
         :return: station beam flag values as list of bool values
         """
         return self.station_beam_flag
+
+    def get_csp_rounding(self) -> int:
+        """
+        Get the CSP rounding value.
+
+        :return: CSP rounding value
+        :rtype: int
+        """
+        return self._csp_rounding
 
 
 class MockTpmFirmwareInformation:
@@ -2194,7 +2204,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> bool:
+    def set_csp_rounding(self: TileSimulator, rounding: int) -> bool:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
@@ -2203,8 +2213,25 @@ class TileSimulator:
         :return: true is write a success.
         """
         if self.is_csp_write_successful:
-            self.csp_rounding = rounding
+            self.csp_rounding = [rounding] * 384
+            assert self.tpm
+            for beamf in self.tpm.station_beamf:
+                beamf._csp_rounding = rounding
         return self.is_csp_write_successful
+
+    @check_mocked_overheating
+    @connected
+    def get_csp_rounding(self: TileSimulator) -> int:
+        """
+        Get the final rounding in the CSP samples.
+
+        Note, only checks first FPGA as they should match.
+
+        :return: CSP rounding value stored in the register of FPGA 1
+        :rtype: int
+        """
+        assert self.tpm
+        return self.tpm.station_beamf[0].get_csp_rounding()
 
     @check_mocked_overheating
     @connected

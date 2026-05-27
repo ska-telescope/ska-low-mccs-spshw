@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for tiles."""
+
 from __future__ import annotations
 
 import json
@@ -3317,24 +3318,13 @@ class TileComponentManager(
             value = int(rounding[0])
         self.logger.debug("TileComponentManager: set_csp_rounding")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    write_successful = self.tile.set_csp_rounding(value)
-                    if write_successful:
-                        hw_value = self.tile.get_csp_rounding()
-                        self._update_attribute_callback(csp_rounding=[hw_value] * 384)
-                    else:
-                        self.logger.warning("Setting the cspRounding failed ")
-
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_csp_rounding(value)
+            hw_value = self.tile.get_csp_rounding()
+        self._update_attribute_callback(csp_rounding=[hw_value] * 384)
 
     @check_communicating
     def get_static_delays(self: TileComponentManager) -> list[float]:
@@ -3424,20 +3414,13 @@ class TileComponentManager(
             f"TileComponentManager: set_channeliser_truncation: {trunc[0]}"
         )
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.set_channeliser_truncation(trunc)
-                    hw_value = self.tile.get_channeliser_truncation()
-                    self._update_attribute_callback(channeliser_rounding=hw_value)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_channeliser_truncation(trunc)
+            hw_value = self.tile.get_channeliser_truncation()
+        self._update_attribute_callback(channeliser_rounding=hw_value)
 
     @check_communicating
     def set_lmc_download(

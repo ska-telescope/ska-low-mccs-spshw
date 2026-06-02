@@ -1648,7 +1648,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     boardTemperature = attribute_from_signal(  # noqa: N815
         board_temperature_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         abs_change=0.1,
         archive_abs_change=0.1,
         min_value=15.0,
@@ -2418,7 +2418,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["fpga1_clock_managers_status"].read()
 
     @attribute(
-        dtype="DevLong",
+        dtype="DevShort",
         label="ddr_write_size",
     )
     def ddr_write_size(self: MccsTile) -> int:
@@ -2883,7 +2883,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.UseAttributesForHealth
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 0",
         unit="Celsius",
         abs_change=0.1,
@@ -2900,7 +2900,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC0"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 1",
         unit="Celsius",
         abs_change=0.1,
@@ -2917,7 +2917,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC1"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 2",
         unit="Celsius",
         abs_change=0.1,
@@ -2934,7 +2934,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC2"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 3",
         unit="Celsius",
         abs_change=0.1,
@@ -2951,7 +2951,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC3"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 4",
         unit="Celsius",
         abs_change=0.1,
@@ -2968,7 +2968,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC4"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 5",
         unit="Celsius",
         abs_change=0.1,
@@ -2985,7 +2985,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC5"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 6",
         unit="Celsius",
         abs_change=0.1,
@@ -3002,7 +3002,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC6"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 7",
         unit="Celsius",
         abs_change=0.1,
@@ -3019,7 +3019,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC7"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 8",
         unit="Celsius",
         abs_change=0.1,
@@ -3036,7 +3036,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC8"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 9",
         unit="Celsius",
         abs_change=0.1,
@@ -3053,7 +3053,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC9"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 10",
         unit="Celsius",
         abs_change=0.1,
@@ -3070,7 +3070,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC10"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 11",
         unit="Celsius",
         abs_change=0.1,
@@ -3087,7 +3087,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC11"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 12",
         unit="Celsius",
         abs_change=0.1,
@@ -3104,7 +3104,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC12"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 13",
         unit="Celsius",
         abs_change=0.1,
@@ -3121,7 +3121,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC13"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 14",
         unit="Celsius",
         abs_change=0.1,
@@ -3138,7 +3138,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["temperatureADC14"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 15",
         unit="Celsius",
         abs_change=0.1,
@@ -3340,7 +3340,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._csp_destination_mac
 
     @attribute(
-        dtype="DevLong", label="cspDestinationPort", abs_change=1, archive_abs_change=1
+        dtype="DevShort", label="cspDestinationPort", abs_change=1, archive_abs_change=1
     )
     def cspDestinationPort(self: MccsTile) -> int:
         """
@@ -3439,7 +3439,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
     @attribute(
-        dtype="DevLong", abs_change=1, archive_abs_change=1, min_value=0, max_value=15
+        dtype="DevShort", abs_change=1, archive_abs_change=1, min_value=0, max_value=15
     )
     def logicalTileId(self: MccsTile) -> int:
         """
@@ -3471,7 +3471,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["tileProgrammingState"].read()
 
-    @attribute(dtype="DevLong", abs_change=1, archive_abs_change=1)
+    @attribute(dtype="DevShort", abs_change=1, archive_abs_change=1)
     def stationId(self: MccsTile) -> int:
         """
         Return the id of the station to which this tile is assigned.
@@ -3902,7 +3902,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return False
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         abs_change=0.1,
         archive_abs_change=0.1,
         min_alarm=10.0,
@@ -3919,7 +3919,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["fpga1Temperature"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         abs_change=0.2,
         archive_abs_change=0.2,
         min_alarm=10.0,
@@ -3978,7 +3978,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.fpga_frame_time
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=("DevShort",),
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
@@ -4013,7 +4013,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ]
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=("DevShort",),
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
@@ -4043,7 +4043,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["adcPower"].read()
 
     @attribute(
-        dtype="DevLong",
+        dtype="DevLong64",
         fisallowed="_is_initialised",
         abs_change=1,
         archive_abs_change=1,
@@ -4718,7 +4718,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.last_pointing_delays
 
     @attribute(
-        dtype=(("DevLong",),),
+        dtype=(("DevShort",),),
         max_dim_x=2,  # pol
         max_dim_y=16,  # antenna
         abs_change=1,
@@ -4789,7 +4789,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.running_beams
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE0 current",
         unit="Amp",
         abs_change=0.1,
@@ -4806,7 +4806,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["currentFE0"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE1 current",
         unit="Amp",
         abs_change=0.1,
@@ -4823,7 +4823,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["currentFE1"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Analog 2.5 V",
         unit="Volt",
         abs_change=0.1,
@@ -4842,7 +4842,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageAVDD3"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Vref voltage for DDR0",
         unit="Volt",
         abs_change=0.1,
@@ -4859,7 +4859,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVrefDDR0"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Vref voltage for DDR1",
         unit="Volt",
         abs_change=0.1,
@@ -4886,7 +4886,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     return self._attribute_state["voltageVref2V5"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 1.2V",
         unit="Volt",
         abs_change=0.1,
@@ -4903,7 +4903,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMan1V2"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT AV",
         unit="Volt",
         abs_change=0.1,
@@ -4920,7 +4920,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMGT_AVCC"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT AVTT",
         unit="Volt",
         abs_change=0.1,
@@ -4937,7 +4937,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMGT_AVTT"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 5V0",
         unit="Volt",
         abs_change=0.1,
@@ -4954,7 +4954,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMon5V0"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 3V3",
         unit="Volt",
         abs_change=0.1,
@@ -4973,7 +4973,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMon3V3"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 1V8",
         unit="Volt",
         abs_change=0.1,
@@ -4992,7 +4992,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMon1V8"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="SW Analog 1.1 V",
         unit="Volt",
         abs_change=0.1,
@@ -5009,7 +5009,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageSW_AVDD1"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="SW Analog 2.3 V",
         unit="Volt",
         abs_change=0.1,
@@ -5026,7 +5026,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageSW_AVDD2"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="input supply",
         unit="Volt",
         abs_change=0.1,
@@ -5043,7 +5043,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVIN"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 0",
         unit="Volt",
         abs_change=0.1,
@@ -5060,7 +5060,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP0"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 1",
         unit="Volt",
         abs_change=0.1,
@@ -5077,7 +5077,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP1"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 2",
         unit="Volt",
         abs_change=0.1,
@@ -5094,7 +5094,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP2"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 3",
         unit="Volt",
         abs_change=0.1,
@@ -5111,7 +5111,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP3"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 4",
         unit="Volt",
         abs_change=0.1,
@@ -5128,7 +5128,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP4"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 5",
         unit="Volt",
         abs_change=0.1,
@@ -5145,7 +5145,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP5"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 6",
         unit="Volt",
         abs_change=0.1,
@@ -5162,7 +5162,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP6"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 7",
         unit="Volt",
         abs_change=0.1,
@@ -5179,7 +5179,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_AGP7"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Clock Buffer0 3.3V",
         unit="Volt",
         abs_change=0.1,
@@ -5196,7 +5196,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_CLK0B"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Clock Buffer1 3.3V",
         unit="Volt",
         abs_change=0.1,
@@ -5213,7 +5213,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_CLK1B"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="DDR FPGA0 Vtt",
         unit="Volt",
         abs_change=0.1,
@@ -5230,7 +5230,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_DDR0_VTT"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="DDR4",
         unit="Volt",
         abs_change=0.1,
@@ -5247,7 +5247,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_DDR1_VDD"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="DDR FPGA1 Vtt",
         unit="Volt",
         abs_change=0.1,
@@ -5264,7 +5264,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_DDR1_VTT"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="SW DRVDD 1.8V",
         unit="Volt",
         abs_change=0.1,
@@ -5281,7 +5281,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_DRVDD"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD DVDD",
         unit="Volt",
         abs_change=0.1,
@@ -5298,7 +5298,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_DVDD"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE0",
         unit="Volt",
         abs_change=0.1,
@@ -5317,7 +5317,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_FE0"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE1",
         unit="Volt",
         abs_change=0.1,
@@ -5336,7 +5336,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_FE1"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT0 AUX",
         unit="Volt",
         abs_change=0.1,
@@ -5353,7 +5353,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_MGT0_AUX"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT1 AUX",
         unit="Volt",
         abs_change=0.1,
@@ -5370,7 +5370,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_MGT1_AUX"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ANALOG PLL",
         unit="Volt",
         abs_change=0.1,
@@ -5387,7 +5387,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageVM_PLL"].read()
 
     @attribute(
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="VGA DC-DC",
         unit="Volt",
         abs_change=0.1,

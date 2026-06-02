@@ -37,8 +37,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # Properties
     # ----------
     SubrackIp = device_property(dtype=str)
-    SubrackPort = device_property(dtype=int, default_value=8081)
-    UpdateRate = device_property(dtype=float, default_value=15.0)
+    SubrackPort = device_property(dtype="DevShort", default_value=8081)
+    UpdateRate = device_property(dtype="DevFloat", default_value=15.0)
     PowerMarshallerTrl = device_property(dtype=str, default_value="")
     PduTrl = device_property(dtype=str, default_value="")
     PduPorts = device_property(dtype=(int,), default_value=[])
@@ -673,7 +673,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
-    @attribute(dtype=int, label="TPM count", abs_change=1)
+    @attribute(dtype="DevShort", label="TPM count", abs_change=1)
     def tpmCount(self: MccsSubrack) -> int:
         """
         Handle a Tango attribute read of TPM count.
@@ -768,7 +768,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._tpm_power_states[7]
 
     @attribute(
-        dtype=(float,),
+        dtype=("DevFloat",),
         max_dim_x=2,
         label="Backplane temperatures",
         unit="Celsius",
@@ -801,7 +801,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("backplaneTemperatures", None)
 
     @attribute(
-        dtype=(float,),
+        dtype=("DevFloat",),
         max_dim_x=2,
         label="Subrack board temperatures",
         unit="Celsius",
@@ -832,7 +832,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("boardTemperatures", None)
 
     @attribute(
-        dtype=(float,),
+        dtype=("DevFloat",),
         label="Board current",
         unit="Ampere",
         abs_change=0.1,
@@ -879,7 +879,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("cpldPllLocked", None)
 
     @attribute(
-        dtype=(float,), max_dim_x=2, label="power supply currents", abs_change=0.1
+        dtype=("DevFloat",), max_dim_x=2, label="power supply currents", abs_change=0.1
     )
     def powerSupplyCurrents(self: MccsSubrack) -> list[float] | None:
         """
@@ -902,7 +902,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("powerSupplyCurrents", None)
 
     @attribute(
-        dtype=(float,), max_dim_x=3, label="power supply fan speeds", abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=3,
+        label="power supply fan speeds",
+        abs_change=0.1,
     )
     def powerSupplyFanSpeeds(self: MccsSubrack) -> list[float] | None:
         """
@@ -928,7 +931,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("powerSupplyFanSpeeds", None)
 
-    @attribute(dtype=(float,), max_dim_x=2, label="power supply powers", abs_change=0.1)
+    @attribute(
+        dtype=("DevFloat",), max_dim_x=2, label="power supply powers", abs_change=0.1
+    )
     def powerSupplyPowers(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the power supply powers.
@@ -950,7 +955,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("powerSupplyPowers", None)
 
     @attribute(
-        dtype=(float,), max_dim_x=2, label="power supply voltages", abs_change=0.1
+        dtype=("DevFloat",), max_dim_x=2, label="power supply voltages", abs_change=0.1
     )
     def powerSupplyVoltages(self: MccsSubrack) -> list[float] | None:
         """
@@ -972,7 +977,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("powerSupplyVoltages", None)
 
-    @attribute(dtype=(float,), max_dim_x=4, label="subrack fan speeds", abs_change=0.1)
+    @attribute(
+        dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
+    )
     def subrackFanSpeeds(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the subrack fan speeds, in RPM.
@@ -994,7 +1001,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackFanSpeeds", None)
 
     @attribute(
-        dtype=(float,), max_dim_x=4, label="subrack fan speeds (%)", abs_change=0.1
+        dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds (%)", abs_change=0.1
     )
     def subrackFanSpeedsPercent(self: MccsSubrack) -> list[float] | None:
         """
@@ -1054,7 +1061,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackPllLocked", None)
 
     @attribute(
-        dtype=int,
+        dtype="DevShort",
         label="Timestamp",
         abs_change=1,
     )
@@ -1083,7 +1090,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return json.dumps(self.component_manager.read_health_status())
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltagesV_1V1")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltagesV_1V1")
     def internalVoltages1V1(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltagesV_1V1 attribute.
@@ -1092,7 +1099,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages1V1", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltagesV_1V5")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltagesV_1V5")
     def internalVoltages1V5(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltagesV_1V5 attribute.
@@ -1101,7 +1108,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages1V5", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltagesV_2V5")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltagesV_2V5")
     def internalVoltages2V5(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_2V5 attribute.
@@ -1110,7 +1117,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages2V5", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_2V8")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_2V8")
     def internalVoltages2V8(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_2V8 attribute.
@@ -1119,7 +1126,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages2V8", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_3V")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_3V")
     def internalVoltages3V(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_3V attribute.
@@ -1128,7 +1135,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages3V", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_3V3")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_3V3")
     def internalVoltages3V3(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_3V3 attribute.
@@ -1137,7 +1144,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages3V3", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_5V")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_5V")
     def internalVoltages5V(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages5V attribute.
@@ -1146,7 +1153,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltages5V", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_ARM")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_ARM")
     def internalVoltagesARM(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_ARM attribute.
@@ -1155,7 +1162,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltagesARM", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_CORE")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_CORE")
     def internalVoltagesCORE(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_CORE attribute.
@@ -1164,7 +1171,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltagesCORE", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_DDR")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_DDR")
     def internalVoltagesDDR(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_DDR attribute.
@@ -1173,7 +1180,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltagesDDR", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_POWERIN")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_POWERIN")
     def internalVoltagesPOWERIN(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_POWERIN attribute.
@@ -1182,7 +1189,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("internalVoltagesPOWERIN", None)
 
-    @attribute(dtype=float, abs_change=0.1, label="internalVoltages_SOC")
+    @attribute(dtype="DevFloat", abs_change=0.1, label="internalVoltages_SOC")
     def internalVoltagesSOC(self: MccsSubrack) -> float | None:
         """
         Handle a Tango attribute read of the internalVoltages_SOC attribute.
@@ -1254,7 +1261,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_model()
 
-    @attribute(dtype=int, label="pdu number ports")
+    @attribute(dtype="DevShort", label="pdu number ports")
     def pduNumberPorts(self: MccsSubrack) -> int | None:
         """
         Handle a Tango attribute read of thenumber of pdu ports.
@@ -1272,7 +1279,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_states()
 
-    @attribute(dtype=(float,), label="pdu port currents")
+    @attribute(dtype=("DevFloat",), label="pdu port currents")
     def pduPortCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the current of pdu port.
@@ -1281,7 +1288,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_currents()
 
-    @attribute(dtype=(float,), label="pdu port voltages")
+    @attribute(dtype=("DevFloat",), label="pdu port voltages")
     def pduPortVoltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the current of pdu port.
@@ -1290,7 +1297,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_voltages()
 
-    @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
+    @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM currents", abs_change=0.1)
     def tpmCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM currents.
@@ -1312,7 +1319,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("tpmCurrents", None)
 
     @attribute(
-        dtype=(float,), max_dim_x=8, label="TPM powers", max_alarm=120.0, abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=8,
+        label="TPM powers",
+        max_alarm=120.0,
+        abs_change=0.1,
     )
     def tpmPowers(self: MccsSubrack) -> list[float] | None:
         """
@@ -1335,7 +1346,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("tpmPowers", None)
 
     # Not implemented on SMB
-    # @attribute(dtype=(float,), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
+    # @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
     # def tpmTemperatures(self: MccsSubrack) -> list[float]:
     #     """
     #     Handle a Tango attribute read of the TPM temperatures.
@@ -1347,7 +1358,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     return self._hardware_attributes.get("tpmTemperatures", None) or []
 
     @attribute(
-        dtype=(float,),
+        dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM voltages",
         min_alarm=11.4,

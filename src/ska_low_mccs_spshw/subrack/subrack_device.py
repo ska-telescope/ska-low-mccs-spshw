@@ -1346,7 +1346,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("tpmPowers", None)
 
     # Not implemented on SMB
-    # @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
+    # @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM temperatures",
+    # abs_change=0.1)
     # def tpmTemperatures(self: MccsSubrack) -> list[float]:
     #     """
     #     Handle a Tango attribute read of the TPM temperatures.

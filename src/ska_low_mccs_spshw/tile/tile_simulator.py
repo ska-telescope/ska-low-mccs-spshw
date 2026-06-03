@@ -519,7 +519,7 @@ class MockTpm:
         self._station_beam_flagging = False
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
         self.tpm_monitor = TpmMonitor(logger)
-        self._scan_id = [0]*48
+        self._scan_id = [0] * 48
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """

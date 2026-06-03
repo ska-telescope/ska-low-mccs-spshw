@@ -2523,6 +2523,7 @@ class TileSimulator:
 
     def load_scan_id(
         self: TileSimulator,
+        beam: int | None = None,
         channel_groups: list[int] | None = None,
         scan_id: int = 0,
     ) -> None:

@@ -1,4 +1,34 @@
 # Version History
+## Unreleased
+
+* [THORN-440] Update MccsSubrack to use attribute_from_signal
+* [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
+
+## Unreleased
+
+* [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.
+* [SKB-1047] Add beamformer daisy chain health to SpsStation rollup.
+
+## 12.0.4
+
+* [SKB-1347] Integrate fix via update to ska-low-mccs-common.
+* [THORN-420] Report progress during SPSStation initialise()
+
+## 12.0.3
+
+* [THORN-449] Update functional tests to cover automatic transmission and reception of bandpasses after Station.Initialise.
+
+## 12.0.2
+
+* [SKB-1128] Add `RfiCount` and `TileBeamformerFrame` to Tile's Initialised polling list. This fixes an issue where a Tile would get into `HealthState.UNKNOWN` when `Initialise` is called in `TileProgrammingState.SYNCHRONISED` with `globalReferenceTime` not set.
+
+## 12.0.1
+
+* [SKB-1318] Update ska-tango-base to bring in fix to PollingComponentManager.
+
+## 12.0.0
+
+* [THORN-547] Add dual TPM firmware support with automated BIOS-based selection during Tile initialise. Keep default firmware 10.0.0 for BIOS < 1.0.0, add support for firmware 11.0.0 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.
 
 ## uncommitted
 

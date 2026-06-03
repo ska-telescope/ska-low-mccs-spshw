@@ -125,6 +125,8 @@ class _TileProxy(DeviceComponentManager):
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
             "pointingDelays": self._on_attribute_change,
+            "dstip40gfpga1": self._on_attribute_change,
+            "dstip40gfpga2": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -491,11 +493,14 @@ class SpsStationComponentManager(
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
+        self._tile_dst_ips: dict[int, tuple[str, str]] = {}
+        self._beamformer_daisy_chain_valid: Optional[bool] = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
             self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+            self._tile_dst_ips[logical_tile_id] = ("", "")
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
@@ -613,6 +618,7 @@ class SpsStationComponentManager(
         self._beamformer_regions = np.zeros(shape=(48, 8), dtype=int)
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
+        self._pps_delays_reported: set[int] = set()
         self._pps_delay_corrections = [0] * 16
         self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
@@ -1022,6 +1028,7 @@ class SpsStationComponentManager(
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
+        self._pps_delays_reported.clear()
         self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
@@ -1043,6 +1050,9 @@ class SpsStationComponentManager(
     ) -> None:
         # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            if attribute_name.lower() == "ppsdelay":
+                self._pps_delays_reported.discard(logical_tile_id)
+                self._fire_pps_delay_spread()
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
                 f"has quality {attribute_quality}. "
@@ -1065,22 +1075,26 @@ class SpsStationComponentManager(
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = list(attribute_value)
             case "ppsdelay":
-                # Only calc for TPMs actually present.
+                # Cache the value regardless of tile state so that when the
+                # tile later becomes Synchronised the value is available.
                 self._pps_delays[logical_tile_id] = attribute_value
-                self._pps_delay_spread = max(
-                    self._pps_delays[0 : self._number_of_tiles]
-                ) - min(self._pps_delays[0 : self._number_of_tiles])
-                if self._component_state_callback:
-                    self._component_state_callback(
-                        ppsDelaySpread=self._pps_delay_spread
-                    )
+                self._pps_delays_reported.add(logical_tile_id)
+                # Spread is computed only from currently-Synchronised tiles to
+                # avoid pre-sync divergent values causing spurious DEGRADED.
+                self._fire_pps_delay_spread()
             case "tileprogrammingstate":
                 self._tile_programming_state[logical_tile_id] = attribute_value
-
+                if attribute_value not in ("Initialised", "Synchronised"):
+                    # State dropped below Initialised: the cached pps delay is
+                    # stale (tile has power-cycled or re-programmed).  Evict it
+                    # so spread is not polluted by the old reading.
+                    self._pps_delays_reported.discard(logical_tile_id)
                 if self._component_state_callback:
                     self._component_state_callback(
                         tileProgrammingState=self._tile_programming_state
                     )
+                # Re-compute spread: the Synchronised set may have changed.
+                self._fire_pps_delay_spread()
 
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:
@@ -1127,11 +1141,63 @@ class SpsStationComponentManager(
                         )
                     for delays in self._hw_pointing_delays.values():
                         delays.fill(np.nan)
+            case "dstip40gfpga1":
+                ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = (str(attribute_value), ip2)
+                self.logger.debug(
+                    f"Tile {logical_tile_id} updated dstip40gfpga1 to "
+                    f"{attribute_value}"
+                )
+                self._validate_beamformer_daisy_chain()
+            case "dstip40gfpga2":
+                ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = (ip1, str(attribute_value))
+                self.logger.debug(
+                    f"Tile {logical_tile_id} updated dstip40gfpga2 to "
+                    f"{attribute_value}"
+                )
+                self._validate_beamformer_daisy_chain()
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "
                     "Nothing is updated."
                 )
+
+    def _validate_beamformer_daisy_chain(
+        self: SpsStationComponentManager,
+    ) -> None:
+        """
+        Validate the station beamformer daisy chain configuration.
+
+        Check whether non-last tiles have their beamformer destination IPs
+        configured to form a correct daisy chain.
+
+        For every tile except the last the expected destinations are the source
+        IPs of the next tile.  The last tile's destination IPs are not validated
+        (it is free to point wherever the operator configures).  If any checked
+        tile's IPs are empty or not yet known the check is deferred.
+        """
+        last = self._number_of_tiles - 1
+        for tile_id in range(last):
+            ip1, ip2 = self._tile_dst_ips.get(tile_id, ("", ""))
+            if not ip1 or not ip2:
+                return
+            exp1 = str(self._sdn_first_address + 2 * tile_id + 2)
+            exp2 = str(self._sdn_first_address + 2 * tile_id + 3)
+            if ip1 != exp1 or ip2 != exp2:
+                self.logger.warning(
+                    f"Tile {tile_id} has incorrect beamformer destination IPs: "
+                    f"Expected ({exp1}, {exp2}), got ({ip1}, {ip2})"
+                )
+                valid = False
+                break
+        else:
+            valid = True
+        if valid == self._beamformer_daisy_chain_valid:
+            return
+        self._beamformer_daisy_chain_valid = valid
+        if self._component_state_callback:
+            self._component_state_callback(beamformerDaisyChainValid=valid)
 
     def _update_communication_state(
         self: SpsStationComponentManager,
@@ -1698,14 +1764,18 @@ class SpsStationComponentManager(
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=5)
             self.logger.debug("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
+            # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event
+                task_callback, task_abort_event, progress_start=5, progress_end=65
             )
+            # Progress is reported incrementally inside _reinitialise_tiles
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
@@ -1715,16 +1785,22 @@ class SpsStationComponentManager(
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=70)
             self.logger.debug("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=75)
             self.logger.debug("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
             )
+            if task_callback:
+                task_callback(progress=85)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
@@ -1735,12 +1811,16 @@ class SpsStationComponentManager(
             )
 
         if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=90)
             self.logger.debug("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            if task_callback:
+                task_callback(progress=95)
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
@@ -1954,6 +2034,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
+        progress_start: int = 0,
+        progress_end: int = 100,
     ) -> tuple[ResultCode, str]:
         """
         Initialise tiles.
@@ -1963,9 +2045,13 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
+        :param progress_start: progress percentage at the start of this step,
+            used to interpolate progress callbacks during the polling wait.
+        :param progress_end: progress percentage reported once tiles are ready.
         :return: a result code and message
 
         """
+        progress_window = progress_end - progress_start
         with self._power_state_lock:
             results = []
             for proxy in self._tile_proxies.values():
@@ -1989,12 +2075,23 @@ class SpsStationComponentManager(
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
+        last_reported_count = 0
+        n_tiles = len(self._tile_proxies)
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in desired_states for state in states):
+            ready_count = sum(state in desired_states for state in states)
+            if ready_count == n_tiles:
+                if task_callback:
+                    task_callback(progress=progress_end)
                 return ResultCode.OK, ""
+            if task_callback and ready_count != last_reported_count:
+                # Fire a callback only when another tile reaches the desired state,
+                # interpolating the progress window across the number of tiles.
+                progress = int(progress_start + progress_window * ready_count / n_tiles)
+                task_callback(progress=progress)
+                last_reported_count = ready_count
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg
@@ -2242,6 +2339,7 @@ class SpsStationComponentManager(
             if start_bandpasses is not None
             else self._start_bandpasses_in_initialise
         ):
+            self.logger.info("Starting integrated channel data stream.")
             self.configure_integrated_channel_data(
                 integration_time=self._bandpass_integration_time,
                 first_channel=0,
@@ -2370,6 +2468,20 @@ class SpsStationComponentManager(
             assert proxy._proxy.ppsDelay is not None
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
+
+    def _fire_pps_delay_spread(self: SpsStationComponentManager) -> None:
+        """Recompute ppsDelaySpread from Synchronised tiles and fire callback."""
+        reported_sync = [
+            self._pps_delays[i]
+            for i in range(self._number_of_tiles)
+            if i in self._pps_delays_reported
+            and self._tile_programming_state[i] == "Synchronised"
+        ]
+        self._pps_delay_spread = (
+            max(reported_sync) - min(reported_sync) if reported_sync else 0
+        )
+        if self._component_state_callback:
+            self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
 
     @property
     def pps_delay_spread(self: SpsStationComponentManager) -> int:

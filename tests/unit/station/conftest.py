@@ -7,6 +7,7 @@
 """This module defined a pytest harness for unit testing the SPS Station module."""
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import unittest.mock
@@ -22,6 +23,16 @@ from ska_low_mccs_spshw import SpsStation
 from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
 from tests.harness import get_subrack_name, get_tile_name
+
+
+@pytest.fixture(name="sdn_first_interface", scope="session")
+def sdn_first_interface_fixture() -> str:
+    """
+    Return the first interface of the block allocated to this station for science data.
+
+    :return: the SDN first interface in CIDR notation.
+    """
+    return "10.0.0.152/25"
 
 
 @pytest.fixture(name="mock_subrack_device_proxy")
@@ -114,6 +125,8 @@ def mock_tile_builder_fixture(
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
     builder.add_attribute("tileProgrammingState", "Unknown")
     builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
+    builder.add_attribute("dstip40gfpga1", "")
+    builder.add_attribute("dstip40gfpga2", "")
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
@@ -147,6 +160,7 @@ def mock_tile_builder_fixture(
         "RejectedCommand", ([ResultCode.REJECTED], ["Command rejected."])
     )
     builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
+    builder.add_result_command("initialise", ResultCode.OK)
     return builder
 
 
@@ -217,22 +231,36 @@ def num_tiles_fixture() -> int:
 
 @pytest.fixture(name="mock_tile_device_proxies")
 def mock_tile_device_proxies_fixture(
-    mock_tile_builder: MockDeviceBuilder, num_tiles: int, station_id: int
+    mock_tile_builder: MockDeviceBuilder,
+    num_tiles: int,
+    station_id: int,
+    sdn_first_interface: str,
 ) -> list[unittest.mock.Mock]:
     """
     Fixture that provides a list of mock MccsTile devices.
+
+    Non-last tiles are pre-configured with the correct beamformer dst IPs so that
+    _validate_beamformer_daisy_chain validates immediately on subscription.
 
     :param mock_tile_builder: builder for mock Tiles
     :param num_tiles: the number of tiles to make mocks of
     :param station_id: the stationID fixture used to populate the
         device_property
+    :param sdn_first_interface: CIDR interface string for the SDN block.
 
     :return: a list of mock MccsTile devices.
     """
-    return [
-        mock_tile_builder(TileId=[i + 1], StationID=[station_id])
-        for i in range(num_tiles)
-    ]
+    sdn_base = ipaddress.ip_interface(sdn_first_interface).ip
+    mocks = []
+    for i in range(num_tiles):
+        mock = mock_tile_builder(TileId=[i + 1], StationID=[station_id])
+        if i < num_tiles - 1:
+            mock.configure_mock(
+                dstip40gfpga1=str(sdn_base + 2 * i + 2),
+                dstip40gfpga2=str(sdn_base + 2 * i + 3),
+            )
+        mocks.append(mock)
+    return mocks
 
 
 @pytest.fixture(name="patched_sps_station_device_class")
@@ -383,6 +411,25 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 args["value"],
                 tango.AttrQuality.ATTR_VALID,
             )
+
+        @command(dtype_in="DevString")
+        def MockTileDstIpChange(self: PatchedSpsStationDevice, argin: str) -> None:
+            """
+            Mock a tile reporting its beamformer destination IPs.
+
+            :param argin: JSON with tile_id, fpga1_ip, fpga2_ip.
+            """
+            args = json.loads(argin)
+            for attr, key in (
+                ("dstip40gfpga1", "fpga1_ip"),
+                ("dstip40gfpga2", "fpga2_ip"),
+            ):
+                self.component_manager._on_tile_attribute_change(
+                    args["tile_id"],
+                    attr,
+                    args[key],
+                    tango.AttrQuality.ATTR_VALID,
+                )
 
     return PatchedSpsStationDevice
 

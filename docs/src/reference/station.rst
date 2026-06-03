@@ -217,7 +217,17 @@ as long running.
   * *Initialise*: All Tiles are programed using the stored semi-static attributes.
     The Tile 40G interfaces are programmed to implement the beamforming SPS chain,
     with the last tile sending packets to the designated CSP ingest IP/port.
-    Tile coarse synchronization (to PPS) is cross checked.
+    Tile coarse synchronization (to PPS) is cross checked. Progress is reported
+    via the task callback at the following intervals:
+
+      * Tile source IPs are set - 5%
+      * Tiles reinitialised - incrementally up to 65% as tiles reach synchronised state
+      * Tile parameters initialised - 70%
+      * Station initialised - 75%
+      * ARP tables ready - 85%
+      * Data streams routed to DAQs - 90%
+      * Station synchronisation checked - 95%
+      * Beamformer started - complete
 
   * *StartAcquisition*: ADC acquisition is started synchronously for all tiles.
     This command must be coordinated (same sync time) for all stations in

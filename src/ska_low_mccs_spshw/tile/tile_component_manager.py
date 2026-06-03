@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
 
 import numpy as np
+import semver
 import tango
 from ska_control_model import (
     CommunicationStatus,
@@ -59,6 +61,28 @@ from .tpm_status import TpmStatus
 from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
+
+FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
+FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
+_BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
+_MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
+
+
+def _select_firmware_name(bios: str) -> str:
+    """
+    Select the firmware file to use for a TPM BIOS string.
+
+    :param bios: BIOS string reported by tile.info.
+
+    :return: firmware filename to program.
+    """
+    match = _BIOS_VERSION_PATTERN.search(bios)
+    if match is None:
+        return FIRMWARE_NAME_V10
+
+    version = semver.Version.parse(match.group(1))
+    return FIRMWARE_NAME_V11 if version >= _MIN_V11_BIOS_VERSION else FIRMWARE_NAME_V10
+
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
 # TileComponentManager have different names for things? It seems clearer for them
@@ -157,7 +181,9 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
-    FIRMWARE_NAME: str = "tpm_firmware.bit"
+    FIRMWARE_NAME_V10: str = FIRMWARE_NAME_V10
+    FIRMWARE_NAME_V11: str = FIRMWARE_NAME_V11
+    FIRMWARE_NAME: str = FIRMWARE_NAME_V10
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
@@ -1305,9 +1331,12 @@ class TileComponentManager(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                     )
                 prog_status = False
+                tile_info = self.tile.info
+                bios = tile_info.get("hardware", {}).get("bios", "")
+                self._firmware_name = _select_firmware_name(bios)
 
                 if self.tile.is_programmed() is False:
-                    self.logger.error(
+                    self.logger.info(
                         f"Programming tile with firmware {self._firmware_name}"
                     )
 
@@ -1663,6 +1692,8 @@ class TileComponentManager(
         pfb_version = None
         rfi_blanking_enabled_antennas = None
         broadband_rfi_factor = None
+        dst_ip_40g_fpga1 = ""
+        dst_ip_40g_fpga2 = ""
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
@@ -1690,6 +1721,14 @@ class TileComponentManager(
             )
             preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
             pps_delay_correction = self._get_pps_delay_correction()
+            core0 = self._with_hardware_lock(
+                lambda: self.tile.get_40g_core_configuration(0, 0) or {}
+            )
+            core1 = self._with_hardware_lock(
+                lambda: self.tile.get_40g_core_configuration(1, 0) or {}
+            )
+            dst_ip_40g_fpga1 = core0.get("dst_ip", "")
+            dst_ip_40g_fpga2 = core1.get("dst_ip", "")
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1707,6 +1746,8 @@ class TileComponentManager(
             tile_health_structure=tile_health_structure,
             preadu_levels=preadu_levels,
             pps_delay_correction=pps_delay_correction,
+            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2854,6 +2895,8 @@ class TileComponentManager(
                     netmask,
                     gateway,
                 )
+                core0 = self.tile.get_40g_core_configuration(0, 0) or {}
+                core1 = self.tile.get_40g_core_configuration(1, 0) or {}
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
@@ -2862,6 +2905,10 @@ class TileComponentManager(
                     [f"TileComponentManager: Tile access failed {e}"],
                 )
 
+        self._update_attribute_callback(
+            dst_ip_40g_fpga1=core0.get("dst_ip", ""),
+            dst_ip_40g_fpga2=core1.get("dst_ip", ""),
+        )
         return ([ResultCode.OK], ["set csp download completed OK"])
 
     def stop_beamformer(
@@ -3517,7 +3564,7 @@ class TileComponentManager(
 
     def _get_40g_core_configuration(
         self: TileComponentManager, core_id: int, arp_table_entry: int
-    ) -> dict[str, Any] | list[dict] | None:
+    ) -> dict[str, Any] | None:
         """
         Return a 40G configuration.
 

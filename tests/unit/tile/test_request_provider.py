@@ -170,3 +170,31 @@ class TestRequestProvider:
             stale_attribute_callback.assert_called_once_with(expected_stale_attribute)
         else:
             stale_attribute_callback.assert_not_called()
+
+    def test_synchronised_to_initialised_keeps_health_attributes_polled(
+        self: TestRequestProvider,
+        tile_request_provider: TileRequestProvider,
+        stale_attribute_callback: unittest.mock.Mock,
+        request_iterator: RequestIterator,
+    ) -> None:
+        """
+        Test that re-entering INITIALISED does not stale sync health attributes.
+
+        `RFI_COUNT` and `TILE_BEAMFORMER_FRAME` are exposed by the device API in
+        INITIALISED, so transitioning from SYNCHRONISED back to INITIALISED must
+        not invalidate them.
+
+        :param tile_request_provider: a `TileRequestProvider` instance.
+        :param stale_attribute_callback: a fixture containing a mock to be called
+            when an attribute is no longer polled.
+        :param request_iterator: a `RequestIterator` instance.
+        """
+        stale_attribute_callback.reset_mock()
+        request_iterator._state = TpmStatus.SYNCHRONISED
+
+        _ = tile_request_provider.get_request(TpmStatus.INITIALISED)
+
+        stale_attribute_callback.assert_called_once()
+        stale_attributes = stale_attribute_callback.call_args.args[0]
+        assert "RFI_COUNT" not in stale_attributes
+        assert "TILE_BEAMFORMER_FRAME" not in stale_attributes

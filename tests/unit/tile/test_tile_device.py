@@ -30,6 +30,7 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import MccsDeviceProxy
+from ska_tango_base.software_bus import attribute_from_signal
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
@@ -44,9 +45,7 @@ from ska_low_mccs_spshw.tile import (
 from ska_low_mccs_spshw.tile.tile_poll_management import RequestIterator
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import (
-    assert_against_lrc_executing,
-    assert_against_lrc_finished,
-    assert_against_lrc_queued,
+    LRCManager,
     execute_lrc_to_completion,
     get_lrc_finished,
     wait_for_completed_command_to_clear_from_queue,
@@ -56,6 +55,21 @@ from .conftest import PREADU_ATTENUATION, STATIC_TIME_DELAYS
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
+
+
+def is_signal_backed_check(attr_name: str) -> bool:
+    """
+    Find if an attribute is backed by a signal.
+
+    :param attr_name: The attribute.
+
+    :return: If the attribute is signal backed.
+    """
+    for cls in MccsTile.__mro__:
+        obj = vars(cls).get(attr_name)
+        if obj is not None:
+            return isinstance(obj, attribute_from_signal)
+    return False
 
 
 def set_nested_value(d: dict[str, Any], keys: list[str], value: Any) -> None:
@@ -85,11 +99,12 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "communication_state",
         "tile_programming_state",
-        "lrc_command",
+        "lrc_finished",
+        "lrc_queue",
+        "lrc_executing",
         "alarms",
         "adc_power",
         "pps_present",
-        "track_lrc_command",
         "alarm_attribute",
         "attribute_state",
         "fpga0_clock",
@@ -275,6 +290,14 @@ def on_tile_device_fixture(
     for subscription_id in subscription_ids:
         tile_device.unsubscribe_event(subscription_id)
     wait_for_completed_command_to_clear_from_queue(tile_device)
+
+    # Wait for health to settle at OK after signal-backed attributes push real values.
+    deadline = time.time() + 10
+    while tile_device.healthState != HealthState.OK:
+        if time.time() > deadline:
+            break
+        time.sleep(0.05)
+
     yield tile_device
 
 
@@ -489,6 +512,8 @@ class TestMccsTile:
             "antennaIds",
             "srcip40gfpga1",
             "srcip40gfpga2",
+            "dstip40gfpga1",
+            "dstip40gfpga2",
             "lastPointingDelays",
             "cspSpeadFormat",
             "parentTRL",
@@ -1158,7 +1183,7 @@ class TestMccsTile:
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(
-            HealthState.OK, lookahead=2
+            HealthState.OK, lookahead=10
         )
         assert tile_device.healthState == HealthState.OK
 
@@ -1567,23 +1592,25 @@ class TestMccsTile:
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
-        ("attribute", "initial_value", "write_value"),
+        ("attribute", "initial_value", "write_value", "is_signal_backed"),
         [
             (
                 "voltageMon5V0",
                 TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
                 None,
+                True,
             ),
             (
                 "adcPower",
                 # pytest.approx(tuple(float(i) for i in range(32))),
                 TileSimulator.ADC_RMS,
                 None,
+                False,
             ),
-            ("preaduLevels", PREADU_ATTENUATION, [5] * 32),
-            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32),
-            ("pllLocked", True, None),
-            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
+            ("preaduLevels", PREADU_ATTENUATION, [5] * 32, False),
+            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32, False),
+            ("pllLocked", True, None, False),
+            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384, False),
         ],
     )
     def test_component_cached_attribute(
@@ -1594,6 +1621,7 @@ class TestMccsTile:
         initial_value: Any,
         mock_subrack_device_proxy: unittest.mock.Mock,
         write_value: Any,
+        is_signal_backed: bool,
     ) -> None:
         """
         Test device attributes that map through to the component.
@@ -1611,16 +1639,27 @@ class TestMccsTile:
         :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
             device.
         :param write_value: value to be written as part of the test.
+        :param is_signal_backed: True if the attribute uses attribute_from_signal
+            (returns degraded quality when unset) rather than raising DevFailed.
         """
         max_wait: int = 14  # seconds
         tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
-        with pytest.raises(
-            DevFailed,
-            match=f"Read value for attribute {attribute} has not been updated",
-        ):
-            _ = getattr(tile_device, attribute)
+        if is_signal_backed:
+            assert is_signal_backed_check(attribute)
+            attr_result = tile_device.read_attribute(attribute)
+            assert attr_result.quality in (
+                AttrQuality.ATTR_INVALID,
+                AttrQuality.ATTR_ALARM,
+            )
+        else:
+            assert not is_signal_backed_check(attribute)
+            with pytest.raises(
+                DevFailed,
+                match=f"Read value for attribute {attribute} has not been updated",
+            ):
+                _ = getattr(tile_device, attribute)
 
         tile_device.subscribe_event(
             "state",
@@ -2105,7 +2144,7 @@ class TestMccsTileCommands:
         command_args: Optional[str],
     ) -> None:
         """
-        Test that LongRunningCommand can execute.
+        Test that Long Running Commands can execute.
 
         Here we are testing the 'Initialise' and 'DownloadFirmware' command the start
         acquisition is tested in 'test_StartAcquisition'
@@ -2126,12 +2165,10 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-        tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
+        tile_lrc_manager = LRCManager(
+            tile_device,
+            change_event_callbacks,
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
@@ -2143,35 +2180,27 @@ class TestMccsTileCommands:
 
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        completed_task = get_lrc_finished(tile_device, command_id)
-
-        assert completed_task["status"] == "FAILED"
-        assert (
-            "Communication with component is not established"
-            in completed_task["result"][-1]
+        tile_lrc_manager.run_command(command_name=command_name, arguments=command_args)
+        tile_lrc_manager.assert_command_queued()
+        # tile_lrc_manager.assert_command_in_progress()
+        tile_lrc_manager.assert_command_finished(
+            status="FAILED",
+            result_message_contains="Communication with component is not established",
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-        [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
-
-        assert task_status == TaskStatus.IN_PROGRESS
-        assert command_name in command_id.split("_")[-1]
-
-        assert_against_lrc_queued(tile_device, command_id)
-        try:
-            assert_against_lrc_executing(tile_device, command_id, "IN_PROGRESS")
-        except TimeoutError:
-            # DownloadFirmware doesn't get this one.
-            pass
-
-        assert_against_lrc_finished(tile_device, command_id, "COMPLETED")
+        tile_lrc_manager.run_command_with_checks(
+            command_name, command_args, TaskStatus.IN_PROGRESS
+        )
+        tile_lrc_manager.assert_command_queued()
+        if command_name != "DownloadFirmware":
+            tile_lrc_manager.assert_command_in_progress()
+        tile_lrc_manager.assert_command_finished(
+            status="COMPLETED", result_code=ResultCode.OK, timeout=10
+        )
 
     def test_StartAcquisition(
         self: TestMccsTileCommands,
@@ -2196,12 +2225,10 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-        tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
+        tile_lrc_manager = LRCManager(
+            tile_device,
+            change_event_callbacks,
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
@@ -2212,19 +2239,13 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        [[task_status], [command_id]] = tile_device.StartAcquisition(
-            json.dumps({"delay": 5})
+        tile_lrc_manager.run_command(
+            command_name="StartAcquisition", arguments=json.dumps({"delay": 5})
         )
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        completed_task = get_lrc_finished(tile_device, command_id)
-        assert completed_task["status"] == "FAILED"
-        assert (
-            "Communication with component is not established"
-            in completed_task["result"][-1]
+        tile_lrc_manager.assert_command_finished(
+            status="FAILED",
+            result_message_contains="Communication with component is not established",
         )
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
 
@@ -2615,11 +2636,6 @@ class TestMccsTileCommands:
             callbacks with asynchrony support.
         """
         # create callbacks to monitor changes in states
-        on_tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
 
         # Set up the antenna buffer
         arg = {
@@ -3383,6 +3399,49 @@ class TestMccsTileCommands:
 
         with pytest.raises(DevFailed, match="Antenna IDs must be between 0 and 15"):
             on_tile_device.command_inout(cmd_name, [2, 3, 15, 16])
+
+    def test_set_csp_download_updates_dst_ip_attributes(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test that SetCspDownload updates dstip40gfpga1/2 and fires change events.
+
+        :param on_tile_device: device proxy to the MccsTile under test.
+        """
+        assert on_tile_device.dstip40gfpga1 == ""
+        assert on_tile_device.dstip40gfpga2 == ""
+
+        dst_ip_cb = MockTangoEventCallbackGroup(
+            "dstip40gfpga1",
+            "dstip40gfpga2",
+            timeout=9.0,
+        )
+        on_tile_device.subscribe_event(
+            "dstip40gfpga1", EventType.CHANGE_EVENT, dst_ip_cb["dstip40gfpga1"]
+        )
+        on_tile_device.subscribe_event(
+            "dstip40gfpga2", EventType.CHANGE_EVENT, dst_ip_cb["dstip40gfpga2"]
+        )
+        dst_ip_cb["dstip40gfpga1"].assert_change_event("")
+        dst_ip_cb["dstip40gfpga2"].assert_change_event("")
+
+        dst_ip_1 = "10.130.0.10"
+        dst_ip_2 = "10.130.0.11"
+        on_tile_device.SetCspDownload(
+            json.dumps(
+                {
+                    "destination_ip_1": dst_ip_1,
+                    "destination_ip_2": dst_ip_2,
+                    "is_last": False,
+                }
+            )
+        )
+
+        assert on_tile_device.dstip40gfpga1 == dst_ip_1
+        assert on_tile_device.dstip40gfpga2 == dst_ip_2
+        dst_ip_cb["dstip40gfpga1"].assert_change_event(dst_ip_1)
+        dst_ip_cb["dstip40gfpga2"].assert_change_event(dst_ip_2)
 
 
 class TestDataBaseInteraction:

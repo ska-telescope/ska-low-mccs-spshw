@@ -32,7 +32,12 @@ from tests.harness import (
     get_subrack_name,
     get_tile_name,
 )
-from tests.test_tools import AttributeWaiter, retry_communication
+from tests.test_tools import (
+    AttributeWaiter,
+    get_lrc_finished,
+    retry_communication,
+    wait_for_lrc_result,
+)
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -265,9 +270,6 @@ def station_in_synchronised_state(
     if station.adminMode not in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
-        AttributeWaiter(timeout=60).wait_for_value(
-            station, "state", tango.DevState.UNKNOWN
-        )
         AttributeWaiter(timeout=300).wait_for_value(
             station, "state", tango.DevState.ON, lookahead=5
         )
@@ -297,6 +299,16 @@ def station_in_synchronised_state(
         assert all(status == "Synchronised" for status in station.tileProgrammingState)
     except AssertionError:
         pytest.fail(f"Not all tiles are Synchronised: {station.tileProgrammingState}")
+
+    # FPGA re-lock is non-deterministic: a tile can land at a different PPS
+    # sample each time. Normalise all synchronised tiles to the minimum delay
+    # so ppsDelaySpread stays below the DEGRADED threshold.
+    delays = list(station.ppsDelays)
+    synchronised_delays = [d for d in delays if d != 0]
+    if synchronised_delays:
+        reference = min(synchronised_delays)
+        corrections = [int(d - reference) if d != 0 else 0 for d in delays]
+        station.ppsDelayCorrections = corrections
 
 
 @given("no consumers are running")
@@ -447,21 +459,10 @@ def daq_bandpass_monitor_running(
         # Allow a rejection if already running.
         assert start_bandpass_result[1][0] == "Bandpass monitor already started."
     else:
-        sub_id = daq_device.subscribe_event(
-            "longRunningCommandResult",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["daq_long_running_command_result"],
-        )
-        change_event_callbacks["daq_long_running_command_result"].assert_change_event(
-            (
-                start_bandpass_result[1][0],
-                json.dumps([ResultCode.OK, "Bandpass monitor active"]),
-            ),
-            lookahead=12,
-            consume_nonmatches=True,
-        )
-        daq_device.unsubscribe_event(sub_id)
-
+        wait_for_lrc_result(daq_device, start_bandpass_result[1][0], ResultCode.OK, 12)
+        result = get_lrc_finished(daq_device, start_bandpass_result[1][0])
+        assert result["result"][-1] == "Bandpass monitor active"
+        # Already checked for ResultCode.OK
     verify_bandpass_state(daq_device, True)
 
     yield

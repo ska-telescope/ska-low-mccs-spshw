@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 # pylint: disable=too-many-arguments, too-many-lines
-# pylint: disable=too-many-locals, too-many-statements
+# pylint: disable=too-many-locals
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -40,7 +40,7 @@ from tests.harness import (
     get_subrack_name,
     get_tile_name,
 )
-from tests.test_tools import execute_lrc_to_completion, wait_for_lrc_result
+from tests.test_tools import LRCManager, execute_lrc_to_completion, wait_for_lrc_result
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -95,27 +95,16 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
     return MockTangoEventCallbackGroup(
         "admin_mode",
-        "command_result",
-        "command_status",
+        "beamformerDaisyChainValid",
+        "lrc_finished",
+        "lrc_executing",
+        "lrc_queue",
         "health_state",
         "state",
         "outsideTemperature",
         "track_lrc_command",
         timeout=20.0,
     )
-
-
-@pytest.fixture(name="sdn_first_interface", scope="session")
-def sdn_first_interface_fixture() -> str:
-    """
-    Return the first interface of the block allocated to this station for science data.
-
-    This is an IP address and netmask, in CIDR-style slash-notation.
-    For example, "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25".
-
-    :return: the SDN first interface
-    """
-    return "10.0.0.152/25"
 
 
 @pytest.fixture(name="sdn_gateway", scope="session")
@@ -241,7 +230,7 @@ def daq_device_fixture(
 
 
 def test_Off(
-    station_device: SpsStation,
+    station_device: DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
@@ -268,33 +257,18 @@ def test_Off(
     change_event_callbacks["state"].assert_not_called()
 
     # TODO: Check that we get an updated value for our subscribed attribute
-
-    # It's on, so let's turn it off.
-    station_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
+    station_lrc_manager = LRCManager(station_device, change_event_callbacks)
+    station_lrc_manager.run_command_with_checks(
+        "Off", expected_status=ResultCode.QUEUED
     )
-
-    change_event_callbacks["command_status"].assert_change_event(())
-
-    station_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
-    ([result_code], [off_command_id]) = station_device.off()
-    assert result_code == ResultCode.QUEUED
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "QUEUED")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED")
+    # SpsStation.Off() is not implemented and will simply be rejected
+    station_lrc_manager.assert_command_finished(
+        "REJECTED",
+        result_message_contains=(
+            "MCCS has no control over subrack PDUs. "
+            "Unable to drive to the OFF state."
+            "Try Standby to turn off all TPMs."
+        ),
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -307,20 +281,9 @@ def test_Off(
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.OFF
 
-    # TODO: SpsStation.Off() implementation is currently fire-and-forget.
-    # No command result is ever issued.
-    #
-    # change_event_callbacks["command_result"].assert_change_event(
-    #     (
-    #         off_command_id,
-    #         json.dumps([int(ResultCode.OK), "Command completed"]),
-    #     ),
-    # )
-    change_event_callbacks["command_status"].assert_not_called()
-
 
 def test_On(
-    station_device: SpsStation,
+    station_device: DeviceProxy,
     mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
@@ -386,32 +349,17 @@ def test_On(
     )
 
     # It's already on, so let's turn it off before we turn it on again.
-    station_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
+    station_lrc_manager = LRCManager(station_device, change_event_callbacks)
+    station_lrc_manager.run_command_with_checks(
+        "Off", expected_status=ResultCode.QUEUED
     )
-
-    change_event_callbacks["command_status"].assert_change_event(())
-
-    station_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
-    ([result_code], [off_command_id]) = station_device.off()
-    assert result_code == ResultCode.QUEUED
-
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "QUEUED")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED")
+    station_lrc_manager.assert_command_finished(
+        "REJECTED",
+        result_message_contains=(
+            "MCCS has no control over subrack PDUs. "
+            "Unable to drive to the OFF state."
+            "Try Standby to turn off all TPMs."
+        ),
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -425,18 +373,8 @@ def test_On(
     assert station_device.state() == DevState.OFF
 
     # Now turn the station back on using the On command
-    ([result_code], [on_command_id]) = station_device.on()
-    assert result_code == ResultCode.QUEUED
-
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "QUEUED")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "IN_PROGRESS")
-    )
+    station_lrc_manager.run_command_with_checks("On", expected_status=ResultCode.QUEUED)
+    station_lrc_manager.assert_command_in_progress()
 
     change_event_callbacks["state"].assert_not_called()
 
@@ -456,9 +394,8 @@ def test_On(
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.ON
 
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "COMPLETED")
-    )
+    station_lrc_manager.assert_command_finished("COMPLETED")
+
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         tile.Configure40GCore.assert_not_called()
@@ -501,7 +438,7 @@ def test_On(
 
 
 def test_Abort_On(
-    station_device: SpsStation,
+    station_device: DeviceProxy,
     mock_tile_device_proxies: list[DeviceProxy],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
@@ -528,32 +465,12 @@ def test_Abort_On(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
 
-    station_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
-    )
-    change_event_callbacks["command_status"].assert_change_event(())
-    station_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
+    station_lrc_manager = LRCManager(station_device, change_event_callbacks)
     # Turn station to Standby state
-    ([result_code], [standby_command_id]) = station_device.standby()
-    assert result_code == ResultCode.QUEUED
-
-    change_event_callbacks["command_status"].assert_change_event(
-        (standby_command_id, "STAGING")
+    station_lrc_manager.run_command_with_checks(
+        "Standby", expected_status=ResultCode.QUEUED
     )
-    change_event_callbacks["command_status"].assert_change_event(
-        (standby_command_id, "QUEUED")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (standby_command_id, "IN_PROGRESS")
-    )
+    station_lrc_manager.assert_command_in_progress()
 
     change_event_callbacks["state"].assert_not_called()
 
@@ -564,35 +481,22 @@ def test_Abort_On(
 
     assert station_device.state() == DevState.STANDBY
 
-    change_event_callbacks["command_status"].assert_change_event(
-        (standby_command_id, "COMPLETED")
-    )
+    station_lrc_manager.assert_command_finished("COMPLETED")
 
     # Turn a tile off, the on command won't be able to finish until it times out
     mock_tile_device_proxies[0].adminMode = AdminMode.OFFLINE
 
-    ([on_result_code], [on_command_id]) = station_device.on()
-
-    assert on_result_code == ResultCode.QUEUED
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "QUEUED")
-    )
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "IN_PROGRESS")
-    )
+    station_lrc_manager.run_command_with_checks("On", expected_status=ResultCode.QUEUED)
 
     # Abort the command
-    ([abort_result_code], [abort_command_id]) = station_device.AbortCommands()
-    change_event_callbacks["command_status"].assert_change_event(
-        (on_command_id, "ABORTED")
-    )
+    ([abort_result_code], [_]) = station_device.AbortCommands()
+    assert abort_result_code == ResultCode.STARTED
+
+    station_lrc_manager.assert_command_finished("ABORTED", timeout=10)
 
 
 def test_Initialise(
-    station_device: SpsStation,
+    station_device: DeviceProxy,
     mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
@@ -657,37 +561,18 @@ def test_Initialise(
         )
     )
 
-    station_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
+    station_lrc_manager = LRCManager(station_device, change_event_callbacks)
+    # Turn station to Standby state
+    station_lrc_manager.run_command_with_checks(
+        "Initialise", expected_status=ResultCode.QUEUED
     )
+    station_lrc_manager.assert_command_in_progress()
 
-    change_event_callbacks["command_status"].assert_change_event(())
-    station_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
-    ([result_code], [command_id]) = station_device.Initialise()
-    assert result_code == ResultCode.QUEUED
-
-    change_event_callbacks["command_status"].assert_change_event(
-        (command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
-    change_event_callbacks["command_status"].assert_change_event(
-        (command_id, "IN_PROGRESS")
-    )
     time.sleep(12)
     for tile in mock_tile_device_proxies:
         tile.tileProgrammingState = "Synchronised"
     time.sleep(4)
-    change_event_callbacks["command_status"].assert_change_event(
-        (command_id, "COMPLETED")
-    )
+    station_lrc_manager.assert_command_finished("COMPLETED")
 
     # get total number of leap seconds
     iers_table = iers.LeapSeconds.auto_open()
@@ -756,7 +641,7 @@ def test_Initialise(
 
 
 def test_Standby(
-    station_device: SpsStation,
+    station_device: DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
@@ -778,30 +663,13 @@ def test_Standby(
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
-    station_device.subscribe_event(
-        "longRunningCommandStatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_status"],
+    station_lrc_manager = LRCManager(station_device, change_event_callbacks)
+    # Turn station to Standby state
+    station_lrc_manager.run_command_with_checks(
+        "Standby", expected_status=ResultCode.QUEUED
     )
+    station_lrc_manager.assert_command_in_progress()
 
-    change_event_callbacks["command_status"].assert_change_event(())
-    station_device.subscribe_event(
-        "longRunningCommandResult",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["command_result"],
-    )
-    change_event_callbacks["command_result"].assert_change_event(("", ""))
-
-    ([result_code], [command_id]) = station_device.standby()
-    assert result_code == ResultCode.QUEUED
-
-    change_event_callbacks["command_status"].assert_change_event(
-        (command_id, "STAGING")
-    )
-    change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
-    change_event_callbacks["command_status"].assert_change_event(
-        (command_id, "IN_PROGRESS")
-    )
     change_event_callbacks["state"].assert_not_called()
 
     # Make the station think it has received events from its tiles,
@@ -812,9 +680,7 @@ def test_Standby(
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.STANDBY
 
-    change_event_callbacks["command_status"].assert_change_event(
-        (command_id, "COMPLETED")
-    )
+    station_lrc_manager.assert_command_finished("COMPLETED")
 
 
 @pytest.mark.parametrize(
@@ -2085,3 +1951,81 @@ def test_csp_set_reset(
     rc, _ = on_station_device.ResetCspIngest()
     assert rc == ResultCode.OK
     assert initial_csp_config == on_station_device.cspIngestConfig
+
+
+def test_beamformer_daisy_chain_health_rollup(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that beamformer daisy-chain validation feeds into the health rollup.
+
+    Verifies that an invalid daisy chain drives healthState to FAILED and that
+    restoring correct IPs brings it back to OK. Subscribes to beamformerDaisyChainValid
+    AFTER health is OK so the event queue starts with exactly one item (the current
+    value) and assert_change_event serves as a proper async synchronization point.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+
+    station_device.subscribe_event(
+        "beamformerDaisyChainValid",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["beamformerDaisyChainValid"],
+    )
+    # Mock tiles are configured with correct dst IPs, so daisy chain is already valid.
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["beamformerDaisyChainValid"].assert_not_called()
+    change_event_callbacks["health_state"].assert_not_called()
+
+    sdn_base = ipaddress.IPv4Address("10.0.0.152")
+
+    # Oh no someone broke it.
+    station_device.MockTileDstIpChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "fpga1_ip": "1.2.3.4",
+                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+            }
+        )
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(False)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+
+    # Yay they fixed it.
+    station_device.MockTileDstIpChange(
+        json.dumps(
+            {
+                "tile_id": 1,
+                "fpga1_ip": str(sdn_base + 2 * 1 + 2),
+                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+            }
+        )
+    )
+    change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)

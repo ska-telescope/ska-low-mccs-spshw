@@ -25,6 +25,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
 from tests.test_tools import (
+    LRCManager,
     execute_lrc_to_completion,
     wait_for_completed_command_to_clear_from_queue,
 )
@@ -48,7 +49,9 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_result",
         "subrack_tpm_power_state",
         "tile_state",
-        "tile_command_status",
+        "tile_lrc_queue",
+        "tile_lrc_executing",
+        "tile_lrc_finished",
         "tile_programming_state",
         "pps_present",
         "preadu_levels",
@@ -175,27 +178,17 @@ class TestSubrackTileIntegration:
         # so it transitions to OFF state.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
 
-        # Now the tile device can turn its TPM on,
-        # but first let's subscribe to change events on command status,
-        # so that we can track the status of the command
-        tile_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_command_status"],
+        lrc_callaback_keys = [
+            "tile_lrc_queue",
+            "tile_lrc_executing",
+            "tile_lrc_finished",
+        ]
+        tile_lrc_manager = LRCManager(
+            tile_device, change_event_callbacks, lrc_callaback_keys
         )
-        change_event_callbacks["tile_command_status"].assert_change_event(())
-
-        ([result_code], [on_command_id]) = tile_device.On()
-        assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "QUEUED")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "IN_PROGRESS")
-        )
+        tile_lrc_manager.run_command("On")
+        tile_lrc_manager.assert_command_queued()
+        tile_lrc_manager.assert_command_in_progress()
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
@@ -208,10 +201,9 @@ class TestSubrackTileIntegration:
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "COMPLETED")
+        tile_lrc_manager.assert_command_finished(
+            "COMPLETED", ResultCode.OK, "Command executed to completion."
         )
-
         # Now let's turn it off.
         _ = tile_device.Off()
 
@@ -387,29 +379,22 @@ class TestMccsTileTpmDriver:
         # Now the tile device can turn its TPM on,
         # but first let's subscribe to change events on command status,
         # so that we can track the status of the command
-        tile_subs.append(
-            tile_device.subscribe_event(
-                "longRunningCommandStatus",
-                tango.EventType.CHANGE_EVENT,
-                change_event_callbacks["tile_command_status"],
-            )
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(())
 
+        lrc_callaback_keys = [
+            "tile_lrc_queue",
+            "tile_lrc_executing",
+            "tile_lrc_finished",
+        ]
+        tile_lrc_manager = LRCManager(
+            tile_device, change_event_callbacks, lrc_callaback_keys
+        )
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Off", lookahead=2, consume_nonmatches=True
         )
-        ([result_code], [on_command_id]) = tile_device.On()
-        assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "QUEUED")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "IN_PROGRESS")
-        )
+        tile_lrc_manager.run_command("On")
+        tile_lrc_manager.assert_command_queued()
+        tile_lrc_manager.assert_command_in_progress()
+
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed", lookahead=2, consume_nonmatches=True
         )
@@ -438,9 +423,10 @@ class TestMccsTileTpmDriver:
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "COMPLETED")
+        tile_lrc_manager.assert_command_finished(
+            "COMPLETED", ResultCode.OK, "Command executed to completion."
         )
+
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(subrack_device)
 
@@ -524,7 +510,6 @@ class TestMccsTileTpmDriver:
             tile_subs,
             subrack_subs,
         )
-
         with pytest.raises(
             tango.DevFailed,
             match="ValueError: Cannot send data before StartAcquisition",
@@ -532,7 +517,6 @@ class TestMccsTileTpmDriver:
             [[result_code], [message]] = tile_device.SendDataSamples(
                 json.dumps({"data_type": "beam"})
             )
-        change_event_callbacks["tile_command_status"].assert_not_called()
 
         # Start Acquisition
         delay_time = 2
@@ -1382,7 +1366,7 @@ class TestMccsTileTpmDriver:
         # We are mocking the TPM in a prexisting SYNCHRONISED state.
         # To check we do not re-initialise.
         tile_simulator.mock_on(lock=True)
-        tile_simulator.program_fpgas("tpm_firmware.bit")
+        tile_simulator.program_fpgas("tpm_firmware_10.0.0.bit")
         tile_simulator.initialise()
         tile_simulator.start_acquisition(delay=0)
         tile_simulator._mocked_tpm = tile_simulator.tpm

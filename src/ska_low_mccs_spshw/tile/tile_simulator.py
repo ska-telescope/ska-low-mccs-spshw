@@ -519,7 +519,6 @@ class MockTpm:
         self._station_beam_flagging = False
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
         self.tpm_monitor = TpmMonitor(logger)
-        self._scan_id = [0] * 48
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -1077,6 +1076,7 @@ class TileSimulator:
         self._is_spead_header_write_successful: bool = True
         self.csp_rounding = list(self.CSP_ROUNDING)
         self._adc_rms: list[float] = list(self.ADC_RMS)
+        self._scan_id = [0] * 48
         self.spead_data_simulator = SpeadDataSimulator(logger)
         self.tpm_mocked_overheating = False
         self._active_40g_ports_setting: str = ""
@@ -2541,7 +2541,7 @@ class TileSimulator:
             return
         for group in channel_groups:
             if group >= 0 and group < 48:
-                self.scan_id[group] = scan_id
+                self._scan_id[group] = scan_id
             else:
                 self.logger.error(f"Invalid group {group} in load_scan_id")
 

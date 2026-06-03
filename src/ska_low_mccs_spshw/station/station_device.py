@@ -316,12 +316,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
     )
 
-    # LoadScanId_SCHEMA: Final = json.loads(
-    #    importlib.resources.read_text(
-    #        "ska_low_mccs_spshw.schemas.station",
-    #        "SpsStation_LoadScanId.json",
-    #    )
-    # )
+    LoadScanId_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.station",
+            "SpsStation_LoadScanId.json",
+        )
+    )
 
     def _setup_health_rollup(
         self: SpsStation,
@@ -2563,17 +2563,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         return task
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    def LoadScanId(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.validators.validate_json_args(schema=LoadScanId_SCHEMA)
+    def LoadScanId(
+        self: SpsStation,
+        channel_groups: list[int] | None = None,
+        scan_id: int | None = None,
+    ) -> DevVarLongStringArrayType:
         """
         Set the scan ID for specified channel groups.
 
-        :param argin: json containing
-            channel_groups: Channel groups to be affected, default all
-            param scan_id: unique scan ID to assign to the channel groups,
+        :param channel_groups: Channel groups to be affected, default all
+        :param scan_id: unique scan ID to assign to the channel groups,
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2586,9 +2587,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("LoadScanId", jstr)
         """
-        arg_list = json.loads(argin)
-        channel_groups = arg_list.get("channel_groups", None)
-        scan_id = arg_list.get("scan_id", 0)
+        # arg_list = json.loads(argin)
+        # channel_groups = arg_list.get("channel_groups", None)
+        # scan_id = arg_list.get("scan_id", 0)
         return self.component_manager.load_scan_id(channel_groups, scan_id)
 
     @command(

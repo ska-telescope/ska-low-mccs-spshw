@@ -317,7 +317,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
     )
 
-    LoadBeamformer_SCHEMA: Final = json.loads(
+    LoadScanId_SCHEMA: Final = json.loads(
         importlib.resources.read_text(
             "ska_low_mccs_spshw.schemas.tile",
             "MccsTile_LoadScanId.json",
@@ -6578,13 +6578,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         return task
 
-    @command(dtype_in="DevString")
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @stb.validators.validate_json_args(schema=LoadScanId_SCHEMA)
     def LoadScanId(
-        self: MccsTile, 
+        self: MccsTile,
         channel_groups: list[int] | None = None,
         scan_id: int | None = None,
-    ) -> stb.type_hints.TaskFunctionType:
+    ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the scan ID for specified channel groups.
 
@@ -6595,8 +6595,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        
+
         :example:
+
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dict = {"channel_groups": [0,1,4,5], "scan_id": 12345603}
         >>> jstr = json.dumps(dict)

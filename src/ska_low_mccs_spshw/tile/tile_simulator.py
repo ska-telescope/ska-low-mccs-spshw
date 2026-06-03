@@ -2522,9 +2522,9 @@ class TileSimulator:
         self.tpm.beam2.stop(channel_groups)  # type: ignore
 
     def load_scan_id(
-        self: TileComponentManager,
-        channel_groups: Optional[[list[int] | None] = None,
-        scan_id: Optional[int] = 0
+        self: TileSimulator,
+        channel_groups: list[int] | None = None,
+        scan_id: int = 0,
     ) -> None:
         """
         Set the scan ID for a given beam or set of channels, default for all.

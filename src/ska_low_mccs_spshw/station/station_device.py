@@ -313,6 +313,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
     )
 
+    LoadScanId_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.station",
+            "SpsStation_LoadScanId.json",
+        )
+    )
+
     def _setup_health_rollup(
         self: SpsStation,
     ) -> HealthRollup:
@@ -2520,6 +2527,34 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
 
         return task
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    def LoadScanId(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+        """
+        Set the scan ID for specified channel groups.
+
+        :param argin: json containing
+            channel_groups: Channel groups to be affected, default all
+            param scan_id: unique scan ID to assign to the channel groups,
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dict = {"channel_groups": [0,1,4,5], "scan_id": 12345603}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("LoadScanId", jstr)
+        """
+        arg_list = json.loads(argin)
+        channel_groups = arg_list.get("channel_groups", None)
+        scan_id = arg_list.get("scan_id", 0)
+        return self.component_manager.load_scan_id(channel_groups, scan_id)
 
     @command(
         dtype_in="DevString",

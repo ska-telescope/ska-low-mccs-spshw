@@ -2521,6 +2521,20 @@ class TileSimulator:
         self.tpm.beam1.stop(channel_groups)  # type: ignore
         self.tpm.beam2.stop(channel_groups)  # type: ignore
 
+    def load_scan_id(
+        self: TileComponentManager,
+        channel_groups: Optional[[list[int] | None] = None,
+        scan_id: Optional[int] = 0
+    ) -> None:
+        """
+        Set the scan ID for a given beam or set of channels, default for all.
+
+        :param channel_groups: list of channel groups, in range 0:48.
+                group 0 for channels 0-7, to group 47 for channels 380-383
+        :param scan_id: the new scan ID to set
+        """
+        self.logger.debug("Applying scan ID")
+
     @check_mocked_overheating
     @connected
     def configure_integrated_channel_data(

@@ -4702,3 +4702,23 @@ class TileComponentManager(
                 delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
 
         return np.array(delays)
+
+    def load_scan_id(
+        self: TileComponentManager,
+        channel_groups: Optional[[list[int] | None] = None,
+        scan_id: Optional[int] = 0
+    ) -> None:
+        """
+        Set the scan ID for a given beam or set of channels, default for all.
+
+        :param channel_groups: list of channel groups, in range 0:48.
+                group 0 for channels 0-7, to group 47 for channels 380-383
+        :param scan_id: the new scan ID to set
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            self.tile.load_scan_id(
+                self,
+                channel_groups=channel_groups,
+                scan_id=scan_id)

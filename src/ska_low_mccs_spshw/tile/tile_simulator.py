@@ -2537,6 +2537,8 @@ class TileSimulator:
         :param scan_id: the new scan ID to set
         """
         self.logger.debug("Applying scan ID")
+        if channel_groups is None:
+            return
         for group in channel_groups:
             if group >= 0 and group < 48:
                 self.scan_id[group] = scan_id

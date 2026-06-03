@@ -2530,6 +2530,7 @@ class TileSimulator:
         """
         Set the scan ID for a given beam or set of channels, default for all.
 
+        :param beam: beam number in range 0:48
         :param channel_groups: list of channel groups, in range 0:48.
                 group 0 for channels 0-7, to group 47 for channels 380-383
         :param scan_id: the new scan ID to set

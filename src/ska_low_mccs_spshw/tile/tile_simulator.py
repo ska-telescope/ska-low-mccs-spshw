@@ -519,6 +519,7 @@ class MockTpm:
         self._station_beam_flagging = False
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
         self.tpm_monitor = TpmMonitor(logger)
+        self._scan_id = [0]*48
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -2519,6 +2520,8 @@ class TileSimulator:
         self.tpm.beam1.stop(channel_groups)  # type: ignore
         self.tpm.beam2.stop(channel_groups)  # type: ignore
 
+    @check_mocked_overheating
+    @connected
     def load_scan_id(
         self: TileSimulator,
         beam: int | None = None,
@@ -2534,6 +2537,11 @@ class TileSimulator:
         :param scan_id: the new scan ID to set
         """
         self.logger.debug("Applying scan ID")
+        for group in channel_groups:
+            if group >= 0 and group < 48:
+                self.scan_id[group] = scan_id
+            else:
+                self.logger.error(f"Invalid group {group} in load_scan_id")
 
     @check_mocked_overheating
     @connected

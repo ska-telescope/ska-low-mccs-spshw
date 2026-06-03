@@ -316,12 +316,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
     )
 
-    LoadScanId_SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.station",
-            "SpsStation_LoadScanId.json",
-        )
-    )
+    # LoadScanId_SCHEMA: Final = json.loads(
+    #    importlib.resources.read_text(
+    #        "ska_low_mccs_spshw.schemas.station",
+    #        "SpsStation_LoadScanId.json",
+    #    )
+    # )
 
     def _setup_health_rollup(
         self: SpsStation,

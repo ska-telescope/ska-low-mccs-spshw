@@ -3449,7 +3449,10 @@ class SpsStationComponentManager(
         scan_id: int | None,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Check if the beamformer is running in a list of channel blocks.
+        Load or change the scan ID to a set of channel groups.
+
+        Used in the Scan/EndScan ObsMode command to update the scan ID
+        at the beginning of a scan, without stopping the beamformer
 
         :param channel_groups: list of channel groups, in range 0:48.
                 group 0 for channels 0-7, to group 47 for channels 380-383

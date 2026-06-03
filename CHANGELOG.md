@@ -1,6 +1,7 @@
 # Version History
 ## Unreleased
 
+* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles. 
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 
@@ -30,11 +31,6 @@
 
 * [THORN-547] Add dual TPM firmware support with automated BIOS-based selection during Tile initialise. Keep default firmware 10.0.0 for BIOS < 1.0.0, add support for firmware 11.0.0 for BIOS >= 1.0.0, and update simulator BIOS/version handling and firmware artifact naming.
 
-## uncommitted
-
-* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles. 
-
-## 11.5.0
 
 * [THORN-434] Update SpsStation to route integrated channel data over the 40G link instead of the 1G link if possible. This is determined by the daq attribute `bandpassLoadbalancerEnabled` - if `True` or the attribute is not present then we default to using the 1G link, if `False` then we default to using the 40G link. Any user-provided value via `SetLmcIntegratedDownload` will override this. Note: This will require TPMs to be re-initialised in existing deployments.
 * [THORN-562] Update Sonar project key

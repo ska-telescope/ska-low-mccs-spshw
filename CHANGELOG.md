@@ -1,11 +1,10 @@
 # Version History
+
 ## Unreleased
 
+* [SDR-1687] Upgrade to PyTango 10.3.0
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
-
-## Unreleased
-
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.
 * [SKB-1047] Add beamformer daisy chain health to SpsStation rollup.
 

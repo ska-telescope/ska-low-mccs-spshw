@@ -3446,7 +3446,7 @@ class SpsStationComponentManager(
     def load_scan_id(
         self: SpsStationComponentManager,
         channel_groups: list[int] | None,
-        scan_id: int | None,
+        scan_id: int,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Load or change the scan ID to a set of channel groups.

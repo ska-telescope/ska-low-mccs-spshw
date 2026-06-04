@@ -6395,7 +6395,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def LoadScanId(
         self: MccsTile,
         channel_groups: list[int] | None = None,
-        scan_id: int  = 0,
+        scan_id: int = 0,
     ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the scan ID for specified channel groups.

@@ -2538,7 +2538,7 @@ class TileSimulator:
         """
         self.logger.debug("Applying scan ID")
         if channel_groups is None:
-            return
+            channel_group = list(range(48))
         for group in channel_groups:
             if group >= 0 and group < 48:
                 self._scan_id[group] = scan_id

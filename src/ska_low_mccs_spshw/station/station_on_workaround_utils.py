@@ -27,7 +27,7 @@ import numpy as np
 import toolz  # type: ignore
 from ska_control_model import ResultCode
 from tango import DevFailed, DeviceProxy, DevSource, DevState, EventType, Group
-from tango.device_proxy import __update_enum_values
+from tango.device_proxy import __get_enum_value
 
 __all__ = [
     "ensure_tpms_on",
@@ -52,7 +52,10 @@ def _update_enum(dev: DeviceProxy, attr: str, value: Any) -> Any:
         dev.__refresh_cmd_cache()
         dev.__refresh_attr_cache()
         attr_info = dev.__get_attr_cache()[attr.lower()]
-    return __update_enum_values(attr_info, value)
+    _, enum_class = attr_info
+    if enum_class is None or value is None:
+        return value
+    return __get_enum_value(value, enum_class)
 
 
 def single_prop(dev: DeviceProxy, prop_name: str) -> str:

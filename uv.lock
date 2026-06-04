@@ -1505,7 +1505,7 @@ wheels = [
 
 [[package]]
 name = "pytango"
-version = "10.1.4"
+version = "10.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docstring-parser" },
@@ -1514,15 +1514,15 @@ dependencies = [
     { name = "psutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/6d/c3f2a5494ffc577d81f8393196d7d8262e10f2371733d800ecd44952a99b/pytango-10.1.4.tar.gz", hash = "sha256:74bd7d5162e234ea27c3d82edfe473a767031020ce1bc7cba17cfb132d274ce5", size = 2795846, upload-time = "2026-03-03T13:14:19.872Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/8e/0648a8528e587ad93643a60a688ba86a7bb5de44baa134622c33a4b131e0/pytango-10.3.0.tar.gz", hash = "sha256:27e03c9feac6227c2534e1fb7dbcd33fa33616cbc1969c3fd86d303d4402f2f6", size = 2823824, upload-time = "2026-06-03T16:15:38.756Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/55/d27d538440edb0414978e43aa46e4cefaf99e32b34539b8440bdff6e9239/pytango-10.1.4-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:5508a7f2f49abdddd02b95f08288e5a5ac217fb44e304f46082852903c331ad8", size = 17473802, upload-time = "2026-03-03T13:13:02.817Z" },
-    { url = "https://files.pythonhosted.org/packages/54/0d/23c08a9cb05125bf5ce87c88c8cd13952f1f5377dffd9e5e048ef112f7a6/pytango-10.1.4-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:705b98608fe30e65a87f0c823993f10db2df20f12520eb944d97049f6203e24f", size = 18607447, upload-time = "2026-03-03T13:13:05.454Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/75/18cbd14440f22a06aadf79b0f476c28b07552a2b8c2d7dc582505a81110d/pytango-10.1.4-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:a2dbe1b2fbfdaa5ad5ba9d492df86e3c57b0a31872f149fb34d334c258b9214e", size = 17885478, upload-time = "2026-03-03T13:13:07.712Z" },
-    { url = "https://files.pythonhosted.org/packages/d8/79/046b7a95a52a17f2d2e552f0a33db69e3f8526c0d92eb553b33175ff4d75/pytango-10.1.4-cp310-cp310-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:11774defaeeadb0425d8d28cfe2b1b74753f5d442bbfb630e0cd8c6ce83f430c", size = 19703980, upload-time = "2026-03-03T13:13:09.838Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/0a/aadfd7bac196d6b0c7998c0bcbf63a5320a5367c4b96b3d9e95ddde42c37/pytango-10.1.4-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:13596e05a4ff98f39193d084b43ab7afd621d89ba02726ceec662f344ecf1a6f", size = 18785124, upload-time = "2026-03-03T13:13:12.031Z" },
-    { url = "https://files.pythonhosted.org/packages/aa/09/c19f6597d91693edc31c7ce19e41cf53e4cd56ff2d6ec36283e0cf71ca72/pytango-10.1.4-cp310-cp310-win32.whl", hash = "sha256:03bb83bf5f1f7329e4453382ef3fd7ef1cb8407afce70d0d23ff6366f64212a7", size = 4636385, upload-time = "2026-03-03T13:13:14.456Z" },
-    { url = "https://files.pythonhosted.org/packages/5a/67/ea95c3db3d724930332ee008e1e91939249c462a1bc0270aa8aac4f252fe/pytango-10.1.4-cp310-cp310-win_amd64.whl", hash = "sha256:463b116aae67358702efe18cbef83119d50f9995fe07900dfdbb0971a93384eb", size = 5156086, upload-time = "2026-03-03T13:13:16.216Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/69/986cd41a3e078c8cdc27f6050c29a7ed2143a021791d61ea3f20c8c819e2/pytango-10.3.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:2670917c37d061a1c9a3816b002f903adb39e0c130f4c231f8c482ccbdb0fbed", size = 17476323, upload-time = "2026-06-03T16:14:10.839Z" },
+    { url = "https://files.pythonhosted.org/packages/22/21/48d05a9d21288a150de43c2bf80db825a9ed38f4dde31446355caadfab16/pytango-10.3.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:2495e8f368eaf2b67d7d683b47a4997cbc5920a95bc6f6a6a6ad26559a26c65b", size = 18571424, upload-time = "2026-06-03T16:14:13.753Z" },
+    { url = "https://files.pythonhosted.org/packages/36/35/610240fb3ca12904009d36171c57667cd28e6cb7504352394e9e4647ce19/pytango-10.3.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:672113c94caab48f9759899c4ca8a44089adb15c69fa7e8a1400a5a2ba0d465e", size = 18249828, upload-time = "2026-06-03T16:14:16.467Z" },
+    { url = "https://files.pythonhosted.org/packages/10/9a/72f34153aa38207cc593c68c84181d8e51a4c4cd4f2e9fee4756b3906cb9/pytango-10.3.0-cp310-cp310-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:d95d985febf191f1ff9b7eabade973e16546f9cd76524fe3f13f3cfdbc75d29e", size = 20154068, upload-time = "2026-06-03T16:14:19.306Z" },
+    { url = "https://files.pythonhosted.org/packages/83/29/68e02ff0f542e60d4b047b351f5bafa68ff465d9ec309285d40e2013a50f/pytango-10.3.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:73e4e2a41340afe4696143401de097c0ba3ed62b177745f992b8523709dca52d", size = 19210607, upload-time = "2026-06-03T16:14:22.195Z" },
+    { url = "https://files.pythonhosted.org/packages/07/60/ad649cceb81fc9b014313eabe67f669921acdd9af8e5e23cd0471fa2fa15/pytango-10.3.0-cp310-cp310-win32.whl", hash = "sha256:5bd4e26659b16e0cf0307a44fdcbaf3a1ca45beefe74c5ffa73a698b91852d80", size = 4560207, upload-time = "2026-06-03T16:14:24.665Z" },
+    { url = "https://files.pythonhosted.org/packages/63/eb/796624ca7a7107348d43c422ab35c7644393374493c0ed87e4c0dd1b1700/pytango-10.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:7a87eb0804e60a6c29f3d12fb3e73fb78510a76acc9b2e266e88b9fa49521045", size = 5080428, upload-time = "2026-06-03T16:14:26.192Z" },
 ]
 
 [[package]]
@@ -2114,7 +2114,7 @@ requires-dist = [
     { name = "pydantic-core", specifier = ">=2.18.1,<2.19.0" },
     { name = "pymongo", specifier = ">=4.10.1,<5.0.0" },
     { name = "pyqt5", specifier = ">=5.15.11,<6.0.0" },
-    { name = "pytango", specifier = ">=10.1.4,<10.2.0" },
+    { name = "pytango", specifier = ">=10.3.0,<10.4.0" },
     { name = "pytz", specifier = ">=2024.2,<2025.0" },
     { name = "pyyaml", specifier = ">=6.0.1,<7.0.0" },
     { name = "recommonmark", specifier = ">=0.7.1,<1.0.0" },

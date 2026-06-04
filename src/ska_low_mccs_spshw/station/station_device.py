@@ -2587,9 +2587,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("LoadScanId", jstr)
         """
-        # arg_list = json.loads(argin)
-        # channel_groups = arg_list.get("channel_groups", None)
-        # scan_id = arg_list.get("scan_id", 0)
         if channel_groups is None:
             channel_groups = list(range(48))
         return self.component_manager.load_scan_id(channel_groups, scan_id)

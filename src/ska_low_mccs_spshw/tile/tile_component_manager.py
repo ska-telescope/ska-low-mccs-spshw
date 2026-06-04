@@ -4752,15 +4752,15 @@ class TileComponentManager(
 
     def load_scan_id(
         self: TileComponentManager,
-        channel_groups: list[int] | None = None,
-        scan_id: int = 0,
+        scan_id: int,
+        channel_groups: list[int],
     ) -> tuple[list[ResultCode], list[str]]:
         """
         Set the scan ID for a given beam or set of channels, default for all.
 
+        :param scan_id: the new scan ID to set
         :param channel_groups: list of channel groups, in range 0:48.
                 group 0 for channels 0-7, to group 47 for channels 380-383
-        :param scan_id: the new scan ID to set
 
         :return: Result code and message
         """

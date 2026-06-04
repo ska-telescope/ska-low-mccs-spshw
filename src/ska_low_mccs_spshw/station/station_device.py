@@ -2567,14 +2567,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @stb.validators.validate_json_args(schema=LoadScanId_SCHEMA)
     def LoadScanId(
         self: SpsStation,
+        scan_id: int,
         channel_groups: list[int] | None = None,
-        scan_id: int = 0,
     ) -> DevVarLongStringArrayType:
         """
         Set the scan ID for specified channel groups.
 
-        :param channel_groups: Channel groups to be affected, default all
         :param scan_id: unique scan ID to assign to the channel groups,
+        :param channel_groups: Channel groups to be affected, default all
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2589,7 +2589,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         if channel_groups is None:
             channel_groups = list(range(48))
-        return self.component_manager.load_scan_id(channel_groups, scan_id)
+        return self.component_manager.load_scan_id(scan_id, channel_groups)
 
     @command(
         dtype_in="DevString",

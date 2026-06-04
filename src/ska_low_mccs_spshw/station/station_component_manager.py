@@ -3445,8 +3445,8 @@ class SpsStationComponentManager(
 
     def load_scan_id(
         self: SpsStationComponentManager,
-        channel_groups: list[int] | None,
         scan_id: int,
+        channel_groups: list[int],
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Load or change the scan ID to a set of channel groups.
@@ -3454,9 +3454,9 @@ class SpsStationComponentManager(
         Used in the Scan/EndScan ObsMode command to update the scan ID
         at the beginning of a scan, without stopping the beamformer
 
+        :param scan_id: the new scan ID to set
         :param channel_groups: list of channel groups, in range 0:48.
                 group 0 for channels 0-7, to group 47 for channels 380-383
-        :param scan_id: the new scan ID to set
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

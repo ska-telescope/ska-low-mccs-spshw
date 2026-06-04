@@ -2568,7 +2568,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     def LoadScanId(
         self: SpsStation,
         channel_groups: list[int] | None = None,
-        scan_id: int | None = None,
+        scan_id: int = 0,
     ) -> DevVarLongStringArrayType:
         """
         Set the scan ID for specified channel groups.
@@ -2590,6 +2590,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # arg_list = json.loads(argin)
         # channel_groups = arg_list.get("channel_groups", None)
         # scan_id = arg_list.get("scan_id", 0)
+        if channel_groups is None:
+            channel_groups = list(range(48))
         return self.component_manager.load_scan_id(channel_groups, scan_id)
 
     @command(

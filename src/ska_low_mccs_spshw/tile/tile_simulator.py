@@ -2537,7 +2537,13 @@ class TileSimulator:
         :param scan_id: the new scan ID to set
         """
         self.logger.debug("Applying scan ID")
-        if channel_groups is None:
+        if beam is not None:
+            channel_groups = []
+            beamformer_table = self.get_beamformer_table()
+            for g, entry in enumerate(beamformer_table):
+                if entry[1] == beam or (entry[0] == 0 and entry[2] == 0):
+                    channel_groups.append(g)
+        elif channel_groups is None:
             channel_groups = list(range(48))
         for group in channel_groups:
             if group >= 0 and group < 48:

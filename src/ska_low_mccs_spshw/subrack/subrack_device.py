@@ -1061,7 +1061,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackPllLocked", None)
 
     @attribute(
-        dtype="DevShort",
+        dtype="DevLong",
         label="Timestamp",
         abs_change=1,
     )

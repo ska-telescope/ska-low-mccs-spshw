@@ -1162,7 +1162,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # cache. Re-pushing without explicit quality lets Tango recompute it
                 # against the newly configured thresholds.
                 signal_cache = self._SignalBusMixin__attr_values.get(attribute_name)
-                if signal_cache is not None:
+                if (
+                    signal_cache is not None
+                    and signal_cache.quality != tango.AttrQuality.ATTR_INVALID
+                ):
                     self.push_change_event(attribute_name, signal_cache.value)
                     self.push_archive_event(attribute_name, signal_cache.value)
 

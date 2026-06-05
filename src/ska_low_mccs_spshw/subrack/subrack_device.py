@@ -269,10 +269,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         if self.UseAttributesForHealth:
             if attribute_name in self._HEALTH_SIGNAL_MAP:
-                signal_name = self._HEALTH_SIGNAL_MAP[attribute_name]
-                signal_value = getattr(self, signal_name)
-                if signal_value is not None:
-                    setattr(self, signal_name, signal_value)
+                attr_data = self._SignalBusMixin__attr_values.get(attribute_name)
+                if (
+                    attr_data is not None
+                    and attr_data.quality != AttrQuality.ATTR_INVALID
+                ):
+                    signal_name = self._HEALTH_SIGNAL_MAP[attribute_name]
+                    setattr(self, signal_name, attr_data.value)
             elif attribute_name in self._hardware_attributes:
                 value_cache = self._hardware_attributes[attribute_name]
                 if value_cache is not None:

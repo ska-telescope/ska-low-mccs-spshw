@@ -3322,7 +3322,8 @@ class TileComponentManager(
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            self.tile.set_csp_rounding(value)
+            if not self.tile.set_csp_rounding(value):
+                self.logger.warning("Setting the cspRounding failed.")
             hw_value = self.tile.get_csp_rounding()
         self._update_attribute_callback(csp_rounding=[hw_value] * 384)
 

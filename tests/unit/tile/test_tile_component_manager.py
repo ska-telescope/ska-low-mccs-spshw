@@ -3050,7 +3050,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.set_channeliser_truncation.side_effect = Exception(
             "Mocked exception"
         )
-        tile_component_manager.set_channeliser_truncation([3] * 100)
+        with pytest.raises(Exception, match="Mocked exception"):
+            tile_component_manager.set_channeliser_truncation([3] * 100)
 
     @pytest.mark.xfail(reason="Uncaught exception")
     def test_fpgas_time(

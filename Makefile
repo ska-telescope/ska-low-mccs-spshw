@@ -234,6 +234,64 @@ helmfile-lint: telmodel-deps
 .PHONY: helmfile-lint telmodel-deps
 
 
+########################################################################
+# CASCADE COMPATIBILITY
+########################################################################
+SKART_DEPS_FILE ?= skart.toml
+SKART_UPDATE_MODE ?= devel
+SKART_WAIT ?= 300
+SKART_REQUERY ?= 5
+SKART_ALLOW_ALL ?= false
+SKART_DEPS_DAQ_DEVEL ?= ska-low-mccs-daq-helm ska-low-mccs-daq-values
+SKART_DEPS_DAQ_RELEASE ?= ska-low-mccs-daq-helm
+SKART_DEPS_DEVEL ?= $(SKART_DEPS_DAQ_DEVEL)
+SKART_DEPS_RELEASE ?= $(SKART_DEPS_DAQ_RELEASE)
+SKART_UPDATE_DEPS ?= $(if $(filter release,$(SKART_UPDATE_MODE)),$(SKART_DEPS_RELEASE),$(SKART_DEPS_DEVEL))
+
+deps-update-uv:
+	@set -e; \
+	if [ ! -f "$(SKART_DEPS_FILE)" ]; then \
+		echo "deps-update-uv: no-op: $(SKART_DEPS_FILE) not found"; \
+		exit 0; \
+	fi; \
+	if [ "$(SKART_UPDATE_DEPS)" = "all" ] && [ "$(SKART_ALLOW_ALL)" != "true" ]; then \
+		echo "deps-update-uv: refusing full update; set SKART_ALLOW_ALL=true to proceed"; \
+		exit 2; \
+	fi; \
+	if ! grep -Eq '^[[:space:]]*\[dep\.[^]]+\][[:space:]]*$$' "$(SKART_DEPS_FILE)"; then \
+		echo "deps-update-uv: no-op: $(SKART_DEPS_FILE) has no [dep.*] entries"; \
+		exit 0; \
+	fi; \
+	if [ "$(SKART_UPDATE_DEPS)" = "all" ]; then \
+		if command -v uv >/dev/null 2>&1; then \
+			uv run skart update --dep-file "$(SKART_DEPS_FILE)" --mode "$(SKART_UPDATE_MODE)" --wait="$(SKART_WAIT)" --requery="$(SKART_REQUERY)"; \
+		elif command -v skart >/dev/null 2>&1; then \
+			skart update --dep-file "$(SKART_DEPS_FILE)" --mode "$(SKART_UPDATE_MODE)" --wait="$(SKART_WAIT)" --requery="$(SKART_REQUERY)"; \
+		else \
+			echo "deps-update-uv: neither uv nor skart found"; \
+			exit 1; \
+		fi; \
+	else \
+		for dep in $(SKART_UPDATE_DEPS); do \
+			echo; \
+			echo "######################################################################"; \
+			echo "### DEPS-UPDATE-UV: UPDATING $$dep (mode=$(SKART_UPDATE_MODE))"; \
+			echo "######################################################################"; \
+			echo; \
+			if command -v uv >/dev/null 2>&1; then \
+				uv run skart update --dep-file "$(SKART_DEPS_FILE)" --mode "$(SKART_UPDATE_MODE)" --wait="$(SKART_WAIT)" --requery="$(SKART_REQUERY)" "$$dep" || exit $$?; \
+			elif command -v skart >/dev/null 2>&1; then \
+				skart update --dep-file "$(SKART_DEPS_FILE)" --mode "$(SKART_UPDATE_MODE)" --wait="$(SKART_WAIT)" --requery="$(SKART_REQUERY)" "$$dep" || exit $$?; \
+			else \
+				echo "deps-update-uv: neither uv nor skart found"; \
+				exit 1; \
+			fi; \
+		done; \
+	fi
+
+.PHONY: deps-update-uv
+
+
 
 ########################################################################
 # PRIVATE OVERRIDES

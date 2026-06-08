@@ -389,6 +389,12 @@ wheels = [
 ]
 
 [[package]]
+name = "docopt"
+version = "0.6.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf578136ef2cc5dfb50baa1761b68c9da1fb1e4eed343c9/docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491", size = 25901, upload-time = "2014-06-16T11:18:57.406Z" }
+
+[[package]]
 name = "docstring-parser"
 version = "0.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -766,8 +772,17 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonpath-ng"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/32/58/250751940d75c8019659e15482d548a4aa3b6ce122c515102a4bfdac50e3/jsonpath_ng-1.8.0.tar.gz", hash = "sha256:54252968134b5e549ea5b872f1df1168bd7defe1a52fed5a358c194e1943ddc3", size = 74513, upload-time = "2026-02-24T14:42:06.182Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/99/33c7d78a3fb70d545fd5411ac67a651c81602cc09c9cf0df383733f068c5/jsonpath_ng-1.8.0-py3-none-any.whl", hash = "sha256:b8dde192f8af58d646fc031fac9c99fe4d00326afc4148f1f043c601a8cfe138", size = 67844, upload-time = "2026-02-28T00:53:19.637Z" },
+]
+
+[[package]]
 name = "jsonschema"
-version = "4.24.0"
+version = "4.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -775,9 +790,9 @@ dependencies = [
     { name = "referencing" },
     { name = "rpds-py" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bf/d3/1cf5326b923a53515d8f3a2cd442e6d7e94fcc444716e879ea70a0ce3177/jsonschema-4.24.0.tar.gz", hash = "sha256:0b4e8069eb12aedfa881333004bccaec24ecef5a8a6a4b6df142b2cc9599d196", size = 353480, upload-time = "2025-05-26T18:48:10.459Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/fc/e067678238fa451312d4c62bf6e6cf5ec56375422aee02f9cb5f909b3047/jsonschema-4.26.0.tar.gz", hash = "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326", size = 366583, upload-time = "2026-01-07T13:41:07.246Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a2/3d/023389198f69c722d039351050738d6755376c8fd343e91dc493ea485905/jsonschema-4.24.0-py3-none-any.whl", hash = "sha256:a462455f19f5faf404a7902952b6f0e3ce868f3ee09a359b05eca6673bd8412d", size = 88709, upload-time = "2025-05-26T18:48:08.417Z" },
+    { url = "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl", hash = "sha256:d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce", size = 90630, upload-time = "2026-01-07T13:41:05.306Z" },
 ]
 
 [[package]]
@@ -1694,15 +1709,15 @@ wheels = [
 
 [[package]]
 name = "python-gitlab"
-version = "3.15.0"
+version = "8.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/53/248b87282df591d74ba3d38c3c3ced2b5087248c0ccfb6b3a947bb1034c3/python-gitlab-3.15.0.tar.gz", hash = "sha256:c9e65eb7612a9fbb8abf0339972eca7fd7a73d4da66c9b446ffe528930aff534", size = 273270, upload-time = "2023-06-09T09:51:31.92Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/96/c20b37e7fd86481e1bf2b1922e84b98dc5477fd9aafd30e5c5086f94d922/python_gitlab-8.4.0.tar.gz", hash = "sha256:f36f20ec3f09138f3b12089394941f4dbe5a407021bed71b70a04bbdd37b8a74", size = 410803, upload-time = "2026-05-28T02:43:32.857Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/51/3c7dd08272658e5490d0c0b6c94af15bd0c0649e7ad23c9ed0db1d276143/python_gitlab-3.15.0-py3-none-any.whl", hash = "sha256:8f8d1c0d387f642eb1ac7bf5e8e0cd8b3dd49c6f34170cee3c7deb7d384611f3", size = 135865, upload-time = "2023-06-09T09:51:29.996Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/af/1c3540dbdccb85fca0b0bbc58cdaf514d0a830d7e0302b2059a6c627b172/python_gitlab-8.4.0-py3-none-any.whl", hash = "sha256:102c747d9c107820e215cc5913627388001592a9a3ba1b43fc341a40f6943e72", size = 148242, upload-time = "2026-05-28T02:43:31.505Z" },
 ]
 
 [[package]]
@@ -1860,6 +1875,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ruamel-yaml"
+version = "0.19.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/3b/ebda527b56beb90cb7652cb1c7e4f91f48649fbcd8d2eb2fb6e77cd3329b/ruamel_yaml-0.19.1.tar.gz", hash = "sha256:53eb66cd27849eff968ebf8f0bf61f46cdac2da1d1f3576dd4ccee9b25c31993", size = 142709, upload-time = "2026-01-02T16:50:31.84Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/0c/51f6841f1d84f404f92463fc2b1ba0da357ca1e3db6b7fbda26956c3b82a/ruamel_yaml-0.19.1-py3-none-any.whl", hash = "sha256:27592957fedf6e0b62f281e96effd28043345e0e66001f97683aa9a40c667c93", size = 118102, upload-time = "2026-01-02T16:50:29.201Z" },
+]
+
+[[package]]
 name = "scapy"
 version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1941,8 +1965,8 @@ health-rollup = [
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "4.5.3"
-source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+version = "4.5.5"
+source = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git?rev=thorn-582#f2dea0f6ce8dcef470d7c55be81cbc60e28d64bd" }
 dependencies = [
     { name = "attrs" },
     { name = "backoff" },
@@ -1959,10 +1983,6 @@ dependencies = [
     { name = "ska-tango-base" },
     { name = "ska-tango-testing" },
     { name = "transitions" },
-]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.5.3/ska_low_mccs_common-4.5.3.tar.gz", hash = "sha256:b48d204950ec3b7db05341bf5452b0b442b8137057c1b94ffee268057c29250d" }
-wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.5.3/ska_low_mccs_common-4.5.3-py3-none-any.whl", hash = "sha256:e6b4fb86d44cc56a881bde109e41bc8a51d439aac68e4826eca3b1f3c08c2f09" },
 ]
 
 [[package]]
@@ -2071,6 +2091,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ska-ser-snmp" },
     { name = "ska-tango-testing" },
+    { name = "skart" },
     { name = "types-pyyaml" },
     { name = "types-requests" },
 ]
@@ -2125,7 +2146,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.2,<2.0.0" },
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
-    { name = "ska-low-mccs-common", specifier = ">=4.5.3,<5.0.0" },
+    { name = "ska-low-mccs-common", git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git?rev=thorn-582" },
     { name = "ska-low-mccs-daq", specifier = ">=6.0.0,<7.0.0" },
     { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=3.1.0" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
@@ -2169,6 +2190,7 @@ dev = [
     { name = "pytest-xdist", specifier = ">=3.6.1,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<0.7.0" },
     { name = "ska-tango-testing", specifier = ">=0.7.3,<0.8.0" },
+    { name = "skart", specifier = "==1.3.2" },
     { name = "types-pyyaml", specifier = ">=6.0.12.11,<7.0.0" },
     { name = "types-requests", specifier = ">=2.31.0.2,<3.0.0" },
 ]
@@ -2286,7 +2308,7 @@ wheels = [
 
 [[package]]
 name = "ska-telmodel"
-version = "1.31.0"
+version = "1.33.0"
 source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "appdirs" },
@@ -2301,9 +2323,27 @@ dependencies = [
     { name = "tomli" },
     { name = "toolz" },
 ]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel/1.31.0/ska_telmodel-1.31.0.tar.gz", hash = "sha256:e175a577e3476730048016c77a8d4a6839f1c934e5b11e27b58266b22b50300b" }
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel/1.33.0/ska_telmodel-1.33.0.tar.gz", hash = "sha256:c9dc501c8b7042ef0953442091f0484f3bd5886a517b9b0d2fa21ef15b0cb88b" }
 wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel/1.31.0/ska_telmodel-1.31.0-py3-none-any.whl", hash = "sha256:d034ff09031dee5c0f6cc17686fc377655926b33e4cd0002e4973163e0a16cd2" },
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel/1.33.0/ska_telmodel-1.33.0-py3-none-any.whl", hash = "sha256:9db24d2edc0bd5b450e50321283bc92cc752781a41235e5fffab947cfe84e932" },
+]
+
+[[package]]
+name = "skart"
+version = "1.3.2"
+source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+dependencies = [
+    { name = "docopt" },
+    { name = "gitpython" },
+    { name = "jsonpath-ng" },
+    { name = "python-dateutil" },
+    { name = "python-gitlab" },
+    { name = "ruamel-yaml" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/skart/1.3.2/skart-1.3.2.tar.gz", hash = "sha256:63f57afea4c03611a9a73b8a2bfd92d3c61c1114833f6c9635742084f19e7b47" }
+wheels = [
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/skart/1.3.2/skart-1.3.2-py3-none-any.whl", hash = "sha256:18668d252fb04412cd11890ccf2a4c312c25b282082930c2d9ade8e9174da135" },
 ]
 
 [[package]]
@@ -2512,11 +2552,11 @@ wheels = [
 
 [[package]]
 name = "toolz"
-version = "0.12.1"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3e/bf/5e12db234df984f6df3c7f12f1428aa680ba4e101f63f4b8b3f9e8d2e617/toolz-0.12.1.tar.gz", hash = "sha256:ecca342664893f177a13dac0e6b41cbd8ac25a358e5f215316d43e2100224f4d", size = 66550, upload-time = "2024-01-24T03:28:28.047Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/d6/114b492226588d6ff54579d95847662fc69196bdeec318eb45393b24c192/toolz-1.1.0.tar.gz", hash = "sha256:27a5c770d068c110d9ed9323f24f1543e83b2f300a687b7891c1a6d56b697b5b", size = 52613, upload-time = "2025-10-17T04:03:21.661Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/8a/d82202c9f89eab30f9fc05380daae87d617e2ad11571ab23d7c13a29bb54/toolz-0.12.1-py3-none-any.whl", hash = "sha256:d22731364c07d72eea0a0ad45bafb2c2937ab6fd38a3507bf55eae8744aa7d85", size = 56121, upload-time = "2024-01-24T03:28:25.97Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/12/5911ae3eeec47800503a238d971e51722ccea5feb8569b735184d5fcdbc0/toolz-1.1.0-py3-none-any.whl", hash = "sha256:15ccc861ac51c53696de0a5d6d4607f99c210739caf987b5d2054f3efed429d8", size = 58093, upload-time = "2025-10-17T04:03:20.435Z" },
 ]
 
 [[package]]

@@ -1,0 +1,48 @@
+# Naming convention:
+# - *-helm deps update chart dependency metadata in Chart.yaml.
+# - *-values deps update runtime image references in values files.
+
+[dep.ska-low-mccs-daq-helm]
+dep_type = "gitlab:helm-chart"
+project = "ska-telescope/mccs/ska-low-mccs-daq"
+release.tag = "\\d+\\.\\d+\\.\\d+"
+release.job = "helm-chart-publish"
+
+[dep.ska-low-mccs-daq-helm.sink.chart-yaml]
+sink_type = "yaml"
+file = "charts/ska-low-mccs-spshw/Chart.yaml"
+updates = [
+	{ path = "dependencies[?name='ska-low-mccs-daq'].repository", value = "{repository}" },
+	{ path = "dependencies[?name='ska-low-mccs-daq'].version", value = "{version}" },
+]
+release.updates = [
+	{ path = "dependencies[?name='ska-low-mccs-daq'].version", value = "{version}" },
+]
+
+[dep.ska-low-mccs-daq-values]
+dep_type = "gitlab:oci-image"
+project = "ska-telescope/mccs/ska-low-mccs-daq"
+release.tag = "\\d+\\.\\d+\\.\\d+"
+release.job = "oci-image-publish"
+
+[dep.ska-low-mccs-daq-values.sink.values-yaml]
+sink_type = "yaml"
+file = "charts/ska-low-mccs-spshw/values.yaml"
+updates = [
+	{ path = "ska-low-mccs-daq.ska-tango-devices.deviceServerTypes.daq.image.registry", value = "{registry}" },
+	{ path = "ska-low-mccs-daq.ska-tango-devices.deviceServerTypes.daq.image.tag", value = "{version}" },
+]
+release.updates = [
+	{ path = "ska-low-mccs-daq.ska-tango-devices.deviceServerTypes.daq.image.tag", value = "{version}" },
+]
+
+[dep.ska-low-mccs-daq-values.sink.values-ci-yaml]
+sink_type = "yaml"
+file = "helmfile.d/values/values-ci.yaml"
+updates = [
+	{ path = "helm_values.ska-low-mccs-daq.ska-tango-devices.deviceServerTypes.daq.image.registry", value = "{registry}" },
+	{ path = "helm_values.ska-low-mccs-daq.ska-tango-devices.deviceServerTypes.daq.image.tag", value = "{version}" },
+]
+release.updates = [
+	{ path = "helm_values.ska-low-mccs-daq.ska-tango-devices.deviceServerTypes.daq.image.tag", value = "{version}" },
+]

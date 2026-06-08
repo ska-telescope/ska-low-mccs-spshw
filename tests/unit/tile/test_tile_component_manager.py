@@ -7,6 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the tile component manage."""
+
 from __future__ import annotations
 
 import datetime
@@ -1963,9 +1964,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator._is_first == is_first
         assert tile_simulator._is_last == is_last
 
-    @pytest.mark.xfail(
-        reason="Only the first element is sent to the tile_component_manager."
-    )
     def test_csp_rounding(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -1989,7 +1987,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Case: set with Integer (clamped)
         # ----------------------
         tile_component_manager.set_csp_rounding(-3)
-        assert tile_simulator.csp_rounding == [0] * 384
+        assert tile_simulator.csp_rounding == [-3] * 384
 
     def test_pre_adu_levels(
         self: TestStaticSimulator,

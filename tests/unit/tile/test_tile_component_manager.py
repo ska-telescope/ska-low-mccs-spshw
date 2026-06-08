@@ -1990,13 +1990,13 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Case: set with Integer
         # ----------------------
         tile_component_manager.set_csp_rounding(3)
-        assert tile_simulator.csp_rounding == 3
+        assert tile_simulator.csp_rounding == [3] * 384
 
         # ----------------------
         # Case: set with Integer (clamped)
         # ----------------------
         tile_component_manager.set_csp_rounding(-3)
-        assert tile_simulator.csp_rounding == 0
+        assert tile_simulator.csp_rounding == [0] * 384
 
     def test_pre_adu_levels(
         self: TestStaticSimulator,

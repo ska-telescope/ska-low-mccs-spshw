@@ -3301,6 +3301,7 @@ class TileComponentManager(
 
         return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
 
+    @check_communicating
     def set_csp_rounding(
         self: TileComponentManager, rounding: np.ndarray | list[int] | int
     ) -> None:
@@ -3324,6 +3325,7 @@ class TileComponentManager(
         ):
             if not self.tile.set_csp_rounding(value):
                 self.logger.warning("Setting the cspRounding failed.")
+                return
             hw_value = self.tile.get_csp_rounding()
         self._update_attribute_callback(csp_rounding=[hw_value] * 384)
 
@@ -3387,6 +3389,7 @@ class TileComponentManager(
         ):
             return self.tile.get_channeliser_truncation()
 
+    @check_communicating
     def set_channeliser_truncation(
         self: TileComponentManager,
         truncation: int | list[int] | np.ndarray,

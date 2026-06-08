@@ -254,6 +254,14 @@ deps-update-uv:
 		echo "deps-update-uv: no-op: $(SKART_DEPS_FILE) not found"; \
 		exit 0; \
 	fi; \
+	if [ "$(SKART_UPDATE_MODE)" != "devel" ] && [ "$(SKART_UPDATE_MODE)" != "release" ]; then \
+		echo "deps-update-uv: SKART_UPDATE_MODE must be 'devel' or 'release' (got '$(SKART_UPDATE_MODE)')"; \
+		exit 2; \
+	fi; \
+	if [ -z "$(SKART_UPDATE_DEPS)" ]; then \
+		echo "deps-update-uv: SKART_UPDATE_DEPS must be set"; \
+		exit 2; \
+	fi; \
 	if [ "$(SKART_UPDATE_DEPS)" = "all" ] && [ "$(SKART_ALLOW_ALL)" != "true" ]; then \
 		echo "deps-update-uv: refusing full update; set SKART_ALLOW_ALL=true to proceed"; \
 		exit 2; \

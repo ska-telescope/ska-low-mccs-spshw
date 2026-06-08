@@ -3326,8 +3326,14 @@ class TileComponentManager(
             if not self.tile.set_csp_rounding(value):
                 self.logger.warning("Setting the cspRounding failed.")
                 return
-            hw_value = self.tile.get_csp_rounding()
-        self._update_attribute_callback(csp_rounding=[hw_value] * 384)
+            try:
+                hw_value = self.tile.get_csp_rounding()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.warning(f"Failed to read back cspRounding: {e}")
+                hw_value = None
+        self._update_attribute_callback(
+            csp_rounding=[hw_value] * 384 if hw_value is not None else None
+        )
 
     @check_communicating
     def get_static_delays(self: TileComponentManager) -> list[float]:
@@ -3423,7 +3429,11 @@ class TileComponentManager(
             raise_exception=True,
         ):
             self.tile.set_channeliser_truncation(trunc)
-            hw_value = self.tile.get_channeliser_truncation()
+            try:
+                hw_value = self.tile.get_channeliser_truncation()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.warning(f"Failed to read back channeliser_truncation: {e}")
+                hw_value = None
         self._update_attribute_callback(channeliser_rounding=hw_value)
 
     @check_communicating

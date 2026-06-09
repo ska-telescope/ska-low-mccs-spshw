@@ -2471,7 +2471,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["fpga1_clock_managers_status"].read()
 
     @attribute(
-        dtype="DevShort",
+        dtype="DevLong",
         label="ddr_write_size",
     )
     def ddr_write_size(self: MccsTile) -> int:
@@ -3313,7 +3313,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._csp_destination_mac
 
     @attribute(
-        dtype="DevShort", label="cspDestinationPort", abs_change=1, archive_abs_change=1
+        dtype="DevLong", label="cspDestinationPort", abs_change=1, archive_abs_change=1
     )
     def cspDestinationPort(self: MccsTile) -> int:
         """
@@ -4677,7 +4677,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.last_pointing_delays
 
     @attribute(
-        dtype=(("DevShort",),),
+        dtype=(("DevLong",),),
         max_dim_x=2,  # pol
         max_dim_y=16,  # antenna
         abs_change=1,

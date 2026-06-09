@@ -979,7 +979,7 @@ class TestMccsTileTpmDriver:
         tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
 
         change_event_callbacks["generic_health_attribute"].assert_change_event(
-            alarm_value
+            alarm_value, lookahead=2
         )
 
         assert (

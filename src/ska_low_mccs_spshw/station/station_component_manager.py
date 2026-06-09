@@ -127,6 +127,8 @@ class _TileProxy(DeviceComponentManager):
             "pointingDelays": self._on_attribute_change,
             "dstip40gfpga1": self._on_attribute_change,
             "dstip40gfpga2": self._on_attribute_change,
+            "fpga0_station_beamformer_flagged_count": self._on_attribute_change,
+            "fpga1_station_beamformer_flagged_count": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -495,6 +497,9 @@ class SpsStationComponentManager(
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
+        self._final_tile_fpga0_flagged_count: int = 0
+        self._final_tile_fpga1_flagged_count: int = 0
+        self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
@@ -964,12 +969,12 @@ class SpsStationComponentManager(
                     "Skipping this antenna."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config.get("delay_x", antenna_config["delay"])
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config.get("delay_y", antenna_config["delay"])
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config.get("delay_x", antenna_config["delay"])
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config.get("delay_y", antenna_config["delay"])
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1157,6 +1162,14 @@ class SpsStationComponentManager(
                     f"{attribute_value}"
                 )
                 self._validate_beamformer_daisy_chain()
+            case "fpga0_station_beamformer_flagged_count":
+                if logical_tile_id == self._number_of_tiles - 1:
+                    self._final_tile_fpga0_flagged_count = int(attribute_value)
+                    self._update_beamformer_flagged_count_health()
+            case "fpga1_station_beamformer_flagged_count":
+                if logical_tile_id == self._number_of_tiles - 1:
+                    self._final_tile_fpga1_flagged_count = int(attribute_value)
+                    self._update_beamformer_flagged_count_health()
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "
@@ -1198,6 +1211,24 @@ class SpsStationComponentManager(
         self._beamformer_daisy_chain_valid = valid
         if self._component_state_callback:
             self._component_state_callback(beamformerDaisyChainValid=valid)
+
+    def _update_beamformer_flagged_count_health(
+        self: SpsStationComponentManager,
+    ) -> None:
+        """
+        Update the station health contribution from the final tile's beamformer flagged count.
+
+        Fires a state callback whenever the OK/not-OK status changes.
+        """
+        ok = (
+            self._final_tile_fpga0_flagged_count == 0
+            and self._final_tile_fpga1_flagged_count == 0
+        )
+        if ok == self._final_tile_beamformer_flagged_count_ok:
+            return
+        self._final_tile_beamformer_flagged_count_ok = ok
+        if self._component_state_callback:
+            self._component_state_callback(finalTileBeamformerFlaggedCountOk=ok)
 
     def _update_communication_state(
         self: SpsStationComponentManager,

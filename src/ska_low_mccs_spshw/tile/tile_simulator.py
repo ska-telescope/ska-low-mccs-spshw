@@ -1076,6 +1076,7 @@ class TileSimulator:
         self._is_spead_header_write_successful: bool = True
         self.csp_rounding = list(self.CSP_ROUNDING)
         self._adc_rms: list[float] = list(self.ADC_RMS)
+        self._scan_id = [0] * 48
         self.spead_data_simulator = SpeadDataSimulator(logger)
         self.tpm_mocked_overheating = False
         self._active_40g_ports_setting: str = ""
@@ -2518,6 +2519,37 @@ class TileSimulator:
         """
         self.tpm.beam1.stop(channel_groups)  # type: ignore
         self.tpm.beam2.stop(channel_groups)  # type: ignore
+
+    @check_mocked_overheating
+    @connected
+    def load_scan_id(
+        self: TileSimulator,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
+        scan_id: int = 0,
+    ) -> None:
+        """
+        Set the scan ID for a given beam or set of channels, default for all.
+
+        :param beam: beam number in range 0:48
+        :param channel_groups: list of channel groups, in range 0:48.
+                group 0 for channels 0-7, to group 47 for channels 380-383
+        :param scan_id: the new scan ID to set
+        """
+        self.logger.debug("Applying scan ID")
+        if beam is not None:
+            channel_groups = []
+            beamformer_table = self.get_beamformer_table()
+            for g, entry in enumerate(beamformer_table):
+                if entry[1] == beam or (entry[0] == 0 and entry[2] == 0):
+                    channel_groups.append(g)
+        elif channel_groups is None:
+            channel_groups = list(range(48))
+        for group in channel_groups:
+            if group >= 0 and group < 48:
+                self._scan_id[group] = scan_id
+            else:
+                self.logger.error(f"Invalid group {group} in load_scan_id")
 
     @check_mocked_overheating
     @connected

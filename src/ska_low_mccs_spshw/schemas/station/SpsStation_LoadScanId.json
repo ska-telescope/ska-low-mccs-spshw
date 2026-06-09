@@ -1,0 +1,30 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/SpsStation_LoadScanId.json",
+    "title": "SpsStation LoadScanId schema",
+    "description": "Schema for SpsStation's LoadScanId command",
+    "type": "object",
+    "properties": {
+	"channel_groups": {
+	    "description": "Channel groups to be affected.",
+            "oneOf": [
+		{"type": "array",
+                    "items":  {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 47
+                    },
+                    "minItems": 0,
+                    "maxItems": 48
+                },
+                {"type": "null"}
+            ]
+	},
+	    "scan_id": {
+            "description": "The unique ID for the scan",
+            "type": "integer",
+            "minimum": 0
+        }
+    },
+    "required": ["scan_id"]
+}

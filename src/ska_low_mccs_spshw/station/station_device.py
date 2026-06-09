@@ -139,6 +139,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
         self._beamformer_daisy_chain_valid: Optional[bool] = None
+        self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -206,6 +207,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("beamformerTable", True, False)
         self.set_change_event("beamformerRegions", True, False)
         self.set_change_event("beamformerDaisyChainValid", True, False)
+        self.set_change_event("finalTileBeamformerFlaggedCountOk", True, False)
 
         self.set_archive_event("xPolBandpass", False)
         self.set_archive_event("yPolBandpass", False)
@@ -217,6 +219,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("beamformerTable", True, True)
         self.set_archive_event("beamformerRegions", True, True)
         self.set_archive_event("beamformerDaisyChainValid", True, True)
+        self.set_archive_event("finalTileBeamformerFlaggedCountOk", True, True)
 
         # pylint: disable=attribute-defined-outside-init
         self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
@@ -336,12 +339,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         # Here the "self" entry represets SpsStation specific health changes
         # such as ppsSpread.
-        rollup_members = ["self", "tile_programming_state", "beamformer_daisy_chain"]
+        rollup_members = [
+            "self", "tile_programming_state",
+            "beamformer_daisy_chain", "beamformer_flagged_count",
+        ]
         # TODO: Make these thresholds fully dynamic based on deployment.
         thresholds = {
             "self": (1, 1, 1),
             "tile_programming_state": (1, 1, 1),
             "beamformer_daisy_chain": (1, 1, 1),
+            "beamformer_flagged_count": (1, 1, 1),
         }
         if len(self.SubrackFQDNs) > 0:
             rollup_members.append("subracks")
@@ -373,6 +380,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "beamformer_daisy_chain",
             ["beamformer_daisy_chain"],
             thresholds["beamformer_daisy_chain"],
+        )
+        health_rollup.define(
+            "beamformer_flagged_count",
+            ["beamformer_flagged_count"],
+            thresholds["beamformer_flagged_count"],
         )
 
         return health_rollup
@@ -616,6 +628,25 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_rollup.health_changed(
                 "beamformer_daisy_chain",
                 HealthState.OK if daisy_chain_valid else HealthState.FAILED,
+            )
+
+        flagged_count_ok = state_change.get("finalTileBeamformerFlaggedCountOk")
+        if (
+            flagged_count_ok is not None
+            and cast(bool, flagged_count_ok) != self._final_tile_beamformer_flagged_count_ok
+        ):
+            self._final_tile_beamformer_flagged_count_ok = cast(bool, flagged_count_ok)
+            self.push_change_event(
+                "finalTileBeamformerFlaggedCountOk",
+                self._final_tile_beamformer_flagged_count_ok,
+            )
+            self.push_archive_event(
+                "finalTileBeamformerFlaggedCountOk",
+                self._final_tile_beamformer_flagged_count_ok,
+            )
+            self._health_rollup.health_changed(
+                "beamformer_flagged_count",
+                HealthState.OK if flagged_count_ok else HealthState.DEGRADED,
             )
 
         tile_programming_state = state_change.get("tileProgrammingState")
@@ -1010,6 +1041,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :return: True if the daisy chain is correctly configured.
         """
         return bool(self._beamformer_daisy_chain_valid)
+
+    @attribute(dtype="DevBoolean")
+    def finalTileBeamformerFlaggedCountOk(self: SpsStation) -> bool:
+        """
+        Return whether the final tile's station beamformer flagged packet count is zero.
+
+        True when both fpga0 and fpga1 discarded_or_flagged_packet_count values on
+        the final tile are 0. False (and station health DEGRADED) when either is non-zero.
+
+        :return: True if the final tile beamformer flagged count is zero.
+        """
+        return bool(self._final_tile_beamformer_flagged_count_ok)
 
     @attribute(dtype=("DevLong",), max_dim_x=336, archive_period=5000)
     def beamformerTable(self: SpsStation) -> list[int] | None:

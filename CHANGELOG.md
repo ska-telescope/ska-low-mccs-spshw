@@ -2,6 +2,7 @@
 
 ## 12.1.0
 
+* [SKB-1373] Fix healthState for OFF TPMs/Subracks
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.

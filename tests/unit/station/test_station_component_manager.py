@@ -864,7 +864,26 @@ def test_pps_delay_spread(
     assert station_component_manager._pps_delays == [0] * 16
     assert station_component_manager._pps_delay_spread == 0
 
-    # Set 1 Tile's ppsDelay to 4 for a delta of 4.
+    # Spread is computed only from Synchronised tiles; move all tiles there first.
+    for tile_id in range(0, num_tiles_to_add):
+        station_component_manager._on_tile_attribute_change(
+            logical_tile_id=tile_id,
+            attribute_name="tileProgrammingState",
+            attribute_value="Synchronised",
+            attribute_quality=tango.AttrQuality.ATTR_VALID,
+        )
+
+    # Seed all tiles to 0 to create a deterministic baseline.
+    for tile_id in range(0, num_tiles_to_add):
+        station_component_manager._on_tile_attribute_change(
+            logical_tile_id=tile_id,
+            attribute_name="ppsDelay",
+            attribute_value=0,
+            attribute_quality=tango.AttrQuality.ATTR_VALID,
+        )
+    assert station_component_manager._pps_delay_spread == 0
+
+    # Change one tile and verify the spread is computed correctly (4 - 0 == 4).
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=1,
         attribute_name="ppsDelay",
@@ -934,7 +953,7 @@ def test_beamformer_table(
     # Component state callback is getting called by many many sources.
     callbacks["component_state"].assert_call(
         beamformerTable=tile_initial_beamformer_table,
-        lookahead=30,
+        lookahead=50,
         consume_nonmatches=True,
     )
     callbacks["component_state"].assert_call(

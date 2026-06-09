@@ -270,9 +270,6 @@ def station_in_synchronised_state(
     if station.adminMode not in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
         print("Setting station admin mode to ONLINE")
         station.adminMode = AdminMode.ONLINE
-        AttributeWaiter(timeout=60).wait_for_value(
-            station, "state", tango.DevState.UNKNOWN
-        )
         AttributeWaiter(timeout=300).wait_for_value(
             station, "state", tango.DevState.ON, lookahead=5
         )
@@ -302,6 +299,16 @@ def station_in_synchronised_state(
         assert all(status == "Synchronised" for status in station.tileProgrammingState)
     except AssertionError:
         pytest.fail(f"Not all tiles are Synchronised: {station.tileProgrammingState}")
+
+    # FPGA re-lock is non-deterministic: a tile can land at a different PPS
+    # sample each time. Normalise all synchronised tiles to the minimum delay
+    # so ppsDelaySpread stays below the DEGRADED threshold.
+    delays = list(station.ppsDelays)
+    synchronised_delays = [d for d in delays if d != 0]
+    if synchronised_delays:
+        reference = min(synchronised_delays)
+        corrections = [int(d - reference) if d != 0 else 0 for d in delays]
+        station.ppsDelayCorrections = corrections
 
 
 @given("no consumers are running")

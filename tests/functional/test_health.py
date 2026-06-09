@@ -242,6 +242,25 @@ def get_device_online(
     return _get_device_online
 
 
+@given("the Station ppsDelays are corrected")
+@then("the Station ppsDelays are corrected")
+def station_delays_corrected(
+    station_devices: dict[str, list[tango.DeviceProxy]],
+) -> None:
+    """
+    Correct the pps delays.
+
+    :param station_devices: A fixture with the station devices.
+    """
+    for station in station_devices["Station"]:
+        delays = list(station.ppsDelays)
+        synchronised_delays = [d for d in delays if d != 0]
+        if synchronised_delays:
+            reference = min(synchronised_delays)
+            corrections = [int(d - reference) if d != 0 else 0 for d in delays]
+            station.ppsDelayCorrections = corrections
+
+
 @given("the Station is online")
 def station_online(
     station_devices: dict[str, list[tango.DeviceProxy]],

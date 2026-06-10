@@ -8,6 +8,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains integration tests of tile-subrack interactions in MCCS."""
+
 from __future__ import annotations
 
 import datetime
@@ -978,8 +979,13 @@ class TestMccsTileTpmDriver:
         # Set the alarming value in backend TileSimulator
         tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
 
+        # Lookahead of 2 due to change to attribute_from_signal. We now push the
+        # value to client on first subscription and first call to push_change_event.
+        # before we prevented a push when the value was unchanged. Now we are making use
+        # of TANGO detection rather than our own now deprecated AttributeManager
+        # (hence we are now exposing the Tango way change events are sent.)
         change_event_callbacks["generic_health_attribute"].assert_change_event(
-            alarm_value
+            alarm_value, lookahead=2, consume_nonmatches=True
         )
 
         assert (

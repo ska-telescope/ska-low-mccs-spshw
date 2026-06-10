@@ -1,8 +1,13 @@
 # Version History
 
-## 12.1.0
+## 12.1.1
 
 * [SKB-1373] Fix healthState for OFF TPMs/Subracks
+* [SPRTS-1005] Update ska-low-sps-tpm-api 3.1.0 -> 3.2.0 to fix ADC PLL sticky bits.
+
+## 12.1.0
+
+* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles.
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.

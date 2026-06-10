@@ -1,7 +1,9 @@
 # Version History
+
 ## 12.1.0
 
-* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles. 
+* [SKB-1379] Move Discarded or Flagged Packet Count "<https://developer.skao.int/projects/ska-low-sps-tpm-api/en/3.2.0/generated/monitoring_points/dsp.html#discarded-or-flagged-packet-count>" to rollup into Spsstation health not MccsTile.
+* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles.
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.

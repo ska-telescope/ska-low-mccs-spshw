@@ -1185,3 +1185,83 @@ def test_beamformer_daisy_chain(
     # Yay they fixed it.
     set_dst_ips(1, str(sdn_base + 2 * 1 + 2), str(sdn_base + 2 * 1 + 3))
     callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)
+
+
+def test_beamformer_flagged_count(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles_to_add: int,
+) -> None:
+    """
+    Test that only the final tile's beamformer flagged counts affect health.
+
+    Calls _on_tile_attribute_change directly without start_communicating() to
+    avoid race conditions with background Tango subscription event threads.
+
+    Checks:
+    - Non-final tiles' counts do not fire any component_state callback.
+    - Final tile non-zero fpga0 count → finalTileBeamformerFlaggedCountOk=False.
+    - Repeated identical value does not re-fire (deduplication).
+    - fpga0 cleared while fpga1 still zero → True.
+    - Non-zero fpga1 → False; clearing → True.
+
+    :param station_component_manager: the SPS station component manager under test.
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles_to_add: number of TPMs in the test.
+    """
+    last = num_tiles_to_add - 1
+
+    # Non-final tiles must not trigger any callback.
+    for tile_id in range(last):
+        station_component_manager._on_tile_attribute_change(
+            tile_id,
+            "fpga0_station_beamformer_flagged_count",
+            5,
+            tango.AttrQuality.ATTR_VALID,
+        )
+    callbacks["component_state"].assert_not_called()
+
+    # Final tile fpga0 non-zero → not ok.
+    station_component_manager._on_tile_attribute_change(
+        last,
+        "fpga0_station_beamformer_flagged_count",
+        5,
+        tango.AttrQuality.ATTR_VALID,
+    )
+    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=False)
+
+    # Same value again — no duplicate callback.
+    station_component_manager._on_tile_attribute_change(
+        last,
+        "fpga0_station_beamformer_flagged_count",
+        5,
+        tango.AttrQuality.ATTR_VALID,
+    )
+    callbacks["component_state"].assert_not_called()
+
+    # fpga0 back to zero (fpga1 still zero) → ok.
+    station_component_manager._on_tile_attribute_change(
+        last,
+        "fpga0_station_beamformer_flagged_count",
+        0,
+        tango.AttrQuality.ATTR_VALID,
+    )
+    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=True)
+
+    # fpga1 non-zero → not ok.
+    station_component_manager._on_tile_attribute_change(
+        last,
+        "fpga1_station_beamformer_flagged_count",
+        3,
+        tango.AttrQuality.ATTR_VALID,
+    )
+    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=False)
+
+    # Both zero → ok.
+    station_component_manager._on_tile_attribute_change(
+        last,
+        "fpga1_station_beamformer_flagged_count",
+        0,
+        tango.AttrQuality.ATTR_VALID,
+    )
+    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=True)

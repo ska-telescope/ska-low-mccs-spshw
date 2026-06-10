@@ -4749,3 +4749,30 @@ class TileComponentManager(
                 delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
 
         return np.array(delays)
+
+    def load_scan_id(
+        self: TileComponentManager,
+        scan_id: int,
+        channel_groups: list[int],
+    ) -> tuple[list[ResultCode], list[str]]:
+        """
+        Set the scan ID for a given beam or set of channels, default for all.
+
+        :param scan_id: the new scan ID to set
+        :param channel_groups: list of channel groups, in range 0:48.
+                group 0 for channels 0-7, to group 47 for channels 380-383
+
+        :return: Result code and message
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            try:
+                self.tile.load_scan_id(channel_groups=channel_groups, scan_id=scan_id)
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                return (
+                    [ResultCode.FAILED],
+                    ["TileComponentManager: Tile access failed"],
+                )
+        return ([ResultCode.OK], ["Load Scan ID completed OK"])

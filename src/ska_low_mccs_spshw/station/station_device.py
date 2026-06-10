@@ -340,8 +340,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # Here the "self" entry represets SpsStation specific health changes
         # such as ppsSpread.
         rollup_members = [
-            "self", "tile_programming_state",
-            "beamformer_daisy_chain", "beamformer_flagged_count",
+            "self",
+            "tile_programming_state",
+            "beamformer_daisy_chain",
+            "beamformer_flagged_count",
         ]
         # TODO: Make these thresholds fully dynamic based on deployment.
         thresholds = {
@@ -633,7 +635,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         flagged_count_ok = state_change.get("finalTileBeamformerFlaggedCountOk")
         if (
             flagged_count_ok is not None
-            and cast(bool, flagged_count_ok) != self._final_tile_beamformer_flagged_count_ok
+            and cast(bool, flagged_count_ok)
+            != self._final_tile_beamformer_flagged_count_ok
         ):
             self._final_tile_beamformer_flagged_count_ok = cast(bool, flagged_count_ok)
             self.push_change_event(
@@ -1048,7 +1051,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Return whether the final tile's station beamformer flagged packet count is zero.
 
         True when both fpga0 and fpga1 discarded_or_flagged_packet_count values on
-        the final tile are 0. False (and station health DEGRADED) when either is non-zero.
+        the final tile are 0.
+        False (and station health DEGRADED) when either is non-zero.
 
         :return: True if the final tile beamformer flagged count is zero.
         """

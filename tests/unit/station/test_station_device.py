@@ -96,6 +96,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     return MockTangoEventCallbackGroup(
         "admin_mode",
         "beamformerDaisyChainValid",
+        "finalTileBeamformerFlaggedCountOk",
         "lrc_finished",
         "lrc_executing",
         "lrc_queue",
@@ -2028,4 +2029,89 @@ def test_beamformer_daisy_chain_health_rollup(
         )
     )
     change_event_callbacks["beamformerDaisyChainValid"].assert_change_event(True)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+
+
+def test_beamformer_flagged_count_health_rollup(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that final-tile beamformer flagged counts feed into the health rollup.
+
+    Verifies that a non-zero flagged count on the final tile drives healthState to
+    DEGRADED, that counts on non-final tiles are ignored, and that clearing the counts
+    restores health to OK. Subscribes to finalTileBeamformerFlaggedCountOk AFTER a
+    zero-count baseline has been pushed so the initial event value is True.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+
+    last_tile = len(mock_tile_device_proxies) - 1
+
+    # Establish baseline: push 0,0 from final tile so the attribute reads True
+    # before we subscribe, mirroring how mock tiles pre-configure correct dst IPs
+    # in test_beamformer_daisy_chain_health_rollup.
+    station_device.MockTileFlaggedCountChange(
+        json.dumps({"tile_id": last_tile, "fpga0_count": 0, "fpga1_count": 0})
+    )
+
+    station_device.subscribe_event(
+        "finalTileBeamformerFlaggedCountOk",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["finalTileBeamformerFlaggedCountOk"],
+    )
+    change_event_callbacks["finalTileBeamformerFlaggedCountOk"].assert_change_event(
+        True
+    )
+    change_event_callbacks["finalTileBeamformerFlaggedCountOk"].assert_not_called()
+    change_event_callbacks["health_state"].assert_not_called()
+
+    # Non-final tile reporting non-zero counts must be ignored.
+    station_device.MockTileFlaggedCountChange(
+        json.dumps({"tile_id": 0, "fpga0_count": 5, "fpga1_count": 0})
+    )
+    change_event_callbacks["finalTileBeamformerFlaggedCountOk"].assert_not_called()
+    change_event_callbacks["health_state"].assert_not_called()
+
+    # Final tile reports non-zero fpga0 → DEGRADED.
+    station_device.MockTileFlaggedCountChange(
+        json.dumps({"tile_id": last_tile, "fpga0_count": 5, "fpga1_count": 0})
+    )
+    change_event_callbacks["finalTileBeamformerFlaggedCountOk"].assert_change_event(
+        False
+    )
+    change_event_callbacks["health_state"].assert_change_event(HealthState.DEGRADED)
+
+    # Final tile counts cleared → OK restored.
+    station_device.MockTileFlaggedCountChange(
+        json.dumps({"tile_id": last_tile, "fpga0_count": 0, "fpga1_count": 0})
+    )
+    change_event_callbacks["finalTileBeamformerFlaggedCountOk"].assert_change_event(
+        True
+    )
     change_event_callbacks["health_state"].assert_change_event(HealthState.OK)

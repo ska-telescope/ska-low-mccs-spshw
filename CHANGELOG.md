@@ -1,11 +1,10 @@
 # Version History
+
 ## Unreleased
 
+* [THORN-416] Changed datatypes of tile and subrack attributes to match hardware datatypes
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
-* [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
-
-## Unreleased
-
+* [THORN-432] MccsTile Move remaining attributes to use attribute_from_sig
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.
 * [SKB-1047] Add beamformer daisy chain health to SpsStation rollup.
 

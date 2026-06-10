@@ -1053,6 +1053,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         True when both fpga0 and fpga1 discarded_or_flagged_packet_count values on
         the final tile are 0.
         False (and station health DEGRADED) when either is non-zero.
+        This defaults to False when value has not been updated yet.
 
         :return: True if the final tile beamformer flagged count is zero.
         """

@@ -3972,7 +3972,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ]
 
     @attribute(
-        dtype=("DevShort",),
+        dtype=("DevLong",),
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,

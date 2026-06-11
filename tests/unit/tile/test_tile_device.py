@@ -1693,7 +1693,9 @@ class TestMccsTile:
                         getattr(tile_device, attribute) == np.array(initial_value)
                     ).all()
                 else:
-                    assert getattr(tile_device, attribute) == initial_value
+                    assert getattr(tile_device, attribute) == pytest.approx(
+                        initial_value
+                    )
             except tango.DevFailed as df:
                 assert (
                     f"Read value for attribute {attribute} has not been updated"

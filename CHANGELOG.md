@@ -1,4 +1,8 @@
 # Version History
+## Unreleased
+
+* [THORN-416] Changed datatypes of tile and subrack attributes to match hardware datatypes
+
 ## 12.1.0
 
 * [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles. 

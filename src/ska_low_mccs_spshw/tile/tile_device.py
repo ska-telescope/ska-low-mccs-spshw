@@ -1708,7 +1708,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     boardTemperature = attribute_from_signal(  # noqa: N815
         board_temperature_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         abs_change=0.1,
         archive_abs_change=0.1,
         min_value=15.0,
@@ -2944,7 +2944,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC0 = attribute_from_signal(  # noqa: N815
         temperature_adc0_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 0",
         unit="Celsius",
         abs_change=0.1,
@@ -2956,7 +2956,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC1 = attribute_from_signal(  # noqa: N815
         temperature_adc1_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 1",
         unit="Celsius",
         abs_change=0.1,
@@ -2968,7 +2968,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC2 = attribute_from_signal(  # noqa: N815
         temperature_adc2_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 2",
         unit="Celsius",
         abs_change=0.1,
@@ -2980,7 +2980,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC3 = attribute_from_signal(  # noqa: N815
         temperature_adc3_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 3",
         unit="Celsius",
         abs_change=0.1,
@@ -2992,7 +2992,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC4 = attribute_from_signal(  # noqa: N815
         temperature_adc4_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 4",
         unit="Celsius",
         abs_change=0.1,
@@ -3004,7 +3004,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC5 = attribute_from_signal(  # noqa: N815
         temperature_adc5_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 5",
         unit="Celsius",
         abs_change=0.1,
@@ -3016,7 +3016,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC6 = attribute_from_signal(  # noqa: N815
         temperature_adc6_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 6",
         unit="Celsius",
         abs_change=0.1,
@@ -3028,7 +3028,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC7 = attribute_from_signal(  # noqa: N815
         temperature_adc7_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 7",
         unit="Celsius",
         abs_change=0.1,
@@ -3040,7 +3040,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC8 = attribute_from_signal(  # noqa: N815
         temperature_adc8_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 8",
         unit="Celsius",
         abs_change=0.1,
@@ -3052,7 +3052,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC9 = attribute_from_signal(  # noqa: N815
         temperature_adc9_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 9",
         unit="Celsius",
         abs_change=0.1,
@@ -3064,7 +3064,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC10 = attribute_from_signal(  # noqa: N815
         temperature_adc10_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 10",
         unit="Celsius",
         abs_change=0.1,
@@ -3076,7 +3076,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC11 = attribute_from_signal(  # noqa: N815
         temperature_adc11_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 11",
         unit="Celsius",
         abs_change=0.1,
@@ -3088,7 +3088,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC12 = attribute_from_signal(  # noqa: N815
         temperature_adc12_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 12",
         unit="Celsius",
         abs_change=0.1,
@@ -3100,7 +3100,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC13 = attribute_from_signal(  # noqa: N815
         temperature_adc13_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 13",
         unit="Celsius",
         abs_change=0.1,
@@ -3112,7 +3112,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC14 = attribute_from_signal(  # noqa: N815
         temperature_adc14_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 14",
         unit="Celsius",
         abs_change=0.1,
@@ -3124,7 +3124,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperatureADC15 = attribute_from_signal(  # noqa: N815
         temperature_adc15_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ADC 15",
         unit="Celsius",
         abs_change=0.1,
@@ -3419,7 +3419,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
     @attribute(
-        dtype="DevLong", abs_change=1, archive_abs_change=1, min_value=0, max_value=15
+        dtype="DevShort", abs_change=1, archive_abs_change=1, min_value=0, max_value=15
     )
     def logicalTileId(self: MccsTile) -> int:
         """
@@ -3451,7 +3451,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["tileProgrammingState"].read()
 
-    @attribute(dtype="DevLong", abs_change=1, archive_abs_change=1)
+    @attribute(dtype="DevShort", abs_change=1, archive_abs_change=1)
     def stationId(self: MccsTile) -> int:
         """
         Return the id of the station to which this tile is assigned.
@@ -3883,7 +3883,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     fpga1Temperature = attribute_from_signal(  # noqa: N815
         fpga1_temperature_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         abs_change=0.1,
         archive_abs_change=0.1,
         min_alarm=10.0,
@@ -3893,7 +3893,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     fpga2Temperature = attribute_from_signal(  # noqa: N815
         fpga2_temperature_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         abs_change=0.2,
         archive_abs_change=0.2,
         min_alarm=10.0,
@@ -3944,7 +3944,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.fpga_frame_time
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=("DevShort",),
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
@@ -4009,7 +4009,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["adcPower"].read()
 
     @attribute(
-        dtype="DevLong",
+        dtype="DevLong64",
         fisallowed="_is_initialised",
         abs_change=1,
         archive_abs_change=1,
@@ -4756,7 +4756,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     currentFE0 = attribute_from_signal(  # noqa: N815
         current_fe0_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE0 current",
         unit="Amp",
         abs_change=0.1,
@@ -4768,7 +4768,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     currentFE1 = attribute_from_signal(  # noqa: N815
         current_fe1_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE1 current",
         unit="Amp",
         abs_change=0.1,
@@ -4780,7 +4780,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageAVDD3 = attribute_from_signal(  # noqa: N815
         voltage_avdd3_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Analog 2.5 V",
         unit="Volt",
         abs_change=0.1,
@@ -4794,7 +4794,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVrefDDR0 = attribute_from_signal(  # noqa: N815
         voltage_vref_ddr0_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Vref voltage for DDR0",
         unit="Volt",
         abs_change=0.1,
@@ -4806,7 +4806,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVrefDDR1 = attribute_from_signal(  # noqa: N815
         voltage_vref_ddr1_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Vref voltage for DDR1",
         unit="Volt",
         abs_change=0.1,
@@ -4828,7 +4828,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageMan1V2 = attribute_from_signal(  # noqa: N815
         voltage_man1v2_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 1.2V",
         unit="Volt",
         abs_change=0.1,
@@ -4840,7 +4840,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageMGT_AVCC = attribute_from_signal(  # noqa: N815
         voltage_mgt_avcc_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT AV",
         unit="Volt",
         abs_change=0.1,
@@ -4852,7 +4852,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageMGT_AVTT = attribute_from_signal(  # noqa: N815
         voltage_mgt_avtt_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT AVTT",
         unit="Volt",
         abs_change=0.1,
@@ -4864,7 +4864,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageMon5V0 = attribute_from_signal(  # noqa: N815
         voltage_mon5v0_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 5V0",
         unit="Volt",
         abs_change=0.1,
@@ -4876,7 +4876,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageMon3V3 = attribute_from_signal(  # noqa: N815
         voltage_mon3v3_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 3V3",
         unit="Volt",
         abs_change=0.1,
@@ -4888,7 +4888,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageMon1V8 = attribute_from_signal(  # noqa: N815
         voltage_mon1v8_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Management 1V8",
         unit="Volt",
         abs_change=0.1,
@@ -4900,7 +4900,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageSW_AVDD1 = attribute_from_signal(  # noqa: N815
         voltage_sw_avdd1_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="SW Analog 1.1 V",
         unit="Volt",
         abs_change=0.1,
@@ -4912,7 +4912,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageSW_AVDD2 = attribute_from_signal(  # noqa: N815
         voltage_sw_avdd2_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="SW Analog 2.3 V",
         unit="Volt",
         abs_change=0.1,
@@ -4924,7 +4924,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVIN = attribute_from_signal(  # noqa: N815
         voltage_vin_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="input supply",
         unit="Volt",
         abs_change=0.1,
@@ -4936,7 +4936,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP0 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp0_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 0",
         unit="Volt",
         abs_change=0.1,
@@ -4948,7 +4948,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP1 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp1_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 1",
         unit="Volt",
         abs_change=0.1,
@@ -4960,7 +4960,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP2 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp2_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 2",
         unit="Volt",
         abs_change=0.1,
@@ -4972,7 +4972,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP3 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp3_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 3",
         unit="Volt",
         abs_change=0.1,
@@ -4984,7 +4984,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP4 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp4_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 4",
         unit="Volt",
         abs_change=0.1,
@@ -4996,7 +4996,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP5 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp5_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 5",
         unit="Volt",
         abs_change=0.1,
@@ -5008,7 +5008,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP6 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp6_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 6",
         unit="Volt",
         abs_change=0.1,
@@ -5020,7 +5020,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_AGP7 = attribute_from_signal(  # noqa: N815
         voltage_vm_agp7_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD AGP group 7",
         unit="Volt",
         abs_change=0.1,
@@ -5032,7 +5032,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_CLK0B = attribute_from_signal(  # noqa: N815
         voltage_vm_clk0b_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Clock Buffer0 3.3V",
         unit="Volt",
         abs_change=0.1,
@@ -5044,7 +5044,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_CLK1B = attribute_from_signal(  # noqa: N815
         voltage_vm_clk1b_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="Clock Buffer1 3.3V",
         unit="Volt",
         abs_change=0.1,
@@ -5056,7 +5056,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_DDR0_VTT = attribute_from_signal(  # noqa: N815
         voltage_vm_ddr0_vtt_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="DDR FPGA0 Vtt",
         unit="Volt",
         abs_change=0.1,
@@ -5068,7 +5068,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_DDR1_VDD = attribute_from_signal(  # noqa: N815
         voltage_vm_ddr1_vdd_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="DDR4",
         unit="Volt",
         abs_change=0.1,
@@ -5080,7 +5080,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_DDR1_VTT = attribute_from_signal(  # noqa: N815
         voltage_vm_ddr1_vtt_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="DDR FPGA1 Vtt",
         unit="Volt",
         abs_change=0.1,
@@ -5092,7 +5092,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_DRVDD = attribute_from_signal(  # noqa: N815
         voltage_vm_drvdd_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="SW DRVDD 1.8V",
         unit="Volt",
         abs_change=0.1,
@@ -5104,7 +5104,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_DVDD = attribute_from_signal(  # noqa: N815
         voltage_vm_dvdd_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="AD DVDD",
         unit="Volt",
         abs_change=0.1,
@@ -5116,7 +5116,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_FE0 = attribute_from_signal(  # noqa: N815
         voltage_vm_fe0_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE0",
         unit="Volt",
         abs_change=0.1,
@@ -5128,7 +5128,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_FE1 = attribute_from_signal(  # noqa: N815
         voltage_vm_fe1_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FE1",
         unit="Volt",
         abs_change=0.1,
@@ -5140,7 +5140,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_MGT0_AUX = attribute_from_signal(  # noqa: N815
         voltage_vm_mgt0_aux_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT0 AUX",
         unit="Volt",
         abs_change=0.1,
@@ -5152,7 +5152,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_MGT1_AUX = attribute_from_signal(  # noqa: N815
         voltage_vm_mgt1_aux_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="FPGA MGT1 AUX",
         unit="Volt",
         abs_change=0.1,
@@ -5164,7 +5164,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_PLL = attribute_from_signal(  # noqa: N815
         voltage_vm_pll_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="ANALOG PLL",
         unit="Volt",
         abs_change=0.1,
@@ -5176,7 +5176,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltageVM_SW_AMP = attribute_from_signal(  # noqa: N815
         voltage_vm_sw_amp_signal,
-        dtype="DevDouble",
+        dtype="DevFloat",
         label="VGA DC-DC",
         unit="Volt",
         abs_change=0.1,

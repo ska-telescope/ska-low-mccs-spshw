@@ -13,6 +13,7 @@ import json
 import os
 import time
 from datetime import datetime
+from statistics import median
 from typing import Any, Callable, Generator
 
 import pytest
@@ -243,6 +244,41 @@ def get_device_online(
     return _get_device_online
 
 
+def unwrap_pps_delays(delays: list[int], period: int = 8) -> list[int]:
+    """
+    Convert wrapped ppsDelay values into a single cluster.
+
+    Example:
+        [17,18,16,17,24,22,23,16]
+    ->
+        [17,18,16,17,16,14,15,16]
+
+    :param delays: list of ppsDelay values to unwrap.
+    :param period: the period at which the values wrap, default is 8.
+
+    :return: list of unwrapped ppsDelay values.
+    """
+    if not delays:
+        return delays
+
+    centre = median(delays)
+    half_period = period / 2
+
+    unwrapped = []
+
+    for delay in delays:
+        diff = delay - centre
+
+        if diff > half_period:
+            delay -= period
+        elif diff < -half_period:
+            delay += period
+
+        unwrapped.append(delay)
+
+    return unwrapped
+
+
 @given("the Station ppsDelays are corrected")
 @then("the Station ppsDelays are corrected")
 def station_delays_corrected(
@@ -260,15 +296,20 @@ def station_delays_corrected(
 
     for station in station_devices["Station"]:
         delays = list(station.ppsDelays)
+        current_corrections = list(station.ppsDelayCorrections)
 
-        corrections = [target - d if d != 0 else 0 for d in delays]
+        if any(c != 0 for c in current_corrections):
+            return
+
+        true_delays = unwrap_pps_delays(delays)
+
+        corrections = [target - delay for delay in true_delays]
 
         station.ppsDelayCorrections = corrections
-        # Intialise to apply correction.
         station.initialise()
 
     wait_for_lrcs_to_finish(station_devices["Station"], 120)
-    # Just sleep to test if time needed to update
+
     time.sleep(5)
 
 

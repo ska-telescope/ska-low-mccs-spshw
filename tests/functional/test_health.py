@@ -268,6 +268,8 @@ def station_delays_corrected(
         station.initialise()
 
     wait_for_lrcs_to_finish(station_devices["Station"], 120)
+    # Just sleep to test if time needed to update
+    time.sleep(5)
 
 
 @given("the Station is online")

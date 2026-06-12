@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the bdd test steps of the health aggregation."""
+
 from __future__ import annotations
 
 import json
@@ -246,19 +247,27 @@ def get_device_online(
 @then("the Station ppsDelays are corrected")
 def station_delays_corrected(
     station_devices: dict[str, list[tango.DeviceProxy]],
+    wait_for_lrcs_to_finish: Callable,
 ) -> None:
     """
     Correct the pps delays.
 
     :param station_devices: A fixture with the station devices.
+    :param wait_for_lrcs_to_finish: A fixture to call to wait for
+        LRC completion.
     """
+    target = 20
+
     for station in station_devices["Station"]:
         delays = list(station.ppsDelays)
-        synchronised_delays = [d for d in delays if d != 0]
-        if synchronised_delays:
-            reference = min(synchronised_delays)
-            corrections = [int(d - reference) if d != 0 else 0 for d in delays]
-            station.ppsDelayCorrections = corrections
+
+        corrections = [target - d if d != 0 else 0 for d in delays]
+
+        station.ppsDelayCorrections = corrections
+        # Intialise to apply correction.
+        station.initialise()
+
+    wait_for_lrcs_to_finish(station_devices["Station"], 120)
 
 
 @given("the Station is online")

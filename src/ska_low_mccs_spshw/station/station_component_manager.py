@@ -8,6 +8,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for stations."""
+
 from __future__ import annotations
 
 import copy
@@ -1087,6 +1088,7 @@ class SpsStationComponentManager(
                 # Spread is computed only from currently-Synchronised tiles to
                 # avoid pre-sync divergent values causing spurious DEGRADED.
                 self._fire_pps_delay_spread()
+                self.logger.error(f"{logical_tile_id=}, {attribute_value=}")
             case "tileprogrammingstate":
                 self._tile_programming_state[logical_tile_id] = attribute_value
                 if attribute_value not in ("Initialised", "Synchronised"):
@@ -2378,7 +2380,7 @@ class SpsStationComponentManager(
             )
         return ResultCode.OK, ""
 
-    @property  # type:ignore[misc]
+    @property  # type: ignore[misc]
     @check_communicating
     def is_configured(self: SpsStationComponentManager) -> bool:
         """
@@ -3149,7 +3151,7 @@ class SpsStationComponentManager(
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
 
-        (fqdn, proxy) = list(self._tile_proxies.items())[-1]
+        fqdn, proxy = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
             return ([ResultCode.FAILED], [f"{fqdn} is not in PowerState.ON"])

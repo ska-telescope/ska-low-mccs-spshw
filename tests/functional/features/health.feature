@@ -8,9 +8,9 @@ Feature: Test health
         And the Tiles reports that its state is OFF
         And the subracks thresholds are normal
         When the Station has been commanded to turn On
+        And the Station ppsDelays are corrected
         Then the Station reports that its state is ON
         And the Tiles reports that its state is ON
-        And the Station ppsDelays are corrected
         And the DAQs reports that its HealthState is OK
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
@@ -19,9 +19,9 @@ Feature: Test health
     Scenario: Failed when tile monitoring point is out of bounds
         Given the Station is online
         And the Station has been commanded to turn On
+        And the Station ppsDelays are corrected
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
-        And the Station ppsDelays are corrected
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is OK
@@ -33,9 +33,9 @@ Feature: Test health
     Scenario: Failed when subrack monitoring point is out of bounds
         Given the Station is online
         And the Station has been commanded to turn On
+        And the Station ppsDelays are corrected
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
-        And the Station ppsDelays are corrected
         And the subracks thresholds are normal
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
@@ -48,9 +48,9 @@ Feature: Test health
     Scenario: Health changes when healthThresholds changes
         Given the Station is online
         And the Station has been commanded to turn On
+        And the Station ppsDelays are corrected
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
-        And the Station ppsDelays are corrected
         And the subracks thresholds are normal
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK

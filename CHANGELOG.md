@@ -1,5 +1,5 @@
 # Version History
-## Unreleased
+## 12.1.1
 
 * [THORN-416] Changed datatypes of tile and subrack attributes to match hardware datatypes
 

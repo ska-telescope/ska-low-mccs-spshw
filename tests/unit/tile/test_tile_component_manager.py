@@ -370,6 +370,48 @@ class TestTileComponentManager:
         else:
             callbacks["communication_status"].assert_not_called()
 
+    def test_tpm_values_changed(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        callbacks: MockCallableGroup,
+        mock_subrack_device_proxy: unittest.mock.Mock,
+        tile_id: int,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test handling of notifications of TPM values changes from the subrack.
+
+        :param tile_component_manager: the tile component manager
+            under test
+        :param callbacks: dictionary of driver callbacks.
+        :param mock_subrack_device_proxy: a mock device proxy to a
+            subrack device.
+        :param tile_id: the logical tile id
+        :param tile_simulator: a mock tpm to test
+
+        """
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmCurrents",
+            [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            tango.EventType.CHANGE_EVENT,
+        )
+
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmPowers",
+            [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8],
+            tango.EventType.CHANGE_EVENT,
+        )
+
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmVoltages",
+            [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8],
+            tango.EventType.CHANGE_EVENT,
+        )
+
+        assert tile_component_manager.current == 0.1
+        assert tile_component_manager.power == 1.1
+        assert tile_component_manager.voltage == 2.1
+
     @unittest.mock.patch(
         "ska_low_mccs_spshw.tile.tile_component_manager.MccsCommandProxy"
     )

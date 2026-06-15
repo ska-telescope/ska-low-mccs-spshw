@@ -319,6 +319,9 @@ class TileComponentManager(
         self._power_callback_timeout: float = power_callback_timeout
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
+        self._current: float | None = None
+        self._power: float | None = None
+        self._voltage: float | None = None
 
         # We track the last known connection status to
         # avoid unnecessary connection attempts.
@@ -1011,10 +1014,21 @@ class TileComponentManager(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-            self._subrack_proxy.add_change_event_callback(
-                f"tpm{self._subrack_tpm_id}PowerState",
-                self._subrack_says_tpm_power_changed,
-            )
+            # Add callbacks for subrack attribute change events
+            self._add_subrack_change_event_callbacks()
+
+    def _add_subrack_change_event_callbacks(self) -> None:
+        """Add subrack change event callbacks."""
+        if self._subrack_proxy:
+            tpm_power_state_attr = f"tpm{self._subrack_tpm_id}PowerState"
+            callbacks: dict[str, Callable[[str, Any, Any], None]] = {
+                tpm_power_state_attr: self._subrack_says_tpm_power_changed,
+                "tpmCurrents": self._subrack_says_tpm_values_changed,
+                "tpmPowers": self._subrack_says_tpm_values_changed,
+                "tpmVotages": self._subrack_says_tpm_values_changed,
+            }
+            for attr, func in callbacks.items():
+                self._subrack_proxy.add_change_event_callback(attr, func)
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """
@@ -1047,7 +1061,7 @@ class TileComponentManager(
         on the subrack device.
 
         :param event_name: name of the event; will always be
-            "areTpmsOn" for this callback
+            "tpm{self._subrack_tpm_id}PowerState" for this callback
         :param event_value: the new attribute value
         :param event_quality: the quality of the change event
         """
@@ -1124,6 +1138,107 @@ class TileComponentManager(
 
         else:
             self._tile_time.set_reference_time(0)
+
+    def _subrack_says_tpm_values_changed(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: list[float] | None,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change in tpm values, as reported by subrack.
+
+        This is a callback that is triggered by an event subscription
+        on the subrack device.
+
+        :param event_name: name of the event; will always be one of
+            "tpmCurrents", "tpmPowers" or "tpmVoltages" for this callback
+        :param event_value: the new attribute value
+        :param event_quality: the quality of the change event
+
+        :raises ValueError: If the number of event values is not 8
+
+        """
+
+        def get_unknown_event_name_message(event_name: str) -> str:
+            names = ["tpmCurrents", "tpmPowers", "tpmVoltages"]
+            return f"Expected on of {names} for event_name, got '{event_name}'"
+
+        if event_value:
+            # Ensure we have 8 values in the list
+            if len(event_value) != 8:
+                raise ValueError(f"Expected 8 values, got {len(event_value)}")
+
+            # Get the tpm value
+            tpm_value = event_value[self._subrack_tpm_id - 1]
+
+            # Check the event name and handle the corresponding attribute update
+            match event_name:
+                case "tpmCurrents":
+                    self._handle_tpm_current_changed(tpm_value)
+                case "tpmPowers":
+                    self._handle_tpm_power_changed(tpm_value)
+                case "tpmVoltages":
+                    self._handle_tpm_voltage_changed(tpm_value)
+                case _:
+                    raise ValueError(get_unknown_event_name_message(event_name))
+
+    def _handle_tpm_current_changed(self, current: float) -> None:
+        """
+        Handle change in tpm current, as reported by subrack.
+
+        :param current: The tpm current.
+
+        """
+        self._current = current
+
+    def _handle_tpm_power_changed(self, power: float) -> None:
+        """
+        Handle change in tpm power, as reported by subrack.
+
+        :param power: The tpm power.
+
+        """
+        self._power = power
+
+    def _handle_tpm_voltage_changed(self, voltage: float) -> None:
+        """
+        Handle change in tpm voltage, as reported by subrack.
+
+        :param voltage: The tpm voltage.
+
+        """
+        self._voltage = voltage
+
+    @property
+    def current(self) -> float | None:
+        """
+        Get the TPM current.
+
+        :returns: The TPM current.
+
+        """
+        return self._current
+
+    @property
+    def power(self) -> float | None:
+        """
+        Get the TPM power.
+
+        :returns: The TPM power.
+
+        """
+        return self._power
+
+    @property
+    def voltage(self) -> float | None:
+        """
+        Get the TPM voltage.
+
+        :returns: The TPM voltage.
+
+        """
+        return self._voltage
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

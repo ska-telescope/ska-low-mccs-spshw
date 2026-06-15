@@ -246,11 +246,13 @@ def get_device_online(
 @then("the Station ppsDelays are corrected")
 def station_delays_corrected(
     station_devices: dict[str, list[tango.DeviceProxy]],
+    station_name: str,
 ) -> None:
     """
     Correct the pps delays.
 
     :param station_devices: A fixture with the station devices.
+    :param station_name: the name of the station under test.
     """
     for station in station_devices["Station"]:
         delays = list(station.ppsDelays)
@@ -259,6 +261,11 @@ def station_delays_corrected(
             reference = min(synchronised_delays)
             corrections = [int(d - reference) if d != 0 else 0 for d in delays]
             station.ppsDelayCorrections = corrections
+        if "ral" in station_name:
+            # Buggy TPMs at RAL cause wider ppsDelaySpread, so relax thresholds.
+            station.healthThresholds = json.dumps(
+                {"pps_delta_degraded": 8, "pps_delta_failed": 12}
+            )
 
 
 @given("the Station is online")

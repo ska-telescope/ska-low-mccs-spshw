@@ -1,9 +1,8 @@
 # Version History
 
-## 12.1.1
+## Unreleased
 
-* [SKB-1373] Fix healthState for OFF TPMs/Subracks
-* [SPRTS-1005] Update ska-low-sps-tpm-api 3.1.0 -> 3.2.0 to fix ADC PLL sticky bits.
+* [SKB-1373] Fix healthState for OFF TPMs/Subracks.
 
 ## 12.1.0
 

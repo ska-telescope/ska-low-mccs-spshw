@@ -1,11 +1,16 @@
 # Version History
-## 12.1.1
+
+## 12.1.2
+
+* [REL-3106] Update version pulled in by chart.
+
+## 12.1.1 (RELEASED chart has old OCI image.)
 
 * [THORN-416] Changed datatypes of tile and subrack attributes to match hardware datatypes
 
-## 12.1.0
+## 12.1.0 (RELEASED chart has old OCI image.)
 
-* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles. 
+* [THORN-157] Added command LoadScanId to SpsStation and MccsTile, which propagates it down to the station beamformer in tiles.
 * [THORN-440] Update MccsSubrack to use attribute_from_signal
 * [THORN-432] MccsTile Move remaining attributes to use attribute_from_signal
 * [THORN-436] Removed deprecated lrc attributes from tests. Added a LRC manager class.

@@ -949,7 +949,8 @@ class TileComponentManager(
 
         :raises AssertionError: request_provider is not yet initialised.
         """
-        if self._request_provider is None:
+        request_provider = self._request_provider
+        if request_provider is None:
             if task_callback:
                 task_callback(
                     status=TaskStatus.REJECTED,
@@ -981,7 +982,7 @@ class TileComponentManager(
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            self._request_provider.enqueue_lrc(request, priority=0)
+            request_provider.enqueue_lrc(request, priority=0)
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """

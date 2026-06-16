@@ -398,6 +398,12 @@ class TileRequestProvider:
         if stale_attributes:
             if self._stale_attribute_callback is not None:
                 self._stale_attribute_callback(stale_attributes)
+        while not self._lrc_queue.empty():
+            try:
+                _, _, _, request = self._lrc_queue.get_nowait()
+                request.notify_removed_from_queue()
+            except Empty:
+                break
 
     # pylint: disable=too-many-return-statements
     def get_request(self, tpm_status: TpmStatus) -> str | TileRequest | None:

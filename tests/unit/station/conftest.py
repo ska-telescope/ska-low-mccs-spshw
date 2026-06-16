@@ -5,6 +5,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module defined a pytest harness for unit testing the SPS Station module."""
+
 from __future__ import annotations
 
 import ipaddress
@@ -127,6 +128,8 @@ def mock_tile_builder_fixture(
     builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
     builder.add_attribute("dstip40gfpga1", "")
     builder.add_attribute("dstip40gfpga2", "")
+    builder.add_attribute("fpga0_station_beamformer_flagged_count", 0)
+    builder.add_attribute("fpga1_station_beamformer_flagged_count", 0)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
@@ -423,6 +426,27 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             for attr, key in (
                 ("dstip40gfpga1", "fpga1_ip"),
                 ("dstip40gfpga2", "fpga2_ip"),
+            ):
+                self.component_manager._on_tile_attribute_change(
+                    args["tile_id"],
+                    attr,
+                    args[key],
+                    tango.AttrQuality.ATTR_VALID,
+                )
+
+        @command(dtype_in="DevString")
+        def MockTileFlaggedCountChange(
+            self: PatchedSpsStationDevice, argin: str
+        ) -> None:
+            """
+            Mock a tile reporting its beamformer flagged packet counts.
+
+            :param argin: JSON with tile_id, fpga0_count, fpga1_count.
+            """
+            args = json.loads(argin)
+            for attr, key in (
+                ("fpga0_station_beamformer_flagged_count", "fpga0_count"),
+                ("fpga1_station_beamformer_flagged_count", "fpga1_count"),
             ):
                 self.component_manager._on_tile_attribute_change(
                     args["tile_id"],

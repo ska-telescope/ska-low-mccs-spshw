@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements the MCCS Tile device."""
+
 # pylint: disable=too-many-arguments
 from __future__ import annotations
 
@@ -1194,6 +1195,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # Pointing delay readback is operational metadata, not a health signal.
                 # It can be unavailable in valid startup/runtime windows.
                 "pointingDelays",
+                "fpga0_station_beamformer_flagged_count",
+                "fpga1_station_beamformer_flagged_count",
             }
 
             if is_v1(self.HardwareVersion):

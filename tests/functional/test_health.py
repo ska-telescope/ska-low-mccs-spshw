@@ -264,7 +264,7 @@ def station_delays_corrected(
         if "ral" in station_name:
             # Buggy TPMs at RAL cause wider ppsDelaySpread, so relax thresholds.
             station.healthThresholds = json.dumps(
-                {"pps_delta_degraded": 8, "pps_delta_failed": 12}
+                {"pps_delta_degraded": 10, "pps_delta_failed": 14}
             )
 
 

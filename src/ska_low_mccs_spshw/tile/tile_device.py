@@ -1197,6 +1197,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # Pointing delay readback is operational metadata, not a health signal.
                 # It can be unavailable in valid startup/runtime windows.
                 "pointingDelays",
+                "dstip40gfpga1",
+                "dstip40gfpga2",
             }
 
             if is_v1(self.HardwareVersion):

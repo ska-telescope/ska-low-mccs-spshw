@@ -372,6 +372,7 @@ class TestTileComponentManager:
     def test_off_on(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
         callbacks: MockCallableGroup,
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
@@ -382,19 +383,27 @@ class TestTileComponentManager:
 
         :param tile_component_manager: the tile component manager
             under test
+        :param tile_simulator: the tile simulator backend.
         :param callbacks: dictionary of driver callbacks.
         :param subrack_tpm_id: This tile's position in its subrack
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         :param tile_id: the logical tile id
         """
+        # Put the simulator in the OFF state before starting communication so
+        # that check_communication() returns all-False from the first poll,
+        # avoiding a race where the default CPLD=True state causes spurious
+        # 'NotProgrammed' programming_state callbacks before mock_off() fires.
+        tile_simulator.mock_off()
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.OFF)
         tile_component_manager.start_communicating()
 
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["component_state"].assert_call(power=PowerState.OFF, fault=False)
+        callbacks["component_state"].assert_call(
+            power=PowerState.OFF, fault=False, lookahead=5, consume_nonmatches=True
+        )
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
             lookahead=5,  # Unknown for number of polls until subrack callback.
@@ -439,24 +448,22 @@ class TestTileComponentManager:
             PowerState.OFF,
             tango.EventType.CHANGE_EVENT,
         )
-        # A try except block in a test is unusual.
-        # It is done here due to the multithreaded
-        # nature of the application.
-        # The Fault is evaluated by looking at the poll_status and
-        # the subrack reported power.
-        # If they dissagree then we are faulted. However, due
-        # to the polling thread and the callback thread being different this can heppen
-        # in either order. The resulting state after this block is the same
-        # power= PowerState.OFF, fault = False
+        # Two possible sequences depending on whether a poll fires between
+        # mock_off() (step A) and _subrack_says_tpm_power=OFF (step B):
+        #   (a) {call_kwargs={'power': OFF}}  — no race; fault was already False
+        #   (c) {call_kwargs={'fault': True}},
+        #       {call_kwargs={'power': OFF, 'fault': False}}
+        #       — poll fires between A and B while subrack still says ON → fault=True;
+        #         next poll after B fires with both power and fault changing.
+        # assert_call uses exact call_kwargs matching (not subset).
         try:
             callbacks["component_state"].assert_call(power=PowerState.OFF)
         except AssertionError:
-            callbacks["component_state"].assert_call(power=PowerState.OFF, fault=True)
-            callbacks["component_state"].assert_call(fault=False)
-        finally:
-            assert tile_component_manager._component_state["power"] == PowerState.OFF
-            assert not tile_component_manager._component_state["fault"]
-            callbacks["component_state"].assert_not_called()
+            callbacks["component_state"].assert_call(fault=True)
+            callbacks["component_state"].assert_call(power=PowerState.OFF, fault=False)
+        assert tile_component_manager._component_state["power"] == PowerState.OFF
+        assert not tile_component_manager._component_state["fault"]
+        callbacks["component_state"].assert_not_called()
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,

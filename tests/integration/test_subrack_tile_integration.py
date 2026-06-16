@@ -215,7 +215,10 @@ class TestSubrackTileIntegration:
         )
 
         # The tile device receives this event too. It transitions to OFF.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+        # Lookahead for transition through FAULT.
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
+        )
 
         # Now we power on the TPM using the subrack,
         # to check that the tile response is responsible to "spontaneous" changes.
@@ -249,7 +252,10 @@ class TestSubrackTileIntegration:
         )
 
         # The tile device receives this event too. It transitions to OFF.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+        # Same race as above: transient FAULT may fire before OFF.
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
+        )
 
 
 class TestMccsTileTpmDriver:

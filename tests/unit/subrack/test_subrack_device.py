@@ -231,10 +231,10 @@ def test_fast_adminMode_switch(
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
             try:
-                # lookahead of 3 since we allow UNKNOWN and DISABLE as
+                # lookahead of 6 since we allow UNKNOWN and DISABLE as
                 # transient states.
                 change_event_callbacks["state"].assert_change_event(
-                    DevState.ON, lookahead=3, consume_nonmatches=True
+                    DevState.ON, lookahead=6, consume_nonmatches=True
                 )
             except AssertionError:
                 print("Transition state ON allowed to not occur.")

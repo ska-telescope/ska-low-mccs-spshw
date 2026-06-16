@@ -1412,6 +1412,27 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     return self._hardware_attributes.get("tpmTemperatures", None) or []
 
     @attribute(
+        dtype="DevFloat",
+        label="TPM total power",
+        max_alarm=1000,
+        abs_change=0.8,
+    )
+    def tpmTotalPower(self) -> float | None:
+        """
+        Handle a Tango attribute read of the total TPM power.
+
+        :return: The total TPM power.
+            When communication with the subrack is not established,
+            this returns none.
+
+        """
+        # Get the TPM powers
+        tpm_powers = self._tpm_powers()
+
+        # Return the sum or None
+        return sum(tpm_powers) if tpm_powers else None
+
+    @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
         label="TPM voltages",

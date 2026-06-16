@@ -1025,7 +1025,7 @@ class TileComponentManager(
                 tpm_power_state_attr: self._subrack_says_tpm_power_changed,
                 "tpmCurrents": self._subrack_says_tpm_values_changed,
                 "tpmPowers": self._subrack_says_tpm_values_changed,
-                "tpmVotages": self._subrack_says_tpm_values_changed,
+                "tpmVoltages": self._subrack_says_tpm_values_changed,
             }
             for attr, func in callbacks.items():
                 self._subrack_proxy.add_change_event_callback(attr, func)
@@ -1162,12 +1162,12 @@ class TileComponentManager(
 
         def get_unknown_event_name_message(event_name: str) -> str:
             names = ["tpmCurrents", "tpmPowers", "tpmVoltages"]
-            return f"Expected on of {names} for event_name, got '{event_name}'"
+            return f"Expected one of {names} for event_name, got '{event_name}'"
 
         if event_value:
             # Ensure we have 8 values in the list
             if len(event_value) != 8:
-                raise ValueError(f"Expected 8 values, got {len(event_value)}")
+                raise ValueError(f"Expected exactly 8 values, got {len(event_value)}")
 
             # Get the tpm value
             tpm_value = event_value[self._subrack_tpm_id - 1]

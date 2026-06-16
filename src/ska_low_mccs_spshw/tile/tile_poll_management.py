@@ -390,7 +390,6 @@ class TileRequestProvider:
         if wipe_time is None:
             wipe_time = time.time() + 60
         self._lrc_queue.put((priority, next(self._command_counter), wipe_time, request))
-        request.notify_queued()
 
     def cleanup(self) -> None:
         """Clean up and notify callbacks."""

@@ -67,6 +67,7 @@ FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
 FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
+_POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -922,7 +923,11 @@ class TileComponentManager(
         )
         # Pass the task callback to be updated by command proxy.
         subrack_off_command_proxy(
-            arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
+            arg=self._subrack_tpm_id,
+            is_lrc=True,
+            timeout=_POWER_COMMAND_TIMEOUT,
+            wait_for_result=True,
+            task_callback=task_callback,
         )
 
     def do_on(
@@ -959,7 +964,12 @@ class TileComponentManager(
         )
         # Do not pass the task_callback to command_proxy.
         # The on command is completed when initialisation has completed.
-        subrack_on_command_proxy(is_lrc=False, arg=self._subrack_tpm_id)
+        subrack_on_command_proxy(
+            is_lrc=True,
+            timeout=_POWER_COMMAND_TIMEOUT,
+            wait_for_result=True,
+            arg=self._subrack_tpm_id,
+        )
 
         request = TileLRCRequest(
             name="initialise",
@@ -1450,8 +1460,6 @@ class TileComponentManager(
         )
         self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Download_firmware command placed in poll QUEUE")
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED, result="Task staged")
         return ([ResultCode.QUEUED], ["Task staged"])
 
     @check_communicating

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [SKB-1341] Remove `Object of type int32 is not JSON serializable. Converting it to a str` warning by correcting command invokation.
+* [SKB-1341] Remove `Object of type int32 is not JSON serializable. Converting it to a str` warning by correcting command invokation
 * [SKB-1341] Remove invalid taskstatus transition QUEUED to QUEUED deprecation warnings.
 * [SKB-1341] Refactor `On` and `Off` commands to remove use of deprecated command objects.
   A side effect of this is that we now raise an exception rather than Rejecting the ``On`` command when in the on state (major change)

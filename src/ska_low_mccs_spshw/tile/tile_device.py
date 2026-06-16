@@ -1202,6 +1202,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "dstip40gfpga2",
                 "fpga0_station_beamformer_flagged_count",
                 "fpga1_station_beamformer_flagged_count",
+                "dstip40gfpga1",
+                "dstip40gfpga2",
             }
 
             if is_v1(self.HardwareVersion):

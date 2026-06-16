@@ -1,10 +1,8 @@
 # Version History
-## Unreleased
+
+## 12.2.0
 
 * [SKB-1379] Move Discarded or Flagged Packet Count "<https://developer.skao.int/projects/ska-low-sps-tpm-api/en/3.2.0/generated/monitoring_points/dsp.html#discarded-or-flagged-packet-count>" to rollup into Spsstation health not MccsTile.
-
-## Unreleased
-
 * [SKB-1373] Fix healthState for OFF TPMs/Subracks.
 
 ## 12.1.2

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements the MCCS Tile device."""
+
 # pylint: disable=too-many-arguments
 from __future__ import annotations
 
@@ -1199,6 +1200,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "pointingDelays",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
+                "fpga0_station_beamformer_flagged_count",
+                "fpga1_station_beamformer_flagged_count",
             }
 
             if is_v1(self.HardwareVersion):

@@ -7,6 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the tile component manage."""
+
 from __future__ import annotations
 
 import datetime
@@ -728,16 +729,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
     @pytest.mark.parametrize(
         ("attribute_name", "initial_value", "values_to_write"),
         (
-            (
-                "csp_rounding",
-                np.array(TileSimulator.CSP_ROUNDING),
-                np.array([[1, 2, 3, 4] * 96]),
-            ),
-            (
-                "channeliser_truncation",
-                TileSimulator.CHANNELISER_TRUNCATION,
-                [[2] * 512],
-            ),
             ("test_generator_active", False, [True]),
             ("csp_spead_format", TileSimulator.CSP_SPEAD_FORMAT, ["AAVS"]),
         ),
@@ -1613,13 +1604,12 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator.tpm is not None
         tile_simulator._timestamp = 2
 
-        tile_component_manager.channeliser_truncation = [4] * 512
+        tile_component_manager.set_channeliser_truncation([4] * 512)
         _ = tile_component_manager.channeliser_truncation
         tile_component_manager.set_static_delays([12.0] * 32)
         with tile_component_manager._hardware_lock:
             _ = tile_component_manager.get_static_delays()
-        tile_component_manager.csp_rounding = 2
-        _ = tile_component_manager.csp_rounding
+        tile_component_manager.set_csp_rounding(2)
         tile_component_manager.set_preadu_levels(np.array([12.0] * 32))
 
     def test_tpm_status(
@@ -1981,9 +1971,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator._is_first == is_first
         assert tile_simulator._is_last == is_last
 
-    @pytest.mark.xfail(
-        reason="Only the first element is sent to the tile_component_manager."
-    )
     def test_csp_rounding(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -1997,19 +1984,17 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
 
-        assert tile_component_manager.csp_rounding == TileComponentManager.CSP_ROUNDING
-
         # ----------------------
         # Case: set with Integer
         # ----------------------
-        tile_component_manager.csp_rounding = 3  # type: ignore[assignment]
-        assert tile_simulator.csp_rounding == 3
+        tile_component_manager.set_csp_rounding(3)
+        assert tile_simulator.csp_rounding == [3] * 384
 
         # ----------------------
-        # Case: set with Integer
+        # Case: set with Integer (clamped)
         # ----------------------
-        tile_component_manager.csp_rounding = -3  # type: ignore[assignment]
-        assert tile_simulator.csp_rounding == 0
+        tile_component_manager.set_csp_rounding(-3)
+        assert tile_simulator.csp_rounding == [-3] * 384
 
     def test_pre_adu_levels(
         self: TestStaticSimulator,
@@ -3039,12 +3024,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the channeliser_truncation function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         tile_simulator.connect()
         tile_simulator.set_channeliser_truncation = (  # type: ignore[assignment]
@@ -3052,27 +3039,33 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
 
         # call with a single value.
-        tile_component_manager.channeliser_truncation = 2  # type: ignore
-        assert tile_component_manager._channeliser_truncation == [2] * 512
+        tile_component_manager.set_channeliser_truncation(2)
         tile_simulator.set_channeliser_truncation.assert_called_with([2] * 512)
+        callbacks["attribute_state"].assert_call(
+            channeliser_rounding=[2] * 512, lookahead=30, consume_nonmatches=True
+        )
+        assert tile_component_manager.channeliser_truncation == [2] * 512
 
         # call with a single value in a list.
-        tile_component_manager.channeliser_truncation = [3]
-        assert tile_component_manager._channeliser_truncation == [3] * 512
+        tile_component_manager.set_channeliser_truncation([3])
         tile_simulator.set_channeliser_truncation.assert_called_with([3] * 512)
-
+        callbacks["attribute_state"].assert_call(
+            channeliser_rounding=[3] * 512, lookahead=30, consume_nonmatches=True
+        )
+        assert tile_component_manager.channeliser_truncation == [3] * 512
         # call with subset of values
-        tile_component_manager.channeliser_truncation = [3] * 100
+        tile_component_manager.set_channeliser_truncation([3] * 100)
         assert tile_component_manager.channeliser_truncation == [3] * 100 + [0] * 412
         tile_simulator.set_channeliser_truncation.assert_called_with(
             [3] * 100 + [0] * 412
         )
 
-        # Check that expections are caught at this level.
+        # Check that exceptions are caught at this level.
         tile_simulator.set_channeliser_truncation.side_effect = Exception(
             "Mocked exception"
         )
-        tile_component_manager.channeliser_truncation = [3] * 100
+        with pytest.raises(Exception, match="Mocked exception"):
+            tile_component_manager.set_channeliser_truncation([3] * 100)
 
     @pytest.mark.xfail(reason="Uncaught exception")
     def test_fpgas_time(
@@ -3119,7 +3112,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("arp_table"),
             ("channeliser_truncation"),
             ("get_static_delays"),
-            ("csp_rounding"),
             ("pps_present"),
             ("current_tile_beamformer_frame"),
             ("is_beamformer_running"),

@@ -4255,7 +4255,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=512,
         archive_abs_change=1,
         abs_change=1,
-        fisallowed="_is_initialised",
+        fisallowed="_check_initialised_for_write",
     )
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
@@ -4267,9 +4267,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :returns: list of 512 values, one per channel.
         """
-        if self._attribute_state["channeliserRounding"].read() is None:
-            rounding = self.component_manager.channeliser_truncation
-            self._attribute_state["channeliserRounding"].update(rounding, post=False)
         return self._attribute_state["channeliserRounding"].read()
 
     @channeliserRounding.write  # type: ignore[no-redef]
@@ -4280,7 +4277,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param truncation: List with either a single value (applies to all channels)
             or a list of 512 values. Range 0 (no truncation) to 7
         """
-        self.component_manager.channeliser_truncation = truncation
+        self.component_manager.set_channeliser_truncation(truncation)
 
     @attribute(
         dtype=("DevDouble",),
@@ -4339,7 +4336,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param rounding: list of up to 384 values in the range 0-7.
             Current hardware supports only a single value, thus oly 1st value is used
         """
-        self.component_manager.csp_rounding = rounding
+        self.component_manager.set_csp_rounding(rounding)
 
     @attribute(dtype="DevString")
     def globalReferenceTime(self: MccsTile) -> str:

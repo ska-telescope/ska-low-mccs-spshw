@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for tiles."""
+
 from __future__ import annotations
 
 import json
@@ -184,8 +185,6 @@ class TileComponentManager(
     FIRMWARE_NAME_V10: str = FIRMWARE_NAME_V10
     FIRMWARE_NAME_V11: str = FIRMWARE_NAME_V11
     FIRMWARE_NAME: str = FIRMWARE_NAME_V10
-    CSP_ROUNDING: list[int] = [2] * 384
-    CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
@@ -290,7 +289,6 @@ class TileComponentManager(
         self._request_provider: Optional[TileRequestProvider] = None
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
-        self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._pps_delay_correction: int = 0
         self._fpga_reference_time = 0
         self._initial_pps_delay: int | None = None
@@ -303,7 +301,6 @@ class TileComponentManager(
         self._station_id = station_id
         self._tile_id = tile_id
         self._tpm_status = TpmStatus.UNKNOWN
-        self._csp_rounding = np.array(self.CSP_ROUNDING)
         self._csp_spead_format = "SKA"
         self._global_reference_time: int | None = None
         self._test_generator_active = False
@@ -1673,9 +1670,6 @@ class TileComponentManager(
         """Read configuration information from the TPM."""
         self.logger.info("Updating attribute configuration from TPM")
 
-        # NOTE: THORN-207: There is no API to read csp_rounding from TPM.
-        csp_rounding = self.csp_rounding
-
         # ===========================================================================
         # Methods that can be called in unprogrammed state.
         is_programmed = self._with_hardware_lock(self.tile.is_programmed)
@@ -1685,6 +1679,7 @@ class TileComponentManager(
         # ===========================================================================
 
         # Defaults when TPM is not programmed
+        csp_rounding = None
         channeliser_rounding = None
         static_delays = None
         beamformer_table = None
@@ -1702,6 +1697,8 @@ class TileComponentManager(
         preadu_levels = None
         pps_delay_correction = None
         if is_programmed:
+            _csp_rounding_value = self._with_hardware_lock(self.tile.get_csp_rounding)
+            csp_rounding = [_csp_rounding_value] * 384
             channeliser_rounding = self.channeliser_truncation
             static_delays = self._with_hardware_lock(self.get_static_delays)
             beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
@@ -3304,60 +3301,39 @@ class TileComponentManager(
 
         return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
 
-    @property
     @check_communicating
-    def csp_rounding(self: TileComponentManager) -> list[int]:
-        """
-        Read the cached value for the final rounding in the CSP samples.
-
-        Need to be specfied only for the last tile
-        :return: Final rounding for the CSP samples. Up to 384 values
-        """
-        return self._csp_rounding.tolist()
-
-    @csp_rounding.setter
-    def csp_rounding(self: TileComponentManager, rounding: np.ndarray | int) -> None:
+    def set_csp_rounding(
+        self: TileComponentManager, rounding: np.ndarray | list[int] | int
+    ) -> None:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
+
+        Note: Only 1 rounding value is supported by the ska-low-sps-tpm-api. We simply
+        grab the first.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
         if isinstance(rounding, int):
-            desired_csp_rounding = np.array([rounding] * 384)
-        elif len(rounding) == 1:
-            desired_csp_rounding = np.array([rounding[0]] * 384)
+            value = rounding
         else:
-            desired_csp_rounding = np.array(rounding)
-        self._set_csp_rounding(desired_csp_rounding)
-
-    def _set_csp_rounding(self: TileComponentManager, rounding: np.ndarray) -> None:
-        """
-        Set output rounding for CSP.
-
-        :param rounding: Number of bits rounded in final 8 bit requantization to CSP
-        """
+            value = int(rounding[0])
         self.logger.debug("TileComponentManager: set_csp_rounding")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    write_successful = self.tile.set_csp_rounding(rounding[0])
-                    if write_successful:
-                        self._csp_rounding = rounding
-                        self._update_attribute_callback(
-                            csp_rounding=self._csp_rounding.tolist()
-                        )
-                    else:
-                        self.logger.warning("Setting the cspRounding failed ")
-
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not self.tile.set_csp_rounding(value):
+                self.logger.warning("Setting the cspRounding failed.")
+                return
+            try:
+                hw_value = self.tile.get_csp_rounding()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.warning(f"Failed to read back cspRounding: {e}")
+                hw_value = None
+        self._update_attribute_callback(
+            csp_rounding=[hw_value] * 384 if hw_value is not None else None
+        )
 
     @check_communicating
     def get_static_delays(self: TileComponentManager) -> list[float]:
@@ -3419,60 +3395,46 @@ class TileComponentManager(
         ):
             return self.tile.get_channeliser_truncation()
 
-    @channeliser_truncation.setter
-    def channeliser_truncation(
-        self: TileComponentManager, truncation: int | list[int]
+    @check_communicating
+    def set_channeliser_truncation(
+        self: TileComponentManager,
+        truncation: int | list[int] | np.ndarray,
     ) -> None:
         """
         Set the channeliser truncation.
 
         :param truncation: number of LS bits discarded after channelisation.
-            Either a signle value or a list of one value per physical frequency channel
+            Either a single value or a list of one value per physical frequency channel.
             0 means no bits discarded, up to 7. 3 is the correct value for a uniform
             white noise.
         """
         if isinstance(truncation, int):
-            self._channeliser_truncation = [truncation] * 512
-
+            normalized: list[int] = [truncation] * 512
         elif len(truncation) == 1:
-            self._channeliser_truncation = [truncation[0]] * 512
+            normalized = [int(truncation[0])] * 512
         else:
-            if isinstance(truncation, np.ndarray):
-                self._channeliser_truncation = truncation.tolist()
-            else:
-                self._channeliser_truncation = list(truncation)
-        self._set_channeliser_truncation(self._channeliser_truncation)
-
-    def _set_channeliser_truncation(
-        self: TileComponentManager, array: list[int]
-    ) -> None:
-        """
-        Set the channeliser coefficients to modify the bandpass.
-
-        :param array: list with M values, one for each of the
-            frequency channels. Same truncation is applied to the corresponding
-            frequency channels in all inputs.
-        """
-        self.logger.debug(
-            f"TileComponentManager: set_channeliser_truncation: {array[0]}"
-        )
-        nb_freq = len(array)
+            normalized = (
+                truncation.tolist()
+                if isinstance(truncation, np.ndarray)
+                else list(truncation)
+            )
         trunc = [0] * 512
-        trunc[0:nb_freq] = array
+        trunc[0 : len(normalized)] = normalized
+        self.logger.debug(
+            f"TileComponentManager: set_channeliser_truncation: {trunc[0]}"
+        )
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.set_channeliser_truncation(trunc)
-                    self._update_attribute_callback(channeliser_rounding=list(trunc))
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_channeliser_truncation(trunc)
+            try:
+                hw_value = self.tile.get_channeliser_truncation()
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.warning(f"Failed to read back channeliser_truncation: {e}")
+                hw_value = None
+        self._update_attribute_callback(channeliser_rounding=hw_value)
 
     @check_communicating
     def set_lmc_download(

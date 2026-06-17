@@ -5,6 +5,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the tile component manage."""
+
 from __future__ import annotations
 
 import copy
@@ -12,6 +13,7 @@ import ipaddress
 import json
 import logging
 import random
+import time
 import unittest.mock
 from types import SimpleNamespace
 from typing import Iterator
@@ -39,25 +41,15 @@ from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 # pylint: disable=too-many-lines
 
 
-@pytest.fixture(name="num_tiles_to_add")
-def num_tiles_to_add_fixture() -> int:
-    """
-    Return number of tiles to add to test.
-
-    :return: Number of tiles to add to harness.
-    """
-    return 4
-
-
 # pylint: disable = too-many-arguments
 @pytest.fixture(name="test_context")
 def fixture_test_context(
     subrack_id: int,
     mock_subrack_device_proxy: unittest.mock.Mock,
     tile_id: int,
-    mock_tile_device_proxy: unittest.mock.Mock,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
     daq_id: int,
-    num_tiles_to_add: int,
+    num_tiles: int,
 ) -> Iterator[None]:
     """
     Yield into a context in which Tango is running, with mock devices.
@@ -73,10 +65,10 @@ def fixture_test_context(
     :param mock_subrack_device_proxy: a mock subrack device proxy
         that has been configured with the required subrack behaviours.
     :param tile_id: ID of the tile Tango device to be mocked
-    :param mock_tile_device_proxy: a mock tile device proxy
+    :param mock_tile_device_proxies: a mock tile device proxy
         that has been configured with the required subrack behaviours.
     :param daq_id: the ID number of the DAQ receiver.
-    :param num_tiles_to_add: Number of tiles to add.
+    :param num_tiles: Number of tiles to add.
 
     :yields: into a context in which Tango is running, with a mock
         subrack device.
@@ -85,8 +77,11 @@ def fixture_test_context(
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
     harness.add_mock_subrack_device(subrack_id + 1, mock_subrack_device_proxy)
     # Add 4 tiles.
-    for i in range(0, num_tiles_to_add):
-        harness.add_mock_tile_device(tile_id + i, mock_tile_device_proxy)
+    for i in range(num_tiles):
+        harness.add_mock_tile_device(
+            tile_id + i,
+            mock_tile_device_proxies[i],
+        )
     with harness:
         yield
 
@@ -118,20 +113,27 @@ def station_label_fixture() -> str:
     return "ci-1"
 
 
-@pytest.fixture(name="mock_tile_proxy")
-def mock_tile_proxy_fixture(
-    tile_id: int, station_label: str, logger: logging.Logger
-) -> MccsDeviceProxy:
+@pytest.fixture(name="mock_tiles")
+def mock_tiles_fixture(
+    tile_id: int,
+    num_tiles: int,
+    station_label: str,
+    logger: logging.Logger,
+) -> list[MccsDeviceProxy]:
     """
-    Proxy to the device which the component manager has been given.
+    Return a proxy for each mock tile in the harness.
 
-    :param tile_id: the id of the tile which the component manager has been given.
-    :param station_label: the label of the station.
-    :param logger: a logger for use in testing.
+    :param tile_id: base tile ID used by the harness.
+    :param num_tiles: number of mock tiles in the harness.
+    :param station_label: station label used to build tile FQDNs.
+    :param logger: logger for the proxy.
 
-    :returns: A proxy to the device which the component manager has been given.
+    :returns: list of proxies, one per mock tile.
     """
-    return MccsDeviceProxy(get_tile_name(tile_id, station_label), logger)
+    return [
+        MccsDeviceProxy(get_tile_name(tile_id + i, station_label), logger)
+        for i in range(num_tiles)
+    ]
 
 
 # pylint: disable=too-many-arguments
@@ -145,7 +147,7 @@ def station_component_manager_fixture(
     callbacks: MockCallableGroup,
     antenna_uri: list[str],
     station_self_check_manager: SpsStationSelfCheckManager,
-    num_tiles_to_add: int,
+    num_tiles: int,
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
@@ -159,14 +161,14 @@ def station_component_manager_fixture(
     :param callbacks: callback group
     :param antenna_uri: Location of antenna configuration file.
     :param station_self_check_manager: SpsStationSelfCheckManager with basic tests.
-    :param num_tiles_to_add: Number of mock tiles to add.
+    :param num_tiles: Number of mock tiles to add.
 
     :return: a station component manager.
     """
     sps_station_component_manager = SpsStationComponentManager(
         1,
         [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
-        [get_tile_name(tile_id + i) for i in range(0, num_tiles_to_add)],
+        [get_tile_name(tile_id + i) for i in range(0, num_tiles)],
         "",
         "",
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
@@ -291,8 +293,7 @@ def test_trigger_adc_equalisation(
 
 def test_load_pointing_delays(
     station_component_manager: SpsStationComponentManager,
-    mock_tile_proxy: MccsDeviceProxy,
-    tile_id: int,
+    mock_tiles: list[MccsDeviceProxy],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -300,8 +301,7 @@ def test_load_pointing_delays(
 
     :param station_component_manager: the SPS station component manager
         under test
-    :param mock_tile_proxy: mock tile which the component manager has been given.
-    :param tile_id: id of the tile which the component manager has been given.
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
     :param callbacks: dictionary of driver callbacks.
     """
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
@@ -353,7 +353,7 @@ def test_load_pointing_delays(
         expected_tile_arg[2 * channel + 1] = delay
         expected_tile_arg[2 * channel + 2] = delay_rate
 
-    mock_tile_proxy.LoadPointingDelays.assert_next_call(expected_tile_arg)
+    mock_tiles[0].LoadPointingDelays.assert_next_call(expected_tile_arg)
 
 
 def test_port_to_antenna_order(
@@ -690,7 +690,7 @@ def test_async_commands(
 def test_send_data_samples(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    mock_tile_proxy: MccsDeviceProxy,
+    mock_tiles: list[MccsDeviceProxy],
 ) -> None:
     """
     Test the method to run commands async.
@@ -698,7 +698,7 @@ def test_send_data_samples(
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
-    :param mock_tile_proxy: mock tile which the component manager has been given.
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
     """
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
 
@@ -707,8 +707,8 @@ def test_send_data_samples(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    mock_tile_proxy.tileProgrammingState = "Synchronised"
-    mock_tile_proxy.pendingDataRequests = True
+    mock_tiles[0].tileProgrammingState = "Synchronised"
+    mock_tiles[0].pendingDataRequests = True
     [result], [msg] = station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})
     )
@@ -719,7 +719,7 @@ def test_send_data_samples(
     )
     assert result == ResultCode.OK
 
-    mock_tile_proxy.pendingDataRequests = False
+    mock_tiles[0].pendingDataRequests = False
     [result], [msg] = station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})
     )
@@ -842,8 +842,8 @@ def test_power_state_transitions(
 def test_pps_delay_spread(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    mock_tile_proxy: MccsDeviceProxy,
-    num_tiles_to_add: int,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
 ) -> None:
     """
     Test the method to run commands async.
@@ -851,21 +851,33 @@ def test_pps_delay_spread(
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
-    :param mock_tile_proxy: mock tile which the component manager has been given.
-    :param num_tiles_to_add: Number of tiles in the test.
+    :param mock_tiles: list of mock tile proxies that are synchronised.
+    :param num_tiles: Number of tiles in the test.
     """
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
     assert station_component_manager._number_of_tiles >= 4  # Test assumes 4 tiles.
-    # takes the component out of DISABLED.
+
+    for idx, tile in enumerate(mock_tiles):
+        tile.ppsDelay = 12 + idx  # 12, 13, 14, 15 — distinct from tile indices
+        assert tile.tileProgrammingState == "Unknown"
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    assert station_component_manager._pps_delays == [0] * 16
+    # Wait for ppsDelay subscription callbacks to populate _pps_delays[0-3].
+    expected_delays = [12, 13, 14, 15] + [0] * 12
+    deadline = time.time() + 5.0
+    while station_component_manager._pps_delays != expected_delays:
+        assert time.time() < deadline, (
+            f"Timed out waiting for ppsDelay callbacks: "
+            f"{station_component_manager._pps_delays}"
+        )
+        time.sleep(0.01)
+    assert station_component_manager._pps_delays == expected_delays
     assert station_component_manager._pps_delay_spread == 0
 
     # Spread is computed only from Synchronised tiles; move all tiles there first.
-    for tile_id in range(0, num_tiles_to_add):
+    for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
             attribute_name="tileProgrammingState",
@@ -874,7 +886,7 @@ def test_pps_delay_spread(
         )
 
     # Seed all tiles to 0 to create a deterministic baseline.
-    for tile_id in range(0, num_tiles_to_add):
+    for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
             attribute_name="ppsDelay",
@@ -893,7 +905,7 @@ def test_pps_delay_spread(
     assert station_component_manager._pps_delay_spread == 4
 
     # Set all tiles to a delay of 4 for a delta of 0.
-    for tile_id in range(0, num_tiles_to_add):
+    for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
             attribute_name="ppsDelay",
@@ -915,7 +927,7 @@ def test_pps_delay_spread(
 def test_beamformer_table(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    mock_tile_proxy: MccsDeviceProxy,
+    mock_tiles: list[MccsDeviceProxy],
     tile_initial_beamformer_table: list[int],
     tile_initial_beamformer_regions: list[int],
 ) -> None:
@@ -925,7 +937,7 @@ def test_beamformer_table(
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
-    :param mock_tile_proxy: mock tile which the component manager has been given.
+    :param mock_tiles: mock tile proxies.
     :param tile_initial_beamformer_table: an initial beamformer table for a tile.
     :param tile_initial_beamformer_regions: an initial beamformer regions for a tile.
     """
@@ -1045,7 +1057,7 @@ def test_initialise_progress_callbacks(
 def test_reinitialise_tiles_progress_callbacks(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    num_tiles_to_add: int,
+    num_tiles: int,
 ) -> None:
     """
     Test that _reinitialise_tiles fires progress callbacks.
@@ -1056,7 +1068,7 @@ def test_reinitialise_tiles_progress_callbacks(
 
     :param station_component_manager: the SPS station component manager under test
     :param callbacks: dictionary of driver callbacks.
-    :param num_tiles_to_add: number of TPMs in the test.
+    :param num_tiles: number of TPMs in the test.
     """
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
@@ -1073,9 +1085,9 @@ def test_reinitialise_tiles_progress_callbacks(
 
     def mock_tile_programming_state() -> list[str]:
         nonlocal call_count
-        n_ready = min(call_count, num_tiles_to_add)
+        n_ready = min(call_count, num_tiles)
         call_count += 1
-        return ["Synchronised"] * n_ready + ["Unknown"] * (num_tiles_to_add - n_ready)
+        return ["Synchronised"] * n_ready + ["Unknown"] * (num_tiles - n_ready)
 
     progress_start = 10
     progress_end = 70
@@ -1101,8 +1113,8 @@ def test_reinitialise_tiles_progress_callbacks(
     progress_calls = [call.kwargs["progress"] for call in task_callback.call_args_list]
 
     expected_progress = [
-        int(progress_start + (progress_end - progress_start) * i / num_tiles_to_add)
-        for i in range(1, num_tiles_to_add + 1)
+        int(progress_start + (progress_end - progress_start) * i / num_tiles)
+        for i in range(1, num_tiles + 1)
     ]
     assert progress_calls == expected_progress
 
@@ -1110,7 +1122,7 @@ def test_reinitialise_tiles_progress_callbacks(
 def test_pointing_delays(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    num_tiles_to_add: int,
+    num_tiles: int,
     tile_initial_pointing_delays: np.ndarray,
 ) -> None:
     """
@@ -1119,7 +1131,7 @@ def test_pointing_delays(
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
-    :param num_tiles_to_add: number of TPMs in the test.
+    :param num_tiles: number of TPMs in the test.
     :param tile_initial_pointing_delays: intial pointing delays the TPMs
         are mocked to have
     """
@@ -1128,7 +1140,7 @@ def test_pointing_delays(
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
     expected_call = {
-        tile_id: tile_initial_pointing_delays for tile_id in range(num_tiles_to_add)
+        tile_id: tile_initial_pointing_delays for tile_id in range(num_tiles)
     }
 
     # Large lookahead as this is only done once we got data for all TPMs
@@ -1141,7 +1153,7 @@ def test_pointing_delays(
 def test_beamformer_daisy_chain(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    num_tiles_to_add: int,
+    num_tiles: int,
 ) -> None:
     """
     Test that the station validates beamformer daisy-chain routing.
@@ -1155,11 +1167,11 @@ def test_beamformer_daisy_chain(
 
     :param station_component_manager: the SPS station component manager under test
     :param callbacks: dictionary of driver callbacks.
-    :param num_tiles_to_add: number of TPMs in the test.
+    :param num_tiles: number of TPMs in the test.
     """
     # Fixture uses IPv4Interface("10.0.0.152/16").
     sdn_base = ipaddress.IPv4Address("10.0.0.152")
-    last = num_tiles_to_add - 1
+    last = num_tiles - 1
 
     def set_dst_ips(tile_id: int, fpga1: str, fpga2: str) -> None:
         station_component_manager._on_tile_attribute_change(
@@ -1190,7 +1202,7 @@ def test_beamformer_daisy_chain(
 def test_beamformer_flagged_count(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
-    num_tiles_to_add: int,
+    num_tiles: int,
 ) -> None:
     """
     Test that only the final tile's beamformer flagged counts affect health.
@@ -1207,9 +1219,9 @@ def test_beamformer_flagged_count(
 
     :param station_component_manager: the SPS station component manager under test.
     :param callbacks: dictionary of driver callbacks.
-    :param num_tiles_to_add: number of TPMs in the test.
+    :param num_tiles: number of TPMs in the test.
     """
-    last = num_tiles_to_add - 1
+    last = num_tiles - 1
 
     # Non-final tiles must not trigger any callback.
     for tile_id in range(last):

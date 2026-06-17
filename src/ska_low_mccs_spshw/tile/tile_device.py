@@ -5343,6 +5343,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevFloat",
         label="Power",
         max_alarm=120.0,
+        max_warning=120.0 * 0.95,  # Set power warning level at 95% of alarm
         abs_change=0.1,
     )
     def power(self: MccsTile) -> float | None:
@@ -5359,6 +5360,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="Voltage",
         min_alarm=11.4,
         max_alarm=12.6,
+        min_warning=11.4 + 1.12 * 0.05,  # Min + 5% (Max - Min)
+        max_warning=12.6 - 1.12 * 0.05,  # Max - 5% (Max - Min)
         abs_change=0.1,
     )
     def voltage(self: MccsTile) -> float | None:

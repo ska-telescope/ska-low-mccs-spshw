@@ -3024,12 +3024,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the channeliser_truncation function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         tile_simulator.connect()
         tile_simulator.set_channeliser_truncation = (  # type: ignore[assignment]
@@ -3039,11 +3041,18 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # call with a single value.
         tile_component_manager.set_channeliser_truncation(2)
         tile_simulator.set_channeliser_truncation.assert_called_with([2] * 512)
+        callbacks["attribute_state"].assert_call(
+            channeliser_rounding=[2] * 512, lookahead=30, consume_nonmatches=True
+        )
+        assert tile_component_manager.channeliser_truncation == [2] * 512
 
         # call with a single value in a list.
         tile_component_manager.set_channeliser_truncation([3])
         tile_simulator.set_channeliser_truncation.assert_called_with([3] * 512)
-
+        callbacks["attribute_state"].assert_call(
+            channeliser_rounding=[3] * 512, lookahead=30, consume_nonmatches=True
+        )
+        assert tile_component_manager.channeliser_truncation == [3] * 512
         # call with subset of values
         tile_component_manager.set_channeliser_truncation([3] * 100)
         assert tile_component_manager.channeliser_truncation == [3] * 100 + [0] * 412

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [THORN-581] Report hardware reading for CspRounding and ChanneliserRounding instead of cache
+* [THORN-581] Update attribute cache from hardware read rather than software cache.
 
 ## 12.2.0
 

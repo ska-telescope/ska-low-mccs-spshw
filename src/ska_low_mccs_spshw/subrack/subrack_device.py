@@ -1414,7 +1414,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="TPM total power",
-        max_alarm=1000,
+        max_alarm=120.0 * 8,
         abs_change=0.8,
     )
     def tpmTotalPower(self) -> float | None:

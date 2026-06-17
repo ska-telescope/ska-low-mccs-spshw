@@ -5325,6 +5325,51 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["pointingDelays"].read()
 
+    @attribute(
+        dtype="DevFloat",
+        label="Current",
+        abs_change=0.1,
+    )
+    def current(self: MccsTile) -> float | None:
+        """
+        Return the current of the tile in amperes.
+
+        :return: Current in amperes, or None if not available
+
+        """
+        return self.component_manager.current
+
+    @attribute(
+        dtype="DevFloat",
+        label="Power",
+        max_alarm=120.0,
+        abs_change=0.1,
+    )
+    def power(self: MccsTile) -> float | None:
+        """
+        Return the power consumption of the tile in watts.
+
+        :return: Power in watts, or None if not available
+
+        """
+        return self.component_manager.power
+
+    @attribute(
+        dtype="DevFloat",
+        label="Voltage",
+        min_alarm=11.4,
+        max_alarm=12.6,
+        abs_change=0.1,
+    )
+    def voltage(self: MccsTile) -> float | None:
+        """
+        Return the voltage of the tile in volts.
+
+        :return: Voltage in volts, or None if not available
+
+        """
+        return self.component_manager.voltage
+
     # --------
     # Commands
     # --------

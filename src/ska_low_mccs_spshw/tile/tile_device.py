@@ -534,6 +534,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing": HealthState.UNKNOWN,
             "adcs": HealthState.UNKNOWN,
             "alarms": HealthState.UNKNOWN,
+            "subrack_power": HealthState.UNKNOWN,
         }
         self._intermediate_attrs: dict[str, list[str]]
         self._csp_destination_ip = ""
@@ -905,6 +906,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageVM_DVDD": ["voltages", "VM_DVDD"],
             "voltageVM_FE0": ["voltages", "VM_FE0"],
             "voltageVM_FE1": ["voltages", "VM_FE1"],
+            "subrackCurrent": ["subrack_power", "current"],
+            "subrackVoltage": ["subrack_power", "voltage"],
+            "subrackPower": ["subrack_power", "power"],
             "voltageVM_MGT0_AUX": ["voltages", "VM_MGT0_AUX"],
             "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
             "voltageVM_PLL": ["voltages", "VM_PLL"],
@@ -4570,6 +4574,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._intermediate_healths["dsp"]
         return self._health_model.intermediate_healths["dsp"][0]
 
+    @attribute(dtype=HealthState)
+    def subrackPowerHealth(self: MccsTile) -> HealthState:
+        """
+        Read the subrack power Health State of the device.
+
+        This is an aggregated quantity representing if the subrack-provided
+        power monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: subrack power Health State of the device
+        """
+        if self.UseAttributesForHealth:
+            return self._intermediate_healths["subrack_power"]
+        return self._health_model.intermediate_healths["subrack_power"][0]
+
     @attribute(dtype="DevString")
     def healthReport(self: MccsTile) -> str:
         """
@@ -5328,6 +5347,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Current",
+        min_alarm=0.0,
+        max_alarm=10.53,
         abs_change=0.1,
     )
     def current(self: MccsTile) -> float | None:
@@ -5342,8 +5363,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Power",
+        min_alarm=0.0,
         max_alarm=120.0,
-        max_warning=120.0 * 0.95,  # Set power warning level at 95% of alarm
         abs_change=0.1,
     )
     def power(self: MccsTile) -> float | None:
@@ -5360,8 +5381,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="Voltage",
         min_alarm=11.4,
         max_alarm=12.6,
-        min_warning=11.4 + 1.12 * 0.05,  # Min + 5% (Max - Min)
-        max_warning=12.6 - 1.12 * 0.05,  # Max - 5% (Max - Min)
         abs_change=0.1,
     )
     def voltage(self: MccsTile) -> float | None:

@@ -380,6 +380,7 @@ class TestMccsTile:
             "timingHealth",
             "ioHealth",
             "dspHealth",
+            "subrackPowerHealth",
             "healthReport",
             "faultReport",
             "inheritModes",

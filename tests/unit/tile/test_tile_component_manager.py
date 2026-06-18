@@ -408,9 +408,9 @@ class TestTileComponentManager:
             tango.EventType.CHANGE_EVENT,
         )
 
-        assert tile_component_manager.current == 0.1
-        assert tile_component_manager.power == 1.1
-        assert tile_component_manager.voltage == 2.1
+        callbacks["attribute_state"].assert_call(subrack_current=0.1)
+        callbacks["attribute_state"].assert_call(subrack_power=1.1)
+        callbacks["attribute_state"].assert_call(subrack_voltage=2.1)
 
     @unittest.mock.patch(
         "ska_low_mccs_spshw.tile.tile_component_manager.MccsCommandProxy"

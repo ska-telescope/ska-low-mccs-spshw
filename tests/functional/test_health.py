@@ -576,6 +576,74 @@ def subrack_health_params_adjusted_fixture(
             reset_attribute_configs["subrack"](subrack)
 
 
+@pytest.fixture(name="tile_subrack_power_thresholds_exceeded")
+def tile_subrack_power_thresholds_exceeded_fixture(
+    station_devices: dict[str, tango.DeviceProxy],
+    reset_attribute_configs: dict[str, Callable],
+) -> Generator:
+    """
+    Simulate tile subrack power thresholds being exceeded and reset on teardown.
+
+    :param station_devices: dictionary of device proxies.
+    :param reset_attribute_configs: fixture providing reset functions.
+
+    :yields: control back to the test.
+
+    """
+    # Create a lookup for the original params
+    original_params = {}
+
+    # Update the attribute configuration
+    def update_tile_attribute_config(
+        tile: tango.DeviceProxy, attr: str, min_alarm: float, max_alarm: float
+    ) -> None:
+        conf = tile.get_attribute_config(attr)
+        conf.alarms.min_alarm = min_alarm
+        conf.alarms.max_alarm = max_alarm
+        tile.set_attribute_config(conf)
+
+    # Set the subrack thresholds to be an impossible range (i.e. min > max) in
+    # the tile device to ensure a failure
+    for tile in station_devices["Tiles"]:
+        if tile.useAttributesForHealth:
+            update_tile_attribute_config(tile, "subrackCurrent", 1, 0)
+            update_tile_attribute_config(tile, "subrackVoltage", 1, 0)
+            update_tile_attribute_config(tile, "subrackPower", 1, 0)
+        else:
+            # Set the original params
+            original_params[tile] = tile.healthModelParams
+
+            # Update the params
+            tile.healthModelParams = json.dumps(
+                {
+                    "subrack_power": {
+                        "current": {
+                            "min": 1,
+                            "max": 0,
+                        },
+                        "voltage": {
+                            "min": 1,
+                            "max": 0,
+                        },
+                        "power": {
+                            "min": 1,
+                            "max": 0,
+                        },
+                    }
+                }
+            )
+
+    yield
+
+    # Reset alarm thresholds to defaults
+    for tile in station_devices["Tiles"]:
+        if tile.useAttributesForHealth:
+            for attr_name in ["subrackCurrent", "subrackVoltage", "subrackPower"]:
+                reset_attribute_configs["tile"](tile, attr_name)
+        else:
+            tile.healthModelParams = original_params[tile]
+
+
 @when("the Subracks board temperature thresholds are adjusted")
 @given("the Subracks board temperature thresholds are adjusted")
 def set_subrack_health_params(
@@ -587,6 +655,21 @@ def set_subrack_health_params(
     Uses fixture to ensure cleanup after test.
 
     :param subrack_health_params_adjusted: fixture that adjusts and cleans up.
+    """
+    pass
+
+
+@when("the Tiles subrack power thresholds are exceeded")
+def set_tile_subrack_power_thresholds_exceeded(
+    tile_subrack_power_thresholds_exceeded: None,
+) -> None:
+    """
+    Set tile subrack power attributes to exceed thresholds.
+
+    Uses fixture to ensure cleanup after test.
+
+    :param tile_subrack_power_thresholds_exceeded: fixture that sets values/cleans up.
+
     """
     pass
 

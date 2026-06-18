@@ -165,6 +165,15 @@ ska-tango-devices:
 
       currentFE0->max_alarm: 2.62
       currentFE1->max_alarm: 2.62
+      
+      subrackCurrent->max_alarm: 10.53
+      subrackCurrent->min_alarm: 0.0
+      
+      subrackVoltage->max_alarm: 12.6
+      subrackVoltage->min_alarm: 11.4
+      
+      subrackPower->max_alarm: 120.0
+      subrackPower->min_alarm: 0.0
 
       voltageAVDD3->max_alarm: 2.6
       voltageAVDD3->max_warning: 2.57

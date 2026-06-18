@@ -208,6 +208,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltage_vm_mgt1_aux_signal: AttrSignal[float] = AttrSignal[float]()
     voltage_vm_pll_signal: AttrSignal[float] = AttrSignal[float]()
     voltage_vm_sw_amp_signal: AttrSignal[float] = AttrSignal[float]()
+    subrack_current_signal: AttrSignal[float] = AttrSignal[float]()
+    subrack_power_signal: AttrSignal[float] = AttrSignal[float]()
+    subrack_voltage_signal: AttrSignal[float] = AttrSignal[float]()
 
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
@@ -274,6 +277,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltageVM_MGT1_AUX": "voltage_vm_mgt1_aux_signal",
         "voltageVM_PLL": "voltage_vm_pll_signal",
         "voltageVM_SW_AMP": "voltage_vm_sw_amp_signal",
+        "subrackCurrent": "subrack_current_signal",
+        "subrackPower": "subrack_power_signal",
+        "subrackVoltage": "subrack_voltage_signal",
     }
 
     # -----------------
@@ -701,6 +707,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "pointing_delays": "pointingDelays",
             "dst_ip_40g_fpga1": "dstip40gfpga1",
             "dst_ip_40g_fpga2": "dstip40gfpga2",
+            "subrack_current": "subrackCurrent",
+            "subrack_power": "subrackPower",
+            "subrack_voltage": "subrackVoltage",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -5344,53 +5353,35 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["pointingDelays"].read()
 
-    @attribute(
+    subrackCurrent = attribute_from_signal(  # noqa: N815
+        subrack_current_signal,
         dtype="DevFloat",
-        label="Current",
+        label="Subrack Current",
         min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
+        doc="Subrack current in amperes.",
     )
-    def current(self: MccsTile) -> float | None:
-        """
-        Return the current of the tile in amperes.
 
-        :return: Current in amperes, or None if not available
-
-        """
-        return self.component_manager.current
-
-    @attribute(
+    subrackPower = attribute_from_signal(  # noqa: N815
+        subrack_power_signal,
         dtype="DevFloat",
-        label="Power",
+        label="Subrack Power",
         min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
+        doc="Subrack power in watts.",
     )
-    def power(self: MccsTile) -> float | None:
-        """
-        Return the power consumption of the tile in watts.
 
-        :return: Power in watts, or None if not available
-
-        """
-        return self.component_manager.power
-
-    @attribute(
+    subrackVoltage = attribute_from_signal(  # noqa: N815
+        subrack_voltage_signal,
         dtype="DevFloat",
-        label="Voltage",
+        label="Subrack Voltage",
         min_alarm=11.4,
         max_alarm=12.6,
         abs_change=0.1,
+        doc="Subrack voltage in volts.",
     )
-    def voltage(self: MccsTile) -> float | None:
-        """
-        Return the voltage of the tile in volts.
-
-        :return: Voltage in volts, or None if not available
-
-        """
-        return self.component_manager.voltage
 
     # --------
     # Commands

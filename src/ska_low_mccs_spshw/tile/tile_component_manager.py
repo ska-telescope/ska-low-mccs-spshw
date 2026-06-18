@@ -319,9 +319,6 @@ class TileComponentManager(
         self._power_callback_timeout: float = power_callback_timeout
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
-        self._current: float | None = None
-        self._power: float | None = None
-        self._voltage: float | None = None
 
         # We track the last known connection status to
         # avoid unnecessary connection attempts.
@@ -1190,7 +1187,7 @@ class TileComponentManager(
         :param current: The tpm current.
 
         """
-        self._current = current
+        self._update_attribute_callback(subrack_current=current)
 
     def _handle_tpm_power_changed(self, power: float) -> None:
         """
@@ -1199,7 +1196,7 @@ class TileComponentManager(
         :param power: The tpm power.
 
         """
-        self._power = power
+        self._update_attribute_callback(subrack_power=power)
 
     def _handle_tpm_voltage_changed(self, voltage: float) -> None:
         """
@@ -1208,37 +1205,7 @@ class TileComponentManager(
         :param voltage: The tpm voltage.
 
         """
-        self._voltage = voltage
-
-    @property
-    def current(self) -> float | None:
-        """
-        Get the TPM current.
-
-        :returns: The TPM current.
-
-        """
-        return self._current
-
-    @property
-    def power(self) -> float | None:
-        """
-        Get the TPM power.
-
-        :returns: The TPM power.
-
-        """
-        return self._power
-
-    @property
-    def voltage(self) -> float | None:
-        """
-        Get the TPM voltage.
-
-        :returns: The TPM voltage.
-
-        """
-        return self._voltage
+        self._update_attribute_callback(subrack_voltage=voltage)
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

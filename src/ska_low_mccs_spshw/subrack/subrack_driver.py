@@ -757,7 +757,15 @@ class SubrackDriver(
                 HardwareClientResponseStatusCodes.BUSY.name,
             ]:
                 if self._active_callback is not None:
-                    self._active_callback(status=TaskStatus.FAILED)
+                    self._active_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            f"Command '{command}' failed with status "
+                            f"'{command_response['status']}': "
+                            f"{command_response.get('info', 'no details')}",
+                        ),
+                    )
                     self._active_callback = None
                 match command_response["status"]:
                     case HardwareClientResponseStatusCodes.ERROR.name:
@@ -795,8 +803,21 @@ class SubrackDriver(
                     command, command_response["retvalue"]
                 )
             else:
-                if self._active_callback is not None:
-                    self._active_callback(status=TaskStatus.FAILED)
+                # BUSY: the board rejected the command because it is already
+                # executing something.  This is only a genuine failure for the
+                # active command when no STARTED response was received earlier
+                # in this same poll iteration (i.e. _board_is_busy was not just
+                # set by a prior STARTED in this loop).  An auxiliary command
+                # (e.g. get_health_status) returning BUSY after the action
+                # command already got STARTED must not fail the active callback.
+                if self._active_callback is not None and not self._board_is_busy:
+                    self._active_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            f"Board busy, command '{command}' was not accepted.",
+                        ),
+                    )
                     self._active_callback = None
 
         for name, value in poll_request.setattributes:
@@ -900,10 +921,17 @@ class SubrackDriver(
             # A command that is asynchronous on the SMB is still running,
             # So there's nothing to do here.
             self.logger.debug("Command still running")
-        elif retvalues:
-            # The presence of any other retvalues indicate
-            # that the active command has completed.
-            # This is true also for normal completion of fast commands
+        elif retvalues and (
+            not self._board_is_busy or retvalues.get("command_completed")
+        ):
+            # The active command has completed.  We accept this conclusion only
+            # when:
+            #   (a) the board was not marked busy (synchronous command returned
+            #       OK in poll()), or
+            #   (b) command_completed explicitly returned True.
+            # Without this guard an auxiliary command such as get_health_status
+            # returning OK in the same poll as an async STARTED response would
+            # spuriously mark the async command as complete.
             if self._board_is_busy:
                 # This means that an attribute  poll is likely overdue and anyway
                 # useful, as the hardware status could have been changed. Force it
@@ -917,9 +945,10 @@ class SubrackDriver(
                     result=(ResultCode.OK, "Command completed."),
                 )
             self._active_callback = None
-            if "get_health_status" in retvalues.keys():
-                self.health_status = retvalues["get_health_status"]
-                self._update_component_state(health_status=self.health_status)
+
+        if "get_health_status" in retvalues:
+            self.health_status = retvalues["get_health_status"]
+            self._update_component_state(health_status=self.health_status)
 
         values = poll_response.query_responses
         self._update_component_state(power=PowerState.ON, fault=fault)

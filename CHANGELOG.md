@@ -2,7 +2,7 @@
 
 # Unreleased
 
-* [SDR-1687] Upgrade to PyTango 10.3.0
+* [SDR-1687] Upgrade to PyTango 10.3.0 and ska-low-mccs-common 4.5.6.
 * [LOW-2275] Fix PDU device for Raritan PDUs.
 * [THORN-581] Update attribute cache from hardware read rather than software cache.
 

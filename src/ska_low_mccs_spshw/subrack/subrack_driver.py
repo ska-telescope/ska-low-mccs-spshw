@@ -717,7 +717,13 @@ class SubrackDriver(
                     ("get_health_status", ""),
                 ]:
                     poll_request.add_command(command, *args)
-            self._command_tick = 0
+                self._command_tick = 0
+            elif not self._poll_commands:
+                # Health-status polling is disabled (old BIOS); reset so we
+                # don't re-enter this block every poll.
+                self._command_tick = 0
+            # else: skipped because an action command is in the poll; leave
+            # tick above max so the next free cycle retries immediately.
         return poll_request
 
     def poll(self: SubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:

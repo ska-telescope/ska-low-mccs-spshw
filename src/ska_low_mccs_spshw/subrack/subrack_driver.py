@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-#
+# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module provides for monitoring and control of an SPS subrack."""
+
 from __future__ import annotations
 
 import logging
@@ -292,7 +293,7 @@ class SubrackDriver(
 
             for key in keys:
                 if key in self._commands_to_execute:
-                    (_, _, prior_callback) = self._commands_to_execute[key]
+                    _, _, prior_callback = self._commands_to_execute[key]
                     if prior_callback is not None:
                         prior_callback(
                             status=TaskStatus.ABORTED,
@@ -413,7 +414,7 @@ class SubrackDriver(
                     # request (because it is a request that acts upon the same
                     # TPM, either individually or as a group). So let's abort
                     # the earlier request, and insert this one in its place.
-                    (_, _, prior_callback) = self._commands_to_execute[key]
+                    _, _, prior_callback = self._commands_to_execute[key]
                     if prior_callback is not None:
                         prior_callback(
                             status=TaskStatus.ABORTED,
@@ -522,7 +523,7 @@ class SubrackDriver(
                 # There is already a request to set the fan speed of this very
                 # fan. This request supersedes that previous request, so let's
                 # abort the earlier request, and insert this one in its place.
-                (_, _, prior_callback) = self._commands_to_execute[key]
+                _, _, prior_callback = self._commands_to_execute[key]
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
@@ -562,7 +563,7 @@ class SubrackDriver(
                 # There is already a request to set the speed mode of this very
                 # fan. This request supersedes that previous request, so let's
                 # abort the earlier request, and insert this one in its place.
-                (_, _, prior_callback) = self._commands_to_execute[key]
+                _, _, prior_callback = self._commands_to_execute[key]
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
@@ -603,7 +604,7 @@ class SubrackDriver(
                 # There is already a request to set the fan speed of this very
                 # fan. This request supersedes that previous request, so let's
                 # abort the earlier request, and insert this one in its place.
-                (_, _, prior_callback) = self._commands_to_execute[key]
+                _, _, prior_callback = self._commands_to_execute[key]
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
@@ -711,7 +712,7 @@ class SubrackDriver(
 
         if self._command_tick > self._command_max_tick:
             self._check_bios_version()
-            if self._poll_commands:
+            if self._poll_commands and not poll_request.commands:
                 for command, args in [
                     ("get_health_status", ""),
                 ]:

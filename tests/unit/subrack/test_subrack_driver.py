@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the subrack component manager."""
+
 from typing import Any
 
 import pytest
@@ -522,3 +523,34 @@ def test_failed_poll(
     )
 
     callbacks["component_state"].assert_not_called()
+
+
+def test_health_status_not_coscheduled_with_action_command(
+    subrack_driver: SubrackDriver,
+) -> None:
+    """
+    get_health_status must not appear in the same poll as an action command.
+
+    After a command completes, poll_succeeded forces _command_tick above its maximum so
+    that the next free-poll cycle refreshes the health status.  But when that forced
+    state coincides with a queued action command (e.g. turn_on_tpm), the previous code
+    also added get_health_status to the same HTTP request.  The board then returned BUSY
+    for get_health_status (it was already executing the action command), which
+    incorrectly triggered the action command's LRC callback with FAILED status.
+
+    :param subrack_driver: the subrack driver under test
+    """
+    # Simulate the post-command-completion state where health-status polling is enabled
+    # and the tick has been forced above its maximum.
+    subrack_driver._board_is_busy = False
+    subrack_driver._poll_commands = True
+    subrack_driver._checked_bios = True
+    subrack_driver._command_tick = subrack_driver._command_max_tick + 1
+
+    subrack_driver.turn_on_tpm(1)
+
+    poll_request = subrack_driver.get_request()
+
+    command_names = [cmd[0] for cmd in poll_request.commands]
+    assert "turn_on_tpm" in command_names
+    assert "get_health_status" not in command_names

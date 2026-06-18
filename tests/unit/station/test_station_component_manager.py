@@ -864,8 +864,11 @@ def test_pps_delay_spread(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    # Wait for ppsDelay subscription callbacks to populate _pps_delays[0-3].
-    expected_delays = [12, 13, 14, 15] + [0] * 12
+    # Wait for ppsDelay subscription callbacks to populate _pps_delays[0-n].
+    total_slots = 16
+    expected_delays = [12 + i for i in range(num_tiles)] + [0] * (
+        total_slots - num_tiles
+    )
     deadline = time.time() + 5.0
     while station_component_manager._pps_delays != expected_delays:
         assert time.time() < deadline, (

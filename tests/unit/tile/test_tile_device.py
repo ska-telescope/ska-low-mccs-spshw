@@ -915,7 +915,7 @@ class TestMccsTile:
     # pylint: disable=too-many-branches
     def test_basic_attribute_quality(
         self: TestMccsTile,
-        patched_tile_device: DeviceProxy,
+        tile_device: DeviceProxy,
         tile_simulator: TileSimulator,
         tile_component_manager: unittest.mock.Mock,
         poll_rate: float,

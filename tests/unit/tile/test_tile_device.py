@@ -915,7 +915,7 @@ class TestMccsTile:
     # pylint: disable=too-many-branches
     def test_basic_attribute_quality(
         self: TestMccsTile,
-        tile_device: DeviceProxy,
+        patched_tile_device: DeviceProxy,
         tile_simulator: TileSimulator,
         tile_component_manager: unittest.mock.Mock,
         poll_rate: float,
@@ -1017,8 +1017,26 @@ class TestMccsTile:
         tile_component_manager._subrack_says_tpm_power_changed(
             "tpm1PowerState",
             PowerState.ON,
-            EventType.CHANGE_EVENT,
+            tango.AttrQuality.ATTR_VALID,
         )
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmCurrents",
+            [10] * 8,
+            tango.AttrQuality.ATTR_VALID,
+        )
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmPowers",
+            [100] * 8,
+            tango.AttrQuality.ATTR_VALID,
+        )
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmVoltages",
+            [12] * 8,
+            tango.AttrQuality.ATTR_VALID,
+        )
+        assert tile_device.subrackCurrent == 10
+        assert tile_device.subrackPower == 100
+        assert tile_device.subrackVoltage == 12
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         change_event_callbacks["health_state"].assert_not_called()

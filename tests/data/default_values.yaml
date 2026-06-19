@@ -324,3 +324,33 @@ ska-tango-devices:
       tpmVoltages->min_alarm: 11.4
 
       tpmPowers->max_alarm: 124.0
+
+      psu1PowerIn->max_alarm: 600.0
+      psu1PowerIn->max_warning: 575.00
+      psu2PowerIn->max_alarm: 600.0
+      psu2PowerIn->max_warning: 575.00
+
+      psu1PowerOut->max_alarm: 600.0
+      psu1PowerOut->max_warning: 575.0
+      psu2PowerOut->max_alarm: 600.0
+      psu2PowerOut->max_warning: 575.0
+
+      psu1VoltageIn->max_alarm: 253.0
+      psu1VoltageIn->max_warning: 240.0
+      psu1VoltageIn->min_warning: 215.0
+      psu1VoltageIn->min_alarm: 207.0
+
+      psu2VoltageIn->max_alarm: 253.0
+      psu2VoltageIn->max_warning: 240.0
+      psu2VoltageIn->min_warning: 215.0
+      psu2VoltageIn->min_alarm: 207.0
+
+      # psu1VoltageOut->max_alarm: 253.0
+      # psu1VoltageOut->max_warning: 240.0
+      # psu1VoltageOut->min_warning: 215.0
+      # psu1VoltageOut->min_alarm: 207.0
+
+      # psu2VoltageOut->max_alarm: 253.0
+      # psu2VoltageOut->max_warning: 240.0
+      # psu2VoltageOut->min_warning: 215.0
+      # psu2VoltageOut->min_alarm: 207.0

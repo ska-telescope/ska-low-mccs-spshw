@@ -903,6 +903,48 @@ def test_health_status_attributes(
             2.69,
             2.66,
         ),
+        (
+            "psu1PowerIn",
+            600.0,
+            575.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu2PowerIn",
+            600.0,
+            575.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu1PowerOut",
+            600.0,
+            575.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu2PowerOut",
+            600.0,
+            575.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu1VoltageIn",
+            253.0,
+            240.0,
+            215.0,
+            207.0,
+        ),
+        (
+            "psu2VoltageIn",
+            253.0,
+            240.0,
+            215.0,
+            207.0,
+        ),
     ],
 )
 # pylint: disable=too-many-arguments

@@ -64,6 +64,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     internal_voltages_ddr_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_powerin_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_soc_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_present_signal: AttrSignal[bool] = AttrSignal[bool]()
+    psu2_present_signal: AttrSignal[bool] = AttrSignal[bool]()
+    psu1_power_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_power_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_power_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_power_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_voltage_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_voltage_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_voltage_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_voltage_out_signal: AttrSignal[float] = AttrSignal[float]()
 
     # Maps each signal-backed internalVoltages attribute name to its signal name.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -79,6 +89,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltagesDDR": "internal_voltages_ddr_signal",
         "internalVoltagesPOWERIN": "internal_voltages_powerin_signal",
         "internalVoltagesSOC": "internal_voltages_soc_signal",
+        "psu1Present": "psu1_present_signal",
+        "psu2Present": "psu2_present_signal",
+        "psu1PowerIn": "psu1_power_in_signal",
+        "psu2PowerIn": "psu2_power_in_signal",
+        "psu1PowerOut": "psu1_power_out_signal",
+        "psu2PowerOut": "psu2_power_out_signal",
+        "psu1VoltageIn": "psu1_voltage_in_signal",
+        "psu2VoltageIn": "psu2_voltage_in_signal",
+        "psu1VoltageOut": "psu1_voltage_out_signal",
+        "psu2VoltageOut": "psu2_voltage_out_signal",
     }
 
     # A map from the component manager argument to the name of the Tango attribute.
@@ -127,6 +147,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltages5V": ["internal_voltages", "V_5V"],
         "internalVoltages3V": ["internal_voltages", "V_3V"],
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
+        "psu1Present": ["psus", "present", "PSU1"],
+        "psu2Present": ["psus", "present", "PSU2"],
+        "psu1PowerIn": ["psus", "power_in", "PSU1"],
+        "psu2PowerIn": ["psus", "power_in", "PSU2"],
+        "psu1PowerOut": ["psus", "power_out", "PSU1"],
+        "psu2PowerOut": ["psus", "power_out", "PSU2"],
+        "psu1VoltageIn": ["psus", "voltage_in", "PSU1"],
+        "psu2VoltageIn": ["psus", "voltage_in", "PSU2"],
+        "psu1VoltageOut": ["psus", "voltage_out", "PSU1"],
+        "psu2VoltageOut": ["psus", "voltage_out", "PSU2"],
     }
 
     SetSubrackFanMode_SCHEMA: Final = json.loads(
@@ -977,7 +1007,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the power supply powers.
 
-        :return: the power supply powers.
+        :return: A two element array containing power supply output power (W)
             When communication with the subrack is not established,
             this returns none.
         """
@@ -987,7 +1017,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the power supply powers.
 
-        :return: the power supply powers.
+        :return: A two element array containing power supply output power (W)
             When communication with the subrack is not established,
             this returns none.
         """
@@ -1249,6 +1279,100 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal SOC supply voltage in Volts.",
     )
 
+    psu1Present = attribute_from_signal(  # noqa: N815
+        psu1_present_signal,
+        dtype=bool,
+        label="Psu1 Present",
+        doc="Presence of PSU1.",
+    )
+
+    psu2Present = attribute_from_signal(  # noqa: N815
+        psu2_present_signal,
+        dtype=bool,
+        label="Psu2 Present",
+        doc="Presence of PSU2.",
+    )
+
+    psu1PowerIn = attribute_from_signal(  # noqa: N815
+        psu1_power_in_signal,
+        dtype="DevDouble",
+        label="PSU1 Input Power",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 input power in Watts.",
+    )
+
+    psu2PowerIn = attribute_from_signal(  # noqa: N815
+        psu2_power_in_signal,
+        dtype="DevDouble",
+        label="PSU2 Input Power",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 input power in Watts.",
+    )
+
+    psu1PowerOut = attribute_from_signal(  # noqa: N815
+        psu1_power_out_signal,
+        dtype="DevDouble",
+        label="PSU1 Output Power",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 output power in Watts.",
+    )
+
+    psu2PowerOut = attribute_from_signal(  # noqa: N815
+        psu2_power_out_signal,
+        dtype="DevDouble",
+        label="PSU2 Output Power",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 output power in Watts.",
+    )
+
+    psu1VoltageIn = attribute_from_signal(  # noqa: N815
+        psu1_voltage_in_signal,
+        dtype="DevDouble",
+        label="PSU1 Input Voltage",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 input voltage in Volts.",
+    )
+
+    psu2VoltageIn = attribute_from_signal(  # noqa: N815
+        psu2_voltage_in_signal,
+        dtype="DevDouble",
+        label="PSU2 Input Voltage",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 input voltage in Volts.",
+    )
+
+    psu1VoltageOut = attribute_from_signal(  # noqa: N815
+        psu1_voltage_out_signal,
+        dtype="DevDouble",
+        label="PSU1 Output Voltage",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 output voltage in Volts.",
+    )
+
+    psu2VoltageOut = attribute_from_signal(  # noqa: N815
+        psu2_voltage_out_signal,
+        dtype="DevDouble",
+        label="PSU2 Output Voltage",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 output voltage in Volts.",
+    )
+
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
     # Need to revisit
 
@@ -1380,7 +1504,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the TPM powers.
 
-        :return: the TPM powers.
+        :return: The power draw per TPM (W).
             When communication with the subrack is not established,
             this returns none.
         """

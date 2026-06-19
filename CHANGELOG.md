@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-581] Update attribute cache from hardware read rather than software cache.
+* [THORN-623] Added attributes to Subrack: psuXPresent, psuXPowerIn, psuXPowerOut, psuXVoltageIn, psuXVoltageOut
 
 ## 12.2.0
 

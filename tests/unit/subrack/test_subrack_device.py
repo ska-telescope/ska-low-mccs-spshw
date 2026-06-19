@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable = too-many-lines
 """This module contains the tests of the subrack Tango device."""
 from __future__ import annotations
 
@@ -87,6 +88,16 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "internalVoltages5V",
         "internalVoltages3V",
         "internalVoltages2V8",
+        "psu1Present",
+        "psu2Present",
+        "psu1PowerIn",
+        "psu2PowerIn",
+        "psu1PowerOut",
+        "psu2PowerOut",
+        "psu1VoltageIn",
+        "psu2VoltageIn",
+        "psu1VoltageOut",
+        "psu2VoltageOut",
         timeout=20.0,
         assert_no_error=False,
     )
@@ -757,6 +768,16 @@ def test_health_status_attributes(
         "internalVoltages5V": ["internal_voltages", "V_5V"],
         "internalVoltages3V": ["internal_voltages", "V_3V"],
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
+        "psu1Present": ["psus", "present", "PSU1"],
+        "psu2Present": ["psus", "present", "PSU2"],
+        "psu1PowerIn": ["psus", "power_in", "PSU1"],
+        "psu2PowerIn": ["psus", "power_in", "PSU2"],
+        "psu1PowerOut": ["psus", "power_out", "PSU1"],
+        "psu2PowerOut": ["psus", "power_out", "PSU2"],
+        "psu1VoltageIn": ["psus", "voltage_in", "PSU1"],
+        "psu2VoltageIn": ["psus", "voltage_in", "PSU2"],
+        "psu1VoltageOut": ["psus", "voltage_out", "PSU1"],
+        "psu2VoltageOut": ["psus", "voltage_out", "PSU2"],
     }
     health_status = subrack_simulator._get_health_status("")
     assert subrack_device.healthStatus == "{}"

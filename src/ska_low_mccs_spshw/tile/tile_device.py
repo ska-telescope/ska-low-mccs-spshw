@@ -208,9 +208,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltage_vm_mgt1_aux_signal: AttrSignal[float] = AttrSignal[float]()
     voltage_vm_pll_signal: AttrSignal[float] = AttrSignal[float]()
     voltage_vm_sw_amp_signal: AttrSignal[float] = AttrSignal[float]()
-    subrack_current_signal: AttrSignal[float] = AttrSignal[float]()
-    subrack_power_signal: AttrSignal[float] = AttrSignal[float]()
-    subrack_voltage_signal: AttrSignal[float] = AttrSignal[float]()
 
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
@@ -277,9 +274,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltageVM_MGT1_AUX": "voltage_vm_mgt1_aux_signal",
         "voltageVM_PLL": "voltage_vm_pll_signal",
         "voltageVM_SW_AMP": "voltage_vm_sw_amp_signal",
-        "subrackCurrent": "subrack_current_signal",
-        "subrackPower": "subrack_power_signal",
-        "subrackVoltage": "subrack_voltage_signal",
     }
 
     # -----------------
@@ -540,7 +534,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing": HealthState.UNKNOWN,
             "adcs": HealthState.UNKNOWN,
             "alarms": HealthState.UNKNOWN,
-            "subrack_power": HealthState.UNKNOWN,
         }
         self._intermediate_attrs: dict[str, list[str]]
         self._csp_destination_ip = ""
@@ -915,9 +908,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltageVM_DVDD": ["voltages", "VM_DVDD"],
             "voltageVM_FE0": ["voltages", "VM_FE0"],
             "voltageVM_FE1": ["voltages", "VM_FE1"],
-            "subrackCurrent": ["subrack_power", "current"],
-            "subrackVoltage": ["subrack_power", "voltage"],
-            "subrackPower": ["subrack_power", "power"],
             "voltageVM_MGT0_AUX": ["voltages", "VM_MGT0_AUX"],
             "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
             "voltageVM_PLL": ["voltages", "VM_PLL"],
@@ -4583,21 +4573,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._intermediate_healths["dsp"]
         return self._health_model.intermediate_healths["dsp"][0]
 
-    @attribute(dtype=HealthState)
-    def subrackPowerHealth(self: MccsTile) -> HealthState:
-        """
-        Read the subrack power Health State of the device.
-
-        This is an aggregated quantity representing if the subrack-provided
-        power monitoring points are outside of their thresholds. This is used to compute
-        the overall healthState of the tile.
-
-        :return: subrack power Health State of the device
-        """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["subrack_power"]
-        return self._health_model.intermediate_healths["subrack_power"][0]
-
     @attribute(dtype="DevString")
     def healthReport(self: MccsTile) -> str:
         """
@@ -5353,35 +5328,53 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["pointingDelays"].read()
 
-    subrackCurrent = attribute_from_signal(  # noqa: N815
-        subrack_current_signal,
+    @attribute(
         dtype="DevFloat",
         label="Subrack Current",
         min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
-        doc="Subrack current in amperes.",
     )
+    def subrackCurrent(self: MccsTile) -> float | None:
+        """
+        Get the subrack current.
 
-    subrackPower = attribute_from_signal(  # noqa: N815
-        subrack_power_signal,
+        :return: The subrack current.
+
+        """
+        return self._attribute_state["subrackCurrent"].read()
+
+    @attribute(
         dtype="DevFloat",
         label="Subrack Power",
         min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
-        doc="Subrack power in watts.",
     )
+    def subrackPower(self: MccsTile) -> float | None:
+        """
+        Get the subrack power.
 
-    subrackVoltage = attribute_from_signal(  # noqa: N815
-        subrack_voltage_signal,
+        :return: The subrack power.
+
+        """
+        return self._attribute_state["subrackPower"].read()
+
+    @attribute(
         dtype="DevFloat",
         label="Subrack Voltage",
         min_alarm=11.4,
         max_alarm=12.6,
         abs_change=0.1,
-        doc="Subrack voltage in volts.",
     )
+    def subrackVoltage(self: MccsTile) -> float | None:
+        """
+        Get the subrack voltage.
+
+        :return: The subrack voltage.
+
+        """
+        return self._attribute_state["subrackVoltage"].read()
 
     # --------
     # Commands

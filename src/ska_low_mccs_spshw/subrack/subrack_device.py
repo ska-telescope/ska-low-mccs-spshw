@@ -7,6 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module provides a Tango device for an SPS subrack."""
+
 from __future__ import annotations
 
 import importlib
@@ -1522,6 +1523,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 except DevFailed as e:
                     # TODO: Anything that appears here is undesired
                     # and a ticket should be created to resolve.
+                    self.logger.warning(
+                        "Failed to push Tango events for "
+                        "attribute '%s' with value '%s': %s",
+                        tango_attribute_name,
+                        value,
+                        e,
+                        exc_info=True,
+                    )
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.warning(
                         "Failed to push Tango events for "
                         "attribute '%s' with value '%s': %s",

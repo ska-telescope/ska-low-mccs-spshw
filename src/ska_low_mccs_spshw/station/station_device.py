@@ -138,8 +138,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
-        self._beamformer_daisy_chain_valid: Optional[bool] = None
-        self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -616,16 +614,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 self._health_rollup.health_changed("self", HealthState.OK)
 
         daisy_chain_valid = state_change.get("beamformerDaisyChainValid")
-        if (
-            daisy_chain_valid is not None
-            and cast(bool, daisy_chain_valid) != self._beamformer_daisy_chain_valid
-        ):
-            self._beamformer_daisy_chain_valid = cast(bool, daisy_chain_valid)
+        if daisy_chain_valid is not None:
             self.push_change_event(
-                "beamformerDaisyChainValid", self._beamformer_daisy_chain_valid
+                "beamformerDaisyChainValid", cast(bool, daisy_chain_valid)
             )
             self.push_archive_event(
-                "beamformerDaisyChainValid", self._beamformer_daisy_chain_valid
+                "beamformerDaisyChainValid", cast(bool, daisy_chain_valid)
             )
             self._health_rollup.health_changed(
                 "beamformer_daisy_chain",
@@ -633,19 +627,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
 
         flagged_count_ok = state_change.get("finalTileBeamformerFlaggedCountOk")
-        if (
-            flagged_count_ok is not None
-            and cast(bool, flagged_count_ok)
-            != self._final_tile_beamformer_flagged_count_ok
-        ):
-            self._final_tile_beamformer_flagged_count_ok = cast(bool, flagged_count_ok)
+        if flagged_count_ok is not None:
             self.push_change_event(
-                "finalTileBeamformerFlaggedCountOk",
-                self._final_tile_beamformer_flagged_count_ok,
+                "finalTileBeamformerFlaggedCountOk", cast(bool, flagged_count_ok)
             )
             self.push_archive_event(
-                "finalTileBeamformerFlaggedCountOk",
-                self._final_tile_beamformer_flagged_count_ok,
+                "finalTileBeamformerFlaggedCountOk", cast(bool, flagged_count_ok)
             )
             self._health_rollup.health_changed(
                 "beamformer_flagged_count",
@@ -1043,7 +1030,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: True if the daisy chain is correctly configured.
         """
-        return bool(self._beamformer_daisy_chain_valid)
+        return bool(self.component_manager.beamformer_daisy_chain_valid)
 
     @attribute(dtype="DevBoolean")
     def finalTileBeamformerFlaggedCountOk(self: SpsStation) -> bool:
@@ -1057,7 +1044,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: True if the final tile beamformer flagged count is zero.
         """
-        return bool(self._final_tile_beamformer_flagged_count_ok)
+        return bool(self.component_manager.final_tile_beamformer_flagged_count_ok)
 
     @attribute(dtype=("DevLong",), max_dim_x=336, archive_period=5000)
     def beamformerTable(self: SpsStation) -> list[int] | None:

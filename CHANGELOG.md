@@ -1,6 +1,6 @@
 # Version History
 
-# Unreleased
+## 12.2.1
 
 * [SKB-1399] Fix bug in MccsSubrack leading to incorrect reporting of LRC results.
 * [SDR-1687] Upgrade to PyTango 10.3.0 and ska-low-mccs-common 4.5.6.

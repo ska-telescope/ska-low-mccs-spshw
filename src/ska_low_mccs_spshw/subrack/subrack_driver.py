@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-#
+# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module provides for monitoring and control of an SPS subrack."""
+
 from __future__ import annotations
 
 import logging
@@ -292,7 +293,7 @@ class SubrackDriver(
 
             for key in keys:
                 if key in self._commands_to_execute:
-                    (_, _, prior_callback) = self._commands_to_execute[key]
+                    _, _, prior_callback = self._commands_to_execute[key]
                     if prior_callback is not None:
                         prior_callback(
                             status=TaskStatus.ABORTED,
@@ -413,7 +414,7 @@ class SubrackDriver(
                     # request (because it is a request that acts upon the same
                     # TPM, either individually or as a group). So let's abort
                     # the earlier request, and insert this one in its place.
-                    (_, _, prior_callback) = self._commands_to_execute[key]
+                    _, _, prior_callback = self._commands_to_execute[key]
                     if prior_callback is not None:
                         prior_callback(
                             status=TaskStatus.ABORTED,
@@ -522,7 +523,7 @@ class SubrackDriver(
                 # There is already a request to set the fan speed of this very
                 # fan. This request supersedes that previous request, so let's
                 # abort the earlier request, and insert this one in its place.
-                (_, _, prior_callback) = self._commands_to_execute[key]
+                _, _, prior_callback = self._commands_to_execute[key]
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
@@ -562,7 +563,7 @@ class SubrackDriver(
                 # There is already a request to set the speed mode of this very
                 # fan. This request supersedes that previous request, so let's
                 # abort the earlier request, and insert this one in its place.
-                (_, _, prior_callback) = self._commands_to_execute[key]
+                _, _, prior_callback = self._commands_to_execute[key]
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
@@ -603,7 +604,7 @@ class SubrackDriver(
                 # There is already a request to set the fan speed of this very
                 # fan. This request supersedes that previous request, so let's
                 # abort the earlier request, and insert this one in its place.
-                (_, _, prior_callback) = self._commands_to_execute[key]
+                _, _, prior_callback = self._commands_to_execute[key]
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
@@ -711,12 +712,18 @@ class SubrackDriver(
 
         if self._command_tick > self._command_max_tick:
             self._check_bios_version()
-            if self._poll_commands:
+            if self._poll_commands and not poll_request.commands:
                 for command, args in [
                     ("get_health_status", ""),
                 ]:
                     poll_request.add_command(command, *args)
-            self._command_tick = 0
+                self._command_tick = 0
+            elif not self._poll_commands:
+                # Health-status polling is disabled (old BIOS); reset so we
+                # don't re-enter this block every poll.
+                self._command_tick = 0
+            # else: skipped because an action command is in the poll; leave
+            # tick above max so the next free cycle retries immediately.
         return poll_request
 
     def poll(self: SubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:
@@ -756,7 +763,15 @@ class SubrackDriver(
                 HardwareClientResponseStatusCodes.BUSY.name,
             ]:
                 if self._active_callback is not None:
-                    self._active_callback(status=TaskStatus.FAILED)
+                    self._active_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            f"Command '{command}' failed with status "
+                            f"'{command_response['status']}': "
+                            f"{command_response.get('info', 'no details')}",
+                        ),
+                    )
                     self._active_callback = None
                 match command_response["status"]:
                     case HardwareClientResponseStatusCodes.ERROR.name:
@@ -794,8 +809,21 @@ class SubrackDriver(
                     command, command_response["retvalue"]
                 )
             else:
-                if self._active_callback is not None:
-                    self._active_callback(status=TaskStatus.FAILED)
+                # BUSY: the board rejected the command because it is already
+                # executing something.  This is only a genuine failure for the
+                # active command when no STARTED response was received earlier
+                # in this same poll iteration (i.e. _board_is_busy was not just
+                # set by a prior STARTED in this loop).  An auxiliary command
+                # (e.g. get_health_status) returning BUSY after the action
+                # command already got STARTED must not fail the active callback.
+                if self._active_callback is not None and not self._board_is_busy:
+                    self._active_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            f"Board busy, command '{command}' was not accepted.",
+                        ),
+                    )
                     self._active_callback = None
 
         for name, value in poll_request.setattributes:
@@ -899,10 +927,17 @@ class SubrackDriver(
             # A command that is asynchronous on the SMB is still running,
             # So there's nothing to do here.
             self.logger.debug("Command still running")
-        elif retvalues:
-            # The presence of any other retvalues indicate
-            # that the active command has completed.
-            # This is true also for normal completion of fast commands
+        elif retvalues and (
+            not self._board_is_busy or retvalues.get("command_completed")
+        ):
+            # The active command has completed.  We accept this conclusion only
+            # when:
+            #   (a) the board was not marked busy (synchronous command returned
+            #       OK in poll()), or
+            #   (b) command_completed explicitly returned True.
+            # Without this guard an auxiliary command such as get_health_status
+            # returning OK in the same poll as an async STARTED response would
+            # spuriously mark the async command as complete.
             if self._board_is_busy:
                 # This means that an attribute  poll is likely overdue and anyway
                 # useful, as the hardware status could have been changed. Force it
@@ -916,9 +951,10 @@ class SubrackDriver(
                     result=(ResultCode.OK, "Command completed."),
                 )
             self._active_callback = None
-            if "get_health_status" in retvalues.keys():
-                self.health_status = retvalues["get_health_status"]
-                self._update_component_state(health_status=self.health_status)
+
+        if "get_health_status" in retvalues:
+            self.health_status = retvalues["get_health_status"]
+            self._update_component_state(health_status=self.health_status)
 
         values = poll_response.query_responses
         self._update_component_state(power=PowerState.ON, fault=fault)

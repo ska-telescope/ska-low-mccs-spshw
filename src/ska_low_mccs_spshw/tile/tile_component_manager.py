@@ -3361,6 +3361,7 @@ class TileComponentManager(
 
         :return: Result code and message
         """
+        frames_until_switch: Optional[int] = None
         if load_time == "":
             load_frame = 0
         elif isinstance(load_time, int):  # added for backward compatibility
@@ -3370,7 +3371,9 @@ class TileComponentManager(
             if load_frame < 0:
                 self.logger.error(f"apply_pointing_delays: Invalid time {load_time}")
                 raise ValueError(f"Invalid time {load_time}")
-            if (load_frame - self.fpga_current_frame) < 20:
+            current_frame = self.fpga_current_frame
+            frames_until_switch = load_frame - current_frame
+            if frames_until_switch < 20:
                 self.logger.error(
                     "apply_pointing_delays: time not enough in the future"
                 )
@@ -3391,7 +3394,19 @@ class TileComponentManager(
                     [ResultCode.FAILED],
                     ["TileComponentManager: Tile access failed"],
                 )
-        return ([ResultCode.OK], ["apply_pointing_delays completed OK"])
+        if load_frame == 0:
+            timing_msg = "immediately"
+        elif frames_until_switch is not None:
+            seconds_until_switch = frames_until_switch * TileData.FRAME_PERIOD
+            timing_msg = (
+                f"in {frames_until_switch} frames ({seconds_until_switch:.3f} seconds)"
+            )
+        else:
+            timing_msg = f"at frame {load_frame}"
+        return (
+            [ResultCode.OK],
+            [f"apply_pointing_delays completed OK: switch {timing_msg}"],
+        )
 
     @check_communicating
     def load_pointing_delays(
@@ -3449,6 +3464,7 @@ class TileComponentManager(
 
         :return: Result code and message.
         """
+        frames_until_switch: Optional[int] = None
         if load_time == "":
             load_frame = 0
         elif isinstance(load_time, int):  # added for backward compatibility
@@ -3457,7 +3473,9 @@ class TileComponentManager(
             load_frame = self._tile_time.frame_from_utc_time(load_time)
             if load_frame < 0:
                 return ([ResultCode.REJECTED], [f"Invalid time {load_time}"])
-            if (load_frame - self.fpga_current_frame) < 20:
+            current_frame = self.fpga_current_frame
+            frames_until_switch = load_frame - current_frame
+            if frames_until_switch < 20:
                 return ([ResultCode.REJECTED], ["Time too early"])
 
         self.logger.debug("TileComponentManager: switch_calibration_bank")
@@ -3474,7 +3492,19 @@ class TileComponentManager(
             else:
                 return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
-        return ([ResultCode.OK], ["ApplyCalibration command completed OK"])
+        if load_frame == 0:
+            timing_msg = "immediately"
+        elif frames_until_switch is not None:
+            seconds_until_switch = frames_until_switch * TileData.FRAME_PERIOD
+            timing_msg = (
+                f"in {frames_until_switch} frames ({seconds_until_switch:.3f} seconds)"
+            )
+        else:
+            timing_msg = f"at frame {load_frame}"
+        return (
+            [ResultCode.OK],
+            [f"ApplyCalibration command completed OK: switch {timing_msg}"],
+        )
 
     def load_calibration_coefficients(
         self: TileComponentManager,

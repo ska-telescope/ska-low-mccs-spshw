@@ -77,7 +77,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tpmCurrents",
         "tpmPowers",
         # "tpmTemperatures",  # Not implemented on SMB
-        "tpmTotalPower",
         "tpmVoltages",
         "adminMode",
         "internalVoltagesPOWERIN",
@@ -453,7 +452,6 @@ def test_monitoring_and_control(
         ("tpmPowers", None),
         # ("tpmTemperatures", None),  # Not implemented on SMB
         ("tpmVoltages", None),
-        ("tpmTotalPower", None),
     ]:
         print(f"Asserting on {attribute_name}")
         subrack_device.subscribe_event(
@@ -515,7 +513,6 @@ def test_monitoring_and_control(
         "tpmCurrents",
         "tpmPowers",
         # "tpmTemperatures",  # Not implemented on SMB
-        "tpmTotalPower",
         "tpmVoltages",
     ]:
         change_event_callbacks[attribute_name].assert_change_event(

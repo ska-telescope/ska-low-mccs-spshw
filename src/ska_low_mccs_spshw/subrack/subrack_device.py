@@ -1524,7 +1524,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 try:
                     self.push_change_event(tango_attribute_name, value)
                     self.push_archive_event(tango_attribute_name, value)
-                except Exception as e:
+                except DevFailed as e:
                     # TODO: Anything that appears here is undesired
                     # and a ticket should be created to resolve.
                     self.logger.warning(

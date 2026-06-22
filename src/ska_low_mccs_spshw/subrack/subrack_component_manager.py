@@ -430,17 +430,15 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         tpm_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a TPM off.
 
         :param tpm_number: (one-based) number of the TPM to turn off.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(SubrackDriver, self._hardware_component_manager).turn_off_tpm(
+        cast(SubrackDriver, self._hardware_component_manager).turn_off_tpm(
             tpm_number, task_callback=task_callback
         )
 
@@ -448,62 +446,54 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         tpm_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a TPM on.
 
         :param tpm_number: (one-based) number of the TPM to turn on.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(SubrackDriver, self._hardware_component_manager).turn_on_tpm(
+        cast(SubrackDriver, self._hardware_component_manager).turn_on_tpm(
             tpm_number, task_callback=task_callback
         )
 
     def turn_off_tpms(
         self: SubrackComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn all TPMs off.
 
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(SubrackDriver, self._hardware_component_manager).turn_off_tpms(
+        cast(SubrackDriver, self._hardware_component_manager).turn_off_tpms(
             task_callback=task_callback
         )
 
     def turn_on_tpms(
         self: SubrackComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn all TPMs on.
 
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(SubrackDriver, self._hardware_component_manager).turn_on_tpms(
+        cast(SubrackDriver, self._hardware_component_manager).turn_on_tpms(
             task_callback=task_callback
         )
 
     def get_health_status(
         self: SubrackComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Read all the monitoring points available in health status.
 
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(SubrackDriver, self._hardware_component_manager).get_health_status(
+        cast(SubrackDriver, self._hardware_component_manager).get_health_status(
             task_callback=task_callback
         )
 
@@ -706,7 +696,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         fan_number: int,
         speed: float,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Set the target speed of a subrack fan.
 
@@ -714,19 +704,17 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param speed: speed setting for the fan.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(
-            SubrackDriver, self._hardware_component_manager
-        ).set_subrack_fan_speed(fan_number, speed, task_callback=task_callback)
+        cast(SubrackDriver, self._hardware_component_manager).set_subrack_fan_speed(
+            fan_number, speed, task_callback=task_callback
+        )
 
     def set_subrack_fan_mode(
         self: SubrackComponentManager,
         fan_number: int,
         mode: FanMode,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Set the target speed mode of a subrack fan.
 
@@ -734,19 +722,17 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param mode: speed mode setting for the fan.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(
-            SubrackDriver, self._hardware_component_manager
-        ).set_subrack_fan_mode(fan_number, mode, task_callback=task_callback)
+        cast(SubrackDriver, self._hardware_component_manager).set_subrack_fan_mode(
+            fan_number, mode, task_callback=task_callback
+        )
 
     def set_power_supply_fan_speed(
         self: SubrackComponentManager,
         fan_number: int,
         speed: float,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Set the target speed of a power supply fan.
 
@@ -754,9 +740,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param speed: speed setting for the fan.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return cast(
+        cast(
             SubrackDriver, self._hardware_component_manager
         ).set_power_supply_fan_speed(fan_number, speed, task_callback=task_callback)

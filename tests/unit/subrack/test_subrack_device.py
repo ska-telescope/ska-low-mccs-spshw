@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*
-#
+# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -1052,11 +1052,9 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
 
     change_event_callbacks["tpmVoltages"].assert_change_event(
         expected_voltages.tolist(),
-        lookahead=5,
-        consume_nonmatches=True,
     )
     change_event_callbacks["tpmCurrents"].assert_change_event(
-        expected_currents.tolist(), lookahead=5, consume_nonmatches=True
+        expected_currents.tolist()
     )
 
     # Verify that a direct attribute read also returns 0.0 for the None slot,

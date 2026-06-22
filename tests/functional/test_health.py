@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the bdd test steps of the health aggregation."""
+
 from __future__ import annotations
 
 import json
@@ -26,6 +27,19 @@ from tests.test_tools import tango_event_subscription
 
 scenarios("./features/health.feature")
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+@pytest.mark.xfail(
+    reason=(
+        "AWS migration introduces networking constraints that prevent this test passing"
+    )
+)
+@scenario(
+    "features/health.feature",
+    "Healthy when everything is on and operational",
+)
+def test_healthy_when_everything_is_on_and_operational() -> None:
+    """Marked xfail: AWS migration networking constraints prevent this scenario."""
 
 
 @scenario(

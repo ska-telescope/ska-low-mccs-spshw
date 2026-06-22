@@ -34,7 +34,38 @@ attributes:
       - [1, 1]      # pdu id
       - [1, 24, 1]  # port
       - [1, 1]      # sensor type
-    dtype: int
+    dtype: enum
+    enum_labels: [
+        open(0),
+        closed(1),
+        belowLowerCritical(2),
+        belowLowerWarning(3),
+        normal(4),
+        aboveUpperWarning(5),
+        aboveUpperCritical(6),
+        on(7),
+        off(8),
+        detected(9),
+        notDetected(10),
+        alarmed(11),
+        ok(12),
+        fail(14),
+        yes(15),
+        no(16),
+        standby(17),
+        one(18),
+        two(19),
+        inSync(20),
+        outOfSync(21),
+        i1OpenFault(22),
+        i1ShortFault(23),
+        i2OpenFault(24),
+        i2ShortFault(25),
+        fault(26),
+        warning(27),
+        critical(28),
+        selfTest(29),
+    ]
     description: The operating sensor state.
 
   - name: pduPort{1}Current
@@ -63,7 +94,7 @@ attributes:
     dtype: float
     description: The rms voltage outlet sensor value.
 
-  - name: pduPort{}OnOff
+  - name: pduPort{1}OnOff
     oid: [PDU2-MIB, switchingOperation]
     access: write
     indexes:

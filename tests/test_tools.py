@@ -624,7 +624,22 @@ class _ProgrammingStateAccess:
                         datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
                     )
                     obj._tile_device.globalReferenceTime = start_time
-                    obj._tile_device.On()
+                    if obj._tile_device.tileProgrammingState == "Off":
+                        obj._tile_device.On()
+                        AttributeWaiter(timeout=30).wait_for_value(
+                            obj._tile_device,
+                            "tileProgrammingState",
+                            "Synchronised",
+                            lookahead=5,
+                        )
+                    else:
+                        obj._tile_device.Initialise()
+                        AttributeWaiter(timeout=30).wait_for_value(
+                            obj._tile_device,
+                            "tileProgrammingState",
+                            "Synchronised",
+                            lookahead=5,
+                        )
             case _:
                 raise NotImplementedError("Not yet able to drive TPM to this state.")
 

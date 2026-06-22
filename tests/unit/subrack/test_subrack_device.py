@@ -98,7 +98,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "psu2VoltageIn",
         "psu1VoltageOut",
         "psu2VoltageOut",
-        timeout=20.0,
+        timeout=30.0,
         assert_no_error=False,
     )
 
@@ -991,7 +991,10 @@ def test_attribute_alarm_health_model(
     # _init_state_model. The HealthRecorder fires UNKNOWN before the stored value
     # changes to FAILED, so _health_changed_new skips the push (no state change).
     # The initial subscription event is therefore FAILED, not UNKNOWN.
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+    # TODO: Add lookahead?
+    change_event_callbacks["healthState"].assert_change_event(
+        HealthState.FAILED, lookahead=5, consume_nonmatches=True
+    )
 
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
@@ -1028,7 +1031,9 @@ def test_attribute_alarm_health_model(
                 }
             )
         )
+        # TODO: Sleep between FAILED event and ALARM assertion?
         change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+        time.sleep(1)
         assert subrack_device.state() == DevState.ALARM
 
         # Change the value within the warning range

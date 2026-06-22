@@ -69,19 +69,19 @@ def subrack_driver_fixture(
     logger: logging.Logger,
     subrack_client: Any,
     callbacks: MockCallableGroup,
-) -> SubrackDriver:
+) -> Iterator[SubrackDriver]:
     """
-    Return a subrack driver, configured to talk to a running subrack server.
+    Yield a subrack driver, configured to talk to a running subrack server.
 
     :param subrack_address: the host and port of the subrack
     :param logger: the logger to be used by this object.
     :param subrack_client: a subrack client.
     :param callbacks: dictionary of driver callbacks
 
-    :return: a subrack driver.
+    :yields: a subrack driver.
     """
     subrack_ip, subrack_port = subrack_address
-    return SubrackDriver(
+    driver = SubrackDriver(
         subrack_ip,
         subrack_port,
         logger,
@@ -90,6 +90,10 @@ def subrack_driver_fixture(
         update_rate=1.0,
         _subrack_client=subrack_client,
     )
+    yield driver
+    # SubrackDriver is a PollingComponentManager, and its cleanup()
+    # must be called in order to stop the polling thread from lingering.
+    driver.cleanup()
 
 
 @pytest.fixture(name="subrack_component_manager")

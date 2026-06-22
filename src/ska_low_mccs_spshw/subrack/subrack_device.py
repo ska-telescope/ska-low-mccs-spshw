@@ -1531,15 +1531,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                         e,
                         exc_info=True,
                     )
-                except Exception as e:  # pylint: disable=broad-exception-caught
-                    self.logger.warning(
-                        "Failed to push Tango events for "
-                        "attribute '%s' with value '%s': %s",
-                        tango_attribute_name,
-                        value,
-                        e,
-                        exc_info=True,
-                    )
             else:
                 special_update_method(value)
 

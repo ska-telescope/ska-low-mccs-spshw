@@ -700,9 +700,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "pointing_delays": "pointingDelays",
             "dst_ip_40g_fpga1": "dstip40gfpga1",
             "dst_ip_40g_fpga2": "dstip40gfpga2",
-            "subrack_current": "subrackCurrent",
-            "subrack_power": "subrackPower",
-            "subrack_voltage": "subrackVoltage",
+            "current_draw": "currentDraw",
+            "power_draw": "powerDraw",
+            "voltage_draw": "voltageDraw",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -5335,14 +5335,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=10.53,
         abs_change=0.1,
     )
-    def subrackCurrent(self: MccsTile) -> float | None:
+    def currentDraw(self: MccsTile) -> float | None:
         """
         Get the subrack current.
 
         :return: The subrack current.
 
         """
-        return self._attribute_state["subrackCurrent"].read()
+        return self._attribute_state["currentDraw"].read()
 
     @attribute(
         dtype="DevFloat",
@@ -5351,14 +5351,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=120.0,
         abs_change=0.1,
     )
-    def subrackPower(self: MccsTile) -> float | None:
+    def powerDraw(self: MccsTile) -> float | None:
         """
         Get the subrack power.
 
         :return: The subrack power.
 
         """
-        return self._attribute_state["subrackPower"].read()
+        return self._attribute_state["powerDraw"].read()
 
     @attribute(
         dtype="DevFloat",
@@ -5367,14 +5367,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=12.6,
         abs_change=0.1,
     )
-    def subrackVoltage(self: MccsTile) -> float | None:
+    def voltageDraw(self: MccsTile) -> float | None:
         """
         Get the subrack voltage.
 
         :return: The subrack voltage.
 
         """
-        return self._attribute_state["subrackVoltage"].read()
+        return self._attribute_state["voltageDraw"].read()
 
     # --------
     # Commands

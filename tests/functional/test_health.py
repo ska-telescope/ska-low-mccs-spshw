@@ -606,9 +606,9 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # the tile device to ensure a failure
     for tile in station_devices["Tiles"]:
         if tile.useAttributesForHealth:
-            update_tile_attribute_config(tile, "subrackCurrent", 1, 0)
-            update_tile_attribute_config(tile, "subrackVoltage", 1, 0)
-            update_tile_attribute_config(tile, "subrackPower", 1, 0)
+            update_tile_attribute_config(tile, "currentDraw", 1, 0)
+            update_tile_attribute_config(tile, "voltageDraw", 1, 0)
+            update_tile_attribute_config(tile, "powerDraw", 1, 0)
         else:
             # Set the original params
             original_params[tile] = tile.healthModelParams
@@ -638,7 +638,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # Reset alarm thresholds to defaults
     for tile in station_devices["Tiles"]:
         if tile.useAttributesForHealth:
-            for attr_name in ["subrackCurrent", "subrackVoltage", "subrackPower"]:
+            for attr_name in ["currentDraw", "voltageDraw", "powerDraw"]:
                 reset_attribute_configs["tile"](tile, attr_name)
         else:
             tile.healthModelParams = original_params[tile]

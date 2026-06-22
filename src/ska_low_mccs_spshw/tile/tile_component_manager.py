@@ -1172,40 +1172,13 @@ class TileComponentManager(
             # Check the event name and handle the corresponding attribute update
             match event_name:
                 case "tpmCurrents":
-                    self._handle_tpm_current_changed(tpm_value)
+                    self._update_attribute_callback(current_draw=tpm_value)
                 case "tpmPowers":
-                    self._handle_tpm_power_changed(tpm_value)
+                    self._update_attribute_callback(power_draw=tpm_value)
                 case "tpmVoltages":
-                    self._handle_tpm_voltage_changed(tpm_value)
+                    self._update_attribute_callback(voltage_draw=tpm_value)
                 case _:
                     raise ValueError(get_unknown_event_name_message(event_name))
-
-    def _handle_tpm_current_changed(self, current: float) -> None:
-        """
-        Handle change in tpm current, as reported by subrack.
-
-        :param current: The tpm current.
-
-        """
-        self._update_attribute_callback(subrack_current=current)
-
-    def _handle_tpm_power_changed(self, power: float) -> None:
-        """
-        Handle change in tpm power, as reported by subrack.
-
-        :param power: The tpm power.
-
-        """
-        self._update_attribute_callback(subrack_power=power)
-
-    def _handle_tpm_voltage_changed(self, voltage: float) -> None:
-        """
-        Handle change in tpm voltage, as reported by subrack.
-
-        :param voltage: The tpm voltage.
-
-        """
-        self._update_attribute_callback(subrack_voltage=voltage)
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

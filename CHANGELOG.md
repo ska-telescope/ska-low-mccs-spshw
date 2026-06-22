@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-641] Fix type being pushed. It appears on pytango 10.3.0 (and before, unsure at what version this appeared) that pushing None in a list is invalid. Instead you must push nan.
+* [THORN-641] Clean up Queued to Queued invalid transition logs.
+
 ## 12.2.2
 
 * [THORN-157] Fix SpsStation.HealthState under adminmode switches.

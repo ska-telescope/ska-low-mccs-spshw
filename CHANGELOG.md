@@ -1,5 +1,9 @@
 # Version History
 
+## 12.2.2
+
+* [THORN-157] Fix SpsStation.HealthState under adminmode switches.
+
 ## 12.2.1
 
 * [SKB-1399] Fix bug in MccsSubrack leading to incorrect reporting of LRC results.

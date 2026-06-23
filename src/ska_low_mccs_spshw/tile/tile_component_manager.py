@@ -1011,6 +1011,9 @@ class TileComponentManager(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
+            # Fetch initial values from subrack attributes
+            self._fetch_initial_subrack_values()
+
             # Add callbacks for subrack attribute change events
             self._add_subrack_change_event_callbacks()
 
@@ -1026,6 +1029,31 @@ class TileComponentManager(
             }
             for attr, func in callbacks.items():
                 self._subrack_proxy.add_change_event_callback(attr, func)
+
+    def _fetch_initial_subrack_values(self) -> None:
+        """Fetch initial values from subrack and update tile attributes."""
+        if self._subrack_proxy:
+            # Read initial values from subrack
+            currents = self._subrack_proxy.tpmCurrents
+            powers = self._subrack_proxy.tpmPowers
+            voltages = self._subrack_proxy.tpmVoltages
+
+            # Get the attributes to update
+            attributes_to_update = {}
+            if currents is not None and len(currents) == 8:
+                attributes_to_update["current_draw"] = currents[
+                    self._subrack_tpm_id - 1
+                ]
+            if powers is not None and len(powers) == 8:
+                attributes_to_update["power_draw"] = powers[self._subrack_tpm_id - 1]
+            if voltages is not None and len(voltages) == 8:
+                attributes_to_update["voltage_draw"] = voltages[
+                    self._subrack_tpm_id - 1
+                ]
+
+            # Update the attributes
+            if len(attributes_to_update) > 0:
+                self._update_attribute_callback(**attributes_to_update)
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """

@@ -189,7 +189,7 @@ class SubrackHealthRules(HealthRules):
         Check the difference in current across all devices in the subrack.
 
         This makes sure that all the currents are adding up to give
-        rougly the same value and we're not losing power somewhere.
+        roughly the same value and we're not losing power somewhere.
 
         :param board_currents: The currents of the boards.
         :param power_supply_currents: The currents of the power supplies.
@@ -299,6 +299,65 @@ class SubrackHealthRules(HealthRules):
 
         return has_failed, report
 
+    def _check_individual_psu_load(
+        self: SubrackHealthRules, psu_loads: list[float], rule_str: str
+    ) -> tuple[bool, str]:
+        """
+        Check whether any PSU is overloaded.
+
+        :param psu_loads: Fractional loading on each PSU.
+        :param rule_str: The type of error threshold to be checking against.
+
+        :return: True if any of the thresholds are breached, along with a text report.
+        """
+        has_failed = False
+        report = ""
+        for psu_id, psu_load in enumerate(psu_loads, start=1):
+            loading_threshold = self._thresholds[f"{rule_str}psu_load"]
+            if psu_load > loading_threshold:
+                has_failed = True
+                report += f"PSU{psu_id}'s load is over {loading_threshold}, "
+
+        return has_failed, report
+
+    def _check_for_dead_psus(
+        self: SubrackHealthRules,
+        power_supply_present: list[bool],
+        power_supply_voltages: list[float],
+        power_supply_voltages_in: list[float],
+        rule_str: str,
+    ) -> tuple[list[bool], str]:
+        """
+        Check whether any or both PSUs are dead.
+
+        :param power_supply_present: Whether or not a PSU is connected to this socket.
+        :param power_supply_voltages: Voltage supplied by PSU.
+        :param power_supply_voltages_in: Voltage received by PSU.
+        :param rule_str: The type of error threshold to be checking against.
+
+        :return: True if any of the thresholds are breached, along with a text report.
+        """
+        report = ""
+        psu_dead = [False, False]
+        for psu_id, (psu_present, psu_v_out, psu_v_in) in enumerate(
+            zip(power_supply_present, power_supply_voltages, power_supply_voltages_in),
+            start=1,
+        ):
+            if not psu_present:
+                continue
+            # TODO: Confirm if this is necessary.
+            # Comparison to 1.0 instead of 0.0 as buffer for any noise on the signal.
+            if psu_v_out < 1.0 < psu_v_in:
+                # if present and voltage in but no voltage out then psu_dead
+                # Nominal V_in = 230V, Nominal V_out = 12V.
+                psu_dead[psu_id - 1] = True
+                report += (
+                    f"PSU{psu_id} is receiving voltage but not supplying any. "
+                    "Suspected defective PSU. "
+                )
+
+        return psu_dead, report
+
     def unknown_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],
@@ -402,6 +461,24 @@ class SubrackHealthRules(HealthRules):
                 f"{self._thresholds['clock_presence']}. "
             )
 
+        psus_load_failed, psus_load_report = self._check_individual_psu_load(
+            state["power_supply_loads"],
+            fail_str,
+        )
+        if psus_load_failed:
+            has_failed = True
+            report += psus_load_report
+
+        psus_failed, dead_psus_report = self._check_for_dead_psus(
+            state["power_supply_present"],
+            state["power_supply_voltages"],
+            state["power_supply_voltages_in"],
+            fail_str,
+        )
+        if all(psus_failed):
+            has_failed = True
+            report += dead_psus_report
+
         return has_failed, report
 
     # pylint: disable=too-many-locals
@@ -472,6 +549,23 @@ class SubrackHealthRules(HealthRules):
             has_degraded = True
             report += current_report
 
+        psus_load_degraded, psus_report = self._check_individual_psu_load(
+            state["power_supply_loads"], fail_str
+        )
+        if psus_load_degraded:
+            has_degraded = True
+            report += psus_report
+
+        psus_defective, dead_psus_report = self._check_for_dead_psus(
+            state["power_supply_present"],
+            state["power_supply_voltages"],
+            state["power_supply_voltages_in"],
+            fail_str,
+        )
+        if any(psus_defective):
+            has_degraded = True
+            report += dead_psus_report
+
         return has_degraded, report
 
     def healthy_rule(  # type: ignore[override]
@@ -537,4 +631,6 @@ class SubrackHealthRules(HealthRules):
             "degraded_fraction_tpm_unknown": 0.0,  # fraction allowed before degraded
             "failed_fraction_tpm_unknown": 0.5,  # fraction allowed before failed
             "clock_presence": [],
+            "degraded_psu_load": 0.50,
+            "failed_psu_load": 0.95,
         }

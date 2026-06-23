@@ -1032,6 +1032,10 @@ class TileComponentManager(
 
     def _fetch_initial_subrack_values(self) -> None:
         """Fetch initial values from subrack and update tile attributes."""
+
+        def check_value(value: None | list[float]) -> bool:
+            return value is not None and isinstance(value, list) and len(value) == 8
+
         if self._subrack_proxy:
             # Read initial values from subrack
             currents = self._subrack_proxy.tpmCurrents
@@ -1039,21 +1043,17 @@ class TileComponentManager(
             voltages = self._subrack_proxy.tpmVoltages
 
             # Get the attributes to update
-            attributes_to_update = {}
-            if currents is not None and len(currents) == 8:
-                attributes_to_update["current_draw"] = currents[
-                    self._subrack_tpm_id - 1
-                ]
-            if powers is not None and len(powers) == 8:
-                attributes_to_update["power_draw"] = powers[self._subrack_tpm_id - 1]
-            if voltages is not None and len(voltages) == 8:
-                attributes_to_update["voltage_draw"] = voltages[
-                    self._subrack_tpm_id - 1
-                ]
+            attributes = {}
+            if check_value(currents):
+                attributes["current_draw"] = currents[self._subrack_tpm_id - 1]
+            if check_value(powers):
+                attributes["power_draw"] = powers[self._subrack_tpm_id - 1]
+            if check_value(voltages):
+                attributes["voltage_draw"] = voltages[self._subrack_tpm_id - 1]
 
             # Update the attributes
-            if len(attributes_to_update) > 0:
-                self._update_attribute_callback(**attributes_to_update)
+            if len(attributes) > 0:
+                self._update_attribute_callback(**attributes)
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """

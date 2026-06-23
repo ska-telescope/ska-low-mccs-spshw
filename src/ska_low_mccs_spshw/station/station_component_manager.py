@@ -1029,6 +1029,13 @@ class SpsStationComponentManager(
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
+        # Reset cached validation state so that tile events received after
+        # reconnection will re-fire the state callbacks even when the values
+        # have not changed from the pre-disconnect values.  Without this,
+        # health_rollup components that were reset to UNKNOWN by
+        # HealthStateRollup.online = True would never recover.
+        self._beamformer_daisy_chain_valid = None
+        self._final_tile_beamformer_flagged_count_ok = None
         self._communication_manager.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
@@ -2513,6 +2520,32 @@ class SpsStationComponentManager(
         )
         if self._component_state_callback:
             self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
+
+    @property
+    def beamformer_daisy_chain_valid(
+        self: SpsStationComponentManager,
+    ) -> Optional[bool]:
+        """
+        Return whether the station beamformer daisy chain is correctly configured.
+
+        None until all non-last tiles have reported their destination IPs.
+
+        :return: True if correctly configured, False if misconfigured, None if unknown.
+        """
+        return self._beamformer_daisy_chain_valid
+
+    @property
+    def final_tile_beamformer_flagged_count_ok(
+        self: SpsStationComponentManager,
+    ) -> Optional[bool]:
+        """
+        Return whether the final tile's station beamformer flagged count is zero.
+
+        None until the final tile has reported its flagged packet counts.
+
+        :return: True if both FPGA counts are zero, False otherwise, None if unknown.
+        """
+        return self._final_tile_beamformer_flagged_count_ok
 
     @property
     def pps_delay_spread(self: SpsStationComponentManager) -> int:

@@ -993,12 +993,12 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Test that None voltages from a powered-off TPM are replaced with 0.0.
+    Test that None voltages from a powered-off TPM are replaced with np.nan.
 
     The real SMB firmware returns null (None in Python) for tpm_voltages,
     tpm_currents, and tpm_powers when a TPM slot is powered off but present.
     Tango cannot push a list containing None as a DevFloat array, so the
-    device must sanitise these values to 0.0 before pushing events and before
+    device must sanitise these values to np.nan before pushing events and before
     storing in _hardware_attributes.
 
     Regression test for: TypeError pushing tpmVoltages after PowerOffTpm.
@@ -1042,7 +1042,7 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     subrack_simulator.simulate_attribute("tpm_voltages", voltages_with_none)
     subrack_simulator.simulate_attribute("tpm_currents", currents_with_none)
 
-    # The device must not crash; None elements must be replaced with 0.0.
+    # The device must not crash; None elements must be replaced with np.nan.
     expected_voltages = np.array(
         [pytest.approx(v) if v is not None else Anything for v in voltages_with_none]
     )
@@ -1057,7 +1057,7 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
         expected_currents.tolist()
     )
 
-    # Verify that a direct attribute read also returns 0.0 for the None slot,
+    # Verify that a direct attribute read also returns np.nan for the None slot,
     # not None (which would fail any downstream numeric consumer).
     voltages = list(subrack_device.tpmVoltages)
     assert math.isnan(voltages[0])

@@ -1509,7 +1509,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 tango_attribute_name = self._ATTRIBUTE_MAP[key]
                 if isinstance(value, list) and any(v is None for v in value):
                     # Hardware returns None for powered-off TPM slots; replace with
-                    # 0.0 so Tango receives a valid numeric array.
+                    # np.nan so Tango receives a valid numeric array.
                     value = np.array([v if v is not None else np.nan for v in value])
                 self._hardware_attributes[tango_attribute_name] = value
                 if tango_attribute_name == "subrackBoardInfo":

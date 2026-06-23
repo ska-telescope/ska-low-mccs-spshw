@@ -1158,10 +1158,10 @@ class TileComponentManager(
         """
 
         def get_unknown_event_name_message(event_name: str) -> str:
-            names = ["tpmCurrents", "tpmPowers", "tpmVoltages"]
+            names = ["tpmcurrents", "tpmpowers", "tpmvoltages"]
             return f"Expected one of {names} for event_name, got '{event_name}'"
 
-        if event_value:
+        if event_value is not None:
             # Ensure we have 8 values in the list
             if len(event_value) != 8:
                 raise ValueError(f"Expected exactly 8 values, got {len(event_value)}")
@@ -1169,16 +1169,23 @@ class TileComponentManager(
             # Get the tpm value
             tpm_value = event_value[self._subrack_tpm_id - 1]
 
+            # Make event name lower case
+            event_name = event_name.lower()
+
             # Check the event name and handle the corresponding attribute update
             match event_name:
-                case "tpmCurrents":
+                case "tpmcurrents":
                     self._update_attribute_callback(current_draw=tpm_value)
-                case "tpmPowers":
+                case "tpmpowers":
                     self._update_attribute_callback(power_draw=tpm_value)
-                case "tpmVoltages":
+                case "tpmvoltages":
                     self._update_attribute_callback(voltage_draw=tpm_value)
                 case _:
                     raise ValueError(get_unknown_event_name_message(event_name))
+        elif event_quality != tango.AttrQuality.ATTR_VALID:
+            self.logger.warning(
+                f"Received {event_name} event with invalid quality: {event_quality}"
+            )
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

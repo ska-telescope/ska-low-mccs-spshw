@@ -1145,15 +1145,17 @@ class TileComponentManager(
         """
         Handle change in tpm values, as reported by subrack.
 
-        This is a callback that is triggered by an event subscription
-        on the subrack device.
+        This callback is triggered by event subscriptions on subrack TPM
+        attributes. Expected event_value format: list[float] with exactly 8
+        values (one per TPM bay). The tile extracts the value corresponding to
+        its subrack_tpm_id position.
 
         :param event_name: name of the event; will always be one of
             "tpmCurrents", "tpmPowers" or "tpmVoltages" for this callback
-        :param event_value: the new attribute value
+        :param event_value: list of 8 float values representing each TPM bay's metric
         :param event_quality: the quality of the change event
 
-        :raises ValueError: If the number of event values is not 8
+        :raises ValueError: If event_value doesn't contain exactly 8 values
 
         """
 

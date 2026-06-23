@@ -14,6 +14,7 @@ import importlib
 import json
 import sys
 import threading
+from collections.abc import Sequence
 from typing import Any, Final, Optional
 
 import ska_tango_base as stb
@@ -1507,6 +1508,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             special_update_method = getattr(self, f"_update_{key}", None)
             if special_update_method is None:
                 tango_attribute_name = self._ATTRIBUTE_MAP[key]
+                if tango_attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+                    if isinstance(value, Sequence):
+                        # Hardware returns None for powered-off TPM slots; replace with
+                        # np.nan so Tango receives a valid numeric array.
+                        value = [float("nan") if v is None else v for v in value]
                 self._hardware_attributes[tango_attribute_name] = value
                 if tango_attribute_name == "subrackBoardInfo":
                     if isinstance(value, dict):

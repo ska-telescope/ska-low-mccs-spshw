@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the subrack component manager."""
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -465,7 +466,6 @@ class TestOn:
         subrack_component_manager.turn_on_tpms(callbacks["task"])
         tpm_on_off = [True for _ in tpm_on_off]
 
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
         callbacks["task"].assert_call(

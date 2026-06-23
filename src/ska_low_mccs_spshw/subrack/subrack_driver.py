@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-lines
+#
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -233,40 +233,36 @@ class SubrackDriver(
         self: SubrackDriver,
         port_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a pdu port on.
 
         :param port_number: (one-based) number of the pdu port to turn on.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._turn_off_on_pdu_port(port_number, True, task_callback)
+        self._turn_off_on_pdu_port(port_number, True, task_callback)
 
     def power_pdu_port_off(
         self: SubrackDriver,
         port_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a pdu port off.
 
         :param port_number: (one-based) number of the pdu port to turn off.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._turn_off_on_pdu_port(port_number, False, task_callback)
+        self._turn_off_on_pdu_port(port_number, False, task_callback)
 
     def _turn_off_on_pdu_port(
         self: SubrackDriver,
         pdu_port_number: int,
         is_turn_on: bool,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a pdu port off or on.
 
@@ -276,8 +272,6 @@ class SubrackDriver(
             the port will be turned on. If false, it will be turned off.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
         with self._write_lock:
             if pdu_port_number == 0:
@@ -306,81 +300,62 @@ class SubrackDriver(
                 task_callback,
             )
 
-            off_on = "on" if is_turn_on else "off"
-
-            if task_callback is not None:
-                task_callback(status=TaskStatus.QUEUED)
-
-            if pdu_port_number == 0:
-                message = f"TPMs will be turned {off_on} at next poll."
-            else:
-                message = f"TPM {pdu_port_number} will be turned {off_on} at next poll."
-            return (TaskStatus.QUEUED, message)
-
     def turn_off_tpm(
         self: SubrackDriver,
         tpm_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a TPM off.
 
         :param tpm_number: (one-based) number of the TPM to turn off.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._turn_off_on_tpm(tpm_number, False, task_callback)
+        self._turn_off_on_tpm(tpm_number, False, task_callback)
 
     def turn_on_tpm(
         self: SubrackDriver,
         tpm_number: int,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a TPM on.
 
         :param tpm_number: (one-based) number of the TPM to turn on.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._turn_off_on_tpm(tpm_number, True, task_callback)
+        self._turn_off_on_tpm(tpm_number, True, task_callback)
 
     def turn_off_tpms(
         self: SubrackDriver, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn all TPMs off.
 
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._turn_off_on_tpm(0, False, task_callback)
+        self._turn_off_on_tpm(0, False, task_callback)
 
     def turn_on_tpms(
         self: SubrackDriver, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn all TPMs on.
 
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._turn_off_on_tpm(0, True, task_callback)
+        self._turn_off_on_tpm(0, True, task_callback)
 
     def _turn_off_on_tpm(
         self: SubrackDriver,
         tpm_number: int,
         is_turn_on: bool,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Turn a TPM off or on.
 
@@ -390,8 +365,6 @@ class SubrackDriver(
             the TPM will be turned on. If false, it will be turned off.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
         # TODO: Refuse to turn on a TPM that is not present.
         # TODO: Should we also refuse to turn on a TPM that is already on? In
@@ -427,43 +400,28 @@ class SubrackDriver(
                 task_callback,
             )
 
-            off_on = "on" if is_turn_on else "off"
-
-            if task_callback is not None:
-                task_callback(status=TaskStatus.QUEUED)
-
-            if tpm_number == 0:
-                message = f"TPMs will be turned {off_on} at next poll."
-            else:
-                message = f"TPM {tpm_number} will be turned {off_on} at next poll."
-            return (TaskStatus.QUEUED, message)
-
     def get_health_status(
         self: SubrackDriver, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Read all the monitoring points available in health status.
 
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
-        return self._get_health_status(task_callback=task_callback)
+        self._get_health_status(task_callback=task_callback)
 
     def _get_health_status(
         self: SubrackDriver,
         monitoring_points: Optional[str] = None,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Read a group of monitoring points.
 
         :param monitoring_points: the group monitoring points to read
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
         # Using "" will return all monitoring points
         if monitoring_points is None:
@@ -478,21 +436,6 @@ class SubrackDriver(
                 task_callback,
             )
 
-            if task_callback is not None:
-                task_callback(status=TaskStatus.QUEUED)
-
-            if monitoring_points == "":
-                message = (
-                    "All monitoring points in health status will be read at next"
-                    " poll."
-                )
-            else:
-                message = (
-                    f"{monitoring_points} in health status will be read at next"
-                    " poll."
-                )
-            return (TaskStatus.QUEUED, message)
-
     def read_health_status(self: SubrackDriver) -> dict:
         """
         Read all the monitoring points available in health status.
@@ -506,7 +449,7 @@ class SubrackDriver(
         fan_number: int,
         speed: float,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Set the target speed of a subrack fan.
 
@@ -514,8 +457,6 @@ class SubrackDriver(
         :param speed: speed setting for the fan.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
         key = f"subrack_fan_{fan_number}_speed"
         with self._write_lock:
@@ -534,19 +475,13 @@ class SubrackDriver(
                 f"{fan_number},{speed}",
                 task_callback,
             )
-        if task_callback is not None:
-            task_callback(status=TaskStatus.QUEUED)
-        return (
-            TaskStatus.QUEUED,
-            f"Subrack fan {fan_number} will be set to speed {speed} at next poll.",
-        )
 
     def set_subrack_fan_mode(
         self: SubrackDriver,
         fan_number: int,
         mode: FanMode,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Set the target speed mode of a subrack fan.
 
@@ -554,8 +489,6 @@ class SubrackDriver(
         :param mode: speed mode setting for the fan.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
         key = f"subrack_fan_{fan_number}_mode"
         with self._write_lock:
@@ -574,20 +507,13 @@ class SubrackDriver(
                 f"{fan_number},{mode.value}",
                 task_callback,
             )
-        if task_callback is not None:
-            task_callback(status=TaskStatus.QUEUED)
-        return (
-            TaskStatus.QUEUED,
-            f"Subrack fan {fan_number} will be set to speed mode {mode.value} at next "
-            "poll.",
-        )
 
     def set_power_supply_fan_speed(
         self: SubrackDriver,
         fan_number: int,
         speed: float,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+    ) -> None:
         """
         Set the target speed of a power supply fan.
 
@@ -595,8 +521,6 @@ class SubrackDriver(
         :param speed: speed setting for the fan.
         :param task_callback: callback to be called when the status of
             the command changes
-
-        :return: the task status and a human-readable status message
         """
         key = f"power_supply_fan_{fan_number}_speed"
         with self._write_lock:
@@ -615,12 +539,6 @@ class SubrackDriver(
                 f"{fan_number},{speed}",
                 task_callback,
             )
-        if task_callback is not None:
-            task_callback(status=TaskStatus.QUEUED)
-        return (
-            TaskStatus.QUEUED,
-            f"Power supply fan {fan_number} will be set to speed {speed} at next poll.",
-        )
 
     def write_attribute(self: SubrackDriver, **kwargs: Any) -> None:
         """

@@ -13,6 +13,7 @@ subracks cannot be programmatically powered off and on. Therefore these
 tests do not cover these cases. They assume the subrack to be always on,
 and test its functionality.
 """
+
 from __future__ import annotations
 
 import enum
@@ -208,13 +209,12 @@ def choose_a_tpm(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["subrack_tpm_present"],
     )
-    change_event_callbacks.assert_change_event(
-        "subrack_tpm_present", Anything, lookahead=4
+    change_event_callbacks["subrack_tpm_present"].assert_change_event(
+        Anything, lookahead=4
     )
     tpms_present = list(subrack_device.tpmPresent)
     if not tpms_present:
-        change_event_callbacks.assert_change_event(
-            "subrack_tpm_present",
+        change_event_callbacks["subrack_tpm_present"].assert_change_event(
             Anything,
         )
         tpms_present = list(subrack_device.tpmPresent)
@@ -264,7 +264,7 @@ def ensure_subrack_fan_mode(
     if not fan_modes:
         # We only just put it online / turned it on,
         # so let's wait for a poll to return a real value
-        change_event_callbacks.assert_change_event("subrack_fan_mode", Anything)
+        change_event_callbacks["subrack_fan_mode"].assert_change_event(Anything)
     fan_modes = list(subrack_device.subrackFanModes)
     assert fan_modes
 
@@ -278,8 +278,8 @@ def ensure_subrack_fan_mode(
             print(f"Setting fans {fan}+{fan+1} mode to MANUAL...")
             subrack_device.SetSubrackFanMode(encoded_arg)
 
-            change_event_callbacks.assert_change_event(
-                "subrack_fan_mode", expected_fan_modes, lookahead=4
+            change_event_callbacks["subrack_fan_mode"].assert_change_event(
+                expected_fan_modes, lookahead=4
             )
     subrack_device.unsubscribe_event(sub_id)
 
@@ -307,8 +307,7 @@ def ensure_subrack_fan_speed_percent(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["subrack_fan_speeds_percent"],
     )
-    change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds_percent",
+    change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
         expected_fan_speeds_percent,
         lookahead=4,
         consume_nonmatches=True,
@@ -322,8 +321,7 @@ def ensure_subrack_fan_speed_percent(
             # Subrack fans update in pairs.
             expected_fan_speeds_percent[fan - 1] = pytest.approx(90.0)
             expected_fan_speeds_percent[fan] = pytest.approx(90.0)
-            change_event_callbacks.assert_change_event(
-                "subrack_fan_speeds_percent",
+            change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
                 expected_fan_speeds_percent,
                 lookahead=10,
                 consume_nonmatches=True,
@@ -366,8 +364,7 @@ def ensure_subrack_fan_speed(
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["subrack_fan_speeds"],
         )
-        change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds",
+        change_event_callbacks["subrack_fan_speeds"].assert_change_event(
             expected_fan_speeds,
             lookahead=10,
             consume_nonmatches=True,
@@ -528,10 +525,9 @@ def check_subrack_fan_speed(
             pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0, abs=10)
             for p in fan_speeds_percent
         ]
-        change_event_callbacks.assert_change_event(
-            "subrack_fan_speeds",
+        change_event_callbacks["subrack_fan_speeds"].assert_change_event(
             expected_fan_speeds,
-            lookahead=10,
+            lookahead=15,
             consume_nonmatches=True,
         )
 

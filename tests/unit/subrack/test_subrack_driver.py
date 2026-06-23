@@ -10,7 +10,7 @@
 from typing import Any
 
 import pytest
-from ska_control_model import CommunicationStatus, PowerState, TaskStatus
+from ska_control_model import CommunicationStatus, PowerState
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -294,8 +294,7 @@ def test_get_health_status(
     assert not subrack_driver._poll_commands
 
     # and the health status to be empty
-    status, message = subrack_driver.get_health_status()
-    assert status == TaskStatus.QUEUED
+    subrack_driver.get_health_status()
     assert subrack_driver.read_health_status() == {}
 
     # Case 2: bios is current enough, health status is polled
@@ -312,8 +311,7 @@ def test_get_health_status(
     subrack_driver._check_bios_version()
     assert subrack_driver._poll_commands
     # and for the health status to have all the values
-    status, message = subrack_driver.get_health_status()
-    assert status == TaskStatus.QUEUED
+    subrack_driver.get_health_status()
     assert subrack_driver.read_health_status() == health_status
 
 

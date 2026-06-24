@@ -1037,23 +1037,30 @@ class TileComponentManager(
             return value is not None and isinstance(value, list) and len(value) == 8
 
         if self._subrack_proxy:
-            # Read initial values from subrack
-            currents = self._subrack_proxy.tpmCurrents
-            powers = self._subrack_proxy.tpmPowers
-            voltages = self._subrack_proxy.tpmVoltages
+            try:
+                # Read initial values from subrack
+                currents = self._subrack_proxy.tpmCurrents
+                powers = self._subrack_proxy.tpmPowers
+                voltages = self._subrack_proxy.tpmVoltages
 
-            # Get the attributes to update
-            attributes = {}
-            if check_value(currents):
-                attributes["current_draw"] = currents[self._subrack_tpm_id - 1]
-            if check_value(powers):
-                attributes["power_draw"] = powers[self._subrack_tpm_id - 1]
-            if check_value(voltages):
-                attributes["voltage_draw"] = voltages[self._subrack_tpm_id - 1]
+                # Get the attributes to update
+                attributes = {}
+                if check_value(currents):
+                    attributes["current_draw"] = currents[self._subrack_tpm_id - 1]
+                if check_value(powers):
+                    attributes["power_draw"] = powers[self._subrack_tpm_id - 1]
+                if check_value(voltages):
+                    attributes["voltage_draw"] = voltages[self._subrack_tpm_id - 1]
 
-            # Update the attributes
-            if len(attributes) > 0:
-                self._update_attribute_callback(**attributes)
+                # Update the attributes
+                if len(attributes) > 0:
+                    self._update_attribute_callback(**attributes)
+            except (
+                tango.ConnectionFailed,
+                tango.DevFailed,
+                tango.CommunicationFailed,
+            ):
+                pass
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """

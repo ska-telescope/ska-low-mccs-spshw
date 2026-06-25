@@ -1218,34 +1218,36 @@ class TileComponentManager(
     def fetch_subrack_values(self) -> None:
         """Fetch initial values from subrack and update tile attributes."""
 
-        def check_value(value: None | list[float]) -> bool:
-            return value is not None and isinstance(value, list) and len(value) == 8
+        def get_value(values: list[float] | None) -> float | None:
+            if values is not None:
+                return values[self._subrack_tpm_id - 1]
+            return values
 
-        def read_attribute(attribute: str) -> float | None:
-            result = None
-            if self._subrack_proxy:
-                try:
-                    # Get attribute values
-                    values = self._subrack_proxy.read_attribute(attribute).value
+        # Initialise values
+        current_draw = None
+        power_draw = None
+        voltage_draw = None
 
-                    # Set the value if the value is not None
-                    if values is not None:
-                        result = values[self._subrack_tpm_id - 1]
-                except tango.DevFailed as e:
-                    self.logger.warning(f"Failed to read {attribute}: {e}")
-                except tango.ConnectionFailed:
-                    self.logger.warning("Connection to subrack failed")
-                except TypeError:
-                    self.logger.warning("Subrack attribute not a list")
-                except IndexError:
-                    self.logger.warning("Subrack attribute not of length 8")
-            return result
+        # Try to get the values from the subrack proxy
+        if self._subrack_proxy:
+            try:
+                current_draw = get_value(self._subrack_proxy.tpmCurrents)
+                power_draw = get_value(self._subrack_proxy.tpmPowers)
+                voltage_draw = get_value(self._subrack_proxy.tpmVoltages)
+            except tango.DevFailed as e:
+                self.logger.warning(f"Failed to read attributes: {e}")
+            except tango.ConnectionFailed:
+                self.logger.warning("Connection to subrack failed")
+            except TypeError:
+                self.logger.warning("Subrack attributes not lists")
+            except IndexError:
+                self.logger.warning("Subrack attributes not of length 8")
 
         # Try to read the subrack attributes
         self._update_attribute_callback(
-            current_draw=read_attribute("tpmCurrents"),
-            power_draw=read_attribute("tpmPowers"),
-            voltage_draw=read_attribute("tpmVoltages"),
+            current_draw=current_draw,
+            power_draw=power_draw,
+            voltage_draw=voltage_draw,
         )
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:

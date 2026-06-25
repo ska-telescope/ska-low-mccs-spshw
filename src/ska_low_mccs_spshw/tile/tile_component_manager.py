@@ -1146,14 +1146,16 @@ class TileComponentManager(
         """
         Handle change subrack state, as reported by subrack.
 
+        This callback is triggered when the subrack's state changes.
+        When the state changes, subrack values may transition between
+        valid/invalid states, so we need to manually fetch the current values
+        since attribute change events are not pushed for state transitions.
+
         :param event_name: name of the event; will always be "state"
-        :param event_value: the current subrack state
+        :param event_value: the current subrack state (e.g., "ONLINE", "OFFLINE")
         :param event_quality: the quality of the change event
 
         """
-        # Wait a second before getting subrack values
-        time.sleep(1)
-
         # If the subrack state changes then the subrack values change to/from
         # INVALID but an attribute event will not be pushed so we need to
         # subscribe to the state change event and fetch the subrack values
@@ -1181,21 +1183,22 @@ class TileComponentManager(
         :param event_value: list of 8 float values representing each TPM bay's metric
         :param event_quality: the quality of the change event
 
-        :raises ValueError: If event_value doesn't contain exactly 8 values
-
         """
 
         def get_unknown_event_name_message(event_name: str) -> str:
             names = ["tpmcurrents", "tpmpowers", "tpmvoltages"]
             return f"Expected one of {names} for event_name, got '{event_name}'"
 
-        if event_value is not None:
-            # Ensure we have 8 values in the list
-            if len(event_value) != 8:
-                raise ValueError(f"Expected exactly 8 values, got {len(event_value)}")
-
-            # Get the tpm value
-            tpm_value = event_value[self._subrack_tpm_id - 1]
+        if event_quality != tango.AttrQuality.ATTR_INVALID:
+            if event_value is not None:
+                if len(event_value) != 8:
+                    self.logger.error(
+                        f"Expected exactly 8 values, got {len(event_value)}"
+                    )
+                    return
+                tpm_value = event_value[self._subrack_tpm_id - 1]
+            else:
+                tpm_value = None
 
             # Make event name lower case
             event_name = event_name.lower()
@@ -1209,8 +1212,8 @@ class TileComponentManager(
                 case "tpmvoltages":
                     self._update_attribute_callback(voltage_draw=tpm_value)
                 case _:
-                    raise ValueError(get_unknown_event_name_message(event_name))
-        elif event_quality != tango.AttrQuality.ATTR_VALID:
+                    self.logger.error(get_unknown_event_name_message(event_name))
+        else:
             self.logger.warning(
                 f"Received {event_name} event with invalid quality: {event_quality}"
             )
@@ -1235,13 +1238,13 @@ class TileComponentManager(
                 power_draw = get_value(self._subrack_proxy.tpmPowers)
                 voltage_draw = get_value(self._subrack_proxy.tpmVoltages)
             except tango.DevFailed as e:
-                self.logger.warning(f"Failed to read attributes: {e}")
+                self.logger.warning(f"Failed to read subrack attributes: {e}")
             except tango.ConnectionFailed as e:
-                self.logger.warning(f"Connection to subrack failed: {e}")
+                self.logger.warning(f"Subrack connection failed: {e}")
             except TypeError as e:
-                self.logger.warning(f"Subrack attributes not lists: {e}")
+                self.logger.warning(f"Subrack attributes have unexpected type: {e}")
             except IndexError as e:
-                self.logger.warning(f"Subrack attributes not correct lengh: {e}")
+                self.logger.warning(f"Subrack attributes have incorrect length: {e}")
 
         # Try to read the subrack attributes
         self._update_attribute_callback(

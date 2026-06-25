@@ -393,19 +393,19 @@ class TestTileComponentManager:
         tile_component_manager._subrack_says_tpm_values_changed(
             "tpmCurrents",
             [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-            tango.EventType.CHANGE_EVENT,
+            tango.AttrQuality.ATTR_VALID,
         )
 
         tile_component_manager._subrack_says_tpm_values_changed(
             "tpmPowers",
             [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8],
-            tango.EventType.CHANGE_EVENT,
+            tango.AttrQuality.ATTR_VALID,
         )
 
         tile_component_manager._subrack_says_tpm_values_changed(
             "tpmVoltages",
             [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8],
-            tango.EventType.CHANGE_EVENT,
+            tango.AttrQuality.ATTR_VALID,
         )
 
         callbacks["attribute_state"].assert_call(current_draw=0.1)

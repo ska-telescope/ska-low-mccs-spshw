@@ -927,6 +927,7 @@ class TestMccsTile:
         software_configuration_attributes: list[str],
         active_read_attributes: list[str],
         change_event_callbacks: MockTangoEventCallbackGroup,
+        mock_subrack_device_proxy: unittest.mock.Mock,
     ) -> None:
         """
         Test attribute quality when marked as invalid.
@@ -1013,26 +1014,16 @@ class TestMccsTile:
             CommunicationStatus.ESTABLISHED
         )
         tile_device.On()
+
+        # Set some mock values for tpm currents, powers and voltages
+        mock_subrack_device_proxy.tpmCurrents = [0.4] * 8
+        mock_subrack_device_proxy.tpmPowers = [12 * 0.4] * 8
+        mock_subrack_device_proxy.tpmVoltages = [12] * 8
         tile_component_manager._subrack_says_tpm_power_changed(
             "tpm1PowerState",
             PowerState.ON,
             tango.AttrQuality.ATTR_VALID,
         )
-        # tile_component_manager._subrack_says_tpm_values_changed(
-        #     "tpmCurrents",
-        #     [10] * 8,
-        #     tango.AttrQuality.ATTR_VALID,
-        # )
-        # tile_component_manager._subrack_says_tpm_values_changed(
-        #     "tpmPowers",
-        #     [100] * 8,
-        #     tango.AttrQuality.ATTR_VALID,
-        # )
-        # tile_component_manager._subrack_says_tpm_values_changed(
-        #     "tpmVoltages",
-        #     [12] * 8,
-        #     tango.AttrQuality.ATTR_VALID,
-        # )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         change_event_callbacks["health_state"].assert_not_called()
@@ -1100,21 +1091,6 @@ class TestMccsTile:
             PowerState.ON,
             EventType.CHANGE_EVENT,
         )
-        # tile_component_manager._subrack_says_tpm_values_changed(
-        #     "tpmCurrents",
-        #     [10] * 8,
-        #     tango.AttrQuality.ATTR_VALID,
-        # )
-        # tile_component_manager._subrack_says_tpm_values_changed(
-        #     "tpmPowers",
-        #     [100] * 8,
-        #     tango.AttrQuality.ATTR_VALID,
-        # )
-        # tile_component_manager._subrack_says_tpm_values_changed(
-        #     "tpmVoltages",
-        #     [12] * 8,
-        #     tango.AttrQuality.ATTR_VALID,
-        # )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
@@ -3532,6 +3508,7 @@ class TestDataBaseInteraction:
         self: TestDataBaseInteraction,
         tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        mock_subrack_device_proxy
     ) -> None:
         """
         Test for healthParams attributes.
@@ -3548,6 +3525,7 @@ class TestDataBaseInteraction:
         change_event_callbacks["state"].assert_change_event(
             attribute_value=DevState.DISABLE
         )
+
         tile_device.adminMode = 0
         change_event_callbacks["state"].assert_change_event(
             attribute_value=DevState.OFF,

@@ -972,6 +972,7 @@ class TestMccsTile:
         :param tile_component_manager: A component manager.
             (Using a TileSimulator)
         :param tile_simulator: The backend TileSimulator.
+        :param mock_subrack_device_proxy: The mock subrack device proxy
         """
         # This latency represents the average time to process the results of a poll.
         # ADR-115 increased this latency from 0.06 -> 0.13
@@ -3508,7 +3509,6 @@ class TestDataBaseInteraction:
         self: TestDataBaseInteraction,
         tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
-        mock_subrack_device_proxy
     ) -> None:
         """
         Test for healthParams attributes.

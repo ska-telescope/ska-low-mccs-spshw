@@ -113,7 +113,7 @@ psi-low-k8s-test:
     paths:
       - "build/"
     reports:
-      junit: build/report.xml
+      junit: build/reports/functional-tests.xml
     when: always
 
 psi-low-xray-publish:

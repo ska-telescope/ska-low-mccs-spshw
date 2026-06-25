@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Any, Callable, Generator
 
 import pytest
+import requests
 import tango
 from pytest_bdd import given, parsers, scenario, scenarios, then, when
 from ska_control_model import AdminMode, HealthState
@@ -88,6 +89,21 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
 
 @scenario(
     "features/health.feature",
+    "Failed when subrack power monitoring point is out of bounds",
+)
+def test_failed_when_subrack_power_monitoring_point_is_out_of_bounds() -> None:
+    """
+    Run the scenario for the subrack power test.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    """
+    pass
+
+
+@scenario(
+    "features/health.feature",
     "Health changes when healthThresholds changes",
 )
 def test_health_changes_when_healththresholds_changes(
@@ -116,6 +132,69 @@ def test_health_changes_when_healththresholds_changes(
     }
     for station in station_devices["Station"]:
         station.healthThresholds = json.dumps(new_health_params)
+
+
+def set_tpm_attribute_in_simulator(
+    host: str, port: int, attribute: str, values: list[float] | None
+) -> None:
+    """
+    Set the TPM attribute.
+
+    :param host: The Tile simulator host.
+    :param port: The Tile simulator port.
+    :param attribute: The attribute name to set.
+    :param values: The values to set for the attribute.
+
+    """
+    assert values is not None and len(values) == 8
+
+    # Create the URL
+    url = f"http://{host}:{port}/get/json.htm"
+
+    # Convert the values list to a JSON string and URL encode it
+    values_json = json.dumps(values)
+
+    # Create parameters
+    params = {"type": "setattribute", "param": attribute, "value": values_json}
+
+    # Make the request
+    response = requests.get(url, params=params)
+
+    # Ensure the response is OK
+    assert response.json().get("status") == "OK"
+
+
+def get_tpm_attribute_from_simulator(
+    host: str, port: int, attribute: str
+) -> list[float]:
+    """
+    Get the TPM attribute from the simulator.
+
+    :param host: The Tile simulator host.
+    :param port: The Tile simulator port.
+    :param attribute: The attribute name to get.
+
+    :returns: The attribute values or None if not found.
+    """
+    # Create the URL
+    url = f"http://{host}:{port}/get/json.htm"
+
+    # Create parameters
+    params = {"type": "getattribute", "param": attribute}
+
+    # Get the response
+    response = requests.get(url, params=params)
+
+    # Get the JSON data
+    result = response.json()
+
+    # Ensure the response is OK
+    assert result.get("status") == "OK"
+
+    # Get the value
+    values = result.get("value")
+    assert values is not None and len(values) == 8
+    return values
 
 
 @pytest.fixture(name="command_info")
@@ -170,6 +249,30 @@ def station_name_fixture(true_context: bool) -> str:
     if not true_context:
         pytest.skip("This needs to be run in a true-context")
     return os.getenv("STATION_LABEL") or "real-daq-1"
+
+
+@pytest.fixture(name="simulator_host")
+def simulator_host_fixture() -> str:
+    """
+    Get the simulator host name from environment variables.
+
+    :returns: The simulator host name.
+    """
+    label = os.getenv("STATION_LABEL") or "real-daq-1"
+    return f"subrack-simulator-{label}-sr1"
+
+
+@pytest.fixture(name="simulator_port")
+def simulator_port_fixture() -> int:
+    """
+    Get the simulator port from environment variables.
+
+    :returns: The simulator port number.
+    """
+    label = (os.getenv("STATION_LABEL") or "REAL_DAQ_1").upper()
+    port = os.getenv(f"SUBRACK_SIMULATOR_{label}_SR1_SERVICE_PORT")
+    assert port is not None
+    return int(port)
 
 
 @pytest.fixture(name="station_devices")
@@ -579,69 +682,53 @@ def subrack_health_params_adjusted_fixture(
 @pytest.fixture(name="tile_subrack_power_thresholds_exceeded")
 def tile_subrack_power_thresholds_exceeded_fixture(
     station_devices: dict[str, tango.DeviceProxy],
-    reset_attribute_configs: dict[str, Callable],
+    simulator_host: str,
+    simulator_port: int,
 ) -> Generator:
     """
     Simulate tile subrack power thresholds being exceeded and reset on teardown.
 
     :param station_devices: dictionary of device proxies.
-    :param reset_attribute_configs: fixture providing reset functions.
+    :param simulator_host: the simulator host name.
+    :param simulator_port: the simulator port number.
 
     :yields: control back to the test.
-
     """
-    # Create a lookup for the original params
-    original_params = {}
+    # The simulator service parameters
+    host = simulator_host
+    port = simulator_port
 
-    # Update the attribute configuration
-    def update_tile_attribute_config(
-        tile: tango.DeviceProxy, attr: str, min_alarm: float, max_alarm: float
-    ) -> None:
-        conf = tile.get_attribute_config(attr)
-        conf.alarms.min_alarm = min_alarm
-        conf.alarms.max_alarm = max_alarm
-        tile.set_attribute_config(conf)
+    # Get current Tile simulator values
+    original_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
 
-    # Set the subrack thresholds to be an impossible range (i.e. min > max) in
-    # the tile device to ensure a failure
-    for tile in station_devices["Tiles"]:
-        if tile.useAttributesForHealth:
-            update_tile_attribute_config(tile, "currentDraw", 1, 0)
-            update_tile_attribute_config(tile, "voltageDraw", 1, 0)
-            update_tile_attribute_config(tile, "powerDraw", 1, 0)
-        else:
-            # Set the original params
-            original_params[tile] = tile.healthModelParams
+    # Get the highest alarm
+    max_alarm = max(
+        [
+            float(tile.get_attribute_config("voltageDraw").alarms.max_alarm)
+            for tile in station_devices["Tiles"]
+        ]
+    )
 
-            # Update the params
-            tile.healthModelParams = json.dumps(
-                {
-                    "subrack_power": {
-                        "current": {
-                            "min": 1,
-                            "max": 0,
-                        },
-                        "voltage": {
-                            "min": 1,
-                            "max": 0,
-                        },
-                        "power": {
-                            "min": 1,
-                            "max": 0,
-                        },
-                    }
-                }
-            )
+    # Set a voltage outside the alarm range
+    new_voltages = [max_alarm + 1.0 for v in original_voltages]
+
+    # Set the new voltages
+    set_tpm_attribute_in_simulator(host, port, "tpm_voltages", new_voltages)
+
+    # Ensure the voltages are as expected
+    validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
+    assert all([abs(a - b) < 1e-3 for a, b in zip(new_voltages, validate_voltages)])
 
     yield
 
-    # Reset alarm thresholds to defaults
-    for tile in station_devices["Tiles"]:
-        if tile.useAttributesForHealth:
-            for attr_name in ["currentDraw", "voltageDraw", "powerDraw"]:
-                reset_attribute_configs["tile"](tile, attr_name)
-        else:
-            tile.healthModelParams = original_params[tile]
+    # Reset the original voltages
+    set_tpm_attribute_in_simulator(host, port, "tpm_voltages", original_voltages)
+
+    # Ensure the voltages are as expected
+    validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
+    assert all(
+        [abs(a - b) < 1e-3 for a, b in zip(original_voltages, validate_voltages)]
+    )
 
 
 @when("the Subracks board temperature thresholds are adjusted")

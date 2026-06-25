@@ -1011,9 +1011,6 @@ class TileComponentManager(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-            # Fetch initial values from subrack attributes
-            self._fetch_initial_subrack_values()
-
             # Add callbacks for subrack attribute change events
             self._add_subrack_change_event_callbacks()
 
@@ -1026,41 +1023,10 @@ class TileComponentManager(
                 "tpmCurrents": self._subrack_says_tpm_values_changed,
                 "tpmPowers": self._subrack_says_tpm_values_changed,
                 "tpmVoltages": self._subrack_says_tpm_values_changed,
+                "state": self._subrack_says_state_changed,
             }
             for attr, func in callbacks.items():
                 self._subrack_proxy.add_change_event_callback(attr, func)
-
-    def _fetch_initial_subrack_values(self) -> None:
-        """Fetch initial values from subrack and update tile attributes."""
-
-        def check_value(value: None | list[float]) -> bool:
-            return value is not None and isinstance(value, list) and len(value) == 8
-
-        if self._subrack_proxy:
-            try:
-                # Read initial values from subrack
-                currents = self._subrack_proxy.tpmCurrents
-                powers = self._subrack_proxy.tpmPowers
-                voltages = self._subrack_proxy.tpmVoltages
-
-                # Get the attributes to update
-                attributes = {}
-                if check_value(currents):
-                    attributes["current_draw"] = currents[self._subrack_tpm_id - 1]
-                if check_value(powers):
-                    attributes["power_draw"] = powers[self._subrack_tpm_id - 1]
-                if check_value(voltages):
-                    attributes["voltage_draw"] = voltages[self._subrack_tpm_id - 1]
-
-                # Update the attributes
-                if len(attributes) > 0:
-                    self._update_attribute_callback(**attributes)
-            except (
-                tango.ConnectionFailed,
-                tango.DevFailed,
-                tango.CommunicationFailed,
-            ):
-                pass
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """
@@ -1171,6 +1137,31 @@ class TileComponentManager(
         else:
             self._tile_time.set_reference_time(0)
 
+    def _subrack_says_state_changed(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: list[float] | None,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change subrack state, as reported by subrack.
+
+        :param event_name: name of the event; will always be "state"
+        :param event_value: the current subrack state
+        :param event_quality: the quality of the change event
+
+        """
+        # Wait a second before getting subrack values
+        time.sleep(1)
+
+        # If the subrack state changes then the subrack values change to/from
+        # INVALID but an attribute event will not be pushed so we need to
+        # subscribe to the state change event and fetch the subrack values
+        # manually. For example:
+        # 1. subrack.adminMode = "OFFLINE" will result in values being invalid
+        # 2. subrack.adminMode = "ONLINE" will result in values being valid
+        self.fetch_subrack_values()
+
     def _subrack_says_tpm_values_changed(
         self: TileComponentManager,
         event_name: str,
@@ -1223,6 +1214,39 @@ class TileComponentManager(
             self.logger.warning(
                 f"Received {event_name} event with invalid quality: {event_quality}"
             )
+
+    def fetch_subrack_values(self) -> None:
+        """Fetch initial values from subrack and update tile attributes."""
+
+        def check_value(value: None | list[float]) -> bool:
+            return value is not None and isinstance(value, list) and len(value) == 8
+
+        def read_attribute(attribute: str) -> float | None:
+            result = None
+            if self._subrack_proxy:
+                try:
+                    # Get attribute values
+                    values = self._subrack_proxy.read_attribute(attribute).value
+
+                    # Set the value if the value is not None
+                    if values is not None:
+                        result = values[self._subrack_tpm_id - 1]
+                except tango.DevFailed as e:
+                    self.logger.warning(f"Failed to read {attribute}: {e}")
+                except tango.ConnectionFailed:
+                    self.logger.warning("Connection to subrack failed")
+                except TypeError:
+                    self.logger.warning("Subrack attribute not a list")
+                except IndexError:
+                    self.logger.warning("Subrack attribute not of length 8")
+            return result
+
+        # Try to read the subrack attributes
+        self._update_attribute_callback(
+            current_draw=read_attribute("tpmCurrents"),
+            power_draw=read_attribute("tpmPowers"),
+            voltage_draw=read_attribute("tpmVoltages"),
+        )
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

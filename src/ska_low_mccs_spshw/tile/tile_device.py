@@ -1421,26 +1421,37 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Propagate power state to base implementation
         super()._component_state_changed(power=power)
 
-        if power in (PowerState.OFF, PowerState.UNKNOWN):
-            for attr in self._attribute_state.values():
-                try:
-                    attr.mark_stale()
-                except Exception as exc:  # pylint: disable=broad-except
-                    self.logger.warning(
-                        "Failed to mark %r as stale: %s",
-                        attr,
-                        exc,
-                        exc_info=True,
+        # Perform actions depending on power state
+        match power:
+            case PowerState.OFF | PowerState.UNKNOWN:
+                # Mark all attributes as stale
+                for attr in self._attribute_state.values():
+                    try:
+                        attr.mark_stale()
+                    except Exception as exc:  # pylint: disable=broad-except
+                        self.logger.warning(
+                            "Failed to mark %r as stale: %s",
+                            attr,
+                            exc,
+                            exc_info=True,
+                        )
+                for signal in self._HEALTH_SIGNAL_MAP.values():
+                    setattr(self, signal, None)
+
+            case PowerState.ON:
+                # If the power state changes to ON then fetch subrack values
+                self.component_manager.fetch_subrack_values()
+
+                # Only evaluate and propagate fault if the tile is ON
+                super()._component_state_changed(
+                    fault=self._evaluate_fault(
+                        db_configuration_fault=db_configuration_fault,
+                        polling_fault=fault,
                     )
-            for signal in self._HEALTH_SIGNAL_MAP.values():
-                setattr(self, signal, None)
-        # Only evaluate and propagate fault if the tile is ON
-        if self.power_state == PowerState.ON:
-            super()._component_state_changed(
-                fault=self._evaluate_fault(
-                    db_configuration_fault=db_configuration_fault, polling_fault=fault
                 )
-            )
+
+            case _:
+                pass
 
         if not self.UseAttributesForHealth:
             if power is not None:

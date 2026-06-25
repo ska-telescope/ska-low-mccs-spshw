@@ -1018,21 +1018,21 @@ class TestMccsTile:
             PowerState.ON,
             tango.AttrQuality.ATTR_VALID,
         )
-        tile_component_manager._subrack_says_tpm_values_changed(
-            "tpmCurrents",
-            [10] * 8,
-            tango.AttrQuality.ATTR_VALID,
-        )
-        tile_component_manager._subrack_says_tpm_values_changed(
-            "tpmPowers",
-            [100] * 8,
-            tango.AttrQuality.ATTR_VALID,
-        )
-        tile_component_manager._subrack_says_tpm_values_changed(
-            "tpmVoltages",
-            [12] * 8,
-            tango.AttrQuality.ATTR_VALID,
-        )
+        # tile_component_manager._subrack_says_tpm_values_changed(
+        #     "tpmCurrents",
+        #     [10] * 8,
+        #     tango.AttrQuality.ATTR_VALID,
+        # )
+        # tile_component_manager._subrack_says_tpm_values_changed(
+        #     "tpmPowers",
+        #     [100] * 8,
+        #     tango.AttrQuality.ATTR_VALID,
+        # )
+        # tile_component_manager._subrack_says_tpm_values_changed(
+        #     "tpmVoltages",
+        #     [12] * 8,
+        #     tango.AttrQuality.ATTR_VALID,
+        # )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         change_event_callbacks["health_state"].assert_not_called()
@@ -1100,21 +1100,21 @@ class TestMccsTile:
             PowerState.ON,
             EventType.CHANGE_EVENT,
         )
-        tile_component_manager._subrack_says_tpm_values_changed(
-            "tpmCurrents",
-            [10] * 8,
-            tango.AttrQuality.ATTR_VALID,
-        )
-        tile_component_manager._subrack_says_tpm_values_changed(
-            "tpmPowers",
-            [100] * 8,
-            tango.AttrQuality.ATTR_VALID,
-        )
-        tile_component_manager._subrack_says_tpm_values_changed(
-            "tpmVoltages",
-            [12] * 8,
-            tango.AttrQuality.ATTR_VALID,
-        )
+        # tile_component_manager._subrack_says_tpm_values_changed(
+        #     "tpmCurrents",
+        #     [10] * 8,
+        #     tango.AttrQuality.ATTR_VALID,
+        # )
+        # tile_component_manager._subrack_says_tpm_values_changed(
+        #     "tpmPowers",
+        #     [100] * 8,
+        #     tango.AttrQuality.ATTR_VALID,
+        # )
+        # tile_component_manager._subrack_says_tpm_values_changed(
+        #     "tpmVoltages",
+        #     [12] * 8,
+        #     tango.AttrQuality.ATTR_VALID,
+        # )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)

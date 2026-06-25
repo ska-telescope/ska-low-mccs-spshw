@@ -130,6 +130,9 @@ def mock_subrack_device_proxy_fixture(
     """
     builder = MockDeviceBuilder()
     builder.add_attribute("tpm1PowerState", initial_tpm_power_state)
+    builder.add_attribute("tpmCurrents", [0.4] * 8)
+    builder.add_attribute("tpmPowers", [4.8] * 8)
+    builder.add_attribute("tpmVoltages", [12] * 8)
     builder.add_result_command("PowerOnTpm", ResultCode.OK)
     builder.add_result_command("PowerOffTpm", ResultCode.OK)
     return builder()

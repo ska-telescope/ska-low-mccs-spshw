@@ -1221,7 +1221,7 @@ class TileComponentManager(
         def get_value(values: list[float] | None) -> float | None:
             if values is not None:
                 return values[self._subrack_tpm_id - 1]
-            return values
+            return None
 
         # Initialise values
         current_draw = None
@@ -1236,12 +1236,12 @@ class TileComponentManager(
                 voltage_draw = get_value(self._subrack_proxy.tpmVoltages)
             except tango.DevFailed as e:
                 self.logger.warning(f"Failed to read attributes: {e}")
-            except tango.ConnectionFailed:
-                self.logger.warning("Connection to subrack failed")
-            except TypeError:
-                self.logger.warning("Subrack attributes not lists")
-            except IndexError:
-                self.logger.warning("Subrack attributes not of length 8")
+            except tango.ConnectionFailed as e:
+                self.logger.warning(f"Connection to subrack failed: {e}")
+            except TypeError as e:
+                self.logger.warning(f"Subrack attributes not lists: {e}")
+            except IndexError as e:
+                self.logger.warning(f"Subrack attributes not correct lengh: {e}")
 
         # Try to read the subrack attributes
         self._update_attribute_callback(

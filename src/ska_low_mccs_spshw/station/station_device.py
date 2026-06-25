@@ -142,6 +142,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
+        self._frame_wrap_timer: threading.Timer | None = None
+        self._frame_wrap_timer_stop_event = threading.Event()
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -154,8 +156,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         }
         super().init_device()
 
-        self._frame_wrap_timer: threading.Timer | None = None
-        self._frame_wrap_timer_stop_event = threading.Event()
         self._start_frame_wrap_timer()
 
         self._is_calibrated = False
@@ -1206,13 +1206,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 )
                 delta = wrap_time - datetime.now(tz=timezone.utc)
                 self.time_to_frame_counter_wrap = delta.total_seconds()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             self.logger.exception("Error updating timeToFrameCounterWrap signal.")
         finally:
             if not self._frame_wrap_timer_stop_event.is_set():
                 self._start_frame_wrap_timer()
 
-    def _stop_frame_wrap_timer(self):
+    def _stop_frame_wrap_timer(self) -> None:
         self._frame_wrap_timer_stop_event.set()
         if self._frame_wrap_timer is not None:
             self._frame_wrap_timer.cancel()

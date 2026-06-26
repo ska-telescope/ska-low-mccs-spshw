@@ -1226,17 +1226,14 @@ class TileComponentManager(
                 return values[self._subrack_tpm_id - 1]
             return None
 
-        # Initialise values
-        current_draw = None
-        power_draw = None
-        voltage_draw = None
-
         # Try to get the values from the subrack proxy
         if self._subrack_proxy:
             try:
-                current_draw = get_value(self._subrack_proxy.tpmCurrents)
-                power_draw = get_value(self._subrack_proxy.tpmPowers)
-                voltage_draw = get_value(self._subrack_proxy.tpmVoltages)
+                self._update_attribute_callback(
+                    current_draw=get_value(self._subrack_proxy.tpmCurrents),
+                    power_draw=get_value(self._subrack_proxy.tpmPowers),
+                    voltage_draw=get_value(self._subrack_proxy.tpmVoltages),
+                )
             except tango.DevFailed as e:
                 self.logger.warning(f"Failed to read subrack attributes: {e}")
             except tango.ConnectionFailed as e:
@@ -1245,13 +1242,6 @@ class TileComponentManager(
                 self.logger.warning(f"Subrack attributes have unexpected type: {e}")
             except IndexError as e:
                 self.logger.warning(f"Subrack attributes have incorrect length: {e}")
-
-        # Try to read the subrack attributes
-        self._update_attribute_callback(
-            current_draw=current_draw,
-            power_draw=power_draw,
-            voltage_draw=voltage_draw,
-        )
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

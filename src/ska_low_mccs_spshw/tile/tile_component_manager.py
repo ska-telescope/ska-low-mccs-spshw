@@ -1238,10 +1238,10 @@ class TileComponentManager(
                     power_draw=get_value(self._subrack_proxy.tpmPowers),
                     voltage_draw=get_value(self._subrack_proxy.tpmVoltages),
                 )
-            except tango.DevFailed as e:
-                self.logger.warning(f"Failed to read subrack attributes: {e}")
             except tango.ConnectionFailed as e:
                 self.logger.warning(f"Subrack connection failed: {e}")
+            except tango.DevFailed as e:
+                self.logger.warning(f"Failed to read subrack attributes: {e}")
             except TypeError as e:
                 self.logger.warning(f"Subrack attributes have unexpected type: {e}")
             except IndexError as e:

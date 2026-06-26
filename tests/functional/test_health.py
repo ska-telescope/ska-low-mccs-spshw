@@ -719,6 +719,9 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
     assert all([abs(a - b) < 1e-3 for a, b in zip(new_voltages, validate_voltages)])
 
+    # Here we yield in order to test the outcome of exceeding the thresholds.
+    # When we return control to this function we are then able to reset the
+    # voltages to their original values.
     yield
 
     # Reset the original voltages

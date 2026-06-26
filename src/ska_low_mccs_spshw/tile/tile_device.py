@@ -1437,7 +1437,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
-            # If the power state changes to ON then fetch subrack values
+            # If the power state is ON then fetch subrack values
             self.component_manager.fetch_subrack_values()
 
             super()._component_state_changed(

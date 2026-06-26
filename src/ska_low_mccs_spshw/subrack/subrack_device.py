@@ -200,6 +200,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self.set_archive_event("tpmPresent", True)
         self.set_change_event("tpmCount", True)
         self.set_archive_event("tpmCount", True)
+        self.set_change_event("scaledSubrackFanSpeeds", True)
+        self.set_archive_event("scaledSubrackFanSpeeds", True)
         for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
             self.set_change_event(f"tpm{tpm_number}PowerState", True)
             self.set_archive_event(f"tpm{tpm_number}PowerState", True)
@@ -1030,6 +1032,29 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             this returns none.
         """
         return self._subrack_fan_speeds()
+
+    @attribute(
+        dtype=("DevFloat",),
+        max_dim_x=4,
+        label="expected fan speeds at 100% pwm duty",
+        abs_change=0.1,
+    )
+    def scaledSubrackFanSpeeds(self: MccsSubrack) -> np.ndarray | None:
+        """
+        Calculate the estimated rpm speed of the fans at 100% pwm duty.
+
+        Uses the FanSpeedsPercent attribute to scale up the FanSpeeds attribute
+        to what the maximum value would be.
+        :return: the subrack fan speeds expected at 100% pwm duty.
+        """
+        pwm_duty = np.array(self._subrack_fan_speeds_percent()) / 100
+        rpm_speed = np.array(self._subrack_fan_speeds())
+
+        # Create an array of small value that will act as an effective minimum
+        # This will avoid division by 0
+        minimum_pwm_duty = np.array([0.01] * 4, np.float32)
+
+        return rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
 
     def _subrack_fan_speeds(self: MccsSubrack) -> list[float] | None:
         """

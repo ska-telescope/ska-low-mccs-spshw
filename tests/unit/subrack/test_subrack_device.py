@@ -511,7 +511,6 @@ def test_monitoring_and_control(
         "powerSupplyVoltages",
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
-        "scaledSubrackFanSpeeds",
         "subrackFanModes",
         "tpmCurrents",
         "tpmPowers",
@@ -627,6 +626,11 @@ def test_monitoring_and_control(
     )
     change_event_callbacks["subrackFanSpeeds"].assert_change_event(
         expected_speeds, lookahead=5, consume_nonmatches=True
+    )
+    assert all(
+        subrack_device.scaledSubrackFanSpeeds
+        == pytest.approx(SubrackData.MAX_SUBRACK_FAN_SPEED)
+        for _ in range(4)
     )
 
     fan_to_change = 3

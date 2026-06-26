@@ -284,6 +284,9 @@ ska-tango-devices:
       powerSupplyVoltages->max_alarm: 12.6
       powerSupplyVoltages->min_alarm: 11.4
 
+      scaledSubrackFanSpeeds->min_alarm: 5000
+      scaledSubrackFanSpeeds->min_warning: 6000
+
       internalVoltages1V1->max_alarm: 1.13
       internalVoltages1V1->min_alarm: 1.07
 

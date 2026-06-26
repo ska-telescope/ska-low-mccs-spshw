@@ -623,8 +623,7 @@ def subrack_device_attribute_values_fixture(
         ],
         "scaledSubrackFanSpeeds": [
             pytest.approx(MAX_SUBRACK_FAN_SPEED) for _ in range(4)
-        ]
-        ,
+        ],
         "subrackFanModes": subrack_simulator_config["subrack_fan_mode"],
         "subrackPllLocked": subrack_simulator_config["subrack_pll_locked"],
         "subrackTimestamp": subrack_simulator_config["subrack_timestamp"],

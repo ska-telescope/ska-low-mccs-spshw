@@ -269,7 +269,7 @@ def simulator_port_fixture() -> int:
 
     :returns: The simulator port number.
     """
-    label = (os.getenv("STATION_LABEL") or "REAL_DAQ_1").upper()
+    label = (os.getenv("STATION_LABEL") or "REAL_DAQ_1").upper().replace("-", "_")
     port = os.getenv(f"SUBRACK_SIMULATOR_{label}_SR1_SERVICE_PORT")
     assert port is not None
     return int(port)

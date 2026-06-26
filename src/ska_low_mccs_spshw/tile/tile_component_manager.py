@@ -1189,30 +1189,34 @@ class TileComponentManager(
             names = ["tpmcurrents", "tpmpowers", "tpmvoltages"]
             return f"Expected one of {names} for event_name, got '{event_name}'"
 
+        def get_value(values: list[float] | None) -> float | None:
+            if values is not None:
+                return values[self._subrack_tpm_id - 1]
+            return None
+
         if event_quality != tango.AttrQuality.ATTR_INVALID:
-            if event_value is not None:
-                if len(event_value) != 8:
-                    self.logger.error(
-                        f"Expected exactly 8 values, got {len(event_value)}"
-                    )
-                    return
-                tpm_value = event_value[self._subrack_tpm_id - 1]
-            else:
-                tpm_value = None
+            try:
+                # Get the tpm value
+                tpm_value = get_value(event_value)
 
-            # Make event name lower case
-            event_name = event_name.lower()
+                # Make event name lower case
+                event_name = event_name.lower()
 
-            # Check the event name and handle the corresponding attribute update
-            match event_name:
-                case "tpmcurrents":
-                    self._update_attribute_callback(current_draw=tpm_value)
-                case "tpmpowers":
-                    self._update_attribute_callback(power_draw=tpm_value)
-                case "tpmvoltages":
-                    self._update_attribute_callback(voltage_draw=tpm_value)
-                case _:
-                    self.logger.error(get_unknown_event_name_message(event_name))
+                # Check the event name and handle the corresponding attribute update
+                match event_name:
+                    case "tpmcurrents":
+                        self._update_attribute_callback(current_draw=tpm_value)
+                    case "tpmpowers":
+                        self._update_attribute_callback(power_draw=tpm_value)
+                    case "tpmvoltages":
+                        self._update_attribute_callback(voltage_draw=tpm_value)
+                    case _:
+                        self.logger.error(get_unknown_event_name_message(event_name))
+
+            except TypeError as e:
+                self.logger.warning(f"Subrack attributes have unexpected type: {e}")
+            except IndexError as e:
+                self.logger.warning(f"Subrack attributes have incorrect length: {e}")
         else:
             self.logger.warning(
                 f"Received {event_name} event with invalid quality: {event_quality}"

@@ -586,3 +586,63 @@ class TestOn:
         callbacks["component_state"].assert_call(
             power_supply_fan_speeds=[pytest.approx(s) for s in power_supply_fan_speeds],
         )
+
+    def test_recovers_from_upstream_communication_outage(
+        self: TestOn,
+        subrack_component_manager: SubrackComponentManager,
+        subrack_simulator_attribute_values: dict[str, Any],
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test recovery when an upstream outage puts the subrack in UNKNOWN.
+
+        If we lose comms with an upstream device (PDU or power marshaller),
+        combined communication drops to NOT_ESTABLISHED and the device's
+        op_state is driven to UNKNOWN. However, because polling for the subrack
+        itself continues happily, power state remains ON throughout, but only a
+        power state update triggers a state change from UNKNOWN to ON.
+
+        :param subrack_component_manager: the subrack component manager under
+            test.
+        :param subrack_simulator_attribute_values: key-value dictionary of the
+            expected subrack simulator attribute values.
+        :param callbacks: dictionary of driver callbacks.
+        """
+        component_manager = subrack_component_manager
+        component_manager.start_communicating()
+
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        # The subrack hardware is ON and polling successfully; its driver caches
+        # power=ON.
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+        callbacks["component_state"].assert_not_called()
+
+        # Simulate an upstream communication outage (e.g. the power supply proxy
+        # restarting) while the subrack hardware itself keeps polling. This
+        # drives the device's op_state to UNKNOWN.
+        # pylint: disable=protected-access
+        component_manager._power_supply_communication_state_changed(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Upstream communication is restored.
+        component_manager._power_supply_communication_state_changed(
+            CommunicationStatus.ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        # On reconnect the component manager must re-assert the hardware's known
+        # power so the device can leave op_state UNKNOWN. Without it, no power
+        # update is emitted here -- this assertion times out, and the real
+        # device would be stranded in UNKNOWN forever.
+        callbacks["component_state"].assert_call(
+            power=PowerState.ON, lookahead=2, consume_nonmatches=True
+        )

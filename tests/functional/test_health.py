@@ -277,7 +277,9 @@ def simulator_port_fixture(subrack_id: int) -> int:
     """
     label = (os.getenv("STATION_LABEL") or "real-daq-1").upper().replace("-", "_")
     name = f"SUBRACK_SIMULATOR_{label}_SR{subrack_id}_SERVICE_PORT"
-    port = os.getenv(name) or os.getenv("SUBRACK_SIMULATOR_PORT") or "8081"
+    port = os.getenv(name)
+    if port is None:
+        pytest.skip("No simulator port set so probably no simulator available.")
     return int(port)
 
 

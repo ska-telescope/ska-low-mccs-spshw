@@ -252,26 +252,33 @@ def station_name_fixture(true_context: bool) -> str:
 
 
 @pytest.fixture(name="simulator_host")
-def simulator_host_fixture() -> str:
+def simulator_host_fixture(subrack_id: int) -> str:
     """
-    Get the simulator host name from environment variables.
+    Get the simulator host name.
+
+    :param subrack_id: the ID number of the subrack in the station.
 
     :returns: The simulator host name.
+
     """
     label = os.getenv("STATION_LABEL") or "real-daq-1"
-    return f"subrack-simulator-{label}-sr1"
+    return f"subrack-simulator-{label}-sr{subrack_id}"
 
 
 @pytest.fixture(name="simulator_port")
-def simulator_port_fixture() -> int:
+def simulator_port_fixture(subrack_id: int) -> int:
     """
     Get the simulator port from environment variables.
 
+    :param subrack_id: the ID number of the subrack in the station.
+
     :returns: The simulator port number.
+
     """
-    label = (os.getenv("STATION_LABEL") or "REAL_DAQ_1").upper().replace("-", "_")
-    port = os.getenv(f"SUBRACK_SIMULATOR_{label}_SR1_SERVICE_PORT")
-    assert port is not None
+    label = (os.getenv("STATION_LABEL") or "real-daq-1").upper().replace("-", "_")
+    name = f"SUBRACK_SIMULATOR_{label}_SR{subrack_id}_SERVICE_PORT"
+    port = os.getenv(name)
+    assert port is not None, f"{name} is not found"
     return int(port)
 
 

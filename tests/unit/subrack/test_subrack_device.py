@@ -823,6 +823,12 @@ def test_health_status_attributes(
     change_event_callbacks["psuDeadCount"].assert_change_event(
         0, lookahead=2, consume_nonmatches=True
     )
+    assert subrack_device.psu1Load == pytest.approx(
+        health_status["psus"]["power_out"]["PSU1"] / 1200.0
+    )
+    assert subrack_device.psu2Load == pytest.approx(
+        health_status["psus"]["power_out"]["PSU2"] / 1200.0
+    )
 
 
 @pytest.mark.parametrize(

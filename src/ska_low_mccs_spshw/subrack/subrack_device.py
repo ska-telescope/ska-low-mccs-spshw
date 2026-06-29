@@ -1065,7 +1065,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns none.
         """
-        return [self.psu1VoltageIn, self.psu2VoltageIn]
+        health_status = self.component_manager.read_health_status()
+        psu_voltages_in = health_status.get("psus", {}).get("voltage_in", {})
+        if not psu_voltages_in:
+            return None
+
+        psu1_voltage_in = psu_voltages_in.get("PSU1")
+        psu2_voltage_in = psu_voltages_in.get("PSU2")
+        if psu1_voltage_in is None or psu2_voltage_in is None:
+            return None
+        return [float(psu1_voltage_in), float(psu2_voltage_in)]
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
@@ -1187,9 +1196,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the fractional load on psu1
         """
-        if self.psu1PowerOut is None:
-            return None
-        return self.psu1PowerOut / PSU_MAX_POWER
+        return self._psu_load(0)
 
     @attribute(dtype=float, label="PSU 2 Load")
     def psu2Load(self: MccsSubrack) -> float | None:
@@ -1198,9 +1205,30 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the fractional load on psu2
         """
-        if self.psu2PowerOut is None:
-            return None
-        return self.psu2PowerOut / PSU_MAX_POWER
+        return self._psu_load(1)
+
+    def _psu_load(self: MccsSubrack, index: int) -> float:
+        """
+        Return the fractional loading for a PSU.
+
+        :param index: PSU index, where 0 is PSU1 and 1 is PSU2.
+        :returns: fractional loading for the requested PSU.
+        """
+        power_supply_powers = self._hardware_attributes.get("powerSupplyPowers")
+        if (
+            isinstance(power_supply_powers, list)
+            and len(power_supply_powers) > index
+            and power_supply_powers[index] is not None
+        ):
+            return float(power_supply_powers[index]) / PSU_MAX_POWER
+
+        try:
+            health_status = self.component_manager.read_health_status()
+            psu_key = f"PSU{index + 1}"
+            return float(health_status["psus"]["power_out"][psu_key]) / PSU_MAX_POWER
+        except (KeyError, TypeError, ValueError):
+            # Float attributes should always return a numeric value.
+            return float("nan")
 
     internalVoltages1V1 = attribute_from_signal(  # noqa: N815
         internal_voltages_1v1_signal,
@@ -1894,7 +1922,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :returns: Fractional loading on each PSU.
         """
-        return [self.psu1Load, self.psu2Load]
+        return [self._psu_load(0), self._psu_load(1)]
 
     def _power_supply_present(self: MccsSubrack) -> list[bool]:
         """
@@ -1902,7 +1930,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :returns: Array of length 2 corresponding to presence of PSUs.
         """
-        return [self.psu1Present, self.psu2Present]
+        health_status = self.component_manager.read_health_status()
+        psu_present = health_status.get("psus", {}).get("present", {})
+        return [
+            bool(psu_present.get("PSU1", False)),
+            bool(psu_present.get("PSU2", False)),
+        ]
 
     @attribute(dtype="DevString")
     def healthReport(self: MccsSubrack) -> str:

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-125] Improve observability when UNPROGRAMMED.
+* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [SKB-1341] Remove `Object of type int32 is not JSON serializable. Converting it to a str` warning by correcting command invokation
 * [SKB-1341] Remove invalid taskstatus transition QUEUED to QUEUED deprecation warnings.
 * [SKB-1341] Refactor `On` and `Off` commands to remove use of deprecated command objects.

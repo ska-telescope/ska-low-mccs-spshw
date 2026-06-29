@@ -1155,7 +1155,35 @@ class TileSimulator:
             # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.
             return {"alarms": self._tile_health_structure["alarms"]}
-        return copy.deepcopy(self._tile_health_structure)
+        full = copy.deepcopy(self._tile_health_structure)
+        if not self.is_programmed():
+            return self._filter_cpld_only(full)
+        return full
+
+    def _filter_cpld_only(
+        self: TileSimulator, structure: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Return a copy of structure containing only CPLD-accessible monitoring points.
+
+        When FPGAs are not programmed the real tile API omits monitoring points that
+        require FPGA communication. This helper mirrors that behaviour using the
+        CPLD_ONLY_HEALTH_KEYS defined in TileData.
+
+        :param structure: full health structure to filter.
+        :return: filtered health structure.
+        """
+        result: dict[str, Any] = {}
+        for group, keys in TileData.CPLD_ONLY_HEALTH_KEYS.items():
+            if group not in structure:
+                continue
+            if keys is None:
+                result[group] = structure[group]
+            else:
+                filtered = {k: v for k, v in structure[group].items() if k in keys}
+                if filtered:
+                    result[group] = filtered
+        return result
 
     def simulate_health_value(self: TileSimulator, path: list[str], value: Any) -> None:
         """

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements polling management for a TileComponentManager."""
+
 from __future__ import annotations
 
 import time
@@ -164,12 +165,19 @@ class TileResponse:
 class RequestIterator:
     """A class that returns attributes allowed given a TpmStatus."""
 
-    UNCONNECTED_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
+    UNCONNECTED_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_ALARM_STATUS"]
     OFF_POLLED_ATTRIBUTES = ["CONNECT"]
-    UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
-    UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
+    UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_ALARM_STATUS"]
+    UNPROGRAMMED_POLLED_ATTRIBUTES = [
+        "CHECK_ALARM_STATUS",
+        "TEMPERATURES",
+        "VOLTAGES",
+        "ALARMS",
+        "ADCS",
+        "TIMING",
+    ]
     PROGRAMMED_POLLED_ATTRIBUTES = [
-        "CHECK_CPLD_COMMS",
+        "CHECK_ALARM_STATUS",
         "IS_PROGRAMMED",
         "PLL_LOCKED",
         "TEMPERATURES",
@@ -184,7 +192,7 @@ class RequestIterator:
     INITIALISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
-        "CHECK_CPLD_COMMS",
+        "CHECK_ALARM_STATUS",
         "FPGA_REFERENCE_TIME",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
@@ -210,7 +218,7 @@ class RequestIterator:
     SYNCHRONISED_POLLED_ATTRIBUTES = [
         "ADC_RMS",
         "BEAMFORMER_TABLE",
-        "CHECK_CPLD_COMMS",
+        "CHECK_ALARM_STATUS",
         "FPGA_REFERENCE_TIME",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",

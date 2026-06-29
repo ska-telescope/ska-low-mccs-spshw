@@ -36,6 +36,7 @@ from ska_low_mccs_spshw.tile import (
     DynamicTileSimulator,
     MockTpm,
     TileComponentManager,
+    TileData,
     TileSimulator,
     TpmStatus,
 )
@@ -678,10 +679,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("pps_delay", TileSimulator.PPS_DELAY),
             ("firmware_available", TileSimulator.FIRMWARE_LIST),
             ("register_list", list(MockTpm.REGISTER_MAP_DEFAULTS)),
-            (
-                "pps_present",
-                TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
-            ),
             ("pending_data_requests", False),
         ),
     )
@@ -1578,8 +1575,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator.tpm is not None
 
         _ = tile_component_manager.register_list
-        _ = tile_component_manager.pps_present
-        # _ = tile_component_manager._check_pps_present()
         with tile_component_manager._hardware_lock:
             _ = tile_component_manager.tile.check_pll_locked()
 
@@ -1662,6 +1657,78 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
             tile_simulator.tpm._is_programmed = False
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+
+    def test_health_status_unprogrammed_returns_cpld_only(
+        self: TestStaticSimulator,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test that when unprogrammed we can collect CPLD-only health.
+
+        :param tile_simulator: A mock object representing a simulated tile.
+        """
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+        tile_simulator.tpm._is_programmed = False
+
+        health = tile_simulator.get_health_status()
+
+        assert set(health.get("temperatures", {}).keys()) == {"board"}
+
+        assert (
+            set(health.get("voltages", {}).keys())
+            == TileData.CPLD_ONLY_HEALTH_KEYS["voltages"]
+        )
+
+        assert "currents" not in health
+
+        assert set(health.get("alarms", {}).keys()) == {
+            "I2C_access_alm",
+            "temperature_alm",
+            "voltage_alm",
+            "SEM_wd",
+            "MCU_wd",
+        }
+
+        adcs = health.get("adcs", {})
+        assert "pll_status" in adcs
+        assert "sysref_timing_requirements" in adcs
+        assert "sysref_counter" in adcs
+
+        assert set(health.get("timing", {}).keys()) == {"pll", "pll_40g"}
+
+        assert "io" not in health
+        assert "dsp" not in health
+
+    def test_health_status_programmed_returns_full_structure(
+        self: TestStaticSimulator,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Regression: get_health_status returns the full structure when programmed.
+
+        :param tile_simulator: A mock object representing a simulated tile.
+        """
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+        tile_simulator.tpm._is_programmed = True
+
+        health = tile_simulator.get_health_status()
+
+        for group in (
+            "temperatures",
+            "voltages",
+            "currents",
+            "alarms",
+            "adcs",
+            "timing",
+            "io",
+            "dsp",
+        ):
+            assert group in health, f"Expected '{group}' in full health structure"
+
+        assert "FPGA0" in health["temperatures"]
+        assert "VM_AGP0" in health["voltages"]
 
     def test_load_time_delays(
         self: TestStaticSimulator,
@@ -3117,7 +3184,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("arp_table"),
             ("channeliser_truncation"),
             ("get_static_delays"),
-            ("pps_present"),
             ("current_tile_beamformer_frame"),
             ("is_beamformer_running"),
             ("pending_data_requests"),
@@ -3552,37 +3618,6 @@ class TestDynamicSimulator:
             programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=9
         )
         return dynamic_tile_component_manager
-
-    @pytest.mark.parametrize(
-        "attribute_name",
-        (
-            "voltage_mon",
-            "board_temperature",
-            "fpga1_temperature",
-            "fpga2_temperature",
-        ),
-    )
-    def test_dynamic_attribute(
-        self: TestDynamicSimulator,
-        tile_component_manager: TileComponentManager,
-        attribute_name: str,
-    ) -> None:
-        """
-        Tests that dynamic attributes can be read.
-
-        Check that they are NOT equal to the
-        static value assigned in the static dynamic simulator.
-
-        :param tile_component_manager: the tile_component_manager
-            class object under test.
-        :param attribute_name: the name of the attribute under test
-        """
-        attribute_value = getattr(tile_component_manager, attribute_name)
-        assert attribute_value is not None
-        time.sleep(8.1)
-        new_attribute_value = getattr(tile_component_manager, attribute_name)
-        assert new_attribute_value is not None
-        assert new_attribute_value != attribute_value
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),

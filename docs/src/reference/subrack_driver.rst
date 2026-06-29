@@ -38,3 +38,28 @@ Power on a TPM
 
 A command to power on a TPM is more complex. The command is not completed instantaneously, so the driver polls every second whether the command has completed. When this happens, the Tango device queries the TPM On status, and if a change is
 detected, generates an event. The Tile devices subscribe to this event, in order to change their status accordingly. 
+
+PSU Dead Count And Health Events
+================================
+
+The ``psuDeadCount`` attribute is derived from Subrack health telemetry, not from
+an immediate direct read of PSU voltage attributes.
+
+When health is evaluated from attributes (``UseAttributesForHealth=True``):
+
+* ``psuDeadCount`` is computed from the ``health_status`` payload.
+* Updates follow the health command polling cadence controlled by
+	``CommandUpdateRate``.
+* The change event for ``psuDeadCount`` is configured without Tango value
+	filtering, so transitions such as initial INVALID to 0 and recovery 1 to 0 are
+	published as change events.
+
+Current health/state behaviour for PSU failures is:
+
+* 0 dead PSUs: health is ``OK``.
+* 1 dead PSU: health is ``DEGRADED`` and device state is ``ALARM``.
+* 2 dead PSUs: health is ``FAILED`` and device state is ``ALARM``.
+
+For tests and troubleshooting where immediate refresh is needed, call
+``UpdateHealthAttributes`` rather than waiting for the next
+``CommandUpdateRate`` cycle.

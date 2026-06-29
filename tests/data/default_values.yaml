@@ -330,10 +330,10 @@ ska-tango-devices:
       psu2PowerIn->max_alarm: 600.0
       psu2PowerIn->max_warning: 575.00
 
-      psu1PowerOut->max_alarm: 600.0
-      psu1PowerOut->max_warning: 575.0
-      psu2PowerOut->max_alarm: 600.0
-      psu2PowerOut->max_warning: 575.0
+      psu1PowerOut->max_alarm: 1140.0
+      psu1PowerOut->max_warning: 600.0
+      psu2PowerOut->max_alarm: 1140.0
+      psu2PowerOut->max_warning: 600.0
 
       psu1VoltageIn->max_alarm: 253.0
       psu1VoltageIn->max_warning: 240.0

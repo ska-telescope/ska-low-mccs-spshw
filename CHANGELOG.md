@@ -5,7 +5,7 @@
 * [SDR-1687] Upgrade to PyTango 10.3.0 and ska-low-mccs-common 4.5.6.
 * [LOW-2275] Fix PDU device for Raritan PDUs.
 * [THORN-581] Update attribute cache from hardware read rather than software cache.
-* [THORN-623] Added attributes to Subrack: psuXPresent, psuXPowerIn, psuXPowerOut, psuXVoltageIn, psuXVoltageOut, psuXLoad. Added new Subrack health rules: Degraded if a psu is over 50% load, failed if both psus are dead or any psu near 100% load.
+* [THORN-623] Added attributes to Subrack: psuXPresent, psuXPowerIn, psuXPowerOut, psuXVoltageIn, psuXVoltageOut, psuXLoad. Added new Subrack health rules: Degraded if a psu is over 50% load, failed if both psus are dead or any psu near 100% load. Added new subrack health rules: Degraded if one PSU has failed, Failed if both PSUs have failed. A failed PSU is defined as a PSU which is present and has an input voltage but no output voltage.
 
 ## 12.2.0
 

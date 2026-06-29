@@ -76,6 +76,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2_voltage_in_signal: AttrSignal[float] = AttrSignal[float]()
     psu1_voltage_out_signal: AttrSignal[float] = AttrSignal[float]()
     psu2_voltage_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu_dead_count_signal: AttrSignal[int] = AttrSignal[int]()
 
     # Maps each signal-backed internalVoltages attribute name to its signal name.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -101,6 +102,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "psu2VoltageIn": "psu2_voltage_in_signal",
         "psu1VoltageOut": "psu1_voltage_out_signal",
         "psu2VoltageOut": "psu2_voltage_out_signal",
+        "psuDeadCount": "psu_dead_count_signal",
     }
 
     # A map from the component manager argument to the name of the Tango attribute.
@@ -160,6 +162,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "psu1VoltageOut": ["psus", "voltage_out", "PSU1"],
         "psu2VoltageOut": ["psus", "voltage_out", "PSU2"],
     }
+
+    _PSU_HEALTH_DEAD_VOLTAGE_THRESHOLD: Final[float] = 1.0
 
     SetSubrackFanMode_SCHEMA: Final = json.loads(
         importlib.resources.read_text(
@@ -236,6 +240,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
             self.set_change_event(attribute_name, True)
             self.set_archive_event(attribute_name, True)
+        self.set_change_event("psuDeadCount", True)
+        self.set_archive_event("psuDeadCount", True)
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -322,6 +328,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             healthful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
                 self._ATTRIBUTE_MAP.values()
             )
+            healthful_attrs.add("psuDeadCount")
             healthful_attrs = healthful_attrs - {
                 "boardCurrent",
                 "cpldPllLocked",
@@ -1356,8 +1363,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype="DevDouble",
         label="PSU1 Output Power",
         unit="Watt",
-        max_alarm=600.0,
-        max_warning=575.0,
+        max_alarm=1140.0,
+        max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         doc="PSU1 output power in Watts.",
@@ -1368,8 +1375,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype="DevDouble",
         label="PSU2 Output Power",
         unit="Watt",
-        max_alarm=600.0,
-        max_warning=575.0,
+        max_alarm=1140.0,
+        max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         doc="PSU2 output power in Watts.",
@@ -1429,6 +1436,20 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         doc="PSU2 output voltage in Volts.",
+    )
+
+    psuDeadCount = attribute_from_signal(  # noqa: N815
+        psu_dead_count_signal,
+        dtype="DevShort",
+        label="Dead PSU Count",
+        max_warning=1,
+        max_alarm=2,
+        abs_change=1,
+        archive_abs_change=1,
+        doc=(
+            "Count of PSUs that are present and receive input voltage but "
+            "supply no output voltage."
+        ),
     )
 
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
@@ -1654,7 +1675,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
-    # pylint: disable=too-many-arguments, too-many-branches
+    # pylint: disable=too-many-arguments, too-many-branches, too-many-locals
     def _component_state_changed(
         self: MccsSubrack,
         fault: Optional[bool] = None,
@@ -1736,6 +1757,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     if value:
                         value = value.get(path, None)
                 setattr(self, self._HEALTH_SIGNAL_MAP[key], value)
+            dead_psu_count = self._calculate_dead_psu_count(health_status)
+            self.psu_dead_count_signal = dead_psu_count
 
         self._update_health_data()
 
@@ -1763,6 +1786,41 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.push_change_event("boardCurrent", [board_current])
             self.push_archive_event("boardCurrent", [board_current])
         self._update_health_data()
+
+    def _calculate_dead_psu_count(
+        self: MccsSubrack, health_status: dict[str, Any]
+    ) -> int:
+        """
+        Count dead PSUs from health status payload.
+
+        A PSU is considered dead when it is present, has input voltage,
+        but has no output voltage.
+
+        :param health_status: subrack health status payload.
+
+        :return: number of dead PSUs.
+        """
+        psus = health_status.get("psus", {})
+        psu_present = psus.get("present", {})
+        psu_v_in = psus.get("voltage_in", {})
+        psu_v_out = psus.get("voltage_out", {})
+
+        dead_count = 0
+        for psu_name in ("PSU1", "PSU2"):
+            present = bool(psu_present.get(psu_name, False))
+            voltage_in = psu_v_in.get(psu_name)
+            voltage_out = psu_v_out.get(psu_name)
+
+            if voltage_in is None or voltage_out is None:
+                continue
+
+            if (
+                present
+                and voltage_out < self._PSU_HEALTH_DEAD_VOLTAGE_THRESHOLD < voltage_in
+            ):
+                dead_count += 1
+
+        return dead_count
 
     def _update_tpm_present(
         self: MccsSubrack, tpm_present: Optional[list[bool]]

@@ -15,6 +15,7 @@ This test just checks that anything which can run passes.
 from __future__ import annotations
 
 import json
+import queue
 import time
 from typing import Any, Generator
 
@@ -22,7 +23,7 @@ import numpy as np
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenario, then, when
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, HealthState
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -164,6 +165,23 @@ def test_apply_switch_verify_partial_cal_coeffs(
         switches banks, verifies staged and live cal,
         applies calibration for the other half of the channels,
         switches banks and verifies staged and live cal.
+
+    :param stations_devices_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/tile.feature",
+    "Tile overheat causes alarm and power-off state transitions",
+)
+def test_tile_overheat_alarm_and_power_off(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Test that overheat triggers alarm, and state transitions.
 
     :param stations_devices_exported: Fixture containing the trl
         root for all sps devices.
@@ -316,8 +334,7 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         assert first_tile.data_router_discarded_packets == json.dumps(
             {"FPGA0": [0, 0], "FPGA1": [0, 0]}
         )
-    # pylint: disable=broad-except
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # Allow time to in case of first read.
         time.sleep(10)
         assert first_tile.data_router_discarded_packets == json.dumps(
@@ -848,4 +865,143 @@ def tile_dropped_packets_stays_0(
         timeout = timeout + 1
     assert (
         first_tile.data_router_discarded_packets == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+    )
+
+
+@when("the Tile overheats", target_fixture="temperature_alm_event_queue")
+def tile_overheats(
+    tile_device: tango.DeviceProxy, request: pytest.FixtureRequest
+) -> queue.SimpleQueue:
+    """
+    Simulate an overheat by subscribing to temperature_alm then driving to UNPROGRAMMED.
+
+    TileWrapper.set_state(UNPROGRAMMED) handles switching to ENGINEERING mode, lowering
+    the board alarm threshold to 30°C, restoring adminMode, and waiting for the
+    tileProgrammingState to reach NotProgrammed.
+
+    :param tile_device: tile device under test.
+    :param request: pytest fixture request (used to register cleanup).
+
+    :return: a queue that will receive temperature_alm change events.
+    """
+    _queue: queue.SimpleQueue[tango.EventData] = queue.SimpleQueue()
+    sub_id = tile_device.subscribe_event(
+        "temperature_alm",
+        tango.EventType.CHANGE_EVENT,
+        _queue.put,
+    )
+    TileWrapper(tile_device).set_state(programming_state=TpmStatus.UNPROGRAMMED)
+
+    def restore_threshold() -> None:
+        tile_device.unsubscribe_event(sub_id)
+        tile_device.adminMode = AdminMode.ENGINEERING
+        tile_device.firmwareTemperatureThresholds = json.dumps(
+            {"board_alarm_threshold": "Undefined"}
+        )
+        tile_device.adminMode = AdminMode.ONLINE
+
+    request.addfinalizer(restore_threshold)
+    return _queue
+
+
+@then("the Tile reports the overheat condition as expected")
+def verify_overheat_condition(
+    tile_device: tango.DeviceProxy,
+    temperature_alm_event_queue: queue.SimpleQueue,
+) -> None:
+    """
+    Verify overheat produces an ALARM quality event, NotProgrammed state, FAILED health.
+
+    :param tile_device: tile device under test.
+    :param temperature_alm_event_queue: queue receiving temperature_alm change events.
+    """
+    deadline = time.time() + 60.0
+    alarm_received = False
+    while time.time() < deadline:
+        try:
+            event = temperature_alm_event_queue.get(timeout=deadline - time.time())
+            if event.attr_value.quality == tango.AttrQuality.ATTR_ALARM:
+                alarm_received = True
+                break
+        except queue.Empty:
+            break
+    assert alarm_received, "temperature_alm never received an ATTR_ALARM quality event"
+
+    AttributeWaiter(timeout=60).wait_for_value(
+        tile_device, "tileProgrammingState", "NotProgrammed", lookahead=5
+    )
+    AttributeWaiter(timeout=60).wait_for_value(
+        tile_device, "healthState", HealthState.FAILED, lookahead=5
+    )
+    assert "temperature_alm" in tile_device.healthReport
+    time.sleep(5)  # Allow time for all attributes to update after overheat
+
+
+@then("the expected CPLD attributes are VALID")
+def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
+    """
+    Verify CPLD-sourced attributes report with the expected Tango quality.
+
+    CPLD attributes should be VALID (board-side monitoring points accessible
+    without FPGA firmware). FPGA-dependent attributes should be INVALID because
+    the tile is in NotProgrammed state after the overheat.
+
+    :param tile_device: tile device under test.
+    """
+    valid_attrs = [
+        "boardTemperature",
+        "voltageMGT_AVCC",
+        "voltageMGT_AVTT",
+        "voltageSW_AVDD1",
+        "voltageSW_AVDD2",
+        "voltageAVDD3",
+        "timing_pll_40g_count",
+        "adc_pll_lock_status",
+        "adc_sysref_timing_requirements",
+    ]
+    invalid_attrs = [
+        "fpga1Temperature",
+        "ppsPresent",
+        "fpga0_qpll_status",
+    ]
+    # We are not testing that the attributes are in the correct quality here,
+    # just testing that they are VALID or a subset of VALID (i.e ALARM, WARNING)
+    for attr in valid_attrs:
+        quality = tile_device.read_attribute(attr).quality
+        assert quality in (
+            tango.AttrQuality.ATTR_VALID,
+            tango.AttrQuality.ATTR_ALARM,
+            tango.AttrQuality.ATTR_WARNING,
+        ), f"{attr} expected ATTR_VALID, ATTR_ALARM, or ATTR_WARNING but got {quality}"
+    for attr in invalid_attrs:
+        quality = tile_device.read_attribute(attr).quality
+        assert (
+            quality == tango.AttrQuality.ATTR_INVALID
+        ), f"{attr} expected ATTR_INVALID but got {quality}"
+
+
+@when("the Tile is powered OFF")
+def tile_powered_off(tile_device: tango.DeviceProxy) -> None:
+    """
+    Power off the tile and wait for the programming state to reach Off.
+
+    :param tile_device: tile device under test.
+    """
+    tile_device.Off()
+    AttributeWaiter(timeout=60).wait_for_value(
+        tile_device, "tileProgrammingState", "Off", lookahead=5
+    )
+
+
+@then("the tile reports it is in the OFF state")
+def verify_tile_off_state(tile_device: tango.DeviceProxy) -> None:
+    """
+    Verify the tile is in the OFF state with UNKNOWN health after power-off.
+
+    :param tile_device: tile device under test.
+    """
+    AttributeWaiter(timeout=30).wait_for_value(tile_device, "state", tango.DevState.OFF)
+    assert tile_device.tileProgrammingState == "Off"
+    AttributeWaiter(timeout=30).wait_for_value(
+        tile_device, "healthState", HealthState.UNKNOWN, lookahead=5
     )

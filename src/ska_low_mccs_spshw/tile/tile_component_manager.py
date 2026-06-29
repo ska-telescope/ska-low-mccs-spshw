@@ -67,6 +67,7 @@ FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
 FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
+_POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -903,40 +904,53 @@ class TileComponentManager(
             self._subrack_proxy.unsubscribe_all_change_events()
             self._subrack_proxy = None
 
-    def off(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    def do_off(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
-        :param task_callback: Update task state, defaults to None
+        Submits the blocking subrack call to the task executor so the
+        Tango serialization monitor is not held during the network round-trip.
 
-        :return: a result code and a unique_id or message.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         subrack_off_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
         subrack_off_command_proxy(
-            arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
+            arg=self._subrack_tpm_id,
+            is_lrc=True,
+            timeout=_POWER_COMMAND_TIMEOUT,
+            wait_for_result=True,
+            task_callback=task_callback,
         )
 
-        return TaskStatus.QUEUED, ""
-
-    def on(
+    def do_on(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
-        :param task_callback: Update task state, defaults to None
+        Submits the blocking subrack call to the task executor so the
+        Tango serialization monitor is not held during the network round-trip.
+        task_callback is not passed to submit_task; instead it is forwarded
+        to TileLRCRequest, which owns the full QUEUED→IN_PROGRESS→COMPLETED
+        lifecycle once the TPM becomes connectable.
 
-        :return: a result code and a unique_id or message.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :raises AssertionError: request_provider is not yet initialised.
         """
-        if self._request_provider is None:
+        request_provider = self._request_provider
+        if request_provider is None:
             if task_callback:
                 task_callback(
                     status=TaskStatus.REJECTED,
@@ -951,7 +965,12 @@ class TileComponentManager(
         )
         # Do not pass the task_callback to command_proxy.
         # The on command is completed when initialisation has completed.
-        subrack_on_command_proxy(is_lrc=False, arg=self._subrack_tpm_id)
+        subrack_on_command_proxy(
+            is_lrc=True,
+            timeout=_POWER_COMMAND_TIMEOUT,
+            wait_for_result=True,
+            arg=self._subrack_tpm_id,
+        )
 
         request = TileLRCRequest(
             name="initialise",
@@ -963,8 +982,7 @@ class TileComponentManager(
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            self._request_provider.enqueue_lrc(request, priority=0)
-        return TaskStatus.QUEUED, "Task staged"
+            request_provider.enqueue_lrc(request, priority=0)
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """
@@ -1443,8 +1461,6 @@ class TileComponentManager(
         )
         self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Download_firmware command placed in poll QUEUE")
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED, result="Task staged")
         return ([ResultCode.QUEUED], ["Task staged"])
 
     @check_communicating

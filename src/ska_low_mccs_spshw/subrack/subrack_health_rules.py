@@ -314,6 +314,8 @@ class SubrackHealthRules(HealthRules):
         report = ""
         for psu_id, psu_load in enumerate(psu_loads, start=1):
             loading_threshold = self._thresholds[f"{rule_str}psu_load"]
+            if psu_load is None:
+                continue
             if psu_load > loading_threshold:
                 has_failed = True
                 report += f"PSU{psu_id}'s load is over {loading_threshold}, "
@@ -325,7 +327,6 @@ class SubrackHealthRules(HealthRules):
         power_supply_present: list[bool],
         power_supply_voltages: list[float],
         power_supply_voltages_in: list[float],
-        rule_str: str,
     ) -> tuple[list[bool], str]:
         """
         Check whether any or both PSUs are dead.
@@ -333,7 +334,6 @@ class SubrackHealthRules(HealthRules):
         :param power_supply_present: Whether or not a PSU is connected to this socket.
         :param power_supply_voltages: Voltage supplied by PSU.
         :param power_supply_voltages_in: Voltage received by PSU.
-        :param rule_str: The type of error threshold to be checking against.
 
         :return: True if any of the thresholds are breached, along with a text report.
         """
@@ -345,7 +345,6 @@ class SubrackHealthRules(HealthRules):
         ):
             if not psu_present:
                 continue
-            # TODO: Confirm if this is necessary.
             # Comparison to 1.0 instead of 0.0 as buffer for any noise on the signal.
             if psu_v_out < 1.0 < psu_v_in:
                 # if present and voltage in but no voltage out then psu_dead
@@ -473,7 +472,6 @@ class SubrackHealthRules(HealthRules):
             state["power_supply_present"],
             state["power_supply_voltages"],
             state["power_supply_voltages_in"],
-            fail_str,
         )
         if all(psus_failed):
             has_failed = True
@@ -560,7 +558,6 @@ class SubrackHealthRules(HealthRules):
             state["power_supply_present"],
             state["power_supply_voltages"],
             state["power_supply_voltages_in"],
-            fail_str,
         )
         if any(psus_defective):
             has_degraded = True

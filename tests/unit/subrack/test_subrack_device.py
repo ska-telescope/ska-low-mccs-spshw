@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*
-# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -921,15 +920,15 @@ def test_health_status_attributes(
         ),
         (
             "psu1PowerIn",
-            1140.0,
             600.0,
+            575.0,
             0.0,
             0.0,
         ),
         (
             "psu2PowerIn",
-            1140.0,
             600.0,
+            575.0,
             0.0,
             0.0,
         ),

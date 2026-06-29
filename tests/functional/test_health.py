@@ -29,19 +29,6 @@ scenarios("./features/health.feature")
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
-@pytest.mark.xfail(
-    reason=(
-        "AWS migration introduces networking constraints that prevent this test passing"
-    )
-)
-@scenario(
-    "features/health.feature",
-    "Healthy when everything is on and operational",
-)
-def test_healthy_when_everything_is_on_and_operational() -> None:
-    """Marked xfail: AWS migration networking constraints prevent this scenario."""
-
-
 @scenario(
     "features/health.feature",
     "Failed when tile monitoring point is out of bounds",

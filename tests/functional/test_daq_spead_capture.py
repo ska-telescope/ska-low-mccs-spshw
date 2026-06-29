@@ -160,7 +160,6 @@ def daq_ready_to_receive_beam(
     # Configure DAQ
     configuration = {
         "directory": "/product/test_eb_id/ska-low-mccs/test_scan_id/",
-        "nof_tiles": 1,
         "append_integrated": False,
     }
     daq_device.Configure(json.dumps(configuration))

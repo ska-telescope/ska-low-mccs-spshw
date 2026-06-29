@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*
-#
+# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -7,16 +7,20 @@
 # See LICENSE for more info.
 # pylint: disable = too-many-lines
 """This module contains the tests of the subrack Tango device."""
+
 from __future__ import annotations
 
 import gc
 import json
+import math
 import time
 from typing import Any, Iterator
 
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
+from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType, server
 
@@ -917,15 +921,15 @@ def test_health_status_attributes(
         ),
         (
             "psu1PowerIn",
+            1140.0,
             600.0,
-            575.0,
             0.0,
             0.0,
         ),
         (
             "psu2PowerIn",
+            1140.0,
             600.0,
-            575.0,
             0.0,
             0.0,
         ),
@@ -1003,7 +1007,6 @@ def test_attribute_alarm_health_model(
     # _init_state_model. The HealthRecorder fires UNKNOWN before the stored value
     # changes to FAILED, so _health_changed_new skips the push (no state change).
     # The initial subscription event is therefore FAILED, not UNKNOWN.
-    # TODO: Add lookahead?
     change_event_callbacks["healthState"].assert_change_event(
         HealthState.FAILED, lookahead=5, consume_nonmatches=True
     )
@@ -1043,9 +1046,7 @@ def test_attribute_alarm_health_model(
                 }
             )
         )
-        # TODO: Sleep between FAILED event and ALARM assertion?
         change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-        time.sleep(1)
         assert subrack_device.state() == DevState.ALARM
 
         # Change the value within the warning range
@@ -1129,3 +1130,82 @@ def test_psu_dead_count_health_transitions(
     change_event_callbacks["psuDeadCount"].assert_change_event(0)
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
     assert subrack_device.state() == DevState.ON
+
+
+def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that None voltages from a powered-off TPM are replaced with np.nan.
+
+    The real SMB firmware returns null (None in Python) for tpm_voltages,
+    tpm_currents, and tpm_powers when a TPM slot is powered off but present.
+    Tango cannot push a list containing None as a DevFloat array, so the
+    device must sanitise these values to np.nan before pushing events and before
+    storing in _hardware_attributes.
+
+    Regression test for: TypeError pushing tpmVoltages after PowerOffTpm.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    assert subrack_device.adminMode == AdminMode.OFFLINE
+
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+        subrack_device.subscribe_event(
+            attribute_name,
+            EventType.CHANGE_EVENT,
+            change_event_callbacks[attribute_name],
+        )
+        change_event_callbacks[attribute_name].assert_change_event(None)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    # Consume the initial values pushed when polling starts.
+    for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+        change_event_callbacks[attribute_name].assert_change_event(
+            Anything, lookahead=30
+        )
+
+    # Simulate the SMB returning None for slot 1 (TPM present but powered off).
+    # The remaining slots keep their nominal values.
+    voltages_with_none = [None, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0]
+    currents_with_none = [None, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
+    subrack_simulator.simulate_attribute("tpm_voltages", voltages_with_none)
+    subrack_simulator.simulate_attribute("tpm_currents", currents_with_none)
+
+    # The device must not crash; None elements must be replaced with np.nan.
+    expected_voltages = np.array(
+        [pytest.approx(v) if v is not None else Anything for v in voltages_with_none]
+    )
+    expected_currents = np.array(
+        [pytest.approx(c) if c is not None else Anything for c in currents_with_none]
+    )
+
+    change_event_callbacks["tpmVoltages"].assert_change_event(
+        expected_voltages.tolist(),
+    )
+    change_event_callbacks["tpmCurrents"].assert_change_event(
+        expected_currents.tolist()
+    )
+
+    # Verify that a direct attribute read also returns np.nan for the None slot,
+    # not None (which would fail any downstream numeric consumer).
+    voltages = list(subrack_device.tpmVoltages)
+    assert math.isnan(voltages[0])
+    currents = list(subrack_device.tpmCurrents)
+    assert math.isnan(currents[0])

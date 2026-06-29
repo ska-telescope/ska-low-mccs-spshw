@@ -876,6 +876,10 @@ def test_pps_delay_spread(
             f"{station_component_manager._pps_delays}"
         )
         time.sleep(0.01)
+    callbacks["component_state"].assert_call(
+        tileProgrammingState=["Unknown", "Unknown", "Unknown", "Unknown"],
+        lookahead=25,
+    )
     assert station_component_manager._pps_delays == expected_delays
     assert station_component_manager._pps_delay_spread == 0
 

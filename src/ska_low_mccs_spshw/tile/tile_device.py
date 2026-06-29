@@ -7162,6 +7162,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ---------------
     # On/Off commands
     # ---------------
+    def is_On_allowed(
+        self: MccsTile,
+        request_type: stb.long_running_commands.LRCReqType | None = None,
+    ) -> bool:
+        """
+        Return whether the On command may be called.
+
+        :param request_type: the type of LRC request being checked
+        :return: whether the command is allowed
+        """
+        if self.get_state() == tango.DevState.ON:
+            return False
+        return super().is_On_allowed(request_type)
 
     @stb.long_running_commands.submit_lrc_task
     def execute_Off(self: MccsTile) -> stb.type_hints.TaskFunctionType:
@@ -7198,13 +7211,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        if self.get_state() == tango.DevState.ON:
-            tango.Except.throw_exception(
-                "CommandNotAllowed",
-                "Device is already in ON state.",
-                "MccsTile.execute_On",
-            )
-
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
 

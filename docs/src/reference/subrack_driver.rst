@@ -39,9 +39,9 @@ Power on a TPM
 A command to power on a TPM is more complex. The command is not completed instantaneously, so the driver polls every second whether the command has completed. When this happens, the Tango device queries the TPM On status, and if a change is
 detected, generates an event. The Tile devices subscribe to this event, in order to change their status accordingly. 
 
-*****************************
+*******************************
 Upstream communication handling
-*****************************
+*******************************
 
 The subrack device maintains communication with upstream components (PDU and PowerMarshaller) to monitor and control power supply state. These upstream components provide critical power supply state information that informs the subrack's operational state.
 

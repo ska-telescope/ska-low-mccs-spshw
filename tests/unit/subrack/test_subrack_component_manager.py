@@ -521,7 +521,6 @@ class TestOn:
 
         # Simulate an upstream communication outage while subrack hardware polling
         # continues. This drives the device op_state to UNKNOWN.
-        # pylint: disable=protected-access
         subrack_component_manager._power_supply_communication_state_changed(
             CommunicationStatus.NOT_ESTABLISHED
         )

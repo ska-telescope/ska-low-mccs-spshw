@@ -157,7 +157,6 @@ def test_context_fixture(
 
             :param argin: communication state name (e.g. "NOT_ESTABLISHED").
             """
-            # pylint: disable=protected-access
             self.component_manager._power_supply_communication_state_changed(
                 CommunicationStatus[argin]
             )

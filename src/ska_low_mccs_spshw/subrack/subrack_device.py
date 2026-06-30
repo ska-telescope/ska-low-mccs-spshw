@@ -21,7 +21,7 @@ import ska_tango_base as stb
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
-from tango import AttrQuality, DevFailed
+from tango import AttrQuality, DevFailed, DevState
 from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -183,6 +183,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
         self._hardware_attributes: dict[str, Any] = {}
+        self._deferred_fault: bool | None = None
 
         self._desired_fan_speeds: Optional[list[float]] = None
         self.clock_presence: list[str] = []
@@ -206,6 +207,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
             self.set_change_event(attribute_name, True)
             self.set_archive_event(attribute_name, True)
+
+        self._deferred_fault = None
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -1474,8 +1477,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
-    # pylint: disable=too-many-arguments, too-many-branches
-    def _component_state_changed(
+    # pylint: disable=too-many-arguments, too-many-branches, too-many-locals
+    # pylint: disable=too-many-statements
+    def _component_state_changed(  # noqa: C901
         self: MccsSubrack,
         fault: Optional[bool] = None,
         power: Optional[PowerState] = None,
@@ -1497,18 +1501,33 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param health_status: any changes to the health_status variables.
         :param kwargs: other state updates
         """
-        # Always propagate power state changes (required for device state machine).
-        # However, guard fault propagation to avoid illegal op-state transitions
-        # (e.g., component_no_fault is not allowed in UNKNOWN state).
-        # This prevents device from getting stuck in UNKNOWN when upstream comms
-        # are lost and then recovered, which was causing StateModelError.
-        if power is not None:
-            super()._component_state_changed(power=power)
+        # Guard fault propagation while device is in UNKNOWN to avoid illegal
+        # op-state actions. Cache the latest fault and replay it once we have
+        # a non-UNKNOWN power update.
+        in_unknown = power == PowerState.UNKNOWN or (
+            power is None and self.dev_state() == DevState.UNKNOWN
+        )
 
-        # Only propagate fault when power is ON or not transitioning to UNKNOWN.
-        # This avoids triggering illegal op-state actions from UNKNOWN.
-        if fault is not None and power != PowerState.UNKNOWN:
-            super()._component_state_changed(fault=fault)
+        fault_to_propagate = fault
+        if in_unknown and fault is not None:
+            self._deferred_fault = fault
+            fault_to_propagate = None
+        elif not in_unknown and fault is not None:
+            self._deferred_fault = None
+        elif (
+            not in_unknown
+            and power is not None
+            and power != PowerState.UNKNOWN
+            and self._deferred_fault is not None
+        ):
+            # Fire a deferred fault when power state recovers.
+            fault_to_propagate = self._deferred_fault
+            self._deferred_fault = None
+
+        # Keep power and fault updates in a single callback so the underlying
+        # state model evaluates them atomically.
+        if power is not None or fault_to_propagate is not None:
+            super()._component_state_changed(power=power, fault=fault_to_propagate)
         if not self.UseAttributesForHealth:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power, health=health)

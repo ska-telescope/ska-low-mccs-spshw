@@ -1038,6 +1038,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         Uses the FanSpeedsPercent attribute to scale up the FanSpeeds attribute
         to what the maximum value would be.
+
+        :return: the scaled subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns none.
         """
         return self._scaled_subrack_fan_speeds()
 
@@ -1045,11 +1049,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the sclaed subrack fan speeds, in RPM.
 
-        :return: the subrack fan speeds.
+        :return: the scaled subrack fan speeds.
             When communication with the subrack is not established,
             this returns none.
         """
-
         return self._hardware_attributes.get("scaledSubrackFanSpeeds", None)
 
     def _calculate_scaled_subrack_fan_speeds(self: MccsSubrack) -> np.ndarray | None:
@@ -1064,23 +1067,23 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         compared to the pwm duty. So when the fan spins up/down the pwm is changing
         values immediately while rpm takes about 5s to catch up. In practice this
         results to about 2-5 wrong consecutive values.
+
         :return: the subrack fan speeds expected at 100% pwm duty.
         """
-        pwm_duty = self._subrack_fan_speeds_percent()
-        if pwm_duty is None:
-            return None
-        pwm_duty = np.array(pwm_duty) / 100
-        rpm_speed = self._subrack_fan_speeds()
-        if rpm_speed is None:
-            return None
-        rpm_speed = np.array(rpm_speed)
+        _pwm_duty = self._subrack_fan_speeds_percent()
+        _rpm_speed = self._subrack_fan_speeds()
 
-        # Create an array of small value that will act as an effective minimum
-        # This will avoid division by 0
+        if _pwm_duty is None or _rpm_speed is None:
+            return None
+
+        pwm_duty = np.array(_pwm_duty, np.float32) / 100
+        rpm_speed = np.array(_rpm_speed, np.float32)
+
+        # Create an array of small value that will act as an effective
+        # minimum, this will avoid division by 0
         minimum_pwm_duty = np.array([0.01] * 4, np.float32)
 
         return rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
-        # return self._hardware_attributes.get("scaledSubrackFanSpeeds", None)
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
@@ -1538,7 +1541,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
-    # pylint: disable=too-many-arguments, too-many-branches
+    # pylint: disable=too-many-arguments, too-many-branches, too-many-locals
     def _component_state_changed(
         self: MccsSubrack,
         fault: Optional[bool] = None,
@@ -1602,7 +1605,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             else:
                 special_update_method(value)
 
-        # if we get an update for the fans' pwm or rpm we need to recalculate the estimated value:
+        # if we get an update for the fans' pwm or rpm we need to recalculate
+        # the estimated value:
         if any(
             key in kwargs
             for key in ["subrack_fan_speeds", "subrack_fan_speeds_percent"]

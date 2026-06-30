@@ -1117,6 +1117,18 @@ def test_psu_dead_count_health_transitions(
         HealthState.OK, lookahead=2, consume_nonmatches=True
     )
 
+    # Change alarm thresholds on voltage out before we change the value so that
+    # the voltage attr does not alarm and we can cleanly see the dead psu detection
+    original_psu1_voltage_config = subrack_device.get_attribute_config(
+        "psu1VoltageOut".lower()
+    )
+    new_attribute_config = original_psu1_voltage_config
+    alarm_config = new_attribute_config.alarms
+    alarm_config.min_warning = str(0)
+    alarm_config.min_alarm = str(0)
+    new_attribute_config.alarms = alarm_config
+    subrack_device.set_attribute_config(new_attribute_config)
+
     subrack_simulator._set_attribute("power_supply_voltages", [0.1, 12.0], _force=True)
 
     change_event_callbacks["psuDeadCount"].assert_change_event(
@@ -1125,11 +1137,25 @@ def test_psu_dead_count_health_transitions(
     change_event_callbacks["healthState"].assert_change_event(HealthState.DEGRADED)
     assert subrack_device.state() == DevState.ALARM
 
+    original_psu2_voltage_config = subrack_device.get_attribute_config(
+        "psu2VoltageOut".lower()
+    )
+    new_attribute_config = original_psu2_voltage_config
+    alarm_config = new_attribute_config.alarms
+    alarm_config.min_warning = str(0)
+    alarm_config.min_alarm = str(0)
+    new_attribute_config.alarms = alarm_config
+    subrack_device.set_attribute_config(new_attribute_config)
+
     subrack_simulator._set_attribute("power_supply_voltages", [0.1, 0.1], _force=True)
     change_event_callbacks["psuDeadCount"].assert_change_event(2)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     time.sleep(1)
     assert subrack_device.state() == DevState.ALARM
+
+    # Reset thresholds.
+    subrack_device.set_attribute_config(original_psu1_voltage_config)
+    subrack_device.set_attribute_config(original_psu2_voltage_config)
 
     subrack_simulator._set_attribute("power_supply_voltages", [12.1, 12.2], _force=True)
     change_event_callbacks["psuDeadCount"].assert_change_event(0)

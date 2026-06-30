@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 13.0.0
 
 * [SKB-1402] Reduce hang in read method when power cut to TPM while in flight.
   (

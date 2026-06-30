@@ -922,14 +922,19 @@ class TileComponentManager(
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
-        subrack_off_command_proxy(
+        result_code, _ = subrack_off_command_proxy(
             arg=self._subrack_tpm_id,
             is_lrc=True,
             timeout=_POWER_COMMAND_TIMEOUT,
             wait_for_result=True,
             task_callback=task_callback,
         )
-        self.logger.info("Off command completed")
+        if result_code == ResultCode.OK:
+            # Since we will continue to poll hardware when adminMode is ONLINE.
+            # We have added this extra logging information for clarity.
+            # It is expected that unhappy paths are flagged appropriatly by
+            # the MccsCommandProxy.
+            self.logger.info("Off command completed")
 
     def do_on(
         self: TileComponentManager,

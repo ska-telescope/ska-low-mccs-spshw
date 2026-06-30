@@ -26,6 +26,7 @@ from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 
+from .subrack_attribute_filter import SubrackAttributeFilter
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
@@ -52,6 +53,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=bool,
         default_value=True,
     )
+
+    # Properties to control the attribute filters
+    AttributeFilterType = device_property(dtype=str, default_value="mean")
+    AttributeFilterNumSamples = device_property(dtype=int, default_value=5)
 
     # Signals backing the internalVoltages* attributes.
     internal_voltages_1v1_signal: AttrSignal[float] = AttrSignal[float]()
@@ -195,6 +200,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         This is overridden here to change the Tango serialisation model.
         """
         super().init_device()
+
+        # Initialise the map of attribute value filters.
+        self._attribute_value_filters = {
+            name: SubrackAttributeFilter()
+            for name in ["tpmCurrent", "tpmPower", "tpmVoltage"]
+        }
 
         self.set_change_event("tpmPresent", True)
         self.set_archive_event("tpmPresent", True)
@@ -1511,7 +1522,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     # Hardware returns None for powered-off TPM slots; replace with
                     # np.nan so Tango receives a valid numeric array.
                     value = np.array([v if v is not None else np.nan for v in value])
-                self._hardware_attributes[tango_attribute_name] = value
+                self._hardware_attributes[
+                    tango_attribute_name
+                ] = self._filter_attribute_value(tango_attribute_name, value)
                 if tango_attribute_name == "subrackBoardInfo":
                     if isinstance(value, dict):
                         # Serialise value to match attribute definition.
@@ -1561,6 +1574,18 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 setattr(self, self._HEALTH_SIGNAL_MAP[key], value)
 
         self._update_health_data()
+
+    def _filter_attribute_value(self, name: str, value: float) -> float:
+        """
+        Filter the attribute value or return unchanged.
+
+        :param name: The tango attribute name.
+        :param value: The raw attribute value.
+
+        :returns: The filtered attribute value
+
+        """
+        return self._attribute_value_filters.get(name, lambda x: x)(value)
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:
         """

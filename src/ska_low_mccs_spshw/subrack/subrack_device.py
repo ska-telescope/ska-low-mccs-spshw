@@ -56,7 +56,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     # Properties to control the attribute filters
     AttributeFilterType = device_property(dtype=str, default_value="mean")
-    AttributeFilterNumSamples = device_property(dtype=int, default_value=5)
+    AttributeFilterMaxSamples = device_property(dtype=int, default_value=5)
 
     # Signals backing the internalVoltages* attributes.
     internal_voltages_1v1_signal: AttrSignal[float] = AttrSignal[float]()
@@ -203,7 +203,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         # Initialise the map of attribute value filters.
         self._attribute_value_filters = {
-            name: SubrackAttributeFilter()
+            name: SubrackAttributeFilter(
+                filter_type=self.AttributeFilterType,
+                max_samples=self.AttributeFilterMaxSamples,
+            )
             for name in ["tpmCurrent", "tpmPower", "tpmVoltage"]
         }
 

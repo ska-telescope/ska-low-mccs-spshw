@@ -14,12 +14,12 @@ import numpy as np
 class SubrackAttributeFilter:
     """The subrack attribute filter."""
 
-    def __init__(self, filter_type: str | None = None, num_samples: int = 5) -> None:
+    def __init__(self, filter_type: str | None = None, max_samples: int = 5) -> None:
         """
         Initialise the subrack attribute filter.
 
         :param filter_type: The filter type.
-        :param num_samples: The number of samples
+        :param max_samples: The number of samples
 
         :raises ValueError: If the filter_tupe is not recognised.
 
@@ -32,8 +32,8 @@ class SubrackAttributeFilter:
         self._filter_type = filter_type
 
         # Create the buffer. The deque will gives us a circular buffer with a
-        # maximum of 'num_samples' elements
-        self._buffer: deque[float] = deque(maxlen=num_samples)
+        # maximum of 'max_samples' elements
+        self._buffer: deque[float] = deque(maxlen=max_samples)
 
     def clear(self) -> None:
         """Clear the filter buffer."""

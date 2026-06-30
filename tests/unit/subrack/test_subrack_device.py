@@ -511,6 +511,7 @@ def test_monitoring_and_control(
         "powerSupplyVoltages",
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
+        "scaledSubrackFanSpeeds",
         "subrackFanModes",
         "tpmCurrents",
         "tpmPowers",

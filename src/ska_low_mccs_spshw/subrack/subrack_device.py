@@ -1021,19 +1021,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("powerSupplyVoltages", None)
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
-    )
-    def subrackFanSpeeds(self: MccsSubrack) -> list[float] | None:
-        """
-        Handle a Tango attribute read of the subrack fan speeds, in RPM.
-
-        :return: the subrack fan speeds.
-            When communication with the subrack is not established,
-            this returns none.
-        """
-        return self._subrack_fan_speeds()
-
-    @attribute(
         dtype=("DevFloat",),
         max_dim_x=4,
         label="expected fan speeds at 100% pwm duty",
@@ -1045,16 +1032,60 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         Uses the FanSpeedsPercent attribute to scale up the FanSpeeds attribute
         to what the maximum value would be.
+        
+        Note: this attribute will drop any 5 incorrect values and replaces
+        them with a correct 6000 rpm. This is done because the rpm value lags
+        compared to the pwm duty. So when the fan spins up/down the pwm is changing
+        values immediately while rpm takes about 5s to catch up. In practice this
+        results to about 2-5 wrong consecutive values.
         :return: the subrack fan speeds expected at 100% pwm duty.
         """
-        pwm_duty = np.array(self._subrack_fan_speeds_percent()) / 100
-        rpm_speed = np.array(self._subrack_fan_speeds())
+        # pwm_duty = np.array(self._subrack_fan_speeds_percent()) / 100
+        # rpm_speed = np.array(self._subrack_fan_speeds())
+
+        # # Create an array of small value that will act as an effective minimum
+        # # This will avoid division by 0
+        # minimum_pwm_duty = np.array([0.01] * 4, np.float32)
+
+        # return rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
+        return self._subrack_fan_speeds()
+
+    def _scaled_subrack_fan_speeds(self: MccsSubrack) -> np.ndarray | None:
+        """
+        Handle a Tango attribute read of the subrack fan speeds, in RPM.
+
+        :return: the subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns none.
+        """
+        pwm_duty = self._subrack_fan_speeds_percent()
+        if pwm_duty is None:
+            pwm_duty = [1]*4
+        pwm_duty = np.array(pwm_duty) / 100
+        rpm_speed = self._subrack_fan_speeds()
+        if rpm_speed is None:
+            rpm_speed = [60]*4
+        rpm_speed = np.array(rpm_speed)
 
         # Create an array of small value that will act as an effective minimum
         # This will avoid division by 0
         minimum_pwm_duty = np.array([0.01] * 4, np.float32)
 
         return rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
+        # return self._hardware_attributes.get("scaledSubrackFanSpeeds", None)
+
+    @attribute(
+        dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
+    )
+    def subrackFanSpeeds(self: MccsSubrack) -> list[float] | None:
+        """
+        Handle a Tango attribute read of the subrack fan speeds, in RPM.
+
+        :return: the subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns none.
+        """
+        return self._subrack_fan_speeds()
 
     def _subrack_fan_speeds(self: MccsSubrack) -> list[float] | None:
         """
@@ -1562,6 +1593,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     )
             else:
                 special_update_method(value)
+
+        # if we get an update for the fans' pwm or rpm we need to recalculate the estimated value:
+        if any(key in kwargs for key in ["subrack_fan_speeds", "subrack_fan_speeds_percent"]):
+            s_value = self._scaled_subrack_fan_speeds()                 
+            self._hardware_attributes["scaledSubrackFanSpeeds"] = s_value
+            self.push_change_event("scaledSubrackFanSpeeds", s_value)
+            self.push_archive_event("scaledSubrackFanSpeeds", s_value)
 
         tpm_power_state = None
         if power == PowerState.OFF:

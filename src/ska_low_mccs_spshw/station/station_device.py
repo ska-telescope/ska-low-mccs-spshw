@@ -126,6 +126,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # attributes, thereby stopping the linters from complaining about
         # "attribute-defined-outside-init" etc. We still need to make sure that
         # `init_device` re-initialises any values defined in here.
+        self._frame_wrap_timer: threading.Timer | None = None
+        self._frame_wrap_timer_stop_event = threading.Event()
+        self._frame_wrap_timer_lock = threading.Lock()
+
         super().__init__(*args, **kwargs)
 
         self._health_state: HealthState = HealthState.UNKNOWN
@@ -142,8 +146,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
-        self._frame_wrap_timer: threading.Timer | None = None
-        self._frame_wrap_timer_stop_event = threading.Event()
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -156,6 +158,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         }
         super().init_device()
 
+        self._frame_wrap_timer_stop_event.clear()  # In case of re-initialisation
         self._start_frame_wrap_timer()
 
         self._is_calibrated = False
@@ -1187,11 +1190,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _start_frame_wrap_timer(self: SpsStation) -> None:
         """Schedule the next update of the timeToFrameCounterWrap attribute."""
-        self._frame_wrap_timer = threading.Timer(
-            1.0, self._update_time_to_frame_counter_wrap
-        )
-        self._frame_wrap_timer.daemon = True
-        self._frame_wrap_timer.start()
+        if self._frame_wrap_timer_stop_event.is_set():
+            return
+        with self._frame_wrap_timer_lock:
+            if self._frame_wrap_timer:
+                self._frame_wrap_timer.cancel()
+            self._frame_wrap_timer = threading.Timer(
+                1.0, self._update_time_to_frame_counter_wrap
+            )
+            self._frame_wrap_timer.daemon = True
+            self._frame_wrap_timer.start()
 
     def _update_time_to_frame_counter_wrap(self: SpsStation) -> None:
         if self._frame_wrap_timer_stop_event.is_set():
@@ -1209,14 +1217,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         except Exception:  # pylint: disable=broad-exception-caught
             self.logger.exception("Error updating timeToFrameCounterWrap signal.")
         finally:
-            if not self._frame_wrap_timer_stop_event.is_set():
-                self._start_frame_wrap_timer()
+            self._start_frame_wrap_timer()
 
     def _stop_frame_wrap_timer(self) -> None:
         self._frame_wrap_timer_stop_event.set()
         if self._frame_wrap_timer is not None:
-            self._frame_wrap_timer.cancel()
-            self._frame_wrap_timer = None
+            with self._frame_wrap_timer_lock:
+                self._frame_wrap_timer.cancel()
+                self._frame_wrap_timer = None
 
     time_to_frame_counter_wrap = AttrSignal[float]()
     timeToFrameCounterWrap = attribute_from_signal(  # noqa: N815

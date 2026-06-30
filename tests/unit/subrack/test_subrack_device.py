@@ -18,7 +18,13 @@ from typing import Any, Iterator
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
+from ska_control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+)
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType, server
@@ -143,6 +149,18 @@ def test_context_fixture(
                 self._hardware_attributes[name] = value
                 self.push_change_event(name, value)
                 self.push_archive_event(name, value)
+
+        @server.command(dtype_in="DevString")
+        def SimulateUpstreamPowerSupplyCommunicationState(self, argin: str) -> None:
+            """
+            Patched method to simulate upstream communication state changes.
+
+            :param argin: communication state name (e.g. "NOT_ESTABLISHED").
+            """
+            # pylint: disable=protected-access
+            self.component_manager._power_supply_communication_state_changed(
+                CommunicationStatus[argin]
+            )
 
     harness = SpsTangoTestHarness()
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
@@ -724,6 +742,58 @@ def test_subrack_connection_lost(
     )
     change_event_callbacks["tpm1PowerState"].assert_not_called()
     assert subrack_device.tpm1PowerState == state_of_device_under_control_after_dropout
+
+
+def test_subrack_recovery_from_upstream_comms_loss(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test recovery from upstream comms loss without illegal op-state transitions.
+
+    This test reproduces the bug where upstream (PDU/PowerMarshaller) comms loss
+    drives the device to UNKNOWN. On recovery, attempting to propagate fault
+    updates from UNKNOWN state triggers an illegal op-state action exception,
+    leaving the device stuck in UNKNOWN until manual Init() is called.
+
+    Expected behavior (after fix): Device should recover from UNKNOWN to ON
+    without requiring Init() and without triggering illegal state-model exceptions.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    # Bring device online
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    # Simulate upstream (PDU/PowerMarshaller) comms loss using the
+    # component manager communication callback path.
+    subrack_device.SimulateUpstreamPowerSupplyCommunicationState("NOT_ESTABLISHED")
+
+    # Device should enter UNKNOWN state
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=3, consume_nonmatches=True
+    )
+
+    # Simulate upstream comms recovery while subrack polling continues.
+    subrack_device.SimulateUpstreamPowerSupplyCommunicationState("ESTABLISHED")
+
+    # Device should recover to ON without requiring Init().
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=3, consume_nonmatches=True
+    )
 
 
 def test_health_status_attributes(

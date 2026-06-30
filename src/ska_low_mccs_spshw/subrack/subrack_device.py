@@ -1497,7 +1497,18 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param health_status: any changes to the health_status variables.
         :param kwargs: other state updates
         """
-        super()._component_state_changed(fault=fault, power=power)
+        # Always propagate power state changes (required for device state machine).
+        # However, guard fault propagation to avoid illegal op-state transitions
+        # (e.g., component_no_fault is not allowed in UNKNOWN state).
+        # This prevents device from getting stuck in UNKNOWN when upstream comms
+        # are lost and then recovered, which was causing StateModelError.
+        if power is not None:
+            super()._component_state_changed(power=power)
+
+        # Only propagate fault when power is ON or not transitioning to UNKNOWN.
+        # This avoids triggering illegal op-state actions from UNKNOWN.
+        if fault is not None and power != PowerState.UNKNOWN:
+            super()._component_state_changed(fault=fault)
         if not self.UseAttributesForHealth:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power, health=health)

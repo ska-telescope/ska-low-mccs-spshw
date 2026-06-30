@@ -406,6 +406,40 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
                 trl, communication_state
             )
 
+    def _power_supply_communication_state_changed(
+        self: SubrackComponentManager,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        """
+        Handle power supply communication status changes.
+
+        On restoration of upstream communication we re-assert the latest known
+        hardware power state so downstream device op_state can transition out of
+        UNKNOWN even if hardware power has remained continuously ON.
+
+        :param communication_state: new communication status.
+        """
+        super()._power_supply_communication_state_changed(communication_state)
+
+        if communication_state != CommunicationStatus.ESTABLISHED:
+            return
+
+        if self._hardware_communication_state != CommunicationStatus.ESTABLISHED:
+            return
+
+        # Re-assert the latest known hardware power on upstream comms recovery.
+        # During an upstream outage (PDU/power marshaller), the device can enter
+        # UNKNOWN while hardware polling continues and power remains ON.
+        # Because unchanged component-state values are not re-published, a normal
+        # post-recovery poll will not emit another power update when cached power is
+        # unchanged (for this path); without this explicit callback the device will
+        # remain stuck in UNKNOWN.
+        # Guards above ensure we only do this once both upstream and hardware
+        # communications are established.
+        known_power = self._hardware_component_manager.component_state.get("power")
+        if known_power is not None:
+            self._component_state_changed_callback(power=known_power)
+
     def _pdu_state_changed(
         self: SubrackComponentManager,
         fqdn: str,

@@ -38,3 +38,36 @@ Power on a TPM
 
 A command to power on a TPM is more complex. The command is not completed instantaneously, so the driver polls every second whether the command has completed. When this happens, the Tango device queries the TPM On status, and if a change is
 detected, generates an event. The Tile devices subscribe to this event, in order to change their status accordingly. 
+
+*****************************
+Upstream communication handling
+*****************************
+
+The subrack device maintains communication with upstream components (PDU and PowerMarshaller) to monitor and control power supply state. These upstream components provide critical power supply state information that informs the subrack's operational state.
+
+Communication Loss and Recovery
+================================
+
+If communication with upstream components is lost, the subrack device transitions to UNKNOWN state to indicate that accurate power state information is unavailable. The subrack driver polls both:
+
+* Direct hardware (SMB) communication status - controlled by subrack polling
+* Upstream (PDU/PowerMarshaller) communication status - controlled by base class callback
+
+When upstream communication is lost:
+
+1. The device enters UNKNOWN state
+2. Hardware polling continues independently
+3. Fault updates are guarded to prevent illegal state machine transitions from UNKNOWN state
+
+When upstream communication recovers and both communication paths are ESTABLISHED:
+
+1. The cached power state from the last successful hardware poll is re-asserted
+2. This re-assertion triggers device state recovery from UNKNOWN back to the appropriate operational state (ON/OFF/STANDBY)
+3. No manual Init() call is required
+
+This design ensures that:
+
+* The subrack can survive transient upstream outages
+* State machine integrity is maintained (no illegal op-state transitions)
+* Hardware-observed state is preserved and restored on recovery
+* The user is not required to manually reinitialize the device

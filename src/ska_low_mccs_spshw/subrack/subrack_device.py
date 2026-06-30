@@ -66,6 +66,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     internal_voltages_ddr_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_powerin_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_soc_signal: AttrSignal[float] = AttrSignal[float]()
+    # scaled_subrack_fan_speed: AttrSignal[float] = AttrSignal[float]()
 
     # Maps each signal-backed internalVoltages attribute name to its signal name.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -1081,7 +1082,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         # Create an array of small value that will act as an effective
         # minimum, this will avoid division by 0
-        minimum_pwm_duty = np.array([0.01] * 4, np.float32)
+        minimum_pwm_duty = np.array([0.01] * len(_pwm_duty), np.float32)
 
         return rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
 

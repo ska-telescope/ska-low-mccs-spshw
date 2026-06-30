@@ -188,7 +188,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         # fan reaxches the correct rpm. The values calculated in that time
         # need to be disragrded
         self._fan_error_values = [0] * SubrackData.FAN_COUNT
-        self._max_fan_errors = 5 
+        self._max_fan_errors = 5
 
         self._hardware_attributes: dict[str, Any] = {}
 
@@ -1100,7 +1100,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             if self._fan_error_values[i] >= self._max_fan_errors:
                 continue
 
-            elif (abs(val - correct_value)/correct_value) > 10:
+            if (abs(val - correct_value) / correct_value) > 10:
                 scaled_values[i] = correct_value
                 self._fan_error_values[i] += 1
 

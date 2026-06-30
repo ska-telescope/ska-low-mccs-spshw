@@ -31,7 +31,7 @@ class SubrackData:  # pylint: disable=too-few-public-methods
 
     MAX_SUBRACK_FAN_SPEED = 6000.0
     """The maximum fan speed for the subrack."""
-    
+
     FAN_COUNT = 4
 
 

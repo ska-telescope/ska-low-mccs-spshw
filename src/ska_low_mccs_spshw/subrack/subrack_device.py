@@ -183,6 +183,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._tpm_count = 0
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
+        # Currently, because of inertia, fan rpm and pwm values aren't synced
+        # this means the values will be off for about 5-10 seconds until the
+        # fan reaxches the correct rpm. The values calculated in that time
+        # need to be disragrded
+        self._fan_error_values = [0] * SubrackData.FAN_COUNT
+        self._max_fan_errors = 5 
+
         self._hardware_attributes: dict[str, Any] = {}
 
         self._desired_fan_speeds: Optional[list[float]] = None
@@ -1084,7 +1091,20 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         # minimum, this will avoid division by 0
         minimum_pwm_duty = np.array([0.01] * len(_pwm_duty), np.float32)
 
-        return rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
+        scaled_values = rpm_speed / np.maximum(pwm_duty, minimum_pwm_duty)
+
+        # Drop any bad values (10% error) unless they are n consecutive
+        # bad values where n is max fan errors
+        correct_value = SubrackData.MAX_SUBRACK_FAN_SPEED
+        for i, val in enumerate(scaled_values):
+            if self._fan_error_values[i] >= self._max_fan_errors:
+                continue
+
+            elif (abs(val - correct_value)/correct_value) > 10:
+                scaled_values[i] = correct_value
+                self._fan_error_values[i] += 1
+
+        return scaled_values
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1

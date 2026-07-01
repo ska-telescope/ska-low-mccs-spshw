@@ -1190,9 +1190,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _start_frame_wrap_timer(self: SpsStation) -> None:
         """Schedule the next update of the timeToFrameCounterWrap attribute."""
-        if self._frame_wrap_timer_stop_event.is_set():
-            return
         with self._frame_wrap_timer_lock:
+            if self._frame_wrap_timer_stop_event.is_set():
+                return
             if self._frame_wrap_timer:
                 self._frame_wrap_timer.cancel()
             self._frame_wrap_timer = threading.Timer(

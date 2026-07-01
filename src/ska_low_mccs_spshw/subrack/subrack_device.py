@@ -55,7 +55,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     )
 
     # Properties to control the attribute filters
-    AttributeFilterType = device_property(dtype=str, default_value="mean")
+    AttributeFilterType = device_property(dtype=str, default_value="none")
     AttributeFilterMaxSamples = device_property(dtype=int, default_value=5)
 
     # Signals backing the internalVoltages* attributes.
@@ -201,7 +201,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         super().init_device()
 
-        # Initialise the map of attribute value filters.
+        # Initialise the map of attribute value filters. For the tpm attributes
+        # we create the filter where the filter type and parameters are taken
+        # from tango properties.
         self._attribute_value_filters = {
             name: SubrackAttributeFilter(
                 filter_type=self.AttributeFilterType,
@@ -1525,9 +1527,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     # Hardware returns None for powered-off TPM slots; replace with
                     # np.nan so Tango receives a valid numeric array.
                     value = np.array([v if v is not None else np.nan for v in value])
-                self._hardware_attributes[
-                    tango_attribute_name
-                ] = self._filter_attribute_value(tango_attribute_name, value)
+
+                # Apply filtering to the attribute values to remove noise
+                value = self._filter_attribute_value(tango_attribute_name, value)
+
+                # Update the attribute value
+                self._hardware_attributes[tango_attribute_name] = value
                 if tango_attribute_name == "subrackBoardInfo":
                     if isinstance(value, dict):
                         # Serialise value to match attribute definition.

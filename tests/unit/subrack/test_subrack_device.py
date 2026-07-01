@@ -1063,3 +1063,65 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     assert math.isnan(voltages[0])
     currents = list(subrack_device.tpmCurrents)
     assert math.isnan(currents[0])
+
+
+@pytest.mark.parametrize("filter_type", [None])  # , "", "none", "mean", "median"])
+def test_subrack_device_tpm_attribute_filtering(
+    filter_type: str | None,
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that the subrack tpm attributes are filtered correctly.
+
+    :param filter_type: test the filter type
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+        subrack_device.subscribe_event(
+            attribute_name,
+            EventType.CHANGE_EVENT,
+            change_event_callbacks[attribute_name],
+        )
+        change_event_callbacks[attribute_name].assert_change_event(None)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    # Consume the initial values pushed when polling starts.
+    for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+        change_event_callbacks[attribute_name].assert_change_event(
+            Anything, lookahead=30
+        )
+
+    # Make small fluctuations in the voltage
+    voltages = np.random.uniform(12.0, 12.1, size=(6, 8))
+    currents = np.random.uniform(0.4, 0.5, size=(6, 8))
+
+    for i in range(voltages.shape[0]):
+        subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
+        subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())
+
+        expected_voltages = [pytest.approx(v) for v in voltages[i].tolist()]
+        expected_currents = [pytest.approx(c) for c in currents[i].tolist()]
+
+        time.sleep(15.2)
+        observed_voltages = list(subrack_device.tpmVoltages)
+        observed_currents = list(subrack_device.tpmCurrents)
+        assert all(a == b for a, b in zip(expected_voltages, observed_voltages))
+        assert all(a == b for a, b in zip(expected_currents, observed_currents))

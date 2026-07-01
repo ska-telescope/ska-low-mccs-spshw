@@ -370,8 +370,54 @@ class TestTileComponentManager:
         else:
             callbacks["communication_status"].assert_not_called()
 
+    def test_tpm_values_changed(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        callbacks: MockCallableGroup,
+        mock_subrack_device_proxy: unittest.mock.Mock,
+        tile_id: int,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test handling of notifications of TPM values changes from the subrack.
+
+        :param tile_component_manager: the tile component manager
+            under test
+        :param callbacks: dictionary of driver callbacks.
+        :param mock_subrack_device_proxy: a mock device proxy to a
+            subrack device.
+        :param tile_id: the logical tile id
+        :param tile_simulator: a mock tpm to test
+
+        """
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmCurrents",
+            [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            tango.AttrQuality.ATTR_VALID,
+        )
+
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmPowers",
+            [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8],
+            tango.AttrQuality.ATTR_VALID,
+        )
+
+        tile_component_manager._subrack_says_tpm_values_changed(
+            "tpmVoltages",
+            [2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8],
+            tango.AttrQuality.ATTR_VALID,
+        )
+
+        callbacks["attribute_state"].assert_call(current_draw=0.1)
+        callbacks["attribute_state"].assert_call(power_draw=1.1)
+        callbacks["attribute_state"].assert_call(voltage_draw=2.1)
+
+    @unittest.mock.patch(
+        "ska_low_mccs_spshw.tile.tile_component_manager.MccsCommandProxy"
+    )
     def test_off_on(
         self: TestTileComponentManager,
+        mock_command_proxy_cls: unittest.mock.Mock,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
         callbacks: MockCallableGroup,
@@ -382,6 +428,7 @@ class TestTileComponentManager:
         """
         Test that we can turn the TPM on and off when the subrack is on.
 
+        :param mock_command_proxy_cls: patched MccsCommandProxy class.
         :param tile_component_manager: the tile component manager
             under test
         :param tile_simulator: the tile simulator backend.
@@ -413,7 +460,7 @@ class TestTileComponentManager:
 
         callbacks["component_state"].assert_not_called()
 
-        tile_component_manager.on()
+        tile_component_manager.do_on()
         # Manually report the Subrack turning on
         tile_component_manager._subrack_says_tpm_power_changed(
             f"tpm{tile_id}powerstate",
@@ -442,7 +489,7 @@ class TestTileComponentManager:
             assert not tile_component_manager._component_state["fault"]
             callbacks["component_state"].assert_not_called()
 
-        tile_component_manager.off()
+        tile_component_manager.do_off()
         # Manually report the Subrack turning on
         tile_component_manager._subrack_says_tpm_power_changed(
             f"tpm{tile_id}powerstate",
@@ -466,8 +513,12 @@ class TestTileComponentManager:
         assert not tile_component_manager._component_state["fault"]
         callbacks["component_state"].assert_not_called()
 
+    @unittest.mock.patch(
+        "ska_low_mccs_spshw.tile.tile_component_manager.MccsCommandProxy"
+    )
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
+        mock_command_proxy_cls: unittest.mock.Mock,
         tile_component_manager: TileComponentManager,
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
@@ -483,6 +534,7 @@ class TestTileComponentManager:
         turned off). Instead of failing, it waits for the subrack to
         turn on, and then executes the on command.
 
+        :param mock_command_proxy_cls: patched MccsCommandProxy class.
         :param tile_component_manager: the tile component manager
             under test
         :param callbacks: dictionary of driver callbacks.
@@ -493,9 +545,11 @@ class TestTileComponentManager:
         :param tile_simulator: the backend simulator.
         :param tile_id: the logical tile id
         """
+        mock_command_proxy_cls.return_value.return_value = (ResultCode.OK, "OK")
+
         tile_simulator.mock_off()
         with pytest.raises(AssertionError):
-            tile_component_manager.on(task_callback=callbacks["task"])
+            tile_component_manager.do_on(task_callback=callbacks["task"])
         callbacks["task"].assert_call(
             status=TaskStatus.REJECTED,
             result=(ResultCode.REJECTED, "No request provider"),
@@ -517,16 +571,21 @@ class TestTileComponentManager:
             PowerState.NO_SUPPLY,
             tango.EventType.CHANGE_EVENT,
         )
-        mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
+        mock_command_proxy_cls.return_value.assert_not_called()
 
-        result_code, message = tile_component_manager.on(callbacks["task"])
-        assert result_code == TaskStatus.QUEUED
-        assert message == "Task staged"
+        tile_component_manager.do_on(task_callback=callbacks["task"])
         time.sleep(0.2)
 
         # We initially submit the on command to the Subrack and place a
         # Initialise command in the queue.
-        mock_subrack_device_proxy.PowerOnTpm.assert_last_call(1)
+        mock_command_proxy_cls.assert_called_once_with(
+            tile_component_manager._subrack_fqdn,
+            "PowerOnTpm",
+            tile_component_manager.logger,
+        )
+        mock_command_proxy_cls.return_value.assert_called_once_with(
+            is_lrc=True, timeout=20, wait_for_result=True, arg=subrack_tpm_id
+        )
 
         # mock an event from subrack announcing it to be turned on
         tile_component_manager._subrack_says_tpm_power_changed(
@@ -534,7 +593,6 @@ class TestTileComponentManager:
             PowerState.ON,
             tango.EventType.CHANGE_EVENT,
         )
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
@@ -583,7 +641,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        tile_component_manager.on(task_callback=callbacks["task"])
+        with unittest.mock.patch(
+            "ska_low_mccs_spshw.tile.tile_component_manager.MccsCommandProxy"
+        ) as mock_command_proxy_cls:
+            mock_command_proxy_cls.return_value.return_value = (ResultCode.OK, "OK")
+            tile_component_manager.do_on(task_callback=callbacks["task"])
         try:
             callbacks["component_state"].assert_call(
                 power=PowerState.ON, fault=False, lookahead=2
@@ -611,7 +673,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=5
         )
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
@@ -884,7 +945,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         mock_bitfile = mocker.Mock()
         tile_component_manager.download_firmware(mock_bitfile, callbacks["task_lrc"])
 
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -997,7 +1057,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         assert not tile_component_manager.is_beamformer_running
         tile_component_manager.start_beamformer(callbacks["task_lrc"])
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -1010,7 +1069,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         assert tile_component_manager.is_beamformer_running
         tile_component_manager.stop_beamformer(callbacks["task_lrc"])
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -1029,7 +1087,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["task_lrc"],
             channel_groups=block1,
         )
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -1045,7 +1102,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["task_lrc"],
             channel_groups=block2,
         )
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -1062,7 +1118,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["task_lrc"],
             channel_groups=block1,
         )
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -1079,7 +1134,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["task_lrc"],
             channel_groups=block2,
         )
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -1259,7 +1313,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             force_reprogramming=True, task_callback=callbacks["task"]
         )
 
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
@@ -1292,7 +1345,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.start_acquisition(
             start_time=start_time, delay=1, task_callback=callbacks["task"]
         )
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         time.sleep(future_time)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS, lookahead=5)
         callbacks["task"].assert_call(
@@ -1784,7 +1836,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             force_reprogramming=True, task_callback=callbacks["task"]
         )
 
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
@@ -1823,7 +1874,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             force_reprogramming=True,
             task_callback=callbacks["task"],
         )
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.FAILED,
@@ -1857,7 +1907,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             force_reprogramming=True, task_callback=callbacks["task"]
         )
 
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
@@ -2208,7 +2257,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.start_beamformer(
             callbacks["task_lrc"], start_time=start_time, duration=4
         )
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -2248,7 +2296,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
 
         tile_component_manager.stop_beamformer(callbacks["task_lrc"])
-        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task_lrc"].assert_call(
             status=TaskStatus.IN_PROGRESS, lookahead=2, consume_nonmatches=True
         )
@@ -3501,7 +3548,11 @@ class TestDynamicSimulator:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        dynamic_tile_component_manager.on(task_callback=callbacks["task"])
+        with unittest.mock.patch(
+            "ska_low_mccs_spshw.tile.tile_component_manager.MccsCommandProxy"
+        ) as mock_command_proxy_cls:
+            mock_command_proxy_cls.return_value.return_value = (ResultCode.OK, "OK")
+            dynamic_tile_component_manager.do_on(task_callback=callbacks["task"])
         try:
             callbacks["component_state"].assert_call(
                 power=PowerState.ON, fault=False, lookahead=2
@@ -3534,7 +3585,6 @@ class TestDynamicSimulator:
             lookahead=5,
             consume_nonmatches=True,
         )
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,

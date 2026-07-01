@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import functools
 import itertools
+import json
 import random
 import threading
 import time
@@ -147,7 +148,7 @@ class SubrackSimulator(SubrackProtocol):
         "tpm_currents": {
             "length": 8,
             "default": [0.4] * 8,
-            "writable": False,
+            "writable": True,
         },
         # "tpm_temperatures": {  # Not implemented on SMB
         #     "length": 8,
@@ -157,7 +158,7 @@ class SubrackSimulator(SubrackProtocol):
         "tpm_voltages": {
             "length": 8,
             "default": [12.0] * 8,
-            "writable": False,
+            "writable": True,
         },
         "board_info": {
             "length": None,
@@ -308,9 +309,31 @@ class SubrackSimulator(SubrackProtocol):
         if not metadata["writable"] and not _force:
             raise TypeError(f"Attempt to write read-only attribute {name}")
         if metadata["length"] is not None and len(values) != metadata["length"]:
-            raise ValueError(f"Wrong number of values for attribute {name}")
+            raise ValueError(f"Wrong number of values for attribute {name}: {values}")
         self._attribute_values[name] = values
         return values
+
+    def _set_attribute_tpm_currents(self, value: str) -> list[str]:
+        """
+        Set the tpm currents attribute.
+
+        :param value: The value of the tpm_currents
+
+        :returns: The values
+
+        """
+        return self._set_attribute("tpm_currents", json.loads(value))
+
+    def _set_attribute_tpm_voltages(self, value: str) -> list[str]:
+        """
+        Set the tpm voltages attribute.
+
+        :param value: The value of the tpm_voltages
+
+        :returns: The values
+
+        """
+        return self._set_attribute("tpm_voltages", json.loads(value))
 
     @apply_jitter
     def get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:

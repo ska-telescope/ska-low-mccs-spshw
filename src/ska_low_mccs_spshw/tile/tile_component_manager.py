@@ -67,6 +67,7 @@ FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
 FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
+_POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -903,40 +904,53 @@ class TileComponentManager(
             self._subrack_proxy.unsubscribe_all_change_events()
             self._subrack_proxy = None
 
-    def off(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+    def do_off(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm off.
 
-        :param task_callback: Update task state, defaults to None
+        Submits the blocking subrack call to the task executor so the
+        Tango serialization monitor is not held during the network round-trip.
 
-        :return: a result code and a unique_id or message.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
         """
         subrack_off_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
         subrack_off_command_proxy(
-            arg=self._subrack_tpm_id, is_lrc=False, task_callback=task_callback
+            arg=self._subrack_tpm_id,
+            is_lrc=True,
+            timeout=_POWER_COMMAND_TIMEOUT,
+            wait_for_result=True,
+            task_callback=task_callback,
         )
 
-        return TaskStatus.QUEUED, ""
-
-    def on(
+    def do_on(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[TaskStatus, str]:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm on.
 
-        :param task_callback: Update task state, defaults to None
+        Submits the blocking subrack call to the task executor so the
+        Tango serialization monitor is not held during the network round-trip.
+        task_callback is not passed to submit_task; instead it is forwarded
+        to TileLRCRequest, which owns the full QUEUED→IN_PROGRESS→COMPLETED
+        lifecycle once the TPM becomes connectable.
 
-        :return: a result code and a unique_id or message.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
 
         :raises AssertionError: request_provider is not yet initialised.
         """
-        if self._request_provider is None:
+        request_provider = self._request_provider
+        if request_provider is None:
             if task_callback:
                 task_callback(
                     status=TaskStatus.REJECTED,
@@ -951,7 +965,12 @@ class TileComponentManager(
         )
         # Do not pass the task_callback to command_proxy.
         # The on command is completed when initialisation has completed.
-        subrack_on_command_proxy(is_lrc=False, arg=self._subrack_tpm_id)
+        subrack_on_command_proxy(
+            is_lrc=True,
+            timeout=_POWER_COMMAND_TIMEOUT,
+            wait_for_result=True,
+            arg=self._subrack_tpm_id,
+        )
 
         request = TileLRCRequest(
             name="initialise",
@@ -963,8 +982,7 @@ class TileComponentManager(
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            self._request_provider.enqueue_lrc(request, priority=0)
-        return TaskStatus.QUEUED, "Task staged"
+            request_provider.enqueue_lrc(request, priority=0)
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """
@@ -993,10 +1011,22 @@ class TileComponentManager(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-            self._subrack_proxy.add_change_event_callback(
-                f"tpm{self._subrack_tpm_id}PowerState",
-                self._subrack_says_tpm_power_changed,
-            )
+            # Add callbacks for subrack attribute change events
+            self._add_subrack_change_event_callbacks()
+
+    def _add_subrack_change_event_callbacks(self) -> None:
+        """Add subrack change event callbacks."""
+        if self._subrack_proxy:
+            tpm_power_state_attr = f"tpm{self._subrack_tpm_id}PowerState"
+            callbacks: dict[str, Callable[[str, Any, Any], None]] = {
+                tpm_power_state_attr: self._subrack_says_tpm_power_changed,
+                "tpmCurrents": self._subrack_says_tpm_values_changed,
+                "tpmPowers": self._subrack_says_tpm_values_changed,
+                "tpmVoltages": self._subrack_says_tpm_values_changed,
+                "state": self._subrack_says_state_changed,
+            }
+            for attr, func in callbacks.items():
+                self._subrack_proxy.add_change_event_callback(attr, func)
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """
@@ -1029,7 +1059,7 @@ class TileComponentManager(
         on the subrack device.
 
         :param event_name: name of the event; will always be
-            "areTpmsOn" for this callback
+            "tpm{self._subrack_tpm_id}PowerState" for this callback
         :param event_value: the new attribute value
         :param event_quality: the quality of the change event
         """
@@ -1106,6 +1136,116 @@ class TileComponentManager(
 
         else:
             self._tile_time.set_reference_time(0)
+
+    def _subrack_says_state_changed(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: list[float] | None,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change subrack state, as reported by subrack.
+
+        This callback is triggered when the subrack's state changes.
+        When the state changes, subrack values may transition between
+        valid/invalid states, so we need to manually fetch the current values
+        since attribute change events are not pushed for state transitions.
+
+        :param event_name: name of the event; will always be "state"
+        :param event_value: the current subrack state (e.g., "ONLINE", "OFFLINE")
+        :param event_quality: the quality of the change event
+
+        """
+        # If the subrack state changes then the subrack values change to/from
+        # INVALID but an attribute event will not be pushed so we need to
+        # subscribe to the state change event and fetch the subrack values
+        # manually. For example:
+        # 1. subrack.adminMode = "OFFLINE" will result in values being invalid
+        # 2. subrack.adminMode = "ONLINE" will result in values being valid
+        self.fetch_subrack_values()
+
+    def _subrack_says_tpm_values_changed(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: list[float] | None,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change in tpm values, as reported by subrack.
+
+        This callback is triggered by event subscriptions on subrack TPM
+        attributes. Expected event_value format: list[float] with exactly 8
+        values (one per TPM bay). The tile extracts the value corresponding to
+        its subrack_tpm_id position.
+
+        :param event_name: name of the event; will always be one of
+            "tpmCurrents", "tpmPowers" or "tpmVoltages" for this callback
+        :param event_value: list of 8 float values representing each TPM bay's metric
+        :param event_quality: the quality of the change event
+
+        """
+
+        def get_unknown_event_name_message(event_name: str) -> str:
+            names = ["tpmcurrents", "tpmpowers", "tpmvoltages"]
+            return f"Expected one of {names} for event_name, got '{event_name}'"
+
+        def get_value(values: list[float] | None) -> float | None:
+            if values is not None:
+                return values[self._subrack_tpm_id - 1]
+            return None
+
+        if event_quality != tango.AttrQuality.ATTR_INVALID:
+            try:
+                # Get the tpm value
+                tpm_value = get_value(event_value)
+
+                # Make event name lower case
+                event_name = event_name.lower()
+
+                # Check the event name and handle the corresponding attribute update
+                match event_name:
+                    case "tpmcurrents":
+                        self._update_attribute_callback(current_draw=tpm_value)
+                    case "tpmpowers":
+                        self._update_attribute_callback(power_draw=tpm_value)
+                    case "tpmvoltages":
+                        self._update_attribute_callback(voltage_draw=tpm_value)
+                    case _:
+                        self.logger.error(get_unknown_event_name_message(event_name))
+
+            except TypeError as e:
+                self.logger.warning(f"Subrack attributes have unexpected type: {e}")
+            except IndexError as e:
+                self.logger.warning(f"Subrack attributes have incorrect length: {e}")
+        else:
+            self.logger.warning(
+                f"Received {event_name} event with invalid quality: {event_quality}"
+            )
+
+    def fetch_subrack_values(self) -> None:
+        """Fetch initial values from subrack and update tile attributes."""
+
+        def get_value(values: list[float] | None) -> float | None:
+            if values is not None:
+                return values[self._subrack_tpm_id - 1]
+            return None
+
+        # Try to get the values from the subrack proxy
+        if self._subrack_proxy:
+            try:
+                self._update_attribute_callback(
+                    current_draw=get_value(self._subrack_proxy.tpmCurrents),
+                    power_draw=get_value(self._subrack_proxy.tpmPowers),
+                    voltage_draw=get_value(self._subrack_proxy.tpmVoltages),
+                )
+            except tango.ConnectionFailed as e:
+                self.logger.warning(f"Subrack connection failed: {e}")
+            except tango.DevFailed as e:
+                self.logger.warning(f"Failed to read subrack attributes: {e}")
+            except TypeError as e:
+                self.logger.warning(f"Subrack attributes have unexpected type: {e}")
+            except IndexError as e:
+                self.logger.warning(f"Subrack attributes have incorrect length: {e}")
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """
@@ -1443,8 +1583,6 @@ class TileComponentManager(
         )
         self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Download_firmware command placed in poll QUEUE")
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED, result="Task staged")
         return ([ResultCode.QUEUED], ["Task staged"])
 
     @check_communicating

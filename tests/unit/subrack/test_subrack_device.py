@@ -1112,7 +1112,7 @@ def test_subrack_device_tpm_attribute_filtering(
     # Make small fluctuations in the voltage
     voltages = np.random.uniform(12.0, 12.1, size=(6, 8))
     currents = np.random.uniform(0.4, 0.5, size=(6, 8))
-
+    
     for i in range(voltages.shape[0]):
         subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
         subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())

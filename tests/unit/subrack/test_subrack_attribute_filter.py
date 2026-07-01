@@ -8,13 +8,14 @@
 
 import statistics
 
+import numpy as np
 import pytest
 
 from ska_low_mccs_spshw.subrack.subrack_attribute_filter import SubrackAttributeFilter
 
 
 @pytest.mark.parametrize("filter_type", [None, "", "mean", "median"])
-def test_subrack_attribute_filter(filter_type: str | None) -> None:
+def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
     """
     Test the subrack attribute filter.
 
@@ -24,6 +25,7 @@ def test_subrack_attribute_filter(filter_type: str | None) -> None:
     # Create the filter
     attribute_filter = SubrackAttributeFilter(filter_type, max_samples=5)
 
+    # Test with float values
     values: list[float] = []
     for x in range(10):
         value = attribute_filter(x)
@@ -32,16 +34,57 @@ def test_subrack_attribute_filter(filter_type: str | None) -> None:
         values = values[-4:] + [x]
         assert len(values) <= 5
         assert len(values) == len(attribute_filter._buffer)
-        assert all(a == b for a, b in zip(values, attribute_filter._buffer))
+        assert pytest.approx(values) == attribute_filter._buffer
 
         # Check expected result
         match filter_type:
             case None, "":
                 assert value == x
             case "mean":
-                assert value == statistics.mean(values)
+                assert pytest.approx(value) == statistics.mean(values)
             case "median":
-                assert value == statistics.median(values)
+                assert pytest.approx(value) == statistics.median(values)
+
+    # Check empty
+    attribute_filter.clear()
+    assert len(attribute_filter._buffer) == 0
+
+
+@pytest.mark.parametrize("filter_type", [None, "", "mean", "median"])
+def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
+    """
+    Test the subrack attribute filter.
+
+    :param filter_type: Test each filter type.
+
+    """
+    # Create the filter
+    attribute_filter = SubrackAttributeFilter(filter_type, max_samples=5)
+
+    # Test with a list of float values
+    values: list[list[float]] = []
+    for x in range(10):
+        value = attribute_filter(np.array([x for i in range(8)]))
+
+        # Ensure max of 5 values
+        values = values[-4:] + [[x for i in range(8)]]
+        assert len(values) <= 5
+        assert len(values) == len(attribute_filter._buffer)
+        for a, b in zip(values, attribute_filter._buffer):
+            assert pytest.approx(a) == b
+
+        # Check expected result
+        match filter_type:
+            case None, "":
+                assert value == x
+            case "mean":
+                assert pytest.approx(value) == [
+                    statistics.mean(v) for v in zip(*values)
+                ]
+            case "median":
+                assert pytest.approx(value) == [
+                    statistics.median(v) for v in zip(*values)
+                ]
 
     # Check empty
     attribute_filter.clear()

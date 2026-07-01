@@ -18,6 +18,7 @@ from typing import Any, Final, Optional
 
 import numpy as np
 import ska_tango_base as stb
+from numpy.typing import NDArray
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
@@ -1583,7 +1584,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         self._update_health_data()
 
-    def _filter_attribute_value(self, name: str, value: float) -> float:
+    def _filter_attribute_value(
+        self, name: str, value: float | NDArray[np.floating]
+    ) -> float | NDArray[np.floating]:
         """
         Filter the attribute value or return unchanged.
 

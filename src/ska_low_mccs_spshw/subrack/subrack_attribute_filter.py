@@ -7,8 +7,10 @@
 """This module provides a subrack attribute filter class."""
 
 from collections import deque
+from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 
 class SubrackAttributeFilter:
@@ -33,15 +35,19 @@ class SubrackAttributeFilter:
 
         # Create the buffer. The deque will gives us a circular buffer with a
         # maximum of 'max_samples' elements
-        self._buffer: deque[float] = deque(maxlen=max_samples)
+        self._buffer: deque[Any] = deque(maxlen=max_samples)
 
     def clear(self) -> None:
         """Clear the filter buffer."""
         self._buffer.clear()
 
-    def __call__(self, value: float) -> float:
+    def __call__(
+        self, value: float | NDArray[np.floating]
+    ) -> float | NDArray[np.floating]:
         """
         Filter and get the value.
+
+        If the attribute is an array, filtering is done over the each element
 
         :param value: The raw value.
 
@@ -58,8 +64,8 @@ class SubrackAttributeFilter:
             case None | "" | "none":
                 return value
             case "mean":
-                return float(np.mean(self._buffer))
+                return np.mean(self._buffer, axis=0)
             case "median":
-                return float(np.median(self._buffer))
+                return np.median(self._buffer, axis=0)
             case _:
                 raise ValueError(f"Unrecognised filter type: {self._filter_type}")

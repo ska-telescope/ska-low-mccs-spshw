@@ -1011,10 +1011,22 @@ class TileComponentManager(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-            self._subrack_proxy.add_change_event_callback(
-                f"tpm{self._subrack_tpm_id}PowerState",
-                self._subrack_says_tpm_power_changed,
-            )
+            # Add callbacks for subrack attribute change events
+            self._add_subrack_change_event_callbacks()
+
+    def _add_subrack_change_event_callbacks(self) -> None:
+        """Add subrack change event callbacks."""
+        if self._subrack_proxy:
+            tpm_power_state_attr = f"tpm{self._subrack_tpm_id}PowerState"
+            callbacks: dict[str, Callable[[str, Any, Any], None]] = {
+                tpm_power_state_attr: self._subrack_says_tpm_power_changed,
+                "tpmCurrents": self._subrack_says_tpm_values_changed,
+                "tpmPowers": self._subrack_says_tpm_values_changed,
+                "tpmVoltages": self._subrack_says_tpm_values_changed,
+                "state": self._subrack_says_state_changed,
+            }
+            for attr, func in callbacks.items():
+                self._subrack_proxy.add_change_event_callback(attr, func)
 
     def _is_connected(self: TileComponentManager, raise_exception: bool = True) -> bool:
         """
@@ -1047,7 +1059,7 @@ class TileComponentManager(
         on the subrack device.
 
         :param event_name: name of the event; will always be
-            "areTpmsOn" for this callback
+            "tpm{self._subrack_tpm_id}PowerState" for this callback
         :param event_value: the new attribute value
         :param event_quality: the quality of the change event
         """
@@ -1124,6 +1136,116 @@ class TileComponentManager(
 
         else:
             self._tile_time.set_reference_time(0)
+
+    def _subrack_says_state_changed(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: list[float] | None,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change subrack state, as reported by subrack.
+
+        This callback is triggered when the subrack's state changes.
+        When the state changes, subrack values may transition between
+        valid/invalid states, so we need to manually fetch the current values
+        since attribute change events are not pushed for state transitions.
+
+        :param event_name: name of the event; will always be "state"
+        :param event_value: the current subrack state (e.g., "ONLINE", "OFFLINE")
+        :param event_quality: the quality of the change event
+
+        """
+        # If the subrack state changes then the subrack values change to/from
+        # INVALID but an attribute event will not be pushed so we need to
+        # subscribe to the state change event and fetch the subrack values
+        # manually. For example:
+        # 1. subrack.adminMode = "OFFLINE" will result in values being invalid
+        # 2. subrack.adminMode = "ONLINE" will result in values being valid
+        self.fetch_subrack_values()
+
+    def _subrack_says_tpm_values_changed(
+        self: TileComponentManager,
+        event_name: str,
+        event_value: list[float] | None,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle change in tpm values, as reported by subrack.
+
+        This callback is triggered by event subscriptions on subrack TPM
+        attributes. Expected event_value format: list[float] with exactly 8
+        values (one per TPM bay). The tile extracts the value corresponding to
+        its subrack_tpm_id position.
+
+        :param event_name: name of the event; will always be one of
+            "tpmCurrents", "tpmPowers" or "tpmVoltages" for this callback
+        :param event_value: list of 8 float values representing each TPM bay's metric
+        :param event_quality: the quality of the change event
+
+        """
+
+        def get_unknown_event_name_message(event_name: str) -> str:
+            names = ["tpmcurrents", "tpmpowers", "tpmvoltages"]
+            return f"Expected one of {names} for event_name, got '{event_name}'"
+
+        def get_value(values: list[float] | None) -> float | None:
+            if values is not None:
+                return values[self._subrack_tpm_id - 1]
+            return None
+
+        if event_quality != tango.AttrQuality.ATTR_INVALID:
+            try:
+                # Get the tpm value
+                tpm_value = get_value(event_value)
+
+                # Make event name lower case
+                event_name = event_name.lower()
+
+                # Check the event name and handle the corresponding attribute update
+                match event_name:
+                    case "tpmcurrents":
+                        self._update_attribute_callback(current_draw=tpm_value)
+                    case "tpmpowers":
+                        self._update_attribute_callback(power_draw=tpm_value)
+                    case "tpmvoltages":
+                        self._update_attribute_callback(voltage_draw=tpm_value)
+                    case _:
+                        self.logger.error(get_unknown_event_name_message(event_name))
+
+            except TypeError as e:
+                self.logger.warning(f"Subrack attributes have unexpected type: {e}")
+            except IndexError as e:
+                self.logger.warning(f"Subrack attributes have incorrect length: {e}")
+        else:
+            self.logger.warning(
+                f"Received {event_name} event with invalid quality: {event_quality}"
+            )
+
+    def fetch_subrack_values(self) -> None:
+        """Fetch initial values from subrack and update tile attributes."""
+
+        def get_value(values: list[float] | None) -> float | None:
+            if values is not None:
+                return values[self._subrack_tpm_id - 1]
+            return None
+
+        # Try to get the values from the subrack proxy
+        if self._subrack_proxy:
+            try:
+                self._update_attribute_callback(
+                    current_draw=get_value(self._subrack_proxy.tpmCurrents),
+                    power_draw=get_value(self._subrack_proxy.tpmPowers),
+                    voltage_draw=get_value(self._subrack_proxy.tpmVoltages),
+                )
+            except tango.ConnectionFailed as e:
+                self.logger.warning(f"Subrack connection failed: {e}")
+            except tango.DevFailed as e:
+                self.logger.warning(f"Failed to read subrack attributes: {e}")
+            except TypeError as e:
+                self.logger.warning(f"Subrack attributes have unexpected type: {e}")
+            except IndexError as e:
+                self.logger.warning(f"Subrack attributes have incorrect length: {e}")
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

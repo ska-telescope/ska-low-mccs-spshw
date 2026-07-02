@@ -2132,16 +2132,6 @@ def test_frame_counter_wrap_timer(
     :param change_event_callbacks: dictionary of Tango change event callbacks.
     """
     station_device.subscribe_event(
-        "timeToFrameCounterWrap",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["timeToFrameCounterWrap"],
-    )
-    station_device.subscribe_event(
-        "healthState",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["health_state"],
-    )
-    station_device.subscribe_event(
         "state",
         EventType.CHANGE_EVENT,
         change_event_callbacks["state"],

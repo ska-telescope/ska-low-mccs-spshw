@@ -1162,6 +1162,8 @@ def test_subrack_device_tpm_attribute_filtering(
             case "median":
                 expected_voltages = np.median(last_5_voltages, axis=0).tolist()
                 expected_currents = np.median(last_5_currents, axis=0).tolist()
+            case _:
+                assert False, f"Didn't match filter_type '{filter_type}"
 
         # Then we need ot wait 15 seconds for the values to be polled
         # We add 2 ticks of 0.1 seconds to ensure this definitely happens

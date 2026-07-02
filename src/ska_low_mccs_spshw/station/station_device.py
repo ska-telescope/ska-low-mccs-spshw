@@ -1232,7 +1232,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         abs_change=1,
         doc="Number of seconds until the station's frame counter wraps around.",
         min_alarm=0,
-        min_warning=1101072,  # 12.74 days (i.e. 24 hours notice of wrap around)
+        min_warning=86400,  # 24 hours notice of wrap-around
     )
 
     @attribute(dtype="DevBoolean")

@@ -1165,7 +1165,7 @@ def test_subrack_device_tpm_attribute_filtering(
 
         # Then we need ot wait 15 seconds for the values to be polled
         # We add 2 ticks of 0.1 seconds to ensure this definitely happens
-        time.sleep(15.2)
+        time.sleep(1.2)
 
         # Now check the values are as we expect given the filtering scheme
         observed_voltages = list(subrack_device.tpmVoltages)

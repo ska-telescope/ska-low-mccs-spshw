@@ -305,7 +305,7 @@ class SpsTangoTestHarness:
         :param address: address of the subrack to be
             monitored and controlled by this Tango device.
             It is a tuple of hostname or IP address, and port.
-        :param update_rate: How often to update monitored attriutes.
+        :param update_rate: How often to update monitored attributes.
         :param logging_level: the Tango device's default logging level.
         :param device_class: The device class to use.
             This may be used to override the usual device class,

@@ -14,7 +14,7 @@ import pytest
 from ska_low_mccs_spshw.subrack.subrack_attribute_filter import SubrackAttributeFilter
 
 
-@pytest.mark.parametrize("filter_type", [None, "", "mean", "median"])
+@pytest.mark.parametrize("filter_type", [None, "", "None", "none", "mean", "median"])
 def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
     """
     Test the subrack attribute filter.
@@ -38,7 +38,7 @@ def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
 
         # Check expected result
         match filter_type:
-            case None, "":
+            case None | "" | "none" | None:
                 assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == statistics.mean(values)
@@ -50,7 +50,7 @@ def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
     assert len(attribute_filter._buffer) == 0
 
 
-@pytest.mark.parametrize("filter_type", [None, "", "none", "mean", "median"])
+@pytest.mark.parametrize("filter_type", [None, "", "none", "None", "mean", "median"])
 def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
     """
     Test the subrack attribute filter.
@@ -75,7 +75,7 @@ def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
 
         # Check expected result
         match filter_type:
-            case None | "" | "none":
+            case None | "" | "none" | "None":
                 assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == [

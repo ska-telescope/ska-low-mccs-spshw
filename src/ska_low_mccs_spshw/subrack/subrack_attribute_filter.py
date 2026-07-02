@@ -29,7 +29,7 @@ class SubrackAttributeFilter:
 
         """
         # Check the filter type input
-        if filter_type not in [None, "None", "none", "mean", "median"]:
+        if filter_type not in [None, "", "None", "none", "mean", "median"]:
             raise ValueError(f"Unrecognised filter type: '{filter_type}'")
 
         # Save the filter type
@@ -68,7 +68,7 @@ class SubrackAttributeFilter:
 
         # Perform an action depending on filter type
         match self._filter_type:
-            case None | "None" | "none":
+            case None | "" | "None" | "none":
                 return value
             case "mean":
                 return np.mean(self._buffer, axis=0)

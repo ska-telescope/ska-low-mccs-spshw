@@ -1140,7 +1140,7 @@ class TileComponentManager(
     def _subrack_says_state_changed(
         self: TileComponentManager,
         event_name: str,
-        event_value: list[float] | None,
+        event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
         """

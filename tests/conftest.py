@@ -211,6 +211,12 @@ def subrack_simulator_config_fixture() -> dict[str, Any]:
         "power_supply_fan_speeds": [90.0, 100.0],
         "power_supply_voltages": [12.0, 12.1],
         "subrack_fan_speeds_percent": [95.0, 96.0, 97.0, 98.0],
+        "subrack_fan_speeds": [
+            0.95 * MAX_SUBRACK_FAN_SPEED,
+            0.96 * MAX_SUBRACK_FAN_SPEED,
+            0.97 * MAX_SUBRACK_FAN_SPEED,
+            0.98 * MAX_SUBRACK_FAN_SPEED,
+        ],
         "subrack_fan_mode": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
         "subrack_pll_locked": True,
         "subrack_timestamp": 1234567890,
@@ -621,9 +627,7 @@ def subrack_device_attribute_values_fixture(
             pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0)
             for p in subrack_simulator_config["subrack_fan_speeds_percent"]
         ],
-        "scaledSubrackFanSpeeds": [
-            pytest.approx(MAX_SUBRACK_FAN_SPEED) for _ in range(4)
-        ],
+        "subrackMaxFanSpeeds": [pytest.approx(MAX_SUBRACK_FAN_SPEED) for _ in range(4)],
         "subrackFanModes": subrack_simulator_config["subrack_fan_mode"],
         "subrackPllLocked": subrack_simulator_config["subrack_pll_locked"],
         "subrackTimestamp": subrack_simulator_config["subrack_timestamp"],

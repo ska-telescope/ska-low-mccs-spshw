@@ -242,6 +242,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         component_state_changed_callback: Callable[..., None],
         update_rate: float = 5.0,
         command_update_rate: float = 20.0,
+        max_fan_errors: int = 5,
         _driver: Optional[SubrackDriver] = None,
         _initial_power_state: PowerState = PowerState.ON,
         _initial_fail: bool = False,
@@ -272,6 +273,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             every 5 seconds).
         :param command_update_rate: similar to update_rate but for polled
             commands such as get_health_status.
+        :param max_fan_errors: the maximum amount of consecutive estimeted
+            fan speed values that are out of bounds. These values are
+            caused by out of sync rpm and pwm values when the fan changes
+            speed (inertia).
         :param _driver: for testing only, we can inject a driver rather
             then letting the component manager create its own. If
             provided, this overrides driver-specific arguments such as
@@ -294,6 +299,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component_state_changed_callback,
             update_rate=update_rate,
             command_update_rate=command_update_rate,
+            max_fan_errors=max_fan_errors,
         )
 
         self.pdu_trl = pdu_trl
@@ -327,6 +333,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             power_supply_voltages=None,
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
+            subrack_max_fan_speeds=None,
             subrack_fan_mode=None,
             subrack_pll_locked=None,
             subrack_timestamp=None,

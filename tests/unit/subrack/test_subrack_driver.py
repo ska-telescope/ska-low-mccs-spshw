@@ -25,6 +25,7 @@ from ska_low_mccs_spshw.subrack import (
 def test_attribute_reads(
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -33,6 +34,8 @@ def test_attribute_reads(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -45,7 +48,9 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
     subrack_driver.stop_communicating()
@@ -53,9 +58,12 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
     callbacks["communication_status"].assert_not_called()
 
+    all_attributes = (
+        subrack_simulator_attribute_values | subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_call(
         fault=None,
-        **{name: None for name in subrack_simulator_attribute_values},
+        **{name: None for name in all_attributes},
     )
     callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
     callbacks["component_state"].assert_not_called()
@@ -65,6 +73,7 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -75,6 +84,8 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -87,7 +98,9 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
     subrack_simulator.simulate_attribute("board_current", 0.7)
@@ -196,6 +209,7 @@ def test_tpm_power_commands(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -206,6 +220,8 @@ def test_tpm_power_commands(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -218,7 +234,9 @@ def test_tpm_power_commands(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
     tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
@@ -253,6 +271,7 @@ def test_get_health_status(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     health_status: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
@@ -264,6 +283,8 @@ def test_get_health_status(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param health_status: the values
     :param callbacks: dictionary of driver callbacks.
     """
@@ -277,7 +298,9 @@ def test_get_health_status(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
     # Case 1: bios is too old, health status is not polled
@@ -319,6 +342,7 @@ def test_other_commands(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -329,6 +353,8 @@ def test_other_commands(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -342,6 +368,7 @@ def test_other_commands(
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
     subrack_fan_speeds_percent = subrack_simulator.get_attribute(
@@ -415,6 +442,7 @@ def test_failed_poll(
     subrack_driver: SubrackDriver,
     subrack_client: Any,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     failed_subrack_simulator_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
@@ -437,6 +465,8 @@ def test_failed_poll(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param failed_subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values from a failed poll.
     :param callbacks: dictionary of driver callbacks.
@@ -452,6 +482,7 @@ def test_failed_poll(
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
     subrack_client.get_attribute = lambda attr_name: {

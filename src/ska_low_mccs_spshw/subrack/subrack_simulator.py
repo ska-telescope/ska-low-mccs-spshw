@@ -129,6 +129,16 @@ class SubrackSimulator(SubrackProtocol):
             "default": [95.0, 96.0, 97.0, 98.0],
             "writable": False,
         },
+        "subrack_fan_speeds": {
+            "length": 4,
+            "default": [
+                0.95 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+                0.96 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+                0.97 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+                0.98 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+            ],
+            "writable": False,
+        },
         "subrack_fan_mode": {
             "length": 4,
             "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
@@ -408,10 +418,11 @@ class SubrackSimulator(SubrackProtocol):
     def _get_attribute_subrack_fan_speeds(
         self: SubrackSimulator,
     ) -> list[float]:
-        return [
+        self._attribute_values["subrack_fan_speeds"] = [
             percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
             for percent in self._attribute_values["subrack_fan_speeds_percent"]
         ]
+        return self._attribute_values["subrack_fan_speeds"]
 
     def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
         """

@@ -71,7 +71,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "powerSupplyVoltages",
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
-        "scaledSubrackFanSpeeds",
+        "subrackMaxFanSpeeds",
         "subrackFanModes",
         "subrackPllLocked",
         "subrackTimestamp",
@@ -446,7 +446,7 @@ def test_monitoring_and_control(
         ("powerSupplyVoltages", None),
         ("subrackFanSpeeds", None),
         ("subrackFanSpeedsPercent", None),
-        ("scaledSubrackFanSpeeds", None),
+        ("subrackMaxFanSpeeds", None),
         ("subrackFanModes", None),
         ("subrackPllLocked", None),
         ("subrackTimestamp", None),
@@ -511,7 +511,7 @@ def test_monitoring_and_control(
         "powerSupplyVoltages",
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
-        "scaledSubrackFanSpeeds",
+        "subrackMaxFanSpeeds",
         "subrackFanModes",
         "tpmCurrents",
         "tpmPowers",
@@ -628,7 +628,11 @@ def test_monitoring_and_control(
     change_event_callbacks["subrackFanSpeeds"].assert_change_event(
         expected_speeds, lookahead=5, consume_nonmatches=True
     )
-
+    change_event_callbacks["subrackMaxFanSpeeds"].assert_change_event(
+        [pytest.approx(SubrackData.MAX_SUBRACK_FAN_SPEED)] * 4,
+        lookahead=5,
+        consume_nonmatches=True,
+    )
     # scaled speed should not change
     for speed in subrack_device.scaledSubrackFanSpeeds:
         assert speed == pytest.approx(SubrackData.MAX_SUBRACK_FAN_SPEED)

@@ -17,7 +17,7 @@ from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 
-NUMBER_OF_SUBRACK_STATE_MONITOR_POINTS = 12
+NUMBER_OF_SUBRACK_STATE_MONITOR_POINTS = 13
 
 
 class TestSubrackHealthModel:
@@ -43,6 +43,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -67,6 +68,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -91,6 +93,7 @@ class TestSubrackHealthModel:
                     "board_temps": [],
                     "backplane_temps": [],
                     "subrack_fan_speeds": [],
+                    "subrack_scaled_fan_speeds": [],
                     "board_currents": [],
                     "tpm_currents": [],
                     "power_supply_currents": [],
@@ -154,6 +157,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -181,6 +185,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -200,6 +205,7 @@ class TestSubrackHealthModel:
                     "board_temps": [60.0, 40.0],
                     "backplane_temps": [60.0, 40.0],
                     "subrack_fan_speeds": [70.0, 50.0],
+                    "subrack_scaled_fan_speeds": [7000, 6000],
                     "board_currents": [3.0, 3.0, 3.0, 3.0, 3.0],
                     "tpm_currents": [3.0, 3.0, 3.0, 3.0, 3.0],
                     "power_supply_currents": [7.0, 7.0, 7.0, 7.0, 7.0],
@@ -227,6 +233,7 @@ class TestSubrackHealthModel:
                     "board_temps": [60.0, 40.0],
                     "backplane_temps": [60.0, 40.0],
                     "subrack_fan_speeds": [70.0, 50.0],
+                    "subrack_scaled_fan_speeds": [7000, 6000],
                     "board_currents": [3.0, 3.0, 3.0, 3.0, 3.0],
                     "tpm_currents": [3.0, 3.0, 3.0, 3.0, 3.0],
                     "power_supply_currents": [7.0, 7.0, 7.0, 7.0, 7.0],
@@ -375,6 +382,7 @@ class TestSubrackHealthModel:
             "board_temps": [50.0, 50.0],
             "backplane_temps": [50.0, 50.0],
             "subrack_fan_speeds": [60.0, 60.0],
+            "subrack_scaled_fan_speeds": [6000, 6000],
             "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
             "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
             "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -418,6 +426,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -438,6 +447,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -461,6 +471,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -484,6 +495,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -507,6 +519,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -527,6 +540,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -603,6 +617,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -630,6 +645,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -649,6 +665,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -668,6 +685,7 @@ class TestSubrackHealthModel:
                     "board_temps": [],
                     "backplane_temps": [],
                     "subrack_fan_speeds": [],
+                    "subrack_scaled_fan_speeds": [],
                     "board_currents": [],
                     "tpm_currents": [],
                     "power_supply_currents": [],
@@ -695,6 +713,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
+                    "subrack_scaled_fan_speeds": [6000, 6000],
                     "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
@@ -722,6 +741,7 @@ class TestSubrackHealthModel:
                     "board_temps": [],
                     "backplane_temps": [],
                     "subrack_fan_speeds": [],
+                    "subrack_scaled_fan_speeds": [],
                     "board_currents": [],
                     "tpm_currents": [],
                     "power_supply_currents": [],
@@ -773,7 +793,7 @@ class TestSubrackHealthModel:
         if NUMBER_OF_SUBRACK_STATE_MONITOR_POINTS != len(poll_data):
             pytest.fail(
                 "The counter key is larger than the number of checks"
-                f"please set counter= {len(expected_state_end)}"
+                f"please set counter= {len(poll_data)}"
             )
 
         def _get_failed_monitoring_point_name(

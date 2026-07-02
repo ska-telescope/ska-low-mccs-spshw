@@ -1475,6 +1475,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._hardware_attributes.clear()
         for signal_name in self._HEALTH_SIGNAL_MAP.values():
             setattr(self, signal_name, None)
+
+        # Ensure the filter buffer is cleared
+        for attribute_filter in self._attribute_value_filters.values():
+            attribute_filter.clear()
+
         self._update_tpm_present(None)
 
     # ----------

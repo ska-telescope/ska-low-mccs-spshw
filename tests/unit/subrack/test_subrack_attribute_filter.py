@@ -38,7 +38,7 @@ def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
 
         # Check expected result
         match filter_type:
-            case None | "" | "none" | None:
+            case None | "" | "none" | "None":
                 assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == statistics.mean(values)

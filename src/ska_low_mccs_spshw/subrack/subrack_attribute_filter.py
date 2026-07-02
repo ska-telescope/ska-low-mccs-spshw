@@ -27,8 +27,8 @@ class SubrackAttributeFilter:
 
         """
         # Check the filter type input
-        if filter_type not in [None, "", "none", "mean", "median"]:
-            raise ValueError(f"Unrecognised filter type: {filter_type}")
+        if filter_type not in [None, "None", "none", "mean", "median"]:
+            raise ValueError(f"Unrecognised filter type: '{filter_type}'")
 
         # Save the filter type
         self._filter_type = filter_type
@@ -56,16 +56,21 @@ class SubrackAttributeFilter:
         :raises ValueError: If the filter_tupe is not recognised.
 
         """
+        # If the value is None or there are nans reset the buffer
+        if value is None or np.isnan(value).any():
+            self._buffer.clear()
+            return value
+
         # Add the value to the buffer
         self._buffer.append(value)
 
         # Perform an action depending on filter type
         match self._filter_type:
-            case None | "" | "none":
+            case None | "None" | "none":
                 return value
             case "mean":
                 return np.mean(self._buffer, axis=0)
             case "median":
                 return np.median(self._buffer, axis=0)
             case _:
-                raise ValueError(f"Unrecognised filter type: {self._filter_type}")
+                raise ValueError(f"Unrecognised filter type: '{self._filter_type}'")

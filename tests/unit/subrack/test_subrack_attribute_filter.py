@@ -39,7 +39,7 @@ def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
         # Check expected result
         match filter_type:
             case None, "":
-                assert value == x
+                assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == statistics.mean(values)
             case "median":
@@ -50,7 +50,7 @@ def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
     assert len(attribute_filter._buffer) == 0
 
 
-@pytest.mark.parametrize("filter_type", [None, "", "mean", "median"])
+@pytest.mark.parametrize("filter_type", [None, "", "none", "mean", "median"])
 def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
     """
     Test the subrack attribute filter.
@@ -75,8 +75,8 @@ def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
 
         # Check expected result
         match filter_type:
-            case None, "":
-                assert value == x
+            case None | "" | "none":
+                assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == [
                     statistics.mean(v) for v in zip(*values)

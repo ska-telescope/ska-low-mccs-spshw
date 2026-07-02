@@ -210,7 +210,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 filter_type=self.AttributeFilterType,
                 max_samples=self.AttributeFilterMaxSamples,
             )
-            for name in ["tpmCurrent", "tpmPower", "tpmVoltage"]
+            for name in ["tpmCurrents", "tpmPowers", "tpmVoltages"]
         }
 
         self.set_change_event("tpmPresent", True)
@@ -701,6 +701,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             being evaluated in health.
         """
         return self.UseAttributesForHealth
+
+    @attribute(dtype="DevString")
+    def attributeFilterType(self) -> str:
+        """
+        Get the attribute filter type.
+
+        :return: The attribute filter type.
+
+        """
+        return self.AttributeFilterType
 
     @attribute(
         dtype="DevString",

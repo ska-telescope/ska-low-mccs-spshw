@@ -295,6 +295,8 @@ class SpsTangoTestHarness:
         simulated_pdu: bool = True,
         use_attribute_for_health: bool = True,
         define_parent_trl: bool = True,
+        filter_type: str | None = None,
+        filter_max_samples: int = 5,
     ) -> None:
         """
         Add a subrack Tango device to the test harness.
@@ -313,6 +315,8 @@ class SpsTangoTestHarness:
             use this new feature.
         :param define_parent_trl: True if we want to define the parentTRL.
             you may want to disable for unittests.
+        :param filter_type: The type of filter to use for TPM attributes
+        :param filter_max_samples: Maximum number of samples in filter buffer
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -341,6 +345,8 @@ class SpsTangoTestHarness:
             UpdateRate=update_rate,
             LoggingLevelDefault=logging_level,
             UseAttributesForHealth=use_attribute_for_health,
+            AttributeFilterType=filter_type,
+            AttributeFilterMaxSamples=filter_max_samples,
             Simulated_PDU=simulated_pdu,
             PduTrl=get_pdu_name(),
             PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",

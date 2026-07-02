@@ -1477,10 +1477,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             setattr(self, signal_name, None)
 
         # Ensure the filter buffer is cleared
-        for attribute_filter in self._attribute_value_filters.values():
-            attribute_filter.clear()
+        self._clear_attribute_value_filters()
 
         self._update_tpm_present(None)
+
+    def _clear_attribute_value_filters(self) -> None:
+        """Clear the attribute value filters."""
+        for attribute_filter in self._attribute_value_filters.values():
+            attribute_filter.clear()
 
     # ----------
     # Callbacks

@@ -1129,24 +1129,26 @@ def test_subrack_device_tpm_attribute_filtering(
             Anything, lookahead=30
         )
 
-    # Get the initial values
-    initial_voltages = subrack_device.tpmVoltages
-    initial_currents = subrack_device.tpmCurrents
-
-    # Make small fluctuations in the voltage and current and add them to the
-    # initial values
-    voltages = np.concatenate(
-        [[initial_voltages], np.random.uniform(12.0, 12.1, size=(6, 8))]
-    )
-    currents = np.concatenate(
-        [[initial_currents], np.random.uniform(0.4, 0.5, size=(6, 8))]
-    )
+    # Make small fluctuations in the voltage and current
+    voltages = np.random.uniform(12.0, 12.1, size=(10, 8))
+    currents = np.random.uniform(0.4, 0.5, size=(10, 8))
 
     # Loop through the sets of values
-    for i in range(1, voltages.shape[0]):
+    for i in range(voltages.shape[0]):
         # For each new set of values, set the values in the simulator
         subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
         subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())
+
+        # Then we need ot wait 1 seconds for the values to be polled
+        # We add 2 ticks of 0.1 seconds to ensure this definitely happens
+        time.sleep(1.2)
+
+        # The max_samples parameter is set to 5. After 5 sets of values updated
+        # we can be sure of the filter buffer contents. Otherwise, it may have
+        # previous values in
+        if i < 5:
+            break
+
         # The last 5 sets of values
         last_5_voltages = voltages[max(0, i - 4) : i + 1]
         last_5_currents = currents[max(0, i - 4) : i + 1]
@@ -1164,10 +1166,6 @@ def test_subrack_device_tpm_attribute_filtering(
                 expected_currents = np.median(last_5_currents, axis=0).tolist()
             case _:
                 assert False, f"Didn't match filter_type '{filter_type}"
-
-        # Then we need ot wait 1 seconds for the values to be polled
-        # We add 2 ticks of 0.1 seconds to ensure this definitely happens
-        time.sleep(1.2)
 
         # Now check the values are as we expect given the filtering scheme
         observed_voltages = list(subrack_device.tpmVoltages)

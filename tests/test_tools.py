@@ -12,6 +12,7 @@ This module contains pytest fixtures other test setups.
 These are common to all ska-low-mccs tests: unit, integration and
 functional (BDD).
 """
+
 from __future__ import annotations
 
 import enum
@@ -634,6 +635,12 @@ class _ProgrammingStateAccess:
                         )
                     else:
                         obj._tile_device.Initialise()
+                        AttributeWaiter(timeout=30).wait_for_value(
+                            obj._tile_device,
+                            "tileProgrammingState",
+                            "NotProgrammed",
+                            lookahead=5,
+                        )
                         AttributeWaiter(timeout=30).wait_for_value(
                             obj._tile_device,
                             "tileProgrammingState",

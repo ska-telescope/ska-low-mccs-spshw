@@ -209,6 +209,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltage_vm_pll_signal: AttrSignal[float] = AttrSignal[float]()
     voltage_vm_sw_amp_signal: AttrSignal[float] = AttrSignal[float]()
 
+    is_programmed_signal: AttrSignal[bool] = AttrSignal[bool]()
+    is_beamformer_running_signal: AttrSignal[bool] = AttrSignal[bool]()
+    pps_delay_signal: AttrSignal[int] = AttrSignal[int]()
+    pending_data_requests_signal: AttrSignal[bool] = AttrSignal[bool]()
+    current_tile_beamformer_frame_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga_reference_time_signal: AttrSignal[str] = AttrSignal[str]()
+    fpgas_time_signal: AttrSignal[list] = AttrSignal[list]()
+    fpga_time_signal: AttrSignal[str] = AttrSignal[str]()
+    fpga_current_frame_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga_frame_time_signal: AttrSignal[str] = AttrSignal[str]()
+
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
@@ -274,6 +285,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltageVM_MGT1_AUX": "voltage_vm_mgt1_aux_signal",
         "voltageVM_PLL": "voltage_vm_pll_signal",
         "voltageVM_SW_AMP": "voltage_vm_sw_amp_signal",
+    }
+
+    # Maps each generic (non-health-sensor) signal-backed attribute's
+    # TileComponentManager kwarg name to its signal attribute name, used by
+    # _update_attribute_callback to route updates generically.
+    _GENERIC_SIGNAL_MAP: dict[str, str] = {
+        "is_programmed": "is_programmed_signal",
+        "beamformer_running": "is_beamformer_running_signal",
+        "pps_delay": "pps_delay_signal",
+        "pending_data_requests": "pending_data_requests_signal",
+        "tile_beamformer_frame": "current_tile_beamformer_frame_signal",
+        "fpga_reference_time": "fpga_reference_time_signal",
+        "fpgas_time": "fpgas_time_signal",
+        "fpga_time": "fpga_time_signal",
+        "fpga_current_frame": "fpga_current_frame_signal",
+        "fpga_frame_time": "fpga_frame_time_signal",
     }
 
     # -----------------
@@ -598,8 +625,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
-            "pending_data_requests": "pendingDataRequests",
-            "fpga_reference_time": "fpgaReferenceTime",
             "I2C_access_alm": "I2C_access_alm",
             "temperature_alm": "temperature_alm",
             "voltage_alm": "voltage_alm",
@@ -612,12 +637,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "csp_rounding": "cspRounding",
             "channeliser_rounding": "channeliserRounding",
             "pll_locked": "pllLocked",
-            "pps_delay": "ppsDelay",
             "pps_drift": "ppsDrift",
             "pps_delay_correction": "ppsDelayCorrection",
             "phase_terminal_count": "phaseTerminalCount",
-            "beamformer_running": "isBeamformerRunning",
-            "is_programmed": "isProgrammed",
             "beamformer_table": "beamformerTable",
             "beamformer_regions": "beamformerRegions",
             "io": "io",
@@ -629,7 +651,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "currents": "currents",
             "tile_id": "logicalTileId",
             "station_id": "stationId",
-            "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
             "adc_pll_lock_status": "adc_pll_lock_status",
             "fpga0_qpll_status": "fpga0_qpll_status",
@@ -700,6 +721,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "pointing_delays": "pointingDelays",
             "dst_ip_40g_fpga1": "dstip40gfpga1",
             "dst_ip_40g_fpga2": "dstip40gfpga2",
+            "firmware_version": "firmwareVersion",
+            "forty_gb_destination_ips": "fortyGbDestinationIps",
             "current_draw": "currentDraw",
             "power_draw": "powerDraw",
             "voltage_draw": "voltageDraw",
@@ -1374,6 +1397,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
+            elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                setattr(
+                    self,
+                    self._GENERIC_SIGNAL_MAP[attribute_name],
+                    None if mark_invalid else attribute_value,
+                )
             else:
                 try:
                     tango_name = self.attr_map[attribute_name]
@@ -2919,7 +2948,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        self._info = self.component_manager.tile_info()
+        self._info = self._attribute_state["tile_info"].read() or {}
         self._convert_ip_to_str(self._info)
         info: dict[str, Any] = self._info
         return json.dumps(info)
@@ -3775,25 +3804,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: firmware version
         """
-        return self.component_manager.firmware_version
+        return self._attribute_state["firmwareVersion"].read()
 
-    @firmwareVersion.write  # type: ignore[no-redef]
-    def firmwareVersion(self: MccsTile, value: str) -> None:
-        """
-        Set the firmware version.
-
-        :param value: firmware version
-        """
-        self.component_manager.firmware_version = value
-
-    @attribute(dtype="DevBoolean")
-    def isProgrammed(self: MccsTile) -> bool:
-        """
-        Return a flag indicating whether of not the board is programmed.
-
-        :return: whether of not the board is programmed
-        """
-        return self.component_manager.is_programmed
+    isProgrammed = attribute_from_signal(  # noqa: N815
+        is_programmed_signal,
+        dtype="DevBoolean",
+        doc="whether or not the board is programmed",
+    )
 
     def _is_programmed(self: MccsTile, *args: Any) -> bool:
         """
@@ -3920,47 +3937,36 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Temperature of FPGA 2 in degrees Celsius.",
     )
 
-    @attribute(
+    fpgasUnixTime = attribute_from_signal(  # noqa: N815
+        fpgas_time_signal,
         dtype=("DevLong",),
         max_dim_x=2,
         abs_change=1,
         archive_abs_change=1,
         fisallowed="_check_initialised_for_write",
+        doc="the time for FPGAs",
     )
-    def fpgasUnixTime(self: MccsTile) -> list[int]:
-        """
-        Return the time for FPGAs.
 
-        :return: the time for FPGAs
-        """
-        return self.component_manager.fpgas_time
+    fpgaTime = attribute_from_signal(  # noqa: N815
+        fpga_time_signal,
+        dtype="DevString",
+        fisallowed="_is_initialised",
+        doc="the FPGA internal time, in UTC format",
+    )
 
-    @attribute(dtype="DevString", fisallowed="_is_initialised")
-    def fpgaTime(self: MccsTile) -> str:
-        """
-        Return the FPGA internal time.
+    fpgaReferenceTime = attribute_from_signal(  # noqa: N815
+        fpga_reference_time_signal,
+        dtype="DevString",
+        fisallowed="_is_initialised",
+        doc="the FPGA synchronization timestamp, in UTC format",
+    )
 
-        :return: the FPGA time, in UTC format
-        """
-        return self.component_manager.fpga_time
-
-    @attribute(dtype="DevString", fisallowed="_is_initialised")
-    def fpgaReferenceTime(self: MccsTile) -> str:
-        """
-        Return the FPGA synchronization timestamp.
-
-        :return: the FPGA timestamp, in UTC format
-        """
-        return self.component_manager.formatted_fpga_reference_time
-
-    @attribute(dtype="DevString", fisallowed="_is_initialised")
-    def fpgaFrameTime(self: MccsTile) -> str:
-        """
-        Return the FPGA synchronization timestamp.
-
-        :return: the FPGA timestamp, in UTC format
-        """
-        return self.component_manager.fpga_frame_time
+    fpgaFrameTime = attribute_from_signal(  # noqa: N815
+        fpga_frame_time_signal,
+        dtype="DevString",
+        fisallowed="_is_initialised",
+        doc="the FPGA synchronization timestamp, in UTC format",
+    )
 
     @attribute(
         dtype=("DevShort",),
@@ -3993,9 +3999,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: IP addresses
         """
-        return [
-            item["dst_ip"] for item in self.component_manager.get_40g_configuration()
-        ]
+        return self._attribute_state["fortyGbDestinationIps"].read()
 
     @attribute(
         dtype=("DevLong",),
@@ -4027,28 +4031,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["adcPower"].read()
 
-    @attribute(
+    currentTileBeamformerFrame = attribute_from_signal(  # noqa: N815
+        current_tile_beamformer_frame_signal,
         dtype="DevLong64",
         fisallowed="_is_initialised",
         abs_change=1,
         archive_abs_change=1,
+        doc=(
+            "current frame, in units of 256 ADC frames (276.48 us). "
+            "Currently this is required, not sure if it will remain so."
+        ),
     )
-    def currentTileBeamformerFrame(self: MccsTile) -> int:
-        """
-        Return current frame.
-
-        in units of 256 ADC frames (276,48 us) Currently this is
-        required, not sure if it will remain so.
-
-        :return: current frame
-        """
-        try:
-            return self.component_manager.current_tile_beamformer_frame
-        except TimeoutError as e:
-            self.logger.warning(
-                f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
-            )
-        return self._attribute_state["currentTileBeamformerFrame"].read()
 
     @attribute(dtype="DevString")
     def coreCommunicationStatus(self: MccsTile) -> str | None:
@@ -4068,40 +4061,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["coreCommunicationStatus"].read()
 
-    @attribute(
+    currentFrame = attribute_from_signal(  # noqa: N815
+        fpga_current_frame_signal,
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
         fisallowed="_is_initialised",
+        doc=(
+            "current frame, in units of 256 ADC frames (276.48 us). "
+            "Currently this is required, not sure if it will remain so."
+        ),
     )
-    def currentFrame(self: MccsTile) -> int:
-        """
-        Return current frame.
 
-        in units of 256 ADC frames (276,48 us) Currently this is
-        required, not sure if it will remain so.
+    pendingDataRequests = attribute_from_signal(  # noqa: N815
+        pending_data_requests_signal,
+        dtype="DevBoolean",
+        fisallowed="_is_initialised",
+        doc="whether there are data requests pending",
+    )
 
-        :return: current frame
-        """
-        return self.component_manager.fpga_current_frame
-
-    @attribute(dtype="DevBoolean", fisallowed="_is_initialised")
-    def pendingDataRequests(self: MccsTile) -> bool | None:
-        """
-        Check for pending data requests.
-
-        :return: whether there are data requests pending
-        """
-        return self.component_manager.pending_data_requests
-
-    @attribute(dtype="DevBoolean", fisallowed="_is_initialised")
-    def isBeamformerRunning(self: MccsTile) -> bool | None:
-        """
-        Check if beamformer is running.
-
-        :return: whether the beamformer is running
-        """
-        return self.component_manager.is_beamformer_running
+    isBeamformerRunning = attribute_from_signal(  # noqa: N815
+        is_beamformer_running_signal,
+        dtype="DevBoolean",
+        fisallowed="_is_initialised",
+        doc="whether the beamformer is running",
+    )
 
     @attribute(
         dtype="DevLong",
@@ -4126,23 +4110,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_phase_terminal_count(value)
 
-    @attribute(
+    ppsDelay = attribute_from_signal(  # noqa: N815
+        pps_delay_signal,
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
         fisallowed="_is_initialised",
+        doc="the delay between PPS and 10 MHz clock, in 1.25ns units",
     )
-    def ppsDelay(self: MccsTile) -> int | None:
-        """
-        Return the delay between PPS and 10 MHz clock.
-
-        :return: Return the PPS delay in 1.25ns units.
-        """
-        if self._attribute_state["ppsDelay"].read() is None:
-            pps_delay = self.component_manager.pps_delay
-            # Post an event so health tracking can recover from stale/invalid state.
-            self._attribute_state["ppsDelay"].update(pps_delay)
-        return self._attribute_state["ppsDelay"].read()
 
     @attribute(
         dtype="DevLong",
@@ -4726,7 +4701,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: a list of bool values corresponding to the fpgas
         """
-        return self.component_manager.is_station_beam_flagging_enabled
+        return self._attribute_state["stationBeamFlagEnabled"].read()
 
     @attribute(dtype="DevString")
     def antennaBufferMode(
@@ -4760,15 +4735,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: Either 1G or 10G string
         """
         return self.component_manager.integrated_data_transmission_mode
-
-    @attribute(dtype=("DevBoolean",), max_dim_x=48, fisallowed="_is_initialised")
-    def runningBeams(self: MccsTile) -> list[bool]:
-        """
-        List running status for each SubarrayBeam.
-
-        :return: list of hardware beam running states
-        """
-        return self.component_manager.running_beams
 
     currentFE0 = attribute_from_signal(  # noqa: N815
         current_fe0_signal,
@@ -5711,7 +5677,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("Configure40GCore", jstr)
         """
-        return self.component_manager.configure_40g_core(
+        result_codes, messages = self.component_manager.configure_40g_core(
             core_id,
             arp_table_entry,
             source_mac,
@@ -5723,6 +5689,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask,
             gateway_ip,
         )
+        if result_codes[0] == ResultCode.OK:
+            self.component_manager.refresh_40g_configuration()
+            # tile_info currently mixes static device configuration with some
+            # non-static hardware-derived fields (including 40G network config),
+            # due to be removed in 4.0.0. Until then, re-evaluate it here so it
+            # stays consistent with the 40G configuration just written.
+            self.component_manager.refresh_tile_info()
+        return (result_codes, messages)
 
     @command(dtype_in="DevString", dtype_out="DevString")
     @stb.validators.validate_json_args(schema=Get40GCoreConfiguration_SCHEMA)
@@ -6008,6 +5982,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>>    }
         """
         return json.dumps(self.component_manager.arp_table)
+
+    @command(dtype_out=("DevLong",))
+    def GetFpgaUnixTime(self: MccsTile) -> list[int]:
+        """
+        Return a fresh, on-demand read of the FPGA unix time.
+
+        Unlike the ``fpgasUnixTime`` attribute (which reports the last value
+        seen by the periodic poll), this reads hardware directly. Used where
+        a precise, up-to-date time is needed, e.g. station synchronisation.
+
+        :return: the time for FPGAs
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> fpga_time = dp.command_inout("GetFpgaUnixTime")
+        """
+        return self.component_manager.fpgas_time
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetBeamFormerRegions(
@@ -6504,6 +6496,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> running = dp.command_inout("BeamformerRunningForChannels", jstr)
         """
         return self.component_manager.beamformer_running_for_channels(channel_groups)
+
+    @command(dtype_out=("DevBoolean",))
+    def RunningBeams(self: MccsTile) -> list[bool]:
+        """
+        List running status for each SubarrayBeam.
+
+        :return: list of hardware beam running states
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> running_beams = dp.command_inout("RunningBeams")
+        """
+        return self.component_manager.running_beams()
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @stb.validators.validate_json_args(schema=ConfigureIntegratedChannelData_SCHEMA)
@@ -7020,6 +7026,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.enable_station_beam_flagging()
         beam_flag_values = self.component_manager.is_station_beam_flagging_enabled
+        self._update_attribute_callback(
+            is_station_beam_flagging_enabled=beam_flag_values
+        )
 
         if all(value for value in beam_flag_values):
             return ([ResultCode.OK], ["EnableStationBeamFlagging command completed OK"])
@@ -7045,6 +7054,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.disable_station_beam_flagging()
         beam_flag_values = self.component_manager.is_station_beam_flagging_enabled
+        self._update_attribute_callback(
+            is_station_beam_flagging_enabled=beam_flag_values
+        )
 
         if all(not value for value in beam_flag_values):
             return (

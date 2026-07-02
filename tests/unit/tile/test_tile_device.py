@@ -355,6 +355,26 @@ def turn_tile_on(
     return tile_device
 
 
+def _wait_for_attribute_value(
+    device: MccsDeviceProxy, attribute: str, expected: Any, timeout: float = 6.0
+) -> None:
+    """
+    Poll a signal-backed attribute until it reaches an expected value.
+
+    Signal-backed attributes are only refreshed by the periodic poll, so a
+    state-changing command does not update them synchronously.
+
+    :param device: the tile device proxy.
+    :param attribute: name of the attribute to poll.
+    :param expected: the value the attribute is expected to settle on.
+    :param timeout: maximum time to wait, in seconds.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline and getattr(device, attribute) != expected:
+        time.sleep(0.1)
+    assert getattr(device, attribute) == expected
+
+
 # pylint: disable=too-many-lines, too-many-public-methods
 class TestMccsTile:
     """
@@ -549,7 +569,6 @@ class TestMccsTile:
             "isBeamformerRunning",
             "stationBeamFlagEnabled",
             "rfiCount",
-            "runningBeams",
             "ppsDelay",
             "fortyGPacketCount",
             "allStagedCal",
@@ -1035,7 +1054,6 @@ class TestMccsTile:
         excluded_state_attributes = [
             "tileProgrammingState",
             "isProgrammed",
-            "runningBeams",
             "coreCommunicationStatus",
             "ddr_write_size",
             "ddr_rd_cnt",
@@ -2755,7 +2773,7 @@ class TestMccsTileCommands:
         :param channel_groups: Channel groups started and stopped
         """
         start_time = None  # it used to be a parameter but only None was tested
-        assert not on_tile_device.isBeamformerRunning
+        _wait_for_attribute_value(on_tile_device, "isBeamformerRunning", False)
         assert not on_tile_device.BeamformerRunningForChannels("{}")
         args = {
             "start_time": start_time,
@@ -2766,7 +2784,7 @@ class TestMccsTileCommands:
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
         completed_task = get_lrc_finished(on_tile_device, lrc_id)
         assert completed_task["status"] == "COMPLETED"
-        assert on_tile_device.isBeamformerRunning
+        _wait_for_attribute_value(on_tile_device, "isBeamformerRunning", True)
         args = {"channel_groups": channel_groups}
         assert on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
@@ -2774,7 +2792,7 @@ class TestMccsTileCommands:
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
         completed_task = get_lrc_finished(on_tile_device, lrc_id)
         assert completed_task["status"] == "COMPLETED"
-        assert not on_tile_device.isBeamformerRunning
+        _wait_for_attribute_value(on_tile_device, "isBeamformerRunning", False)
         assert not on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
     def test_configure_beamformer(
@@ -2871,17 +2889,15 @@ class TestMccsTileCommands:
             [[result_code], [message]] = on_tile_device.SendDataSamples(json_arg)
             assert result_code == ResultCode.OK
 
-        assert not on_tile_device.pendingDataRequests
+        _wait_for_attribute_value(on_tile_device, "pendingDataRequests", False)
         json_arg = json.dumps(
             {"data_type": "channel_continuous", "channel_id": 2, "n_samples": 4}
         )
         [[result_code], [message]] = on_tile_device.SendDataSamples(json_arg)
         assert result_code == ResultCode.OK
-        time.sleep(0.2)
-        assert on_tile_device.pendingDataRequests
+        _wait_for_attribute_value(on_tile_device, "pendingDataRequests", True)
         on_tile_device.StopDataTransmission()
-        time.sleep(0.1)
-        assert not on_tile_device.pendingDataRequests
+        _wait_for_attribute_value(on_tile_device, "pendingDataRequests", False)
 
         invalid_channel_range_args = [
             {"data_type": "channel", "first_channel": 0, "last_channel": 512},

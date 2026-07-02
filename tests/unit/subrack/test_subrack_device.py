@@ -1147,7 +1147,7 @@ def test_subrack_device_tpm_attribute_filtering(
         # we can be sure of the filter buffer contents. Otherwise, it may have
         # previous values in
         if i < 5:
-            break
+            continue
 
         # The last 5 sets of values
         last_5_voltages = voltages[max(0, i - 4) : i + 1]

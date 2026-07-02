@@ -1165,7 +1165,7 @@ def test_subrack_device_tpm_attribute_filtering(
             case _:
                 assert False, f"Didn't match filter_type '{filter_type}"
 
-        # Then we need ot wait 15 seconds for the values to be polled
+        # Then we need ot wait 1 seconds for the values to be polled
         # We add 2 ticks of 0.1 seconds to ensure this definitely happens
         time.sleep(1.2)
 

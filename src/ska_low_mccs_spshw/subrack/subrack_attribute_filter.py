@@ -6,6 +6,8 @@
 # See LICENSE for more info.
 """This module provides a subrack attribute filter class."""
 
+from __future__ import annotations
+
 from collections import deque
 from typing import Any
 

@@ -5256,36 +5256,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return json.dumps(self._attribute_state["fortyGPacketCount"].read())
 
     @attribute(
-        dtype="DevString",
-        label="All Staged Calibration Coefficients",
-    )
-    def allStagedCal(self: MccsTile) -> str:
-        """
-        Read all staged calibration coefficients.
-
-        :return: JSON string of all staged calibration coefficients.
-        """
-        return json.dumps(
-            self.component_manager.read_all_staged_calibration_coefficients(),
-            cls=NumpyEncoder,
-        )
-
-    @attribute(
-        dtype="DevString",
-        label="All Live Calibration Coefficients",
-    )
-    def allLiveCal(self: MccsTile) -> str:
-        """
-        Read all live calibration coefficients.
-
-        :return: JSON string of all live calibration coefficients.
-        """
-        return json.dumps(
-            self.component_manager.read_all_live_calibration_coefficients(),
-            cls=NumpyEncoder,
-        )
-
-    @attribute(
         dtype=(("DevFloat",),),
         max_dim_x=32,  # Channels
         max_dim_y=8,  # Antennas
@@ -5999,6 +5969,40 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> fpga_time = dp.command_inout("GetFpgaUnixTime")
         """
         return self.component_manager.fpgas_time
+
+    @command(dtype_out="DevString")
+    def GetAllStagedCalibration(self: MccsTile) -> str:
+        """
+        Read all staged calibration coefficients.
+
+        :return: JSON string of all staged calibration coefficients.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> coefficients = json.loads(dp.command_inout("GetAllStagedCalibration"))
+        """
+        return json.dumps(
+            self.component_manager.read_all_staged_calibration_coefficients(),
+            cls=NumpyEncoder,
+        )
+
+    @command(dtype_out="DevString")
+    def GetAllLiveCalibration(self: MccsTile) -> str:
+        """
+        Read all live calibration coefficients.
+
+        :return: JSON string of all live calibration coefficients.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> coefficients = json.loads(dp.command_inout("GetAllLiveCalibration"))
+        """
+        return json.dumps(
+            self.component_manager.read_all_live_calibration_coefficients(),
+            cls=NumpyEncoder,
+        )
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def SetBeamFormerRegions(

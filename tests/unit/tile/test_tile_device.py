@@ -571,8 +571,6 @@ class TestMccsTile:
             "rfiCount",
             "ppsDelay",
             "fortyGPacketCount",
-            "allStagedCal",
-            "allLiveCal",
         ]
 
     def __check_attributes_invalid(

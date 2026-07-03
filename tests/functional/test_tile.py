@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#
+# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -440,7 +440,7 @@ def stage_calibration_coefficients_on_tile_per_antenna(
     """
     # Store original cal.
     original_staged_cal: list[list[list[list[float]]]] = json.loads(
-        tile_device.allStagedCal
+        tile_device.GetAllStagedCalibration()
     )
     for antenna in range(nof_antennas):
         # Only loads for one antenna at a time.
@@ -463,7 +463,10 @@ def stage_calibration_coefficients_on_tile_per_antenna(
 
     try:
         assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
-            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
+            np.array(json.loads(tile_device.GetAllStagedCalibration()))
+            .ravel()
+            .tolist(),
+            abs=0.001,
         )
     except AssertionError:
         pytest.fail("Could not validate restoration of original staged calibration.")
@@ -495,7 +498,7 @@ def stage_calibration_coefficients_on_tile_for_half_of_the_channels(
     """
     # Store original cal.
     original_staged_cal: list[list[list[list[float]]]] = json.loads(
-        tile_device.allStagedCal
+        tile_device.GetAllStagedCalibration()
     )
     cal_data = [0]  # Start with first_channel = 0
     for ch in range(0, nof_channels // 2):
@@ -520,7 +523,10 @@ def stage_calibration_coefficients_on_tile_for_half_of_the_channels(
 
     try:
         assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
-            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
+            np.array(json.loads(tile_device.GetAllStagedCalibration()))
+            .ravel()
+            .tolist(),
+            abs=0.001,
         )
     except AssertionError:
         pytest.fail("Could not validate restoration of original staged calibration.")
@@ -586,10 +592,14 @@ def read_and_compare_half_staged_and_live_calibration(
     )
 
     actual_cal_staged = (
-        np.array(json.loads(tile_device.allStagedCal))[:half_channels].ravel().tolist()
+        np.array(json.loads(tile_device.GetAllStagedCalibration()))[:half_channels]
+        .ravel()
+        .tolist()
     )
     actual_cal_live = (
-        np.array(json.loads(tile_device.allLiveCal))[:half_channels].ravel().tolist()
+        np.array(json.loads(tile_device.GetAllLiveCalibration()))[:half_channels]
+        .ravel()
+        .tolist()
     )
     assert actual_cal_staged == pytest.approx(actual_cal_live, abs=0.001)
 
@@ -620,7 +630,7 @@ def stage_calibration_coefficients_on_tile_per_channel(
     """
     # Store original cal.
     original_staged_cal: list[list[list[list[float]]]] = json.loads(
-        tile_device.allStagedCal
+        tile_device.GetAllStagedCalibration()
     )
 
     # Load all channels at once
@@ -657,7 +667,10 @@ def stage_calibration_coefficients_on_tile_per_channel(
 
     try:
         assert np.array(original_staged_cal).ravel().tolist() == pytest.approx(
-            np.array(json.loads(tile_device.allStagedCal)).ravel().tolist(), abs=0.001
+            np.array(json.loads(tile_device.GetAllStagedCalibration()))
+            .ravel()
+            .tolist(),
+            abs=0.001,
         )
     except AssertionError:
         pytest.fail("Could not validate restoration of original staged calibration.")
@@ -679,7 +692,7 @@ def switch_active_calibration_bank(
 
     :yields: Control to the test.
     """
-    original_live_cal = np.array(json.loads(tile_device.allLiveCal))
+    original_live_cal = np.array(json.loads(tile_device.GetAllLiveCalibration()))
     tile_device.ApplyCalibration("")
     time.sleep(0.25)  # We saw what looked like a partial bank swap vs hardware.
     # Looks like the command is returning too soon from tpm-api.
@@ -700,7 +713,8 @@ def switch_active_calibration_bank(
 
     try:
         assert np.array(original_live_cal).ravel().tolist() == pytest.approx(
-            np.array(json.loads(tile_device.allLiveCal)).ravel().tolist(), abs=0.001
+            np.array(json.loads(tile_device.GetAllLiveCalibration())).ravel().tolist(),
+            abs=0.001,
         )
     except AssertionError:
         pytest.fail("Could not validate restoration of original live calibration.")
@@ -741,7 +755,9 @@ def read_and_compare_live_calibration(
     expected_length = nof_channels * nof_antennas * nof_pols * 2
     expected_cal_1d = np.array(calibration_coefficients).ravel().tolist()
     assert len(expected_cal_1d) == expected_length
-    actual_cal_1d = np.array(json.loads(tile_device.allLiveCal)).ravel().tolist()
+    actual_cal_1d = (
+        np.array(json.loads(tile_device.GetAllLiveCalibration())).ravel().tolist()
+    )
     assert len(actual_cal_1d) == expected_length
 
     assert actual_cal_1d == pytest.approx(expected_cal_1d, abs=0.001)
@@ -769,7 +785,9 @@ def read_and_compare_staged_calibration(
     expected_length = nof_channels * nof_antennas * nof_pols * 2
     expected_cal_1d = np.array(calibration_coefficients).ravel().tolist()
     assert len(expected_cal_1d) == expected_length
-    actual_cal_1d = np.array(json.loads(tile_device.allStagedCal)).ravel().tolist()
+    actual_cal_1d = (
+        np.array(json.loads(tile_device.GetAllStagedCalibration())).ravel().tolist()
+    )
     assert len(actual_cal_1d) == expected_length
 
     assert actual_cal_1d == pytest.approx(expected_cal_1d, abs=0.001)

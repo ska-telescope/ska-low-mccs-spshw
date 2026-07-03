@@ -723,6 +723,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "dst_ip_40g_fpga2": "dstip40gfpga2",
             "firmware_version": "firmwareVersion",
             "forty_gb_destination_ips": "fortyGbDestinationIps",
+            "forty_gb_destination_ports": "fortyGbDestinationPorts",
             "current_draw": "currentDraw",
             "power_draw": "powerDraw",
             "voltage_draw": "voltageDraw",
@@ -4013,9 +4014,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: ports
         """
-        return [
-            item["dst_port"] for item in self.component_manager.get_40g_configuration()
-        ]
+        return self._attribute_state["fortyGbDestinationPorts"].read()
 
     @attribute(
         dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1

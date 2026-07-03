@@ -1301,14 +1301,16 @@ class TileComponentManager(
 
     def _read_40g_destination_ips(
         self: TileComponentManager,
-    ) -> tuple[list[str], str, str]:
+    ) -> tuple[list[str], list[int], str, str]:
         """
-        Read all 40G destination IPs, and the per-FPGA IP.
+        Read all 40G destination IPs/ports, and the per-FPGA IP.
 
-        :return: all destination IPs, and the FPGA1/FPGA2 destination IP.
+        :return: all destination IPs, all destination ports, and the
+            FPGA1/FPGA2 destination IP.
         """
         forty_gb_cores = self.get_40g_configuration()
         destination_ips = [core["dst_ip"] for core in forty_gb_cores]
+        destination_ports = [core["dst_port"] for core in forty_gb_cores]
         dst_ip_40g_fpga1 = next(
             (core["dst_ip"] for core in forty_gb_cores if core.get("core_id") == 0),
             "",
@@ -1317,17 +1319,19 @@ class TileComponentManager(
             (core["dst_ip"] for core in forty_gb_cores if core.get("core_id") == 1),
             "",
         )
-        return destination_ips, dst_ip_40g_fpga1, dst_ip_40g_fpga2
+        return destination_ips, destination_ports, dst_ip_40g_fpga1, dst_ip_40g_fpga2
 
     def refresh_40g_configuration(self: TileComponentManager) -> None:
         """Re-read 40G core configuration from hardware and publish it."""
         (
             destination_ips,
+            destination_ports,
             dst_ip_40g_fpga1,
             dst_ip_40g_fpga2,
         ) = self._read_40g_destination_ips()
         self._update_attribute_callback(
             forty_gb_destination_ips=destination_ips,
+            forty_gb_destination_ports=destination_ports,
             dst_ip_40g_fpga1=dst_ip_40g_fpga1,
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,
         )
@@ -1906,6 +1910,7 @@ class TileComponentManager(
         dst_ip_40g_fpga1 = ""
         dst_ip_40g_fpga2 = ""
         forty_gb_destination_ips: list[str] = []
+        forty_gb_destination_ports: list[int] = []
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
@@ -1931,6 +1936,7 @@ class TileComponentManager(
             is_station_beam_flagging_enabled = self.is_station_beam_flagging_enabled
             (
                 forty_gb_destination_ips,
+                forty_gb_destination_ports,
                 dst_ip_40g_fpga1,
                 dst_ip_40g_fpga2,
             ) = self._read_40g_destination_ips()
@@ -1953,6 +1959,7 @@ class TileComponentManager(
             dst_ip_40g_fpga1=dst_ip_40g_fpga1,
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,
             forty_gb_destination_ips=forty_gb_destination_ips,
+            forty_gb_destination_ports=forty_gb_destination_ports,
         )
 
         self.logger.info("Configuration information read from TPM")

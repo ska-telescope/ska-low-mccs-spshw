@@ -14,6 +14,7 @@ import gc
 import itertools
 import json
 import random
+import threading
 import time
 import unittest.mock
 from typing import Any, Iterator, Optional
@@ -373,6 +374,67 @@ def _wait_for_attribute_value(
     while time.time() < deadline and getattr(device, attribute) != expected:
         time.sleep(0.1)
     assert getattr(device, attribute) == expected
+
+
+class _TileAccessRecorder:
+    """
+    A transparent proxy that records accesses made to a wrapped tile.
+
+    This is used to detect an attribute read reaching into the tile (or
+    simulator) directly, rather than being served from the cache that the
+    component manager's poll loop keeps up to date. Accesses made from the
+    poll loop itself are expected, and so are not recorded.
+    """
+
+    def __init__(self: "_TileAccessRecorder", wrapped: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param wrapped: the tile (or simulator) to wrap and observe.
+        """
+        self._wrapped = wrapped
+        self.accesses_outside_poll: list[str] = []
+
+    def _record(self: "_TileAccessRecorder", name: str) -> None:
+        """
+        Record an access, unless it comes from the polling thread.
+
+        :param name: a label identifying the access that was made.
+        """
+        if threading.current_thread().name != "Polling thread":
+            self.accesses_outside_poll.append(name)
+
+    def __getattr__(self: "_TileAccessRecorder", name: str) -> Any:
+        """
+        Record an attribute access, then forward it to the wrapped tile.
+
+        :param name: the name of the attribute being accessed.
+
+        :return: the corresponding attribute of the wrapped tile.
+        """
+        self._record(name)
+        return getattr(self._wrapped, name)
+
+    def __getitem__(self: "_TileAccessRecorder", key: Any) -> Any:
+        """
+        Record a register read, then forward it to the wrapped tile.
+
+        :param key: the register (or address) being read.
+
+        :return: the corresponding value from the wrapped tile.
+        """
+        self._record(f"__getitem__[{key}]")
+        return self._wrapped[key]
+
+    def __setitem__(self: "_TileAccessRecorder", key: Any, value: Any) -> None:
+        """
+        Record a register write, then forward it to the wrapped tile.
+
+        :param key: the register (or address) being written.
+        :param value: the value to write.
+        """
+        self._record(f"__setitem__[{key}]")
+        self._wrapped[key] = value
 
 
 # pylint: disable=too-many-lines, too-many-public-methods
@@ -1154,6 +1216,55 @@ class TestMccsTile:
 
         time.sleep(time_to_poll_attributes)
         assert tile_device.healthState == HealthState.OK, tile_device.healthReport
+
+    def test_attribute_reads_do_not_access_tile_hardware(
+        self: TestMccsTile,
+        on_tile_device: DeviceProxy,
+        tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
+        not_implemented_attributes: list[str],
+    ) -> None:
+        """
+        Test that reading an attribute never triggers a live call to hardware.
+
+        Attribute reads must be served entirely from the cache that the
+        component manager's poll loop keeps up to date. This is because
+        deployment tooling (e.g. taranta will spam these causing interference
+        with observations attempting to claim the lock. Accessing hardware is
+        a large overhead, when a cached value is sufficient.). This guards against
+        a future attribute being added (or an existing one being changed)
+        such that reading it from the Tango interface reaches into the
+        tile/simulator directly, instead of from the cache.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to a device under test that has
+            already been driven to the ON state, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend TileSimulator that the component
+            manager polls.
+        :param tile_component_manager: the injected TileComponentManager.
+        :param not_implemented_attributes: a fixture containing a list of
+            attributes not yet implemented in tile, reading of which raises
+            an exception unrelated to this test.
+        """
+        recorder = _TileAccessRecorder(tile_simulator)
+        tile_component_manager.tile = recorder  # type: ignore[assignment]
+        try:
+            for attr in on_tile_device.get_attribute_list():
+                if attr in not_implemented_attributes:
+                    continue
+                try:
+                    on_tile_device.read_attribute(attr)
+                except DevFailed:
+                    continue
+        finally:
+            tile_component_manager.tile = tile_simulator
+
+        assert not recorder.accesses_outside_poll, (
+            "Reading the following attributes reached into the tile/simulator "
+            "directly, instead of using the cache populated by polling: "
+            f"{recorder.accesses_outside_poll}."
+        )
 
     def test_healthState(
         self: TestMccsTile,

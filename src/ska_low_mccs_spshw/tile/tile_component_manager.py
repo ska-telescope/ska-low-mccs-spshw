@@ -922,13 +922,19 @@ class TileComponentManager(
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
-        subrack_off_command_proxy(
+        result_code, _ = subrack_off_command_proxy(
             arg=self._subrack_tpm_id,
             is_lrc=True,
             timeout=_POWER_COMMAND_TIMEOUT,
             wait_for_result=True,
             task_callback=task_callback,
         )
+        if result_code == ResultCode.OK:
+            # Since we will continue to poll hardware when adminMode is ONLINE.
+            # We have added this extra logging information for clarity.
+            # It is expected that unhappy paths are flagged appropriatly by
+            # the MccsCommandProxy.
+            self.logger.info("Off command completed")
 
     def do_on(
         self: TileComponentManager,
@@ -1830,9 +1836,6 @@ class TileComponentManager(
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
-        adc_rms = None
-        tile_health_structure = None
-        preadu_levels = None
         pps_delay_correction = None
         if is_programmed:
             _csp_rounding_value = self._with_hardware_lock(self.tile.get_csp_rounding)
@@ -1850,11 +1853,6 @@ class TileComponentManager(
             broadband_rfi_factor = self._with_hardware_lock(
                 lambda: self.tile.broadband_rfi_factor
             )
-            adc_rms = self._with_hardware_lock(self.tile.get_adc_rms)
-            tile_health_structure = self._with_hardware_lock(
-                self.tile.get_health_status
-            )
-            preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
             pps_delay_correction = self._get_pps_delay_correction()
             core0 = self._with_hardware_lock(
                 lambda: self.tile.get_40g_core_configuration(0, 0) or {}
@@ -1877,9 +1875,6 @@ class TileComponentManager(
             firmware_thresholds=firmware_thresholds,
             rfi_blanking_enabled_antennas=rfi_blanking_enabled_antennas,
             broadband_rfi_factor=broadband_rfi_factor,
-            adc_rms=adc_rms,
-            tile_health_structure=tile_health_structure,
-            preadu_levels=preadu_levels,
             pps_delay_correction=pps_delay_correction,
             dst_ip_40g_fpga1=dst_ip_40g_fpga1,
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,

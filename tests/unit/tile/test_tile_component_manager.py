@@ -442,6 +442,7 @@ class TestTileComponentManager:
         # that check_communication() returns all-False from the first poll,
         # avoiding a race where the default CPLD=True state causes spurious
         # 'NotProgrammed' programming_state callbacks before mock_off() fires.
+        mock_command_proxy_cls.return_value.return_value = (ResultCode.OK, "OK")
         tile_simulator.mock_off()
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.OFF)
         tile_component_manager.start_communicating()

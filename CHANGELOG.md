@@ -1,7 +1,12 @@
 # Version History
 
-## Unreleased
+## 13.0.0
 
+* [SKB-1402] Reduce hang in read method when power cut to TPM while in flight.
+  (
+    symptoms of this issue are a hang during power OFF of > 220 s. Expect ~12s hang after this patch,
+    this time may vary slightly and is due to UCP timeout
+  )
 * [SKB-1341] Remove `Object of type int32 is not JSON serializable. Converting it to a str` warning by correcting command invokation
 * [SKB-1341] Remove invalid taskstatus transition QUEUED to QUEUED deprecation warnings.
 * [SKB-1341] Refactor `On` and `Off` commands to remove use of deprecated command objects.

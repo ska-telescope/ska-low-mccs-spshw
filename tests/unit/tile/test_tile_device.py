@@ -557,10 +557,10 @@ class TestMccsTile:
         return [
             "tile_info",
             "firmwareVersion",
-            "fpgasUnixTime",
-            "fpgaTime",
-            "fpgaReferenceTime",
-            "fpgaFrameTime",
+            # "fpgasUnixTime",
+            # "fpgaTime",
+            # "fpgaReferenceTime",
+            # "fpgaFrameTime",
             "fortyGbDestinationIps",
             "fortyGbDestinationPorts",
             "currentTileBeamformerFrame",
@@ -1091,6 +1091,7 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Off", lookahead=10
         )
+        time.sleep(1)
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
                 try:
@@ -1317,9 +1318,13 @@ class TestMccsTile:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         """
+        time.sleep(4)
         keys = ["hardware", "fpga_firmware", "network"]
+        print("dsoijds")
+        print(on_tile_device.tile_info)
         assert all(key in json.loads(on_tile_device.tile_info).keys() for key in keys)
         assert tile_simulator.tpm
+
         assert (
             json.loads(on_tile_device.tile_info)["fpga_firmware"]
             == tile_simulator.tpm.info["fpga_firmware"]

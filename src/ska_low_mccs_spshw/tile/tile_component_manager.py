@@ -582,7 +582,7 @@ class TileComponentManager(
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     lambda: self._tile_time.format_time_from_timestamp(
-                        self._fpgas_time[0]
+                        self.fpgas_time[0]
                     ),
                     publish=True,
                 )
@@ -1321,9 +1321,11 @@ class TileComponentManager(
 
     def refresh_40g_configuration(self: TileComponentManager) -> None:
         """Re-read 40G core configuration from hardware and publish it."""
-        destination_ips, dst_ip_40g_fpga1, dst_ip_40g_fpga2 = (
-            self._read_40g_destination_ips()
-        )
+        (
+            destination_ips,
+            dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2,
+        ) = self._read_40g_destination_ips()
         self._update_attribute_callback(
             forty_gb_destination_ips=destination_ips,
             dst_ip_40g_fpga1=dst_ip_40g_fpga1,
@@ -3732,9 +3734,7 @@ class TileComponentManager(
                     is not None
                 ]
             else:
-                config = self.tile.get_40g_core_configuration(
-                    core_id, arp_table_entry
-                )
+                config = self.tile.get_40g_core_configuration(core_id, arp_table_entry)
                 self._forty_gb_core_list = [config] if config else []
         return self._forty_gb_core_list
 
@@ -4078,9 +4078,7 @@ class TileComponentManager(
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            return [
-                self.tile.beamformer_is_running(beam=beam) for beam in range(48)
-            ]
+            return [self.tile.beamformer_is_running(beam=beam) for beam in range(48)]
 
     @property
     @check_communicating

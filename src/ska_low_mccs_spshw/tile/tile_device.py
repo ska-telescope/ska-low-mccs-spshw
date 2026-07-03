@@ -729,6 +729,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         attribute_converters: dict[str, Any] = {
+            "tile_info": self._convert_ip_to_str,
             "adc_pll_lock_status": adc_pll_to_list,
             "fpga0_bip_error_count": udp_error_count_to_list,
             "fpga0_decode_error_count": udp_error_count_to_list,
@@ -1739,17 +1740,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # no alarm defined
             pass
 
-    def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
+    def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> str:
         """
         Convert IPAddresses to str in (possibly nested) dict.
 
         :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
+
+        :returns: a json serialised dictionary.
         """
         for k, v in nested_dict.items():
             if isinstance(v, IPv4Address):
                 nested_dict[k] = str(v)
             elif isinstance(v, dict):
                 self._convert_ip_to_str(v)
+
+        return json.dumps(nested_dict)
 
     # ----------
     # Attributes
@@ -2948,10 +2953,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        self._info = self._attribute_state["tile_info"].read() or {}
-        self._convert_ip_to_str(self._info)
-        info: dict[str, Any] = self._info
-        return json.dumps(info)
+        return self._attribute_state["tile_info"].read() or ""
 
     @attribute(
         dtype="DevString",
@@ -3950,21 +3952,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fpgaTime = attribute_from_signal(  # noqa: N815
         fpga_time_signal,
         dtype="DevString",
-        fisallowed="_is_initialised",
         doc="the FPGA internal time, in UTC format",
     )
 
     fpgaReferenceTime = attribute_from_signal(  # noqa: N815
         fpga_reference_time_signal,
         dtype="DevString",
-        fisallowed="_is_initialised",
         doc="the FPGA synchronization timestamp, in UTC format",
     )
 
     fpgaFrameTime = attribute_from_signal(  # noqa: N815
         fpga_frame_time_signal,
         dtype="DevString",
-        fisallowed="_is_initialised",
         doc="the FPGA synchronization timestamp, in UTC format",
     )
 

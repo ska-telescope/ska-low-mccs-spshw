@@ -1481,6 +1481,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         power: Optional[PowerState] = None,
         health: HealthState | int | None = None,
         pdu: Optional[HealthState] = None,
+        power_marshaller: Optional[HealthState] = None,
         health_status: Optional[dict] = None,
         **kwargs: Any,
     ) -> None:

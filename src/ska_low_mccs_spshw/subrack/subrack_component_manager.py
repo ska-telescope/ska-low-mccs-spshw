@@ -348,18 +348,22 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             )
         )
         self.proxy_map: dict[str, Any] = {}
-        self.power_marshaller_trl = power_marshaller_trl
+        # Strip whitespace. Without this the test context adds a space
+        # and breaks everything.
+        self.power_marshaller_trl = power_marshaller_trl.strip()
         self.power_marshaller_proxy = (
             None
-            if not power_marshaller_trl
+            if not self.power_marshaller_trl
             else _PowerMarshallerProxy(
-                power_marshaller_trl,
+                self.power_marshaller_trl,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed,
-                    power_marshaller_trl,
+                    self.power_marshaller_trl,
                 ),
-                functools.partial(self._pdu_state_changed, power_marshaller_trl),
+                functools.partial(
+                    self._power_marshaller_state_changed, self.power_marshaller_trl
+                ),
             )
         )
 
@@ -421,9 +425,29 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         """
         # ===========================================================================
         # NOTE: The PDU power state is not integrated into the component state,
-        # unindented to reduce noise from alling back with empty dict.
+        # unindented to reduce noise from calling back with empty dict.
         if state_change:
             self._component_state_changed_callback(pdu=state_change)
+        # ===========================================================================
+
+    def _power_marshaller_state_changed(
+        self: SubrackComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
+    ) -> None:
+        """
+        Handle power marshaller state change.
+
+        :param fqdn: power marshaller fqdn.
+        :param power: power marshaller power.
+        :param state_change: state changes
+        """
+        # ===========================================================================
+        # NOTE: The power marshaller power state is not integrated into the component state,
+        # unindented to reduce noise from calling back with empty dict.
+        if state_change:
+            self._component_state_changed_callback(power_marshaller=state_change)
         # ===========================================================================
 
     def turn_off_tpm(

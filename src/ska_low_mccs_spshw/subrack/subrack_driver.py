@@ -55,6 +55,7 @@ class SubrackDriver(
         update_rate: float = 5.0,
         command_update_rate: float = 20.0,
         max_fan_errors: int = 5,
+        accepted_fan_delta: float = 10,
         _subrack_client: Any = None,
     ) -> None:
         """
@@ -84,6 +85,9 @@ class SubrackDriver(
             fan speed values that are out of bounds. These values are
             caused by out of sync rpm and pwm values when the fan changes
             speed (inertia).
+        :param accepted_fan_delta: the percentage variance in fan max rpm.
+            Any value within accepted_fan_delta % of the expected fan rpm
+            is considered ok.
         :param _subrack_client: an optional subrack client to use.
         """
         self._client = _subrack_client or WebHardwareClient(host, port)
@@ -111,6 +115,7 @@ class SubrackDriver(
         # need to be disragrded
         self._fan_error_values = [0] * SubrackData.FAN_COUNT
         self._max_fan_errors = int(max_fan_errors)
+        self._accepted_fan_delta = accepted_fan_delta / 100
 
         self._write_lock = threading.Lock()
 
@@ -613,9 +618,11 @@ class SubrackDriver(
             if self._fan_error_values[i] >= self._max_fan_errors:
                 continue
 
-            if (abs(val - correct_value) / correct_value) > 10:
+            if (abs(val - correct_value) / correct_value) > self._accepted_fan_delta:
                 scaled_values[i] = correct_value
                 self._fan_error_values[i] += 1
+            else:
+                self._fan_error_values[i] = 0
 
         return scaled_values
 

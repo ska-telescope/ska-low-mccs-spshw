@@ -606,10 +606,7 @@ def test_health_status_not_coscheduled_with_action_command(
             False,
         ),
         pytest.param(
-            [600, 1200, 3000, 5400],
-            [10, 20, 50, 90],
-            [6000, 6000, 6000, 6000],
-            False
+            [600, 1200, 3000, 5400], [10, 20, 50, 90], [6000, 6000, 6000, 6000], False
         ),
         # Bad values. Note: we expect
         # the first n bad values to be
@@ -674,7 +671,7 @@ def test_estimate_max_fan_speed(
             ] * SubrackData.FAN_COUNT == subrack_driver._estimate_max_fan_rpm(
                 fan_speed, fan_speed_percent
             )
-        assert (i+1) in subrack_driver._fan_error_values
+        assert (i + 1) in subrack_driver._fan_error_values
 
     if expected_max_rpm is not None:
         expected_max_rpm = [pytest.approx(val) for val in expected_max_rpm]

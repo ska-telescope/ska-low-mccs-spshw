@@ -222,7 +222,10 @@ class TestOff:
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
-        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_simulator_attribute_values,
+            **subrack_driver_derived_attribute_values,
+        )
         callbacks["component_state"].assert_not_called()
 
         # Now that the subrack is on,
@@ -314,7 +317,10 @@ class TestOn:
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_simulator_attribute_values,
+            **subrack_driver_derived_attribute_values,
+        )
         callbacks["component_state"].assert_not_called()
 
         subrack_simulator.simulate_attribute("board_current", 0.7)
@@ -467,7 +473,10 @@ class TestOn:
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_simulator_attribute_values,
+            **subrack_driver_derived_attribute_values,
+        )
         callbacks["component_state"].assert_not_called()
 
         tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
@@ -531,7 +540,10 @@ class TestOn:
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_simulator_attribute_values,
+            **subrack_driver_derived_attribute_values,
+        )
         callbacks["component_state"].assert_not_called()
 
         subrack_fan_speeds_percent = subrack_simulator.get_attribute(

@@ -194,6 +194,8 @@ class TestOff:
             under test
         :param subrack_simulator_attribute_values: key-value dictionary of
             the expected subrack simulator attribute values
+        :param subrack_driver_derived_attribute_values: key-value dictionary
+            of the expected subrack simulator attribute values
         :param callbacks: dictionary of driver callbacks.
         """
         callbacks["communication_status"].assert_not_called()
@@ -222,7 +224,9 @@ class TestOff:
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-        callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_driver_derived_attribute_values
+        )
         callbacks["component_state"].assert_not_called()
 
         # Now that the subrack is on,
@@ -245,7 +249,7 @@ class TestOff:
                 attribute_name: None
                 for attribute_name in subrack_simulator_attribute_values
             },
-            subrack_max_fan_speeds=Anything
+            subrack_max_fan_speeds=Anything,
         )
 
         callbacks["component_state"].assert_not_called()
@@ -275,7 +279,8 @@ class TestOn:
         """
         return PowerState.ON
 
-    def test_attribute_updates(  # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals, too-many-arguments
+    def test_attribute_updates(
         self: TestOn,
         subrack_simulator: SubrackSimulator,
         subrack_component_manager: SubrackComponentManager,
@@ -292,6 +297,8 @@ class TestOn:
             under test.
         :param subrack_simulator_attribute_values: key-value dictionary
             of the expected subrack simulator attribute values.
+        :param subrack_driver_derived_attribute_values: key-value dictionary
+            of the expected subrack simulator attribute values
         :param callbacks: dictionary of driver callbacks.
         """
         callbacks["communication_status"].assert_not_called()
@@ -312,7 +319,9 @@ class TestOn:
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-        callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_driver_derived_attribute_values
+        )
         callbacks["component_state"].assert_not_called()
 
         subrack_simulator.simulate_attribute("board_current", 0.7)
@@ -427,10 +436,11 @@ class TestOn:
                 attribute_name: None
                 for attribute_name in subrack_simulator_attribute_values
             },
-            subrack_max_fan_speeds = Anything
+            subrack_max_fan_speeds=Anything,
         )
         callbacks["component_state"].assert_not_called()
 
+    # pylint: disable=too-many-arguments
     def test_tpm_power_commands(
         self: TestOn,
         subrack_simulator: SubrackSimulator,
@@ -448,6 +458,8 @@ class TestOn:
             under test
         :param subrack_simulator_attribute_values: key-value dictionary of
             the expected subrack simulator attribute values
+        :param subrack_driver_derived_attribute_values: key-value dictionary
+            of the expected subrack simulator attribute values
         :param callbacks: dictionary of driver callbacks.
         """
         callbacks["communication_status"].assert_not_called()
@@ -463,7 +475,9 @@ class TestOn:
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-        callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_driver_derived_attribute_values
+        )
         callbacks["component_state"].assert_not_called()
 
         tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
@@ -493,6 +507,7 @@ class TestOn:
         tpm_on_off[tpm_to_power - 1] = True
         callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
+    # pylint: disable=too-many-arguments
     def test_other_commands(
         self: TestOn,
         subrack_simulator: SubrackSimulator,
@@ -510,6 +525,8 @@ class TestOn:
             under test
         :param subrack_simulator_attribute_values: key-value dictionary of
             the expected subrack simulator attribute values
+        :param subrack_driver_derived_attribute_values: key-value dictionary
+            of the expected subrack simulator attribute values
         :param callbacks: dictionary of driver callbacks.
         """
         callbacks["communication_status"].assert_not_called()
@@ -525,7 +542,9 @@ class TestOn:
 
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-        callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_driver_derived_attribute_values
+        )
         callbacks["component_state"].assert_not_called()
 
         subrack_fan_speeds_percent = subrack_simulator.get_attribute(

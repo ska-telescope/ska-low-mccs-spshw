@@ -13,7 +13,6 @@ import pytest
 from ska_control_model import CommunicationStatus, PowerState
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
-from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
@@ -50,8 +49,9 @@ def test_attribute_reads(
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_driver.stop_communicating()
@@ -100,8 +100,9 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_simulator.simulate_attribute("board_current", 0.7)
@@ -236,8 +237,9 @@ def test_tpm_power_commands(
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
@@ -301,8 +303,9 @@ def test_get_health_status(
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     # Case 1: bios is too old, health status is not polled
@@ -369,8 +372,9 @@ def test_other_commands(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_fan_speeds_percent = subrack_simulator.get_attribute(
@@ -484,13 +488,10 @@ def test_failed_poll(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
-    callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
-    callbacks["component_state"].assert_not_called()
-
-    all_attributes = (
-        subrack_simulator_attribute_values  # | subrack_driver_derived_attribute_values
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
     )
+    callbacks["component_state"].assert_not_called()
 
     subrack_client.get_attribute = lambda attr_name: {
         "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
@@ -504,7 +505,7 @@ def test_failed_poll(
         "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
-        "value": all_attributes.get(attr_name),
+        "value": subrack_simulator_attribute_values.get(attr_name),
     }
     callbacks["component_state"].assert_call(fault=False)
 
@@ -523,7 +524,7 @@ def test_failed_poll(
         "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
-        "value": all_attributes.get(attr_name),
+        "value": subrack_simulator_attribute_values.get(attr_name),
     }
     callbacks["component_state"].assert_call(power=PowerState.ON)
 
@@ -531,7 +532,7 @@ def test_failed_poll(
         "status": "invalid_response code",
         "info": "",
         "attribute": attr_name,
-        "value": all_attributes.get(attr_name),
+        "value": subrack_simulator_attribute_values.get(attr_name),
     }
     # lookahead of 2 due to a call to populate attribute cache
     # following PowerState.ON.
@@ -543,7 +544,7 @@ def test_failed_poll(
         "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
-        "value": all_attributes.get(attr_name),
+        "value": subrack_simulator_attribute_values.get(attr_name),
     }
     callbacks["component_state"].assert_call(fault=False)
 
@@ -555,12 +556,10 @@ def test_failed_poll(
     }
 
     callbacks["component_state"].assert_call(
-        **failed_subrack_simulator_attribute_values, lookahead=2
+        **failed_subrack_simulator_attribute_values,
+        subrack_max_fan_speeds=None,
+        lookahead=2,
     )
-    # Since subrack_max_fans is not read from the subrack API, it won't
-    # fail with the rest of the attributes.
-    # It should in theory come back with None.
-    callbacks["component_state"].assert_call(**{"subrack_max_fan_speeds": Anything})
 
     callbacks["component_state"].assert_not_called()
 
@@ -594,3 +593,91 @@ def test_health_status_not_coscheduled_with_action_command(
     command_names = [cmd[0] for cmd in poll_request.commands]
     assert "turn_on_tpm" in command_names
     assert "get_health_status" not in command_names
+
+
+@pytest.mark.parametrize(
+    ("fan_speed", "fan_speed_percent", "expected_max_rpm", "suppress_values"),
+    [
+        # Test good cases
+        pytest.param(
+            [5900, 6000, 6100, 6300],
+            [100, 100, 100, 100],
+            [5900, 6000, 6100, 6300],
+            False,
+        ),
+        pytest.param(
+            [600, 1200, 3000, 5400],
+            [10, 20, 50, 90],
+            [6000, 6000, 6000, 6000],
+            False
+        ),
+        # Bad values. Note: we expect
+        # the first n bad values to be
+        # supressed
+        pytest.param(
+            [3000, 12000, 1500, 6000],
+            [100, 100, 50, 50],
+            [3000, 12000, 3000, 12000],
+            True,
+        ),
+        # Edge case: the value is within
+        # 10% of the correct value, so
+        # it is simply returned
+        pytest.param(
+            [5500, 6500, 2750, 3250],
+            [100, 100, 50, 50],
+            [5500, 6500, 5500, 6500],
+            False,
+        ),
+        # Edge case: incredebly small
+        # pwm gets rounded up to 1%
+        # to avoid division by 0
+        pytest.param(
+            [0, 6000, 0, 6000],
+            [0, 0, 2, 2],
+            [0, 600_000, 0, 300_000],
+            True,
+        ),
+        # Edge case: None
+        pytest.param(
+            [0, 6000, 0, 6000],
+            None,
+            None,
+            False,
+        ),
+    ],
+)
+def test_estimate_max_fan_speed(
+    subrack_driver: SubrackDriver,
+    fan_speed: list[float] | None,
+    fan_speed_percent: list[float] | None,
+    expected_max_rpm: list | None,
+    suppress_values: bool,
+) -> None:
+    """
+    Test that the estimate max fan speed method responds correctly.
+
+    :param subrack_driver: the subrack driver under test
+    :param fan_speed: input rpm
+    :param fan_speed_percent: input pwm
+    :param expected_max_rpm: the expected result
+    :param suppress_values: if the function will supress bad values or not.
+        In general this should be False if we expect the result is within
+        10% of the maximum fan speed or if it's None. Otherwise, the
+        method will supress 5 bad consecutive answers and only the 6th one
+        will be the expected value
+    """
+    if suppress_values:
+        for i in range(subrack_driver._max_fan_errors):
+            assert [
+                pytest.approx(SubrackData.MAX_SUBRACK_FAN_SPEED)
+            ] * SubrackData.FAN_COUNT == subrack_driver._estimate_max_fan_rpm(
+                fan_speed, fan_speed_percent
+            )
+        assert (i+1) in subrack_driver._fan_error_values
+
+    if expected_max_rpm is not None:
+        expected_max_rpm = [pytest.approx(val) for val in expected_max_rpm]
+    assert expected_max_rpm == subrack_driver._estimate_max_fan_rpm(
+        fan_speed, fan_speed_percent
+    )

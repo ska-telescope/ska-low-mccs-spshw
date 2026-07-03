@@ -586,7 +586,11 @@ class SubrackDriver(
                 self._poll_commands = True
             self._checked_bios = True
 
-    def _estimate_max_fan_rpm(self: SubrackDriver) -> list | None:
+    def _estimate_max_fan_rpm(
+        self: SubrackDriver,
+        fan_speed: list[float] | None,
+        fan_speed_percent: list[float] | None,
+    ) -> list | None:
         """
         Calculate the estimated rpm speed of the fans at 100% pwm duty.
 
@@ -599,17 +603,17 @@ class SubrackDriver(
         values immediately while rpm takes about 5s to catch up. In practice this
         results to about 2-5 wrong consecutive values.
 
+        :param fan_speed: fan speed in rpm as reported by the subrack
+        :param fan_speed_percent: pwm duty cycle
+
         :return: the subrack fan speeds expected at 100% pwm duty.
         """
-        rpm = self._component_state["subrack_fan_speeds"]
-        pwm = self._component_state["subrack_fan_speeds_percent"]
-
-        if rpm is None or pwm is None:
+        if fan_speed is None or fan_speed_percent is None:
             return None
 
         # Filter out 0s
-        pwm_duty = [max(0.01, p / 100) for p in pwm]
-        scaled_values = [r / pwm_duty[i] for i, r in enumerate(rpm)]
+        pwm_duty = [max(0.01, p / 100) for p in fan_speed_percent]
+        scaled_values = [r / pwm_duty[i] for i, r in enumerate(fan_speed)]
 
         # Drop any bad values (10% error) unless they are n consecutive
         # bad values where n is max fan errors
@@ -939,9 +943,15 @@ class SubrackDriver(
             key in values
             for key in ["subrack_fan_speeds", "subrack_fan_speeds_percent"]
         ):
-            max_rpm = self._estimate_max_fan_rpm()
-            if max_rpm is not None:
-                values["subrack_max_fan_speeds"] = max_rpm
+            rpm = values.get(
+                "subrack_fan_speeds", self._component_state["subrack_fan_speeds"]
+            )
+            pwm = values.get(
+                "subrack_fan_speeds_percent",
+                self._component_state["subrack_fan_speeds_percent"],
+            )
+            max_rpm = self._estimate_max_fan_rpm(rpm, pwm)
+            values["subrack_max_fan_speeds"] = max_rpm
         self._update_component_state(**values)
 
     def polling_stopped(self: SubrackDriver) -> None:

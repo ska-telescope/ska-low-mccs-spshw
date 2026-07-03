@@ -117,7 +117,6 @@ _ATTRIBUTE_MAP: Final = {
     "40G_PACKET_COUNT": "40g_packet_count",
     "POINTING_DELAYS": "pointing_delays",
     "FPGAS_TIME": "fpgas_time",
-    "FPGA_TIME": "fpga_time",
     "FPGA_CURRENT_FRAME": "fpga_current_frame",
     "FPGA_FRAME_TIME": "fpga_frame_time",
 }
@@ -575,16 +574,8 @@ class TileComponentManager(
             case "FPGAS_TIME":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
-                    lambda: self.fpgas_time,
-                    publish=True,
-                )
-            case "FPGA_TIME":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    lambda: self._tile_time.format_time_from_timestamp(
-                        self.fpgas_time[0]
-                    ),
-                    publish=True,
+                    self._poll_fpgas_time,
+                    publish=False,
                 )
             case "FPGA_CURRENT_FRAME":
                 request = TileRequest(
@@ -1292,7 +1283,7 @@ class TileComponentManager(
 
         :return: information relevant to tile.
         """
-        with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
+        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
             return self.tile.info
 
     def refresh_tile_info(self: TileComponentManager) -> None:
@@ -2203,6 +2194,19 @@ class TileComponentManager(
         if failed:
             raise ConnectionError("Cannot read time from FPGA")
         return self._fpgas_time
+
+    def _poll_fpgas_time(self: TileComponentManager) -> None:
+        """
+        Read the FPGA unix time once and publish both fpgasUnixTime and fpgaTime.
+
+        fpgaTime is just a formatted view of fpgasUnixTime, so this avoids
+        polling hardware twice for what is effectively the same reading.
+        """
+        fpgas_time = self.fpgas_time
+        self._update_attribute_callback(
+            fpgas_time=fpgas_time,
+            fpga_time=self._tile_time.format_time_from_timestamp(fpgas_time[0]),
+        )
 
     @property
     def fpga_reference_time(self: TileComponentManager) -> int:
@@ -4080,12 +4084,17 @@ class TileComponentManager(
 
         :return: list of hardware beam running states
         """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return [self.tile.beamformer_is_running(beam=beam) for beam in range(48)]
+        subarray_beams = [False] * 48
+        # if self.tpm_status != TpmStatus.INITIALISED:
+        #     return subarray_beams
+        for beam in range(48):
+            with acquire_timeout(
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                subarray_beams[beam] = self.tile.beamformer_is_running(beam=beam)
+        return subarray_beams
 
     @property
     @check_communicating
@@ -4574,6 +4583,8 @@ class TileComponentManager(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.enable_station_beam_flagging()
+            flagging_enabled = self.is_station_beam_flagging_enabled
+        self._update_attribute_callback(station_beam_flagging_enabled=flagging_enabled)
 
     def disable_station_beam_flagging(self: TileComponentManager) -> None:
         """Disable station beam flagging."""
@@ -4581,6 +4592,8 @@ class TileComponentManager(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.disable_station_beam_flagging()
+            flagging_enabled = self.is_station_beam_flagging_enabled
+        self._update_attribute_callback(station_beam_flagging_enabled=flagging_enabled)
 
     def get_voltage_warning_thresholds(
         self: TileComponentManager,

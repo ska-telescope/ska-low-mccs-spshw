@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-lines
+#
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -11,6 +11,7 @@ This file contains a test for the tile dropped packets test.
 Depending on your exact deployment the individual tests may or may not be run.
 This test just checks that anything which can run passes.
 """
+
 from __future__ import annotations
 
 import json

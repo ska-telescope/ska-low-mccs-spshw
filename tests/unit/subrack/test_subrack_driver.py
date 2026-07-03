@@ -13,6 +13,7 @@ import pytest
 from ska_control_model import CommunicationStatus, PowerState
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
+from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
@@ -267,6 +268,7 @@ def test_tpm_power_commands(
     callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
 
+# pylint: disable=too-many-arguments
 def test_get_health_status(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
@@ -438,6 +440,7 @@ def test_other_commands(
     )
 
 
+# pylint: disable=too-many-arguments
 def test_failed_poll(
     subrack_driver: SubrackDriver,
     subrack_client: Any,
@@ -485,6 +488,10 @@ def test_failed_poll(
     callbacks["component_state"].assert_call(**subrack_driver_derived_attribute_values)
     callbacks["component_state"].assert_not_called()
 
+    all_attributes = (
+        subrack_simulator_attribute_values  # | subrack_driver_derived_attribute_values
+    )
+
     subrack_client.get_attribute = lambda attr_name: {
         "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
         "info": "Exception: " + str("mocked exception"),
@@ -497,7 +504,7 @@ def test_failed_poll(
         "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
-        "value": subrack_simulator_attribute_values.get(attr_name),
+        "value": all_attributes.get(attr_name),
     }
     callbacks["component_state"].assert_call(fault=False)
 
@@ -516,7 +523,7 @@ def test_failed_poll(
         "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
-        "value": subrack_simulator_attribute_values.get(attr_name),
+        "value": all_attributes.get(attr_name),
     }
     callbacks["component_state"].assert_call(power=PowerState.ON)
 
@@ -524,7 +531,7 @@ def test_failed_poll(
         "status": "invalid_response code",
         "info": "",
         "attribute": attr_name,
-        "value": subrack_simulator_attribute_values.get(attr_name),
+        "value": all_attributes.get(attr_name),
     }
     # lookahead of 2 due to a call to populate attribute cache
     # following PowerState.ON.
@@ -536,7 +543,7 @@ def test_failed_poll(
         "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
-        "value": subrack_simulator_attribute_values.get(attr_name),
+        "value": all_attributes.get(attr_name),
     }
     callbacks["component_state"].assert_call(fault=False)
 
@@ -548,8 +555,12 @@ def test_failed_poll(
     }
 
     callbacks["component_state"].assert_call(
-        **failed_subrack_simulator_attribute_values,
+        **failed_subrack_simulator_attribute_values, lookahead=2
     )
+    # Since subrack_max_fans is not read from the subrack API, it won't
+    # fail with the rest of the attributes.
+    # It should in theory come back with None.
+    callbacks["component_state"].assert_call(**{"subrack_max_fan_speeds": Anything})
 
     callbacks["component_state"].assert_not_called()
 

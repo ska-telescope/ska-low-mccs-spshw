@@ -933,7 +933,8 @@ class SubrackDriver(
             for key in ["subrack_fan_speeds", "subrack_fan_speeds_percent"]
         ):
             max_rpm = self._estimate_max_fan_rpm()
-            values["subrack_max_fan_speeds"] = max_rpm
+            if max_rpm is not None:
+                values["subrack_max_fan_speeds"] = max_rpm
         self._update_component_state(**values)
 
     def polling_stopped(self: SubrackDriver) -> None:

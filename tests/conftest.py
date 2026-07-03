@@ -513,11 +513,11 @@ def subrack_simulator_attribute_values_fixture(
                 subrack_simulator_config["power_supply_voltages"],
             )
         ],
-        "subrack_fan_speeds_percent": _approxify(
-            subrack_simulator_config["subrack_fan_speeds_percent"]
-        ),
+        "subrack_fan_speeds_percent": subrack_simulator_config[
+            "subrack_fan_speeds_percent"
+        ],
         "subrack_fan_speeds": [
-            pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0)
+            p * MAX_SUBRACK_FAN_SPEED / 100.0
             for p in subrack_simulator_config["subrack_fan_speeds_percent"]
         ],
         "subrack_fan_mode": subrack_simulator_config["subrack_fan_mode"],
@@ -575,6 +575,27 @@ def subrack_simulator_attribute_values_fixture(
             },
             "PSM": {"EXT_LABEL": "", "SN": "", "PN": "", "HARDWARE_REV": ""},
         },
+    }
+
+
+@pytest.fixture(name="subrack_driver_derived_attribute_values", scope="session")
+def subrack_driver_derived_attribute_values_fixture(
+    subrack_simulator_config: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Return attribute values that the subrack driver derives from other attributes.
+
+    :param subrack_simulator_config: attribute values with which the
+        subrack simulator is configured.
+
+    :return: a key-value dictionary of attribute values that the subrack
+        driver derives from other reported attributes.
+    """
+    return {
+        "subrack_max_fan_speeds": [
+            pytest.approx(MAX_SUBRACK_FAN_SPEED)
+            for p in subrack_simulator_config["subrack_fan_speeds"]
+        ],
     }
 
 

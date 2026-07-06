@@ -531,8 +531,8 @@ class MockTpm:
                 subnet = 10 + idx
 
                 self._40g_configuration[(port, lane)] = {
-                    "core_id": idx,
-                    "arp_table_entry": idx,
+                    "core_id": port,
+                    "arp_table_entry": lane,
                     "src_mac": f"62:00:0A:82:00:{idx + 1:02X}",
                     "src_ip": f"10.0.{subnet}.2",
                     "dst_ip": f"10.0.{subnet}.3",

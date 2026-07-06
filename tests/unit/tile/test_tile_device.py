@@ -619,10 +619,6 @@ class TestMccsTile:
         return [
             "tile_info",
             "firmwareVersion",
-            # "fpgasUnixTime",
-            # "fpgaTime",
-            # "fpgaReferenceTime",
-            # "fpgaFrameTime",
             "fortyGbDestinationIps",
             "fortyGbDestinationPorts",
             "currentTileBeamformerFrame",
@@ -1429,8 +1425,6 @@ class TestMccsTile:
         """
         time.sleep(4)
         keys = ["hardware", "fpga_firmware", "network"]
-        print("dsoijds")
-        print(on_tile_device.tile_info)
         assert all(key in json.loads(on_tile_device.tile_info).keys() for key in keys)
         assert tile_simulator.tpm
 

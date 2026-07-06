@@ -4580,7 +4580,9 @@ class TileComponentManager(
         ):
             self.tile.enable_station_beam_flagging()
             flagging_enabled = self.is_station_beam_flagging_enabled
-        self._update_attribute_callback(station_beam_flagging_enabled=flagging_enabled)
+        self._update_attribute_callback(
+            is_station_beam_flagging_enabled=flagging_enabled
+        )
 
     def disable_station_beam_flagging(self: TileComponentManager) -> None:
         """Disable station beam flagging."""
@@ -4589,7 +4591,9 @@ class TileComponentManager(
         ):
             self.tile.disable_station_beam_flagging()
             flagging_enabled = self.is_station_beam_flagging_enabled
-        self._update_attribute_callback(station_beam_flagging_enabled=flagging_enabled)
+        self._update_attribute_callback(
+            is_station_beam_flagging_enabled=flagging_enabled
+        )
 
     def get_voltage_warning_thresholds(
         self: TileComponentManager,

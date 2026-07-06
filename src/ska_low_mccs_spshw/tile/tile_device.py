@@ -5757,7 +5757,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
-        return self.component_manager.set_lmc_download(
+        result_codes, messages = self.component_manager.set_lmc_download(
             mode=mode,
             payload_length=payload_length,
             dst_ip=destination_ip,
@@ -5766,6 +5766,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask_40g=netmask_40g,
             gateway_40g=gateway_40g,
         )
+        if result_codes[0] == ResultCode.OK:
+            self.component_manager.refresh_40g_configuration()
+            # tile_info currently mixes static device configuration with some
+            # non-static hardware-derived fields (including 40G network config),
+            # due to be removed in 4.0.0. Until then, re-evaluate it here so it
+            # stays consistent with the 40G configuration just written.
+            self.component_manager.refresh_tile_info()
+        return (result_codes, messages)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @stb.validators.validate_json_args(schema=SetLmcIntegratedDownload_SCHEMA)
@@ -5858,7 +5866,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetCspDownload", jstr)
         """
-        return self.component_manager.set_csp_download(
+        result_codes, messages = self.component_manager.set_csp_download(
             source_port,
             destination_ip_1,
             destination_ip_2,
@@ -5867,6 +5875,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask,
             gateway,
         )
+        if result_codes[0] == ResultCode.OK:
+            self.component_manager.refresh_40g_configuration()
+            # tile_info currently mixes static device configuration with some
+            # non-static hardware-derived fields (including 40G network config),
+            # due to be removed in 4.0.0. Until then, re-evaluate it here so it
+            # stays consistent with the 40G configuration just written.
+            self.component_manager.refresh_tile_info()
+        return (result_codes, messages)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetAttributeThresholds(

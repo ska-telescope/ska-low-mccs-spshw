@@ -619,10 +619,9 @@ class SubrackDriver(
         # bad values where n is max fan errors
         correct_value = SubrackData.MAX_SUBRACK_FAN_SPEED
         for i, val in enumerate(scaled_values):
-            if self._fan_error_values[i] >= self._max_fan_errors:
-                continue
-
             if (abs(val - correct_value) / correct_value) > self._accepted_fan_delta:
+                if self._fan_error_values[i] >= self._max_fan_errors:
+                    continue
                 scaled_values[i] = correct_value
                 self._fan_error_values[i] += 1
             else:

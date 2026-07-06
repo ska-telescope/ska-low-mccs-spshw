@@ -17,7 +17,7 @@ import json
 import threading
 import time
 import unittest.mock
-from datetime import timezone
+from datetime import timedelta, timezone
 from logging import Logger
 from typing import Any, Callable, Iterator
 from unittest.mock import ANY, MagicMock, call, patch
@@ -104,6 +104,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
+        "timeToFrameCounterWrap",
+        "globalReferenceTime",
         timeout=20.0,
     )
 
@@ -2115,3 +2117,55 @@ def test_beamformer_flagged_count_health_rollup(
         True
     )
     change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+
+
+def test_frame_counter_wrap_timer(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the timeToFrameCounterWrap attribute is updated correctly.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    # Set the global reference time to one week ago
+    global_reference_dt = datetime.datetime.now(tz=timezone.utc) - timedelta(days=7)
+    setattr(
+        station_device,
+        "globalReferenceTime",
+        datetime.datetime.strftime(global_reference_dt, SpsStation.RFC_FORMAT),
+    )
+    time.sleep(1)
+
+    global_reference_time = getattr(station_device, "globalReferenceTime")
+    global_reference_dt = datetime.datetime.strptime(
+        global_reference_time, SpsStation.RFC_FORMAT
+    ).replace(tzinfo=timezone.utc)
+    expected_wrap_dt = global_reference_dt + timedelta(
+        seconds=SpsStation.FRAME_COUNTER_WRAP_PERIOD
+    )
+
+    expected_time_to_wrap = (
+        expected_wrap_dt - datetime.datetime.now(tz=timezone.utc)
+    ).total_seconds()
+
+    assert getattr(station_device, "timeToFrameCounterWrap") == pytest.approx(
+        expected_time_to_wrap, abs=1
+    )

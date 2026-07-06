@@ -700,6 +700,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "pointing_delays": "pointingDelays",
             "dst_ip_40g_fpga1": "dstip40gfpga1",
             "dst_ip_40g_fpga2": "dstip40gfpga2",
+            "current_draw": "currentDraw",
+            "power_draw": "powerDraw",
+            "voltage_draw": "voltageDraw",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -1418,24 +1421,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Propagate power state to base implementation
         super()._component_state_changed(power=power)
 
-        if power in (PowerState.OFF, PowerState.UNKNOWN):
-            for attr in self._attribute_state.values():
-                try:
-                    attr.mark_stale()
-                except Exception as exc:  # pylint: disable=broad-except
-                    self.logger.warning(
-                        "Failed to mark %r as stale: %s",
-                        attr,
-                        exc,
-                        exc_info=True,
-                    )
-            for signal in self._HEALTH_SIGNAL_MAP.values():
-                setattr(self, signal, None)
+        match power:
+            case PowerState.OFF | PowerState.UNKNOWN:
+                for attr in self._attribute_state.values():
+                    try:
+                        attr.mark_stale()
+                    except Exception as exc:  # pylint: disable=broad-except
+                        self.logger.warning(
+                            "Failed to mark %r as stale: %s",
+                            attr,
+                            exc,
+                            exc_info=True,
+                        )
+                for signal in self._HEALTH_SIGNAL_MAP.values():
+                    setattr(self, signal, None)
+            case PowerState.ON:
+                # If the power state is ON then fetch subrack values
+                self.component_manager.fetch_subrack_values()
+            case _:
+                pass
+
         # Only evaluate and propagate fault if the tile is ON
         if self.power_state == PowerState.ON:
             super()._component_state_changed(
                 fault=self._evaluate_fault(
-                    db_configuration_fault=db_configuration_fault, polling_fault=fault
+                    db_configuration_fault=db_configuration_fault,
+                    polling_fault=fault,
                 )
             )
 
@@ -1608,13 +1619,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         f"Attribute {attr_name} changed to {attr_value}, "
                         "this is above maximum alarm, Shutting down TPM."
                     )
-                    self.component_manager.off()
+                    self.execute_Off()
             except Exception as e:  # pylint: disable=broad-except
                 self.logger.error(
                     f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
                     "Shutting down TPM."
                 )
-                self.component_manager.off()
+                self.execute_Off()
 
     def notify_emission(self: MccsTile, signal: str, value: Any) -> None:
         """
@@ -5325,6 +5336,54 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["pointingDelays"].read()
 
+    @attribute(
+        dtype="DevFloat",
+        label="Subrack Current",
+        min_alarm=0.0,
+        max_alarm=10.53,
+        abs_change=0.1,
+    )
+    def currentDraw(self: MccsTile) -> float | None:
+        """
+        Get the Tile current as measured by the subrack.
+
+        :return: The Tile current as measured by the subrack.
+
+        """
+        return self._attribute_state["currentDraw"].read()
+
+    @attribute(
+        dtype="DevFloat",
+        label="Subrack Power",
+        min_alarm=0.0,
+        max_alarm=120.0,
+        abs_change=0.1,
+    )
+    def powerDraw(self: MccsTile) -> float | None:
+        """
+        Get the Tile power as measured by the subrack.
+
+        :return: The Tile power as measured by the subrack.
+
+        """
+        return self._attribute_state["powerDraw"].read()
+
+    @attribute(
+        dtype="DevFloat",
+        label="Subrack Voltage",
+        min_alarm=11.4,
+        max_alarm=12.6,
+        abs_change=0.1,
+    )
+    def voltageDraw(self: MccsTile) -> float | None:
+        """
+        Get the Tile voltage as measured by the subrack.
+
+        :return: The Tile voltage as measured by the subrack.
+
+        """
+        return self._attribute_state["voltageDraw"].read()
+
     # --------
     # Commands
     # --------
@@ -7162,8 +7221,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ---------------
     # On/Off commands
     # ---------------
+    def is_On_allowed(
+        self: MccsTile,
+        request_type: stb.long_running_commands.LRCReqType | None = None,
+    ) -> bool:
+        """
+        Return whether the On command may be called.
 
-    def execute_Off(self: MccsTile) -> DevVarLongStringArrayType:
+        :param request_type: the type of LRC request being checked
+        :return: whether the command is allowed
+        """
+        if self.get_state() == tango.DevState.ON:
+            return False
+        return super().is_On_allowed(request_type)
+
+    @stb.long_running_commands.submit_lrc_task
+    def execute_Off(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Turn the device off.
 
@@ -7176,9 +7249,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = True
-        return super().execute_Off()
 
-    def execute_On(self: MccsTile) -> DevVarLongStringArrayType:
+        def _off_task(
+            task_callback: Optional[Callable] = None,
+            task_abort_event: Optional[threading.Event] = None,
+        ) -> None:
+            self.component_manager.do_off(task_callback, task_abort_event)
+
+        return _off_task
+
+    @stb.long_running_commands.submit_lrc_task
+    def execute_On(self: MccsTile) -> stb.type_hints.TaskFunctionType:
         """
         Turn device on.
 
@@ -7189,12 +7270,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        if self.get_state() == tango.DevState.ON:
-            return ([ResultCode.REJECTED], ["Device is already in ON state."])
-
         if not self.UseAttributesForHealth:
             self._health_model._ignore_power_state = False
-        return super().execute_On()
+
+        def _on_task(
+            task_callback: Optional[Callable] = None,
+            task_abort_event: Optional[threading.Event] = None,
+        ) -> None:
+            self.component_manager.do_on(task_callback, task_abort_event)
+
+        return _on_task
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
     def EnableBroadbandRfiBlanking(

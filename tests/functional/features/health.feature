@@ -45,6 +45,20 @@ Feature: Test health
         And the Station reports that its HealthState is FAILED
         And the Subracks reports that its HealthState is FAILED
 
+    Scenario: Failed when subrack power monitoring point is out of bounds
+        Given the Station is online
+        And the Station has been commanded to turn On
+        And the Station reports that its state is ON
+        And the Tiles reports that its state is ON
+        And the subracks thresholds are normal
+        And the Subracks reports that its HealthState is OK
+        And the Tiles reports that its HealthState is OK
+        And the Station reports that its HealthState is OK
+        When the Tiles subrack power thresholds are exceeded
+        Then the Tiles reports that its HealthState is FAILED
+        And the Station reports that its HealthState is FAILED
+        And the Subracks reports that its HealthState is FAILED
+
     Scenario: Health changes when healthThresholds changes
         Given the Station is online
         And the Station has been commanded to turn On

@@ -1,9 +1,20 @@
 # Version History
 
-## Unreleased
+## 13.0.0
 
+* [SKB-1402] Reduce hang in read method when power cut to TPM while in flight.
+  (
+    symptoms of this issue are a hang during power OFF of > 220 s. Expect ~12s hang after this patch,
+    this time may vary slightly and is due to UCP timeout
+  )
+* [SKB-1341] Remove `Object of type int32 is not JSON serializable. Converting it to a str` warning by correcting command invokation
+* [SKB-1341] Remove invalid taskstatus transition QUEUED to QUEUED deprecation warnings.
+* [SKB-1341] Refactor `On` and `Off` commands to remove use of deprecated command objects.
+  A side effect of this is that we now raise an exception rather than Rejecting the ``On`` command when in the on state (major change)
+* [THORN-529] Add attribute to report seconds until frame counter wrap.
 * [THORN-641] Fix type being pushed. It appears on pytango 10.3.0 (and before, unsure at what version this appeared) that pushing None in a list is invalid. Instead you must push nan.
 * [THORN-641] Clean up Queued to Queued invalid transition logs.
+* [THORN-593] Report Subrack Per TPM Attributes in Tile
 
 ## 12.2.2
 

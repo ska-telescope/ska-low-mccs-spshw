@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests for MccsTile."""
+
 from __future__ import annotations
 
 import copy
@@ -927,6 +928,7 @@ class TestMccsTile:
         software_configuration_attributes: list[str],
         active_read_attributes: list[str],
         change_event_callbacks: MockTangoEventCallbackGroup,
+        mock_subrack_device_proxy: unittest.mock.Mock,
     ) -> None:
         """
         Test attribute quality when marked as invalid.
@@ -971,6 +973,7 @@ class TestMccsTile:
         :param tile_component_manager: A component manager.
             (Using a TileSimulator)
         :param tile_simulator: The backend TileSimulator.
+        :param mock_subrack_device_proxy: The mock subrack device proxy
         """
         # This latency represents the average time to process the results of a poll.
         # ADR-115 increased this latency from 0.06 -> 0.13
@@ -1013,10 +1016,15 @@ class TestMccsTile:
             CommunicationStatus.ESTABLISHED
         )
         tile_device.On()
+
+        # Set some mock values for tpm currents, powers and voltages
+        mock_subrack_device_proxy.tpmCurrents = [0.4] * 8
+        mock_subrack_device_proxy.tpmPowers = [12 * 0.4] * 8
+        mock_subrack_device_proxy.tpmVoltages = [12] * 8
         tile_component_manager._subrack_says_tpm_power_changed(
             "tpm1PowerState",
             PowerState.ON,
-            EventType.CHANGE_EVENT,
+            tango.AttrQuality.ATTR_VALID,
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
@@ -1640,7 +1648,7 @@ class TestMccsTile:
         :param is_signal_backed: True if the attribute uses attribute_from_signal
             (returns degraded quality when unset) rather than raising DevFailed.
         """
-        max_wait: int = 14  # seconds
+        max_wait: int = 24  # seconds
         tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
@@ -1684,6 +1692,12 @@ class TestMccsTile:
         deadline = time.time() + max_wait
         while time.time() < deadline:
             try:
+                if (
+                    tile_device.read_attribute(attribute).quality
+                    == tango.AttrQuality.ATTR_INVALID
+                ):
+                    time.sleep(tick)
+                    continue
                 if isinstance(initial_value, dict):
                     assert getattr(tile_device, attribute) == json.dumps(initial_value)
                 elif isinstance(initial_value, list):
@@ -3518,6 +3532,7 @@ class TestDataBaseInteraction:
         change_event_callbacks["state"].assert_change_event(
             attribute_value=DevState.DISABLE
         )
+
         tile_device.adminMode = 0
         change_event_callbacks["state"].assert_change_event(
             attribute_value=DevState.OFF,

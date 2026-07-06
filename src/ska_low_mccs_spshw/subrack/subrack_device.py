@@ -48,6 +48,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     PduPorts = device_property(dtype=(int,), default_value=[])
     SimulatedPDU = device_property(dtype=bool, default_value=True)
     MaxFanErrors = device_property(dtype=int, default_value=5)
+    MaxFanRpmDelta = device_property(dtype=int, default_value=25)
     UseAttributesForHealth = device_property(
         doc="Use the attribute quality factor in health. ADR-115.",
         dtype=bool,
@@ -67,7 +68,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     internal_voltages_ddr_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_powerin_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_soc_signal: AttrSignal[float] = AttrSignal[float]()
-    # scaled_subrack_fan_speed: AttrSignal[float] = AttrSignal[float]()
 
     # Maps each signal-backed internalVoltages attribute name to its signal name.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -345,6 +345,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             update_rate=self.UpdateRate,
             command_update_rate=self.CommandUpdateRate,
             max_fan_errors=self.MaxFanErrors,
+            max_fan_delta=self.MaxFanRpmDelta,
         )
 
     # ----------
@@ -1670,7 +1671,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             "board_temps": self._board_temperatures(),
             "backplane_temps": self._backplane_temperatures(),
             "subrack_fan_speeds": self._subrack_fan_speeds_percent(),
-            # Note: switched the name to scaled to avoid confusion
+            # Note: switched the name to scaled from max fan speed to avoid
+            # confusion in the thresholds names (which already use min/max)
             "subrack_scaled_fan_speeds": self._subrack_max_fan_speeds(),
             "board_currents": self._board_current(),
             "tpm_currents": self._tpm_currents(),

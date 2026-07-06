@@ -55,7 +55,7 @@ class SubrackDriver(
         update_rate: float = 5.0,
         command_update_rate: float = 20.0,
         max_fan_errors: int = 5,
-        accepted_fan_delta: float = 10,
+        max_fan_delta: float = 25,
         _subrack_client: Any = None,
     ) -> None:
         """
@@ -85,8 +85,8 @@ class SubrackDriver(
             fan speed values that are out of bounds. These values are
             caused by out of sync rpm and pwm values when the fan changes
             speed (inertia).
-        :param accepted_fan_delta: the percentage variance in fan max rpm.
-            Any value within accepted_fan_delta % of the expected fan rpm
+        :param max_fan_delta: the percentage variance in fan max rpm.
+            Any value within max_fan_delta % of the expected fan rpm
             is considered ok.
         :param _subrack_client: an optional subrack client to use.
         """
@@ -115,7 +115,7 @@ class SubrackDriver(
         # need to be disragrded
         self._fan_error_values = [0] * SubrackData.FAN_COUNT
         self._max_fan_errors = int(max_fan_errors)
-        self._accepted_fan_delta = accepted_fan_delta / 100
+        self._max_fan_delta = max_fan_delta / 100
 
         self._write_lock = threading.Lock()
 
@@ -615,11 +615,11 @@ class SubrackDriver(
         pwm_duty = [max(0.01, p / 100) for p in fan_speed_percent]
         scaled_values = [r / pwm_duty[i] for i, r in enumerate(fan_speed)]
 
-        # Drop any bad values (10% error) unless they are n consecutive
-        # bad values where n is max fan errors
+        # Drop any bad values (max_fan_delta=25% error) unless they are
+        # n consecutive bad values where n is max fan errors
         correct_value = SubrackData.MAX_SUBRACK_FAN_SPEED
         for i, val in enumerate(scaled_values):
-            if (abs(val - correct_value) / correct_value) > self._accepted_fan_delta:
+            if (abs(val - correct_value) / correct_value) > self._max_fan_delta:
                 if self._fan_error_values[i] >= self._max_fan_errors:
                     continue
                 scaled_values[i] = correct_value

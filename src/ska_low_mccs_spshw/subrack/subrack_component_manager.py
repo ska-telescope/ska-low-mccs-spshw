@@ -229,7 +229,8 @@ class _PDUProxy(DeviceComponentManager):
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
 
-    def __init__(  # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
+    def __init__(
         self: SubrackComponentManager,
         subrack_ip: str,
         subrack_port: int,
@@ -243,6 +244,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         update_rate: float = 5.0,
         command_update_rate: float = 20.0,
         max_fan_errors: int = 5,
+        max_fan_delta: float = 25,
         _driver: Optional[SubrackDriver] = None,
         _initial_power_state: PowerState = PowerState.ON,
         _initial_fail: bool = False,
@@ -273,10 +275,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             every 5 seconds).
         :param command_update_rate: similar to update_rate but for polled
             commands such as get_health_status.
-        :param max_fan_errors: the maximum amount of consecutive estimeted
+        :param max_fan_errors: the maximum amount of consecutive estimated
             fan speed values that are out of bounds. These values are
             caused by out of sync rpm and pwm values when the fan changes
             speed (inertia).
+        :param max_fan_delta: the percentage variance in fan max rpm.
+            Any value within max_fan_delta % of the expected fan rpm
+            is considered ok.
         :param _driver: for testing only, we can inject a driver rather
             then letting the component manager create its own. If
             provided, this overrides driver-specific arguments such as
@@ -300,6 +305,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             update_rate=update_rate,
             command_update_rate=command_update_rate,
             max_fan_errors=max_fan_errors,
+            max_fan_delta=max_fan_delta,
         )
 
         self.pdu_trl = pdu_trl

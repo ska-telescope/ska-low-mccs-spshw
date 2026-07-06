@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-640] Added "subrackMaxFanSpeeds" attribute to subrack as a health parameter. This attributes uses the rpm and pwm readouts from the subrack fans to determine the expected maximum rpm speed of the fans
+
 ## 13.0.0
 
 * [SKB-1402] Reduce hang in read method when power cut to TPM while in flight.

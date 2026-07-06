@@ -524,7 +524,24 @@ class MockTpm:
         self._station_beamf = [self.beam1, self.beam2]
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
-        self._40g_configuration: dict[str, Any] = {}
+        self._40g_configuration: dict[tuple[int, int], dict[str, Any]] = {}
+        for port in range(2):
+            for lane in range(4):
+                idx = port * 4 + lane
+                subnet = 10 + idx
+
+                self._40g_configuration[(port, lane)] = {
+                    "core_id": idx,
+                    "arp_table_entry": idx,
+                    "src_mac": f"62:00:0A:82:00:{idx + 1:02X}",
+                    "src_ip": f"10.0.{subnet}.2",
+                    "dst_ip": f"10.0.{subnet}.3",
+                    "src_port": 1234,
+                    "dst_port": 5678,
+                    "netmask": "255.255.255.0",
+                    "gateway_ip": f"10.0.{subnet}.1",
+                }
+
         self._bios_version = self.BIOS_VERSION_OLD
         self._station_beam_flagging = False
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
@@ -634,7 +651,7 @@ class MockTpm:
         self: MockTpm,
         core_id: int = 0,
         arp_table_entry: int = 0,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """
         Return a 40G configuration.
 
@@ -642,42 +659,10 @@ class MockTpm:
             be returned
         :param arp_table_entry: ARP table entry to use
 
-        :return: core configuration
+        :return: core configuration, or None if this core/arp_table_entry
+            combination has not been configured
         """
-        # Fake some values. In reality we'd query the TPM here.
-        self._40g_configuration = {
-            "core_id": core_id,
-            "arp_table_entry": arp_table_entry,
-            "src_mac": self._get_src_mac(),
-            "src_ip": self._get_src_ip(),
-            "dst_ip": self._get_dst_ip(),
-            "src_port": self._get_src_port(),
-            "dst_port": self._get_dst_port(),
-            "netmask": self._get_netmask(),
-            "gateway_ip": self._get_gateway_ip(),
-        }
-        return self._40g_configuration
-
-    def _get_src_mac(self: MockTpm) -> str:
-        return "62:00:0A:82:00:01"
-
-    def _get_src_ip(self: MockTpm) -> str:
-        return "10.0.10.2"
-
-    def _get_dst_ip(self: MockTpm) -> str:
-        return "10.0.10.3"
-
-    def _get_src_port(self: MockTpm) -> int:
-        return 1234
-
-    def _get_dst_port(self: MockTpm) -> int:
-        return 5678
-
-    def _get_netmask(self: MockTpm) -> str:
-        return "255.255.255.0"
-
-    def _get_gateway_ip(self: MockTpm) -> str:
-        return "10.0.10.1"
+        return self._40g_configuration.get((core_id, arp_table_entry))
 
     def find_register(
         self: MockTpm,
@@ -1048,7 +1033,6 @@ class TileSimulator:
         :param logger: a logger for this simulator to use
         """
         self.logger: logging.Logger = logger
-        self._forty_gb_core_list: list[Any] = []
         self.tpm: MockTpm | None = None
         self._is_programmed: bool = False
         self._pending_data_request = False
@@ -1916,8 +1900,10 @@ class TileSimulator:
         """
         if core_id not in [0, 1]:
             raise ValueError(f"Invalid core_id {core_id}, must be 0 or 1.")
+        assert self.tpm is not None
+        config = self.tpm._40g_configuration[(core_id, arp_table_entry)]
 
-        core_dict = {
+        updates = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,
             "src_mac": src_mac,
@@ -1929,29 +1915,8 @@ class TileSimulator:
             "netmask": netmask,
             "gateway_ip": gateway_ip,
         }
-        self._forty_gb_core_list.append(core_dict)
 
-    @check_mocked_overheating
-    @connected
-    def get_40g_core_configuration(
-        self: TileSimulator,
-        core_id: int,
-        arp_table_entry: int = 0,
-    ) -> dict[str, Any] | None:
-        """
-        Return a 40G configuration.
-
-        :param core_id: id of the core for which a configuration is to
-            be returned
-        :param arp_table_entry: ARP table entry to use
-
-        :return: core configuration or None if not found
-        """
-        for item in self._forty_gb_core_list:
-            if item.get("core_id") == core_id:
-                if item.get("arp_table_entry") == arp_table_entry:
-                    return item
-        return None
+        config.update({k: v for k, v in updates.items() if v is not None})
 
     @check_mocked_overheating
     @connected
@@ -2269,15 +2234,17 @@ class TileSimulator:
             "gateway": gateway,
         }
         self.logger.debug(f"Set CSP download config: {self._csp_download_config}")
+        assert self.tpm
         for core_id, dst_ip in [(0, dst_ip_1 or ""), (1, dst_ip_2 or "")]:
-            for item in self._forty_gb_core_list:
-                if item.get("core_id") == core_id and item.get("arp_table_entry") == 0:
-                    item["dst_ip"] = dst_ip
-                    break
+            existing = self.tpm._40g_configuration.get((core_id, 0))
+            if existing is not None:
+                existing["dst_ip"] = dst_ip
             else:
-                self._forty_gb_core_list.append(
-                    {"core_id": core_id, "arp_table_entry": 0, "dst_ip": dst_ip}
-                )
+                self.tpm._40g_configuration[(core_id, 0)] = {
+                    "core_id": core_id,
+                    "arp_table_entry": 0,
+                    "dst_ip": dst_ip,
+                }
 
     @check_mocked_overheating
     @connected

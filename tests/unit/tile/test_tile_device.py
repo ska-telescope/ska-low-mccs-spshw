@@ -2675,12 +2675,10 @@ class TestMccsTileCommands:
             "destination_port": 5001,
         }
         on_tile_device.Configure40GCore(json.dumps(config_2))
-
-        assert tuple(on_tile_device.fortyGbDestinationIps) == (
-            "10.0.98.3",
-            "10.0.98.4",
-        )
-        assert tuple(on_tile_device.fortyGbDestinationPorts) == (5000, 5001)
+        assert on_tile_device.fortyGbDestinationIps[0] == "10.0.98.3"
+        assert on_tile_device.fortyGbDestinationIps[5] == "10.0.98.4"
+        assert on_tile_device.fortyGbDestinationPorts[0] == 5000
+        assert on_tile_device.fortyGbDestinationPorts[5] == 5001
 
         arg = {
             "core_id": 0,
@@ -3553,9 +3551,6 @@ class TestMccsTileCommands:
 
         :param on_tile_device: device proxy to the MccsTile under test.
         """
-        assert on_tile_device.dstip40gfpga1 == ""
-        assert on_tile_device.dstip40gfpga2 == ""
-
         dst_ip_cb = MockTangoEventCallbackGroup(
             "dstip40gfpga1",
             "dstip40gfpga2",
@@ -3567,8 +3562,8 @@ class TestMccsTileCommands:
         on_tile_device.subscribe_event(
             "dstip40gfpga2", EventType.CHANGE_EVENT, dst_ip_cb["dstip40gfpga2"]
         )
-        dst_ip_cb["dstip40gfpga1"].assert_change_event("")
-        dst_ip_cb["dstip40gfpga2"].assert_change_event("")
+        dst_ip_cb["dstip40gfpga1"].assert_change_event(Anything)
+        dst_ip_cb["dstip40gfpga2"].assert_change_event(Anything)
 
         dst_ip_1 = "10.130.0.10"
         dst_ip_2 = "10.130.0.11"

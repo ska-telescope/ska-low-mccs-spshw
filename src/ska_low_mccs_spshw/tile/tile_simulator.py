@@ -649,7 +649,7 @@ class MockTpm:
 
     def get_40g_core_configuration(
         self: MockTpm,
-        core_id: int = 0,
+        core_id: int,
         arp_table_entry: int = 0,
     ) -> dict[str, Any] | None:
         """

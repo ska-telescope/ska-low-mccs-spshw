@@ -228,8 +228,6 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "buildState",  # Mismatch between cpp and tango args.
         "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
-        "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
-        "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # This is only available in specific bios versions
         # (the simulator is configured to be on a version > 0.6.0 hence

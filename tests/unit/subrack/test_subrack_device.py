@@ -914,6 +914,13 @@ def test_health_status_attributes(
             2.69,
             2.66,
         ),
+        (
+            "subrackMaxFanSpeeds",
+            8000.0,
+            7000.0,
+            5000.0,
+            4000.0,
+        ),
     ],
 )
 # pylint: disable=too-many-arguments
@@ -988,12 +995,27 @@ def test_attribute_alarm_health_model(
     except tango.DevFailed:
         pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
 
+    def _attribute_value(value: float) -> float | list[float]:
+        """
+        Shape a scalar value for the attribute under test.
+
+        Spectrum attributes (e.g. subrackMaxFanSpeeds) need one value per
+        element; the rest of the tested attributes are scalar.
+
+        :param value: the scalar value to shape.
+
+        :return: the value shaped for the attribute under test.
+        """
+        if attribute == "subrackMaxFanSpeeds":
+            return [value] * SubrackData.FAN_COUNT
+        return value
+
     try:
         # Change the values past the max alarm
         subrack_device.ChangeHardwareAttributeValue(
             json.dumps(
                 {
-                    attribute: float(max_alarm * 1.5),
+                    attribute: _attribute_value(float(max_alarm * 1.5)),
                 }
             )
         )
@@ -1004,7 +1026,7 @@ def test_attribute_alarm_health_model(
         subrack_device.ChangeHardwareAttributeValue(
             json.dumps(
                 {
-                    attribute: float((max_warning + min_warning) / 2),
+                    attribute: _attribute_value(float((max_warning + min_warning) / 2)),
                 }
             )
         )

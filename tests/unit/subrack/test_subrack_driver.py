@@ -608,39 +608,27 @@ def test_health_status_not_coscheduled_with_action_command(
         pytest.param(
             [600, 1200, 3000, 5400], [10, 20, 50, 90], [6000, 6000, 6000, 6000], False
         ),
-        # Bad values. Note: we expect
-        # the first n bad values to be
-        # supressed
+        # Bad values. Note: we expect the first n bad values to be suppressed
         pytest.param(
             [3000, 12000, 1500, 6000],
             [100, 100, 50, 50],
             [3000, 12000, 3000, 12000],
             True,
         ),
-        # Edge case: the value is within
-        # 10% of the correct value, so
-        # it is simply returned
+        # Edge case: the value is within 10% of the correct value, so it is simply
+        # returned
         pytest.param(
             [5500, 6500, 2750, 3250],
             [100, 100, 50, 50],
             [5500, 6500, 5500, 6500],
             False,
         ),
-        # Edge case: incredebly small
-        # pwm gets rounded up to 1%
-        # to avoid division by 0
+        # Edge case: small/null pwm gets rounded up to 1% to avoid division by 0
         pytest.param(
             [0, 6000, 0, 6000],
             [0, 0, 2, 2],
             [0, 600_000, 0, 300_000],
             True,
-        ),
-        # Edge case: None
-        pytest.param(
-            [0, 6000, 0, 6000],
-            None,
-            None,
-            False,
         ),
     ],
 )
@@ -678,3 +666,27 @@ def test_estimate_max_fan_speed(
     assert expected_max_rpm == subrack_driver._estimate_max_fan_rpm(
         fan_speed, fan_speed_percent
     )
+
+
+def test_estimate_max_fan_speed_returns_none(
+    subrack_driver: SubrackDriver,
+) -> None:
+    """
+    Test that the method returns None correctly.
+
+    This test makes sure the method doesn't report values when the subrack
+    is disconnected.
+
+    :param subrack_driver: the subrack driver under test
+    """
+    rpm = [SubrackData.MAX_SUBRACK_FAN_SPEED] * SubrackData.FAN_COUNT
+    pwm = [100.0] * SubrackData.FAN_COUNT
+
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(rpm, None)
+    assert max_fan_rpm is None
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(None, pwm)
+    assert max_fan_rpm is None
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(None, None)
+    assert max_fan_rpm is None
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(rpm, pwm)
+    assert max_fan_rpm is not None

@@ -117,9 +117,17 @@ _ATTRIBUTE_MAP: Final = {
     "40G_PACKET_COUNT": "40g_packet_count",
     "POINTING_DELAYS": "pointing_delays",
     "FPGAS_TIME": "fpgas_time",
-    "FPGA_TIME": "fpga_time",
     "FPGA_CURRENT_FRAME": "fpga_current_frame",
-    "FPGA_FRAME_TIME": "fpga_frame_time",
+}
+
+# Attributes derived from (and published alongside)
+# a raw polled attribute,
+# rather than being polled independently.
+# When the raw attribute goes stale,
+# its derived counterpart must be invalidated too.
+_DERIVED_ATTRIBUTE_MAP: Final = {
+    "fpgas_time": "fpga_time",
+    "fpga_current_frame": "fpga_frame_time",
 }
 
 
@@ -575,30 +583,14 @@ class TileComponentManager(
             case "FPGAS_TIME":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
-                    lambda: self.fpgas_time,
-                    publish=True,
-                )
-            case "FPGA_TIME":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    lambda: self._tile_time.format_time_from_timestamp(
-                        self.fpgas_time[0]
-                    ),
-                    publish=True,
+                    self._poll_fpgas_time,
+                    publish=False,
                 )
             case "FPGA_CURRENT_FRAME":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
-                    lambda: self.fpga_current_frame,
-                    publish=True,
-                )
-            case "FPGA_FRAME_TIME":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    lambda: self._tile_time.format_time_from_frame(
-                        self.fpga_current_frame
-                    ),
-                    publish=True,
+                    self._poll_fpga_current_frame,
+                    publish=False,
                 )
             case "RFI_COUNT":
                 request = TileRequest(
@@ -788,10 +780,11 @@ class TileComponentManager(
             val = names.pop()
             if _ATTRIBUTE_MAP.get(val) is not None:
                 mapped_val = _ATTRIBUTE_MAP[val]
+                invalidated = {mapped_val: None}
+                if mapped_val in _DERIVED_ATTRIBUTE_MAP:
+                    invalidated[_DERIVED_ATTRIBUTE_MAP[mapped_val]] = None
                 try:
-                    self._update_attribute_callback(
-                        mark_invalid=True, **{mapped_val: None}
-                    )
+                    self._update_attribute_callback(mark_invalid=True, **invalidated)
                 except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"Issue marking attribute {mapped_val} INVALID. {e}"
@@ -2204,6 +2197,20 @@ class TileComponentManager(
             raise ConnectionError("Cannot read time from FPGA")
         return self._fpgas_time
 
+    def _poll_fpgas_time(self: TileComponentManager) -> None:
+        """
+        Read the FPGA unix time once and publish both fpgasUnixTime and fpgaTime.
+
+        fpgaTime is just a formatted view of fpgasUnixTime, so this avoids
+        polling hardware twice for what is effectively the same reading.
+        """
+        fpgas_time = self.fpgas_time
+        fpga_time = self._tile_time.format_time_from_timestamp(fpgas_time[0])
+        self._update_attribute_callback(
+            fpgas_time=fpgas_time,
+            fpga_time=fpga_time,
+        )
+
     @property
     def fpga_reference_time(self: TileComponentManager) -> int:
         """
@@ -2278,6 +2285,19 @@ class TileComponentManager(
         if failed:
             raise ConnectionError("Cannot read time from FPGA")
         return self._fpga_current_frame
+
+    def _poll_fpga_current_frame(self: TileComponentManager) -> None:
+        """
+        Read the FPGA current frame.
+
+        fpgaFrameTime is just a formatted view of currentFrame, so this avoids
+        polling hardware twice for what is effectively the same reading.
+        """
+        fpga_current_frame = self.fpga_current_frame
+        self._update_attribute_callback(
+            fpga_current_frame=fpga_current_frame,
+            fpga_frame_time=self._tile_time.format_time_from_frame(fpga_current_frame),
+        )
 
     @property
     @check_communicating

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [SKB-1430] Refactor MccsTile attribute reads to reduce time spent holding the hardware lock, moving `allLiveCal`/`allStagedCal` to commands, polling `FPGA_TIME` separately.
+* [SKB-1430] Refactor MccsTile attribute reads to reduce time spent holding the hardware lock, moving `allLiveCal`/`allStagedCal` to commands.
 
 ## 13.0.0
 

@@ -611,8 +611,10 @@ class SubrackDriver(
         if fan_speed is None or fan_speed_percent is None:
             return None
 
-        # Filter out 0s
-        pwm_duty = [max(0.01, p / 100) for p in fan_speed_percent]
+        # A 0% pwm duty represents about 1200 +- 250 rpm
+        # Taking into account errors on the fan measurement side
+        # we need to make a floot at 0.1 (10%)
+        pwm_duty = [max(0.1, p / 100) for p in fan_speed_percent]
         scaled_values = [r / pwm_duty[i] for i, r in enumerate(fan_speed)]
 
         # Drop any bad values (max_fan_delta=25% error) unless they are

@@ -541,10 +541,10 @@ class SubrackHealthRules(HealthRules):
             "failed_min_fan_speed": 20.0,  # placeholder
             "degraded_min_fan_speed": 30.0,  # placeholder
             # "scaled fan speed" - estimated value from the pwm and rpm values
-            "failed_max_scaled_fan_speed": 8000,
-            "degraded_max_scaled_fan_speed": 7000,
-            "failed_min_scaled_fan_speed": 4000,
-            "degraded_min_scaled_fan_speed": 5000,
+            "failed_max_scaled_fan_speed": 11100,  # 150%
+            "degraded_max_scaled_fan_speed": 9250,  # 125%
+            "degraded_min_scaled_fan_speed": 5550,  # 75%
+            "failed_min_scaled_fan_speed": 1850,  # 25%
             # Voltage drop on TPMs (V)
             "failed_voltage_drop": 5.0,  # derived
             "degraded_voltage_drop": 3.0,  # derived

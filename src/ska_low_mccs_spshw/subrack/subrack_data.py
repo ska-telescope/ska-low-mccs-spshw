@@ -29,8 +29,11 @@ class SubrackData:  # pylint: disable=too-few-public-methods
     TPM_BAY_COUNT = 8
     """The number of TPM bays (some bays may be empty)"""
 
-    MAX_SUBRACK_FAN_SPEED = 6000.0
-    """The maximum fan speed for the subrack."""
+    MAX_SUBRACK_FAN_SPEED = 7400.0
+    """The maximum fan speed for the subrack.
+
+    This is from the fan's datasheet, at 100% duty cycle, 12V
+    """
 
     FAN_COUNT = 4
 

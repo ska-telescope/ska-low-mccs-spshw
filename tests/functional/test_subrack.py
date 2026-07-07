@@ -31,7 +31,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tests.harness import SpsTangoTestHarnessContext
 
 TPM_BAY_COUNT = 8
-MAX_SUBRACK_FAN_SPEED = 6000.0
+MAX_SUBRACK_FAN_SPEED = 7400.0
 
 
 # TODO: [MCCS-1328] We don't want to import anything from ska-low-mccs-spshw here,

@@ -916,10 +916,10 @@ def test_health_status_attributes(
         ),
         (
             "subrackMaxFanSpeeds",
-            8000.0,
-            7000.0,
-            5000.0,
-            4000.0,
+            11100.0,
+            9250.0,
+            5550.0,
+            1850.0,
         ),
     ],
 )

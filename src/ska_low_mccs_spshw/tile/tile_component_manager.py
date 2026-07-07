@@ -596,7 +596,7 @@ class TileComponentManager(
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     lambda: self._tile_time.format_time_from_frame(
-                        self._fpga_current_frame
+                        self.fpga_current_frame
                     ),
                     publish=True,
                 )

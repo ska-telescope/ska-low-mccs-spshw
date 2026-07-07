@@ -1766,6 +1766,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param kwargs: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
+
+        # Ensure the attribute filters are up to date with the tango device property
+        self._update_attribute_filters()
+
         if not self.UseAttributesForHealth:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power, health=health)
@@ -1836,6 +1840,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.psu_dead_count_signal = dead_psu_count
 
         self._update_health_data()
+
+    def _update_attribute_filters(self) -> None:
+        """Update the attribute filter properties."""
+        # The AttributeFilterType is defined and set as a tango property. In
+        # order to ensure we are up to date with this property value, we sync
+        # the filter type when the component model is updated.
+        for filter_object in self._attribute_value_filters.values():
+            if filter_object.filter_type != self.AttributeFilterType:
+                filter_object.filter_type = self.AttributeFilterType
 
     def _filter_attribute_value(
         self, name: str, value: float | NDArray[np.floating] | None

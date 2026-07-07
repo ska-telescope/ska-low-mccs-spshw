@@ -171,6 +171,16 @@ def test_context_fixture(
                 self.push_change_event(name, value)
                 self.push_archive_event(name, value)
 
+        @server.command
+        def ChangeAttributeFilterType(self, filter_type: str) -> None:
+            """
+            Change the attribute filter type.
+
+            :param filter_type: Set the attribute filter type
+
+            """
+            self.AttributeFilterType = filter_type
+
     harness = SpsTangoTestHarness()
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
     harness.add_subrack_device(
@@ -1334,6 +1344,110 @@ def test_subrack_device_tpm_attribute_filtering(
 
     # Loop through the sets of values
     for i in range(voltages.shape[0]):
+        # For each new set of values, set the values in the simulator
+        subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
+        subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())
+
+        # Then we need ot wait 1 seconds for the values to be polled
+        # We add 2 ticks of 0.1 seconds to ensure this definitely happens
+        time.sleep(1.2)
+
+        # The max_samples parameter is set to 5. After 5 sets of values updated
+        # we can be sure of the filter buffer contents. Otherwise, it may have
+        # previous values in
+        if i < 5:
+            continue
+
+        # The last 5 sets of values
+        last_5_voltages = voltages[max(0, i - 4) : i + 1]
+        last_5_currents = currents[max(0, i - 4) : i + 1]
+
+        # Get the expected values
+        match filter_type:
+            case "" | "none":
+                expected_voltages = voltages[i].tolist()
+                expected_currents = currents[i].tolist()
+            case "mean":
+                expected_voltages = np.mean(last_5_voltages, axis=0).tolist()
+                expected_currents = np.mean(last_5_currents, axis=0).tolist()
+            case "median":
+                expected_voltages = np.median(last_5_voltages, axis=0).tolist()
+                expected_currents = np.median(last_5_currents, axis=0).tolist()
+            case _:
+                assert False, f"Didn't match filter_type '{filter_type}"
+
+        # Now check the values are as we expect given the filtering scheme
+        observed_voltages = list(subrack_device.tpmVoltages)
+        observed_currents = list(subrack_device.tpmCurrents)
+
+        # Check the values
+        assert pytest.approx(observed_voltages) == expected_voltages
+        assert pytest.approx(observed_currents) == expected_currents
+
+
+def test_subrack_device_attribute_filter_type_changed(
+    filter_type: str,
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that the subrack tpm attributes are filtered correctly.
+
+    :param filter_type: the filter type to test (none, mean, median)
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    """
+    # Check the filter type matches the subrack device
+    assert str(filter_type) == subrack_device.attributeFilterType
+
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+        subrack_device.subscribe_event(
+            attribute_name,
+            EventType.CHANGE_EVENT,
+            change_event_callbacks[attribute_name],
+        )
+        change_event_callbacks[attribute_name].assert_change_event(None)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    # Consume the initial values pushed when polling starts.
+    for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
+        change_event_callbacks[attribute_name].assert_change_event(
+            Anything, lookahead=30
+        )
+
+    # Make small fluctuations in the voltage and current
+    voltages = np.random.uniform(12.0, 12.1, size=(10, 8))
+    currents = np.random.uniform(0.4, 0.5, size=(10, 8))
+
+    filter_type_list = ["none", "mean", "median"]
+
+    # Loop through the sets of values
+    for i in range(voltages.shape[0]):
+        # Cycle through the filters
+        filter_type = filter_type_list[i % 3]
+
+        # Set the filter type
+        subrack_device.ChangeAttributeFilterType(filter_type)
+
+        # Check this has been set
+        assert str(filter_type) == subrack_device.attributeFilterType
+
         # For each new set of values, set the values in the simulator
         subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
         subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())

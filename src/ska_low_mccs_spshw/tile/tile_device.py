@@ -219,6 +219,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fpga_time_signal: AttrSignal[str] = AttrSignal[str]()
     fpga_current_frame_signal: AttrSignal[int] = AttrSignal[int]()
     fpga_frame_time_signal: AttrSignal[str] = AttrSignal[str]()
+    tile_info_signal: AttrSignal[dict] = AttrSignal[dict]()
+    forty_gb_destination_ips_signal: AttrSignal[list] = AttrSignal[list]()
+    forty_gb_destination_ports_signal: AttrSignal[list] = AttrSignal[list]()
 
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
@@ -301,6 +304,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga_time": "fpga_time_signal",
         "fpga_current_frame": "fpga_current_frame_signal",
         "fpga_frame_time": "fpga_frame_time_signal",
+        "tile_info": "tile_info_signal",
+        "forty_gb_destination_ips": "forty_gb_destination_ips_signal",
+        "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
     }
 
     # -----------------
@@ -651,7 +657,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "currents": "currents",
             "tile_id": "logicalTileId",
             "station_id": "stationId",
-            "tile_info": "tile_info",
             "adc_pll_lock_status": "adc_pll_lock_status",
             "fpga0_qpll_status": "fpga0_qpll_status",
             "fpga0_qpll_counter": "fpga0_qpll_counter",
@@ -722,15 +727,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "dst_ip_40g_fpga1": "dstip40gfpga1",
             "dst_ip_40g_fpga2": "dstip40gfpga2",
             "firmware_version": "firmwareVersion",
-            "forty_gb_destination_ips": "fortyGbDestinationIps",
-            "forty_gb_destination_ports": "fortyGbDestinationPorts",
             "current_draw": "currentDraw",
             "power_draw": "powerDraw",
             "voltage_draw": "voltageDraw",
         }
 
         attribute_converters: dict[str, Any] = {
-            "tile_info": self._convert_ip_to_str,
             "adc_pll_lock_status": adc_pll_to_list,
             "fpga0_bip_error_count": udp_error_count_to_list,
             "fpga0_decode_error_count": udp_error_count_to_list,
@@ -849,7 +851,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     functools.partial(self.post_change_event, "rfiCount")
                 ),
                 "fortyGPacketCount": AttributeManager(
-                    functools.partial(self.post_change_event, "fortyGPacketCount")
+                    functools.partial(self.post_change_event, "fortyGPacketCount"),
+                    converter=serialise_object,
                 ),
                 "pointingDelays": AlwaysPushAttributeManager(
                     functools.partial(self.post_change_event, "pointingDelays")
@@ -1465,6 +1468,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                             exc_info=True,
                         )
                 for signal in self._HEALTH_SIGNAL_MAP.values():
+                    setattr(self, signal, None)
+                for signal in self._GENERIC_SIGNAL_MAP.values():
                     setattr(self, signal, None)
             case PowerState.ON:
                 # If the power state is ON then fetch subrack values
@@ -2924,8 +2929,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["timing_pll_40g_count"].read()
 
-    @attribute(dtype="DevString", label="tile_info", fisallowed="_is_programmed")
-    def tile_info(self: MccsTile) -> str:
+    @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
+    def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:
         """
         Return all the tile info available.
 
@@ -2952,9 +2957,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "40g_mac_address_p2": "02:00:00:00:00:00",
             "40g_gateway_p2": "10.130.0.126", "40g_netmask_p2": "255.255.255.128"}}'
 
-        :return: info available
+        :param nested_dict: the raw tile info emitted on the signal, or ``None``
+            when the value is being invalidated.
+        :return: info available, or ``None`` to invalidate the attribute.
         """
-        return self._attribute_state["tile_info"].read() or ""
+        if nested_dict is None:
+            return None
+        return self._convert_ip_to_str(nested_dict)
 
     @attribute(
         dtype="DevString",
@@ -3992,29 +4001,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self._antenna_ids = list(antenna_ids)
 
-    @attribute(dtype=("DevString",), max_dim_x=16, fisallowed="_is_initialised")
-    def fortyGbDestinationIps(self: MccsTile) -> list[str]:
-        """
-        Return the destination IPs for all 40Gb ports on the tile.
+    fortyGbDestinationIps = attribute_from_signal(  # noqa: N815
+        forty_gb_destination_ips_signal,
+        dtype=("DevString",),
+        max_dim_x=16,
+        doc="the destination IPs for all 40Gb ports on the tile",
+    )
 
-        :return: IP addresses
-        """
-        return self._attribute_state["fortyGbDestinationIps"].read()
-
-    @attribute(
+    fortyGbDestinationPorts = attribute_from_signal(  # noqa: N815
+        forty_gb_destination_ports_signal,
         dtype=("DevLong",),
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_is_initialised",
+        doc="the destination ports for all 40Gb ports on the tile",
     )
-    def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
-        """
-        Return the destination ports for all 40Gb ports on the tile.
-
-        :return: ports
-        """
-        return self._attribute_state["fortyGbDestinationPorts"].read()
 
     @attribute(
         dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1
@@ -4032,7 +4033,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currentTileBeamformerFrame = attribute_from_signal(  # noqa: N815
         current_tile_beamformer_frame_signal,
         dtype="DevLong64",
-        fisallowed="_is_initialised",
         abs_change=1,
         archive_abs_change=1,
         doc=(
@@ -4064,7 +4064,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_is_initialised",
         doc=(
             "current frame, in units of 256 ADC frames (276.48 us). "
             "Currently this is required, not sure if it will remain so."
@@ -4074,14 +4073,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     pendingDataRequests = attribute_from_signal(  # noqa: N815
         pending_data_requests_signal,
         dtype="DevBoolean",
-        fisallowed="_is_initialised",
         doc="whether there are data requests pending",
     )
 
     isBeamformerRunning = attribute_from_signal(  # noqa: N815
         is_beamformer_running_signal,
         dtype="DevBoolean",
-        fisallowed="_is_initialised",
         doc="whether the beamformer is running",
     )
 
@@ -4113,7 +4110,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_is_initialised",
         doc="the delay between PPS and 10 MHz clock, in 1.25ns units",
     )
 
@@ -4678,7 +4674,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_y=16,  # antenna
         abs_change=1,
         archive_abs_change=1,
-        fisallowed="_is_initialised",
     )
     def rfiCount(self: MccsTile) -> list[list]:
         """
@@ -5212,7 +5207,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="40G Packet Count",
-        fisallowed="_is_initialised",
     )
     def fortyGPacketCount(self: MccsTile) -> str:
         """
@@ -5252,7 +5246,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: Packet counts per active 40G core. Returns an empty dictionary
                 if no 40G cores are active.
         """
-        return json.dumps(self._attribute_state["fortyGPacketCount"].read())
+        return self._attribute_state["fortyGPacketCount"].read()
 
     @attribute(
         dtype=(("DevFloat",),),

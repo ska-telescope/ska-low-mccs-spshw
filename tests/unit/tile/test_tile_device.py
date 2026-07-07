@@ -569,6 +569,7 @@ class TestMccsTile:
         # TPM.
         return [
             "logicalTileId",
+            "firmwareVersion",
             "staticTimeDelays",
             "stationId",
             "pfbVersion",
@@ -585,6 +586,8 @@ class TestMccsTile:
         """
         return [
             "testGeneratorActive",
+            "firmwareVersion",
+            "stationBeamFlagEnabled",
             "firmwareName",
             "globalReferenceTime",
             "cspDestinationIp",
@@ -616,20 +619,11 @@ class TestMccsTile:
         :returns: a list of attributes that claim the hardware lock
             for an active read.
         """
-        return [
-            "tile_info",
-            "firmwareVersion",
-            "fortyGbDestinationIps",
-            "fortyGbDestinationPorts",
-            "currentTileBeamformerFrame",
-            "currentFrame",
-            "pendingDataRequests",
-            "isBeamformerRunning",
-            "stationBeamFlagEnabled",
-            "rfiCount",
-            "ppsDelay",
-            "fortyGPacketCount",
-        ]
+        # SKB-1430: Was created to ensure that we no longer have any of these.
+        # A regression test ``test_attribute_reads_do_not_access_tile_hardware``
+        # was added to test for future regressions.
+        # We are therefore intentionally leaving this return an empty list.
+        return []
 
     def __check_attributes_invalid(
         self: TestMccsTile, tile: DeviceProxy, attr_list: list[str]

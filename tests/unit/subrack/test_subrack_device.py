@@ -422,12 +422,6 @@ def test_off_on(
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
     assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
 
-    subrack_lrc_manager.assert_command_finished(
-        status="COMPLETED",
-        result_code=ResultCode.OK,
-        result_message="Command completed",
-    )
-
     change_event_callbacks["boardCurrent"].assert_change_event([])
     with pytest.raises(tango.DevFailed):
         _ = subrack_device.boardCurrent

@@ -33,6 +33,33 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
+def wait_for_condition(
+    condition_func: Callable[[], bool], timeout: float = 120, poll_interval: float = 0.1
+) -> bool:
+    """
+    Wait for condition with a timeout.
+
+    :param condition_func: The condition function
+    :param timeout: The timeout in seconds
+    :param poll_interval: The polling interval
+    :returns: True/False if all condition is satisfied.
+
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        time.sleep(poll_interval)
+        try:
+            if condition_func():
+                return True
+        except (
+            tango.ConnectionFailed,
+            tango.DevFailed,
+            tango.CommunicationFailed,
+        ):
+            pass
+    return False
+
+
 class TpmStatus(enum.IntEnum):
     """
     Enumerated type for tile status.

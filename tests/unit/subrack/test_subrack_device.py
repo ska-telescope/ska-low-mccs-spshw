@@ -420,7 +420,7 @@ def test_off_on(
         status="COMPLETED", result_code=ResultCode.OK, timeout=10
     )
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
+    assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
 
     subrack_lrc_manager.assert_command_finished(
         status="COMPLETED",
@@ -443,7 +443,7 @@ def test_off_on(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
 
-    wait_for_condition(lambda: subrack_device.state() == DevState.ON)
+    assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
 
     change_event_callbacks["boardCurrent"].assert_change_event(
         subrack_device_attribute_values["boardCurrent"],

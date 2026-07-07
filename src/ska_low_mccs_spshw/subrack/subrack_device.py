@@ -245,6 +245,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             name: SubrackAttributeFilter(
                 filter_type=self.AttributeFilterType,
                 max_samples=self.AttributeFilterMaxSamples,
+                logger=self.logger,
             )
             for name in ["tpmCurrents", "tpmPowers", "tpmVoltages"]
         }
@@ -1837,8 +1838,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._update_health_data()
 
     def _filter_attribute_value(
-        self, name: str, value: float | NDArray[np.floating]
-    ) -> float | NDArray[np.floating]:
+        self, name: str, value: float | NDArray[np.floating] | None
+    ) -> float | NDArray[np.floating] | None:
         """
         Filter the attribute value or return unchanged.
 

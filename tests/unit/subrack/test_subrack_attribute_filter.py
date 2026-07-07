@@ -14,8 +14,11 @@ import pytest
 from ska_low_mccs_spshw.subrack.subrack_attribute_filter import SubrackAttributeFilter
 
 
-@pytest.mark.parametrize("filter_type", [None, "", "None", "none", "mean", "median"])
-def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
+@pytest.mark.parametrize(
+    "filter_type",
+    [None, "", "None", "none", "mean", "median", "non-existant-filter-type"],
+)
+def test_subrack_attribute_filter_with_scalars(filter_type: str) -> None:
     """
     Test the subrack attribute filter.
 
@@ -38,22 +41,24 @@ def test_subrack_attribute_filter_with_scalars(filter_type: str | None) -> None:
 
         # Check expected result
         match filter_type:
-            case None | "" | "none" | "None":
+            case None | "" | "none" | "None" | "non-existant-filter-type":
                 assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == statistics.mean(values)
             case "median":
                 assert pytest.approx(value) == statistics.median(values)
             case _:
-                assert False, f"Didn't match filter_type '{filter_type}"
+                pytest.fail(f"Didn't match filter_type '{filter_type}")
 
     # Check empty
     attribute_filter.clear()
     assert len(attribute_filter._buffer) == 0
 
 
-@pytest.mark.parametrize("filter_type", [None, "", "none", "None", "mean", "median"])
-def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
+@pytest.mark.parametrize(
+    "filter_type", ["", "none", "None", "mean", "median", "non-existant-filter-type"]
+)
+def test_subrack_attribute_filter_with_arrays(filter_type: str) -> None:
     """
     Test the subrack attribute filter.
 
@@ -77,7 +82,7 @@ def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
 
         # Check expected result
         match filter_type:
-            case None | "" | "none" | "None":
+            case None | "" | "none" | "None" | "non-existant-filter-type":
                 assert pytest.approx(value) == x
             case "mean":
                 assert pytest.approx(value) == [
@@ -88,7 +93,7 @@ def test_subrack_attribute_filter_with_arrays(filter_type: str | None) -> None:
                     statistics.median(v) for v in zip(*values)
                 ]
             case _:
-                assert False, f"Didn't match filter_type '{filter_type}"
+                pytest.fail(f"Didn't match filter_type '{filter_type}")
 
     # Check empty
     attribute_filter.clear()

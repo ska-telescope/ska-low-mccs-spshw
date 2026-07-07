@@ -137,7 +137,7 @@ def test_context_fixture(
     subrack_id: int,
     subrack_simulator: SubrackSimulator,
     use_attribute_for_health: bool,
-    filter_type: str | None,
+    filter_type: str,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which both subrack simulator and Tango device are running.
@@ -1281,9 +1281,9 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     assert math.isnan(currents[0])
 
 
-@pytest.mark.parametrize("filter_type", [None, "none", "mean", "median"], indirect=True)
+@pytest.mark.parametrize("filter_type", ["none", "mean", "median"], indirect=True)
 def test_subrack_device_tpm_attribute_filtering(
-    filter_type: str | None,
+    filter_type: str,
     subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
@@ -1354,7 +1354,7 @@ def test_subrack_device_tpm_attribute_filtering(
 
         # Get the expected values
         match filter_type:
-            case None | "" | "none":
+            case "" | "none":
                 expected_voltages = voltages[i].tolist()
                 expected_currents = currents[i].tolist()
             case "mean":

@@ -73,11 +73,11 @@ class SubrackAttributeFilter:
         # is a mis-configuration the filter is set to no filter. We also output
         # a warning to make this visible in the logs.
         if filter_type.casefold() not in allowed_filter_types:
-            filter_type = "none"
             self.logger.warning(
                 f"Expected filter type in {allowed_filter_types}, got "
                 f"'{filter_type}'. Setting filter type to 'none'."
             )
+            filter_type = "none"
 
         # Set the filter type
         self._filter_type = filter_type

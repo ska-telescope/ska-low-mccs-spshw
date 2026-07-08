@@ -7514,25 +7514,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             raise ValueError("Antenna IDs must be between 0 and 15")
         return self.component_manager.read_broadband_rfi(argin).flatten().tolist()
 
-    @command(dtype_in="DevVarLongArray", dtype_out="DevLong")
-    def MaxBroadbandRfi(self: MccsTile, argin: list[int]) -> int:
-        """
-        Get max of RFI counts of specified antennas.
-
-        This returns the RFI count of the antenna with the maximum RFI count.
-
-        :param argin: list antennas whose RFI counters to read
-        :return: Maximum RFI counts
-        :rtype: int
-
-        :raises ValueError: if input arguments are invalid
-        """
-        if len(argin) > 16:
-            raise ValueError("Cannot specify more than 16 antennas")
-        if max(argin) > 15 or min(argin) < 0:
-            raise ValueError("Antenna IDs must be between 0 and 15")
-        return self.component_manager.max_broadband_rfi(argin)
-
     @command(dtype_out="DevVarLongStringArray")
     def ClearBroadbandRfi(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """

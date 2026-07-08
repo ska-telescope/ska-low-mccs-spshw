@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests for the TileHealthModel."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -464,15 +465,15 @@ class TestTileHealthModel:
                 "Health is OK.",
             ),
             (
-                {"io": {"f2f_interface": {"pll_status": (False, 2)}}},
+                {"io": {"f2f_interface": {"pll_status": {"FPGA0": (False, 2)}}}},
                 HealthState.FAILED,
                 "Intermediate health io is in FAILED HealthState. "
-                'Cause: Monitoring point "/f2f_interface/pll_status": '
+                'Cause: Monitoring point "/f2f_interface/pll_status/FPGA0": '
                 "(True, 0) =/= (False, 2)",
-                {"io": {"f2f_interface": {"pll_status": (False, 4)}}},
+                {"io": {"f2f_interface": {"pll_status": {"FPGA0": (False, 4)}}}},
                 HealthState.FAILED,
                 "Intermediate health io is in FAILED HealthState. "
-                'Cause: Monitoring point "/f2f_interface/pll_status": '
+                'Cause: Monitoring point "/f2f_interface/pll_status/FPGA0": '
                 "(True, 0) =/= (False, 4)",
             ),
             (

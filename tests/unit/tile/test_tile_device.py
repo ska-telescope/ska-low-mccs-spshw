@@ -1544,7 +1544,7 @@ class TestMccsTile:
             "voltageVM_SW_AMP",
             "voltageVrefDDR0",
             "currentTileBeamformerFrame",
-            "f2f_pll_lock_status",
+            "io_f2f_interface_pll_status_fpga0",
             "fpga0_clock_managers_status",
             "fpga1_clock_managers_count",
             "fpga0_lane_error_count",
@@ -1618,13 +1618,13 @@ class TestMccsTile:
                 False,
             ),
             (
-                "f2f_pll_lock_status",
-                ["io", "f2f_interface", "pll_status"],
+                "io_f2f_interface_pll_status_fpga0",
+                ["io", "f2f_interface", "pll_status", "FPGA0"],
                 (False, 0),
             ),
             (
-                "f2f_pll_counter",
-                ["io", "f2f_interface", "pll_status"],
+                "io_f2f_interface_pll_status_fpga0_counter",
+                ["io", "f2f_interface", "pll_status", "FPGA0"],
                 (True, 1),
             ),
             (

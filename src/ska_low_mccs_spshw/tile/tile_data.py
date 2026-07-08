@@ -214,6 +214,7 @@ class TileData:
             "pps": {"status": None},
             "pll": None,
             "pll_40g": None,
+            "sync_time": None,
         },
         "info": {
             "hardware": {
@@ -302,7 +303,6 @@ class TileData:
                         },
                     },
                 },
-                "lane_status": True,
                 "resync_count": {"FPGA0": None, "FPGA1": None},
                 "qpll_status": {"FPGA0": None, "FPGA1": None},
             },
@@ -314,9 +314,9 @@ class TileData:
                 # "rd_dat_cnt": {"FPGA0": None, "FPGA1": None},
             },
             "f2f_interface": {
-                "pll_status": None,
-                "soft_error": None,
-                "hard_error": None,
+                "pll_status": {"FPGA0": None, "FPGA1": None},
+                "soft_error": {"FPGA0": None, "FPGA1": None},
+                "hard_error": {"FPGA0": None, "FPGA1": None},
             },
             "udp_interface": {
                 "arp": None,
@@ -375,8 +375,8 @@ class TileData:
                     "FPGA0": 0,
                     "FPGA1": 0,
                 },
+                "dsp_latency_error": None,
             },
-            "max_broadband_rfi": None,
         },
     }
 

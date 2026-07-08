@@ -312,6 +312,13 @@ ska-tango-devices:
       backplaneTemperatures->min_warning: 15.0
       backplaneTemperatures->min_alarm: 10.0
 
+      subrackMaxFanSpeeds->max_alarm: 11100
+      subrackMaxFanSpeeds->max_warning: 9250
+      subrackMaxFanSpeeds->min_warning: "Not specified"
+      subrackMaxFanSpeeds->min_alarm: "Not specified"
+      # subrackMaxFanSpeeds->min_warning: 5550
+      # subrackMaxFanSpeeds->min_alarm: 1850
+
       boardTemperatures->max_alarm: 50.0
       boardTemperatures->max_warning: 45.0
       boardTemperatures->min_warning: 15.0

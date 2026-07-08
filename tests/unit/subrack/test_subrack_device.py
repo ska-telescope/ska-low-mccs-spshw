@@ -186,10 +186,28 @@ def subrack_device_fixture(
     yield test_context.get_subrack_device(subrack_id)
 
 
+@pytest.mark.parametrize(
+    "inter_command_sleep",
+    [
+        pytest.param(0.1, id="pretty_fast"),
+        pytest.param(
+            None,
+            id="fast",
+            marks=pytest.mark.xfail(
+                reason=(
+                    "Bug THORN-647: device sticks in UNKNOWN when adminMode "
+                    "is cycled without delay between commands"
+                ),
+                strict=True,
+            ),
+        ),
+    ],
+)
 def test_fast_adminMode_switch(
     subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    inter_command_sleep: float | None,
 ) -> None:
     """
     Test our ability to deal with a quick succession of communication commands.
@@ -198,6 +216,8 @@ def test_fast_adminMode_switch(
     :param subrack_simulator: the simulator for the backend
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param inter_command_sleep: seconds to sleep between adminMode commands,
+        or None for no sleep (exposes a known bug).
     """
     subrack_device.loggingLevel = 4  # type: ignore[assignment]
     subrack_device.subscribe_event(
@@ -236,9 +256,11 @@ def test_fast_adminMode_switch(
 
         for _ in range(number_of_communication_cycles):
             subrack_device.adminmode = AdminMode.OFFLINE
-            time.sleep(0.1)
+            if inter_command_sleep is not None:
+                time.sleep(inter_command_sleep)
             subrack_device.adminmode = AdminMode.ONLINE
-            time.sleep(0.1)
+            if inter_command_sleep is not None:
+                time.sleep(inter_command_sleep)
 
         # When cycling adminmode ONLINE n times we expect up to n
         # transitions to DevState.ON. The important point is that is end

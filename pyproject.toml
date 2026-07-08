@@ -1,6 +1,6 @@
 [project]
 dependencies = [
-    "ska-low-sps-tpm-api @ git+https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/@3.1.0",
+    "ska-low-sps-tpm-api @ git+https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/@3.2.1",
     "fire >= 0.5.0, <0.6.0",
     "numpy >= 1.26.4, <2.0.0",
     "pytango >= 10.3.0, <10.4.0",
@@ -48,7 +48,7 @@ dependencies = [
 ]
 
 name = "ska-low-mccs-spshw"
-version = "12.2.2"
+version = "13.0.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = [{name = "MCCS team"}]
@@ -132,7 +132,7 @@ is_calendar_booked = "utils.scripts.is_calendar_booked:main"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"
-addopts = "--forked -n 16 --json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs_spshw --junitxml=build/reports/unit-tests.xml --verbose"
+addopts = "--forked -n 16 --json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs_spshw --junitxml=reports/unit-tests.xml --verbose"
 console_output_style = "progress"
 junit_family = "legacy"
 markers = ["XTP-25768",

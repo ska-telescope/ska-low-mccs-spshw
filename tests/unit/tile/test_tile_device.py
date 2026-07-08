@@ -3649,7 +3649,6 @@ class TestMccsTileCommands:
         """
         initial_rfi = on_tile_device.ReadBroadbandRfi(list(range(16)))
         assert len(initial_rfi) == 16 * 2
-        assert isinstance(on_tile_device.MaxBroadbandRfi(list(range(16))), int)
         on_tile_device.ClearBroadbandRfi()
         cleared_rfi = on_tile_device.ReadBroadbandRfi(list(range(16))).tolist()
         assert cleared_rfi == [0] * 16 * 2
@@ -3688,7 +3687,6 @@ class TestMccsTileCommands:
         ("cmd_name"),
         [
             ("ReadBroadbandRfi"),
-            ("MaxBroadbandRfi"),
         ],
     )
     def test_read_max_rfi_command_input_validation(

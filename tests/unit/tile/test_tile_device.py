@@ -686,6 +686,8 @@ class TestMccsTile:
             "temperatureADC13",  # Not updated in simulated hardware version
             "temperatureADC14",  # Not updated in simulated hardware version
             "temperatureADC15",  # Not updated in simulated hardware version
+            "fpga0_station_beamformer_flagged_count",  # Only valid for final Tile
+            "fpga1_station_beamformer_flagged_count",  # Only valid for final Tile
         ]
 
     @pytest.fixture(name="tpm_configuration_attributes")

@@ -1101,7 +1101,15 @@ class TileSimulator:
             subgroup = kwargs["subgroup"]
             adc_subgroup = self._tile_health_structure["adcs"][subgroup]
             return {"adcs": {subgroup: copy.deepcopy(adc_subgroup)}}
-        return copy.deepcopy(self._tile_health_structure)
+        health_status = copy.deepcopy(self._tile_health_structure)
+        if not self._is_last:
+            # ska-low-sps-tpm-api returns None for this monitoring point
+            # when polled on a tile that is not the last in the station
+            # beamforming chain.
+            health_status["dsp"]["station_beamf"][
+                "discarded_or_flagged_packet_count"
+            ] = {"FPGA0": None, "FPGA1": None}
+        return health_status
 
     def define_monitoring_point_filter(
         self: TileSimulator, path: str, override: bool = True, **kwargs: Any

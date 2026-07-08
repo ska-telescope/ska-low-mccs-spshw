@@ -4,6 +4,7 @@
 
 * [THORN-623] Added attributes to Subrack: psuXPresent, psuXPowerIn, psuXPowerOut, psuXVoltageIn, psuXVoltageOut, psuXLoad. Added new Subrack health rules: Degraded if a psu is over 50% load, failed if both psus are dead or any psu near 100% load. Added new subrack health rules: Degraded if one PSU has failed, Failed if both PSUs have failed. A failed PSU is defined as a PSU which is present and has an input voltage but no output voltage.
 * [SKB-1430] Refactor MccsTile attribute reads to reduce time spent holding the hardware lock, moving `allLiveCal`/`allStagedCal` to commands.
+* [THORN-639] Add subrack attribute filtering for power smoothing
 
 ## 13.0.0
 
@@ -20,7 +21,6 @@
 * [THORN-641] Fix type being pushed. It appears on pytango 10.3.0 (and before, unsure at what version this appeared) that pushing None in a list is invalid. Instead you must push nan.
 * [THORN-641] Clean up Queued to Queued invalid transition logs.
 * [THORN-593] Report Subrack Per TPM Attributes in Tile
-* [THORN-639] Add subrack attribute filtering for power smoothing
 
 ## 12.2.2
 

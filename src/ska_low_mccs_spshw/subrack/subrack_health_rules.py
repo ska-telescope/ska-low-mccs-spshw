@@ -127,13 +127,13 @@ class SubrackHealthRules(HealthRules):
                 )
 
         for fan_speed in scaled_fan_speeds:
-            if fan_speed < self._thresholds[f"{rule_str}min_scaled_fan_speed"]:
-                has_failed = True
-                report += (
-                    f"Estimated max fan speed {fan_speed} rpm is below "
-                    f"{rule_str}min_scaled_fan_speed "
-                    f"{self._thresholds[f'{rule_str}min_scaled_fan_speed']} rpm."
-                )
+            # if fan_speed < self._thresholds[f"{rule_str}min_scaled_fan_speed"]:
+            #     has_failed = True
+            #     report += (
+            #         f"Estimated max fan speed {fan_speed} rpm is below "
+            #         f"{rule_str}min_scaled_fan_speed "
+            #         f"{self._thresholds[f'{rule_str}min_scaled_fan_speed']} rpm."
+            #     )
             if fan_speed > self._thresholds[f"{rule_str}max_scaled_fan_speed"]:
                 has_failed = True
                 report += (
@@ -543,8 +543,8 @@ class SubrackHealthRules(HealthRules):
             # "scaled fan speed" - estimated value from the pwm and rpm values
             "failed_max_scaled_fan_speed": 11100,  # 150%
             "degraded_max_scaled_fan_speed": 9250,  # 125%
-            "degraded_min_scaled_fan_speed": 5550,  # 75%
-            "failed_min_scaled_fan_speed": 1850,  # 25%
+            # "degraded_min_scaled_fan_speed": 5550,  # 75%
+            # "failed_min_scaled_fan_speed": 1850,  # 25%
             # Voltage drop on TPMs (V)
             "failed_voltage_drop": 5.0,  # derived
             "degraded_voltage_drop": 3.0,  # derived

@@ -728,9 +728,6 @@ class MockTpm:
 
         :return: the info
         """
-        # TODO: Update this with representative data and types rather
-        # than just arbitrary strings.
-        communication_status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
         info: dict[str, Any] = {}
         info["hardware"] = self.get_board_info()
         info["hardware"]["HARDWARE_REV"] = "<current hardware revision>"
@@ -771,45 +768,6 @@ class MockTpm:
         del info["hardware"]["MAC"]
         del info["hardware"]["netmask"]
         del info["hardware"]["gateway"]
-        # TODO: What should we do about this bit? Where to check comms in sim?
-        # Add 40G network information, using ARP table entry for station beam packets
-        if communication_status["FPGA0"] and communication_status["FPGA1"]:
-            config_40g_1 = self.get_40g_core_configuration(arp_table_entry=0, core_id=0)
-            config_40g_2 = self.get_40g_core_configuration(arp_table_entry=0, core_id=1)
-            if config_40g_1 is not None:
-                info["network"]["40g_ip_address_p1"] = IPv4Address(
-                    config_40g_1["src_ip"]
-                )
-                info["network"]["40g_mac_address_p1"] = config_40g_1["src_mac"]
-                info["network"]["40g_gateway_p1"] = IPv4Address(
-                    config_40g_1["gateway_ip"]
-                )
-                info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
-
-            if config_40g_2 is not None:
-                info["network"]["40g_ip_address_p2"] = IPv4Address(
-                    config_40g_2["src_ip"]
-                )
-                info["network"]["40g_mac_address_p2"] = config_40g_2["src_mac"]
-                info["network"]["40g_gateway_p2"] = IPv4Address(
-                    config_40g_2["gateway_ip"]
-                )
-                info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
-        else:
-            info["network"].update(
-                dict.fromkeys(
-                    [
-                        "40g_ip_address_p1",
-                        "40g_mac_address_p1",
-                        "40g_gateway_p1",
-                        "40g_netmask_p1",
-                        "40g_ip_address_p2",
-                        "40g_mac_address_p2",
-                        "40g_gateway_p2",
-                        "40g_netmask_p2",
-                    ]
-                )
-            )
         return info
 
     def write_register(
@@ -1669,9 +1627,9 @@ class TileSimulator:
         )
         # save values to buffer attributes
         self._antenna_buffer_tile_attribute["mode"] = mode
-        self._antenna_buffer_tile_attribute[
-            "DDR_start_address"
-        ] = ddr_start_byte_address
+        self._antenna_buffer_tile_attribute["DDR_start_address"] = (
+            ddr_start_byte_address
+        )
         self._antenna_buffer_tile_attribute["max_DDR_byte_size"] = max_ddr_byte_size
         self._antenna_buffer_tile_attribute["set_up_complete"] = True
 
@@ -1761,9 +1719,9 @@ class TileSimulator:
 
         # Save values to buffer attributes for testing
         self._antenna_buffer_tile_attribute["start_time"] = start_time
-        self._antenna_buffer_tile_attribute[
-            "timestamp_capture_duration"
-        ] = timestamp_capture_duration
+        self._antenna_buffer_tile_attribute["timestamp_capture_duration"] = (
+            timestamp_capture_duration
+        )
         self._antenna_buffer_tile_attribute["continuous_mode"] = continuous_mode
         self._antenna_buffer_tile_attribute["read_antenna_buffer"] = False
         self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = False
@@ -2436,9 +2394,9 @@ class TileSimulator:
 
         # Assign calibration coefficients for this antenna across all channels
         for channel in range(len(calibration_coefficients)):
-            self._staged_calibration_coefficients[channel][
-                antenna
-            ] = calibration_coefficients[channel]
+            self._staged_calibration_coefficients[channel][antenna] = (
+                calibration_coefficients[channel]
+            )
 
         self.logger.debug(
             f"Simulator received calibration coefficients for antenna {antenna}"
@@ -3113,27 +3071,27 @@ class TileSimulator:
 
         if max_board_alarm_threshold is not None:
             if _is_less_than_50(max_board_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "board_alarm_threshold"
-                ] = max_board_alarm_threshold
+                self._tpm_temperature_thresholds["board_alarm_threshold"] = (
+                    max_board_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_board_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga1_alarm_threshold is not None:
             if _is_less_than_50(max_fpga1_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga1_alarm_threshold"
-                ] = max_fpga1_alarm_threshold
+                self._tpm_temperature_thresholds["fpga1_alarm_threshold"] = (
+                    max_fpga1_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga1_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga2_alarm_threshold is not None:
             if _is_less_than_50(max_fpga2_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga2_alarm_threshold"
-                ] = max_fpga2_alarm_threshold
+                self._tpm_temperature_thresholds["fpga2_alarm_threshold"] = (
+                    max_fpga2_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga2_alarm_threshold=} not larger than 50. Doing nothing"
@@ -3443,22 +3401,6 @@ class TileSimulator:
             f" \n"
             f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
             f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
-            f"40G Port 1 IP Address        | "
-            f"{str(info['network']['40g_ip_address_p1'])} \n"
-            f"40G Port 1 MAC Address       | "
-            f"{str(info['network']['40g_mac_address_p1'])} \n"
-            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
-            f" \n"
-            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
-            f" \n"
-            f"40G Port 2 IP Address        | "
-            f"{str(info['network']['40g_ip_address_p2'])} \n"
-            f"40G Port 2 MAC Address       | "
-            f"{str(info['network']['40g_mac_address_p2'])} \n"
-            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
-            f" \n"
-            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
-            f" \n"
         )
 
 

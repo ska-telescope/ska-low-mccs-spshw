@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1430] Refactor MccsTile attribute reads to reduce time spent holding the hardware lock, moving `allLiveCal`/`allStagedCal` to commands.
+
 ## 13.0.0
 
 * [SKB-1402] Reduce hang in read method when power cut to TPM while in flight.

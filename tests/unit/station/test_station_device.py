@@ -310,7 +310,7 @@ def test_On(
     counter = 0
     sync_time = None
 
-    def getter(*args: Any) -> list:
+    def get_fpga_unix_time(*args: Any) -> list:
         nonlocal counter, sync_time
         if counter < 2:
             counter += 1
@@ -318,9 +318,7 @@ def test_On(
         return [sync_time]
 
     for tile in mock_tile_device_proxies:
-        pm = unittest.mock.PropertyMock()
-        pm.__get__ = getter  # type: ignore[assignment]
-        type(tile).fpgasUnixTime = pm
+        tile.GetFpgaUnixTime = unittest.mock.Mock(side_effect=get_fpga_unix_time)
 
     # First let's check the initial state
     assert station_device.adminMode == AdminMode.OFFLINE
@@ -523,7 +521,7 @@ def test_Initialise(
     counter = 0
     sync_time = None
 
-    def getter(*args: Any) -> list:
+    def get_fpga_unix_time(*args: Any) -> list:
         nonlocal counter, sync_time
         if counter < 2:
             counter += 1
@@ -531,9 +529,7 @@ def test_Initialise(
         return [sync_time]
 
     for tile in mock_tile_device_proxies:
-        pm = unittest.mock.PropertyMock()
-        pm.__get__ = getter  # type: ignore[assignment]
-        type(tile).fpgasUnixTime = pm
+        tile.GetFpgaUnixTime = unittest.mock.Mock(side_effect=get_fpga_unix_time)
 
     # First let's check the initial state
     assert station_device.adminMode == AdminMode.OFFLINE

@@ -2277,9 +2277,9 @@ class SpsStationComponentManager(
         assert tile0 is not None
 
         for i in range(5):
-            time0 = (tile0.fpgasUnixTime)[0]
+            time0 = (tile0.GetFpgaUnixTime())[0]
             timeout = 15
-            while (tile0.fpgasUnixTime)[0] == time0:
+            while (tile0.GetFpgaUnixTime())[0] == time0:
                 if timeout == 0:
                     self.logger.error("Timeout waiting for FPGA time second tick")
                     return (
@@ -2292,7 +2292,7 @@ class SpsStationComponentManager(
             time.sleep(0.4)  # Wait till mid second
             for proxy in tiles:
                 assert proxy._proxy is not None
-                result = result + list(proxy._proxy.fpgasUnixTime)
+                result = result + list(proxy._proxy.GetFpgaUnixTime())
             self.logger.debug(f"Current FPGA times:{result}")
             if any(result[0] != time_n for time_n in result):
                 self.logger.error("FPGA time counters not synced, try again")

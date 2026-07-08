@@ -600,13 +600,13 @@ def test_health_status_not_coscheduled_with_action_command(
     [
         # Test good cases
         pytest.param(
-            [7000, 7400, 8000, 8500],
+            [6000, 6500, 6700, 7000],
             [100, 100, 100, 100],
-            [7000, 7400, 8000, 8500],
+            [6000, 6500, 6700, 7000],
             False,
         ),
         pytest.param(
-            [740, 1480, 3700, 5550], [10, 20, 50, 75], [7400, 7400, 7400, 7400], False
+            [650, 1300, 3250, 4875], [10, 20, 50, 75], [6500, 6500, 6500, 6500], False
         ),
         # Bad values. Note: we expect the first n bad values to be suppressed
         pytest.param(
@@ -618,16 +618,16 @@ def test_health_status_not_coscheduled_with_action_command(
         # Edge case: the value is within 10% of the correct value, so it is simply
         # returned
         pytest.param(
-            [7000, 8000, 3500, 4000],
+            [6000, 7000, 3000, 3500],
             [100, 100, 50, 50],
-            [7000, 8000, 7000, 8000],
+            [6000, 7000, 6000, 7000],
             False,
         ),
         # Edge case: small/null pwm gets rounded up to 10%
         pytest.param(
-            [0, 7400, 0, 7400],
+            [0, 6500, 0, 6500],
             [0, 0, 20, 20],
-            [0, 74_000, 0, 37_000],
+            [0, 65_000, 0, 32_500],
             True,
         ),
     ],

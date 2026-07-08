@@ -1026,12 +1026,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=4,
-        max_alarm=11100,  # 150%
-        max_warning=9250,  # 125%
+        max_alarm=9750,  # 150%
+        max_warning=8125,  # 125%
         min_alarm="Not specified",  # ignore faults on RAL
         min_warning="Not specified",  # ignore faults on RAL
-        # min_alarm=1850,  # 25%
-        # min_warning=5550,  # 75%
+        # min_alarm=1625,  # 25%
+        # min_warning=4875,  # 75%
         label="expected fan speeds at 100% pwm duty",
         unit="rpm",
         abs_change=0.1,

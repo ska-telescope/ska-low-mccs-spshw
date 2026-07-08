@@ -27,7 +27,7 @@ from _pytest.python_api import ApproxBase
 from tests.harness import get_bandpass_daq_name, get_lmc_daq_name
 
 TPM_BAY_COUNT = 8
-MAX_SUBRACK_FAN_SPEED = 7400.0
+MAX_SUBRACK_FAN_SPEED = 6500.0
 
 
 # TODO: [MCCS-1328] We don't want to import anything from ska-low-mccs-spshw here,

@@ -1599,7 +1599,6 @@ class TestMccsTile:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         """
-        time.sleep(4)
         keys = ["hardware", "fpga_firmware", "network"]
         assert all(key in json.loads(on_tile_device.tile_info).keys() for key in keys)
         assert tile_simulator.tpm

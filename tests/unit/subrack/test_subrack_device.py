@@ -196,6 +196,9 @@ def _wait_for_state(
                 f"Device '{device}' did not reach '{expected_state}' after {timeout}s"
             )
             return False
+    # Small sleep and re-assert to make sure the state change wasn't transient.
+    time.sleep(1)
+    assert device.state() == expected_state
     print(f"Device '{device}' reached state '{expected_state}'")
     return True
 

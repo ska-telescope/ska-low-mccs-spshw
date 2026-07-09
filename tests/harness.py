@@ -290,6 +290,7 @@ class SpsTangoTestHarness:
         subrack_id: int,
         address: tuple[str, int] | None = None,
         update_rate: float = 1.0,
+        command_update_rate: float = 15.0,
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsSubrack",
         simulated_pdu: bool = True,
@@ -304,6 +305,8 @@ class SpsTangoTestHarness:
             monitored and controlled by this Tango device.
             It is a tuple of hostname or IP address, and port.
         :param update_rate: How often to update monitored attriutes.
+        :param command_update_rate: How often to poll command-style data
+            such as health status.
         :param logging_level: the Tango device's default logging level.
         :param device_class: The device class to use.
             This may be used to override the usual device class,
@@ -339,6 +342,7 @@ class SpsTangoTestHarness:
             SubrackIp=host,
             SubrackPort=port,
             UpdateRate=update_rate,
+            CommandUpdateRate=command_update_rate,
             LoggingLevelDefault=logging_level,
             UseAttributesForHealth=use_attribute_for_health,
             Simulated_PDU=simulated_pdu,

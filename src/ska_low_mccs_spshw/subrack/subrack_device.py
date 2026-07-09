@@ -29,6 +29,8 @@ from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
+PSU_MAX_POWER: Final[float] = 1200.0  # Max possible power from PSU in Watts
+
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
 # pylint: disable=too-many-ancestors
@@ -66,6 +68,17 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     internal_voltages_ddr_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_powerin_signal: AttrSignal[float] = AttrSignal[float]()
     internal_voltages_soc_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_present_signal: AttrSignal[bool] = AttrSignal[bool]()
+    psu2_present_signal: AttrSignal[bool] = AttrSignal[bool]()
+    psu1_power_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_power_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_power_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_power_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_voltage_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_voltage_in_signal: AttrSignal[float] = AttrSignal[float]()
+    psu1_voltage_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu2_voltage_out_signal: AttrSignal[float] = AttrSignal[float]()
+    psu_dead_count_signal: AttrSignal[int] = AttrSignal[int]()
 
     # Maps each signal-backed internalVoltages attribute name to its signal name.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -81,6 +94,17 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltagesDDR": "internal_voltages_ddr_signal",
         "internalVoltagesPOWERIN": "internal_voltages_powerin_signal",
         "internalVoltagesSOC": "internal_voltages_soc_signal",
+        "psu1Present": "psu1_present_signal",
+        "psu2Present": "psu2_present_signal",
+        "psu1PowerIn": "psu1_power_in_signal",
+        "psu2PowerIn": "psu2_power_in_signal",
+        "psu1PowerOut": "psu1_power_out_signal",
+        "psu2PowerOut": "psu2_power_out_signal",
+        "psu1VoltageIn": "psu1_voltage_in_signal",
+        "psu2VoltageIn": "psu2_voltage_in_signal",
+        "psu1VoltageOut": "psu1_voltage_out_signal",
+        "psu2VoltageOut": "psu2_voltage_out_signal",
+        "psuDeadCount": "psu_dead_count_signal",
     }
 
     # A map from the component manager argument to the name of the Tango attribute.
@@ -93,9 +117,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "board_temperatures": "boardTemperatures",
         "board_current": "boardCurrent",
         "cpld_pll_locked": "cpldPllLocked",
-        "power_supply_currents": "powerSupplyCurrents",
-        "power_supply_powers": "powerSupplyPowers",
-        "power_supply_voltages": "powerSupplyVoltages",
+        "power_supply_currents": "powerSupplyCurrents",  # Currents out
+        "power_supply_powers": "powerSupplyPowers",  # Powers out
+        "power_supply_voltages": "powerSupplyVoltages",  # Voltages out
         "power_supply_fan_speeds": "powerSupplyFanSpeeds",
         "subrack_fan_speeds": "subrackFanSpeeds",
         "subrack_fan_speeds_percent": "subrackFanSpeedsPercent",
@@ -129,7 +153,19 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "internalVoltages5V": ["internal_voltages", "V_5V"],
         "internalVoltages3V": ["internal_voltages", "V_3V"],
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
+        "psu1Present": ["psus", "present", "PSU1"],
+        "psu2Present": ["psus", "present", "PSU2"],
+        "psu1PowerIn": ["psus", "power_in", "PSU1"],
+        "psu2PowerIn": ["psus", "power_in", "PSU2"],
+        "psu1PowerOut": ["psus", "power_out", "PSU1"],
+        "psu2PowerOut": ["psus", "power_out", "PSU2"],
+        "psu1VoltageIn": ["psus", "voltage_in", "PSU1"],
+        "psu2VoltageIn": ["psus", "voltage_in", "PSU2"],
+        "psu1VoltageOut": ["psus", "voltage_out", "PSU1"],
+        "psu2VoltageOut": ["psus", "voltage_out", "PSU2"],
     }
+
+    _PSU_HEALTH_DEAD_VOLTAGE_THRESHOLD: Final[float] = 1.0
 
     SetSubrackFanMode_SCHEMA: Final = json.loads(
         importlib.resources.read_text(
@@ -206,6 +242,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
             self.set_change_event(attribute_name, True)
             self.set_archive_event(attribute_name, True)
+        self.set_change_event("psuDeadCount", True)
+        self.set_archive_event("psuDeadCount", True)
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -292,6 +330,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             healthful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
                 self._ATTRIBUTE_MAP.values()
             )
+            healthful_attrs.add("psuDeadCount")
             healthful_attrs = healthful_attrs - {
                 "boardCurrent",
                 "cpldPllLocked",
@@ -979,7 +1018,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the power supply powers.
 
-        :return: the power supply powers.
+        :return: A two element array containing power supply output power (W)
             When communication with the subrack is not established,
             this returns none.
         """
@@ -989,7 +1028,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the power supply powers.
 
-        :return: the power supply powers.
+        :return: A two element array containing power supply output power (W)
             When communication with the subrack is not established,
             this returns none.
         """
@@ -1017,6 +1056,25 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             this returns none.
         """
         return self._hardware_attributes.get("powerSupplyVoltages", None)
+
+    def _power_supply_voltages_in(self: MccsSubrack) -> list[float] | None:
+        """
+        Handle a Tango attribute read of the power supply input voltages.
+
+        :return: the power supply input voltages.
+            When communication with the subrack is not established,
+            this returns none.
+        """
+        health_status = self.component_manager.read_health_status()
+        psu_voltages_in = health_status.get("psus", {}).get("voltage_in", {})
+        if not psu_voltages_in:
+            return None
+
+        psu1_voltage_in = psu_voltages_in.get("PSU1")
+        psu2_voltage_in = psu_voltages_in.get("PSU2")
+        if psu1_voltage_in is None or psu2_voltage_in is None:
+            return None
+        return [float(psu1_voltage_in), float(psu2_voltage_in)]
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
@@ -1130,6 +1188,47 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: A dictionary containing all the monitoring points
         """
         return json.dumps(self.component_manager.read_health_status())
+
+    @attribute(dtype=float, label="PSU 1 Load")
+    def psu1Load(self: MccsSubrack) -> float | None:
+        """
+        Return the fractional loading on PSU 1.
+
+        :return: the fractional load on psu1
+        """
+        return self._psu_load(0)
+
+    @attribute(dtype=float, label="PSU 2 Load")
+    def psu2Load(self: MccsSubrack) -> float | None:
+        """
+        Return the fractional loading on PSU 2.
+
+        :return: the fractional load on psu2
+        """
+        return self._psu_load(1)
+
+    def _psu_load(self: MccsSubrack, index: int) -> float:
+        """
+        Return the fractional loading for a PSU.
+
+        :param index: PSU index, where 0 is PSU1 and 1 is PSU2.
+        :returns: fractional loading for the requested PSU.
+        """
+        power_supply_powers = self._hardware_attributes.get("powerSupplyPowers")
+        if (
+            isinstance(power_supply_powers, list)
+            and len(power_supply_powers) > index
+            and power_supply_powers[index] is not None
+        ):
+            return float(power_supply_powers[index]) / PSU_MAX_POWER
+
+        try:
+            health_status = self.component_manager.read_health_status()
+            psu_key = f"PSU{index + 1}"
+            return float(health_status["psus"]["power_out"][psu_key]) / PSU_MAX_POWER
+        except (KeyError, TypeError, ValueError):
+            # Float attributes should always return a numeric value.
+            return float("nan")
 
     internalVoltages1V1 = attribute_from_signal(  # noqa: N815
         internal_voltages_1v1_signal,
@@ -1249,6 +1348,138 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         doc="Subrack internal SOC supply voltage in Volts.",
+    )
+
+    psu1Present = attribute_from_signal(  # noqa: N815
+        psu1_present_signal,
+        dtype=bool,
+        label="Psu1 Present",
+        doc="Presence of PSU1.",
+    )
+
+    psu2Present = attribute_from_signal(  # noqa: N815
+        psu2_present_signal,
+        dtype=bool,
+        label="Psu2 Present",
+        doc="Presence of PSU2.",
+    )
+
+    psu1PowerIn = attribute_from_signal(  # noqa: N815
+        psu1_power_in_signal,
+        dtype="DevDouble",
+        label="PSU1 Input Power",
+        unit="Watt",
+        max_alarm=600.0,
+        max_warning=575.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 input power in Watts.",
+    )
+
+    psu2PowerIn = attribute_from_signal(  # noqa: N815
+        psu2_power_in_signal,
+        dtype="DevDouble",
+        label="PSU2 Input Power",
+        unit="Watt",
+        max_alarm=600.0,
+        max_warning=575.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 input power in Watts.",
+    )
+
+    psu1PowerOut = attribute_from_signal(  # noqa: N815
+        psu1_power_out_signal,
+        dtype="DevDouble",
+        label="PSU1 Output Power",
+        unit="Watt",
+        max_alarm=1140.0,
+        max_warning=600.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 output power in Watts.",
+    )
+
+    psu2PowerOut = attribute_from_signal(  # noqa: N815
+        psu2_power_out_signal,
+        dtype="DevDouble",
+        label="PSU2 Output Power",
+        unit="Watt",
+        max_alarm=1140.0,
+        max_warning=600.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 output power in Watts.",
+    )
+
+    psu1VoltageIn = attribute_from_signal(  # noqa: N815
+        psu1_voltage_in_signal,
+        dtype="DevDouble",
+        label="PSU1 Input Voltage",
+        unit="Volt",
+        max_alarm=253.00,
+        max_warning=240.0,
+        min_warning=215.0,
+        min_alarm=207.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 input voltage in Volts.",
+    )
+
+    psu2VoltageIn = attribute_from_signal(  # noqa: N815
+        psu2_voltage_in_signal,
+        dtype="DevDouble",
+        label="PSU2 Input Voltage",
+        unit="Volt",
+        max_alarm=253.00,
+        max_warning=240.0,
+        min_warning=215.0,
+        min_alarm=207.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 input voltage in Volts.",
+    )
+
+    psu1VoltageOut = attribute_from_signal(  # noqa: N815
+        psu1_voltage_out_signal,
+        dtype="DevDouble",
+        label="PSU1 Output Voltage",
+        unit="Volt",
+        max_alarm=14.0,
+        max_warning=13.0,
+        min_warning=11.0,
+        min_alarm=10.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU1 output voltage in Volts.",
+    )
+
+    psu2VoltageOut = attribute_from_signal(  # noqa: N815
+        psu2_voltage_out_signal,
+        dtype="DevDouble",
+        label="PSU2 Output Voltage",
+        unit="Volt",
+        max_alarm=14.0,
+        max_warning=13.0,
+        min_warning=11.0,
+        min_alarm=10.0,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="PSU2 output voltage in Volts.",
+    )
+
+    psuDeadCount = attribute_from_signal(  # noqa: N815
+        psu_dead_count_signal,
+        dtype="DevShort",
+        label="Dead PSU Count",
+        max_warning=1,
+        max_alarm=2,
+        abs_change=1,
+        archive_abs_change=1,
+        doc=(
+            "Count of PSUs that are present and receive input voltage but "
+            "supply no output voltage."
+        ),
     )
 
     # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
@@ -1382,7 +1613,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the TPM powers.
 
-        :return: the TPM powers.
+        :return: The power draw per TPM (W).
             When communication with the subrack is not established,
             this returns none.
         """
@@ -1474,7 +1705,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
-    # pylint: disable=too-many-arguments, too-many-branches
+    # pylint: disable=too-many-arguments, too-many-branches, too-many-locals
     def _component_state_changed(
         self: MccsSubrack,
         fault: Optional[bool] = None,
@@ -1559,6 +1790,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     if value:
                         value = value.get(path, None)
                 setattr(self, self._HEALTH_SIGNAL_MAP[key], value)
+            dead_psu_count = self._calculate_dead_psu_count(health_status)
+            self.psu_dead_count_signal = dead_psu_count
 
         self._update_health_data()
 
@@ -1586,6 +1819,41 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.push_change_event("boardCurrent", [board_current])
             self.push_archive_event("boardCurrent", [board_current])
         self._update_health_data()
+
+    def _calculate_dead_psu_count(
+        self: MccsSubrack, health_status: dict[str, Any]
+    ) -> int:
+        """
+        Count dead PSUs from health status payload.
+
+        A PSU is considered dead when it is present, has input voltage,
+        but has no output voltage.
+
+        :param health_status: subrack health status payload.
+
+        :return: number of dead PSUs.
+        """
+        psus = health_status.get("psus", {})
+        psu_present = psus.get("present", {})
+        psu_v_in = psus.get("voltage_in", {})
+        psu_v_out = psus.get("voltage_out", {})
+
+        dead_count = 0
+        for psu_name in ("PSU1", "PSU2"):
+            present = bool(psu_present.get(psu_name, False))
+            voltage_in = psu_v_in.get(psu_name)
+            voltage_out = psu_v_out.get(psu_name)
+
+            if voltage_in is None or voltage_out is None:
+                continue
+
+            if (
+                present
+                and voltage_out < self._PSU_HEALTH_DEAD_VOLTAGE_THRESHOLD < voltage_in
+            ):
+                dead_count += 1
+
+        return dead_count
 
     def _update_tpm_present(
         self: MccsSubrack, tpm_present: Optional[list[bool]]
@@ -1642,8 +1910,32 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             "desired_fan_speeds": self._desired_fan_speeds,
             "clock_reqs": self.clock_presence,
             "tpm_present": self._tpm_present,
+            "power_supply_loads": self._power_supply_loads(),
+            "power_supply_present": self._power_supply_present(),
+            "power_supply_voltages_in": self._power_supply_voltages_in(),
         }
         self._health_model.update_data(data)
+
+    def _power_supply_loads(self: MccsSubrack) -> list[float]:
+        """
+        Return fractional load on both PSUs.
+
+        :returns: Fractional loading on each PSU.
+        """
+        return [self._psu_load(0), self._psu_load(1)]
+
+    def _power_supply_present(self: MccsSubrack) -> list[bool]:
+        """
+        Return presence of PSUs.
+
+        :returns: Array of length 2 corresponding to presence of PSUs.
+        """
+        health_status = self.component_manager.read_health_status()
+        psu_present = health_status.get("psus", {}).get("present", {})
+        return [
+            bool(psu_present.get("PSU1", False)),
+            bool(psu_present.get("PSU2", False)),
+        ]
 
     @attribute(dtype="DevString")
     def healthReport(self: MccsSubrack) -> str:

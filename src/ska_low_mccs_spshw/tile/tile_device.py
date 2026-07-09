@@ -2170,7 +2170,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.data_router.status.FPGA0",
+        label="io_data_router_status_fpga0",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
@@ -2191,7 +2191,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.data_router.status.FPGA1",
+        label="io_data_router_status_fpga1",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
@@ -2328,7 +2328,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.soft_error.FPGA0",
+        label="io_f2f_interface_soft_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
@@ -2350,7 +2350,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.soft_error.FPGA1",
+        label="io_f2f_interface_soft_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
@@ -2372,7 +2372,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.hard_error.FPGA0",
+        label="io_f2f_interface_hard_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
@@ -2396,7 +2396,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.hard_error.FPGA1",
+        label="io_f2f_interface_hard_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
@@ -2883,7 +2883,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.pll_status.FPGA0",
+        label="io_f2f_interface_pll_status_fpga0",
         min_alarm=0,
         abs_change=1,
         max_value=2,
@@ -2906,7 +2906,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.pll_status.FPGA0.counter",
+        label="io_f2f_interface_pll_status_fpga0_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
@@ -2928,7 +2928,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.pll_status.FPGA1",
+        label="io_f2f_interface_pll_status_fpga1",
         min_alarm=0,
         abs_change=1,
         max_value=2,
@@ -2951,7 +2951,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="io.f2f_interface.pll_status.FPGA1.counter",
+        label="io_f2f_interface_pll_status_fpga1_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,

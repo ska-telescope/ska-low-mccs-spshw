@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -53,6 +54,8 @@ class SubrackDriver(
         component_state_callback: Callable,
         update_rate: float = 5.0,
         command_update_rate: float = 20.0,
+        max_fan_errors: int = 5,
+        max_fan_delta: float = 25,
         _subrack_client: Any = None,
     ) -> None:
         """
@@ -78,6 +81,13 @@ class SubrackDriver(
             every 5 seconds).
         :param command_update_rate: similar to update_rate but for polled
             commands.
+        :param max_fan_errors: the maximum amount of consecutive estimeted
+            fan speed values that are out of bounds. These values are
+            caused by out of sync rpm and pwm values when the fan changes
+            speed (inertia).
+        :param max_fan_delta: the percentage variance in fan max rpm.
+            Any value within max_fan_delta % of the expected fan rpm
+            is considered ok.
         :param _subrack_client: an optional subrack client to use.
         """
         self._client = _subrack_client or WebHardwareClient(host, port)
@@ -98,6 +108,14 @@ class SubrackDriver(
         # know that it isn't.
         self._board_is_busy: Optional[bool] = True
         self._active_callback: Optional[Callable] = None
+
+        # Currently, because of inertia, fan rpm and pwm values aren't synced.
+        # this means the values will be off for about 5-10 seconds until the
+        # fan reaches the correct rpm. The values calculated in that time
+        # need to be disragrded
+        self._fan_error_values = [0] * SubrackData.FAN_COUNT
+        self._max_fan_errors = int(max_fan_errors)
+        self._max_fan_delta = max_fan_delta / 100
 
         self._write_lock = threading.Lock()
 
@@ -125,6 +143,7 @@ class SubrackDriver(
             power_supply_voltages=None,
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
+            subrack_max_fan_speeds=None,
             subrack_fan_mode=None,
             subrack_pll_locked=None,
             subrack_timestamp=None,
@@ -567,6 +586,51 @@ class SubrackDriver(
                 self._poll_commands = True
             self._checked_bios = True
 
+    def _estimate_max_fan_rpm(
+        self: SubrackDriver,
+        fan_speed: list[float] | None,
+        fan_speed_percent: list[float] | None,
+    ) -> list | None:
+        """
+        Calculate the estimated rpm speed of the fans at 100% pwm duty.
+
+        Uses the FanSpeedsPercent attribute to scale up the FanSpeeds attribute
+        to what the maximum value would be.
+
+        Note: this attribute will drop any 5 incorrect values and replaces
+        them with a correct 6000 rpm. This is done because the rpm value lags
+        compared to the pwm duty. So when the fan spins up/down the pwm is changing
+        values immediately while rpm takes about 5s to catch up. In practice this
+        results to about 2-5 wrong consecutive values.
+
+        :param fan_speed: fan speed in rpm as reported by the subrack
+        :param fan_speed_percent: pwm duty cycle
+
+        :return: the subrack fan speeds expected at 100% pwm duty.
+        """
+        if fan_speed is None or fan_speed_percent is None:
+            return None
+
+        # A 0% pwm duty represents about 1200 +- 250 rpm
+        # Taking into account errors on the fan measurement side
+        # we need to make a floot at 0.1 (10%)
+        pwm_duty = [max(0.1, p / 100) for p in fan_speed_percent]
+        scaled_values = [r / pwm_duty[i] for i, r in enumerate(fan_speed)]
+
+        # Drop any bad values (max_fan_delta=25% error) unless they are
+        # n consecutive bad values where n is max fan errors
+        correct_value = SubrackData.MAX_SUBRACK_FAN_SPEED
+        for i, val in enumerate(scaled_values):
+            if (abs(val - correct_value) / correct_value) > self._max_fan_delta:
+                if self._fan_error_values[i] >= self._max_fan_errors:
+                    continue
+                scaled_values[i] = correct_value
+                self._fan_error_values[i] += 1
+            else:
+                self._fan_error_values[i] = 0
+
+        return scaled_values
+
     def get_request(self: SubrackDriver) -> HttpPollRequest:
         """
         Return the reads, writes and commands to be executed in the next poll.
@@ -876,6 +940,19 @@ class SubrackDriver(
 
         values = poll_response.query_responses
         self._update_component_state(power=PowerState.ON, fault=fault)
+        if any(
+            key in values
+            for key in ["subrack_fan_speeds", "subrack_fan_speeds_percent"]
+        ):
+            rpm = values.get(
+                "subrack_fan_speeds", self._component_state["subrack_fan_speeds"]
+            )
+            pwm = values.get(
+                "subrack_fan_speeds_percent",
+                self._component_state["subrack_fan_speeds_percent"],
+            )
+            max_rpm = self._estimate_max_fan_rpm(rpm, pwm)
+            values["subrack_max_fan_speeds"] = max_rpm
         self._update_component_state(**values)
 
     def polling_stopped(self: SubrackDriver) -> None:
@@ -917,6 +994,7 @@ class SubrackDriver(
             power_supply_voltages=kwargs.get("power_supply_voltages"),
             subrack_fan_speeds=kwargs.get("subrack_fan_speeds"),
             subrack_fan_speeds_percent=kwargs.get("subrack_fan_speeds_percent"),
+            subrack_max_fan_speeds=kwargs.get("subrack_max_fan_speeds"),
             subrack_fan_mode=kwargs.get("subrack_fan_mode"),
             subrack_pll_locked=kwargs.get("subrack_pll_locked"),
             subrack_timestamp=kwargs.get("subrack_timestamp"),

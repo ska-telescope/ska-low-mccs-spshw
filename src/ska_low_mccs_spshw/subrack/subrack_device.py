@@ -49,6 +49,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     PduTrl = device_property(dtype=str, default_value="")
     PduPorts = device_property(dtype=(int,), default_value=[])
     SimulatedPDU = device_property(dtype=bool, default_value=True)
+    MaxFanErrors = device_property(dtype=int, default_value=5)
+    MaxFanRpmDelta = device_property(dtype=int, default_value=25)
     UseAttributesForHealth = device_property(
         doc="Use the attribute quality factor in health. ADR-115.",
         dtype=bool,
@@ -123,6 +125,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "power_supply_fan_speeds": "powerSupplyFanSpeeds",
         "subrack_fan_speeds": "subrackFanSpeeds",
         "subrack_fan_speeds_percent": "subrackFanSpeedsPercent",
+        "subrack_max_fan_speeds": "subrackMaxFanSpeeds",
         "subrack_fan_mode": "subrackFanModes",
         "subrack_pll_locked": "subrackPllLocked",
         "subrack_timestamp": "subrackTimestamp",
@@ -380,6 +383,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._component_state_changed,
             update_rate=self.UpdateRate,
             command_update_rate=self.CommandUpdateRate,
+            max_fan_errors=self.MaxFanErrors,
+            max_fan_delta=self.MaxFanRpmDelta,
         )
 
     # ----------
@@ -1075,6 +1080,42 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         if psu1_voltage_in is None or psu2_voltage_in is None:
             return None
         return [float(psu1_voltage_in), float(psu2_voltage_in)]
+
+    @attribute(
+        dtype=("DevFloat",),
+        max_dim_x=4,
+        max_alarm=9750,  # 150%
+        max_warning=8125,  # 125%
+        min_alarm="Not specified",  # ignore faults on RAL
+        min_warning="Not specified",  # ignore faults on RAL
+        # min_alarm=1625,  # 25%
+        # min_warning=4875,  # 75%
+        label="expected fan speeds at 100% pwm duty",
+        unit="rpm",
+        abs_change=0.1,
+    )
+    def subrackMaxFanSpeeds(self: MccsSubrack) -> np.ndarray | None:
+        """
+        Return the estimated rpm speed of the fans at 100% pwm duty.
+
+        Uses the FanSpeedsPercent attribute to scale up the FanSpeeds attribute
+        to what the maximum value would be.
+
+        :return: the scaled subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns none.
+        """
+        return self._subrack_max_fan_speeds()
+
+    def _subrack_max_fan_speeds(self: MccsSubrack) -> np.ndarray | None:
+        """
+        Handle a Tango attribute read of the sclaed subrack fan speeds, in RPM.
+
+        :return: the scaled subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns none.
+        """
+        return self._hardware_attributes.get("subrackMaxFanSpeeds", None)
 
     @attribute(
         dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
@@ -1901,6 +1942,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             "board_temps": self._board_temperatures(),
             "backplane_temps": self._backplane_temperatures(),
             "subrack_fan_speeds": self._subrack_fan_speeds_percent(),
+            # Note: switched the name to scaled from max fan speed to avoid
+            # confusion in the thresholds names (which already use min/max)
+            "subrack_scaled_fan_speeds": self._subrack_max_fan_speeds(),
             "board_currents": self._board_current(),
             "tpm_currents": self._tpm_currents(),
             "power_supply_currents": self._power_supply_currents(),

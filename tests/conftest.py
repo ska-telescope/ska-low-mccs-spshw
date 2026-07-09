@@ -27,7 +27,7 @@ from _pytest.python_api import ApproxBase
 from tests.harness import get_bandpass_daq_name, get_lmc_daq_name
 
 TPM_BAY_COUNT = 8
-MAX_SUBRACK_FAN_SPEED = 8000.0
+MAX_SUBRACK_FAN_SPEED = 6500.0
 
 
 # TODO: [MCCS-1328] We don't want to import anything from ska-low-mccs-spshw here,
@@ -211,6 +211,12 @@ def subrack_simulator_config_fixture() -> dict[str, Any]:
         "power_supply_fan_speeds": [90.0, 100.0],
         "power_supply_voltages": [12.0, 12.1],
         "subrack_fan_speeds_percent": [95.0, 96.0, 97.0, 98.0],
+        "subrack_fan_speeds": [
+            0.95 * MAX_SUBRACK_FAN_SPEED,
+            0.96 * MAX_SUBRACK_FAN_SPEED,
+            0.97 * MAX_SUBRACK_FAN_SPEED,
+            0.98 * MAX_SUBRACK_FAN_SPEED,
+        ],
         "subrack_fan_mode": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
         "subrack_pll_locked": True,
         "subrack_timestamp": 1234567890,
@@ -507,11 +513,11 @@ def subrack_simulator_attribute_values_fixture(
                 subrack_simulator_config["power_supply_voltages"],
             )
         ],
-        "subrack_fan_speeds_percent": _approxify(
-            subrack_simulator_config["subrack_fan_speeds_percent"]
-        ),
+        "subrack_fan_speeds_percent": subrack_simulator_config[
+            "subrack_fan_speeds_percent"
+        ],
         "subrack_fan_speeds": [
-            pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0)
+            p * MAX_SUBRACK_FAN_SPEED / 100.0
             for p in subrack_simulator_config["subrack_fan_speeds_percent"]
         ],
         "subrack_fan_mode": subrack_simulator_config["subrack_fan_mode"],
@@ -572,6 +578,27 @@ def subrack_simulator_attribute_values_fixture(
     }
 
 
+@pytest.fixture(name="subrack_driver_derived_attribute_values", scope="session")
+def subrack_driver_derived_attribute_values_fixture(
+    subrack_simulator_config: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Return attribute values that the subrack driver derives from other attributes.
+
+    :param subrack_simulator_config: attribute values with which the
+        subrack simulator is configured.
+
+    :return: a key-value dictionary of attribute values that the subrack
+        driver derives from other reported attributes.
+    """
+    return {
+        "subrack_max_fan_speeds": [
+            pytest.approx(MAX_SUBRACK_FAN_SPEED)
+            for p in subrack_simulator_config["subrack_fan_speeds"]
+        ],
+    }
+
+
 @pytest.fixture(name="subrack_device_attribute_values", scope="session")
 def subrack_device_attribute_values_fixture(
     subrack_simulator_config: dict[str, Any],
@@ -621,6 +648,7 @@ def subrack_device_attribute_values_fixture(
             pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0)
             for p in subrack_simulator_config["subrack_fan_speeds_percent"]
         ],
+        "subrackMaxFanSpeeds": [pytest.approx(MAX_SUBRACK_FAN_SPEED) for _ in range(4)],
         "subrackFanModes": subrack_simulator_config["subrack_fan_mode"],
         "subrackPllLocked": subrack_simulator_config["subrack_pll_locked"],
         "subrackTimestamp": subrack_simulator_config["subrack_timestamp"],

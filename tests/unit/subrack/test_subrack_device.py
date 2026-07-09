@@ -71,6 +71,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "powerSupplyVoltages",
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
+        "subrackMaxFanSpeeds",
         "subrackFanModes",
         "subrackPllLocked",
         "subrackTimestamp",
@@ -479,6 +480,7 @@ def test_monitoring_and_control(
         ("powerSupplyVoltages", None),
         ("subrackFanSpeeds", None),
         ("subrackFanSpeedsPercent", None),
+        ("subrackMaxFanSpeeds", None),
         ("subrackFanModes", None),
         ("subrackPllLocked", None),
         ("subrackTimestamp", None),
@@ -543,6 +545,7 @@ def test_monitoring_and_control(
         "powerSupplyVoltages",
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
+        "subrackMaxFanSpeeds",
         "subrackFanModes",
         "tpmCurrents",
         "tpmPowers",
@@ -659,6 +662,9 @@ def test_monitoring_and_control(
     change_event_callbacks["subrackFanSpeeds"].assert_change_event(
         expected_speeds, lookahead=5, consume_nonmatches=True
     )
+    # scaled speed should not change
+    for speed in subrack_device.subrackMaxFanSpeeds:
+        assert speed == pytest.approx(SubrackData.MAX_SUBRACK_FAN_SPEED)
 
     fan_to_change = 3
     subrack_fan_mode = subrack_device.subrackFanModes
@@ -988,6 +994,13 @@ def test_health_status_attributes(
             215.0,
             200.0,
         ),
+        (
+            "subrackMaxFanSpeeds",
+            9750.0,
+            8125.0,
+            4875.0,
+            1625.0,
+        ),
     ],
 )
 # pylint: disable=too-many-arguments
@@ -1064,12 +1077,27 @@ def test_attribute_alarm_health_model(
     except tango.DevFailed:
         pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
 
+    def _attribute_value(value: float) -> float | list[float]:
+        """
+        Shape a scalar value for the attribute under test.
+
+        Spectrum attributes (e.g. subrackMaxFanSpeeds) need one value per
+        element; the rest of the tested attributes are scalar.
+
+        :param value: the scalar value to shape.
+
+        :return: the value shaped for the attribute under test.
+        """
+        if attribute == "subrackMaxFanSpeeds":
+            return [value] * SubrackData.FAN_COUNT
+        return value
+
     try:
         # Change the values past the max alarm
         subrack_device.ChangeHardwareAttributeValue(
             json.dumps(
                 {
-                    attribute: float(max_alarm * 1.5),
+                    attribute: _attribute_value(float(max_alarm * 1.5)),
                 }
             )
         )
@@ -1080,7 +1108,7 @@ def test_attribute_alarm_health_model(
         subrack_device.ChangeHardwareAttributeValue(
             json.dumps(
                 {
-                    attribute: float((max_warning + min_warning) / 2),
+                    attribute: _attribute_value(float((max_warning + min_warning) / 2)),
                 }
             )
         )

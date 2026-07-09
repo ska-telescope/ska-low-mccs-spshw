@@ -285,7 +285,7 @@ class SpsTangoTestHarness:
             SubrackServerContextManager(subrack_simulator),
         )
 
-    def add_subrack_device(  # pylint: disable=too-many-arguments
+    def add_subrack_device(  # pylint: disable=too-many-arguments, too-many-locals
         self: SpsTangoTestHarness,
         subrack_id: int,
         address: tuple[str, int] | None = None,

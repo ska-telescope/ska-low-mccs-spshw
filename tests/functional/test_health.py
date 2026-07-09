@@ -835,13 +835,16 @@ def read_all_tile_attributes(
     time.sleep(10)
     tiles = station_devices["Tiles"]
     for i, tile in enumerate(tiles):
+        tile_excluded_attributes = excluded_tile_attributes
         if i != len(tiles) - 1:
             # These are documented by the API as do not use unless final tile.
             # They are therefore INVALID for all tiles except final tile.
-            excluded_tile_attributes += "fpga0_station_beamformer_flagged_count"
-            excluded_tile_attributes += "fpga1_station_beamformer_flagged_count"
+            tile_excluded_attributes = excluded_tile_attributes + [
+                "fpga0_station_beamformer_flagged_count",
+                "fpga1_station_beamformer_flagged_count",
+            ]
         if tile.useAttributesForHealth:
-            all_excluded_tile_attributes = excluded_tile_attributes + [
+            all_excluded_tile_attributes = tile_excluded_attributes + [
                 "dspHealth",
                 "ioHealth",
                 "timingHealth",

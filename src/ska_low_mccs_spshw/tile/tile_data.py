@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from ska_low_mccs_spshw.tile import health_config  # import the subpackage
+from ska_low_mccs_spshw.tile.utils import HealthConfigLoader
 
 __all__ = ["TileData"]
 
@@ -77,7 +78,8 @@ class TileData:
         raise FileNotFoundError(f"{DEFAULT_SET} not found in health_config package")
 
     DEFAULT_MONITORING_POINTS = (
-        yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"] or {}
+        yaml.load(min_max_string, Loader=HealthConfigLoader)["tpm_monitoring_points"]
+        or {}
     )
 
     TILE_MONITORING_POINTS = {

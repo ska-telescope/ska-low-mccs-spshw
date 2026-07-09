@@ -18,6 +18,7 @@ from typing import Any, Final, Optional
 
 import numpy as np
 import ska_tango_base as stb
+from numpy.typing import NDArray
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
@@ -26,6 +27,7 @@ from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 
+from .subrack_attribute_filter import SubrackAttributeFilter
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
@@ -56,6 +58,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=bool,
         default_value=True,
     )
+
+    # Properties to control the attribute filters
+    AttributeFilterType = device_property(dtype=str, default_value="none")
+    AttributeFilterMaxSamples = device_property(dtype=int, default_value=5)
 
     # Signals backing the internalVoltages* attributes.
     internal_voltages_1v1_signal: AttrSignal[float] = AttrSignal[float]()
@@ -234,6 +240,18 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         This is overridden here to change the Tango serialisation model.
         """
         super().init_device()
+
+        # Initialise the map of attribute value filters. For the tpm attributes
+        # we create the filter where the filter type and parameters are taken
+        # from tango properties.
+        self._attribute_value_filters = {
+            name: SubrackAttributeFilter(
+                filter_type=self.AttributeFilterType,
+                max_samples=self.AttributeFilterMaxSamples,
+                logger=self.logger,
+            )
+            for name in ["tpmCurrents", "tpmPowers", "tpmVoltages"]
+        }
 
         self.set_change_event("tpmPresent", True)
         self.set_archive_event("tpmPresent", True)
@@ -728,6 +746,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             being evaluated in health.
         """
         return self.UseAttributesForHealth
+
+    @attribute(dtype="DevString")
+    def attributeFilterType(self) -> str:
+        """
+        Get the attribute filter type.
+
+        :return: The attribute filter type.
+
+        """
+        return self.AttributeFilterType
 
     @attribute(
         dtype="DevString",
@@ -1720,7 +1748,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._hardware_attributes.clear()
         for signal_name in self._HEALTH_SIGNAL_MAP.values():
             setattr(self, signal_name, None)
+
+        # Ensure the filter buffer is cleared
+        self._clear_attribute_value_filters()
+
         self._update_tpm_present(None)
+
+    def _clear_attribute_value_filters(self) -> None:
+        """Clear the attribute value filters."""
+        for attribute_filter in self._attribute_value_filters.values():
+            attribute_filter.clear()
 
     # ----------
     # Callbacks
@@ -1770,6 +1807,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param kwargs: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
+
+        # Ensure the attribute filters are up to date with the tango device property
+        self._update_attribute_filters()
+
         if not self.UseAttributesForHealth:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power, health=health)
@@ -1783,6 +1824,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     # Hardware returns None for powered-off TPM slots; replace with
                     # np.nan so Tango receives a valid numeric array.
                     value = np.array([v if v is not None else np.nan for v in value])
+
+                # Apply filtering to the attribute values to remove noise
+                value = self._filter_attribute_value(tango_attribute_name, value)
+
+                # Update the attribute value
                 self._hardware_attributes[tango_attribute_name] = value
                 if tango_attribute_name == "subrackBoardInfo":
                     if isinstance(value, dict):
@@ -1835,6 +1881,29 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.psu_dead_count_signal = dead_psu_count
 
         self._update_health_data()
+
+    def _update_attribute_filters(self) -> None:
+        """Update the attribute filter properties."""
+        # The AttributeFilterType is defined and set as a tango property. In
+        # order to ensure we are up to date with this property value, we sync
+        # the filter type when the component model is updated.
+        for filter_object in self._attribute_value_filters.values():
+            if filter_object.filter_type != self.AttributeFilterType:
+                filter_object.filter_type = self.AttributeFilterType
+
+    def _filter_attribute_value(
+        self, name: str, value: float | NDArray[np.floating] | None
+    ) -> float | NDArray[np.floating] | None:
+        """
+        Filter the attribute value or return unchanged.
+
+        :param name: The tango attribute name.
+        :param value: The raw attribute value.
+
+        :returns: The filtered attribute value
+
+        """
+        return self._attribute_value_filters.get(name, lambda x: x)(value)
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:
         """

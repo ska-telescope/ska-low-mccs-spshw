@@ -5,6 +5,7 @@
 * [THORN-640] Added "subrackMaxFanSpeeds" attribute to subrack as a health parameter. This attributes uses the rpm and pwm readouts from the subrack fans to determine the expected maximum rpm speed of the fans
 * [THORN-623] Added attributes to Subrack: psuXPresent, psuXPowerIn, psuXPowerOut, psuXVoltageIn, psuXVoltageOut, psuXLoad. Added new Subrack health rules: Degraded if a psu is over 50% load, failed if both psus are dead or any psu near 100% load. Added new subrack health rules: Degraded if one PSU has failed, Failed if both PSUs have failed. A failed PSU is defined as a PSU which is present and has an input voltage but no output voltage.
 * [SKB-1430] Refactor MccsTile attribute reads to reduce time spent holding the hardware lock, moving `allLiveCal`/`allStagedCal` to commands.
+* [THORN-639] Add subrack attribute filtering for power smoothing
 
 ## 13.0.0
 

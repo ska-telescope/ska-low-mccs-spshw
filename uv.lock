@@ -1935,7 +1935,7 @@ health-rollup = [
 [[package]]
 name = "ska-low-mccs-common"
 version = "4.5.6"
-source = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/?rev=thorn-647#e4d031502b9eaa3bb9f2c3181801604615ccbe2a" }
+source = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/?rev=thorn-647#fcbba9c73b7726607b7123ab780776e41c62069e" }
 dependencies = [
     { name = "attrs" },
     { name = "backoff" },

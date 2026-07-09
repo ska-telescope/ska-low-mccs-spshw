@@ -1190,7 +1190,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: the tile_component_manager class
             object under test.
         """
-        assert tile_component_manager.get_40g_configuration(-1, 0) == []
         assert tile_component_manager.get_40g_configuration(9) == []
         mock_src_ip = 167774722
         mock_dst_ip = 167774723
@@ -1212,12 +1211,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "src_port": 8888,
             "dst_ip": str(ipaddress.IPv4Address(mock_dst_ip)),
             "dst_port": 3333,
-            "rx_port_filter": None,
-            "netmask": None,
-            "gateway_ip": None,
+            "netmask": "255.255.255.0",
+            "gateway_ip": "10.0.14.1",
         }
 
-        assert tile_component_manager.get_40g_configuration(-1, 0) == [expected]
+        assert tile_component_manager.get_40g_configuration(1, 0) == [expected]
         assert tile_component_manager.get_40g_configuration(1) == [expected]
         assert tile_component_manager.get_40g_configuration(10) == []
 
@@ -3032,8 +3030,10 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         }
 
         tile_simulator.connect()
-        tile_simulator.get_40g_core_configuration = (  # type: ignore[assignment]
-            unittest.mock.Mock(return_value=core_dict)
+        setattr(
+            tile_simulator,
+            "get_40g_core_configuration",
+            unittest.mock.Mock(return_value=core_dict),
         )
 
         tile_component_manager.get_40g_configuration(

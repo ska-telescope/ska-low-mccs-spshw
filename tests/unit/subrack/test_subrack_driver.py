@@ -25,6 +25,7 @@ from ska_low_mccs_spshw.subrack import (
 def test_attribute_reads(
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -33,6 +34,8 @@ def test_attribute_reads(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -45,7 +48,10 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_driver.stop_communicating()
@@ -53,9 +59,12 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
     callbacks["communication_status"].assert_not_called()
 
+    all_attributes = (
+        subrack_simulator_attribute_values | subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_call(
         fault=None,
-        **{name: None for name in subrack_simulator_attribute_values},
+        **{name: None for name in all_attributes},
     )
     callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
     callbacks["component_state"].assert_not_called()
@@ -65,6 +74,7 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -75,6 +85,8 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -87,7 +99,10 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_simulator.simulate_attribute("board_current", 0.7)
@@ -196,6 +211,7 @@ def test_tpm_power_commands(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -206,6 +222,8 @@ def test_tpm_power_commands(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -218,7 +236,10 @@ def test_tpm_power_commands(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
@@ -249,10 +270,12 @@ def test_tpm_power_commands(
     callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
 
+# pylint: disable=too-many-arguments
 def test_get_health_status(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     health_status: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
@@ -264,6 +287,8 @@ def test_get_health_status(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param health_status: the values
     :param callbacks: dictionary of driver callbacks.
     """
@@ -277,7 +302,10 @@ def test_get_health_status(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     # Case 1: bios is too old, health status is not polled
@@ -319,6 +347,7 @@ def test_other_commands(
     subrack_simulator: SubrackSimulator,
     subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
     """
@@ -329,6 +358,8 @@ def test_other_commands(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param callbacks: dictionary of driver callbacks.
     """
     callbacks["communication_status"].assert_not_called()
@@ -341,7 +372,9 @@ def test_other_commands(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_fan_speeds_percent = subrack_simulator.get_attribute(
@@ -411,10 +444,12 @@ def test_other_commands(
     )
 
 
+# pylint: disable=too-many-arguments
 def test_failed_poll(
     subrack_driver: SubrackDriver,
     subrack_client: Any,
     subrack_simulator_attribute_values: dict[str, Any],
+    subrack_driver_derived_attribute_values: dict[str, Any],
     failed_subrack_simulator_attribute_values: dict[str, Any],
     callbacks: MockCallableGroup,
 ) -> None:
@@ -437,6 +472,8 @@ def test_failed_poll(
     :param subrack_driver: the subrack driver under test
     :param subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values
+    :param subrack_driver_derived_attribute_values: key-value dictionary
+        of the expected subrack simulator attribute values
     :param failed_subrack_simulator_attribute_values: key-value dictionary of
         the expected subrack simulator attribute values from a failed poll.
     :param callbacks: dictionary of driver callbacks.
@@ -451,7 +488,9 @@ def test_failed_poll(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_call(
+        **subrack_simulator_attribute_values, **subrack_driver_derived_attribute_values
+    )
     callbacks["component_state"].assert_not_called()
 
     subrack_client.get_attribute = lambda attr_name: {
@@ -518,6 +557,8 @@ def test_failed_poll(
 
     callbacks["component_state"].assert_call(
         **failed_subrack_simulator_attribute_values,
+        subrack_max_fan_speeds=None,
+        lookahead=2,
     )
 
     callbacks["component_state"].assert_not_called()
@@ -552,3 +593,100 @@ def test_health_status_not_coscheduled_with_action_command(
     command_names = [cmd[0] for cmd in poll_request.commands]
     assert "turn_on_tpm" in command_names
     assert "get_health_status" not in command_names
+
+
+@pytest.mark.parametrize(
+    ("fan_speed", "fan_speed_percent", "expected_max_rpm", "suppress_values"),
+    [
+        # Test good cases
+        pytest.param(
+            [6000, 6500, 6700, 7000],
+            [100, 100, 100, 100],
+            [6000, 6500, 6700, 7000],
+            False,
+        ),
+        pytest.param(
+            [650, 1300, 3250, 4875], [10, 20, 50, 75], [6500, 6500, 6500, 6500], False
+        ),
+        # Bad values. Note: we expect the first n bad values to be suppressed
+        pytest.param(
+            [3000, 12000, 1500, 6000],
+            [100, 100, 50, 50],
+            [3000, 12000, 3000, 12000],
+            True,
+        ),
+        # Edge case: the value is within 10% of the correct value, so it is simply
+        # returned
+        pytest.param(
+            [6000, 7000, 3000, 3500],
+            [100, 100, 50, 50],
+            [6000, 7000, 6000, 7000],
+            False,
+        ),
+        # Edge case: small/null pwm gets rounded up to 10%
+        pytest.param(
+            [0, 6500, 0, 6500],
+            [0, 0, 20, 20],
+            [0, 65_000, 0, 32_500],
+            True,
+        ),
+    ],
+)
+def test_estimate_max_fan_speed(
+    subrack_driver: SubrackDriver,
+    fan_speed: list[float] | None,
+    fan_speed_percent: list[float] | None,
+    expected_max_rpm: list | None,
+    suppress_values: bool,
+) -> None:
+    """
+    Test that the estimate max fan speed method responds correctly.
+
+    :param subrack_driver: the subrack driver under test
+    :param fan_speed: input rpm
+    :param fan_speed_percent: input pwm
+    :param expected_max_rpm: the expected result
+    :param suppress_values: if the function will supress bad values or not.
+        In general this should be False if we expect the result is within
+        10% of the maximum fan speed or if it's None. Otherwise, the
+        method will supress 5 bad consecutive answers and only the 6th one
+        will be the expected value
+    """
+    if suppress_values:
+        for i in range(subrack_driver._max_fan_errors):
+            assert [
+                pytest.approx(SubrackData.MAX_SUBRACK_FAN_SPEED)
+            ] * SubrackData.FAN_COUNT == subrack_driver._estimate_max_fan_rpm(
+                fan_speed, fan_speed_percent
+            )
+        assert i + 1 in subrack_driver._fan_error_values
+
+    if expected_max_rpm is not None:
+        expected_max_rpm = [pytest.approx(val) for val in expected_max_rpm]
+    assert expected_max_rpm == subrack_driver._estimate_max_fan_rpm(
+        fan_speed, fan_speed_percent
+    )
+
+
+def test_estimate_max_fan_speed_returns_none(
+    subrack_driver: SubrackDriver,
+) -> None:
+    """
+    Test that the method returns None correctly.
+
+    This test makes sure the method doesn't report values when the subrack
+    is disconnected.
+
+    :param subrack_driver: the subrack driver under test
+    """
+    rpm = [SubrackData.MAX_SUBRACK_FAN_SPEED] * SubrackData.FAN_COUNT
+    pwm = [100.0] * SubrackData.FAN_COUNT
+
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(rpm, None)
+    assert max_fan_rpm is None
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(None, pwm)
+    assert max_fan_rpm is None
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(None, None)
+    assert max_fan_rpm is None
+    max_fan_rpm = subrack_driver._estimate_max_fan_rpm(rpm, pwm)
+    assert max_fan_rpm is not None

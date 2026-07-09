@@ -71,13 +71,15 @@ class SubrackHealthRules(HealthRules):
     def _check_fan_speeds(
         self: SubrackHealthRules,
         fan_speeds: list[float],
+        scaled_fan_speeds: list[float],
         desired_fan_speeds: Optional[list[float]],
         rule_str: str,
     ) -> tuple[bool, str]:
         """
         Check the fan speeds.
 
-        :param fan_speeds: The speeds of the fans.
+        :param fan_speeds: The pwm speeds of the fans.
+        :param scaled_fan_speeds: The expected speed of the fans at 100% pwm.
         :param desired_fan_speeds: The desired speeds of the fans, None if not set yet.
         :param rule_str: The type of error threshold to be checking against.
 
@@ -123,6 +125,23 @@ class SubrackHealthRules(HealthRules):
                     f"Fan speed {fan_speed} is below {rule_str}min_fan_speed "
                     f"{self._thresholds[f'{rule_str}min_fan_speed']}. "
                 )
+
+        for fan_speed in scaled_fan_speeds:
+            # if fan_speed < self._thresholds[f"{rule_str}min_scaled_fan_speed"]:
+            #     has_failed = True
+            #     report += (
+            #         f"Estimated max fan speed {fan_speed} rpm is below "
+            #         f"{rule_str}min_scaled_fan_speed "
+            #         f"{self._thresholds[f'{rule_str}min_scaled_fan_speed']} rpm."
+            #     )
+            if fan_speed > self._thresholds[f"{rule_str}max_scaled_fan_speed"]:
+                has_failed = True
+                report += (
+                    f"Estimated max fan speed {fan_speed} rpm is over "
+                    f"{rule_str}max_scaled_fan_speed "
+                    f"{self._thresholds[f'{rule_str}max_scaled_fan_speed']} rpm."
+                )
+
         return has_failed, report
 
     # pylint: disable=too-many-arguments
@@ -434,13 +453,17 @@ class SubrackHealthRules(HealthRules):
         if basic_thresholds_failed:
             has_failed = True
             report += basic_report
-        fan_failed, fan_report = self._check_fan_speeds(
-            state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-        )
 
+        fan_failed, fan_report = self._check_fan_speeds(
+            state["subrack_fan_speeds"],
+            state["subrack_scaled_fan_speeds"],
+            state["desired_fan_speeds"],
+            fail_str,
+        )
         if fan_failed:
             has_failed = True
             report += fan_report
+
         current_failed, current_report = self._check_current_diff(
             state["board_currents"],
             state["power_supply_currents"],
@@ -533,7 +556,10 @@ class SubrackHealthRules(HealthRules):
             has_degraded = True
             report += basic_report
         fan_degraded, fan_report = self._check_fan_speeds(
-            state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+            state["subrack_fan_speeds"],
+            state["subrack_scaled_fan_speeds"],
+            state["desired_fan_speeds"],
+            fail_str,
         )
         if fan_degraded:
             has_degraded = True
@@ -600,11 +626,16 @@ class SubrackHealthRules(HealthRules):
             "degraded_max_backplane_temp": 50.0,
             "failed_min_backplane_temp": 5.0,  # placeholder
             "degraded_min_backplane_temp": 10.0,
-            # fan speeds are marked  as dynamic thresholds (RPM)
+            # fan speeds are marked  as dynamic thresholds (PWM)
             "failed_fan_speed_diff": 10.0,  # placeholder
             "degraded_fan_speed_diff": 5.0,  # placeholder
             "failed_min_fan_speed": 20.0,  # placeholder
             "degraded_min_fan_speed": 30.0,  # placeholder
+            # "scaled fan speed" - estimated value from the pwm and rpm values
+            "failed_max_scaled_fan_speed": 9750,  # 150%
+            "degraded_max_scaled_fan_speed": 8125,  # 125%
+            # "degraded_min_scaled_fan_speed": 4875,  # 75%
+            # "failed_min_scaled_fan_speed": 1625,  # 25%
             # Voltage drop on TPMs (V)
             "failed_voltage_drop": 5.0,  # derived
             "degraded_voltage_drop": 3.0,  # derived

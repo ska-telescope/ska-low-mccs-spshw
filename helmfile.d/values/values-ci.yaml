@@ -1,6 +1,7 @@
 defaults:
   logging_level_default: 5
 
+# AWS Cluster setting
 platform:
   cluster:
     domain: cluster.local

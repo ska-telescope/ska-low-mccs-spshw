@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*
-# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable = too-many-lines
 """This module contains the tests of the subrack Tango device."""
 
 from __future__ import annotations
@@ -92,7 +92,18 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "internalVoltages5V",
         "internalVoltages3V",
         "internalVoltages2V8",
-        timeout=20.0,
+        "psu1Present",
+        "psu2Present",
+        "psu1PowerIn",
+        "psu2PowerIn",
+        "psu1PowerOut",
+        "psu2PowerOut",
+        "psu1VoltageIn",
+        "psu2VoltageIn",
+        "psu1VoltageOut",
+        "psu2VoltageOut",
+        "psuDeadCount",
+        timeout=30.0,
         assert_no_error=False,
     )
 
@@ -151,6 +162,7 @@ def test_context_fixture(
         subrack_id,
         use_attribute_for_health=use_attribute_for_health,
         device_class=_PatchedMccsSubrack,
+        command_update_rate=5.0,
         define_parent_trl=False,
     )
 
@@ -789,6 +801,16 @@ def test_health_status_attributes(
         "internalVoltages5V": ["internal_voltages", "V_5V"],
         "internalVoltages3V": ["internal_voltages", "V_3V"],
         "internalVoltages2V8": ["internal_voltages", "V_2V8"],
+        "psu1Present": ["psus", "present", "PSU1"],
+        "psu2Present": ["psus", "present", "PSU2"],
+        "psu1PowerIn": ["psus", "power_in", "PSU1"],
+        "psu2PowerIn": ["psus", "power_in", "PSU2"],
+        "psu1PowerOut": ["psus", "power_out", "PSU1"],
+        "psu2PowerOut": ["psus", "power_out", "PSU2"],
+        "psu1VoltageIn": ["psus", "voltage_in", "PSU1"],
+        "psu2VoltageIn": ["psus", "voltage_in", "PSU2"],
+        "psu1VoltageOut": ["psus", "voltage_out", "PSU1"],
+        "psu2VoltageOut": ["psus", "voltage_out", "PSU2"],
     }
     health_status = subrack_simulator._get_health_status("")
     assert subrack_device.healthStatus == "{}"
@@ -800,6 +822,12 @@ def test_health_status_attributes(
             change_event_callbacks[attribute_name],
         )
         change_event_callbacks[attribute_name].assert_change_event(None)
+    subrack_device.subscribe_event(
+        "psuDeadCount",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["psuDeadCount"],
+    )
+    change_event_callbacks["psuDeadCount"].assert_change_event(None)
 
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
@@ -819,6 +847,16 @@ def test_health_status_attributes(
         change_event_callbacks[attribute_name].assert_change_event(
             value, lookahead=2, consume_nonmatches=True
         )
+
+    change_event_callbacks["psuDeadCount"].assert_change_event(
+        0, lookahead=2, consume_nonmatches=True
+    )
+    assert subrack_device.psu1Load == pytest.approx(
+        health_status["psus"]["power_out"]["PSU1"] / 1200.0
+    )
+    assert subrack_device.psu2Load == pytest.approx(
+        health_status["psus"]["power_out"]["PSU2"] / 1200.0
+    )
 
 
 @pytest.mark.parametrize(
@@ -915,6 +953,48 @@ def test_health_status_attributes(
             2.66,
         ),
         (
+            "psu1PowerIn",
+            600.0,
+            575.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu2PowerIn",
+            600.0,
+            575.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu1PowerOut",
+            1140.0,
+            600.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu2PowerOut",
+            1140.0,
+            600.0,
+            0.0,
+            0.0,
+        ),
+        (
+            "psu1VoltageIn",
+            260.0,
+            245.0,
+            215.0,
+            200.0,
+        ),
+        (
+            "psu2VoltageIn",
+            260.0,
+            245.0,
+            215.0,
+            200.0,
+        ),
+        (
             "subrackMaxFanSpeeds",
             9750.0,
             8125.0,
@@ -967,7 +1047,9 @@ def test_attribute_alarm_health_model(
     # _init_state_model. The HealthRecorder fires UNKNOWN before the stored value
     # changes to FAILED, so _health_changed_new skips the push (no state change).
     # The initial subscription event is therefore FAILED, not UNKNOWN.
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["healthState"].assert_change_event(
+        HealthState.FAILED, lookahead=5, consume_nonmatches=True
+    )
 
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
@@ -975,7 +1057,7 @@ def test_attribute_alarm_health_model(
     # Use lookahead to consume any intermediate UNKNOWN events from the HealthRecorder
     # if HealthRecorder fires UNKNOWN after stored=FAILED, it precedes OK
     change_event_callbacks["healthState"].assert_change_event(
-        HealthState.OK, lookahead=2, consume_nonmatches=True
+        HealthState.OK, lookahead=5, consume_nonmatches=True
     )
     change_event_callbacks["healthState"].assert_not_called()
 
@@ -1037,6 +1119,100 @@ def test_attribute_alarm_health_model(
         subrack_device.set_attribute_config(original_attribute_config)
 
 
+def test_psu_dead_count_health_transitions(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that the derived dead PSU count drives attribute-based health.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: Simulator for the backend subrack.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    assert subrack_device.adminMode == AdminMode.OFFLINE
+
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    subrack_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["healthState"],
+    )
+    change_event_callbacks["healthState"].assert_change_event(
+        HealthState.FAILED, lookahead=5, consume_nonmatches=True
+    )
+
+    subrack_device.subscribe_event(
+        "psuDeadCount",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["psuDeadCount"],
+    )
+    change_event_callbacks["psuDeadCount"].assert_change_event(None)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["psuDeadCount"].assert_change_event(
+        0, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["healthState"].assert_change_event(
+        HealthState.OK, lookahead=2, consume_nonmatches=True
+    )
+
+    # Change alarm thresholds on voltage out before we change the value so that
+    # the voltage attr does not alarm and we can cleanly see the dead psu detection
+    original_psu1_voltage_config = subrack_device.get_attribute_config(
+        "psu1VoltageOut".lower()
+    )
+    new_attribute_config = original_psu1_voltage_config
+    alarm_config = new_attribute_config.alarms
+    alarm_config.min_warning = str(0)
+    alarm_config.min_alarm = str(0)
+    new_attribute_config.alarms = alarm_config
+    subrack_device.set_attribute_config(new_attribute_config)
+
+    subrack_simulator._set_attribute("power_supply_voltages", [0.1, 12.0], _force=True)
+
+    change_event_callbacks["psuDeadCount"].assert_change_event(
+        1, lookahead=2, consume_nonmatches=True
+    )
+    change_event_callbacks["healthState"].assert_change_event(HealthState.DEGRADED)
+    assert subrack_device.state() == DevState.ALARM
+
+    original_psu2_voltage_config = subrack_device.get_attribute_config(
+        "psu2VoltageOut".lower()
+    )
+    new_attribute_config = original_psu2_voltage_config
+    alarm_config = new_attribute_config.alarms
+    alarm_config.min_warning = str(0)
+    alarm_config.min_alarm = str(0)
+    new_attribute_config.alarms = alarm_config
+    subrack_device.set_attribute_config(new_attribute_config)
+
+    subrack_simulator._set_attribute("power_supply_voltages", [0.1, 0.1], _force=True)
+    change_event_callbacks["psuDeadCount"].assert_change_event(2)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+    time.sleep(1)
+    assert subrack_device.state() == DevState.ALARM
+
+    # Reset thresholds.
+    subrack_device.set_attribute_config(original_psu1_voltage_config)
+    subrack_device.set_attribute_config(original_psu2_voltage_config)
+
+    subrack_simulator._set_attribute("power_supply_voltages", [12.1, 12.2], _force=True)
+    change_event_callbacks["psuDeadCount"].assert_change_event(0)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+    assert subrack_device.state() == DevState.ON
+
+
 def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
@@ -1058,13 +1234,14 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
+    assert subrack_device.adminMode == AdminMode.OFFLINE
+
     subrack_device.subscribe_event(
         "state",
         EventType.CHANGE_EVENT,
         change_event_callbacks["state"],
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-
     for attribute_name in ("tpmVoltages", "tpmCurrents", "tpmPowers"):
         subrack_device.subscribe_event(
             attribute_name,

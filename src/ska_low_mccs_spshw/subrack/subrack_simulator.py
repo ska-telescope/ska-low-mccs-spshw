@@ -534,6 +534,16 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values["tpm_on_off"] = [True] * SubrackData.TPM_BAY_COUNT
 
     def _get_health_status(self: SubrackSimulator, arg: str) -> dict:
+        psu_currents = cast(
+            list[float], self._attribute_values["power_supply_currents"]
+        )
+        psu_voltages = cast(
+            list[float], self._attribute_values["power_supply_voltages"]
+        )
+        psu_powers = [
+            current * voltage for current, voltage in zip(psu_currents, psu_voltages)
+        ]
+
         return {
             "temperatures": {
                 "SMM1": 40,
@@ -608,12 +618,12 @@ class SubrackSimulator(SubrackProtocol):
                     "PSU2": False,
                 },
                 "voltage_out": {
-                    "PSU1": 12.0,
-                    "PSU2": 12.1,
+                    "PSU1": psu_voltages[0],
+                    "PSU2": psu_voltages[1],
                 },
                 "power_out": {
-                    "PSU1": 4.2 * 12,
-                    "PSU2": 5.8 * 12.1,
+                    "PSU1": psu_powers[0],
+                    "PSU2": psu_powers[1],
                 },
                 "voltage_in": {
                     "PSU1": 230,

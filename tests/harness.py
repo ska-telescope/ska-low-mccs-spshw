@@ -285,16 +285,19 @@ class SpsTangoTestHarness:
             SubrackServerContextManager(subrack_simulator),
         )
 
-    def add_subrack_device(  # pylint: disable=too-many-arguments
+    def add_subrack_device(  # pylint: disable=too-many-arguments, too-many-locals
         self: SpsTangoTestHarness,
         subrack_id: int,
         address: tuple[str, int] | None = None,
         update_rate: float = 1.0,
+        command_update_rate: float = 15.0,
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsSubrack",
         simulated_pdu: bool = True,
         use_attribute_for_health: bool = True,
         define_parent_trl: bool = True,
+        filter_type: str | None = None,
+        filter_max_samples: int = 5,
     ) -> None:
         """
         Add a subrack Tango device to the test harness.
@@ -303,7 +306,9 @@ class SpsTangoTestHarness:
         :param address: address of the subrack to be
             monitored and controlled by this Tango device.
             It is a tuple of hostname or IP address, and port.
-        :param update_rate: How often to update monitored attriutes.
+        :param update_rate: How often to update monitored attributes.
+        :param command_update_rate: How often to poll command-style data
+            such as health status.
         :param logging_level: the Tango device's default logging level.
         :param device_class: The device class to use.
             This may be used to override the usual device class,
@@ -313,6 +318,8 @@ class SpsTangoTestHarness:
             use this new feature.
         :param define_parent_trl: True if we want to define the parentTRL.
             you may want to disable for unittests.
+        :param filter_type: The type of filter to use for TPM attributes
+        :param filter_max_samples: Maximum number of samples in filter buffer
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -339,8 +346,11 @@ class SpsTangoTestHarness:
             SubrackIp=host,
             SubrackPort=port,
             UpdateRate=update_rate,
+            CommandUpdateRate=command_update_rate,
             LoggingLevelDefault=logging_level,
             UseAttributesForHealth=use_attribute_for_health,
+            AttributeFilterType=filter_type,
+            AttributeFilterMaxSamples=filter_max_samples,
             Simulated_PDU=simulated_pdu,
             PduTrl=get_pdu_name(),
             PowerMarshallerTrl="",  # "low-mccs/powermarshaller/powermarshaller",

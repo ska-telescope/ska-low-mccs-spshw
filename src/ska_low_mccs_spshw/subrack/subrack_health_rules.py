@@ -71,13 +71,15 @@ class SubrackHealthRules(HealthRules):
     def _check_fan_speeds(
         self: SubrackHealthRules,
         fan_speeds: list[float],
+        scaled_fan_speeds: list[float],
         desired_fan_speeds: Optional[list[float]],
         rule_str: str,
     ) -> tuple[bool, str]:
         """
         Check the fan speeds.
 
-        :param fan_speeds: The speeds of the fans.
+        :param fan_speeds: The pwm speeds of the fans.
+        :param scaled_fan_speeds: The expected speed of the fans at 100% pwm.
         :param desired_fan_speeds: The desired speeds of the fans, None if not set yet.
         :param rule_str: The type of error threshold to be checking against.
 
@@ -123,6 +125,23 @@ class SubrackHealthRules(HealthRules):
                     f"Fan speed {fan_speed} is below {rule_str}min_fan_speed "
                     f"{self._thresholds[f'{rule_str}min_fan_speed']}. "
                 )
+
+        for fan_speed in scaled_fan_speeds:
+            # if fan_speed < self._thresholds[f"{rule_str}min_scaled_fan_speed"]:
+            #     has_failed = True
+            #     report += (
+            #         f"Estimated max fan speed {fan_speed} rpm is below "
+            #         f"{rule_str}min_scaled_fan_speed "
+            #         f"{self._thresholds[f'{rule_str}min_scaled_fan_speed']} rpm."
+            #     )
+            if fan_speed > self._thresholds[f"{rule_str}max_scaled_fan_speed"]:
+                has_failed = True
+                report += (
+                    f"Estimated max fan speed {fan_speed} rpm is over "
+                    f"{rule_str}max_scaled_fan_speed "
+                    f"{self._thresholds[f'{rule_str}max_scaled_fan_speed']} rpm."
+                )
+
         return has_failed, report
 
     # pylint: disable=too-many-arguments
@@ -189,7 +208,7 @@ class SubrackHealthRules(HealthRules):
         Check the difference in current across all devices in the subrack.
 
         This makes sure that all the currents are adding up to give
-        rougly the same value and we're not losing power somewhere.
+        roughly the same value and we're not losing power somewhere.
 
         :param board_currents: The currents of the boards.
         :param power_supply_currents: The currents of the power supplies.
@@ -299,6 +318,64 @@ class SubrackHealthRules(HealthRules):
 
         return has_failed, report
 
+    def _check_individual_psu_load(
+        self: SubrackHealthRules, psu_loads: list[float], rule_str: str
+    ) -> tuple[bool, str]:
+        """
+        Check whether any PSU is overloaded.
+
+        :param psu_loads: Fractional loading on each PSU.
+        :param rule_str: The type of error threshold to be checking against.
+
+        :return: True if any of the thresholds are breached, along with a text report.
+        """
+        has_failed = False
+        report = ""
+        for psu_id, psu_load in enumerate(psu_loads, start=1):
+            loading_threshold = self._thresholds[f"{rule_str}psu_load"]
+            if psu_load is None:
+                continue
+            if psu_load > loading_threshold:
+                has_failed = True
+                report += f"PSU{psu_id}'s load is over {loading_threshold}, "
+
+        return has_failed, report
+
+    def _check_for_dead_psus(
+        self: SubrackHealthRules,
+        power_supply_present: list[bool],
+        power_supply_voltages: list[float],
+        power_supply_voltages_in: list[float],
+    ) -> tuple[list[bool], str]:
+        """
+        Check whether any or both PSUs are dead.
+
+        :param power_supply_present: Whether or not a PSU is connected to this socket.
+        :param power_supply_voltages: Voltage supplied by PSU.
+        :param power_supply_voltages_in: Voltage received by PSU.
+
+        :return: True if any of the thresholds are breached, along with a text report.
+        """
+        report = ""
+        psu_dead = [False, False]
+        for psu_id, (psu_present, psu_v_out, psu_v_in) in enumerate(
+            zip(power_supply_present, power_supply_voltages, power_supply_voltages_in),
+            start=1,
+        ):
+            if not psu_present:
+                continue
+            # Comparison to 1.0 instead of 0.0 as buffer for any noise on the signal.
+            if psu_v_out < 1.0 < psu_v_in:
+                # if present and voltage in but no voltage out then psu_dead
+                # Nominal V_in = 230V, Nominal V_out = 12V.
+                psu_dead[psu_id - 1] = True
+                report += (
+                    f"PSU{psu_id} is receiving voltage but not supplying any. "
+                    "Suspected defective PSU. "
+                )
+
+        return psu_dead, report
+
     def unknown_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],
@@ -376,13 +453,17 @@ class SubrackHealthRules(HealthRules):
         if basic_thresholds_failed:
             has_failed = True
             report += basic_report
-        fan_failed, fan_report = self._check_fan_speeds(
-            state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-        )
 
+        fan_failed, fan_report = self._check_fan_speeds(
+            state["subrack_fan_speeds"],
+            state["subrack_scaled_fan_speeds"],
+            state["desired_fan_speeds"],
+            fail_str,
+        )
         if fan_failed:
             has_failed = True
             report += fan_report
+
         current_failed, current_report = self._check_current_diff(
             state["board_currents"],
             state["power_supply_currents"],
@@ -401,6 +482,23 @@ class SubrackHealthRules(HealthRules):
                 f"clock_reqs {state['clock_reqs']} does not match thresholds "
                 f"{self._thresholds['clock_presence']}. "
             )
+
+        psus_load_failed, psus_load_report = self._check_individual_psu_load(
+            state["power_supply_loads"],
+            fail_str,
+        )
+        if psus_load_failed:
+            has_failed = True
+            report += psus_load_report
+
+        psus_failed, dead_psus_report = self._check_for_dead_psus(
+            state["power_supply_present"],
+            state["power_supply_voltages"],
+            state["power_supply_voltages_in"],
+        )
+        if all(psus_failed):
+            has_failed = True
+            report += dead_psus_report
 
         return has_failed, report
 
@@ -458,7 +556,10 @@ class SubrackHealthRules(HealthRules):
             has_degraded = True
             report += basic_report
         fan_degraded, fan_report = self._check_fan_speeds(
-            state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+            state["subrack_fan_speeds"],
+            state["subrack_scaled_fan_speeds"],
+            state["desired_fan_speeds"],
+            fail_str,
         )
         if fan_degraded:
             has_degraded = True
@@ -471,6 +572,22 @@ class SubrackHealthRules(HealthRules):
         if current_degraded:
             has_degraded = True
             report += current_report
+
+        psus_load_degraded, psus_report = self._check_individual_psu_load(
+            state["power_supply_loads"], fail_str
+        )
+        if psus_load_degraded:
+            has_degraded = True
+            report += psus_report
+
+        psus_defective, dead_psus_report = self._check_for_dead_psus(
+            state["power_supply_present"],
+            state["power_supply_voltages"],
+            state["power_supply_voltages_in"],
+        )
+        if any(psus_defective):
+            has_degraded = True
+            report += dead_psus_report
 
         return has_degraded, report
 
@@ -509,11 +626,16 @@ class SubrackHealthRules(HealthRules):
             "degraded_max_backplane_temp": 50.0,
             "failed_min_backplane_temp": 5.0,  # placeholder
             "degraded_min_backplane_temp": 10.0,
-            # fan speeds are marked  as dynamic thresholds (RPM)
+            # fan speeds are marked  as dynamic thresholds (PWM)
             "failed_fan_speed_diff": 10.0,  # placeholder
             "degraded_fan_speed_diff": 5.0,  # placeholder
             "failed_min_fan_speed": 20.0,  # placeholder
             "degraded_min_fan_speed": 30.0,  # placeholder
+            # "scaled fan speed" - estimated value from the pwm and rpm values
+            "failed_max_scaled_fan_speed": 9750,  # 150%
+            "degraded_max_scaled_fan_speed": 8125,  # 125%
+            # "degraded_min_scaled_fan_speed": 4875,  # 75%
+            # "failed_min_scaled_fan_speed": 1625,  # 25%
             # Voltage drop on TPMs (V)
             "failed_voltage_drop": 5.0,  # derived
             "degraded_voltage_drop": 3.0,  # derived
@@ -537,4 +659,6 @@ class SubrackHealthRules(HealthRules):
             "degraded_fraction_tpm_unknown": 0.0,  # fraction allowed before degraded
             "failed_fraction_tpm_unknown": 0.5,  # fraction allowed before failed
             "clock_presence": [],
+            "degraded_psu_load": 0.50,
+            "failed_psu_load": 0.95,
         }

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements polling management for a TileComponentManager."""
+
 from __future__ import annotations
 
 import time
@@ -185,7 +186,9 @@ class RequestIterator:
         "ADC_RMS",
         "BEAMFORMER_TABLE",
         "CHECK_CPLD_COMMS",
+        "FPGA_CURRENT_FRAME",
         "FPGA_REFERENCE_TIME",
+        "FPGAS_TIME",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
         "PENDING_DATA_REQUESTS",
@@ -211,7 +214,9 @@ class RequestIterator:
         "ADC_RMS",
         "BEAMFORMER_TABLE",
         "CHECK_CPLD_COMMS",
+        "FPGA_CURRENT_FRAME",
         "FPGA_REFERENCE_TIME",
+        "FPGAS_TIME",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
         "PENDING_DATA_REQUESTS",

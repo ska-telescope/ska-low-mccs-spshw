@@ -18,7 +18,7 @@ import json
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Callable, Final, Optional, cast
 
@@ -35,6 +35,7 @@ from ska_control_model import (
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.obs import SKAObsDevice
+from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango import AttrQuality
 from tango.server import attribute, command, device_property
 
@@ -80,6 +81,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
     DEFAULT_CSP_DST_PORT: Final = 4660
+    RFC_FORMAT: Final = "%Y-%m-%dT%H:%M:%S.%fZ"
+    FRAME_COUNTER_WRAP_PERIOD: Final = 1187473  # 2^40 * 1.08 µs (13.74 days)
+
     # -----------------
     # Device Properties
     # -----------------
@@ -122,6 +126,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # attributes, thereby stopping the linters from complaining about
         # "attribute-defined-outside-init" etc. We still need to make sure that
         # `init_device` re-initialises any values defined in here.
+        self._frame_wrap_timer: threading.Timer | None = None
+        self._frame_wrap_timer_stop_event = threading.Event()
+        self._frame_wrap_timer_lock = threading.Lock()
+
         super().__init__(*args, **kwargs)
 
         self._health_state: HealthState = HealthState.UNKNOWN
@@ -149,6 +157,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "tiles": (1, 1, 2),
         }
         super().init_device()
+
+        self._frame_wrap_timer_stop_event.clear()  # In case of re-initialisation
+        self._start_frame_wrap_timer()
 
         self._is_calibrated = False
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -223,6 +234,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
         # pylint: disable=attribute-defined-outside-init
         self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
+
+    def delete_device(self: SpsStation) -> None:
+        """Do any necessary cleanup."""
+        self._stop_frame_wrap_timer()
+        super().delete_device()
 
     def create_component_manager(
         self: SpsStation,
@@ -1155,10 +1171,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         tai_2000_epoch = 946684763
         # check syntax and positive time.
         # TODO Convert to astropy Time
-        rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
         try:
             # time_ref = Time(reference_time, format="isot").unix
-            dt = datetime.strptime(reference_time, rfc_format)
+            dt = datetime.strptime(reference_time, self.RFC_FORMAT)
             time_ref = dt.replace(tzinfo=timezone.utc).timestamp()
         except ValueError as error:
             self.logger.error(f"Invalid ISO time: {error}")
@@ -1169,9 +1184,56 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.component_manager.global_reference_time = (
             # Time(time_ref, format="unix").isot + "Z"
             datetime.strftime(
-                datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
+                datetime.fromtimestamp(time_ref, tz=timezone.utc), self.RFC_FORMAT
             )
         )
+
+    def _start_frame_wrap_timer(self: SpsStation) -> None:
+        """Schedule the next update of the timeToFrameCounterWrap attribute."""
+        with self._frame_wrap_timer_lock:
+            if self._frame_wrap_timer_stop_event.is_set():
+                return
+            if self._frame_wrap_timer:
+                self._frame_wrap_timer.cancel()
+            self._frame_wrap_timer = threading.Timer(
+                1.0, self._update_time_to_frame_counter_wrap
+            )
+            self._frame_wrap_timer.daemon = True
+            self._frame_wrap_timer.start()
+
+    def _update_time_to_frame_counter_wrap(self: SpsStation) -> None:
+        if self._frame_wrap_timer_stop_event.is_set():
+            return
+        try:
+            if self.component_manager.global_reference_time:
+                global_reference_dt = datetime.strptime(
+                    self.component_manager.global_reference_time, self.RFC_FORMAT
+                ).replace(tzinfo=timezone.utc)
+                wrap_time = global_reference_dt + timedelta(
+                    seconds=self.FRAME_COUNTER_WRAP_PERIOD
+                )
+                delta = wrap_time - datetime.now(tz=timezone.utc)
+                self.time_to_frame_counter_wrap = delta.total_seconds()
+        except Exception:  # pylint: disable=broad-exception-caught
+            self.logger.exception("Error updating timeToFrameCounterWrap signal.")
+        finally:
+            self._start_frame_wrap_timer()
+
+    def _stop_frame_wrap_timer(self) -> None:
+        self._frame_wrap_timer_stop_event.set()
+        if self._frame_wrap_timer is not None:
+            with self._frame_wrap_timer_lock:
+                self._frame_wrap_timer.cancel()
+                self._frame_wrap_timer = None
+
+    time_to_frame_counter_wrap = AttrSignal[float]()
+    timeToFrameCounterWrap = attribute_from_signal(  # noqa: N815
+        time_to_frame_counter_wrap,
+        abs_change=1,
+        doc="Number of seconds until the station's frame counter wraps around.",
+        min_alarm=0,
+        min_warning=86400,  # 24 hours notice of wrap-around
+    )
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: SpsStation) -> bool:

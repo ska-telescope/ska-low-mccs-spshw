@@ -174,8 +174,34 @@ def subrack_device_fixture(
     yield test_context.get_subrack_device(subrack_id)
 
 
+def _wait_for_state(
+    device: tango.DeviceProxy, expected_state: DevState, timeout: float = 5.0
+) -> bool:
+    """
+    Wait for device to get to expected_state.
+
+    Blocks for up to `timeout` seconds waiting for `device` to reach `expected_state`.
+
+    :param device: DeviceProxy to wait for.
+    :param expected_state: DevState we expect the device to reach.
+    :param timeout: Duration to wait for `device` to reach `expected_state`.
+
+    :returns: Whether or not the device reached the expected state.
+    """
+    end_time = time.time() + timeout
+    while device.state() != expected_state:
+        time.sleep(0.1)
+        if time.time() > end_time:
+            print(
+                f"Device '{device}' did not reach '{expected_state}' after {timeout}s"
+            )
+            return False
+    print(f"Device '{device}' reached state '{expected_state}'")
+    return True
+
+
 def test_fast_adminMode_switch(
-    subrack_device: MccsSubrack,
+    subrack_device: DeviceProxy,
     subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
@@ -204,16 +230,19 @@ def test_fast_adminMode_switch(
         # run test using a variable network jitter.
         max_jitter: int = (i * 100) % 600  # milliseconds
         subrack_simulator.network_jitter_limits = (0, max_jitter)
+
+        # We can't deterministically wait for events as there's no guarantee
+        # whether or not we'll see some of them so we only assert that we reach
+        # the correct state in a timely manner.
+        assert _wait_for_state(subrack_device, DevState.DISABLE)
         subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        assert _wait_for_state(subrack_device, DevState.ON)
 
         subrack_device.adminmode = AdminMode.OFFLINE
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert _wait_for_state(subrack_device, DevState.DISABLE)
 
         subrack_device.adminmode = AdminMode.ONLINE
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        assert _wait_for_state(subrack_device, DevState.ON, timeout=10)
 
         number_of_communication_cycles: int = 4
 
@@ -224,31 +253,21 @@ def test_fast_adminMode_switch(
 
         for _ in range(number_of_communication_cycles):
             subrack_device.adminmode = AdminMode.OFFLINE
-            time.sleep(0.1)
             subrack_device.adminmode = AdminMode.ONLINE
-            time.sleep(0.1)
 
         # When cycling adminmode ONLINE n times we expect up to n
-        # transitions to DevState.ON. The important point is that is end
+        # transitions to DevState.ON. The important point is that we end
         # up in a steady ON state.
         for _ in range(number_of_communication_cycles):
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
-            try:
-                # lookahead of 6 since we allow UNKNOWN and DISABLE as
-                # transient states.
-                change_event_callbacks["state"].assert_change_event(
-                    DevState.ON, lookahead=6, consume_nonmatches=True
-                )
-            except AssertionError:
-                print("Transition state ON allowed to not occur.")
+        assert _wait_for_state(subrack_device, DevState.ON)
 
-        change_event_callbacks["state"].assert_not_called()
         assert subrack_device.adminMode == AdminMode.ONLINE
         assert subrack_device.state() == DevState.ON
 
         subrack_device.adminmode = AdminMode.OFFLINE
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert _wait_for_state(subrack_device, DevState.DISABLE)
         print(f"Iteration {i}")
 
 

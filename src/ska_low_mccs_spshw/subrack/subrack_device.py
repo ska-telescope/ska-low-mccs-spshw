@@ -1495,6 +1495,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param power: the power state of the component
         :param health: the health state of a subordinate component.
         :param pdu: any changes to the pdu device.
+        :param power_marshaller: any changes to the power_marshaller device.
         :param health_status: any changes to the health_status variables.
         :param kwargs: other state updates
         """

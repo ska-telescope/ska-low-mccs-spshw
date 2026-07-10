@@ -1,5 +1,9 @@
 # Version History
 
+## 12.2.3
+
+* [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
+
 ## 12.2.2
 
 * [THORN-157] Fix SpsStation.HealthState under adminmode switches.

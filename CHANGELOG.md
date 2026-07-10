@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
+
 ## 14.1.0
 
 * [THORN-682] Update ska-low-mccs-daq reference to 7.0.2

@@ -1189,18 +1189,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
         for attr_name in self._attribute_state:
-            verify_events = (
-                False if attr_name == "pointingDelays" else self.VerifyEvents
-            )
-            self.set_change_event(attr_name, True, verify_events)
-            self.set_archive_event(attr_name, True, verify_events)
+            # VerifyEvents now applies to archive events only. Change events are
+            # always pushed.
+            self.set_change_event(attr_name, True, False)
+            self.set_archive_event(attr_name, True, self.VerifyEvents)
 
         for attr_name in [
             "firmwareVoltageThresholds",
             "firmwareCurrentThresholds",
             "firmwareTemperatureThresholds",
         ]:
-            self.set_change_event(attr_name, True, self.VerifyEvents)
+            self.set_change_event(attr_name, True, False)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
         self.init_completed()
 
@@ -1273,7 +1272,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
 
-        self.set_change_event("healthState", True, self.VerifyEvents)
+        self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, self.VerifyEvents)
 
         if self.UseAttributesForHealth:

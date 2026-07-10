@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
+
 ## 14.0.0
 
 * [THORN-656] Updated `tpm-api` from **3.2.1** to **4.0.0**.

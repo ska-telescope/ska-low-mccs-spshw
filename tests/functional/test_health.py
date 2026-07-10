@@ -832,7 +832,16 @@ def read_all_tile_attributes(
     :param excluded_tile_attributes: A list of attributes to not check.
     """
     # Allow a time for all attributes to be polled.
-    time.sleep(10)
+    # Slight regression from fix implementation SKB-1440.
+    # We split up a poll into 3 polls.
+    # This meant that the we have 2 extra sleeps
+    # before all attributes are polled.
+    # This resulted in a failure where 'pointingDelays' did not update in 10 seconds.
+    # Given the deployed PollRate is 0.4 this is an additional 0.8s sleep.
+    # I am accepting this regression since PollRate is configurable anyway
+    # and adding 1 second.
+    time.sleep(11)
+
     tiles = station_devices["Tiles"]
     for i, tile in enumerate(tiles):
         tile_excluded_attributes = excluded_tile_attributes

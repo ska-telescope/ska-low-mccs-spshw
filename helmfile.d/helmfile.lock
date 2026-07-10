@@ -1,28 +1,31 @@
-version: 1.1.0
+version: 0.169.2
 dependencies:
-  - name: jupyterhub
-    repository: https://jupyterhub.github.io/helm-chart
-    version: 3.1.0
-  - name: ska-ser-skuid
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 3.3.3
-  - name: ska-tango-base
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 0.4.23
-  - name: ska-tango-tangogql
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 1.3.12
-  - name: ska-tango-taranta
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 2.5.1
-  - name: ska-tango-taranta-auth
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 0.1.9
-  - name: ska-tango-taranta-dashboard
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 1.4.1
-  - name: ska-tango-taranta-dashboard-pvc
-    repository: https://artefact.skao.int/repository/helm-internal
-    version: 1.4.1
-digest: sha256:dac64dcd5f7bc80af5b097c753b333dd9fcec32adc96f9e55820a96ab0174bab
-generated: "2025-08-21T19:37:13.383395305+08:00"
+- name: jupyterhub
+  repository: https://jupyterhub.github.io/helm-chart
+  version: 3.1.0
+- name: ska-sat-lmc
+  repository: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
+  version: 1.0.0-dev.c99938c45
+- name: ska-ser-skuid
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 3.3.3
+- name: ska-tango-base
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 0.4.24
+- name: ska-tango-tangogql
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 1.3.12
+- name: ska-tango-taranta
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 2.5.1
+- name: ska-tango-taranta-auth
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 0.1.9
+- name: ska-tango-taranta-dashboard
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 1.4.1
+- name: ska-tango-taranta-dashboard-pvc
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 1.4.1
+digest: sha256:31a8958f321ed04abeabb3cc92c9ad5f87f7fe989586202275d1e76861da8e89
+generated: "2026-07-10T16:21:50.418758123+01:00"

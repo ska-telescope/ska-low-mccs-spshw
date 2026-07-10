@@ -201,6 +201,8 @@ repositories:
     url: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
   - name: ska-tango-devices
     url: https://gitlab.com/api/v4/projects/66823602/packages/helm/dev
+  - name: ska-sat-lmc
+    url: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
 
 releases:
   - name: ska-low-mccs-spshw
@@ -214,6 +216,54 @@ releases:
       - .deploy/helmfile.d/templates/spshw/ska-low-mccs-daq.yaml.gotmpl
       - .deploy/helmfile.d/templates/helm-values.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/pdus.yaml.gotmpl
+
+{{- $sat_service_provided := dig "platform" "sat" "" .Values}}
+{{- if not $sat_service_provided}}
+  - name: ska-sat-lmc
+    namespace: {{.Namespace | default "ska-low-mccs"}}
+    chart: ska-sat-lmc/ska-sat-lmc
+    version: 1.0.0-dev.c99938c45
+    values:
+      - ska-tango-devices:
+          deviceServerTypes:
+            WhiteRabbitSimulator:
+              metadata:
+                component: sat
+              image:
+                registry: artefact.skao.int
+                name: ska-sat-lmc
+                tag: 1.0.0-dirty
+                pullPolicy: IfNotPresent
+              command: WhiteRabbitSimulator
+              resources:
+                limits:
+                  memory: 2Gi
+                requests:
+                  cpu: 20m
+                  memory: 50Mi
+              livenessProbe:
+                initialDelaySeconds: 0
+                periodSeconds: 10
+                timeoutSeconds: 3
+                successThreshold: 1
+                failureThreshold: 3
+              readinessProbe:
+                initialDelaySeconds: 0
+                periodSeconds: 10
+                timeoutSeconds: 3
+                successThreshold: 1
+                failureThreshold: 3
+          deviceServers:
+            WhiteRabbitSimulator:
+              whiterabbitsim-1:
+                devices:
+                  WhiteRabbitSimulator:
+                  - low-sat/whiterabbitsimulator/ci-1
+          devices:
+            WhiteRabbitSimulator:
+              low-sat/whiterabbitsimulator/ci-1:
+                Host: 127.0.0.1
+{{- end}}
 
 {{- $_tango_host_provided := dig "platform" "cluster" "services" "tango-base" "tango-host" "" .Values}}
 {{- $tango_host_provided := dig "overrides" "cluster" "services" "tango-base" "tango-host" $_tango_host_provided .Values}}

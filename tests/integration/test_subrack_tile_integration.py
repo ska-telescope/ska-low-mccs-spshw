@@ -412,10 +412,10 @@ class TestMccsTileTpmDriver:
             "Initialised"
         )
         # check that the fpga time is moving.
-        initial_time = tile_device.fpgasUnixTime[0]
+        initial_time = tile_device.GetFpgaUnixTime()[0]
         sleep_time = 2.5
         time.sleep(sleep_time)
-        final_time = tile_device.fpgasUnixTime[0]
+        final_time = tile_device.GetFpgaUnixTime()[0]
 
         assert (final_time - initial_time) >= int(sleep_time)
 

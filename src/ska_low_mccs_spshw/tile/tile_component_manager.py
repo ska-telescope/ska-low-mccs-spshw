@@ -116,6 +116,18 @@ _ATTRIBUTE_MAP: Final = {
     "RFI_COUNT": "rfi_count",
     "40G_PACKET_COUNT": "40g_packet_count",
     "POINTING_DELAYS": "pointing_delays",
+    "FPGAS_TIME": "fpgas_time",
+    "FPGA_CURRENT_FRAME": "fpga_current_frame",
+}
+
+# Attributes derived from (and published alongside)
+# a raw polled attribute,
+# rather than being polled independently.
+# When the raw attribute goes stale,
+# its derived counterpart must be invalidated too.
+_DERIVED_ATTRIBUTE_MAP: Final = {
+    "fpgas_time": "fpga_time",
+    "fpga_current_frame": "fpga_frame_time",
 }
 
 
@@ -512,7 +524,7 @@ class TileComponentManager(
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_pending_data_requests,
-                    publish=False,
+                    publish=True,
                 )
             case "PPS_DELAY":
                 request = TileRequest(
@@ -560,12 +572,25 @@ class TileComponentManager(
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     lambda: self.formatted_fpga_reference_time,
+                    publish=True,
                 )
             case "TILE_BEAMFORMER_FRAME":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.current_tile_beamformer_frame,
                     publish=True,
+                )
+            case "FPGAS_TIME":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self._poll_fpgas_time,
+                    publish=False,
+                )
+            case "FPGA_CURRENT_FRAME":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self._poll_fpga_current_frame,
+                    publish=False,
                 )
             case "RFI_COUNT":
                 request = TileRequest(
@@ -755,10 +780,11 @@ class TileComponentManager(
             val = names.pop()
             if _ATTRIBUTE_MAP.get(val) is not None:
                 mapped_val = _ATTRIBUTE_MAP[val]
+                invalidated = {mapped_val: None}
+                if mapped_val in _DERIVED_ATTRIBUTE_MAP:
+                    invalidated[_DERIVED_ATTRIBUTE_MAP[mapped_val]] = None
                 try:
-                    self._update_attribute_callback(
-                        mark_invalid=True, **{mapped_val: None}
-                    )
+                    self._update_attribute_callback(mark_invalid=True, **invalidated)
                 except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"Issue marking attribute {mapped_val} INVALID. {e}"
@@ -922,13 +948,19 @@ class TileComponentManager(
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
         # Pass the task callback to be updated by command proxy.
-        subrack_off_command_proxy(
+        result_code, _ = subrack_off_command_proxy(
             arg=self._subrack_tpm_id,
             is_lrc=True,
             timeout=_POWER_COMMAND_TIMEOUT,
             wait_for_result=True,
             task_callback=task_callback,
         )
+        if result_code == ResultCode.OK:
+            # Since we will continue to poll hardware when adminMode is ONLINE.
+            # We have added this extra logging information for clarity.
+            # It is expected that unhappy paths are flagged appropriatly by
+            # the MccsCommandProxy.
+            self.logger.info("Off command completed")
 
     def do_on(
         self: TileComponentManager,
@@ -1140,7 +1172,7 @@ class TileComponentManager(
     def _subrack_says_state_changed(
         self: TileComponentManager,
         event_name: str,
-        event_value: list[float] | None,
+        event_value: tango.DevState | None,
         event_quality: tango.AttrQuality,
     ) -> None:
         """
@@ -1253,8 +1285,49 @@ class TileComponentManager(
 
         :return: information relevant to tile.
         """
-        with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
+        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
             return self.tile.info
+
+    def refresh_tile_info(self: TileComponentManager) -> None:
+        """Re-read tile_info from hardware and publish the new value."""
+        self._update_attribute_callback(tile_info=self.tile_info())
+
+    def _read_40g_destination_ips(
+        self: TileComponentManager,
+    ) -> tuple[list[str], list[int], str, str]:
+        """
+        Read all 40G destination IPs/ports, and the per-FPGA IP.
+
+        :return: all destination IPs, all destination ports, and the
+            FPGA1/FPGA2 destination IP.
+        """
+        forty_gb_cores = self.get_40g_configuration()
+        destination_ips = [core["dst_ip"] for core in forty_gb_cores]
+        destination_ports = [core["dst_port"] for core in forty_gb_cores]
+        dst_ip_40g_fpga1 = next(
+            (core["dst_ip"] for core in forty_gb_cores if core.get("core_id") == 0),
+            "",
+        )
+        dst_ip_40g_fpga2 = next(
+            (core["dst_ip"] for core in forty_gb_cores if core.get("core_id") == 1),
+            "",
+        )
+        return destination_ips, destination_ports, dst_ip_40g_fpga1, dst_ip_40g_fpga2
+
+    def refresh_40g_configuration(self: TileComponentManager) -> None:
+        """Re-read 40G core configuration from hardware and publish it."""
+        (
+            destination_ips,
+            destination_ports,
+            dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2,
+        ) = self._read_40g_destination_ips()
+        self._update_attribute_callback(
+            forty_gb_destination_ips=destination_ips,
+            forty_gb_destination_ports=destination_ports,
+            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
+        )
 
     @property
     def global_reference_time(self: TileComponentManager) -> str | None:
@@ -1814,6 +1887,8 @@ class TileComponentManager(
         station_id = self._with_hardware_lock(self.tile.get_station_id)
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
         firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
+        firmware_version = self.firmware_version
+        self.refresh_tile_info()
         # ===========================================================================
 
         # Defaults when TPM is not programmed
@@ -1827,13 +1902,13 @@ class TileComponentManager(
         broadband_rfi_factor = None
         dst_ip_40g_fpga1 = ""
         dst_ip_40g_fpga2 = ""
+        forty_gb_destination_ips: list[str] = []
+        forty_gb_destination_ports: list[int] = []
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
-        adc_rms = None
-        tile_health_structure = None
-        preadu_levels = None
         pps_delay_correction = None
+        is_station_beam_flagging_enabled = None
         if is_programmed:
             _csp_rounding_value = self._with_hardware_lock(self.tile.get_csp_rounding)
             csp_rounding = [_csp_rounding_value] * 384
@@ -1850,20 +1925,14 @@ class TileComponentManager(
             broadband_rfi_factor = self._with_hardware_lock(
                 lambda: self.tile.broadband_rfi_factor
             )
-            adc_rms = self._with_hardware_lock(self.tile.get_adc_rms)
-            tile_health_structure = self._with_hardware_lock(
-                self.tile.get_health_status
-            )
-            preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
             pps_delay_correction = self._get_pps_delay_correction()
-            core0 = self._with_hardware_lock(
-                lambda: self.tile.get_40g_core_configuration(0, 0) or {}
-            )
-            core1 = self._with_hardware_lock(
-                lambda: self.tile.get_40g_core_configuration(1, 0) or {}
-            )
-            dst_ip_40g_fpga1 = core0.get("dst_ip", "")
-            dst_ip_40g_fpga2 = core1.get("dst_ip", "")
+            is_station_beam_flagging_enabled = self.is_station_beam_flagging_enabled
+            (
+                forty_gb_destination_ips,
+                forty_gb_destination_ports,
+                dst_ip_40g_fpga1,
+                dst_ip_40g_fpga2,
+            ) = self._read_40g_destination_ips()
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1875,14 +1944,15 @@ class TileComponentManager(
             beamformer_regions=beamformer_regions,
             pfb_version=pfb_version,
             firmware_thresholds=firmware_thresholds,
+            firmware_version=firmware_version,
             rfi_blanking_enabled_antennas=rfi_blanking_enabled_antennas,
             broadband_rfi_factor=broadband_rfi_factor,
-            adc_rms=adc_rms,
-            tile_health_structure=tile_health_structure,
-            preadu_levels=preadu_levels,
             pps_delay_correction=pps_delay_correction,
+            is_station_beam_flagging_enabled=is_station_beam_flagging_enabled,
             dst_ip_40g_fpga1=dst_ip_40g_fpga1,
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,
+            forty_gb_destination_ips=forty_gb_destination_ips,
+            forty_gb_destination_ports=forty_gb_destination_ports,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2127,6 +2197,20 @@ class TileComponentManager(
             raise ConnectionError("Cannot read time from FPGA")
         return self._fpgas_time
 
+    def _poll_fpgas_time(self: TileComponentManager) -> None:
+        """
+        Read the FPGA unix time once and publish both fpgasUnixTime and fpgaTime.
+
+        fpgaTime is just a formatted view of fpgasUnixTime, so this avoids
+        polling hardware twice for what is effectively the same reading.
+        """
+        fpgas_time = self.fpgas_time
+        fpga_time = self._tile_time.format_time_from_timestamp(fpgas_time[0])
+        self._update_attribute_callback(
+            fpgas_time=fpgas_time,
+            fpga_time=fpga_time,
+        )
+
     @property
     def fpga_reference_time(self: TileComponentManager) -> int:
         """
@@ -2201,6 +2285,19 @@ class TileComponentManager(
         if failed:
             raise ConnectionError("Cannot read time from FPGA")
         return self._fpga_current_frame
+
+    def _poll_fpga_current_frame(self: TileComponentManager) -> None:
+        """
+        Read the FPGA current frame.
+
+        fpgaFrameTime is just a formatted view of currentFrame, so this avoids
+        polling hardware twice for what is effectively the same reading.
+        """
+        fpga_current_frame = self.fpga_current_frame
+        self._update_attribute_callback(
+            fpga_current_frame=fpga_current_frame,
+            fpga_frame_time=self._tile_time.format_time_from_frame(fpga_current_frame),
+        )
 
     @property
     @check_communicating
@@ -3646,44 +3743,27 @@ class TileComponentManager(
         self.logger.debug(
             f"get_40g_configuration: core:{core_id} entry:{arp_table_entry}"
         )
-        self._forty_gb_core_list = []
-        if core_id == -1 or core_id is None:
-            for icore in range(2):
-                for arp_table_entry_id in range(4):
-                    dict_to_append = self._get_40g_core_configuration(
-                        icore, arp_table_entry_id
-                    )
-                    if dict_to_append is not None:
-                        self._forty_gb_core_list.append(dict_to_append)
-        else:
-            if self._get_40g_core_configuration(core_id, arp_table_entry):
-                self._forty_gb_core_list = [
-                    self._get_40g_core_configuration(core_id, arp_table_entry)
-                ]
-        return self._forty_gb_core_list
-
-    def _get_40g_core_configuration(
-        self: TileComponentManager, core_id: int, arp_table_entry: int
-    ) -> dict[str, Any] | None:
-        """
-        Return a 40G configuration.
-
-        :param core_id: id of the core for which a configuration is to
-            be return. Defaults to -1, in which case all cores
-            configurations are returned
-        :param arp_table_entry: ARP table entry to use
-
-        :return: core configuration or list of core configurations
-        """
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            return self.tile.get_40g_core_configuration(
-                core_id,
-                arp_table_entry,
-            )
+            if core_id == -1 or core_id is None:
+                self._forty_gb_core_list = [
+                    config
+                    for icore in range(2)
+                    for arp_table_entry_id in range(4)
+                    if (
+                        config := self.tile.get_40g_core_configuration(
+                            icore, arp_table_entry_id
+                        )
+                    )
+                    is not None
+                ]
+            else:
+                config = self.tile.get_40g_core_configuration(core_id, arp_table_entry)
+                self._forty_gb_core_list = [config] if config else []
+        return self._forty_gb_core_list
 
     def configure_40g_core(
         self: TileComponentManager,
@@ -4013,7 +4093,6 @@ class TileComponentManager(
         ):
             return self.tile.beamformer_is_running(channel_groups=channel_groups)
 
-    @property
     @check_communicating
     def running_beams(self: TileComponentManager) -> list[bool]:
         """
@@ -4520,6 +4599,10 @@ class TileComponentManager(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.enable_station_beam_flagging()
+            flagging_enabled = self.is_station_beam_flagging_enabled
+        self._update_attribute_callback(
+            is_station_beam_flagging_enabled=flagging_enabled
+        )
 
     def disable_station_beam_flagging(self: TileComponentManager) -> None:
         """Disable station beam flagging."""
@@ -4527,6 +4610,10 @@ class TileComponentManager(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.disable_station_beam_flagging()
+            flagging_enabled = self.is_station_beam_flagging_enabled
+        self._update_attribute_callback(
+            is_station_beam_flagging_enabled=flagging_enabled
+        )
 
     def get_voltage_warning_thresholds(
         self: TileComponentManager,

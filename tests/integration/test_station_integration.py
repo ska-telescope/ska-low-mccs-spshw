@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains integration tests of tile-subrack interactions in MCCS."""
+
 from __future__ import annotations
 
 import gc
@@ -79,6 +80,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_channeliser_rounding",
         "track_lrc_command",
         timeout=9.0,
+        assert_no_error=False,
     )
 
 

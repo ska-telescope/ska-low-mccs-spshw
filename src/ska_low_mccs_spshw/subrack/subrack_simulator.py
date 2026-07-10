@@ -130,6 +130,16 @@ class SubrackSimulator(SubrackProtocol):
             "default": [95.0, 96.0, 97.0, 98.0],
             "writable": False,
         },
+        "subrack_fan_speeds": {
+            "length": 4,
+            "default": [
+                0.95 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+                0.96 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+                0.97 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+                0.98 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+            ],
+            "writable": False,
+        },
         "subrack_fan_mode": {
             "length": 4,
             "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
@@ -431,10 +441,11 @@ class SubrackSimulator(SubrackProtocol):
     def _get_attribute_subrack_fan_speeds(
         self: SubrackSimulator,
     ) -> list[float]:
-        return [
+        self._attribute_values["subrack_fan_speeds"] = [
             percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
             for percent in self._attribute_values["subrack_fan_speeds_percent"]
         ]
+        return self._attribute_values["subrack_fan_speeds"]
 
     def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
         """
@@ -523,6 +534,16 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values["tpm_on_off"] = [True] * SubrackData.TPM_BAY_COUNT
 
     def _get_health_status(self: SubrackSimulator, arg: str) -> dict:
+        psu_currents = cast(
+            list[float], self._attribute_values["power_supply_currents"]
+        )
+        psu_voltages = cast(
+            list[float], self._attribute_values["power_supply_voltages"]
+        )
+        psu_powers = [
+            current * voltage for current, voltage in zip(psu_currents, psu_voltages)
+        ]
+
         return {
             "temperatures": {
                 "SMM1": 40,
@@ -597,12 +618,12 @@ class SubrackSimulator(SubrackProtocol):
                     "PSU2": False,
                 },
                 "voltage_out": {
-                    "PSU1": 12.0,
-                    "PSU2": 12.1,
+                    "PSU1": psu_voltages[0],
+                    "PSU2": psu_voltages[1],
                 },
                 "power_out": {
-                    "PSU1": 4.2 * 12,
-                    "PSU2": 5.8 * 12.1,
+                    "PSU1": psu_powers[0],
+                    "PSU2": psu_powers[1],
                 },
                 "voltage_in": {
                     "PSU1": 230,

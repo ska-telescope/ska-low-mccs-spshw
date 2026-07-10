@@ -228,8 +228,6 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "buildState",  # Mismatch between cpp and tango args.
         "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
-        "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
-        "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # This is only available in specific bios versions
         # (the simulator is configured to be on a version > 0.6.0 hence
@@ -366,6 +364,35 @@ def station_delays_corrected(
     :param station_devices: A fixture with the station devices.
     :param station_name: the name of the station under test.
     """
+
+    def _wait_for_valid_pps_reading(timeout: float = 10.0) -> None:
+        """
+        Check for a valid reading before deadline exceeded.
+
+        :param timeout: time to wait for condition in seconds.
+
+        :raises TimeoutError: When the deadline is exceeded.
+        """
+        tiles = station_devices["Tiles"]
+        deadline = time.monotonic() + timeout
+
+        while time.monotonic() < deadline:
+            if all(
+                tile.read_attribute("ppsDelay").quality == tango.AttrQuality.ATTR_VALID
+                for tile in tiles
+            ):
+                return
+
+            time.sleep(0.2)
+
+        raise TimeoutError(f"PPS reading did not become valid within {timeout}s")
+
+    # --------------------------------------------------------------
+    # This attribute is polled by the PollingLoop.
+    # After initialisation this can take a few poll loops to update.
+    _wait_for_valid_pps_reading()
+    # --------------------------------------------------------------
+
     for station in station_devices["Station"]:
         delays = list(station.ppsDelays)
         synchronised_delays = [d for d in delays if d != 0]

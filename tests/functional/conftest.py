@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains pytest-specific test harness for SPSHW functional tests."""
+
 from __future__ import annotations
 
 import json
@@ -580,6 +581,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_mode",
         "subrack_fan_speeds",
         "subrack_fan_speeds_percent",
+        "subrack_max_fan_speeds",
         "subrack_tpm_power_state",
         "subrack_tpm_present",
         "daq_state",
@@ -808,13 +810,20 @@ def synchronised_tile_device_fixture(
     :yield: a 'DeviceProxy' to the Synchronised tile.
     """
     if tile_device.adminMode != AdminMode.ONLINE:
+        initial_adminmode = tile_device.adminMode
         tile_device.adminMode = AdminMode.ONLINE
-        AttributeWaiter(timeout=60).wait_for_value(
-            tile_device,
-            "tileProgrammingState",
-            None,
-            lookahead=5,
-        )
+
+        # Only expect an update to the tileprogrammingstate
+        # when transitioning from OFFLINE to ONLINE.
+        # A transition from a subset of ONLINE (i.e. ENGINEERING )
+        # does not trigger an evaluation of tileprogrammingstate.
+        if initial_adminmode == AdminMode.OFFLINE:
+            AttributeWaiter(timeout=60).wait_for_value(
+                tile_device,
+                "tileProgrammingState",
+                None,
+                lookahead=5,
+            )
 
     # Grab the previous GRT, used to return to this state in teardown.
     initial_grt = tile_device.globalreferenceTime

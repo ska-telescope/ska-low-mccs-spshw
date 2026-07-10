@@ -293,6 +293,11 @@ ska-tango-devices:
       powerSupplyVoltages->max_alarm: 12.6
       powerSupplyVoltages->min_alarm: 11.4
 
+      # subrackMaxFanSpeeds->min_alarm: 1625
+      # subrackMaxFanSpeeds->min_warning: 4875
+      subrackMaxFanSpeeds->max_alarm: 9750
+      subrackMaxFanSpeeds->max_warning: 8125
+
       internalVoltages1V1->max_alarm: 1.13
       internalVoltages1V1->min_alarm: 1.07
 
@@ -333,3 +338,35 @@ ska-tango-devices:
       tpmVoltages->min_alarm: 11.4
 
       tpmPowers->max_alarm: 124.0
+
+      psu1PowerIn->max_alarm: 600.0
+      psu1PowerIn->max_warning: 575.00
+      psu2PowerIn->max_alarm: 600.0
+      psu2PowerIn->max_warning: 575.00
+
+      psu1PowerOut->max_alarm: 1140.0
+      psu1PowerOut->max_warning: 600.0
+      psu2PowerOut->max_alarm: 1140.0
+      psu2PowerOut->max_warning: 600.0
+
+      # Nominally 230V
+      psu1VoltageIn->max_alarm: 260.0
+      psu1VoltageIn->max_warning: 245.0
+      psu1VoltageIn->min_warning: 215.0
+      psu1VoltageIn->min_alarm: 200.0
+
+      psu2VoltageIn->max_alarm: 260.0
+      psu2VoltageIn->max_warning: 245.0
+      psu2VoltageIn->min_warning: 215.0
+      psu2VoltageIn->min_alarm: 200.0
+
+      # Nominally 12V
+      psu1VoltageOut->max_alarm: 16.0
+      psu1VoltageOut->max_warning: 14.0
+      psu1VoltageOut->min_warning: 10.0
+      psu1VoltageOut->min_alarm: 8.0
+
+      psu2VoltageOut->max_alarm: 16.0
+      psu2VoltageOut->max_warning: 14.0
+      psu2VoltageOut->min_warning: 10.0
+      psu2VoltageOut->min_alarm: 8.0

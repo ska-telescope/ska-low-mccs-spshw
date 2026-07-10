@@ -437,6 +437,138 @@ class _TileAccessRecorder:
         self._wrapped[key] = value
 
 
+class _LockHoldTracker:
+    """
+    A transparent proxy around a lock that tracks whether it is held.
+
+    Wraps ``TileComponentManager._hardware_lock`` so tests can check whether
+    the lock is currently held without relying on interpreter-private lock
+    internals (e.g. ``RLock._is_owned``).
+    """
+
+    def __init__(self: "_LockHoldTracker", wrapped: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param wrapped: the lock to wrap and observe.
+        """
+        self._wrapped = wrapped
+        self._depth = 0
+
+    @property
+    def held(self: "_LockHoldTracker") -> bool:
+        """
+        Return whether the wrapped lock is currently held.
+
+        :return: True if the wrapped lock is currently held by someone.
+        """
+        return self._depth > 0
+
+    def acquire(self: "_LockHoldTracker", *args: Any, **kwargs: Any) -> bool:
+        """
+        Acquire the wrapped lock, tracking whether it is now held.
+
+        :param args: positional arguments to forward to the wrapped lock.
+        :param kwargs: keyword arguments to forward to the wrapped lock.
+
+        :return: True if the lock was acquired.
+        """
+        acquired = self._wrapped.acquire(*args, **kwargs)
+        if acquired:
+            self._depth += 1
+        return acquired
+
+    def release(self: "_LockHoldTracker") -> None:
+        """Release the wrapped lock."""
+        self._wrapped.release()
+        self._depth -= 1
+
+
+class _LockCheckingTileProxy:
+    """
+    A transparent proxy that checks a hardware lock is held on every access.
+
+    Used to verify that whenever the component manager's poll loop reaches
+    into the tile (or simulator) it does so only while holding
+    ``_hardware_lock``. Accesses from threads other than the polling thread
+    are ignored, since they take the lock through other code paths (e.g.
+    long running commands), and asserting on them here would just duplicate
+    that coverage.
+    """
+
+    def __init__(
+        self: "_LockCheckingTileProxy", wrapped: Any, lock_tracker: _LockHoldTracker
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param wrapped: the tile (or simulator) to wrap and observe.
+        :param lock_tracker: tracker for the lock expected to be held.
+        """
+        self._wrapped = wrapped
+        self._lock_tracker = lock_tracker
+        self.accesses_without_lock: list[str] = []
+
+    def _check(self: "_LockCheckingTileProxy", name: str) -> None:
+        """
+        Record an access made by the polling thread without the lock held.
+
+        :param name: a label identifying the access that was made.
+        """
+        if threading.current_thread().name != "Polling thread":
+            return
+        if not self._lock_tracker.held:
+            self.accesses_without_lock.append(name)
+
+    def __getattr__(self: "_LockCheckingTileProxy", name: str) -> Any:
+        """
+        Forward an attribute access to the wrapped tile.
+
+        get_request() builds each TileRequest with a bound method taken
+        from the tile (e.g. ``self.tile.get_health_status``) *before*
+        poll() acquires the hardware lock — only the later call actually
+        touches hardware. So a plain (non-callable) attribute is checked
+        immediately, but a callable is wrapped so the lock is checked at
+        call time instead, when the access actually happens.
+
+        :param name: the name of the attribute being accessed.
+
+        :return: the corresponding attribute of the wrapped tile, wrapped
+            to check the lock at call time if it is callable.
+        """
+        attr = getattr(self._wrapped, name)
+        if not callable(attr):
+            self._check(name)
+            return attr
+
+        def _checked_call(*args: Any, **kwargs: Any) -> Any:
+            self._check(f"{name}()")
+            return attr(*args, **kwargs)
+
+        return _checked_call
+
+    def __getitem__(self: "_LockCheckingTileProxy", key: Any) -> Any:
+        """
+        Check the lock is held, then forward a register read.
+
+        :param key: the register (or address) being read.
+
+        :return: the corresponding value from the wrapped tile.
+        """
+        self._check(f"__getitem__[{key}]")
+        return self._wrapped[key]
+
+    def __setitem__(self: "_LockCheckingTileProxy", key: Any, value: Any) -> None:
+        """
+        Check the lock is held, then forward a register write.
+
+        :param key: the register (or address) being written.
+        :param value: the value to write.
+        """
+        self._check(f"__setitem__[{key}]")
+        self._wrapped[key] = value
+
+
 # pylint: disable=too-many-lines, too-many-public-methods
 class TestMccsTile:
     """
@@ -1254,6 +1386,56 @@ class TestMccsTile:
             "Reading the following attributes reached into the tile/simulator "
             "directly, instead of using the cache populated by polling: "
             f"{recorder.accesses_outside_poll}."
+        )
+
+    def test_poll_requests_hold_hardware_lock_when_accessing_tile(
+        self: TestMccsTile,
+        on_tile_device: DeviceProxy,
+        tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
+        poll_rate: float,
+    ) -> None:
+        """
+        Test that every poll request accesses the tile with the lock held.
+
+        The ADC health read used to fetch PLL status, SYSREF counters and
+        SYSREF timing requirements for all 16 ADCs in a single 'ADCS' poll,
+        holding the hardware lock for the whole read. It is now split into
+        three separate poll requests, so the lock is claimed and released
+        once per sub-group instead of once for all three. This guards that
+        split (and any future poll request) by asserting that the polling
+        thread never reaches into the tile/simulator without first having
+        acquired ``_hardware_lock``.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to a device under test that has
+            already been driven to the ON state, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend TileSimulator that the component
+            manager polls.
+        :param tile_component_manager: the injected TileComponentManager.
+        :param poll_rate: fixture yielding the poll rate the device is
+            configured with.
+        """
+        lock_tracker = _LockHoldTracker(tile_component_manager._hardware_lock)
+        tile_proxy = _LockCheckingTileProxy(tile_simulator, lock_tracker)
+        original_lock = tile_component_manager._hardware_lock
+        tile_component_manager._hardware_lock = lock_tracker  # type: ignore[assignment]
+        tile_component_manager.tile = tile_proxy  # type: ignore[assignment]
+        try:
+            # This latency represents the average time to process a poll.
+            latency = 0.13
+            time_to_poll_all_attributes = (poll_rate + latency) * len(
+                RequestIterator.INITIALISED_POLLED_ATTRIBUTES
+            )
+            time.sleep(time_to_poll_all_attributes)
+        finally:
+            tile_component_manager.tile = tile_simulator
+            tile_component_manager._hardware_lock = original_lock
+
+        assert not tile_proxy.accesses_without_lock, (
+            "The polling thread accessed the tile/simulator without holding "
+            f"the hardware lock for: {tile_proxy.accesses_without_lock}."
         )
 
     def test_healthState(

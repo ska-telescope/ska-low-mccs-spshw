@@ -1139,7 +1139,27 @@ class TileSimulator:
             # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.
             return {"alarms": self._tile_health_structure["alarms"]}
+        if "subgroup" in kwargs:
+            subgroup = kwargs["subgroup"]
+            adc_subgroup = self._tile_health_structure["adcs"][subgroup]
+            return {"adcs": {subgroup: copy.deepcopy(adc_subgroup)}}
         return copy.deepcopy(self._tile_health_structure)
+
+    def define_monitoring_point_filter(
+        self: TileSimulator, path: str, override: bool = True, **kwargs: Any
+    ) -> None:
+        """
+        No-op filter registration, kept for API compatibility.
+
+        Real hardware uses this to tag monitoring points so
+        get_health_status(subgroup=...) can select just one ADC health
+        sub-group; get_health_status already special-cases 'subgroup'
+        directly, so there is nothing to register here.
+
+        :param path: kept for API compatibility with ska_low_sps_tpm_api.Tile.
+        :param override: kept for API compatibility with ska_low_sps_tpm_api.Tile.
+        :param kwargs: kept for API compatibility with ska_low_sps_tpm_api.Tile.
+        """
 
     def simulate_health_value(self: TileSimulator, path: list[str], value: Any) -> None:
         """

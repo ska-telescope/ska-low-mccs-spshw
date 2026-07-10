@@ -8,6 +8,7 @@
 checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
 `_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
 Synchronised tile (previously ungated).
+* [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
 
 ## 14.1.0
 

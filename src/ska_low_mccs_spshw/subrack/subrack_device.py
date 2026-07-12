@@ -1840,6 +1840,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                     ).set_quality(quality=AttrQuality.ATTR_INVALID, send_event=True)
                     continue
                 try:
+                    self.logger.debug(
+                        f"Pushing events for attribute {tango_attribute_name}, "
+                        f"value {value!r}"
+                    )
                     self.push_change_event(tango_attribute_name, value)
                     self.push_archive_event(tango_attribute_name, value)
                 except DevFailed as e:

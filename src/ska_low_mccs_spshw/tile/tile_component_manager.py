@@ -1684,6 +1684,7 @@ class TileComponentManager(
         static_delays = None
         beamformer_table = None
         beamformer_regions = None
+        beamformer_running = None
         pfb_version = None
         rfi_blanking_enabled_antennas = None
         broadband_rfi_factor = None
@@ -1704,6 +1705,9 @@ class TileComponentManager(
             beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
             beamformer_regions = self._with_hardware_lock(
                 self.tile.get_beamformer_regions
+            )
+            beamformer_running = self._with_hardware_lock(
+                self.tile.beamformer_is_running
             )
             pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
             rfi_blanking_enabled_antennas = self._with_hardware_lock(
@@ -1735,6 +1739,7 @@ class TileComponentManager(
             channeliser_rounding=channeliser_rounding,
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
+            beamformer_running=beamformer_running,
             pfb_version=pfb_version,
             firmware_thresholds=firmware_thresholds,
             rfi_blanking_enabled_antennas=rfi_blanking_enabled_antennas,

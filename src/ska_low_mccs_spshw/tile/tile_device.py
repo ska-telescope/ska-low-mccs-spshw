@@ -4089,7 +4089,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: whether the beamformer is running
         """
-        return self.component_manager.is_beamformer_running
+        return self._attribute_state["isBeamformerRunning"].read()
 
     @attribute(
         dtype="DevLong",

@@ -105,6 +105,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "alarms",
         "adc_power",
         "pps_present",
+        "is_beamformer_running",
         "alarm_attribute",
         "attribute_state",
         "fpga0_clock",
@@ -2721,6 +2722,7 @@ class TestMccsTileCommands:
     def test_start_and_stop_beamformer(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
         # start_time: Optional[int],
         duration: Optional[int],
         channel_groups: Optional[list[int]],
@@ -2734,15 +2736,25 @@ class TestMccsTileCommands:
         * isBeamformerRunning attribute
 
         :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
         :param duration: duration of time that the beamformer should run
         :param channel_groups: Channel groups started and stopped
         """
         start_time = None  # it used to be a parameter but only None was tested
-        assert not on_tile_device.isBeamformerRunning
         assert not on_tile_device.BeamformerRunningForChannels("{}")
+
+        # isBeamformerRunning is served from the poll cache, which lags the
+        # command; wait on change events rather than reading synchronously.
+        on_tile_device.subscribe_event(
+            "isBeamformerRunning",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["is_beamformer_running"],
+        )
+        change_event_callbacks["is_beamformer_running"].assert_change_event(False)
+
         args = {
             "start_time": start_time,
             "duration": duration,
@@ -2752,7 +2764,9 @@ class TestMccsTileCommands:
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
         completed_task = get_lrc_finished(on_tile_device, lrc_id)
         assert completed_task["status"] == "COMPLETED"
-        assert on_tile_device.isBeamformerRunning
+        change_event_callbacks["is_beamformer_running"].assert_change_event(
+            True, lookahead=2, consume_nonmatches=True
+        )
         args = {"channel_groups": channel_groups}
         assert on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
@@ -2760,7 +2774,9 @@ class TestMccsTileCommands:
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
         completed_task = get_lrc_finished(on_tile_device, lrc_id)
         assert completed_task["status"] == "COMPLETED"
-        assert not on_tile_device.isBeamformerRunning
+        change_event_callbacks["is_beamformer_running"].assert_change_event(
+            False, lookahead=2, consume_nonmatches=True
+        )
         assert not on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
     def test_configure_beamformer(

@@ -1890,7 +1890,9 @@ class SpsStationComponentManager(
                 for proxy in self._subrack_proxies.values():
                     results[proxy._name] = proxy.on()
                 failed = [
-                    name for name, rc in results.items() if rc == ResultCode.FAILED
+                    name
+                    for name, (status, _) in results.items()
+                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
                 ]
                 if failed:
                     msg = f"subracks failed to power on: {failed}"
@@ -1938,7 +1940,9 @@ class SpsStationComponentManager(
                     results[proxy._proxy.name()] = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                 failed = [
-                    name for name, rc in results.items() if rc == TaskStatus.FAILED
+                    name
+                    for name, (status, _) in results.items()
+                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
                 ]
                 if failed:
                     msg = f"tiles failed to power on: {failed}"

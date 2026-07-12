@@ -13,15 +13,21 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends git make curl && \
     rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock ./
+# Next steps in order from least-to-most frequently changing for caching
+# Download and install TPM firmware.
+# .make and .helmfile.d are required for make to run - should be fixed
+COPY .make/ .make/
+COPY .make-uv/ .make-uv/
+COPY helmfile.d/ helmfile.d/
+COPY Makefile ./
+RUN make install-firmware
 
+# Install Python dependencies
+COPY pyproject.toml uv.lock ./
 RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
     uv sync --locked --no-install-project --no-dev
 
-# COPY Makefile ./
-# COPY helmfile.d/ helmfile.d/
-# COPY .make/ .make/
+# Copy source code and install local project
 COPY . .
-RUN make install-firmware
 RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
     uv sync --locked --no-dev

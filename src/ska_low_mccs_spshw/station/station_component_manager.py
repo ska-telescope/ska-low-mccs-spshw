@@ -2173,11 +2173,17 @@ class SpsStationComponentManager(
             tile.cspSpeadFormat = self._csp_spead_format
             tile.globalReferenceTime = self._global_reference_time
             tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
-            tile.ConfigureStationBeamformer(
+            result_code, message = tile.ConfigureStationBeamformer(
                 json.dumps(
                     {"is_first": (tile_no == 0), "is_last": (tile_no == last_tile)}
                 )
             )
+            if result_code[0] != ResultCode.OK:
+                msg = (
+                    f"ConfigureStationBeamformer failed on {tile.name()}: {message[0]}"
+                )
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
             tile_no = tile_no + 1
         self._set_beamformer_table()
         return ResultCode.OK, ""
@@ -2222,7 +2228,7 @@ class SpsStationComponentManager(
                 dst_ip1 = str(self._sdn_first_address + 2 * tile_id + 2)
                 dst_ip2 = str(self._sdn_first_address + 2 * tile_id + 3)
 
-            proxy._proxy.SetCspDownload(
+            result_code, message = proxy._proxy.SetCspDownload(
                 json.dumps(
                     {
                         "source_port": self._source_port,
@@ -2235,6 +2241,10 @@ class SpsStationComponentManager(
                     }
                 )
             )
+            if result_code[0] != ResultCode.OK:
+                msg = f"SetCspDownload failed on {proxy._proxy.name()}: {message[0]}"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
         return ResultCode.OK, ""
 
     @check_communicating
@@ -3095,8 +3105,8 @@ class SpsStationComponentManager(
                 "mode": mode,
                 "payload_length": payload_length,
                 "destination_ip": dst_ip,
-                "source_port": src_port,
                 "destination_port": int(dst_port),
+                "source_port": src_port,
                 "netmask_40g": self._sdn_netmask,
                 "gateway_40g": self._sdn_gateway,
             }

@@ -22,7 +22,7 @@ from concurrent.futures import Future, wait
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
-from typing import Any, Callable, Optional, Sequence, Union, cast
+from typing import Any, Callable, Optional, Sequence, Union
 
 import numpy as np
 import tango
@@ -595,15 +595,6 @@ class SpsStationComponentManager(
         self._sdn_netmask = str(sdn_first_interface.netmask)
         self._sdn_gateway: str | None = str(sdn_gateway) if sdn_gateway else None
 
-        self._lmc_param: dict[str, str | int | None] = {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": self._destination_port,
-            "source_port": self._source_port,
-            "netmask_40g": self._sdn_netmask,
-            "gateway_40g": self._sdn_gateway,
-        }
         self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
         self._lmc_integrated_ip = "0.0.0.0"
@@ -2178,7 +2169,6 @@ class SpsStationComponentManager(
             tile.cspSpeadFormat = self._csp_spead_format
             tile.globalReferenceTime = self._global_reference_time
             tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
-            tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
                 json.dumps(
                     {"is_first": (tile_no == 0), "is_last": (tile_no == last_tile)}
@@ -2238,20 +2228,6 @@ class SpsStationComponentManager(
                         "is_last": is_last_tile,
                         "netmask": self._sdn_netmask,
                         "gateway": self._sdn_gateway,
-                    }
-                )
-            )
-
-            proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
-            proxy._proxy.SetLmcIntegratedDownload(
-                json.dumps(
-                    {
-                        "mode": self._lmc_integrated_mode,
-                        "destination_ip": self._lmc_param["destination_ip"],
-                        "channel_payload_length": self._lmc_channel_payload_length,
-                        "beam_payload_length": self._lmc_beam_payload_length,
-                        "netmask_40g": self._sdn_netmask,
-                        "gateway_40g": self._sdn_gateway,
                     }
                 )
             )
@@ -2353,12 +2329,12 @@ class SpsStationComponentManager(
             if mode is not None:
                 self._lmc_integrated_mode = mode
                 self._lmc_integrated_mode_locked = True
-        self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
-        self.logger.debug(
+
+        self.logger.info(
             "Configuring LMC Integrated Download: "
             f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
         )
-        self.set_lmc_integrated_download(
+        integrated_result_code, integrated_message = self.set_lmc_integrated_download(
             mode=self._lmc_integrated_mode,
             dst_ip=self._lmc_integrated_ip,
             dst_port=self._lmc_integrated_port,
@@ -2366,12 +2342,25 @@ class SpsStationComponentManager(
             beam_payload_length=self._lmc_beam_payload_length,
             lock_mode=False,
         )
-        self.set_lmc_download(
+        if integrated_result_code[0] != ResultCode.OK:
+            msg = (
+                f"Failed to configure LMC integrated download: {integrated_message[0]}"
+            )
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
+
+        self.logger.info(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
+        lmc_result_code, lmc_message = self.set_lmc_download(
             mode=self._lmc_mode,
             dst_ip=self._lmc_ip,
             dst_port=self._lmc_port,
             payload_length=self._lmc_payload_length,
         )
+        if lmc_result_code[0] != ResultCode.OK:
+            msg = f"Failed to configure LMC download: {lmc_message[0]}"
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
+
         if (
             start_bandpasses
             if start_bandpasses is not None
@@ -3097,14 +3086,17 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        self._lmc_param["mode"] = mode
-        self._lmc_param["payload_length"] = payload_length
-        self._lmc_param["destination_ip"] = dst_ip
-        self._lmc_param["source_port"] = src_port
-        self._lmc_param["destination_port"] = int(dst_port)
-        self._lmc_param["netmask_40g"] = self._sdn_netmask
-        self._lmc_param["gateway_40g"] = self._sdn_gateway
-        json_param = json.dumps(self._lmc_param)
+        json_param = json.dumps(
+            {
+                "mode": mode,
+                "payload_length": payload_length,
+                "destination_ip": dst_ip,
+                "source_port": src_port,
+                "destination_port": int(dst_port),
+                "netmask_40g": self._sdn_netmask,
+                "gateway_40g": self._sdn_gateway,
+            }
+        )
         return self._execute_async_on_tiles(
             "SetLmcDownload", json_param, require_initialised=True
         )
@@ -3146,7 +3138,7 @@ class SpsStationComponentManager(
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
         if dst_ip == "":
-            dst_ip = cast(str, self._lmc_param["destination_ip"])
+            dst_ip = self._lmc_integrated_ip
         json_param = json.dumps(
             {
                 "mode": mode,
@@ -3741,7 +3733,6 @@ class SpsStationComponentManager(
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to stop: {message}")
 
-    # pylint: disable = too-many-branches
     @check_communicating
     def acquire_data_for_calibration(
         self: SpsStationComponentManager,

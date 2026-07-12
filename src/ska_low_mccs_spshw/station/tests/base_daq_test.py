@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, Iterator
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.observers import Observer
-from watchdog.observers.inotify import InotifyObserver
+from watchdog.observers.api import BaseObserver
 
 from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
@@ -65,7 +65,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param component_manager: SpsStation component manager under test.
         """
         self._data: np.ndarray | None = None
-        self._observer: InotifyObserver
+        self._observer: BaseObserver
         self._data_handler: BaseDataReceivedHandler | None = None
         self._pattern: list | None = None
         self._adders: list | None = None
@@ -247,7 +247,7 @@ class BaseDaqTest(TpmSelfCheckTest):
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
-        self._observer = Observer()  # type: ignore
+        self._observer = Observer()
         assert self.daq_proxy is not None
         daq_dir = json.loads(self.daq_proxy.getconfiguration())["directory"]
         self.test_logger.info(f"Observer watching {daq_dir}...")

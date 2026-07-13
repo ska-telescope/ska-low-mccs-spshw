@@ -22,6 +22,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
 
+from ska_low_mccs_spshw import MccsSubrackPrototype
 from ska_low_mccs_spshw.subrack import SubrackSimulator
 from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulator
 from tests.harness import (
@@ -133,7 +134,11 @@ def integration_test_context_fixture(
         }
         harness = SpsTangoTestHarness()
         harness.add_subrack_simulator(subrack_id, subrack_simulator)
-        harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
+        harness.add_subrack_device(
+            subrack_id,
+            logging_level=int(LoggingLevel.ERROR),
+            device_class=MccsSubrackPrototype,
+        )
         # harness.add_pdu_device(
         #     "ENLOGIC", "10.135.253.170", "public",
         # logging_level=int(LoggingLevel.ERROR)

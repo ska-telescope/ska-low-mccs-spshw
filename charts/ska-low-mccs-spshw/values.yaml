@@ -306,7 +306,7 @@ ska-tango-devices:
       voltageVM_SW_AMP->max_alarm: 3.78
       voltageVM_SW_AMP->min_alarm: 3.22
 
-    MccsSubrack:
+    MccsSubrack: &mccs_subrack_alarms
       backplaneTemperatures->max_alarm: 50.0
       backplaneTemperatures->max_warning: 45.0
       backplaneTemperatures->min_warning: 15.0
@@ -370,6 +370,8 @@ ska-tango-devices:
       tpmVoltages->min_alarm: 11.4
 
       tpmPowers->max_alarm: 120.0
+
+    MccsSubrackPrototype: *mccs_subrack_alarms
 
   # devices:
   #   MccsTile:

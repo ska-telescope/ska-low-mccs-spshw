@@ -16,3 +16,7 @@ dependencies:
     repository: https://artefact.skao.int/repository/helm-internal
     # version: 0.2.2-dev.c4df5a71e
     # repository: https://gitlab.com/api/v4/projects/66823602/packages/helm/dev
+  - name: ska-sat-lmc
+    version: 1.0.0-dev.c99938c45
+    repository: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
+    condition: ska-sat-lmc.enabled

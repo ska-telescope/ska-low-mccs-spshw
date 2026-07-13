@@ -3,9 +3,6 @@ dependencies:
 - name: jupyterhub
   repository: https://jupyterhub.github.io/helm-chart
   version: 3.1.0
-- name: ska-sat-lmc
-  repository: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
-  version: 1.0.0-dev.c99938c45
 - name: ska-ser-skuid
   repository: https://artefact.skao.int/repository/helm-internal
   version: 3.3.3
@@ -27,5 +24,5 @@ dependencies:
 - name: ska-tango-taranta-dashboard-pvc
   repository: https://artefact.skao.int/repository/helm-internal
   version: 1.4.1
-digest: sha256:a24e109a6908c1e2c100c5960fc11d8f5c8ce64fb79d957ff9825aa3449d9d50
-generated: "2026-07-13T13:14:33.448282409+01:00"
+digest: sha256:3246d647886e59a550165835b6576d4db52ebe32097e5d7604d3943c99532ba9
+generated: "2026-07-13T23:54:09.989452909+01:00"

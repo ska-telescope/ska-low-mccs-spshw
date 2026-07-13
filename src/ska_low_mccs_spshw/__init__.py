@@ -23,6 +23,7 @@ __version_info__ = str(
 
 __all__ = [
     "MccsSubrack",
+    "MccsSubrackPrototype",
     "MccsTile",
     "SpsStation",
     "MccsPdu",
@@ -34,6 +35,7 @@ import tango.server
 
 from .pdu import MccsPdu
 from .power_marshaller import PowerMarshaller
+from .prototype_subrack import MccsSubrackPrototype
 from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile
@@ -55,7 +57,8 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
         classes=(
             MccsPdu,
             PowerMarshaller,
-            MccsSubrack,
+            # MccsSubrack,
+            MccsSubrackPrototype,
             MccsTile,
             SpsStation,
         ),

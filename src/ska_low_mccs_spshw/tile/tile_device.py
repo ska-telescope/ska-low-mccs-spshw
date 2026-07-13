@@ -1469,6 +1469,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     None if mark_invalid else attribute_value,
                 )
             else:
+                self.logger.debug(f"Updating {attribute_name=} with {attribute_value=}")
                 try:
                     tango_name = self.attr_map[attribute_name]
                     if mark_invalid:

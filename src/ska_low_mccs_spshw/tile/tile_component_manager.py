@@ -1326,7 +1326,9 @@ class TileComponentManager(
 
         :return: information relevant to tile.
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             return self.tile.info
 
     def refresh_tile_info(self: TileComponentManager) -> None:

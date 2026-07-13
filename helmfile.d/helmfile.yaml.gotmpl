@@ -217,8 +217,8 @@ releases:
       - .deploy/helmfile.d/templates/helm-values.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/pdus.yaml.gotmpl
 
-{{- $sat_service_provided := dig "platform" "sat" "" .Values}}
-{{- if not $sat_service_provided}}
+{{- $is_sat_simulated := dig "platform" "sat" "simulated" false .Values}}
+{{- if $is_sat_simulated}}
   - name: ska-sat-lmc
     namespace: {{.Namespace | default "ska-low-mccs"}}
     chart: ska-sat-lmc/ska-sat-lmc

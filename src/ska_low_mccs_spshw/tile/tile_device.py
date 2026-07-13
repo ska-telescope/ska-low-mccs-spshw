@@ -1371,6 +1371,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             else:
+                self.logger.debug(f"Updating {attribute_name=} with {attribute_value=}")
                 try:
                     tango_name = self.attr_map[attribute_name]
                     if mark_invalid:

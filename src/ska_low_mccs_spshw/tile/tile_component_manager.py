@@ -1113,7 +1113,9 @@ class TileComponentManager(
 
         :return: information relevant to tile.
         """
-        with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             return self.tile.info
 
     @property

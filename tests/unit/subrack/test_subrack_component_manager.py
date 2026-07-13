@@ -510,6 +510,7 @@ class TestOn:
         self: TestOn,
         subrack_component_manager: SubrackComponentManager,
         subrack_simulator_attribute_values: dict[str, Any],
+        subrack_driver_derived_attribute_values: dict[str, Any],
         callbacks: MockCallableGroup,
     ) -> None:
         """
@@ -525,6 +526,8 @@ class TestOn:
             test.
         :param subrack_simulator_attribute_values: key-value dictionary of the
             expected subrack simulator attribute values.
+        :param subrack_driver_derived_attribute_values: key-value dictionary
+            of the expected subrack simulator attribute values
         :param callbacks: dictionary of driver callbacks.
         """
         subrack_component_manager.start_communicating()
@@ -537,7 +540,10 @@ class TestOn:
         # The subrack hardware is ON and polling successfully; its driver caches
         # power=ON.
         callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
-        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+        callbacks["component_state"].assert_call(
+            **subrack_simulator_attribute_values,
+            **subrack_driver_derived_attribute_values,
+        )
         callbacks["component_state"].assert_not_called()
 
         # Simulate an upstream communication outage while subrack hardware polling

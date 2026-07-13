@@ -36,7 +36,7 @@ from ska_low_mccs_spshw.subrack import (
     SubrackSimulator,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
-from tests.test_tools import LRCManager
+from tests.test_tools import LRCManager, _wait_for_state
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -434,7 +434,7 @@ def test_off_on(
     subrack_lrc_manager.assert_command_queued()
     subrack_lrc_manager.assert_command_in_progress()
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    assert subrack_device.state() == DevState.OFF
+    assert _wait_for_state(subrack_device, DevState.OFF)
 
     subrack_lrc_manager.assert_command_finished(
         status="COMPLETED",

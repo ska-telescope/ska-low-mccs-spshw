@@ -686,6 +686,8 @@ class TestMccsTile:
             "temperatureADC13",  # Not updated in simulated hardware version
             "temperatureADC14",  # Not updated in simulated hardware version
             "temperatureADC15",  # Not updated in simulated hardware version
+            "fpga0_station_beamformer_flagged_count",  # Only valid for final Tile
+            "fpga1_station_beamformer_flagged_count",  # Only valid for final Tile
         ]
 
     @pytest.fixture(name="tpm_configuration_attributes")
@@ -1544,7 +1546,7 @@ class TestMccsTile:
             "voltageVM_SW_AMP",
             "voltageVrefDDR0",
             "currentTileBeamformerFrame",
-            "f2f_pll_lock_status",
+            "io_f2f_interface_pll_status_fpga0",
             "fpga0_clock_managers_status",
             "fpga1_clock_managers_count",
             "fpga0_lane_error_count",
@@ -1599,7 +1601,6 @@ class TestMccsTile:
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         """
-        time.sleep(4)
         keys = ["hardware", "fpga_firmware", "network"]
         assert all(key in json.loads(on_tile_device.tile_info).keys() for key in keys)
         assert tile_simulator.tpm
@@ -1618,13 +1619,13 @@ class TestMccsTile:
                 False,
             ),
             (
-                "f2f_pll_lock_status",
-                ["io", "f2f_interface", "pll_status"],
+                "io_f2f_interface_pll_status_fpga0",
+                ["io", "f2f_interface", "pll_status", "FPGA0"],
                 (False, 0),
             ),
             (
-                "f2f_pll_counter",
-                ["io", "f2f_interface", "pll_status"],
+                "io_f2f_interface_pll_status_fpga0_counter",
+                ["io", "f2f_interface", "pll_status", "FPGA0"],
                 (True, 1),
             ),
             (
@@ -3650,7 +3651,6 @@ class TestMccsTileCommands:
         """
         initial_rfi = on_tile_device.ReadBroadbandRfi(list(range(16)))
         assert len(initial_rfi) == 16 * 2
-        assert isinstance(on_tile_device.MaxBroadbandRfi(list(range(16))), int)
         on_tile_device.ClearBroadbandRfi()
         cleared_rfi = on_tile_device.ReadBroadbandRfi(list(range(16))).tolist()
         assert cleared_rfi == [0] * 16 * 2
@@ -3689,7 +3689,6 @@ class TestMccsTileCommands:
         ("cmd_name"),
         [
             ("ReadBroadbandRfi"),
-            ("MaxBroadbandRfi"),
         ],
     )
     def test_read_max_rfi_command_input_validation(

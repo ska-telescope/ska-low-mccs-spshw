@@ -4862,19 +4862,6 @@ class TileComponentManager(
         ):
             return self.tile.read_broadband_rfi(antennas)
 
-    def max_broadband_rfi(self: TileComponentManager, antennas: list[int]) -> int:
-        """
-        Read the maximum broadband RFI levels for a list of antennas.
-
-        :param antennas: list of antennas to read maximum broadband RFI levels
-
-        :return: maximum broadband RFI levels for the specified antennas
-        """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            return self.tile.max_broadband_rfi(antennas)
-
     def clear_broadband_rfi(self: TileComponentManager) -> None:
         """Clear the broadband RFI levels."""
         with acquire_timeout(

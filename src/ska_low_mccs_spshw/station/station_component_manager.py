@@ -1960,15 +1960,17 @@ class SpsStationComponentManager(
             if task_abort_event and task_abort_event.is_set():
                 self.logger.info("_turn_on_tiles task has been aborted")
                 return ResultCode.ABORTED, "task aborted"
-            states = self.tile_programming_state()
+            states = self._tile_programming_state
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
                 return ResultCode.OK, ""
 
-        states = self.tile_programming_state()
         not_ready = {
             trl: state
-            for trl, state in zip(self._tile_proxies.keys(), states)
+            for trl, state in zip(
+                self._tile_proxies.keys(),
+                self._tile_programming_state,
+            )
             if state not in desired_states
         }
         msg = (

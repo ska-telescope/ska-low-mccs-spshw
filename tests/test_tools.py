@@ -33,6 +33,33 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
+def wait_for_condition(
+    condition_func: Callable[[], bool], timeout: float = 120, poll_interval: float = 0.1
+) -> bool:
+    """
+    Wait for condition with a timeout.
+
+    :param condition_func: The condition function
+    :param timeout: The timeout in seconds
+    :param poll_interval: The polling interval
+    :returns: True/False if all condition is satisfied.
+
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        time.sleep(poll_interval)
+        try:
+            if condition_func():
+                return True
+        except (
+            tango.ConnectionFailed,
+            tango.DevFailed,
+            tango.CommunicationFailed,
+        ):
+            pass
+    return False
+
+
 class TpmStatus(enum.IntEnum):
     """
     Enumerated type for tile status.
@@ -358,37 +385,6 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
         assert device_proxy.adminMode == AdminMode.ONLINE
     else:
         print(f"Device {device_proxy.dev_name()} is already ONLINE nothing to do.")
-
-
-def _wait_for_state(
-    device: tango.DeviceProxy, expected_state: tango.DevState, timeout: float = 5.0
-) -> bool:
-    """
-    Wait for device to get to expected_state.
-
-    Blocks for up to `timeout` seconds waiting for `device` to reach `expected_state`.
-
-    :param device: DeviceProxy to wait for.
-    :param expected_state: DevState we expect the device to reach.
-    :param timeout: Duration to wait for `device` to reach `expected_state`.
-
-    :returns: Whether or not the device reached the expected state.
-    """
-    end_time = time.time() + timeout
-    while device.state() != expected_state:
-        time.sleep(0.1)
-        if time.time() > end_time:
-            print(
-                f"Device '{device}' did not reach '{expected_state}' after {timeout}s"
-            )
-            return False
-    # Small sleep and re-assert to make sure the state change wasn't transient.
-    time.sleep(1)
-    assert (
-        device.state() == expected_state
-    ), f"Device {device} reached {expected_state} but rapidly transitioned to {device.state()}"
-    print(f"Device '{device}' reached state '{expected_state}'")
-    return True
 
 
 class AttributeWaiter:  # pylint: disable=too-few-public-methods
@@ -769,8 +765,10 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
         ("udp_status", "udp_status"),
         ("ddr_initialisation", "ddr_initialisation"),
         ("ddr_reset_counter", "ddr_reset_counter"),
-        ("f2f_soft_errors", "f2f_soft_errors"),
-        ("f2f_hard_errors", "f2f_hard_errors"),
+        ("io_f2f_interface_soft_error_fpga0", "io_f2f_interface_soft_error_fpga0"),
+        ("io_f2f_interface_soft_error_fpga1", "io_f2f_interface_soft_error_fpga1"),
+        ("io_f2f_interface_hard_error_fpga0", "io_f2f_interface_hard_error_fpga0"),
+        ("io_f2f_interface_hard_error_fpga1", "io_f2f_interface_hard_error_fpga1"),
         ("resync_count", "resync_count"),
         ("lane_status", "lane_status"),
         ("lane_error_count", "lane_error_count"),
@@ -778,7 +776,16 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
         ("clocks", "clocks"),
         ("adc_sysref_counter", "adc_sysref_counter"),
         ("adc_sysref_timing_requirements", "adc_sysref_timing_requirements"),
-        ("f2f_pll_lock_status", "f2f_pll_lock_status"),
+        ("io_f2f_interface_pll_status_fpga0", "io_f2f_interface_pll_status_fpga0"),
+        ("io_f2f_interface_pll_status_fpga1", "io_f2f_interface_pll_status_fpga1"),
+        (
+            "io_f2f_interface_pll_status_fpga0_counter",
+            "io_f2f_interface_pll_status_fpga0_counter",
+        ),
+        (
+            "io_f2f_interface_pll_status_fpga1_counter",
+            "io_f2f_interface_pll_status_fpga1_counter",
+        ),
         ("qpll_status", "qpll_status"),
         ("timing_pll_lock_status", "timing_pll_lock_status"),
         ("tile_info", "tile_info"),

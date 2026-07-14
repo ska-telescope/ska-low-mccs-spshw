@@ -35,17 +35,21 @@ ska-tango-devices:
       fpga0_linkup_loss_count->max_alarm: 1
       fpga1_linkup_loss_count->max_alarm: 1
 
-      fpga0_data_router_status->max_alarm: 1
-      fpga1_data_router_status->max_alarm: 1
+      io_data_router_status_fpga0->min_alarm: 0
+      io_data_router_status_fpga1->min_alarm: 0
 
       fpga0_ddr_reset_counter->max_alarm: 1
       fpga1_ddr_reset_counter->max_alarm: 1
 
-      f2f_soft_errors->max_alarm: 1
-      f2f_soft_errors->min_alarm: -1
+      io_f2f_interface_soft_error_fpga0->max_alarm: 1
+      io_f2f_interface_soft_error_fpga0->min_alarm: -1
+      io_f2f_interface_soft_error_fpga1->max_alarm: 1
+      io_f2f_interface_soft_error_fpga1->min_alarm: -1
 
-      f2f_hard_errors->max_alarm: 1
-      f2f_hard_errors->min_alarm: -1
+      io_f2f_interface_hard_error_fpga0->max_alarm: 1
+      io_f2f_interface_hard_error_fpga0->min_alarm: -1
+      io_f2f_interface_hard_error_fpga1->max_alarm: 1
+      io_f2f_interface_hard_error_fpga1->min_alarm: -1
 
       fpga0_resync_count->max_alarm: 1
       fpga1_resync_count->max_alarm: 1
@@ -72,9 +76,11 @@ ska-tango-devices:
       fpga0_qpll_counter->max_alarm: 1
       fpga1_qpll_counter->max_alarm: 1
 
-      f2f_pll_lock_status->min_alarm: 0
+      io_f2f_interface_pll_status_fpga0->min_alarm: 0
+      io_f2f_interface_pll_status_fpga1->min_alarm: 0
 
-      f2f_pll_counter->max_alarm: 1
+      io_f2f_interface_pll_status_fpga0_counter->max_alarm: 1
+      io_f2f_interface_pll_status_fpga1_counter->max_alarm: 1
 
       timing_pll_lock_status->min_alarm: 0
 

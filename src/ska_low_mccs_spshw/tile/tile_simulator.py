@@ -728,9 +728,6 @@ class MockTpm:
 
         :return: the info
         """
-        # TODO: Update this with representative data and types rather
-        # than just arbitrary strings.
-        communication_status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
         info: dict[str, Any] = {}
         info["hardware"] = self.get_board_info()
         info["hardware"]["HARDWARE_REV"] = "<current hardware revision>"
@@ -771,45 +768,6 @@ class MockTpm:
         del info["hardware"]["MAC"]
         del info["hardware"]["netmask"]
         del info["hardware"]["gateway"]
-        # TODO: What should we do about this bit? Where to check comms in sim?
-        # Add 40G network information, using ARP table entry for station beam packets
-        if communication_status["FPGA0"] and communication_status["FPGA1"]:
-            config_40g_1 = self.get_40g_core_configuration(arp_table_entry=0, core_id=0)
-            config_40g_2 = self.get_40g_core_configuration(arp_table_entry=0, core_id=1)
-            if config_40g_1 is not None:
-                info["network"]["40g_ip_address_p1"] = IPv4Address(
-                    config_40g_1["src_ip"]
-                )
-                info["network"]["40g_mac_address_p1"] = config_40g_1["src_mac"]
-                info["network"]["40g_gateway_p1"] = IPv4Address(
-                    config_40g_1["gateway_ip"]
-                )
-                info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
-
-            if config_40g_2 is not None:
-                info["network"]["40g_ip_address_p2"] = IPv4Address(
-                    config_40g_2["src_ip"]
-                )
-                info["network"]["40g_mac_address_p2"] = config_40g_2["src_mac"]
-                info["network"]["40g_gateway_p2"] = IPv4Address(
-                    config_40g_2["gateway_ip"]
-                )
-                info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
-        else:
-            info["network"].update(
-                dict.fromkeys(
-                    [
-                        "40g_ip_address_p1",
-                        "40g_mac_address_p1",
-                        "40g_gateway_p1",
-                        "40g_netmask_p1",
-                        "40g_ip_address_p2",
-                        "40g_mac_address_p2",
-                        "40g_gateway_p2",
-                        "40g_netmask_p2",
-                    ]
-                )
-            )
         return info
 
     def write_register(
@@ -1139,7 +1097,35 @@ class TileSimulator:
             # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.
             return {"alarms": self._tile_health_structure["alarms"]}
-        return copy.deepcopy(self._tile_health_structure)
+        if "subgroup" in kwargs:
+            subgroup = kwargs["subgroup"]
+            adc_subgroup = self._tile_health_structure["adcs"][subgroup]
+            return {"adcs": {subgroup: copy.deepcopy(adc_subgroup)}}
+        health_status = copy.deepcopy(self._tile_health_structure)
+        if not self._is_last:
+            # ska-low-sps-tpm-api returns None for this monitoring point
+            # when polled on a tile that is not the last in the station
+            # beamforming chain.
+            health_status["dsp"]["station_beamf"][
+                "discarded_or_flagged_packet_count"
+            ] = {"FPGA0": None, "FPGA1": None}
+        return health_status
+
+    def define_monitoring_point_filter(
+        self: TileSimulator, path: str, override: bool = True, **kwargs: Any
+    ) -> None:
+        """
+        No-op filter registration, kept for API compatibility.
+
+        Real hardware uses this to tag monitoring points so
+        get_health_status(subgroup=...) can select just one ADC health
+        sub-group; get_health_status already special-cases 'subgroup'
+        directly, so there is nothing to register here.
+
+        :param path: kept for API compatibility with ska_low_sps_tpm_api.Tile.
+        :param override: kept for API compatibility with ska_low_sps_tpm_api.Tile.
+        :param kwargs: kept for API compatibility with ska_low_sps_tpm_api.Tile.
+        """
 
     def simulate_health_value(self: TileSimulator, path: list[str], value: Any) -> None:
         """
@@ -3298,21 +3284,6 @@ class TileSimulator:
         """
         self._broadband_rfi_factor = rfi_factor
 
-    def max_broadband_rfi(
-        self: TileSimulator, antennas: range | list[int] = range(16)
-    ) -> int:
-        """
-        Return maximum broadband RFI counter value.
-
-        :param antennas: list antenna IDs whose RFI counters to read
-
-        :return: maximum broadband RFI counter value
-        """
-        ret = np.max(self.read_broadband_rfi(antennas))
-        self.logger.warning(f"{ret=}")
-        self.logger.warning(f"{type(ret)=}")
-        return ret
-
     def clear_broadband_rfi(self: TileSimulator) -> None:
         """Clear broadband RFI counters."""
         self._rfi_count = np.zeros(
@@ -3423,22 +3394,6 @@ class TileSimulator:
             f" \n"
             f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
             f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
-            f"40G Port 1 IP Address        | "
-            f"{str(info['network']['40g_ip_address_p1'])} \n"
-            f"40G Port 1 MAC Address       | "
-            f"{str(info['network']['40g_mac_address_p1'])} \n"
-            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
-            f" \n"
-            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
-            f" \n"
-            f"40G Port 2 IP Address        | "
-            f"{str(info['network']['40g_ip_address_p2'])} \n"
-            f"40G Port 2 MAC Address       | "
-            f"{str(info['network']['40g_mac_address_p2'])} \n"
-            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
-            f" \n"
-            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
-            f" \n"
         )
 
 

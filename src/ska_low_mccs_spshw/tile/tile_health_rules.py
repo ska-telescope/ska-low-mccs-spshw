@@ -21,6 +21,7 @@ from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthRules
 
 from ska_low_mccs_spshw.tile import health_config  # import the subpackage
+from ska_low_mccs_spshw.tile.utils import HealthConfigLoader
 
 # COUNTERS = [
 #     "rd_cnt",
@@ -222,7 +223,9 @@ class TileHealthRules(HealthRules):
                 f"{resource_name} not found in health_config package"
             )
         return (
-            yaml.load(min_max_string, Loader=yaml.Loader).get("tpm_monitoring_points")
+            yaml.load(min_max_string, Loader=HealthConfigLoader).get(
+                "tpm_monitoring_points"
+            )
             or {}
         )
 

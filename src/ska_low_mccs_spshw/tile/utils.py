@@ -20,12 +20,43 @@ from logging import Logger
 from types import FrameType, TracebackType
 from typing import Any, Callable, Iterator, TypeVar, cast
 
+import yaml
 from ska_control_model import ResultCode, TaskStatus
+from yaml.nodes import SequenceNode
 
-__all__ = ["acquire_timeout", "abort_task_on_exception"]
+__all__ = [
+    "acquire_timeout",
+    "abort_task_on_exception",
+    "HealthConfigLoader",
+]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
 _FrameInfo = namedtuple("_FrameInfo", ["frame", "filename", "lineno", "function"])
+
+
+class HealthConfigLoader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
+    """
+    A yaml.SafeLoader that also understands the "!!python/tuple" tag.
+
+    Health config yaml files use "!!python/tuple" for values that must
+    compare equal to a tuple read back from the TPM. Loading them with
+    yaml.Loader/UnsafeLoader would allow construction of arbitrary
+    Python objects from the yaml content, so this loader only adds
+    back the one tag we need on top of the safe tag set.
+    """
+
+
+def _construct_python_tuple(
+    loader: HealthConfigLoader,
+    node: SequenceNode,
+) -> tuple[object, ...]:
+    return tuple(loader.construct_sequence(node))
+
+
+HealthConfigLoader.add_constructor(
+    "tag:yaml.org,2002:python/tuple",
+    _construct_python_tuple,
+)
 
 
 def _iterate_stack() -> Iterator[_FrameInfo]:

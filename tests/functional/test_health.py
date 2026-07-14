@@ -832,11 +832,28 @@ def read_all_tile_attributes(
     :param excluded_tile_attributes: A list of attributes to not check.
     """
     # Allow a time for all attributes to be polled.
-    time.sleep(10)
+    # Slight regression from fix implementation SKB-1440.
+    # We split up a poll into 3 polls.
+    # This meant that the we have 2 extra sleeps
+    # before all attributes are polled.
+    # This resulted in a failure where 'pointingDelays' did not update in 10 seconds.
+    # Given the deployed PollRate is 0.4 this is an additional 0.8s sleep.
+    # I am accepting this regression since PollRate is configurable anyway
+    # and adding 1 second.
+    time.sleep(11)
+
     tiles = station_devices["Tiles"]
-    for tile in tiles:
+    for i, tile in enumerate(tiles):
+        tile_excluded_attributes = excluded_tile_attributes
+        if i != len(tiles) - 1:
+            # These are documented by the API as do not use unless final tile.
+            # They are therefore INVALID for all tiles except final tile.
+            tile_excluded_attributes = excluded_tile_attributes + [
+                "fpga0_station_beamformer_flagged_count",
+                "fpga1_station_beamformer_flagged_count",
+            ]
         if tile.useAttributesForHealth:
-            all_excluded_tile_attributes = excluded_tile_attributes + [
+            all_excluded_tile_attributes = tile_excluded_attributes + [
                 "dspHealth",
                 "ioHealth",
                 "timingHealth",

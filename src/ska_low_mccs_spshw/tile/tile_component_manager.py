@@ -95,7 +95,9 @@ _ATTRIBUTE_MAP: Final = {
     "VOLTAGES": "tile_health_structure",
     "CURRENTS": "tile_health_structure",
     "ALARMS": "tile_health_structure",
-    "ADCS": "tile_health_structure",
+    "ADC_SYSREF_COUNTER": "tile_health_structure",
+    "ADC_PLL_STATUS": "tile_health_structure",
+    "ADC_SYSREF_TIMING_REQUIREMENTS": "tile_health_structure",
     "TIMING": "tile_health_structure",
     "IO": "tile_health_structure",
     "DSP": "tile_health_structure",
@@ -357,6 +359,7 @@ class TileComponentManager(
                 logger=logger,
                 tpm_version=_tpm_version,
             )
+        self._tag_adc_health_subgroups()
 
         super().__init__(
             logger,
@@ -364,6 +367,29 @@ class TileComponentManager(
             component_state_changed_callback,
             poll_rate=poll_rate,
         )
+
+    def _tag_adc_health_subgroups(self: TileComponentManager) -> None:
+        """
+        Tag each ADC health sub-group so get_health_status can select just one.
+
+        pll_status, sysref_counter and sysref_timing_requirements all share
+        the same top-level 'adcs' group tag in the tpm-api's monitoring point
+        lookup, so get_health_status(group="adcs") can't tell them apart.
+        Tagging each with its own 'subgroup' filter lets each be polled (and
+        the hardware lock released) independently.
+        """
+        # NOTE: There was a regression in the command time after tpm-api transition
+        # from 3.1.1 -> 3.2.1. This is believed to be due to the clear method added.
+        # This led to a polled command claiming the lock for a long period.
+        # As a result we are defining our own groups to split up this request.
+        for subgroup in (
+            "pll_status",
+            "sysref_counter",
+            "sysref_timing_requirements",
+        ):
+            self.tile.define_monitoring_point_filter(
+                f"adcs.{subgroup}", subgroup=subgroup
+            )
 
     def _submit_lrc_request(
         self: TileComponentManager,
@@ -482,12 +508,26 @@ class TileComponentManager(
                     publish=True,
                     group="alarms",
                 )
-            case "ADCS":
+            case "ADC_SYSREF_COUNTER":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_health_status,
                     publish=True,
-                    group="adcs",
+                    subgroup="sysref_counter",
+                )
+            case "ADC_PLL_STATUS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    subgroup="pll_status",
+                )
+            case "ADC_SYSREF_TIMING_REQUIREMENTS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_health_status,
+                    publish=True,
+                    subgroup="sysref_timing_requirements",
                 )
             case "TIMING":
                 request = TileRequest(
@@ -607,7 +647,7 @@ class TileComponentManager(
             case "POINTING_DELAYS":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
-                    self.get_all_pointing_delays,
+                    self._get_all_pointing_delays,
                     publish=True,
                 )
             case _:
@@ -640,6 +680,7 @@ class TileComponentManager(
         ):
             result = poll_request()
             self._last_known_connected = True
+
         return TileResponse(
             poll_request.name,
             result,
@@ -4821,19 +4862,6 @@ class TileComponentManager(
         ):
             return self.tile.read_broadband_rfi(antennas)
 
-    def max_broadband_rfi(self: TileComponentManager, antennas: list[int]) -> int:
-        """
-        Read the maximum broadband RFI levels for a list of antennas.
-
-        :param antennas: list of antennas to read maximum broadband RFI levels
-
-        :return: maximum broadband RFI levels for the specified antennas
-        """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            return self.tile.max_broadband_rfi(antennas)
-
     def clear_broadband_rfi(self: TileComponentManager) -> None:
         """Clear the broadband RFI levels."""
         with acquire_timeout(
@@ -4917,7 +4945,7 @@ class TileComponentManager(
         ):
             return self.tile.read_all_live_calibration_coefficients()
 
-    def get_all_pointing_delays(
+    def _get_all_pointing_delays(
         self: TileComponentManager,
     ) -> np.ndarray:
         """
@@ -4928,12 +4956,7 @@ class TileComponentManager(
         delays = []
 
         for beam in range(8):
-            with acquire_timeout(
-                self._hardware_lock,
-                timeout=self._default_lock_timeout,
-                raise_exception=True,
-            ):
-                delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
+            delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
 
         return np.array(delays)
 

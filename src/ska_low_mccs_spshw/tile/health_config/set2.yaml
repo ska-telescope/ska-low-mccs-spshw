@@ -264,6 +264,7 @@ tpm_monitoring_points:
       status: True
     pll: !!python/tuple [True, 0]
     pll_40g: !!python/tuple [True, null]
+    sync_time: True
   info:
     hardware:
       ip_address_eep: 10.0.10.2
@@ -341,7 +342,6 @@ tpm_monitoring_points:
             lane5: 0
             lane6: 0
             lane7: 0
-      lane_status: True
       resync_count:
         FPGA0: 0
         FPGA1: 0
@@ -363,9 +363,15 @@ tpm_monitoring_points:
       #   FPGA0: 0
       #   FPGA1: 0
     f2f_interface:
-      pll_status: !!python/tuple [True, 0]
-      soft_error: 0
-      hard_error: 0
+      pll_status:
+        FPGA0: !!python/tuple [True, 0]
+        FPGA1: !!python/tuple [True, 0]
+      soft_error:
+        FPGA0: 0
+        FPGA1: 0
+      hard_error:
+        FPGA0: 0
+        FPGA1: 0
     udp_interface:
       arp: True
       status: True
@@ -399,8 +405,8 @@ tpm_monitoring_points:
         FPGA1: 0
     data_router:
       status:
-        FPGA0: 0
-        FPGA1: 0
+        FPGA0: True
+        FPGA1: True
       discarded_packets:
         FPGA0: [0, 0]
         FPGA1: [0, 0]
@@ -415,9 +421,6 @@ tpm_monitoring_points:
         FPGA0: 0
         FPGA1: 0
       dsp_latency_error: True
-    max_broadband_rfi: 
-      min: 0 
-      max: 65535
   derived:
     pps_drift:
       soft: 4

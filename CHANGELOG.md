@@ -2,13 +2,30 @@
 
 ## Unreleased
 
+* [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.
+
+## 14.0.0
+
+* [THORN-656] Updated `tpm-api` from **3.2.1** to **4.0.0**.
+  * Restructured the F2F interface attributes to reflect the hardware architecture, where each FPGA has its own F2F interface:
+    * `f2f_pll_lock_status` → `io_f2f_interface_pll_status_fpga0`, `io_f2f_interface_pll_status_fpga1`
+    * `f2f_pll_counter` → `io_f2f_interface_pll_status_fpga0_counter`, `io_f2f_interface_pll_status_fpga1_counter`
+    * `f2f_soft_errors` → `io_f2f_interface_soft_error_fpga0`, `io_f2f_interface_soft_error_fpga1`
+    * `f2f_hard_errors` → `io_f2f_interface_hard_error_fpga0`, `io_f2f_interface_hard_error_fpga1`
+  * Renamed `fpga0_data_router_status` and `fpga1_data_router_status` to `io_data_router_status_fpga0` and `io_data_router_status_fpga1`. The semantics have also changed: previously, values **> 0** indicated that one or more data router errors had been detected. The attribute now returns `1` when no errors are detected and `0` when one or more errors are detected.
+  * Removed the `lane_status` attribute.
+  * Updated `tile_info` to report only static information. 40G core configuration should now be obtained using the `Get40GCoreConfiguration` command.
+  * Removed the `MaxBroadbandRfi` command, as the same information is available via the `rfiCount` attribute.
+* [SKB-1440] Hotfix: After upgrading from **3.1.1** to **3.2.1**, the execution time of the `adcs` group in the health dictionary increased significantly. This caused the hardware lock to be held for much longer, interfering with observations. The root cause is still under investigation. As a temporary mitigation, the polling groups have been reduced in size so that the hardware lock is held for a shorter period while the underlying issue is investigated.
 * [THORN-640] Added "subrackMaxFanSpeeds" attribute to subrack as a health parameter. This attributes uses the rpm and pwm readouts from the subrack fans to determine the expected maximum rpm speed of the fans
 * [THORN-623] Added attributes to Subrack: psuXPresent, psuXPowerIn, psuXPowerOut, psuXVoltageIn, psuXVoltageOut, psuXLoad. Added new Subrack health rules: Degraded if a psu is over 50% load, failed if both psus are dead or any psu near 100% load. Added new subrack health rules: Degraded if one PSU has failed, Failed if both PSUs have failed. A failed PSU is defined as a PSU which is present and has an input voltage but no output voltage.
 * [SKB-1430] Refactor MccsTile attribute reads to reduce time spent holding the hardware lock, moving `allLiveCal`/`allStagedCal` to commands.
 * [THORN-639] Add subrack attribute filtering for power smoothing
+* [THORN-654] Reduce flakiness of test_off_and_on
 
 ## 13.0.0
 
+* [SKB-1402] Bump tpm-api 3.1.1 -> 3.2.1
 * [SKB-1402] Reduce hang in read method when power cut to TPM while in flight.
   (
     symptoms of this issue are a hang during power OFF of > 220 s. Expect ~12s hang after this patch,

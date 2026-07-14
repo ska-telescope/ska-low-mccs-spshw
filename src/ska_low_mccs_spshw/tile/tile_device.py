@@ -662,10 +662,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga0_qpll_counter": "fpga0_qpll_counter",
             "fpga1_qpll_status": "fpga1_qpll_status",
             "fpga1_qpll_counter": "fpga1_qpll_counter",
-            "f2f_pll_lock_status": "f2f_pll_lock_status",
-            "f2f_pll_counter": "f2f_pll_counter",
-            "f2f_soft_errors": "f2f_soft_errors",
-            "f2f_hard_errors": "f2f_hard_errors",
+            "io_f2f_interface_pll_status_fpga0": "io_f2f_interface_pll_status_fpga0",
+            "io_f2f_interface_pll_status_fpga0_counter": (
+                "io_f2f_interface_pll_status_fpga0_counter"
+            ),
+            "io_f2f_interface_pll_status_fpga1": "io_f2f_interface_pll_status_fpga1",
+            "io_f2f_interface_pll_status_fpga1_counter": (
+                "io_f2f_interface_pll_status_fpga1_counter"
+            ),
+            "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0",
+            "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1",
+            "io_f2f_interface_hard_error_fpga0": "io_f2f_interface_hard_error_fpga0",
+            "io_f2f_interface_hard_error_fpga1": "io_f2f_interface_hard_error_fpga1",
             "timing_pll_lock_status": "timing_pll_lock_status",
             "timing_pll_count": "timing_pll_count",
             "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
@@ -696,8 +704,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_decode_error_count": "fpga1_decode_error_count",
             "fpga0_linkup_loss_count": "fpga0_linkup_loss_count",
             "fpga1_linkup_loss_count": "fpga1_linkup_loss_count",
-            "fpga0_data_router_status": "fpga0_data_router_status",
-            "fpga1_data_router_status": "fpga1_data_router_status",
+            "io_data_router_status_fpga0": "io_data_router_status_fpga0",
+            "io_data_router_status_fpga1": "io_data_router_status_fpga1",
             "data_router_discarded_packets": "data_router_discarded_packets",
             "tile_beamformer_status": "tile_beamformer_status",
             "station_beamformer_status": "station_beamformer_status",
@@ -760,11 +768,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "f2f_pll_lock_status": lambda val: (
+            "io_f2f_interface_pll_status_fpga0": lambda val: (
+                int(val[0]) if val[0] is not None else None
+            ),
+            "io_f2f_interface_pll_status_fpga1": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
             "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
-            "f2f_pll_counter": lambda val: int(val[1]) if val[1] is not None else None,
+            "io_f2f_interface_pll_status_fpga0_counter": lambda val: (
+                int(val[1]) if val[1] is not None else None
+            ),
+            "io_f2f_interface_pll_status_fpga1_counter": lambda val: (
+                int(val[1]) if val[1] is not None else None
+            ),
             "timing_pll_40g_count": lambda val: (
                 int(val[1]) if val[1] is not None else None
             ),
@@ -773,6 +789,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ),
             "fpga1_qpll_counter": lambda val: (
                 int(val[1]) if val[1] is not None else None
+            ),
+            "io_data_router_status_fpga0": lambda val: (
+                int(val) if val is not None else None
+            ),
+            "io_data_router_status_fpga1": lambda val: (
+                int(val) if val is not None else None
             ),
             "coreCommunicationStatus": serialise_object,
             "voltages": serialise_object,
@@ -833,10 +855,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 ),
                 "ddr_initialisation": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ddr_initialisation"),
-                    alarm_flag="LOW",
-                ),
-                "lane_status": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "lane_status"),
                     alarm_flag="LOW",
                 ),
                 "link_status": BoolAttributeManager(
@@ -949,10 +967,54 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "fpga1_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA1"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "f2f_pll_lock_status": ["io", "f2f_interface", "pll_status"],
-            "f2f_pll_counter": ["io", "f2f_interface", "pll_status"],
-            "f2f_soft_errors": ["io", "f2f_interface", "soft_error"],
-            "f2f_hard_errors": ["io", "f2f_interface", "hard_error"],
+            "io_f2f_interface_pll_status_fpga0": [
+                "io",
+                "f2f_interface",
+                "pll_status",
+                "FPGA0",
+            ],
+            "io_f2f_interface_pll_status_fpga0_counter": [
+                "io",
+                "f2f_interface",
+                "pll_status",
+                "FPGA0",
+            ],
+            "io_f2f_interface_pll_status_fpga1": [
+                "io",
+                "f2f_interface",
+                "pll_status",
+                "FPGA1",
+            ],
+            "io_f2f_interface_pll_status_fpga1_counter": [
+                "io",
+                "f2f_interface",
+                "pll_status",
+                "FPGA1",
+            ],
+            "io_f2f_interface_soft_error_fpga0": [
+                "io",
+                "f2f_interface",
+                "soft_error",
+                "FPGA0",
+            ],
+            "io_f2f_interface_soft_error_fpga1": [
+                "io",
+                "f2f_interface",
+                "soft_error",
+                "FPGA1",
+            ],
+            "io_f2f_interface_hard_error_fpga0": [
+                "io",
+                "f2f_interface",
+                "hard_error",
+                "FPGA0",
+            ],
+            "io_f2f_interface_hard_error_fpga1": [
+                "io",
+                "f2f_interface",
+                "hard_error",
+                "FPGA1",
+            ],
             # Extracting status and count in different attributes
             # by use of converters.
             "timing_pll_lock_status": ["timing", "pll"],
@@ -986,7 +1048,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "lane_error_count",
                 "FPGA1",
             ],
-            "lane_status": ["io", "jesd_interface", "lane_status"],
             "link_status": ["io", "jesd_interface", "link_status"],
             "fpga0_resync_count": ["io", "jesd_interface", "resync_count", "FPGA0"],
             "fpga1_resync_count": ["io", "jesd_interface", "resync_count", "FPGA1"],
@@ -1053,8 +1114,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "linkup_loss_count",
                 "FPGA1",
             ],
-            "fpga0_data_router_status": ["io", "data_router", "status", "FPGA0"],
-            "fpga1_data_router_status": ["io", "data_router", "status", "FPGA1"],
+            "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
+            "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
             "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
@@ -2109,45 +2170,45 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="fpga0_data_router_status",
-        max_alarm=1,
+        label="io_data_router_status_fpga0",
+        min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def fpga0_data_router_status(self: MccsTile) -> int:
+    def io_data_router_status_fpga0(self: MccsTile) -> int:
         """
         Return the status of the data router.
 
-        Expected: 0 if no status OK.
+        Expected: 1 if status OK, 0 otherwise.
 
         :example:
-            >>> tile.fpga0_data_router_status
-            0
+            >>> tile.io_data_router_status_fpga0
+            1
 
-        :return: the linkup loss count per FPGA.
+        :return: the data router status for FPGA0.
         """
-        return self._attribute_state["fpga0_data_router_status"].read()
+        return self._attribute_state["io_data_router_status_fpga0"].read()
 
     @attribute(
         dtype="DevShort",
-        label="fpga1_data_router_status",
-        max_alarm=1,
+        label="io_data_router_status_fpga1",
+        min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def fpga1_data_router_status(self: MccsTile) -> int:
+    def io_data_router_status_fpga1(self: MccsTile) -> int:
         """
         Return the status of the data router.
 
-        Expected: 0 if no status OK.
+        Expected: 1 if status OK, 0 otherwise.
 
         :example:
-            >>> tile.fpga1_data_router_status
-            0
+            >>> tile.io_data_router_status_fpga1
+            1
 
-        :return: the linkup loss count per FPGA.
+        :return: the data router status for FPGA1.
         """
-        return self._attribute_state["fpga1_data_router_status"].read()
+        return self._attribute_state["io_data_router_status_fpga1"].read()
 
     @attribute(
         dtype="DevString",
@@ -2267,49 +2328,95 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="f2f_soft_errors",
+        label="io_f2f_interface_soft_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def f2f_soft_errors(self: MccsTile) -> int:
+    def io_f2f_interface_soft_error_fpga0(self: MccsTile) -> int:
         """
-        Return the f2f interface soft error count.
+        Return the FPGA0 f2f interface soft error count.
 
         Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
 
         :example:
-            tile.f2f_soft_errors
+            tile.io_f2f_interface_soft_error_fpga0
             0
 
-        :return: the f2f interface soft error count.
+        :return: the FPGA0 f2f interface soft error count.
         """
-        return self._attribute_state["f2f_soft_errors"].read()
+        return self._attribute_state["io_f2f_interface_soft_error_fpga0"].read()
 
     @attribute(
         dtype="DevShort",
-        label="f2f_hard_errors",
+        label="io_f2f_interface_soft_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def f2f_hard_errors(self: MccsTile) -> int:
+    def io_f2f_interface_soft_error_fpga1(self: MccsTile) -> int:
         """
-        Return the f2f interface hard error count.
+        Return the FPGA1 f2f interface soft error count.
+
+        Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
+
+        :example:
+            tile.io_f2f_interface_soft_error_fpga1
+            0
+
+        :return: the FPGA1 f2f interface soft error count.
+        """
+        return self._attribute_state["io_f2f_interface_soft_error_fpga1"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="io_f2f_interface_hard_error_fpga0",
+        max_alarm=1,
+        min_alarm=-1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def io_f2f_interface_hard_error_fpga0(self: MccsTile) -> int:
+        """
+        Return the FPGA0 f2f interface hard error count.
 
         Expected: 0 if no hard errors detected in FPGA-to-FPGA interface.
             Hard errors require the interface to be reset. This likely means
             reinitialising the TPM entirely due to the impact on beamformers.
 
         :example:
-            >>> tile.f2f_hard_errors
+            >>> tile.io_f2f_interface_hard_error_fpga0
             0
 
-        :return: the f2f interface hard error count.
+        :return: the FPGA0 f2f interface hard error count.
         """
-        return self._attribute_state["f2f_hard_errors"].read()
+        return self._attribute_state["io_f2f_interface_hard_error_fpga0"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="io_f2f_interface_hard_error_fpga1",
+        max_alarm=1,
+        min_alarm=-1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def io_f2f_interface_hard_error_fpga1(self: MccsTile) -> int:
+        """
+        Return the FPGA1 f2f interface hard error count.
+
+        Expected: 0 if no hard errors detected in FPGA-to-FPGA interface.
+            Hard errors require the interface to be reset. This likely means
+            reinitialising the TPM entirely due to the impact on beamformers.
+
+        :example:
+            >>> tile.io_f2f_interface_hard_error_fpga1
+            0
+
+        :return: the FPGA1 f2f interface hard error count.
+        """
+        return self._attribute_state["io_f2f_interface_hard_error_fpga1"].read()
 
     @attribute(
         dtype="DevShort",
@@ -2352,24 +2459,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the resync count
         """
         return self._attribute_state["fpga1_resync_count"].read()
-
-    @attribute(
-        dtype="DevBoolean",
-        label="lane_status",
-    )
-    def lane_status(self: MccsTile) -> bool:
-        """
-        Return the lane status.
-
-        Expected: `True` if no errors detected on any lane.
-
-        :example:
-            >>> tile.lane_status
-            True
-
-        :return: the lane status.
-        """
-        return self._attribute_state["lane_status"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -2794,48 +2883,93 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="f2f_pll_lock_status",
+        label="io_f2f_interface_pll_status_fpga0",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
     )
-    def f2f_pll_lock_status(self: MccsTile) -> int:
+    def io_f2f_interface_pll_status_fpga0(self: MccsTile) -> int:
         """
-        Return the PLL lock status.
+        Return the FPGA0 f2f PLL lock status.
 
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.f2f_pll_lock_status
+            >>> tile.io_f2f_interface_pll_status_fpga0
             '1'
 
-        :return: the PLL lock status.
+        :return: the FPGA0 f2f PLL lock status.
         """
-        return self._attribute_state["f2f_pll_lock_status"].read()
+        return self._attribute_state["io_f2f_interface_pll_status_fpga0"].read()
 
     @attribute(
         dtype="DevShort",
-        label="f2f_pll_counter",
+        label="io_f2f_interface_pll_status_fpga0_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def f2f_pll_counter(self: MccsTile) -> int:
+    def io_f2f_interface_pll_status_fpga0_counter(self: MccsTile) -> int:
         """
-        Return the PLL lock loss counter.
+        Return the FPGA0 f2f PLL lock loss counter.
 
         Expected: `0` if no PLL lock loss events detected.
         Increments for each lock loss event.
 
         :example:
-            >>> tile.f2f_pll_counter
+            >>> tile.io_f2f_interface_pll_status_fpga0_counter
             '0'
 
-        :return: the PLL lock loss counter.
+        :return: the FPGA0 f2f PLL lock loss counter.
         """
-        return self._attribute_state["f2f_pll_counter"].read()
+        return self._attribute_state["io_f2f_interface_pll_status_fpga0_counter"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="io_f2f_interface_pll_status_fpga1",
+        min_alarm=0,
+        abs_change=1,
+        max_value=2,
+        min_value=-1,
+        archive_abs_change=1,
+    )
+    def io_f2f_interface_pll_status_fpga1(self: MccsTile) -> int:
+        """
+        Return the FPGA1 f2f PLL lock status.
+
+        Expected: `1` if PLL locked, `0` otherwise.
+
+        :example:
+            >>> tile.io_f2f_interface_pll_status_fpga1
+            '1'
+
+        :return: the FPGA1 f2f PLL lock status.
+        """
+        return self._attribute_state["io_f2f_interface_pll_status_fpga1"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="io_f2f_interface_pll_status_fpga1_counter",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def io_f2f_interface_pll_status_fpga1_counter(self: MccsTile) -> int:
+        """
+        Return the FPGA1 f2f PLL lock loss counter.
+
+        Expected: `0` if no PLL lock loss events detected.
+        Increments for each lock loss event.
+
+        :example:
+            >>> tile.io_f2f_interface_pll_status_fpga1_counter
+            '0'
+
+        :return: the FPGA1 f2f PLL lock loss counter.
+        """
+        return self._attribute_state["io_f2f_interface_pll_status_fpga1_counter"].read()
 
     @attribute(
         dtype="DevShort",
@@ -7379,25 +7513,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if max(argin) > 15 or min(argin) < 0:
             raise ValueError("Antenna IDs must be between 0 and 15")
         return self.component_manager.read_broadband_rfi(argin).flatten().tolist()
-
-    @command(dtype_in="DevVarLongArray", dtype_out="DevLong")
-    def MaxBroadbandRfi(self: MccsTile, argin: list[int]) -> int:
-        """
-        Get max of RFI counts of specified antennas.
-
-        This returns the RFI count of the antenna with the maximum RFI count.
-
-        :param argin: list antennas whose RFI counters to read
-        :return: Maximum RFI counts
-        :rtype: int
-
-        :raises ValueError: if input arguments are invalid
-        """
-        if len(argin) > 16:
-            raise ValueError("Cannot specify more than 16 antennas")
-        if max(argin) > 15 or min(argin) < 0:
-            raise ValueError("Antenna IDs must be between 0 and 15")
-        return self.component_manager.max_broadband_rfi(argin)
 
     @command(dtype_out="DevVarLongStringArray")
     def ClearBroadbandRfi(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:

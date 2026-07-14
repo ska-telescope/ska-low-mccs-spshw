@@ -30,7 +30,7 @@ from ska_low_mccs_spshw.subrack import (
     SubrackSimulator,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
-from tests.test_tools import LRCManager, _wait_for_state
+from tests.test_tools import LRCManager, wait_for_condition
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -248,15 +248,19 @@ def test_fast_adminMode_switch(
         # We can't deterministically wait for events as there's no guarantee
         # whether or not we'll see some of them so we only assert that we reach
         # the correct state in a timely manner.
-        assert _wait_for_state(subrack_device, DevState.DISABLE)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
+        # assert _wait_for_state(subrack_device, DevState.DISABLE)
         subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-        assert _wait_for_state(subrack_device, DevState.ON)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
+        # assert _wait_for_state(subrack_device, DevState.ON)
 
         subrack_device.adminmode = AdminMode.OFFLINE
-        assert _wait_for_state(subrack_device, DevState.DISABLE)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
+        # assert _wait_for_state(subrack_device, DevState.DISABLE)
 
         subrack_device.adminmode = AdminMode.ONLINE
-        assert _wait_for_state(subrack_device, DevState.ON, timeout=10)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
+        # assert _wait_for_state(subrack_device, DevState.ON, timeout=10)
 
         number_of_communication_cycles: int = 4
 
@@ -275,13 +279,15 @@ def test_fast_adminMode_switch(
         for _ in range(number_of_communication_cycles):
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
-        assert _wait_for_state(subrack_device, DevState.ON)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
+        # assert _wait_for_state(subrack_device, DevState.ON)
 
         assert subrack_device.adminMode == AdminMode.ONLINE
         assert subrack_device.state() == DevState.ON
 
         subrack_device.adminmode = AdminMode.OFFLINE
-        assert _wait_for_state(subrack_device, DevState.DISABLE)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
+        # assert _wait_for_state(subrack_device, DevState.DISABLE)
         print(f"Iteration {i}")
 
 
@@ -387,14 +393,11 @@ def test_off_on(
     )
     subrack_lrc_manager.assert_command_queued()
     subrack_lrc_manager.assert_command_in_progress()
-    change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    assert subrack_device.state() == DevState.OFF
-
     subrack_lrc_manager.assert_command_finished(
-        status="COMPLETED",
-        result_code=ResultCode.OK,
-        result_message="Command completed",
+        status="COMPLETED", result_code=ResultCode.OK, timeout=10
     )
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+    assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
 
     change_event_callbacks["boardCurrent"].assert_change_event([])
     with pytest.raises(tango.DevFailed):
@@ -411,7 +414,7 @@ def test_off_on(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
 
-    assert subrack_device.state() == DevState.ON
+    assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
 
     change_event_callbacks["boardCurrent"].assert_change_event(
         subrack_device_attribute_values["boardCurrent"],

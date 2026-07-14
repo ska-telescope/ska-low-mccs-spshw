@@ -28,6 +28,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.functional.conftest import verify_bandpass_state
 from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
+from tests.test_tools import wait_for_lrc_result
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -120,6 +121,23 @@ def test_station_on_strict(stations_devices_exported: list[tango.DeviceProxy]) -
     "TPMs transition from OFF to ON to Synchronised (workaround allowed)",
 )
 def test_station_on_workaround(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
+    "Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)",
+)
+def test_standby_during_init(
     stations_devices_exported: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -318,6 +336,34 @@ def check_spsstation_state_standby(
 
     if station.state() != tango.DevState.STANDBY:
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.STANDBY}")
+
+
+@given("the station and its tiles are synchronised")
+def check_station_and_tiles_synchronised(
+    station: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
+) -> None:
+    """
+    Check the SpsStation is ON and all its tiles are Synchronised.
+
+    :param station: a proxy to the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    """
+    check_spsstation_state(
+        station, change_event_callbacks, stations_devices_exported, station_tiles
+    )
+
+    if any(status != "Synchronised" for status in station.tileProgrammingState):
+        station.Initialise()
+
+    station_is_synced(station)
 
 
 @given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag}"))
@@ -561,3 +607,76 @@ def bandpass_daq_receiving(
 
     assert np.count_nonzero(bandpass_daq_device.xPolBandpass) > 0
     assert np.count_nonzero(bandpass_daq_device.yPolBandpass) > 0
+
+
+@when("the SpsStation is instructed to Init, then to Standby as soon as possible")
+def init_then_standby_on_unknown(
+    station: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    command_info: dict[str, Any],
+) -> None:
+    """
+    Call Tango Init, then Standby as soon as the station re-enters UNKNOWN.
+
+    This reproduces the SKB-1402 race: Init tears down and rebuilds the
+    station's communication with its TPMs, cycling the device state through
+    UNKNOWN -> DISABLED -> INIT -> DISABLED -> UNKNOWN. Commanding Standby
+    the moment we re-enter UNKNOWN used to hang if a TPM read was in flight
+    when the TPM lost power.
+
+    :param station: station device under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param command_info: a dict in which to store command IDs.
+    """
+    station.Init()
+
+    for expected_state in [
+        tango.DevState.UNKNOWN,
+        tango.DevState.DISABLED,
+        tango.DevState.INIT,
+        tango.DevState.DISABLED,
+        tango.DevState.UNKNOWN,
+    ]:
+        change_event_callbacks["device_state"].assert_change_event(expected_state)
+
+    ([result_code], [command_id]) = station.Standby()
+    assert result_code == ResultCode.QUEUED
+    command_info["Standby"] = command_id
+
+
+@then("the Standby command completed successfully")
+def standby_command_completed_successfully(
+    station: tango.DeviceProxy, command_info: dict[str, Any]
+) -> None:
+    """
+    Check the Standby command completed with ResultCode.OK.
+
+    :param station: station device under test.
+    :param command_info: a dict containing command IDs.
+    """
+    wait_for_lrc_result(
+        device=station,
+        uid=command_info["Standby"],
+        expected_result=ResultCode.OK,
+        timeout=300,
+    )
+
+
+@then("all TPMs transition to Off state")
+def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
+    """
+    Check all TPMs reach OFF state.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    """
+    deadline = time.time() + 300
+    while time.time() < deadline:
+        if all(tile.state() == tango.DevState.OFF for tile in station_tiles):
+            break
+        time.sleep(2)
+    else:
+        pytest.fail(
+            "Not all tiles transitioned to OFF: "
+            f"""{[(tile.dev_name(), tile.state()) for tile in station_tiles]}"""
+        )

@@ -7,6 +7,6 @@ dependencies:
   version: 0.16.0
 - name: ska-sat-lmc
   repository: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
-  version: 1.0.0-dev.c99938c45
-digest: sha256:598696abbfcf07686ee32e80930daa41ffbfdba3ee066b8e42a271d2f25a1740
-generated: "2026-07-13T23:11:23.576368311+01:00"
+  version: 1.0.0-dev.c6f2efe26
+digest: sha256:27ecdf429db5532537306edd56f0b514b582a386b1b8252a3f68a701898f7f23
+generated: "2026-07-14T14:57:30.596612955+01:00"

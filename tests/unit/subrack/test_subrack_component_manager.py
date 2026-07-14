@@ -61,7 +61,8 @@ class TestNoSupply:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        # Following commented callback expected with no PowerMarshaller.
+        # callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.NO_SUPPLY)
@@ -89,7 +90,8 @@ class TestNoSupply:
 
         subrack_component_manager.stop_communicating()
         callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
-        callbacks["component_state"].assert_call(power=None)
+        # Following commented callback expected with no PowerMarshaller.
+        # callbacks["component_state"].assert_call(power=None)
         callbacks["component_state"].assert_not_called()
 
 
@@ -132,7 +134,8 @@ class TestUnknown:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        # Following commented callback expected with no PowerMarshaller.
+        # callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         # no component state change will be pushed here,
@@ -208,7 +211,8 @@ class TestOff:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        # Following commented callback expected with no PowerMarshaller.
+        # callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.OFF)
@@ -259,7 +263,8 @@ class TestOff:
 
         subrack_component_manager.stop_communicating()
         callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
-        callbacks["component_state"].assert_call(power=None)
+        # Following commented callback expected with no PowerMarshaller.
+        # callbacks["component_state"].assert_call(power=None)
         callbacks["component_state"].assert_not_called()
 
 
@@ -434,13 +439,29 @@ class TestOn:
         subrack_component_manager.stop_communicating()
 
         callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=3)
-        callbacks["component_state"].assert_call(power=None, fault=None)
+        # We expect the following 2 calls without a PowerMarshaller.
+        # callbacks["component_state"].assert_call(power=None, fault=None)
+        # callbacks["component_state"].assert_call(
+        #     **{
+        #         attribute_name: None
+        #         for attribute_name in subrack_simulator_attribute_values
+        #     },
+        #     **{
+        #         attribute_name: None
+        #         for attribute_name in subrack_driver_derived_attribute_values
+        #     },
+        # )
+        # We expect the following call with a PowerMarshaller.
         callbacks["component_state"].assert_call(
+            fault=None,
             **{
                 attribute_name: None
                 for attribute_name in subrack_simulator_attribute_values
             },
-            subrack_max_fan_speeds=None,
+            **{
+                attribute_name: None
+                for attribute_name in subrack_driver_derived_attribute_values
+            },
         )
         callbacks["component_state"].assert_not_called()
 

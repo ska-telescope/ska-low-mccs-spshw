@@ -353,7 +353,7 @@ class SpsTangoTestHarness:
             AttributeFilterMaxSamples=filter_max_samples,
             Simulated_PDU=simulated_pdu,
             PduTrl=get_pdu_name(),
-            PowerMarshallerTrl="",  # "low-mccs/powermarshaller/powermarshaller",
+            PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",
             **optional_properties,
         )
 

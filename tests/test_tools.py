@@ -360,6 +360,35 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
         print(f"Device {device_proxy.dev_name()} is already ONLINE nothing to do.")
 
 
+def _wait_for_state(
+    device: tango.DeviceProxy, expected_state: tango.DevState, timeout: float = 5.0
+) -> bool:
+    """
+    Wait for device to get to expected_state.
+
+    Blocks for up to `timeout` seconds waiting for `device` to reach `expected_state`.
+
+    :param device: DeviceProxy to wait for.
+    :param expected_state: DevState we expect the device to reach.
+    :param timeout: Duration to wait for `device` to reach `expected_state`.
+
+    :returns: Whether or not the device reached the expected state.
+    """
+    end_time = time.time() + timeout
+    while device.state() != expected_state:
+        time.sleep(0.1)
+        if time.time() > end_time:
+            print(
+                f"Device '{device}' did not reach '{expected_state}' after {timeout}s"
+            )
+            return False
+    # Small sleep and re-assert to make sure the state change wasn't transient.
+    time.sleep(1)
+    assert device.state() == expected_state
+    print(f"Device '{device}' reached state '{expected_state}'")
+    return True
+
+
 class AttributeWaiter:  # pylint: disable=too-few-public-methods
     """A AttributeWaiter class."""
 

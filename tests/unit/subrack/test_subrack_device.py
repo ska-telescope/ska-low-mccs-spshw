@@ -30,7 +30,7 @@ from ska_low_mccs_spshw.subrack import (
     SubrackSimulator,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
-from tests.test_tools import LRCManager
+from tests.test_tools import LRCManager, _wait_for_state
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -212,35 +212,6 @@ def subrack_device_fixture(
     :yield: the subrack Tango device under test.
     """
     yield test_context.get_subrack_device(subrack_id)
-
-
-def _wait_for_state(
-    device: tango.DeviceProxy, expected_state: DevState, timeout: float = 5.0
-) -> bool:
-    """
-    Wait for device to get to expected_state.
-
-    Blocks for up to `timeout` seconds waiting for `device` to reach `expected_state`.
-
-    :param device: DeviceProxy to wait for.
-    :param expected_state: DevState we expect the device to reach.
-    :param timeout: Duration to wait for `device` to reach `expected_state`.
-
-    :returns: Whether or not the device reached the expected state.
-    """
-    end_time = time.time() + timeout
-    while device.state() != expected_state:
-        time.sleep(0.1)
-        if time.time() > end_time:
-            print(
-                f"Device '{device}' did not reach '{expected_state}' after {timeout}s"
-            )
-            return False
-    # Small sleep and re-assert to make sure the state change wasn't transient.
-    time.sleep(1)
-    assert device.state() == expected_state
-    print(f"Device '{device}' reached state '{expected_state}'")
-    return True
 
 
 def test_fast_adminMode_switch(

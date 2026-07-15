@@ -3,6 +3,9 @@ defaults:
 
 # AWS Cluster setting
 platform:
+  sat:
+    # This is used to deploy a simulated WREN device server for testing purposes. It is not used in production.
+    simulated: true 
   cluster:
     domain: cluster.local
 

@@ -201,6 +201,8 @@ repositories:
     url: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
   - name: ska-tango-devices
     url: https://gitlab.com/api/v4/projects/66823602/packages/helm/dev
+  - name: ska-sat-lmc
+    url: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
 
 releases:
   - name: ska-low-mccs-spshw
@@ -212,8 +214,9 @@ releases:
       - .deploy/helmfile.d/templates/spshw/subracks.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/tpms.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/ska-low-mccs-daq.yaml.gotmpl
-      - .deploy/helmfile.d/templates/helm-values.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/pdus.yaml.gotmpl
+      - templates/wren-simulator.yaml.gotmpl
+      - .deploy/helmfile.d/templates/helm-values.yaml.gotmpl
 
 {{- $_tango_host_provided := dig "platform" "cluster" "services" "tango-base" "tango-host" "" .Values}}
 {{- $tango_host_provided := dig "overrides" "cluster" "services" "tango-base" "tango-host" $_tango_host_provided .Values}}

@@ -1595,6 +1595,7 @@ class SpsStationComponentManager(
             else:
                 self.logger.debug("Timeout in standby")
                 task_status = TaskStatus.FAILED
+                result_code = ResultCode.FAILED
                 message = "Standby command timeout."
         else:
             task_status = TaskStatus.FAILED

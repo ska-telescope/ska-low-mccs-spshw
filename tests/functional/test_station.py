@@ -15,7 +15,9 @@ This test just checks that anything which can run passes.
 from __future__ import annotations
 
 import json
+import random
 import time
+from collections.abc import Iterator
 from datetime import datetime
 from typing import Any, Callable, Generator
 
@@ -252,6 +254,40 @@ def ensure_spsstation_state_on(
 
     if station.state() != tango.DevState.ON:
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
+
+
+@pytest.fixture(name="tile_inheriting")
+def tile_inheriting_fixture(station_tiles: list[tango.DeviceProxy]) -> Iterator[None]:
+    """
+    Temporarily enable ``inheritmodes`` for all station tiles.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: facilitate teardown
+    """
+    initial_inherit = [tile.inheritmodes for tile in station_tiles]
+
+    for tile in station_tiles:
+        tile.inheritmodes = True
+
+    time.sleep(1)
+
+    yield
+
+    for tile, initial_mode in zip(station_tiles, initial_inherit):
+        tile.inheritmodes = initial_mode
+
+
+@given("inheritmode is set to true")
+def set_inherit_mode_true(tile_inheriting: Any) -> None:
+    """
+    Set the inheritMode True.
+
+    :param tile_inheriting: Fixture to alter inheritmode.
+
+    """
+    return
 
 
 @given("the SpsStation is STANDBY")
@@ -621,7 +657,7 @@ def init_then_standby_on_unknown(
 
     This reproduces the SKB-1402 race: Init tears down and rebuilds the
     station's communication with its TPMs, cycling the device state through
-    UNKNOWN -> DISABLED -> INIT -> DISABLED -> UNKNOWN. Commanding Standby
+    UNKNOWN -> DISABLE -> INIT -> DISABLE -> UNKNOWN. Commanding Standby
     the moment we re-enter UNKNOWN used to hang if a TPM read was in flight
     when the TPM lost power.
 
@@ -646,14 +682,21 @@ def init_then_standby_on_unknown(
     # Command can be invoked as soon as we restart and enter UNKNOWN.
     for expected_state in [
         tango.DevState.UNKNOWN,
-        tango.DevState.DISABLED,
+        tango.DevState.DISABLE,
         tango.DevState.INIT,
-        tango.DevState.DISABLED,
+        tango.DevState.DISABLE,
         tango.DevState.UNKNOWN,
     ]:
         state_callback.assert_change_event("state", expected_state)
 
-    [result_code], [command_id] = station.Standby()
+    for i in range(10):
+        try:
+            time.sleep(random.randrange(1, 10) / 50)
+            [result_code], [command_id] = station.Standby()
+            break
+        except tango.DevFailed:
+            time.sleep(0.1)
+
     assert result_code == ResultCode.QUEUED
     command_info["Standby"] = command_id
 

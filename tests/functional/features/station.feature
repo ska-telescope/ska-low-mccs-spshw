@@ -30,6 +30,7 @@ Feature: Test station
     Scenario: Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)
         Given an SPS deployment against HW
         And the station and its tiles are synchronised
+        And inheritmode is set to true
         When the SpsStation is instructed to Init, then to Standby as soon as possible
         Then the Standby command completed successfully
         And all TPMs transition to Off state

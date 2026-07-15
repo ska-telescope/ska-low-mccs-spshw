@@ -47,8 +47,10 @@ include .make/oci.mk
 
 FIRMWARE_VERSION = 10.0.0
 FIRMWARE_VERSION_NEW = 11.0.0
+FIRMWARE_VERSION_2 = 12.0.0-rc1
 DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_10.0.0.bit
 DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_11.0.0.bit
+DESIRED_FIRMWARE_FILE_NAME_2 = tpm_firmware_12.0.0.bit
 
 define download_firmware_from_car
 	mkdir -p temp_firmware
@@ -63,6 +65,7 @@ endef
 install-firmware:
 	$(call download_firmware_from_car,$(FIRMWARE_VERSION),$(DESIRED_FIRMWARE_FILE_NAME))
 	$(call download_firmware_from_car,$(FIRMWARE_VERSION_NEW),$(DESIRED_FIRMWARE_FILE_NAME_NEW))
+	$(call download_firmware_from_car,$(FIRMWARE_VERSION_2),$(DESIRED_FIRMWARE_FILE_NAME_2))
 
 ########################################################################
 # HELM

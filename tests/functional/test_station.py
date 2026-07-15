@@ -11,6 +11,7 @@ This file contains a test for the station syncronisation.
 Depending on your exact deployment the individual tests may or may not be run.
 This test just checks that anything which can run passes.
 """
+
 from __future__ import annotations
 
 import json
@@ -163,7 +164,7 @@ def check_against_hardware(hw_context: bool, station_label: str) -> None:
 
 
 @given("the SpsStation is ON")
-def check_spsstation_state(
+def ensure_spsstation_state_on(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     stations_devices_exported: list[tango.DeviceProxy],
@@ -356,7 +357,7 @@ def check_station_and_tiles_synchronised(
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     """
-    check_spsstation_state(
+    ensure_spsstation_state_on(
         station, change_event_callbacks, stations_devices_exported, station_tiles
     )
 
@@ -395,7 +396,7 @@ def turn_station_on(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    ([result_code], [_]) = station.On()
+    [result_code], [_] = station.On()
     assert result_code == ResultCode.QUEUED
 
 
@@ -629,8 +630,20 @@ def init_then_standby_on_unknown(
         tango change event callbacks.
     :param command_info: a dict in which to store command IDs.
     """
+    state_callback = MockTangoEventCallbackGroup(
+        "state",
+        timeout=15,
+    )
+    station.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        state_callback["state"],
+    )
+    state_callback.assert_change_event("state", tango.DevState.ON)
+
     station.Init()
 
+    # Command can be invoked as soon as we restart and enter UNKNOWN.
     for expected_state in [
         tango.DevState.UNKNOWN,
         tango.DevState.DISABLED,
@@ -638,9 +651,9 @@ def init_then_standby_on_unknown(
         tango.DevState.DISABLED,
         tango.DevState.UNKNOWN,
     ]:
-        change_event_callbacks["device_state"].assert_change_event(expected_state)
+        state_callback.assert_change_event("state", expected_state)
 
-    ([result_code], [command_id]) = station.Standby()
+    [result_code], [command_id] = station.Standby()
     assert result_code == ResultCode.QUEUED
     command_info["Standby"] = command_id
 
@@ -670,6 +683,7 @@ def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
 
     :param station_tiles: List of TPM DeviceProxies.
     """
+    assert station_tiles, "No station tiles were discovered"
     deadline = time.time() + 300
     while time.time() < deadline:
         if all(tile.state() == tango.DevState.OFF for tile in station_tiles):

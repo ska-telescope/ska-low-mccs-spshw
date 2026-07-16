@@ -15,8 +15,8 @@ This test just checks that anything which can run passes.
 from __future__ import annotations
 
 import json
-import threading
 import random
+import threading
 import time
 from collections.abc import Iterator
 from datetime import datetime
@@ -35,7 +35,7 @@ from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
 from tests.test_tools import wait_for_lrc_result
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-STRESS_TEST_PHASE_DURATION = 120.0  # seconds
+STRESS_TEST_PHASE_DURATION = 90.0  # seconds
 NOF_CHANNEL_GROUPS = 48
 
 

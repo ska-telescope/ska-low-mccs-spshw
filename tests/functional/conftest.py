@@ -906,6 +906,13 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "buildState",  # Mismatch between cpp and tango args.
         "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "longRunningCommandInProgress",  # deprecated and noisy
+        "longRunningCommandProgress",  # deprecated and noisy
+        "longRunningCommandStatus",  # deprecated and noisy
+        "longRunningCommandsInQueue",  # deprecated and noisy
+        "longRunningCommandIDsInQueue",  # deprecated and noisy
+        "longRunningCommandResult",  # deprecated and noisy
+        "stationBeamFlagEnabled",  # not allowed when initialising.
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # Only available in specific bios versions.
     ] + [f"temperatureADC{i}" for i in range(16)]

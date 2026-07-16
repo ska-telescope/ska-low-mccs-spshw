@@ -891,6 +891,26 @@ def wait_for_lrcs_to_finish_fixture() -> Callable:
     return _wait_for_lrcs_to_finish
 
 
+@pytest.fixture(name="excluded_tile_attributes")
+def excluded_tile_attributes_fixture() -> list[str]:
+    """
+    Return attribute names to exclude when bulk-reading Tile attributes.
+
+    These attributes are known to fail or be invalid to read for reasons
+    unrelated to hardware lock contention, so excluding them avoids false
+    positives when stress-testing the interface.
+
+    :returns: a list of attribute names to exclude.
+    """
+    return [
+        "buildState",  # Mismatch between cpp and tango args.
+        "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "_lrcEvent",  # Requires more setup than the test performs.
+        "timing_pll_40g_count",  # Only available in specific bios versions.
+    ] + [f"temperatureADC{i}" for i in range(16)]
+
+
 @pytest.fixture(name="calibration_coefficients")
 def calibration_coefficients_fixture(
     nof_channels: int, nof_antennas: int, nof_pols: int

@@ -27,6 +27,13 @@ Feature: Test station
         Then all TPMs eventually transition to Synchronised state
 
 
+    Scenario: Stress testing the interface does not cause lock contention (SKB-1440 regression)
+        Given an SPS deployment against HW
+        And the SpsStation is ON
+        When we stress test the interface
+        Then we do not get any failures
+
+
     Scenario: Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)
         Given an SPS deployment against HW
         And the station and its tiles are synchronised

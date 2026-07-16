@@ -919,7 +919,9 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "fpga1_station_beamformer_error_count",
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # Only available in specific bios versions.
-    ] + [f"temperatureADC{i}" for i in range(16)]
+    ] + [
+        f"temperatureADC{i}" for i in range(16)
+    ]  # Only available in > 2 Hardware versions
 
 
 @pytest.fixture(name="calibration_coefficients")

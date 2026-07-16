@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -822,6 +823,85 @@ def _stress_beamformer_running_for_channels(
                 )
             if time.time() >= deadline:
                 break
+
+
+@pytest.fixture(name="stressed_tiles")
+def stressed_tiles_fixture(
+    station_tiles: list[tango.DeviceProxy],
+) -> Iterator[None]:
+    """
+    Configure station tiles for stress testing.
+
+    Temporarily reduces the poll rate and lock timeout, reinitialises
+    each tile, waits for the expected state transitions, and restores
+    the original configuration after the test.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: before teardown.
+
+    :raises RuntimeError: when we fail to restore initial state.
+        State left modified by test.
+    """
+    expected_states_after_init = [
+        tango.DevState.UNKNOWN,
+        tango.DevState.DISABLE,
+        tango.DevState.INIT,
+        tango.DevState.DISABLE,
+        tango.DevState.UNKNOWN,
+        tango.DevState.ON,
+    ]
+
+    original_properties = []
+
+    try:
+        for tile in station_tiles:
+            props = tile.get_property("PollRate")
+            props.update(tile.get_property("DefaultLockTimeout"))
+            original_properties.append(props)
+
+            tile.put_property({"PollRate": 0.05})
+            tile.put_property({"DefaultLockTimeout": 0.3})
+
+            state_callback = MockTangoEventCallbackGroup(
+                "state",
+                timeout=15,
+            )
+            tile.subscribe_event(
+                "state",
+                tango.EventType.CHANGE_EVENT,
+                state_callback["state"],
+            )
+
+            state_callback.assert_change_event("state", tango.DevState.ON)
+
+            tile.init()
+
+            for state in expected_states_after_init:
+                state_callback.assert_change_event("state", state)
+
+        yield
+
+    finally:
+        cleanup_errors = []
+
+        for tile, props in zip(station_tiles, original_properties):
+            tile.put_property({"PollRate": props["PollRate"]})
+            tile.put_property({"DefaultLockTimeout": props["DefaultLockTimeout"]})
+
+            try:
+                tile.init()
+
+                for state in expected_states_after_init:
+                    state_callback.assert_change_event("state", state)
+            except Exception as e:  # pylint: disable=broad-except
+                cleanup_errors.append(f"{tile}: {e}")
+
+        if cleanup_errors:
+            raise RuntimeError(
+                "Failed to restore test state:\n" + "\n".join(cleanup_errors)
+            )
 
 
 @when("we stress test the interface")

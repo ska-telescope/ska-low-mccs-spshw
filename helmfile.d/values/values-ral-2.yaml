@@ -35,50 +35,34 @@ helm_values:
           BiosVersion: 0.6.0
           HardwareVersion: v1.6.7a
           PreAduFitted: [true, true]
-          PollRate: 0.05   # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3  # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm10:
           BiosVersion: 0.6.0
           HardwareVersion: v1.6.7a
           PreAduFitted: [true, true]
-          PollRate: 0.05   # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3  # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm11:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
-          PollRate: 0.05   # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3   # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm12:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
-          PollRate: 0.05   # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3  # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm13:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
-          PollRate: 0.05  # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3  # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm14:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.1a
           PreAduFitted: [false, false]
-          PollRate: 0.05   # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3  # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm15:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.2a
           PreAduFitted: [false, false]
-          PollRate: 0.05   # Decreased from default production value to stress while testing.
-          DefaultLockTimeout: 0.3  # Reduced to enforce stricter timeout than production defaults
         low-mccs/tile/stfc-ral-2-tpm16:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.2a
           PreAduFitted: [false, false]
-          PollRate: 0.05
-          DefaultLockTimeout: 0.3 # Reduced to enforce stricter timeout than production defaults
       MccsSubrack: # SPRTS-787
         low-mccs/subrack/stfc-ral-2-sr2:
           tpmPowers->max_alarm: 124.0

@@ -707,6 +707,8 @@ def _poll_all_tile_attributes(
                 )
                 continue
             for attr in attribute_names:
+                if stop_event.is_set():
+                    return
                 if attr in exclusions:
                     continue
                 try:
@@ -746,6 +748,9 @@ def _stress_initialise_and_preadu_levels(
     :param station: station device under test.
     :param failures: a list to append failure descriptions to.
     :param duration: how long to run this phase for, in seconds.
+
+    :raises tango.DevFailed: when the origional preadu level
+        could not be reset.
     """
     deadline = time.time() + duration
     while time.time() < deadline:
@@ -773,9 +778,21 @@ def _stress_initialise_and_preadu_levels(
         raised_levels = [level + 1 for level in original_levels]
         try:
             station.preaduLevels = raised_levels
-            station.preaduLevels = original_levels
         except tango.DevFailed as error:
-            failures.append(f"preaduLevels write failed: {error}")
+            failures.append(f"preaduLevels raise failed: {error}")
+        finally:
+            # Restore is not optional cleanup: leaving the station at
+            # raised_levels would corrupt the baseline for every later
+            # iteration (and any observation that follows this test), so
+            # a failure here must abort the stress loop rather than be
+            # logged and skipped like the other failures in this loop.
+            try:
+                station.preaduLevels = original_levels
+            except tango.DevFailed as error:
+                failures.append(
+                    f"preaduLevels restore failed, hardware left modified: {error}"
+                )
+                raise
 
 
 def _stress_beamformer_running_for_channels(

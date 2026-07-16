@@ -45,10 +45,10 @@ python-lint: mypy
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 10.0.0
-FIRMWARE_VERSION_NEW = 11.0.0
-DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_10.0.0.bit
-DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_11.0.0.bit
+FIRMWARE_VERSION = 12.0.0-rc1
+FIRMWARE_VERSION_NEW = 12.0.0-rc1
+DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_12.0.0_rc1.bit
+DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_12.0.0_rc1.bit
 
 define download_firmware_from_car
 	mkdir -p temp_firmware

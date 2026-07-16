@@ -6,9 +6,6 @@ platform:
   sat:
     # This is used to deploy a simulated WREN device server for testing purposes. It is not used in production.
     simulated: true 
-  cluster:
-    domain: cluster.local
-
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
 # For example,

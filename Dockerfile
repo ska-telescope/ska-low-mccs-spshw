@@ -10,17 +10,14 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 # Install git for dependencies from git repositories
-RUN apt-get update && apt-get install -y --no-install-recommends git make curl && \
+RUN apt-get update && apt-get install -y --no-install-recommends git && \
     rm -rf /var/lib/apt/lists/*
 
 # Next steps in order from least-to-most frequently changing for caching
+
 # Download and install TPM firmware.
-# .make and .helmfile.d are required for make to run - should be fixed
-COPY .make/ .make/
-COPY .make-uv/ .make-uv/
-COPY helmfile.d/ helmfile.d/
-COPY Makefile ./
-RUN make install-firmware
+COPY download_firmware.sh ./
+RUN ./download_firmware.sh
 
 # Install Python dependencies
 COPY pyproject.toml uv.lock ./

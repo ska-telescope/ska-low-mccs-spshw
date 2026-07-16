@@ -46,6 +46,29 @@ def command_info_fixture() -> dict[str, Any]:
     return {}
 
 
+@pytest.fixture(name="tile_inheriting")
+def tile_inheriting_fixture(station_tiles: list[tango.DeviceProxy]) -> Iterator[None]:
+    """
+    Temporarily enable ``inheritmodes`` for all station tiles.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: facilitate teardown
+    """
+    initial_inherit = [tile.inheritmodes for tile in station_tiles]
+
+    for tile in station_tiles:
+        tile.inheritmodes = True
+
+    time.sleep(1)
+
+    yield
+
+    for tile, initial_mode in zip(station_tiles, initial_inherit):
+        tile.inheritmodes = initial_mode
+
+
 @pytest.fixture(name="change_event_callbacks")
 def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
@@ -254,40 +277,6 @@ def ensure_spsstation_state_on(
 
     if station.state() != tango.DevState.ON:
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.ON}")
-
-
-@pytest.fixture(name="tile_inheriting")
-def tile_inheriting_fixture(station_tiles: list[tango.DeviceProxy]) -> Iterator[None]:
-    """
-    Temporarily enable ``inheritmodes`` for all station tiles.
-
-    :param station_tiles: A list containing the ``tango.DeviceProxy``
-        of the exported tiles. Or Empty list if no devices exported.
-
-    :yields: facilitate teardown
-    """
-    initial_inherit = [tile.inheritmodes for tile in station_tiles]
-
-    for tile in station_tiles:
-        tile.inheritmodes = True
-
-    time.sleep(1)
-
-    yield
-
-    for tile, initial_mode in zip(station_tiles, initial_inherit):
-        tile.inheritmodes = initial_mode
-
-
-@given("inheritmode is set to true")
-def set_inherit_mode_true(tile_inheriting: Any) -> None:
-    """
-    Set the inheritMode True.
-
-    :param tile_inheriting: Fixture to alter inheritmode.
-
-    """
-    return
 
 
 @given("the SpsStation is STANDBY")
@@ -646,9 +635,10 @@ def bandpass_daq_receiving(
     assert np.count_nonzero(bandpass_daq_device.yPolBandpass) > 0
 
 
-@when("the SpsStation is instructed to Init, then to Standby as soon as possible")
-def init_then_standby_on_unknown(
+@when("we trigger skb-1402")
+def trigger_skb_1402(
     station: tango.DeviceProxy,
+    tile_inheriting: Any,
     change_event_callbacks: MockTangoEventCallbackGroup,
     command_info: dict[str, Any],
 ) -> None:
@@ -662,6 +652,7 @@ def init_then_standby_on_unknown(
     when the TPM lost power.
 
     :param station: station device under test.
+    :param tile_inheriting: fixture to ensure tiles are inheriting.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     :param command_info: a dict in which to store command IDs.

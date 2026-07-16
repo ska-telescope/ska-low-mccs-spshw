@@ -45,11 +45,6 @@ python-lint: mypy
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 10.0.0
-FIRMWARE_VERSION_NEW = 11.0.0
-DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_10.0.0.bit
-DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_11.0.0.bit
-
 define download_firmware_from_car
 	mkdir -p temp_firmware
 	curl -sSL --retry 3 --connect-timeout 15 \
@@ -61,8 +56,7 @@ define download_firmware_from_car
 endef
 
 install-firmware:
-	$(call download_firmware_from_car,$(FIRMWARE_VERSION),$(DESIRED_FIRMWARE_FILE_NAME))
-	$(call download_firmware_from_car,$(FIRMWARE_VERSION_NEW),$(DESIRED_FIRMWARE_FILE_NAME_NEW))
+	./download_firmware.sh
 
 ########################################################################
 # HELM

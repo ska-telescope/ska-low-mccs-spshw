@@ -1,0 +1,55 @@
+@startuml
+participant "TANGO Interface" as user
+participant "SpsStation" as station
+participant "MccsSubrack" as subrack
+participant "MccsTile" as tile
+participant "WREN\n(WhiteRabbit)" as wren
+
+== On() ==
+user -> station: On()
+station -> subrack: On()\n(power up subrack + ports)
+subrack --> station: PowerState.ON
+
+station -> station: _turn_on_without_automatic_initialisation()\n(set tile source IPs, global reference time,\nturn on tile power - Tile initialise is NOT sent)
+station -> tile: power on
+tile --> station: PowerState.ON
+
+loop until WREN healthState == OK, or timeout elapses
+station -> wren: healthState
+wren --> station: healthState
+end
+
+station -> tile: initialise() (per tile)
+tile --> station: tileProgrammingState
+
+note right of station
+  Continue with the pre-existing workflow:
+  _initialise_tile_parameters, _initialise_station,
+  _wait_for_arp_table, _route_data,
+  _check_station_synchronisation
+end note
+
+station --> user: longRunningCommandResult
+
+== Initialise() ==
+user -> station: Initialise()
+station -> station: _set_tile_source_ips()\n_set_global_reference_time()
+
+loop until WREN healthState == OK, or timeout elapses
+station -> wren: healthState
+wren --> station: healthState
+end
+
+station -> tile: _reinitialise_tiles()\ninitialise() (per tile)
+tile --> station: tileProgrammingState
+
+note right of station
+  Continue with the pre-existing workflow:
+  _initialise_tile_parameters, _initialise_station,
+  _wait_for_arp_table, _route_data,
+  _check_station_synchronisation
+end note
+
+station --> user: longRunningCommandResult
+
+@enduml

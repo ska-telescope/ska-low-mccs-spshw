@@ -38,6 +38,7 @@ prototype for the `Square Kilometre Array`_.
    reference/subrack_driver.rst
    reference/pointing.rst
    reference/station.rst
+   reference/station_synchronisation.rst
 
 
 Indices and tables

@@ -189,6 +189,11 @@ def wait_for_lrc_result(
     for finished_result in device.lrcfinished:
         loaded_result = json.loads(finished_result)
         if loaded_result["uid"] == uid:
+            if loaded_result["status"] != "COMPLETED":
+                raise ValueError(
+                    f"Status for {uid} = {loaded_result['status']}. "
+                    "Expected COMPLETED!"
+                )
             actual_result = ResultCode(loaded_result["result"][0])
             if actual_result == expected_result:
                 return

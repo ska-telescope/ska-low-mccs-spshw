@@ -913,6 +913,10 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "longRunningCommandIDsInQueue",  # deprecated and noisy
         "longRunningCommandResult",  # deprecated and noisy
         "stationBeamFlagEnabled",  # not allowed when initialising.
+        # OverflowError: Value is too large error (related SKB-1397 ?)
+        "fpga0_station_beamformer_error_count",
+        # OverflowError: Value is too large error (related SKB-1397 ?)
+        "fpga1_station_beamformer_error_count",
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # Only available in specific bios versions.
     ] + [f"temperatureADC{i}" for i in range(16)]

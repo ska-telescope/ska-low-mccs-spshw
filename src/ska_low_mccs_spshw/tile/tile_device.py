@@ -6483,7 +6483,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.logger.error("Insufficient parameters")
             raise ValueError("Insufficient parameters")
         beam_index = int(argin[0])
-        if beam_index < 0 or beam_index > 7:
+        if beam_index < 0 or beam_index > 47:
             self.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
         delay_array = []

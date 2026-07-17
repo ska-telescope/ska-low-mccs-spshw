@@ -24,6 +24,7 @@ from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union
 
+import backoff
 import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
@@ -63,6 +64,63 @@ __all__ = ["SpsStationComponentManager"]
 
 _LMC_INTEGRATED_MODE_RETRY_DELAY = 0.1
 _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
+
+# Seconds to keep retrying a transiently-failing MccsTile command/attribute write.
+# Retry is only active within a long-running SpsStation command; fast commands hold
+# the client serialisation lock throughout, so they run once and fail fast.
+_TILE_INTERACTION_RETRY_MAX_TIME = 2.5
+
+
+class _TileCommandFailedError(Exception):
+    """Internal signal that a retried tile command returned a non-OK ResultCode."""
+
+    def __init__(self: _TileCommandFailedError, result: Any) -> None:
+        """
+        Initialise with the failing command result.
+
+        :param result: the ``([ResultCode], [message])`` returned by the command.
+        """
+        self.result = result
+        super().__init__()
+
+
+def _command_result_failed(result: Any) -> bool:
+    """
+    Return whether a tile command result reports a non-OK ResultCode.
+
+    Commands return ``([ResultCode], [message])``; attribute writes return ``None``
+    (and mock proxies return arbitrary objects), neither of which is a failure.
+
+    :param result: the value returned by the tile interaction.
+    :return: True if ``result`` is a command result with a non-OK code.
+    """
+    try:
+        [[code], [_]] = result
+    except (ValueError, TypeError):
+        return False
+    return bool(code != ResultCode.OK)
+
+
+def _with_tile_command_retry(func: Callable) -> Callable:
+    """
+    Enable MccsTile command retry while an SpsStation long-running command runs.
+
+    Outside a decorated command there is no retry budget, so tile interactions run
+    once and fail fast.
+
+    :param func: the ``(self, ...)`` component-manager method to wrap.
+    :return: the wrapped method.
+    """
+
+    @functools.wraps(func)
+    def _wrapper(self: SpsStationComponentManager, *args: Any, **kwargs: Any) -> Any:
+        self._tile_command_retry_max_time = _TILE_INTERACTION_RETRY_MAX_TIME
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            self._tile_command_retry_max_time = None
+
+    return _wrapper
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -606,6 +664,11 @@ class SpsStationComponentManager(
         self._lmc_ip = "0.0.0.0"
         self._lmc_port = self._destination_port
         self._lmc_payload_length = 8192
+
+        # Retry budget (seconds) for transiently-failing MccsTile commands and
+        # attribute writes; None means no retry (fail fast). Set to the retry budget
+        # only while a long-running SpsStation command runs (_with_tile_command_retry).
+        self._tile_command_retry_max_time: float | None = None
 
         self._desired_beamformer_table = np.zeros(shape=(48, 7), dtype=int)
         self._desired_beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
@@ -1609,6 +1672,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
+    @_with_tile_command_retry
     @lock_power_state
     @check_communicating
     def _on(
@@ -1742,6 +1806,7 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
+    @_with_tile_command_retry
     @check_communicating
     # pylint: disable=too-many-branches
     def initialise(
@@ -2164,21 +2229,43 @@ class SpsStationComponentManager(
                 self.logger.info(
                     "Initialise routine overriding MccsTile instance PreaduAttenuation "
                 )
-                tile.preaduLevels = self._desired_preadu_levels[i1:i2]
+                self._run_with_backoff(
+                    tile.write_attribute,
+                    "preaduLevels",
+                    self._desired_preadu_levels[i1:i2],
+                )
             if self._desired_static_delays is not None:
                 self.logger.info(
                     "Initialise routine overriding MccsTile instance StaticTimeDelays "
                 )
-                tile.staticTimeDelays = self._desired_static_delays[i1:i2]
-            tile.channeliserRounding = self._channeliser_rounding
-            tile.cspRounding = self._csp_rounding
-            tile.cspSpeadFormat = self._csp_spead_format
-            tile.globalReferenceTime = self._global_reference_time
-            tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
-            result_code, message = tile.ConfigureStationBeamformer(
+                self._run_with_backoff(
+                    tile.write_attribute,
+                    "staticTimeDelays",
+                    self._desired_static_delays[i1:i2],
+                )
+            self._run_with_backoff(
+                tile.write_attribute, "channeliserRounding", self._channeliser_rounding
+            )
+            self._run_with_backoff(
+                tile.write_attribute, "cspRounding", self._csp_rounding
+            )
+            self._run_with_backoff(
+                tile.write_attribute, "cspSpeadFormat", self._csp_spead_format
+            )
+            self._run_with_backoff(
+                tile.write_attribute, "globalReferenceTime", self._global_reference_time
+            )
+            self._run_with_backoff(
+                tile.write_attribute,
+                "ppsDelayCorrection",
+                self._pps_delay_corrections[tile_no],
+            )
+
+            result_code, message = self._run_with_backoff(
+                tile.ConfigureStationBeamformer,
                 json.dumps(
                     {"is_first": (tile_no == 0), "is_last": (tile_no == last_tile)}
-                )
+                ),
             )
             if result_code[0] != ResultCode.OK:
                 msg = (
@@ -2230,7 +2317,8 @@ class SpsStationComponentManager(
                 dst_ip1 = str(self._sdn_first_address + 2 * tile_id + 2)
                 dst_ip2 = str(self._sdn_first_address + 2 * tile_id + 3)
 
-            result_code, message = proxy._proxy.SetCspDownload(
+            result_code, message = self._run_with_backoff(
+                proxy._proxy.SetCspDownload,
                 json.dumps(
                     {
                         "source_port": self._source_port,
@@ -2241,7 +2329,7 @@ class SpsStationComponentManager(
                         "netmask": self._sdn_netmask,
                         "gateway": self._sdn_gateway,
                     }
-                )
+                ),
             )
             if result_code[0] != ResultCode.OK:
                 msg = f"SetCspDownload failed on {proxy._proxy.name()}: {message[0]}"
@@ -4132,6 +4220,56 @@ class SpsStationComponentManager(
             return f"{test_name} appears to have no description."
         return docs
 
+    def _run_with_backoff(
+        self: SpsStationComponentManager,
+        func: Callable[..., Any],
+        *args: Any,
+        description: str | None = None,
+    ) -> Any:
+        """
+        Run an MccsTile command or attribute write, retrying transient failures.
+
+        Retries — with exponential backoff up to ``_tile_command_retry_max_time`` —
+        on a raised ``tango.DevFailed`` or a non-OK command ResultCode. Retry is only
+        active while a long-running SpsStation command runs; otherwise the call runs
+        once and fails fast.
+
+        :param func: the tile command or ``write_attribute`` callable to invoke.
+        :param args: positional arguments to call ``func`` with.
+        :param description: optional description for retry logging; derived from
+            ``func`` and its first argument (the command/attribute name) if omitted.
+
+        :return: whatever ``func`` returns.
+        """
+        max_time = self._tile_command_retry_max_time
+        if max_time is None:
+            return func(*args)
+
+        if description is None:
+            description = getattr(func, "__name__", None) or repr(func)
+            if args:
+                description = f"{description} {args[0]}"
+
+        @backoff.on_exception(
+            backoff.expo,
+            (tango.DevFailed, _TileCommandFailedError),
+            max_time=max_time,
+            on_backoff=lambda details: self.logger.warning(
+                f"Retrying tile interaction '{description}' after a transient "
+                f"failure ({details['elapsed']:.1f}s elapsed)."
+            ),
+        )
+        def _invoke() -> Any:
+            result = func(*args)
+            if _command_result_failed(result):
+                raise _TileCommandFailedError(result)
+            return result
+
+        try:
+            return _invoke()
+        except _TileCommandFailedError as exc:
+            return exc.result
+
     # pylint: disable=broad-exception-caught
     def _execute_async_on_tiles(
         self: SpsStationComponentManager,
@@ -4144,7 +4282,9 @@ class SpsStationComponentManager(
         """
         Execute a given command on all tile proxies in separate threads.
 
-        This is for commands which return a DevVarLongStringArrayType.
+        This is for commands which return a DevVarLongStringArrayType. Each tile
+        command is retried on transient failure using the current retry budget
+        (longer while a long-running SpsStation command runs).
 
         :param command_name: command to execute.
         :param command_args: args to execute commands with.
@@ -4170,9 +4310,11 @@ class SpsStationComponentManager(
             proxy: MccsDeviceProxy,
         ) -> tuple[list[ResultCode], list[Optional[str]]]:
             try:
-                return proxy.command_inout(
+                return self._run_with_backoff(
+                    proxy.command_inout,
                     command_name,
                     *command_args,
+                    description=f"{command_name} on {proxy.dev_name()}",
                 )
             except Exception as e:
                 self.logger.error(

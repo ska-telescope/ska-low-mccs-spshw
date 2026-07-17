@@ -425,6 +425,9 @@ def test_off_on(
     change_event_callbacks["boardCurrent"].assert_change_event(
         subrack_device_attribute_values["boardCurrent"],
     )
+    assert wait_for_condition(
+        lambda: subrack_device.state() == DevState.ON
+    ), subrack_device.state()
 
     # It's on, so let's turn it off.
     subrack_lrc_manager = LRCManager(subrack_device, change_event_callbacks)
@@ -437,8 +440,13 @@ def test_off_on(
         status="COMPLETED", result_code=ResultCode.OK, timeout=10
     )
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
-
+    # Somehow we're getting here and the Subrack is still ON sometimes...
+    # Weirdly state=ON but status=OFF
+    assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF), (
+        subrack_device.state(),
+        subrack_device.status(),
+    )
+    assert subrack_device.state() == DevState.OFF
     change_event_callbacks["boardCurrent"].assert_change_event([])
     with pytest.raises(tango.DevFailed):
         _ = subrack_device.boardCurrent

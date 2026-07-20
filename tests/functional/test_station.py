@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import json
 import random
+import threading
 import time
 from collections.abc import Iterator
 from datetime import datetime
@@ -34,6 +36,8 @@ from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
 from tests.test_tools import wait_for_lrc_result
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+STRESS_TEST_PHASE_DURATION = 90.0  # seconds
+NOF_CHANNEL_GROUPS = 48
 
 
 @pytest.fixture(name="command_info")
@@ -151,6 +155,23 @@ def test_station_on_workaround(
 ) -> None:
     """
     Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
+    "Stress testing the interface does not cause lock contention (SKB-1440 regression)",
+)
+def test_lock_contention_not_observed(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that stress tests the SpsStation/Tile interface.
 
     :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
         for all exported sps devices.
@@ -633,6 +654,314 @@ def bandpass_daq_receiving(
 
     assert np.count_nonzero(bandpass_daq_device.xPolBandpass) > 0
     assert np.count_nonzero(bandpass_daq_device.yPolBandpass) > 0
+
+
+@pytest.fixture(name="stress_test_failures")
+def stress_test_failures_fixture() -> list[str]:
+    """
+    Fixture to store failures observed while stress testing the interface.
+
+    :returns: an empty list to append failure descriptions to.
+    """
+    return []
+
+
+def _poll_all_tile_attributes(
+    station_tiles: list[tango.DeviceProxy],
+    excluded_tile_attributes: list[str],
+    failures: list[str],
+    stop_event: threading.Event,
+) -> None:
+    """
+    Continuously poll every attribute on every tile until told to stop.
+
+    This is used as a background stressor for the TPM hardware lock while
+    other operations are driven against the station, per SKB-1440.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param excluded_tile_attributes: Attribute names to skip, as they are
+        known to fail for reasons unrelated to hardware lock contention.
+    :param failures: a list to append failure descriptions to.
+    :param stop_event: an event used to signal the loop to stop.
+    """
+    tile_exclusions = {}
+    for i, tile in enumerate(station_tiles):
+        exclusions = set(excluded_tile_attributes)
+        if i != len(station_tiles) - 1:
+            # These are documented by the API as do not use unless final tile.
+            exclusions.update(
+                {
+                    "fpga0_station_beamformer_flagged_count",
+                    "fpga1_station_beamformer_flagged_count",
+                }
+            )
+        tile_exclusions[tile.dev_name()] = exclusions
+
+    while not stop_event.is_set():
+        for tile in station_tiles:
+            exclusions = tile_exclusions[tile.dev_name()]
+            try:
+                attribute_names = tile.get_attribute_list()
+            except tango.DevFailed as error:
+                failures.append(
+                    f"get_attribute_list failed on {tile.dev_name()}: {error}"
+                )
+                continue
+            for attr in attribute_names:
+                if stop_event.is_set():
+                    return
+                if attr in exclusions:
+                    continue
+                try:
+                    getattr(tile, attr)
+                except tango.DevFailed as error:
+                    failures.append(f"Failed to read {tile.dev_name()}.{attr}: {error}")
+
+
+def _wait_for_preadu_levels(station: tango.DeviceProxy, timeout: float = 60.0) -> Any:
+    """
+    Wait for the SpsStation preaduLevels attribute to populate.
+
+    :param station: station device under test.
+    :param timeout: the maximum time to wait, in seconds.
+
+    :raises TimeoutError: if preaduLevels does not populate in time.
+
+    :return: the populated preaduLevels values.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        levels = station.preaduLevels
+        if levels is not None and len(levels) > 0:
+            return levels
+        time.sleep(1)
+    raise TimeoutError("Timed out waiting for preaduLevels to populate on SpsStation")
+
+
+def _stress_initialise_and_preadu_levels(
+    station: tango.DeviceProxy,
+    failures: list[str],
+    duration: float = STRESS_TEST_PHASE_DURATION,
+) -> None:
+    """
+    Repeatedly Initialise the station and read/write preaduLevels.
+
+    :param station: station device under test.
+    :param failures: a list to append failure descriptions to.
+    :param duration: how long to run this phase for, in seconds.
+
+    :raises tango.DevFailed: when the origional preadu level
+        could not be reset.
+    """
+    deadline = time.time() + duration
+    while time.time() < deadline:
+        try:
+            [result_code], [command_id] = station.Initialise()
+            if result_code != ResultCode.QUEUED:
+                failures.append(f"Initialise not queued, got {result_code}")
+                continue
+            wait_for_lrc_result(
+                device=station,
+                uid=command_id,
+                expected_result=ResultCode.OK,
+                timeout=60,
+            )
+        except (tango.DevFailed, TimeoutError, ValueError) as error:
+            failures.append(f"Initialise failed: {error}")
+            continue
+
+        try:
+            original_levels = list(_wait_for_preadu_levels(station))
+        except TimeoutError as error:
+            failures.append(str(error))
+            continue
+
+        raised_levels = [level + 1 for level in original_levels]
+        try:
+            station.preaduLevels = raised_levels
+        except tango.DevFailed as error:
+            failures.append(f"preaduLevels raise failed: {error}")
+        finally:
+            # Restore is not optional cleanup: leaving the station at
+            # raised_levels would corrupt the baseline for every later
+            # iteration (and any observation that follows this test), so
+            # a failure here must abort the stress loop rather than be
+            # logged and skipped like the other failures in this loop.
+            try:
+                station.preaduLevels = original_levels
+            except tango.DevFailed as error:
+                failures.append(
+                    f"preaduLevels restore failed, hardware left modified: {error}"
+                )
+                raise
+
+
+def _stress_beamformer_running_for_channels(
+    station: tango.DeviceProxy,
+    failures: list[str],
+    duration: float = STRESS_TEST_PHASE_DURATION,
+) -> None:
+    """
+    Repeatedly call BeamformerRunningForChannels for every channel group.
+
+    :param station: station device under test.
+    :param failures: a list to append failure descriptions to.
+    :param duration: how long to run this phase for, in seconds.
+    """
+    deadline = time.time() + duration
+    while time.time() < deadline:
+        for channel_group in range(NOF_CHANNEL_GROUPS):
+            try:
+                station.command_inout(
+                    "BeamformerRunningForChannels",
+                    json.dumps({"channel_groups": [channel_group]}),
+                )
+            except tango.DevFailed as error:
+                failures.append(
+                    "BeamformerRunningForChannels failed for channel group "
+                    f"{channel_group}: {error}"
+                )
+            if time.time() >= deadline:
+                break
+
+
+@pytest.fixture(name="stressed_tiles")
+def stressed_tiles_fixture(
+    station_tiles: list[tango.DeviceProxy],
+) -> Iterator[None]:
+    """
+    Configure station tiles for stress testing.
+
+    Temporarily reduces the poll rate and lock timeout, reinitialises
+    each tile, waits for the expected state transitions, and restores
+    the original configuration after the test.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: before teardown.
+
+    :raises RuntimeError: when we fail to restore initial state.
+        State left modified by test.
+    """
+    expected_states_after_init = [
+        tango.DevState.UNKNOWN,
+        tango.DevState.DISABLE,
+        tango.DevState.INIT,
+        tango.DevState.DISABLE,
+        tango.DevState.UNKNOWN,
+        tango.DevState.ON,
+    ]
+
+    original_properties = []
+
+    try:
+        for tile in station_tiles:
+            props = tile.get_property("PollRate")
+            props.update(tile.get_property("DefaultLockTimeout"))
+            original_properties.append(props)
+
+            tile.put_property({"PollRate": 0.05})
+            tile.put_property({"DefaultLockTimeout": 0.3})
+
+            state_callback = MockTangoEventCallbackGroup(
+                "state",
+                timeout=15,
+            )
+            tile.subscribe_event(
+                "state",
+                tango.EventType.CHANGE_EVENT,
+                state_callback["state"],
+            )
+
+            state_callback.assert_change_event("state", tango.DevState.ON)
+
+            tile.init()
+
+            for state in expected_states_after_init:
+                state_callback.assert_change_event("state", state)
+
+        yield
+
+    finally:
+        cleanup_errors = []
+
+        for tile, props in zip(station_tiles, original_properties):
+            tile.put_property({"PollRate": props["PollRate"]})
+            tile.put_property({"DefaultLockTimeout": props["DefaultLockTimeout"]})
+
+            try:
+                tile.init()
+
+                for state in expected_states_after_init:
+                    state_callback.assert_change_event("state", state)
+            except Exception as e:  # pylint: disable=broad-except
+                cleanup_errors.append(f"{tile}: {e}")
+
+        if cleanup_errors:
+            raise RuntimeError(
+                "Failed to restore test state:\n" + "\n".join(cleanup_errors)
+            )
+
+
+@when("we stress test the interface")
+def stress_test_interface(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    excluded_tile_attributes: list[str],
+    stress_test_failures: list[str],
+) -> None:
+    """
+    Stress test the SpsStation/Tile interface to check for lock contention.
+
+    A background thread continuously polls every attribute on every tile
+    while, concurrently, the station is repeatedly Initialised and its
+    preaduLevels are read and written, followed by repeated
+    BeamformerRunningForChannels queries. This reproduces the conditions of
+    SKB-1440, where prolonged holding of the TPM hardware lock by one
+    operation starved out others.
+
+    :param station: station device under test.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param excluded_tile_attributes: A list of attributes to not poll.
+    :param stress_test_failures: a list to record failure descriptions in.
+    """
+    assert station_tiles, "No station tiles were discovered"
+
+    stop_polling = threading.Event()
+    poll_thread = threading.Thread(
+        target=_poll_all_tile_attributes,
+        args=(
+            station_tiles,
+            excluded_tile_attributes,
+            stress_test_failures,
+            stop_polling,
+        ),
+        daemon=True,
+    )
+    poll_thread.start()
+
+    try:
+        _stress_initialise_and_preadu_levels(station, stress_test_failures)
+        _stress_beamformer_running_for_channels(station, stress_test_failures)
+    finally:
+        stop_polling.set()
+        poll_thread.join(timeout=30)
+
+
+@then("we do not get any failures")
+def check_no_failures(stress_test_failures: list[str]) -> None:
+    """
+    Assert that no failures were observed during the stress test.
+
+    :param stress_test_failures: a list of failure descriptions collected
+        during the stress test.
+    """
+    assert not stress_test_failures, (
+        f"{len(stress_test_failures)} failure(s) observed during stress test:\n"
+        + "\n".join(stress_test_failures)
+    )
 
 
 @when("we trigger skb-1402")

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1462] Update `tpm-api` from **4.0.0** to **4.0.1**.
 * [THORN-607] Add conditional ska-sat-lmc dependency to ska-low-mccs-spshw chart. To disable please set ska-sat-lmc.enabled = false
 
 ## 14.0.0

@@ -676,7 +676,10 @@ class TileComponentManager(
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with acquire_timeout(
-            self._hardware_lock, self._poll_timeout, raise_exception=True
+            self._hardware_lock,
+            self._poll_timeout,
+            raise_exception=True,
+            context=poll_request.name,
         ):
             result = poll_request()
             self._last_known_connected = True
@@ -1915,6 +1918,7 @@ class TileComponentManager(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
+            context=getattr(func, "__name__", repr(func)),
         ):
             return func()
 

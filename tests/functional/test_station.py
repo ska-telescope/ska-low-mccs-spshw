@@ -926,6 +926,8 @@ def stress_test_interface(
         of the exported tiles. Or Empty list if no devices exported.
     :param excluded_tile_attributes: A list of attributes to not poll.
     :param stress_test_failures: a list to record failure descriptions in.
+
+    :raises RuntimeError: When unable to join thread in timeout period.
     """
     assert station_tiles, "No station tiles were discovered"
 
@@ -948,6 +950,8 @@ def stress_test_interface(
     finally:
         stop_polling.set()
         poll_thread.join(timeout=30)
+        if poll_thread.is_alive():
+            raise RuntimeError("Poll thread did not terminate in time")
 
 
 @then("we do not get any failures")

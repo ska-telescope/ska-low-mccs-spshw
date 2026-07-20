@@ -82,14 +82,23 @@ class LogLock:
         self.lock = threading.RLock()
         self.last_acquired_at = float("inf")
         self.last_acquired_by = ""
+        self.last_acquired_context = ""
         self._timeout_warning = timeout_warning
 
-    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+    def acquire(
+        self, blocking: bool = True, timeout: float = -1, context: str = ""
+    ) -> bool:
         """
         Attempt to acquire the lock.
 
         :param blocking: same as threading.Lock's blocking argument.
         :param timeout: same as threading.Lock's timeout argument.
+        :param context: optional description of the operation being
+            performed while the lock is held (e.g. the name of the poll
+            request), reported alongside the caller if the lock is held
+            for a long time. The call stack alone often can't distinguish
+            between operations, since many different requests are
+            executed from the same generic wrapper code.
 
         :return: True if the lock was acquired, False if it was not.
         """
@@ -105,14 +114,20 @@ class LogLock:
         if acquired:
             self.last_acquired_at = time.time()
             self.last_acquired_by = caller
+            self.last_acquired_context = context
             # self.log.debug(
             #     f"lock {self.name} acquired after {acquire_time:.3f}s by {caller}"
             # )
         else:
             time_since_acquired = time.time() - self.last_acquired_at
+            held_by = (
+                f"{self.last_acquired_by} ({self.last_acquired_context})"
+                if (self.last_acquired_context)
+                else self.last_acquired_by
+            )
             self.log.error(
                 f"lock {self.name} not acquired after {acquire_time:.3f}s by {caller} "
-                f"- held for {time_since_acquired:.3f}s by {self.last_acquired_by}"
+                f"- held for {time_since_acquired:.3f}s by {held_by}"
             )
         return acquired
 
@@ -144,7 +159,12 @@ class LogLock:
 
         # self.log.debug(f"lock {self.name} released after {elapsed:.3f}s by {caller}")
         if elapsed > self._timeout_warning:
-            self.log.warning(f"lock {self.name} held for {elapsed:.3f}s by {caller}")
+            context = (
+                f" ({self.last_acquired_context})" if self.last_acquired_context else ""
+            )
+            self.log.warning(
+                f"lock {self.name} held for {elapsed:.3f}s by {caller}{context}"
+            )
         self.lock.release()
 
     def __enter__(self) -> bool:
@@ -161,7 +181,10 @@ class LogLock:
 
 @contextmanager
 def acquire_timeout(
-    lock: LogLock | threading.Lock, timeout: float, raise_exception: bool = False
+    lock: LogLock | threading.Lock,
+    timeout: float,
+    raise_exception: bool = False,
+    context: str = "",
 ) -> Iterator[bool]:
     """
     Create an implementation of a lock context manager with timeout.
@@ -169,12 +192,20 @@ def acquire_timeout(
     :param lock: the thread lock instance
     :param timeout: timeout before giving up on acquiring the lock
     :param raise_exception: if True, raise exception on timeout
+    :param context: optional description of the operation being performed
+        while the lock is held, e.g. the name of the poll request. Only
+        used when ``lock`` is a :py:class:`LogLock`; reported alongside
+        the caller if the lock is held for a long time, to identify what
+        was actually running when it timed out.
 
     :yields: a context manager
 
     :raises TimeoutError: if raise_exception is True and the lock isn't acquired
     """
-    acquired = lock.acquire(timeout=timeout)
+    if isinstance(lock, LogLock):
+        acquired = lock.acquire(timeout=timeout, context=context)
+    else:
+        acquired = lock.acquire(timeout=timeout)
     if raise_exception and not acquired:
         raise TimeoutError(f"lock not acquired in {timeout:.3f}s")
     try:

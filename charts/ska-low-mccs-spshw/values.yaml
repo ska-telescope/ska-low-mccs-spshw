@@ -21,7 +21,7 @@ mccs_anchor: &mccs_anchor
   image:
     registry: artefact.skao.int
     name: ska-low-mccs-spshw
-    tag: 14.0.0
+    tag: 14.0.1
     pullPolicy: IfNotPresent
 
 <<: *mccs_anchor

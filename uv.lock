@@ -1992,7 +1992,7 @@ wheels = [
 
 [[package]]
 name = "ska-low-mccs-spshw"
-version = "14.0.0"
+version = "14.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -2127,7 +2127,7 @@ requires-dist = [
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
     { name = "ska-low-mccs-common", specifier = ">=4.5.6,<5.0.0" },
     { name = "ska-low-mccs-daq", specifier = ">=6.0.0,<7.0.0" },
-    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.0" },
+    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.1" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
     { name = "ska-tango-base", specifier = ">=1.6.1,<2.0.0" },
@@ -2191,8 +2191,8 @@ docs = [
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "4.0.0"
-source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.0#050d2673f540b214901c6fb26347d78ce2207bf4" }
+version = "4.0.1"
+source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.1#40eb9e030bb031570a97b4a2bb0782ffeaa8f1fa" }
 dependencies = [
     { name = "future" },
     { name = "numpy" },

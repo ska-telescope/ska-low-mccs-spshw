@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -951,6 +952,11 @@ def stress_test_interface(
         stop_polling.set()
         poll_thread.join(timeout=30)
         if poll_thread.is_alive():
+            # Print out previous exception, to help debugging.
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print(f"Exception type: {exc_type}")
+            print(f"Exception value: {exc_value}")
+            print(f"Traceback object: {exc_traceback}")
             raise RuntimeError("Poll thread did not terminate in time")
 
 

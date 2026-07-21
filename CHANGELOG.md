@@ -1,5 +1,9 @@
 # Version History
 
+## 14.0.2
+
+* [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.
+
 ## 14.0.1
 
 * [SKB-1462] Update `tpm-api` from **4.0.0** to **4.0.1**.

@@ -39,6 +39,7 @@ from tests.harness import (
     get_lmc_daq_name,
     get_subrack_name,
     get_tile_name,
+    get_wren_name,
 )
 from tests.test_tools import LRCManager, execute_lrc_to_completion, wait_for_lrc_result
 
@@ -160,6 +161,7 @@ def test_context_fixture(
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
         lmc_daq_trl=get_lmc_daq_name(),
         bandpass_daq_trl=get_bandpass_daq_name(),
+        wren_trl=get_wren_name(),
         device_class=patched_sps_station_device_class,
     )
 
@@ -1542,6 +1544,22 @@ def test_stations_daq_trl(station_device: SpsStation) -> None:
     station_device.LMCdaqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
 
     assert station_device.LMCdaqTRL == "NEW_DAQ_TRL"
+
+
+def test_stations_wren_trl(station_device: SpsStation) -> None:
+    """
+    Test that SPSStation properly stores its WREN TRL.
+
+    Tests that SPSStation initialises its WREN TRL properly and is
+        able to change its value.
+
+    :param station_device: The station device to use.
+    """
+    assert station_device.WrenTRL == get_wren_name()
+
+    station_device.WrenTRL = "NEW_WREN_TRL"
+
+    assert station_device.WrenTRL == "NEW_WREN_TRL"
 
 
 def test_AcquireDataForCalibration(

@@ -89,6 +89,18 @@ def get_bandpass_daq_name(station_label: str | None = None) -> str:
     return f"low-mccs/daqreceiver/{station_label or DEFAULT_STATION_LABEL}-bandpass"
 
 
+def get_wren_name(station_label: str | None = None) -> str:
+    """
+    Construct the WREN Tango device name from its ID number.
+
+    :param station_label: name of the station under test.
+        Defaults to None, in which case the module default is used.
+
+    :return: the WREN Tango device name
+    """
+    return f"low-sat/wren/{station_label or DEFAULT_STATION_LABEL}"
+
+
 class SpsTangoTestHarnessContext:
     """Handle for the SPSHW test harness context."""
 

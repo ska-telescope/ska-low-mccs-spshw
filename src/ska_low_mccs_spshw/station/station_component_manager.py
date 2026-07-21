@@ -1315,8 +1315,7 @@ class SpsStationComponentManager(
                 "dataReceivedResult", ("", "")
             )
             if (
-                data_received_result[0] == "correlator"
-                or data_received_result[0] == "tc_correlator"
+                data_received_result[0] in ("correlator", "tc_correlator")
                 and self.acquiring_data_for_calibration.is_set()
             ):
                 self.calibration_data_received_queue.put(
@@ -3728,6 +3727,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         daq_mode: str,
     ) -> None:
+        # Stop any consumers left by a previous run so Start begins from idle.
+        self._stop_daq()
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         on_command = MccsCommandProxy(self._lmc_daq_trl, "Start", self.logger)
         result, message = on_command(json.dumps({"modes_to_start": daq_mode}))
@@ -3794,12 +3795,26 @@ class SpsStationComponentManager(
 
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
-            self.configure_station_for_calibration(
-                nof_correlator_samples=nof_samples,
-                nof_tiles=(
-                    16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
-                ),
+            config_result_code, config_message = (
+                self.configure_station_for_calibration(
+                    nof_correlator_samples=nof_samples,
+                    nof_tiles=(
+                        16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
+                    ),
+                )
             )
+            if config_result_code != ResultCode.OK:
+                message = (
+                    "AcquireDataForCalibration failed to configure station "
+                    f"for calibration: {config_message}"
+                )
+                self.logger.error(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(ResultCode.FAILED, message),
+                    )
+                return
             self._start_daq(
                 "CORRELATOR_DATA"
                 if daq_mode.lower() == "xgpu"
@@ -3853,29 +3868,35 @@ class SpsStationComponentManager(
                     f"Got data for {channel}, waiting "
                     f"for {last_channel}, {last_channel - channel} more."
                 )
-            self.logger.info("Stopping all consumers...")
-            self._stop_daq()
-
-            if task_callback:
-                if success:
-                    task_callback(
-                        status=TaskStatus.COMPLETED,
-                        result=(
-                            ResultCode.OK,
-                            {"dropped_channels": dropped_channels},
-                        ),
-                    )
-                else:
-                    task_callback(
-                        status=TaskStatus.FAILED,
-                        result=(
-                            ResultCode.FAILED,
-                            "No channels processed, maybe no data reached DAQ?",
-                        ),
-                    )
+            self.logger.info("Data acquisition finished; tearing down.")
         finally:
+            # Always stop producers then consumers, on every exit path, so a
+            # failed run cannot leave data flowing into the next one.
+            try:
+                self.stop_data_transmission()
+            except Exception:  # pylint: disable=broad-except
+                self.logger.exception("Failed to stop TPM transmission on teardown")
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
+            self._stop_daq()
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(
+                        ResultCode.OK,
+                        {"dropped_channels": dropped_channels},
+                    ),
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(
+                        ResultCode.FAILED,
+                        "No channels processed, maybe no data reached DAQ?",
+                    ),
+                )
 
     @check_communicating
     def configure_station_for_calibration(
@@ -3883,13 +3904,16 @@ class SpsStationComponentManager(
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
         **daq_config: Any,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Configure station for calibration.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         :param daq_config: any extra config to configure DAQ with
+
+        :return: A tuple containing the result code and a human-readable
+            status message.
         """
         assert self._lmc_daq_proxy is not None
         if task_callback:
@@ -3906,6 +3930,15 @@ class SpsStationComponentManager(
                 return True
             return False
 
+        def _fail(message: str) -> tuple[ResultCode, str]:
+            self.logger.error(message)
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, message),
+                )
+            return ResultCode.FAILED, message
+
         base_config = {
             "nof_tiles": 16,  # always 16 for correlation mode.
             "directory": "correlator_data",  # Appended to ADR-55 path.
@@ -3917,21 +3950,32 @@ class SpsStationComponentManager(
         configure_command = MccsCommandProxy(
             self._lmc_daq_trl, "Configure", self.logger
         )
-        configure_command(json.dumps(base_config), is_lrc=False)
+        result_code, message = configure_command(
+            json.dumps(base_config), is_lrc=False
+        )
+        if result_code != ResultCode.OK:
+            return _fail(f"Failed to configure DAQ for calibration: {message}")
         if _check_aborted():
-            return
+            return ResultCode.ABORTED, "Task aborted"
 
-        self.set_lmc_download(
+        [download_result_code], [download_message] = self.set_lmc_download(
             mode="10g",
             payload_length=8192,  # Default for using 10g
             dst_ip=self._lmc_daq_proxy.receiverIP,
             dst_port=self._lmc_daq_proxy.receiverPorts[0],
         )
+        if download_result_code != ResultCode.OK:
+            return _fail(
+                f"Failed to set LMC download for calibration: {download_message}"
+            )
+
+        message = "Station configured for calibration."
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result=(ResultCode.OK, "Station configured for calibration."),
+                result=(ResultCode.OK, message),
             )
+        return ResultCode.OK, message
 
     @property
     def csp_spead_format(self: SpsStationComponentManager) -> str:

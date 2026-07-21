@@ -87,34 +87,40 @@ https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/reference/tile_
    current default behaviour of ``SpsStation``, and the interfaces
    described here are subject to change.
 
-On the SAT platform, Tile timing synchronisation is provided by a
-WhiteRabbit reference clock, distributed through a WREN device. In this
-prototype, the automatic Tile initialisation that normally happens as
-part of turning a Tile on is deferred: ``MccsTile`` no longer initialises
-itself automatically when powered on. Instead, ``SpsStation`` powers on
-the subrack and its ports as before, then waits for the WREN
-``healthState`` to report ``OK`` (or for a timeout to elapse) before it
-explicitly triggers Tile initialisation and continues the existing
-workflow.
+For details about the SAT (Signal And Timing) subsystem please see https://developer.skao.int/projects/ska-sat-lmc/en/latest/.
 
-Concretely, this splits the ``On`` sequence into three parts:
+The WhiteRabbit is responsible for ditribution of timing signals that keep the RPFs (remote processing facilities) synchronised with CPF (central processing facility).
+Each SPS rack contains one EndNode, this distributes the 10MHz and 1PPS signal to the subracks via coax. 
+The subrack then distributes this to the TPM that then synchronise their own clocks, again please 
+see https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/reference/tile_brief_overview.html#synchronization-procedure.
 
-1. ``_turn_on_without_automatic_initialisation``: turn on the subrack and
-   its ports, and bring the Tiles up to a powered, but not yet
-   initialised, state.
+Our spsstation ON and initialisation procedure is therefore gated by having good stable input timing.
+we do this by observing the HealthState of the WREN. 
 
-2. Wait for the WREN ``healthState`` to become ``HealthState.OK``, or for a
-   configured timeout to expire.
+Our SpsStation device will have an optional DeviceProperty "WREN_TRL" (name TBC).
+If this is supplied will wait on this signal before attempting synchronisation. 
+The time we wait will be configurable, but as a ballpark figure it can take 5 mins 
+to indicate it is OK if WR EN is powered up after WR GM. 
+If powered up before it can take longer. 
+We define a property "wait_time" (name TBC) that can be configured, 
+if the healthState is not OK in that period we do not attempt initialisation and the command fails.
 
-3. Initialise the TPMs, then continue with the pre-existing workflow
-   (``_initialise_tile_parameters``, ``_initialise_station``,
-   ``_wait_for_arp_table``, ``_route_data``,
-   ``_check_station_synchronisation``).
+Concretely, in this prototype a single wait step is inserted at the very
+start of each command, before anything is turned on or re-initialised:
 
-The ``Initialise`` sequence is changed more simply: a wait for the WREN
-``healthState`` to reach ``HealthState.OK`` (or timeout) is inserted
-immediately before the existing ``_reinitialise_tiles`` step, and the
-remainder of the sequence is unchanged.
+* ``On``: the wait for the WREN ``healthState`` to reach
+  ``HealthState.OK`` (or for the configured ``wait_time`` to elapse) is
+  inserted before ``_turn_on_subracks`` is called. If the wait times out
+  without the WREN reaching ``OK``, the ``On`` command fails immediately
+  and no subrack or Tile action is attempted.
+
+* ``Initialise``: the same wait is inserted before ``_set_tile_source_ips``
+  is called. If the wait times out without the WREN reaching ``OK``, the
+  ``Initialise`` command fails immediately and no re-initialisation is
+  attempted.
+
+In both cases, the remainder of the sequence described above is
+unchanged.
 
 The sequence diagram below shows both commands with this new WhiteRabbit
 wait step:

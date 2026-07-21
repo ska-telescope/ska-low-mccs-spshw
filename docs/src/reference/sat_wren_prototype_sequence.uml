@@ -7,20 +7,22 @@ participant "WREN\n(WhiteRabbit)" as wren
 
 == On() ==
 user -> station: On()
-station -> subrack: On()\n(power up subrack + ports)
-subrack --> station: PowerState.ON
 
-station -> station: _turn_on_without_automatic_initialisation()\n(set tile source IPs, global reference time,\nturn on tile power - Tile initialise is NOT sent)
-station -> tile: power on
-tile --> station: PowerState.ON
-
-loop until WREN healthState == OK, or timeout elapses
+loop until WREN healthState == OK, or wait_time elapses
 station -> wren: healthState
 wren --> station: healthState
 end
 
-station -> tile: initialise() (per tile)
-tile --> station: tileProgrammingState
+alt healthState != OK (wait_time elapsed)
+station --> user: longRunningCommandResult (FAILED)
+else healthState == OK
+station -> subrack: _turn_on_subracks()\n(power up subrack + ports)
+subrack --> station: PowerState.ON
+
+station -> station: _set_tile_source_ips()\n_set_global_reference_time()
+
+station -> tile: _turn_on_tiles()
+tile --> station: PowerState.ON / tileProgrammingState
 
 note right of station
   Continue with the pre-existing workflow:
@@ -29,16 +31,21 @@ note right of station
   _check_station_synchronisation
 end note
 
-station --> user: longRunningCommandResult
+station --> user: longRunningCommandResult (COMPLETED)
+end
 
 == Initialise() ==
 user -> station: Initialise()
-station -> station: _set_tile_source_ips()\n_set_global_reference_time()
 
-loop until WREN healthState == OK, or timeout elapses
+loop until WREN healthState == OK, or wait_time elapses
 station -> wren: healthState
 wren --> station: healthState
 end
+
+alt healthState != OK (wait_time elapsed)
+station --> user: longRunningCommandResult (FAILED)
+else healthState == OK
+station -> station: _set_tile_source_ips()\n_set_global_reference_time()
 
 station -> tile: _reinitialise_tiles()\ninitialise() (per tile)
 tile --> station: tileProgrammingState
@@ -50,6 +57,7 @@ note right of station
   _check_station_synchronisation
 end note
 
-station --> user: longRunningCommandResult
+station --> user: longRunningCommandResult (COMPLETED)
+end
 
 @enduml

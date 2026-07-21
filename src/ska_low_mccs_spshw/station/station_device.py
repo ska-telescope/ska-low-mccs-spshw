@@ -1845,7 +1845,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            return self.component_manager.acquire_data_for_calibration(
+            self.component_manager.acquire_data_for_calibration(
                 first_channel,
                 last_channel,
                 start_time,
@@ -1881,7 +1881,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            return self.component_manager.configure_station_for_calibration(
+            self.component_manager.configure_station_for_calibration(
                 **json.loads(daq_config),
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,

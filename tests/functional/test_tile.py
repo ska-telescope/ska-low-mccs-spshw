@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#
+# pylint: disable=too-many-lines
 # This file is part of the SKA Low MCCS project
 #
 #

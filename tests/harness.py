@@ -220,6 +220,7 @@ class SpsTangoTestHarness:
         tile_ids: Iterable[int] = range(1, 17),
         lmc_daq_trl: str = "",
         bandpass_daq_trl: str = "",
+        wren_trl: str = "",
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.SpsStation",
     ) -> None:
@@ -235,6 +236,7 @@ class SpsTangoTestHarness:
         :param tile_ids: IDS of the tiles in this station.
         :param lmc_daq_trl: TRL of this Station's LMC DAQ.
         :param bandpass_daq_trl: TRL of this Station's Bandpass DAQ.
+        :param wren_trl: TRL of this Station's WREN.
         :param logging_level: the Tango device's default logging level.
         :param device_class: The device class to use.
             This may be used to override the usual device class,
@@ -246,6 +248,7 @@ class SpsTangoTestHarness:
             StationId=1,
             LMCDaqTRL=lmc_daq_trl,
             BandpassDaqTRL=bandpass_daq_trl,
+            WRENTRL=wren_trl,
             TileFQDNs=[
                 get_tile_name(tile_id, station_label=self._station_label)
                 for tile_id in tile_ids

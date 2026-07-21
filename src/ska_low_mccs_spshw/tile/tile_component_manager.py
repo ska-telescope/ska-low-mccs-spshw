@@ -678,7 +678,7 @@ class TileComponentManager(
             self._hardware_lock,
             self._poll_timeout,
             raise_exception=True,
-            context=poll_request.name,
+            context=f"{poll_request.name} kwargs={poll_request._kwargs}",
         ):
             result = poll_request()
             self._last_known_connected = True

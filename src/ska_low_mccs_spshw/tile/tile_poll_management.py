@@ -173,7 +173,9 @@ class RequestIterator:
         "TEMPERATURES",
         "VOLTAGES",
         "ALARMS",
-        "ADCS",
+        "ADC_SYSREF_COUNTER",
+        "ADC_PLL_STATUS",
+        "ADC_SYSREF_TIMING_REQUIREMENTS",
         "TIMING",
     ]
     PROGRAMMED_POLLED_ATTRIBUTES = [

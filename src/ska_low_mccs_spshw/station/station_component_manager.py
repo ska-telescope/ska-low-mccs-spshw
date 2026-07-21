@@ -3767,6 +3767,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         self.acquiring_data_for_calibration.set()
+        transmission_started = False
         try:
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
@@ -3845,6 +3846,7 @@ class SpsStationComponentManager(
                     }
                 )
             )
+            transmission_started = True
             self.logger.debug(
                 f"Channel spigot sent for {first_channel=}, {last_channel=}"
             )
@@ -3878,13 +3880,17 @@ class SpsStationComponentManager(
         finally:
             # Always stop producers then consumers, on every exit path, so a
             # failed run cannot leave data flowing into the next one.
-            try:
-                self.stop_data_transmission()
-            except Exception:  # pylint: disable=broad-except
-                self.logger.exception("Failed to stop TPM transmission on teardown")
+            if transmission_started:
+                try:
+                    self.stop_data_transmission()
+                except Exception:  # pylint: disable=broad-except
+                    self.logger.exception("Failed to stop TPM transmission on teardown")
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
-            self._stop_daq()
+            try:
+                self._stop_daq()
+            except Exception:  # pylint: disable=broad-except
+                self.logger.exception("Failed to stop DAQ on teardown")
 
         if task_callback:
             if success:

@@ -179,7 +179,6 @@ ral-low-k8s-test:
     CUCUMBER_JSON_PATH: build/reports/ral-low-cucumber.json
     JSON_REPORT_PATH: build/reports/report.json
     HW_DEPLOYMENT: true
-    K8S_PYTEST_EXTRA_ARGUMENTS: "-k acquire_data_for_calibration"
   before_script:
     - is_calendar_booked --calendar RAL --expected-runtime 30m
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default

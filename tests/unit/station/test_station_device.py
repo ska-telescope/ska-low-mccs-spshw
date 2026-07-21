@@ -1557,7 +1557,7 @@ def test_stations_wren_trl(station_device: SpsStation) -> None:
     """
     assert station_device.WrenTRL == get_wren_name()
 
-    station_device.WrenTRL = "NEW_WREN_TRL"
+    station_device.WrenTRL = "NEW_WREN_TRL"  # type: ignore[method-assign]
 
     assert station_device.WrenTRL == "NEW_WREN_TRL"
 

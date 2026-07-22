@@ -3803,25 +3803,28 @@ class SpsStationComponentManager(
                     16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
                 ),
             )
-            if config_result_code == ResultCode.ABORTED:
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.ABORTED,
-                        result=(ResultCode.ABORTED, config_message),
+            match config_result_code:
+                case ResultCode.ABORTED:
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.ABORTED,
+                            result=(ResultCode.ABORTED, config_message),
+                        )
+                    return
+                case ResultCode.OK:
+                    pass
+                case _:
+                    message = (
+                        "AcquireDataForCalibration failed to configure station "
+                        f"for calibration: {config_message}"
                     )
-                return
-            if config_result_code != ResultCode.OK:
-                message = (
-                    "AcquireDataForCalibration failed to configure station "
-                    f"for calibration: {config_message}"
-                )
-                self.logger.error(message)
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.FAILED,
-                        result=(ResultCode.FAILED, message),
-                    )
-                return
+                    self.logger.error(message)
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.FAILED,
+                            result=(ResultCode.FAILED, message),
+                        )
+                    return
             self._start_daq(
                 "CORRELATOR_DATA"
                 if daq_mode.lower() == "xgpu"

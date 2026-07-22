@@ -82,6 +82,30 @@ class TileData:
         or {}
     )
 
+    CPLD_ONLY_HEALTH_KEYS: dict[str, set[str] | None] = {
+        "temperatures": {"board"},
+        "voltages": {
+            "MGT_AVCC",
+            "MGT_AVTT",
+            "SW_AVDD1",
+            "SW_AVDD2",
+            "AVDD3",
+            "MAN_1V2",
+            "DDR0_VREF",
+            "DDR1_VREF",
+            "VM_DRVDD",
+            "VIN",
+            "MON_3V3",
+            "MON_1V8",
+            "MON_5V0",
+        },
+        # currents: omitted — FE0_mVA and FE1_mVA are not CPLD-only
+        "alarms": None,  # entire group is CPLD-only
+        "adcs": None,  # entire group is CPLD-only
+        "timing": {"pll", "pll_40g"},
+        # io, dsp: omitted — no CPLD-only entries
+    }
+
     TILE_MONITORING_POINTS = {
         "temperatures": {
             "board": None,

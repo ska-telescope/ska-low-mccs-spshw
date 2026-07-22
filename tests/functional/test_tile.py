@@ -175,7 +175,7 @@ def test_apply_switch_verify_partial_cal_coeffs(
 
 @scenario(
     "features/tile.feature",
-    "Tile overheat causes alarm and power-off state transitions",
+    "Tile monitors a firmware overheating event and can be turned off afterwards",
 )
 def test_tile_overheat_alarm_and_power_off(
     stations_devices_exported: list[tango.DeviceProxy],

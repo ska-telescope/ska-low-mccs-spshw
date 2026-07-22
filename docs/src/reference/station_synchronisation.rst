@@ -40,7 +40,7 @@ following steps, in order:
 
 8. Wait for the ARP table to be populated (``_wait_for_arp_table``).
 
-9.  Route data to the DAQ/CSP destinations (``_route_data``). Route data streams to the relevant DAQ endpoints,
+9. Route data to the DAQ/CSP destinations (``_route_data``). Route data streams to the relevant DAQ endpoints,
    Internally uses ``SetLmcDownload``, ``SetLmcIntegratedDownload`` and ``ConfigureIntegratedChannelData``.
 
 10. Check station synchronisation (``_check_station_synchronisation``).
@@ -76,7 +76,7 @@ used when the station is already ``On``, and resets it to the
 8. Route data to the DAQ/CSP destinations (``_route_data``). Route data streams to the relevant DAQ endpoints,
    Internally uses ``SetLmcDownload``, ``SetLmcIntegratedDownload`` and ``ConfigureIntegratedChannelData``.
 
-9.  Check station synchronisation (``_check_station_synchronisation``).
+9. Check station synchronisation (``_check_station_synchronisation``).
 
 Further reading
 =================

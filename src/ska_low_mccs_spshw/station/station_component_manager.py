@@ -399,7 +399,6 @@ class _WrenProxy(DeviceComponentManager):
     def __init__(
         self,
         fqdn: str,
-        station_id: int,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
@@ -409,8 +408,6 @@ class _WrenProxy(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this daq
-            is to be assigned
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
             called when the component state changes
@@ -614,7 +611,6 @@ class SpsStationComponentManager(
             # TODO: Detect a bad wren trl.
             self._wren_proxy = _WrenProxy(
                 self._wren_trl,
-                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, self._wren_trl

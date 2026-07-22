@@ -128,6 +128,7 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     mock_daq_device_proxy: unittest.mock.Mock,
+    mock_wren_device_proxy: unittest.mock.Mock,
     patched_sps_station_device_class: type[SpsStation],
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
@@ -141,6 +142,8 @@ def test_context_fixture(
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
         devices
     :param mock_daq_device_proxy: a fixture returning a mocked MccsDaqReceiver
+        for unittests.
+    :param mock_wren_device_proxy: a fixture returning a mocked WREN device
         for unittests.
     :param patched_sps_station_device_class: a subclass of SpsStation
         that has been patched with extra commands that mock system under
@@ -167,6 +170,7 @@ def test_context_fixture(
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
     harness.add_mock_bandpass_daq_device(mock_daq_device_proxy)
+    harness.add_mock_wren_device(mock_wren_device_proxy)
 
     with harness as context:
         yield context

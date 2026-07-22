@@ -540,6 +540,19 @@ class SpsTangoTestHarness:
             get_bandpass_daq_name(self._station_label), mock
         )
 
+    def add_mock_wren_device(
+        self: SpsTangoTestHarness,
+        mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Add a mock WREN Tango device to this test harness.
+
+        :param mock: the mock to be used as a mock WREN device.
+        """
+        self._tango_test_harness.add_mock_device(
+            get_wren_name(self._station_label), mock
+        )
+
     def __enter__(
         self: SpsTangoTestHarness,
     ) -> SpsTangoTestHarnessContext:

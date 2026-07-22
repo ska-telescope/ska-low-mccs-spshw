@@ -3838,7 +3838,7 @@ class SpsStationComponentManager(
                     datetime.now(timezone.utc) + timedelta(seconds=2)
                 ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             # Send data from tpms
-            self.send_data_samples(
+            send_result_codes, send_messages = self.send_data_samples(
                 json.dumps(
                     {
                         "start_time": start_time,
@@ -3849,6 +3849,18 @@ class SpsStationComponentManager(
                     }
                 )
             )
+            if send_result_codes[0] != ResultCode.OK:
+                message = (
+                    "AcquireDataForCalibration failed to send data samples: "
+                    f"{send_messages[0]}"
+                )
+                self.logger.error(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(ResultCode.FAILED, message),
+                    )
+                return
             transmission_started = True
             self.logger.debug(
                 f"Channel spigot sent for {first_channel=}, {last_channel=}"

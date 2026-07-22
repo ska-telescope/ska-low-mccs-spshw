@@ -617,11 +617,9 @@ class SpsStationComponentManager(
                 station_id,
                 logger,
                 functools.partial(
-                    self._device_communication_state_changed, self._bandpass_daq_trl
+                    self._device_communication_state_changed, self._wren_trl
                 ),
-                functools.partial(
-                    self._bandpass_daq_state_changed, self._bandpass_daq_trl
-                ),
+                functools.partial(self._wren_state_changed, self._wren_trl),
                 event_serialiser=self._event_serialiser,
             )
             self._wren_power_state = {wren_trl: PowerState.UNKNOWN}
@@ -1407,6 +1405,25 @@ class SpsStationComponentManager(
             y_bandpass_data = state_change.get("yPolBandpass")
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
+
+    @threadsafe
+    def _wren_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        health: Optional[HealthState] = None,
+        fault: Optional[bool] = None,
+    ) -> None:
+        """
+        Handle the WREN state changed.
+
+        :param fqdn: The WREN TRL
+        :param power: The power state
+        :param health: The health state
+        :param fault: The fault state.
+
+        """
+        self.logger.warn("WREN state change currently unhandled")
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,

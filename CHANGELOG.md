@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-125] Improve observability when UNPROGRAMMED.
+* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
+
 ## 14.0.1
 
 * [SKB-1462] Update `tpm-api` from **4.0.0** to **4.0.1**.

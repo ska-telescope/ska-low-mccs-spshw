@@ -204,6 +204,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
+            self.WRENTRL,
             self._old_health_changed,
         )
         # Update thresholds so we don't have to define ppsDelta in two places.
@@ -274,6 +275,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._component_state_changed,
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
+            self._health_model.wren_health_changed,
             self.OnWorkaroundFlag,
             event_serialiser=self._event_serialiser,
         )

@@ -24,6 +24,7 @@ class SpsStationHealthRules(HealthRules):
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        wren_health: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
@@ -31,6 +32,7 @@ class SpsStationHealthRules(HealthRules):
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param wren_health: dictionary containing WREN health
         :param station_state: dictionary of station state attributes.
 
         :return: True if UNKNOWN is a valid state, along with a text report.
@@ -50,9 +52,14 @@ class SpsStationHealthRules(HealthRules):
                 for trl, health in subrack_healths.items()
                 if health is None or health == HealthState.UNKNOWN
             ]
+            wren_state = [
+                trl
+                for trl, health in wren_health.items()
+                if health is None or health == HealthState.UNKNOWN
+            ]
             report = (
                 "Some devices are unknown: "
-                f"Tiles: {tile_states} Subracks: {subrack_states}"
+                f"Tiles: {tile_states} Subracks: {subrack_states} WREN: {wren_state}"
             )
         else:
             report = ""
@@ -62,6 +69,7 @@ class SpsStationHealthRules(HealthRules):
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        wren_health: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
@@ -69,6 +77,7 @@ class SpsStationHealthRules(HealthRules):
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param wren_health: dictionary containing WREN health
         :param station_state: dictionary of station state attributes.
 
         :return: True if FAILED is a valid state, along with a text report.
@@ -90,9 +99,14 @@ class SpsStationHealthRules(HealthRules):
                 for trl, health in subrack_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
+            wren_state = [
+                f"{trl} - {health.name}"
+                for trl, health in wren_health.items()
+                if health is not None and health in DEGRADED_STATES
+            ]
             report = (
                 "Too many subdevices are in a bad state: "
-                f"Tiles: {tile_states} Subracks: {subrack_states}"
+                f"Tiles: {tile_states} Subracks: {subrack_states} WREN {wren_state}"
             )
         else:
             report = ""
@@ -122,6 +136,7 @@ class SpsStationHealthRules(HealthRules):
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        wren_health: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
@@ -129,6 +144,7 @@ class SpsStationHealthRules(HealthRules):
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param wren_health: dictionary containing WREN health
         :param station_state: dictionary of station state attributes.
 
         :return: True if DEGRADED is a valid state, along with a text report.
@@ -138,6 +154,8 @@ class SpsStationHealthRules(HealthRules):
             >= self._thresholds["tile_degraded"]
             or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
             >= self._thresholds["subrack_degraded"]
+            or self.get_fraction_in_states(wren_health, DEGRADED_STATES, default=0)
+            >= self._thresholds["wren_degraded"]
         )
         if result:
             tile_states = [
@@ -150,9 +168,14 @@ class SpsStationHealthRules(HealthRules):
                 for trl, health in subrack_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
+            wren_state = [
+                f"{trl} - {health.name}"
+                for trl, health in wren_health.items()
+                if health is not None and health in DEGRADED_STATES
+            ]
             report = (
                 "Too many subdevices are in a bad state: "
-                f"Tiles: {tile_states} Subracks: {subrack_states}"
+                f"Tiles: {tile_states} Subracks: {subrack_states} WREN {wren_state}"
             )
         else:
             report = ""
@@ -181,6 +204,7 @@ class SpsStationHealthRules(HealthRules):
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        wren_health: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
@@ -188,6 +212,7 @@ class SpsStationHealthRules(HealthRules):
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param wren_health: dictionary containing WREN health
         :param station_state: dictionary of station state attributes.
 
         :return: True if OK is a valid state, along with a text report.
@@ -197,6 +222,8 @@ class SpsStationHealthRules(HealthRules):
             < self._thresholds["tile_degraded"]
             and self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
             < self._thresholds["subrack_degraded"]
+            and self.get_fraction_in_states(wren_health, DEGRADED_STATES, default=0)
+            < self._thresholds["wren_degraded"]
         )
         if not result:
             tile_states = [
@@ -209,9 +236,14 @@ class SpsStationHealthRules(HealthRules):
                 for trl, health in subrack_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
+            wren_state = [
+                f"{trl} - {health.name}"
+                for trl, health in wren_health.items()
+                if health is not None and health in DEGRADED_STATES
+            ]
             report = (
                 "Too many subdevices are in a bad state: "
-                f"Tiles: {tile_states} Subracks: {subrack_states}"
+                f"Tiles: {tile_states} Subracks: {subrack_states} WREN: {wren_state}"
             )
         else:
             report = ""
@@ -229,4 +261,6 @@ class SpsStationHealthRules(HealthRules):
             "subrack_failed": 0.2,
             "tile_degraded": 0.05,
             "tile_failed": 0.2,
+            "wren_degraded": 0.0,
+            "wren_failed": 0.0,
         }

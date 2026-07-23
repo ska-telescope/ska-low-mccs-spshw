@@ -21,10 +21,12 @@ __all__ = ["SpsStationHealthModel"]
 class SpsStationHealthModel(BaseHealthModel):
     """A health model for a Sps station."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: SpsStationHealthModel,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
+        wren_fqdn: str,
         health_changed_callback: HealthChangedCallbackProtocol,
         thresholds: Optional[dict[str, float]] = None,
     ) -> None:
@@ -33,6 +35,7 @@ class SpsStationHealthModel(BaseHealthModel):
 
         :param subrack_fqdns: the FQDNs of this station's subracks
         :param tile_fqdns: the FQDNs of this station's tiles
+        :param wren_fqdn: the FQDN of this station's WREN
         :param health_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
@@ -43,6 +46,9 @@ class SpsStationHealthModel(BaseHealthModel):
         }
         self._subrack_health: dict[str, Optional[HealthState]] = {
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
+        }
+        self._wren_health: dict[str, Optional[HealthState]] = {
+            wren_fqdn: HealthState.UNKNOWN
         }
         self._health_rules = SpsStationHealthRules(thresholds)
         # State entries to create.
@@ -82,6 +88,24 @@ class SpsStationHealthModel(BaseHealthModel):
             self._tile_health[tile_fqdn] = tile_health
             self.update_health()
 
+    def wren_health_changed(
+        self,
+        wren_fqdn: str,
+        wren_health: Optional[HealthState],
+    ) -> None:
+        """
+        Handle a change in WREN health.
+
+        :param wren_fqdn: the FQDN of the WREN whose health has changed
+        :param wren_health: the health state of the specified WREN, or
+            None if the WREN's admin mode indicates that its health
+            should not be rolled up.
+
+        """
+        if self._wren_health.get(wren_fqdn) != wren_health:
+            self._wren_health[wren_fqdn] = wren_health
+            self.update_health()
+
     def evaluate_health(
         self: SpsStationHealthModel,
     ) -> tuple[HealthState, str]:
@@ -108,7 +132,7 @@ class SpsStationHealthModel(BaseHealthModel):
             if health == station_health:
                 return station_health, station_report
             result, report = self._health_rules.rules[health](
-                self._subrack_health, self._tile_health, self._state
+                self._subrack_health, self._tile_health, self._wren_health, self._state
             )
             if result:
                 return health, report

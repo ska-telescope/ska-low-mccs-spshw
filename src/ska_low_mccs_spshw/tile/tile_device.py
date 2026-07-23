@@ -1900,7 +1900,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["station_beamformer_status"].read()
 
     @attribute(
-        dtype="DevShort",
+        dtype="DevUShort",
         label="fpga0_station_beamformer_error_count",
         max_alarm=1,
         abs_change=1,
@@ -1921,7 +1921,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["fpga0_station_beamformer_error_count"].read()
 
     @attribute(
-        dtype="DevShort",
+        dtype="DevUShort",
         label="fpga1_station_beamformer_error_count",
         max_alarm=1,
         abs_change=1,

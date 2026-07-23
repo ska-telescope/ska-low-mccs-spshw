@@ -495,6 +495,7 @@ class SpsStationComponentManager(
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
+        self._pointing_delays_received: set[int] = set()
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
         self._final_tile_fpga0_flagged_count: int = 0
@@ -1144,15 +1145,13 @@ class SpsStationComponentManager(
                         )
             case "pointingdelays":
                 self._hw_pointing_delays[logical_tile_id] = attribute_value
-                if all(
-                    not np.isnan(v).any() for v in self._hw_pointing_delays.values()
-                ):
+                self._pointing_delays_received.add(logical_tile_id)
+                if len(self._pointing_delays_received) == len(self._tile_proxies):
                     if self._component_state_callback:
                         self._component_state_callback(
                             pointingdelays=self._hw_pointing_delays.copy()
                         )
-                    for delays in self._hw_pointing_delays.values():
-                        delays.fill(np.nan)
+                    self._pointing_delays_received.clear()
             case "dstip40gfpga1":
                 ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
                 self._tile_dst_ips[logical_tile_id] = (str(attribute_value), ip2)

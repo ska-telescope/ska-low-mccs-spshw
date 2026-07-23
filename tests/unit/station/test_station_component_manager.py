@@ -1157,6 +1157,58 @@ def test_pointing_delays(
     )
 
 
+def test_pointing_delays_with_unsupported_beams_still_publishes(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles: int,
+) -> None:
+    """
+    Test that unsupported beams on one tile don't block publishing forever.
+
+    A tile on older firmware only supports 8 (of 48) beams, and reports
+    NaN for the remaining, permanently-unsupported beam rows. This must
+    not prevent pointingdelays from ever being published for the rest of
+    the station, and must not prevent later rounds from publishing either.
+
+    Calls _on_tile_attribute_change directly without start_communicating() to
+    avoid race conditions with background Tango subscription event threads.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles: number of TPMs in the test.
+    """
+    full_delays = np.arange(48 * 32, dtype=float).reshape(48, 32)
+    old_firmware_delays = full_delays.copy()
+    old_firmware_delays[8:] = np.nan
+    old_firmware_tile = 0
+
+    def report_all_tiles() -> None:
+        for tile_id in range(num_tiles):
+            delays = (
+                old_firmware_delays if tile_id == old_firmware_tile else full_delays
+            )
+            station_component_manager._on_tile_attribute_change(
+                tile_id, "pointingDelays", delays, tango.AttrQuality.ATTR_VALID
+            )
+
+    expected_call = {
+        tile_id: (
+            old_firmware_delays if tile_id == old_firmware_tile else full_delays
+        )
+        for tile_id in range(num_tiles)
+    }
+
+    report_all_tiles()
+    callbacks["component_state"].assert_call(pointingdelays=expected_call)
+
+    # A second round with the same permanently-unsupported beams must also
+    # publish, rather than getting stuck forever waiting for those beams to
+    # stop being NaN.
+    report_all_tiles()
+    callbacks["component_state"].assert_call(pointingdelays=expected_call)
+
+
 def test_beamformer_daisy_chain(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,

@@ -392,6 +392,41 @@ class _BandpassDaqProxy(DeviceComponentManager):
                 )
 
 
+class _WrenProxy(DeviceComponentManager):
+    """A proxy to a WREN for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self,
+        fqdn: str,
+        logger: logging.Logger,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param logger: the logger to be used by this object.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param event_serialiser: the event serialiser to be used by this object
+        """
+        super().__init__(
+            fqdn,
+            logger,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            event_serialiser=event_serialiser,
+        )
+
+
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
     MccsBaseComponentManager, TaskExecutorComponentManager
@@ -408,6 +443,7 @@ class SpsStationComponentManager(
         tile_fqdns: Sequence[str],
         lmc_daq_trl: str,
         bandpass_daq_trl: str,
+        wren_trl: str,
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
@@ -435,6 +471,8 @@ class SpsStationComponentManager(
         :param lmc_daq_trl: The TRL of this Station's DAQ Receiver for general LMC use.
             Could be empty if the device property is not set.
         :param bandpass_daq_trl: The TRL of this Station's DAQ Receiver for bandpasses.
+            Could be empty if the device property is not set.
+        :param wren_trl: The TRL of this Station's WREN instance.
             Could be empty if the device property is not set.
         :param sdn_first_interface: CIDR-style IP address with mask,
             for the first interface in the block assigned for science data
@@ -473,10 +511,12 @@ class SpsStationComponentManager(
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
+        self._wren_proxy: Optional[_WrenProxy] = None
         self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
+        self._wren_trl = wren_trl
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
@@ -566,6 +606,18 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._bandpass_daq_power_state = {bandpass_daq_trl: PowerState.UNKNOWN}
+        if self._wren_trl:
+            # TODO: Detect a bad wren trl.
+            self._wren_proxy = _WrenProxy(
+                self._wren_trl,
+                logger,
+                functools.partial(
+                    self._device_communication_state_changed, self._wren_trl
+                ),
+                functools.partial(self._wren_state_changed, self._wren_trl),
+                event_serialiser=self._event_serialiser,
+            )
+            self._wren_power_state = {wren_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
@@ -660,6 +712,8 @@ class SpsStationComponentManager(
             optional_devices[self._lmc_daq_trl] = self._lmc_daq_proxy
         if self._bandpass_daq_proxy:
             optional_devices[self._bandpass_daq_trl] = self._bandpass_daq_proxy
+        if self._wren_proxy:
+            optional_devices[self._wren_trl] = self._wren_proxy
 
         self._communication_manager = CommunicationManager(
             self._update_communication_state,
@@ -698,6 +752,8 @@ class SpsStationComponentManager(
             self._lmc_daq_proxy.cleanup()
         if self._bandpass_daq_proxy:
             self._bandpass_daq_proxy.cleanup()
+        if self._wren_proxy:
+            self._wren_proxy.cleanup()
         for tile_proxy in self._tile_proxies.values():
             tile_proxy.cleanup()
         for subrack_proxy in self._subrack_proxies.values():
@@ -1344,6 +1400,25 @@ class SpsStationComponentManager(
             y_bandpass_data = state_change.get("yPolBandpass")
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
+
+    @threadsafe
+    def _wren_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        health: Optional[HealthState] = None,
+        fault: Optional[bool] = None,
+    ) -> None:
+        """
+        Handle the WREN state changed.
+
+        :param fqdn: The WREN TRL
+        :param power: The power state
+        :param health: The health state
+        :param fault: The fault state.
+
+        """
+        self.logger.warn("WREN state change currently unhandled")
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,

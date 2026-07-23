@@ -39,6 +39,7 @@ from tests.harness import (
     get_lmc_daq_name,
     get_subrack_name,
     get_tile_name,
+    get_wren_name,
 )
 from tests.test_tools import LRCManager, execute_lrc_to_completion, wait_for_lrc_result
 
@@ -127,6 +128,7 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     mock_daq_device_proxy: unittest.mock.Mock,
+    mock_wren_device_proxy: unittest.mock.Mock,
     patched_sps_station_device_class: type[SpsStation],
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
@@ -140,6 +142,8 @@ def test_context_fixture(
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
         devices
     :param mock_daq_device_proxy: a fixture returning a mocked MccsDaqReceiver
+        for unittests.
+    :param mock_wren_device_proxy: a fixture returning a mocked WREN device
         for unittests.
     :param patched_sps_station_device_class: a subclass of SpsStation
         that has been patched with extra commands that mock system under
@@ -160,11 +164,13 @@ def test_context_fixture(
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
         lmc_daq_trl=get_lmc_daq_name(),
         bandpass_daq_trl=get_bandpass_daq_name(),
+        wren_trl=get_wren_name(),
         device_class=patched_sps_station_device_class,
     )
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
     harness.add_mock_bandpass_daq_device(mock_daq_device_proxy)
+    harness.add_mock_wren_device(mock_wren_device_proxy)
 
     with harness as context:
         yield context
@@ -1542,6 +1548,17 @@ def test_stations_daq_trl(station_device: SpsStation) -> None:
     station_device.LMCdaqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
 
     assert station_device.LMCdaqTRL == "NEW_DAQ_TRL"
+
+
+def test_stations_wren_trl(station_device: SpsStation) -> None:
+    """
+    Test that SPSStation properly stores its WREN TRL.
+
+    Tests that SPSStation initialises its WREN TRL properly
+
+    :param station_device: The station device to use.
+    """
+    assert station_device.WrenTRL == get_wren_name()
 
 
 def test_AcquireDataForCalibration(

@@ -63,7 +63,7 @@ class TestTileComponentManager:
             ),
             (
                 ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
-                "tpm_firmware_11.0.0.bit",
+                "tpm_firmware_12.0.0.bit",
             ),
             ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
             ("TileSimulatorBios", "tpm_firmware_10.0.0.bit"),
@@ -1911,7 +1911,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
-        assert tile_component_manager.firmware_name == "tpm_firmware_11.0.0.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_12.0.0.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,

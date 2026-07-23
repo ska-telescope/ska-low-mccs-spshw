@@ -1193,9 +1193,7 @@ def test_pointing_delays_with_unsupported_beams_still_publishes(
             )
 
     expected_call = {
-        tile_id: (
-            old_firmware_delays if tile_id == old_firmware_tile else full_delays
-        )
+        tile_id: (old_firmware_delays if tile_id == old_firmware_tile else full_delays)
         for tile_id in range(num_tiles)
     }
 

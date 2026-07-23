@@ -38,6 +38,7 @@ prototype for the `Square Kilometre Array`_.
    reference/tile_device_methods.rst
    reference/tile_test_generator.rst
    reference/subrack_driver.rst
+   reference/subrack_health.rst
    reference/pointing.rst
    reference/station.rst
 

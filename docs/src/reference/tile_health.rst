@@ -55,6 +55,13 @@ ADC, timing, I/O and DSP), exposed as the intermediate ``*Health`` attributes
 `healthState`_ below. Which attributes belong to which group is itself
 derived from ``attribute_monitoring_point_map``, described next.
 
+Everything on this page only applies when the ``UseAttributesForHealth``
+device property is ``True`` (the default, per ADR-115). When it is ``False``,
+``MccsTile`` instead falls back to the legacy ``TileHealthModel``, which
+re-evaluates raw values against its own rules rather than using
+``HealthRecorder``. ``UseAttributesForHealth=False`` is **deprecated** and
+due to be removed soon, along with ``TileHealthModel``.
+
 Monitored attributes and their TPM monitoring points
 -----------------------------------------------------
 

@@ -18,6 +18,26 @@ if TYPE_CHECKING:
 DEFAULT_STATION_LABEL = "ci-1"  # station 1 of cluster "ci"
 
 
+def get_facility_name() -> str:
+    """
+    Return the facility name for the WREN.
+
+    :returns: The facility name
+
+    """
+    return "ci"
+
+
+def get_cabinet_name() -> str:
+    """
+    Return the cabinet name for the WREN.
+
+    :returns: The cabinet name
+
+    """
+    return "A1"
+
+
 def get_sps_station_name(station_label: str | None = None) -> str:
     """
     Return the SPS station Tango device name.
@@ -89,16 +109,16 @@ def get_bandpass_daq_name(station_label: str | None = None) -> str:
     return f"low-mccs/daqreceiver/{station_label or DEFAULT_STATION_LABEL}-bandpass"
 
 
-def get_wren_name(station_label: str | None = None) -> str:
+def get_wren_name() -> str:
     """
-    Construct the WREN Tango device name from its ID number.
-
-    :param station_label: name of the station under test.
-        Defaults to None, in which case the module default is used.
+    Construct the WREN Tango device name from its facility and cabinet.
 
     :return: the WREN Tango device name
+
     """
-    return f"low-sat/wren/{station_label or DEFAULT_STATION_LABEL}"
+    facility = get_facility_name()
+    cabinet = get_cabinet_name()
+    return f"low-sat/endnode/{facility}-{cabinet}"
 
 
 class SpsTangoTestHarnessContext:
@@ -549,9 +569,7 @@ class SpsTangoTestHarness:
 
         :param mock: the mock to be used as a mock WREN device.
         """
-        self._tango_test_harness.add_mock_device(
-            get_wren_name(self._station_label), mock
-        )
+        self._tango_test_harness.add_mock_device(get_wren_name(), mock)
 
     def __enter__(
         self: SpsTangoTestHarness,

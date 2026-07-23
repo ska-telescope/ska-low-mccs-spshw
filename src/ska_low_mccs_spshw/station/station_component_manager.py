@@ -418,7 +418,6 @@ class _WrenProxy(DeviceComponentManager):
             called when the component state changes
         :param event_serialiser: the event serialiser to be used by this object
         """
-        self._station_id = station_id
         super().__init__(
             fqdn,
             logger,

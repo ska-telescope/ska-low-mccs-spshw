@@ -27,7 +27,9 @@ class TestSpsStationHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
+        health_model = SpsStationHealthModel(
+            ["subrack"], ["tile"], "wren", MockCallable()
+        )
         _health_thresholds = {
             "pps_delta_degraded": 4,
             "pps_delta_failed": 9,

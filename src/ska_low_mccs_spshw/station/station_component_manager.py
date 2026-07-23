@@ -457,6 +457,7 @@ class SpsStationComponentManager(
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        wren_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         on_workaround_flag: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
@@ -504,6 +505,8 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param wren_health_changed_callback: callback to be
+            called when a WREN's health changed
         :param on_workaround_flag: whether to enable the workaround
         :param event_serialiser: the event serialiser to be used by this object.
         """
@@ -623,6 +626,7 @@ class SpsStationComponentManager(
         }
         self._tile_health_changed_callback = tile_health_changed_callback
         self._subrack_health_changed_callback = subrack_health_changed_callback
+        self._wren_health_changed_callback = wren_health_changed_callback
         # configuration parameters
         # more to come
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
@@ -730,6 +734,7 @@ class SpsStationComponentManager(
             tile_trls=list(self._tile_proxies.keys()),
             subrack_trls=list(self._subrack_proxies.keys()),
             daq_trl=self._lmc_daq_trl,
+            wren_trl=self._wren_trl,
         )
 
         self.acquiring_data_for_calibration = threading.Event()
@@ -1418,7 +1423,22 @@ class SpsStationComponentManager(
         :param fault: The fault state.
 
         """
-        self.logger.warn("WREN state change currently unhandled")
+        # Handle the power state change
+        if power is not None:
+            with self._power_state_lock:
+                self._wren_power_state[fqdn] = power
+                self._evaluate_power_state()
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, power=power)
+
+        # Handle the health state change
+        if health is not None:
+            # Old health model.
+            self._wren_health_changed_callback(fqdn, HealthState(health))
+
+            # New health model.
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, health=health)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -1443,6 +1463,12 @@ class SpsStationComponentManager(
         with self._power_state_lock:
             tile_power_states = list(self._tile_power_states.values())
             subrack_power_states = list(self._subrack_power_states.values())
+
+            # Get the WREN power state. At the moment, we just log the power
+            # state, the WREN power state does not have an effect on the
+            # evaluated_power_state.
+            wren_power_state = self._wren_power_state.values()
+
             # Assume that with any Tile ON the subrack must also be ON.
             if any(power_state == PowerState.ON for power_state in tile_power_states):
                 evaluated_power_state = PowerState.ON  # 1
@@ -1474,12 +1500,14 @@ class SpsStationComponentManager(
                 # Any tile UNKNOWN AND no tile ON
                 self.logger.debug(f"tile powers: {tile_power_states}")
                 self.logger.debug(f"subrack powers: {subrack_power_states}")
+                self.logger.debug(f"WREN power: {wren_power_state}")
                 evaluated_power_state = PowerState.UNKNOWN  # 5
 
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
+                f"\tWREN: {self._wren_power_state.values()}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self._update_component_state(power=evaluated_power_state)

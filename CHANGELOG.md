@@ -5,6 +5,7 @@
 * [THORN-125] Improve observability when UNPROGRAMMED.
 * [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL
+* [THORN-613] SpsStation waits for WREN to be OK during initialise
 
 ## 14.0.1
 

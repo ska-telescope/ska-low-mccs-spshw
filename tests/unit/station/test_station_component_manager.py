@@ -99,6 +99,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         "tile_health",
         "subrack_health",
+        "wren_health",
         timeout=15.0,
     )
 

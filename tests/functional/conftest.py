@@ -76,6 +76,16 @@ def pytest_addoption(
     )
 
 
+@pytest.fixture(name="command_info")
+def command_info_fixture() -> dict[str, Any]:
+    """
+    Fixture to store command ID.
+
+    :returns: Empty dictionary.
+    """
+    return {}
+
+
 @pytest.fixture(name="nof_antennas")
 def nof_antennas_fixture() -> int:
     """
@@ -889,6 +899,35 @@ def wait_for_lrcs_to_finish_fixture() -> Callable:
                     )
 
     return _wait_for_lrcs_to_finish
+
+
+def wait_for_condition(
+    condition_func: Callable[[], bool], timeout: float = 120, poll_interval: float = 0.1
+) -> bool:
+    """
+    Wait for condition with a timeout.
+
+    :param condition_func: The condition function
+    :param timeout: The timeout in seconds
+    :param poll_interval: The polling interval
+    :returns: True/False if all condition is satisfied.
+
+    """
+    start_time = time.time()
+    while True:
+        try:
+            if condition_func():
+                return True
+        except (
+            tango.ConnectionFailed,
+            tango.DevFailed,
+            tango.CommunicationFailed,
+        ):
+            pass
+        if time.time() - start_time > timeout:
+            break
+        time.sleep(poll_interval)
+    return False
 
 
 @pytest.fixture(name="excluded_tile_attributes")

@@ -99,6 +99,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         "tile_health",
         "subrack_health",
+        "wren_health",
         timeout=15.0,
     )
 
@@ -180,6 +181,8 @@ def station_component_manager_fixture(
         antenna_uri,
         True,  # whether or not to start bandpasses in initialise
         5,  # Bandpass integration time
+        True,  # wren_health_check_enabled
+        120,  # wren_health_check_timeout
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],
@@ -1033,6 +1036,12 @@ def test_initialise_progress_callbacks(
             station_component_manager, "_initialise_tile_parameters", return_value=ok
         ),
         unittest.mock.patch.object(
+            station_component_manager, "_wren_proxy", return_value=object
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_wait_for_wren", return_value=ok
+        ),
+        unittest.mock.patch.object(
             station_component_manager, "_initialise_station", return_value=ok
         ),
         unittest.mock.patch.object(
@@ -1055,7 +1064,7 @@ def test_initialise_progress_callbacks(
         for call in task_callback.call_args_list
         if "progress" in call.kwargs
     ]
-    assert progress_calls == [5, 70, 75, 85, 90, 95]
+    assert progress_calls == [5, 65, 70, 75, 85, 90, 95]
 
     task_callback.assert_called_with(
         status=TaskStatus.COMPLETED,
@@ -1286,3 +1295,61 @@ def test_beamformer_flagged_count(
         tango.AttrQuality.ATTR_VALID,
     )
     callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=True)
+
+
+@pytest.mark.parametrize(
+    ("fail_on_timeout", "timedout", "expected_result"),
+    [
+        (True, True, ResultCode.FAILED),
+        (True, False, ResultCode.OK),
+        (False, True, ResultCode.OK),
+        (False, False, ResultCode.OK),
+    ],
+)
+def test_wait_for_wren(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    fail_on_timeout: bool,
+    timedout: bool,
+    expected_result: ResultCode,
+) -> None:
+    """
+    Test the wait for WREN functionality.
+
+    Checks the following:
+    - If fail_on_timeout is True and timeout return FAILED
+    - If fail_on_timeout is True and not timeout return OK
+    - If fail_on_timeout is False and timeout return OK
+    - If fail_on_timeout is False and not timeout return OK
+
+    :param station_component_manager: the SPS station component manager under test.
+    :param callbacks: dictionary of driver callbacks.
+    :param fail_on_timeout: Is the fail on timeout flag set
+    :param timedout: Does the command timeout
+    :param expected_result: The expected result
+
+    """
+    # Start communicating
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # Set the expected WREN health
+    wren_health = HealthState.UNKNOWN if timedout else HealthState.OK
+
+    # Create a mock wren proxy object
+    mock_wren_proxy = unittest.mock.Mock(healthState=wren_health)
+
+    # Ensure healthState is as expected
+    assert mock_wren_proxy.healthState == wren_health
+
+    # Mock the station component manager _wren_proxy
+    station_component_manager._wren_proxy = mock_wren_proxy
+
+    # Wait for the WREN to be in health state OK
+    result_code, _ = station_component_manager._wait_for_wren(
+        None, None, timeout=1, poll_interval=0.1, fail_on_timeout=fail_on_timeout
+    )
+
+    # Check we get the expected result
+    assert result_code == expected_result

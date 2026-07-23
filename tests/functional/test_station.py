@@ -41,16 +41,6 @@ STRESS_TEST_PHASE_DURATION = 90.0  # seconds
 NOF_CHANNEL_GROUPS = 48
 
 
-@pytest.fixture(name="command_info")
-def command_info_fixture() -> dict[str, Any]:
-    """
-    Fixture to store command ID.
-
-    :returns: Empty dictionary.
-    """
-    return {}
-
-
 @pytest.fixture(name="tile_inheriting")
 def tile_inheriting_fixture(station_tiles: list[tango.DeviceProxy]) -> Iterator[None]:
     """

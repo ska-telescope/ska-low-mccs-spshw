@@ -1574,6 +1574,50 @@ def test_stations_wren_trl(station_device: SpsStation) -> None:
     assert station_device.WrenTRL == get_wren_name()
 
 
+def test_stations_wren_health_check_enabled(station_device: SpsStation) -> None:
+    """
+    Test that SPSStation properly exposes WREN health check enabled flag.
+
+    :param station_device: The station device to use.
+
+    """
+    # Check the initial value is the same as the device property
+    assert (
+        station_device.WrenHealthCheckEnabled == station_device.WRENHealthCheckEnabled
+    )
+
+    # Toggle the value
+    new_value = not station_device.WRENHealthCheckEnabled
+
+    # Set the value
+    station_device.WrenHealthCheckEnabled = new_value  # type: ignore[method-assign]
+
+    # Check the new value has been set
+    assert station_device.WrenHealthCheckEnabled == new_value
+
+
+def test_stations_wren_health_check_timeout(station_device: SpsStation) -> None:
+    """
+    Test that SPSStation properly exposes WREN health check timeout.
+
+    :param station_device: The station device to use.
+
+    """
+    # Check the initial value is the same as the device property
+    assert (
+        station_device.WrenHealthCheckTimeout == station_device.WRENHealthCheckTimeout
+    )
+
+    # Increment the value
+    new_value = station_device.WRENHealthCheckTimeout + 1
+
+    # Set the value
+    station_device.WrenHealthCheckTimeout = new_value  # type: ignore[method-assign]
+
+    # Check the new value has been set
+    assert station_device.WrenHealthCheckTimeout == new_value
+
+
 def test_AcquireDataForCalibration(
     station_device: SpsStation,
     daq_device: DeviceProxy,
@@ -1912,6 +1956,8 @@ def test_programing_state_health_rollup(
                 "subrack_failed": 0.2,
                 "tile_degraded": 0.05,
                 "tile_failed": 0.2,
+                "wren_degraded": 0.05,
+                "wren_failed": 0.2,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
@@ -1922,6 +1968,8 @@ def test_programing_state_health_rollup(
                 "subrack_failed": 0.3,
                 "tile_degraded": 0.07,
                 "tile_failed": 0.2,
+                "wren_degraded": 0.07,
+                "wren_failed": 0.2,
                 "pps_delta_degraded": 6,
                 "pps_delta_failed": 10,
             },

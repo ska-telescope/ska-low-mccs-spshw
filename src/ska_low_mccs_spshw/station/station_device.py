@@ -114,6 +114,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
+    # Feature flags for WREN device. When WRENHealthCheckEnabled is True, the
+    # device will wait until WREN is ok during initialisation. If WREN timesout
+    # then device will not initialise.
+    WRENHealthCheckEnabled = device_property(dtype=bool, default_value=False)
+    WRENHealthCheckTimeout = device_property(dtype=float, default_value=120)
+
     # ---------------
     # Initialisation
     # ---------------
@@ -270,6 +276,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.AntennaConfigURI,
             self.StartBandpassesInInitialise,
             self.BandpassIntegrationTime,
+            self.WRENHealthCheckEnabled,
+            self.WRENHealthCheckTimeout,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,
@@ -857,14 +865,55 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.BandpassDaqTRL = value
         self.component_manager._bandpass_daq_trl = value
 
-    @attribute(dtype=str)
+    @attribute()
     def WrenTRL(self: SpsStation) -> str:
         """
         Report the Tango Resource Locator for this SpsStation's WREN instance.
 
         :return: Return the current WREN TRL.
+
         """
         return self.WRENTRL
+
+    @attribute()
+    def WrenHealthCheckEnabled(self) -> bool:
+        """
+        Return whether the WREN Health Check feature is enabled.
+
+        :returns: The WREN Health Check feature is enabled.
+
+        """
+        return self.component_manager.wren_health_check_enabled
+
+    @WrenHealthCheckEnabled.write  # type: ignore[no-redef]
+    def WrenHealthCheckEnabled(self, enabled: bool) -> None:
+        """
+        Set whether the WREN Health Check feature is enabled.
+
+        :param enabled: True to enable WREN Health Check, False to disable.
+
+        """
+        self.component_manager.wren_health_check_enabled = enabled
+
+    @attribute()
+    def WrenHealthCheckTimeout(self) -> float:
+        """
+        Return the WREN Health Check timeout in seconds.
+
+        :returns: The WREN Health Check timeout.
+
+        """
+        return self.component_manager.wren_health_check_timeout
+
+    @WrenHealthCheckTimeout.write  # type: ignore[no-redef]
+    def WrenHealthCheckTimeout(self, timeout: float) -> None:
+        """
+        Set the WREN Health Check timeout in seconds.
+
+        :param timeout: The timeout in seconds for WREN Health Check.
+
+        """
+        self.component_manager.wren_health_check_timeout = timeout
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:

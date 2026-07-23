@@ -63,10 +63,10 @@ from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
 
-FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
-FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
+FIRMWARE_NAME_OLD = "tpm_firmware_10.0.0.bit"
+FIRMWARE_NAME_NEW = "tpm_firmware_12.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
-_MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
+_MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 
 
@@ -80,10 +80,10 @@ def _select_firmware_name(bios: str) -> str:
     """
     match = _BIOS_VERSION_PATTERN.search(bios)
     if match is None:
-        return FIRMWARE_NAME_V10
+        return FIRMWARE_NAME_OLD
 
     version = semver.Version.parse(match.group(1))
-    return FIRMWARE_NAME_V11 if version >= _MIN_V11_BIOS_VERSION else FIRMWARE_NAME_V10
+    return FIRMWARE_NAME_NEW if version >= _MIN_NEW_BIOS_VERSION else FIRMWARE_NAME_OLD
 
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
@@ -197,9 +197,9 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
-    FIRMWARE_NAME_V10: str = FIRMWARE_NAME_V10
-    FIRMWARE_NAME_V11: str = FIRMWARE_NAME_V11
-    FIRMWARE_NAME: str = FIRMWARE_NAME_V10
+    FIRMWARE_NAME_OLD: str = FIRMWARE_NAME_OLD
+    FIRMWARE_NAME_NEW: str = FIRMWARE_NAME_NEW
+    FIRMWARE_NAME: str = FIRMWARE_NAME_OLD
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(

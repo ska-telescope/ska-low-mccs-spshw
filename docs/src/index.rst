@@ -31,6 +31,8 @@ prototype for the `Square Kilometre Array`_.
    :caption: Reference material
 
    reference/tile_brief_overview.rst
+   reference/firmware_thresholds.rst
+   reference/tile_health.rst
    reference/power
    reference/tile_device_to_tpm
    reference/tile_device_methods.rst

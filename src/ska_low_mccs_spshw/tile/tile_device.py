@@ -5384,17 +5384,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=32,  # Channels
-        max_dim_y=8,  # Antennas
+        max_dim_x=32,  # delay, delay rate for each of the 16 antennas
+        max_dim_y=48,  # Beams
         label="Pointing Delays",
         rel_change=0.01,
         archive_rel_change=0.01,
     )
     def pointingDelays(self: MccsTile) -> list[float]:
         """
-        Get the pointing delays for beam 0.
+        Get the pointing delays for all beams.
 
-        :return: list of pointing delays for beam 0
+        :return: list of pointing delays for all beams
         """
         return self._attribute_state["pointingDelays"].read()
 
@@ -6453,7 +6453,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Specify the delay in seconds and the delay rate in seconds/second.
 
         The delay_array specifies the delay and delay rate for each antenna. beam_index
-        specifies which beam is desired (range 0-7)
+        specifies which beam is desired (range 0-47)
 
         :param argin: An array containing: beam index,
             the delay in seconds and the delay rate in
@@ -6483,7 +6483,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.logger.error("Insufficient parameters")
             raise ValueError("Insufficient parameters")
         beam_index = int(argin[0])
-        if beam_index < 0 or beam_index > 7:
+        if beam_index < 0 or beam_index > 47:
             self.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
         delay_array = []

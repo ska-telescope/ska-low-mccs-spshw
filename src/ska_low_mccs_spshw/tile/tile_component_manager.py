@@ -35,6 +35,7 @@ from ska_low_sps_tpm_api.base.definitions import (
     BoardError,
     Device,
     LibraryError,
+    PluginError,
     RegisterInfo,
 )
 from ska_low_sps_tpm_api.tile import Tile
@@ -68,6 +69,7 @@ FIRMWARE_NAME_NEW = "tpm_firmware_12.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
+_MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -4955,14 +4957,33 @@ class TileComponentManager(
         """
         Read pointing delays from the TPM for all beams.
 
-        :return: pointing delays for all beams as (8, 32) ndarray.
+        Each beam requires a separate round trip to the hardware, and this
+        is called with the hardware lock already held by the poller (see
+        :py:meth:`poll`), so this directly extends how long that lock is
+        held for. Widening this from 8 to 48 beams makes this poll roughly
+        6x slower, which risks starving other requests (e.g. LRCs such as
+        ``LoadPointingDelays``) of the hardware lock while it runs.
+
+        Older firmware/BIOS only supports 8 beams (see
+        ``BeamfFD.max_beams`` in ska-low-sps-tpm-api), and raises a
+        ``PluginError`` for beam indices beyond what it supports. Rows for
+        beams unsupported by the connected TPM are left as NaN, so the
+        shape is always (48, 32) regardless of firmware.
+
+        :return: pointing delays for all beams as (48, 32) ndarray.
         """
-        delays = []
+        delays = np.full((_MAX_BEAMS, 32), np.nan)
 
-        for beam in range(8):
-            delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
+        for beam in range(_MAX_BEAMS):
+            try:
+                delays[beam] = np.array(self.tile.get_pointing_delay(beam)).reshape(-1)
+            except PluginError:
+                self.logger.debug(
+                    f"Beam {beam} not supported by this TPM's firmware/BIOS"
+                )
+                break
 
-        return np.array(delays)
+        return delays
 
     def load_scan_id(
         self: TileComponentManager,

@@ -504,7 +504,7 @@ class SpsStationComponentManager(
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
-            self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+            self._hw_pointing_delays[logical_tile_id] = np.full((48, 32), np.nan)
             self._tile_dst_ips[logical_tile_id] = ("", "")
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.

@@ -862,16 +862,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.WRENTRL
 
-    @WrenTRL.write  # type: ignore[no-redef]
-    def WrenTRL(self: SpsStation, value: str) -> None:
-        """
-        Set the Tango Resource Locator for this SpsStation's WREN instance.
-
-        :param value: The new WREN TRL.
-        """
-        self.WRENTRL = value
-        self.component_manager._wren_trl = value
-
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:
         """

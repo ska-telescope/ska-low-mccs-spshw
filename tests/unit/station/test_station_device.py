@@ -1899,6 +1899,8 @@ def test_programing_state_health_rollup(
                 "subrack_failed": 0.2,
                 "tile_degraded": 0.05,
                 "tile_failed": 0.2,
+                "wren_degraded": 0.05,
+                "wren_failed": 0.2,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
@@ -1909,6 +1911,8 @@ def test_programing_state_health_rollup(
                 "subrack_failed": 0.3,
                 "tile_degraded": 0.07,
                 "tile_failed": 0.2,
+                "wren_degraded": 0.07,
+                "wren_failed": 0.2,
                 "pps_delta_degraded": 6,
                 "pps_delta_failed": 10,
             },

@@ -609,6 +609,9 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._bandpass_daq_power_state = {bandpass_daq_trl: PowerState.UNKNOWN}
+
+        # Create the WREN proxy and WREN power state variable. If the WREN TRL
+        # isn't set, create an empty dict for the WREN power state
         if self._wren_trl:
             # TODO: Detect a bad wren trl.
             self._wren_proxy = _WrenProxy(
@@ -621,6 +624,9 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._wren_power_state = {wren_trl: PowerState.UNKNOWN}
+        else:
+            self._wren_power_state = {}
+
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }

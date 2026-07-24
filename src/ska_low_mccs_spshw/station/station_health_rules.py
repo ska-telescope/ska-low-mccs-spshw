@@ -106,7 +106,7 @@ class SpsStationHealthRules(HealthRules):
             ]
             report = (
                 "Too many subdevices are in a bad state: "
-                f"Tiles: {tile_states} Subracks: {subrack_states} WREN {wren_state}"
+                f"Tiles: {tile_states} Subracks: {subrack_states} WREN: {wren_state}"
             )
         else:
             report = ""
@@ -175,7 +175,7 @@ class SpsStationHealthRules(HealthRules):
             ]
             report = (
                 "Too many subdevices are in a bad state: "
-                f"Tiles: {tile_states} Subracks: {subrack_states} WREN {wren_state}"
+                f"Tiles: {tile_states} Subracks: {subrack_states} WREN: {wren_state}"
             )
         else:
             report = ""
@@ -261,6 +261,6 @@ class SpsStationHealthRules(HealthRules):
             "subrack_failed": 0.2,
             "tile_degraded": 0.05,
             "tile_failed": 0.2,
-            "wren_degraded": 0.0,
-            "wren_failed": 0.0,
+            "wren_degraded": 0.05,
+            "wren_failed": 0.2,
         }

@@ -452,6 +452,7 @@ class SpsStationComponentManager(
         antenna_config_uri: Optional[list[str]],
         start_bandpasses_in_initialise: bool,
         bandpass_integration_time: float,
+        wren_health_check_enabled: bool,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -495,6 +496,7 @@ class SpsStationComponentManager(
             in initialise.
         :param bandpass_integration_time: the integration time for channelised data
             capture started in initialise.
+        :param wren_health_check_enabled: Is the health check enabled in initialise
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -520,6 +522,7 @@ class SpsStationComponentManager(
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
         self._wren_trl = wren_trl
+        self._wren_health_check_enabled = wren_health_check_enabled
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
@@ -1863,7 +1866,7 @@ class SpsStationComponentManager(
 
     @check_communicating
     # pylint: disable=too-many-branches
-    def initialise(
+    def initialise(  # noqa: C901
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
@@ -1921,7 +1924,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=5, progress_end=65
+                task_callback, task_abort_event, progress_start=5, progress_end=60
             )
             # Progress is reported incrementally inside _reinitialise_tiles
 
@@ -1931,6 +1934,18 @@ class SpsStationComponentManager(
                 task_callback,
                 task_abort_event,
             )
+
+        # Now, if the wren proxy is set, wait for the WREN to initialise
+        if self._wren_proxy:
+            if result_code == ResultCode.OK:
+                self.logger.debug("Waiting for WREN")
+                result_code, failure_step = self._wait_for_wren(
+                    task_callback,
+                    task_abort_event,
+                    fail_on_timeout=self._wren_health_check_enabled,
+                )
+                if task_callback:
+                    task_callback(progress=65)
 
         if result_code == ResultCode.OK:
             if task_callback:
@@ -2243,6 +2258,68 @@ class SpsStationComponentManager(
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg
+
+    @check_communicating
+    def _wait_for_wren(
+        self,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+        timeout: float = 120,
+        poll_interval: float = 0.5,
+        fail_on_timeout: bool = False,
+    ) -> tuple[ResultCode, str]:
+        """
+        Wait for the WREN to be health.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :param timeout: The timeout (seconds)
+        :param poll_interval: The polling interval (seconds)
+        :param fail_on_timeout: Return failed on timeout
+
+        :return: a result code and message
+
+        """
+        # Ensure we have the WREN Proxy object
+        assert self._wren_proxy is not None, "WREN Proxy is None"
+
+        # Start polling
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            # Wait for a moment
+            time.sleep(poll_interval)
+
+            # If abort is set then return early
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("_wait_for_wren task has been aborted")
+                return ResultCode.ABORTED, "task aborted"
+
+            # Now try to get the wren proxy health state and return OK if the
+            # WREN health state is OK
+            try:
+                current_state = self._wren_proxy.health
+                if current_state == HealthState.OK:
+                    return ResultCode.OK, ""
+            except (
+                tango.ConnectionFailed,
+                tango.DevFailed,
+                tango.CommunicationFailed,
+            ):
+                current_state = HealthState.UNKNOWN
+
+        # If we timeout then log a message with the final health state.
+        message = (
+            "Timed out waiting for WREN to come up, "
+            f"current state is '{current_state}'"
+        )
+
+        # If the feature flag is set log an error and return FAILED. If the
+        # feature flag is not set then result OK
+        result_code = ResultCode.FAILED if fail_on_timeout else ResultCode.OK
+
+        # Log the message and return the result
+        self.logger.error(message)
+        return result_code, message
 
     @check_communicating
     def _initialise_tile_parameters(

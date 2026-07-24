@@ -112,6 +112,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
+    # Feature flags for WREN device. When WRENHealthCheckEnabled is True, the
+    # device will wait until WREN is ok during initialisation. If WREN timesout
+    # then device will not initialise.
+    WRENHealthCheckEnabled = device_property(dtype=bool, default_value=False)
+
     # ---------------
     # Initialisation
     # ---------------
@@ -268,6 +273,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.AntennaConfigURI,
             self.StartBandpassesInInitialise,
             self.BandpassIntegrationTime,
+            self.WRENHealthCheckEnabled,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,

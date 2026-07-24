@@ -116,6 +116,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # device will wait until WREN is ok during initialisation. If WREN timesout
     # then device will not initialise.
     WRENHealthCheckEnabled = device_property(dtype=bool, default_value=False)
+    WRENHealthCheckTimeout = device_property(dtype=float, default_value=120)
 
     # ---------------
     # Initialisation
@@ -274,6 +275,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.StartBandpassesInInitialise,
             self.BandpassIntegrationTime,
             self.WRENHealthCheckEnabled,
+            self.WRENHealthCheckTimeout,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,

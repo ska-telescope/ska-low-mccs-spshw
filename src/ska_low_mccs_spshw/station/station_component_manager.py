@@ -453,6 +453,7 @@ class SpsStationComponentManager(
         start_bandpasses_in_initialise: bool,
         bandpass_integration_time: float,
         wren_health_check_enabled: bool,
+        wren_health_check_timeout: float,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -497,6 +498,7 @@ class SpsStationComponentManager(
         :param bandpass_integration_time: the integration time for channelised data
             capture started in initialise.
         :param wren_health_check_enabled: Is the health check enabled in initialise
+        :param wren_health_check_timeout: The timeout for the WREN initialisation
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -523,6 +525,7 @@ class SpsStationComponentManager(
         self._bandpass_daq_trl = bandpass_daq_trl
         self._wren_trl = wren_trl
         self._wren_health_check_enabled = wren_health_check_enabled
+        self._wren_health_check_timeout = wren_health_check_timeout
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
@@ -1942,6 +1945,7 @@ class SpsStationComponentManager(
                 result_code, failure_step = self._wait_for_wren(
                     task_callback,
                     task_abort_event,
+                    timeout=self._wren_health_check_timeout,
                     fail_on_timeout=self._wren_health_check_enabled,
                 )
                 if task_callback:

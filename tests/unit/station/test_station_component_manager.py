@@ -182,6 +182,7 @@ def station_component_manager_fixture(
         True,  # whether or not to start bandpasses in initialise
         5,  # Bandpass integration time
         True,  # wren_health_check_enabled
+        120,  # wren_health_check_timeout
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],

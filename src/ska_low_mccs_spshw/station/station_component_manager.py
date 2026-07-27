@@ -4274,7 +4274,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         command_name: str,
         command_args: Optional[Any] = None,
-        timeout: int = 20,
+        timeout: float = 20.0,
         require_initialised: bool = False,
         require_synchronised: bool = False,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
@@ -4284,7 +4284,11 @@ class SpsStationComponentManager(
         This is for commands which return a DevVarLongStringArrayType.
 
         :param command_name: command to execute.
-        :param command_args: args to execute commands with.
+        :param command_args: args to execute commands with. May be a
+            callable, in which case it is called with each tile's proxy
+            to compute that tile's args -- allowing different tiles to
+            be sent different arguments. Otherwise the same args are
+            sent to every tile.
         :param timeout: timeout in which to expect command completion.
         :param require_initialised: if this command can only execute on an initialised
             tile.
@@ -4296,7 +4300,11 @@ class SpsStationComponentManager(
             information purpose only.
         """
         self.logger.debug(f"calling {command_name} with {command_args=}")
-        command_args = [command_args] if command_args is not None else []
+
+        def _args_for(proxy: MccsDeviceProxy) -> list[Any]:
+            if callable(command_args):
+                return [command_args(proxy)]
+            return [command_args] if command_args is not None else []
 
         # Ideally we wouldn't handle the exceptions, and let them hit the user.
         # However we need to do more work in MccsTile before that. I'd like to get
@@ -4309,7 +4317,7 @@ class SpsStationComponentManager(
             try:
                 return proxy.command_inout(
                     command_name,
-                    *command_args,
+                    *_args_for(proxy),
                 )
             except Exception as e:
                 self.logger.error(
@@ -4376,19 +4384,29 @@ class SpsStationComponentManager(
             # tango.asyncio.DeviceProxy to use that functionality, which would involve a
             # general refactor of SpsStation. So for now we just spin up some threads,
             # and execute each synchronous call in it's own thread manually.
-            with PyTangoThreadPoolExecutor(
-                max_workers=len(self._tile_proxies)
-            ) as executor:
-                futures: list[Future] = [
-                    executor.submit(command, proxy)
-                    for command, proxy in commands_to_execute
-                ]
-                complete, incomplete = wait(futures, timeout=timeout)
-                if incomplete:
-                    msg = f"{len(incomplete)} commands failed to complete in time."
-                    self.logger.warning(msg)
-                    return [ResultCode.FAILED], [msg]
-                results = [future.result() for future in complete]
+            #
+            # Deliberately not using this executor as a context manager: exiting a
+            # `with` block still runs Executor.__exit__, which calls
+            # shutdown(wait=True) even when we `return` early below -- that would
+            # block this method (and therefore hold this device's own Tango
+            # monitor) until every tile call finishes, however long that takes,
+            # completely defeating `timeout`. If a tile call hangs rather than
+            # merely being slow, that turns into a permanent, unrecoverable block.
+            executor = PyTangoThreadPoolExecutor(max_workers=len(self._tile_proxies))
+            futures: list[Future] = [
+                executor.submit(command, proxy)
+                for command, proxy in commands_to_execute
+            ]
+            complete, incomplete = wait(futures, timeout=timeout)
+            if incomplete:
+                msg = f"{len(incomplete)} commands failed to complete in time."
+                self.logger.warning(msg)
+                # Detach rather than wait: don't block on the stuck call(s).
+                # They'll finish (or not) in the background.
+                executor.shutdown(wait=False)
+                return [ResultCode.FAILED], [msg]
+            results = [future.result() for future in complete]
+            executor.shutdown(wait=True)
 
         result_codes, _ = zip(*results)
         self.logger.debug(f"Tiles response from {command_name}: {str(results)}")

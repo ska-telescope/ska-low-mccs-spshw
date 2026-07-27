@@ -2,10 +2,10 @@
 
 ## 14.0.2
 
+* [THORN-680] Fix _execute_async_on_tiles to obey timeout.
 * [THORN-322] Add docs for Health of hardware facing devices.
 * [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.
 * [THORN-125] Improve observability when UNPROGRAMMED.
-* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL
 
 ## 14.0.1

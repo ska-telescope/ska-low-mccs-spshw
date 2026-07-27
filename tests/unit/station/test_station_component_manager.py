@@ -16,7 +16,7 @@ import random
 import time
 import unittest.mock
 from types import SimpleNamespace
-from typing import Iterator
+from typing import Iterator, cast
 
 import numpy as np
 import pytest
@@ -36,6 +36,7 @@ from ska_low_mccs_spshw.station import (
     SpsStationSelfCheckManager,
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
+from ska_low_mccs_spshw.station.station_component_manager import _TileProxy
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 # pylint: disable=too-many-lines
@@ -686,6 +687,56 @@ def test_async_commands(
     assert result[0] == expected_station_result
     assert message[0] is not None
     assert expected_tile_result.name in message[0]
+
+
+def test_execute_async_on_tiles_respects_timeout_on_hung_tile(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Verify _execute_async_on_tiles doesn't block past the requested timeout.
+
+    Regression test: ``_execute_async_on_tiles`` used to call
+    ``wait(futures, timeout=timeout)`` and, on incomplete futures,
+    ``return`` a ``FAILED`` result from inside a
+    ``with PyTangoThreadPoolExecutor(...) as executor:`` block. Exiting
+    that block still ran ``Executor.__exit__``, which calls
+    ``self.shutdown(wait=True)`` -- blocking until every submitted future
+    actually completed, regardless of ``timeout``. A tile call that hangs
+    (rather than merely being slow) therefore blocked the calling
+    command-dispatch thread -- and held this device's own Tango monitor
+    -- indefinitely.
+
+    :param station_component_manager: the SPS station component manager
+        under test.
+    """
+    call_duration = 0.5
+    requested_timeout = 0.05
+
+    # pylint: disable=too-few-public-methods
+    class _SlowProxy:
+        # pylint: disable=missing-function-docstring
+        def command_inout(
+            self: _SlowProxy, *args: object, **kwargs: object
+        ) -> tuple[list[ResultCode], list[str]]:
+            time.sleep(call_duration)
+            return [ResultCode.OK], ["done"]
+
+    station_component_manager._tile_proxies = {
+        "fake/tile/1": cast(_TileProxy, SimpleNamespace(_proxy=_SlowProxy())),
+    }  # type: ignore[assignment]
+
+    start = time.monotonic()
+    result, message = station_component_manager._execute_async_on_tiles(
+        "SlowCommand", timeout=requested_timeout
+    )
+    elapsed = time.monotonic() - start
+
+    assert result == [ResultCode.FAILED]
+    assert message[0] is not None
+    assert "failed to complete in time" in message[0]
+    # The fix: the method returns close to the requested timeout, not
+    # after waiting for the slow/hung tile call to finish.
+    assert elapsed < call_duration
 
 
 def test_send_data_samples(

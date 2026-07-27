@@ -12,6 +12,7 @@ import ipaddress
 import json
 import logging
 import unittest.mock
+from typing import Any, Callable
 
 import numpy as np
 import pytest
@@ -93,13 +94,78 @@ def tile_initial_beamformer_regions_fixture(
     return regions
 
 
+def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
+    """
+    Patch a mock device so that setting an attribute pushes a change event.
+
+    ``MockDeviceBuilder``'s mocked ``subscribe_event`` only ever calls the
+    registered callback once, with whatever value is current at
+    subscription time: see its docstring, "It doesn't actually support
+    publishing change events." Real hardware (and the real Tango event
+    mechanism) pushes a fresh change event every time an attribute's value
+    changes, and SpsStation's component manager caches tile attribute
+    values from those pushes rather than re-reading them live. So for a
+    mock tile to behave like the real thing from the perspective of that
+    cache, every subsequent write to a subscribed attribute must also
+    trigger the callback, not just the first one.
+
+    :param mock_device: the mock device to patch.
+    """
+    event_name_to_type = {
+        tango.EventType.ALARM_EVENT: "alarm",
+        tango.EventType.CHANGE_EVENT: "change",
+        tango.EventType.ATTR_CONF_EVENT: "attr_conf",
+    }
+    subscriptions: dict[str, tuple[tango.EventType, Callable]] = {}
+    original_subscribe_event = mock_device.subscribe_event.side_effect
+
+    def _subscribe_event(
+        attribute_name: str,
+        event_type: tango.EventType,
+        callback: Callable,
+        stateless: bool,
+    ) -> None:
+        subscriptions[attribute_name.lower()] = (event_type, callback)
+        original_subscribe_event(attribute_name, event_type, callback, stateless)
+
+    mock_device.subscribe_event.side_effect = _subscribe_event
+
+    def _push_change_event(attribute_name: str, value: Any) -> None:
+        subscription = subscriptions.get(attribute_name.lower())
+        if subscription is None:
+            return
+        event_type, callback = subscription
+        mock_event_data = unittest.mock.Mock()
+        mock_event_data.event = event_name_to_type[event_type]
+        mock_event_data.err = False
+        mock_event_data.attr_value.name = attribute_name
+        mock_event_data.attr_value.value = value
+        mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID
+        # Called synchronously (unlike the one-shot subscribe_event push
+        # above) so that by the time the attribute assignment returns, the
+        # station's cache has already been updated -- callers then don't
+        # need to sleep and poll waiting for a background thread to run.
+        callback(mock_event_data)
+
+    # Each Mock() instance gets its own dynamically-created class, so
+    # patching __setattr__ here is instance-scoped, not global.
+    mock_class = type(mock_device)
+    original_setattr = mock_class.__setattr__
+
+    def _setattr(self: unittest.mock.Mock, name: str, value: Any) -> None:
+        original_setattr(self, name, value)
+        _push_change_event(name, value)
+
+    mock_class.__setattr__ = _setattr
+
+
 @pytest.fixture(name="mock_tile_builder")
 def mock_tile_builder_fixture(
     tile_id: int,
     tile_initial_beamformer_table: list[int],
     tile_initial_beamformer_regions: list[int],
     tile_initial_pointing_delays: np.ndarray,
-) -> MockDeviceBuilder:
+) -> Callable[..., unittest.mock.Mock]:
     """
     Fixture that provides a builder for a mock MccsTile device.
 
@@ -120,7 +186,18 @@ def mock_tile_builder_fixture(
     builder.add_attribute("adcPower", np.array([17.0] * 32))
     builder.add_attribute("staticTimeDelays", np.array([0] * 32))
     builder.add_attribute("ppsDelay", 0)
+    builder.add_attribute("ppsDelayCorrection", 0)
     builder.add_attribute("cspRounding", np.array([2] * 384))
+    builder.add_attribute("channeliserRounding", np.array([3] * 512))
+    builder.add_attribute("boardTemperature", 25.0)
+    builder.add_attribute("fpga1Temperature", 25.0)
+    builder.add_attribute("fpga2Temperature", 25.0)
+    builder.add_attribute("sysrefPresent", True)
+    builder.add_attribute("pllLocked", True)
+    builder.add_attribute("ppsPresent", True)
+    builder.add_attribute("clockPresent", True)
+    builder.add_attribute("testGeneratorActive", False)
+    builder.add_attribute("isBeamformerRunning", False)
     builder.add_attribute("pendingDataRequests", False)
     builder.add_attribute("beamformerTable", tile_initial_beamformer_table)
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
@@ -164,7 +241,13 @@ def mock_tile_builder_fixture(
     )
     builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     builder.add_result_command("initialise", ResultCode.OK)
-    return builder
+
+    def _build(**kwargs: Any) -> unittest.mock.Mock:
+        mock_device = builder(**kwargs)
+        _make_mock_push_change_events(mock_device)
+        return mock_device
+
+    return _build
 
 
 @pytest.fixture(name="mock_daq_device_proxy")
@@ -220,7 +303,7 @@ def mock_wren_device_proxy_fixture() -> MockDeviceBuilder:
 
 @pytest.fixture(name="mock_tile_device_proxy")
 def mock_tile_device_proxy_fixture(
-    mock_tile_builder: MockDeviceBuilder,
+    mock_tile_builder: Callable[..., unittest.mock.Mock],
     tile_id: int,
     station_id: int,
 ) -> unittest.mock.Mock:
@@ -251,7 +334,7 @@ def num_tiles_fixture() -> int:
 
 @pytest.fixture(name="mock_tile_device_proxies")
 def mock_tile_device_proxies_fixture(
-    mock_tile_builder: MockDeviceBuilder,
+    mock_tile_builder: Callable[..., unittest.mock.Mock],
     num_tiles: int,
     station_id: int,
     sdn_first_interface: str,

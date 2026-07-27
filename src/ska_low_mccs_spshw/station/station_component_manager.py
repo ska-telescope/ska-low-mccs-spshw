@@ -8,6 +8,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for stations."""
+
 from __future__ import annotations
 
 import copy
@@ -121,6 +122,7 @@ class _TileProxy(DeviceComponentManager):
             "staticTimeDelays": self._on_attribute_change,
             "preaduLevels": self._on_attribute_change,
             "ppsDelay": self._on_attribute_change,
+            "ppsDelayCorrection": self._on_attribute_change,
             "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
@@ -129,6 +131,17 @@ class _TileProxy(DeviceComponentManager):
             "dstip40gfpga2": self._on_attribute_change,
             "fpga0_station_beamformer_flagged_count": self._on_attribute_change,
             "fpga1_station_beamformer_flagged_count": self._on_attribute_change,
+            "boardTemperature": self._on_attribute_change,
+            "fpga1Temperature": self._on_attribute_change,
+            "fpga2Temperature": self._on_attribute_change,
+            "sysrefPresent": self._on_attribute_change,
+            "pllLocked": self._on_attribute_change,
+            "ppsPresent": self._on_attribute_change,
+            "clockPresent": self._on_attribute_change,
+            "testGeneratorActive": self._on_attribute_change,
+            "isBeamformerRunning": self._on_attribute_change,
+            "channeliserRounding": self._on_attribute_change,
+            "cspRounding": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -680,6 +693,21 @@ class SpsStationComponentManager(
         self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [csp_rounding] * 384
+
+        # Caches kept current from tile change-event subscriptions (see
+        # _on_tile_attribute_change), so that reading a station-level
+        # summary attribute doesn't require a live per-tile round trip.
+        self._board_temperatures: list[float | None] = [None] * self._number_of_tiles
+        self._fpga1_temperatures: list[float | None] = [None] * self._number_of_tiles
+        self._fpga2_temperatures: list[float | None] = [None] * self._number_of_tiles
+        self._sysref_present: list[bool | None] = [None] * self._number_of_tiles
+        self._pll_locked: list[bool | None] = [None] * self._number_of_tiles
+        self._pps_present: list[bool | None] = [None] * self._number_of_tiles
+        self._clock_present: list[bool | None] = [None] * self._number_of_tiles
+        self._test_generator_active: list[bool | None] = [None] * self._number_of_tiles
+        self._is_beamformer_running: list[bool | None] = [None] * self._number_of_tiles
+        self._channeliser_roundings: np.ndarray = np.zeros([16, 512])
+        self._pps_delay_corrections_reported: set[int] = set()
         self._desired_static_delays: None | list[float] = None
         self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
@@ -1025,12 +1053,12 @@ class SpsStationComponentManager(
                     "Skipping this antenna."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config.get("delay_x", antenna_config["delay"])
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config.get("delay_y", antenna_config["delay"])
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config.get("delay_x", antenna_config["delay"])
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config.get("delay_y", antenna_config["delay"])
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1121,6 +1149,8 @@ class SpsStationComponentManager(
             if attribute_name.lower() == "ppsdelay":
                 self._pps_delays_reported.discard(logical_tile_id)
                 self._fire_pps_delay_spread()
+            elif attribute_name.lower() == "ppsdelaycorrection":
+                self._pps_delay_corrections_reported.discard(logical_tile_id)
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
                 f"has quality {attribute_quality}. "
@@ -1233,6 +1263,38 @@ class SpsStationComponentManager(
                 if logical_tile_id == self._number_of_tiles - 1:
                     self._final_tile_fpga1_flagged_count = int(attribute_value)
                     self._update_beamformer_flagged_count_health()
+            case "ppsdelaycorrection":
+                self._pps_delay_corrections[logical_tile_id] = attribute_value
+                self._pps_delay_corrections_reported.add(logical_tile_id)
+            case "boardtemperature":
+                self._board_temperatures[logical_tile_id] = attribute_value
+            case "fpga1temperature":
+                self._fpga1_temperatures[logical_tile_id] = attribute_value
+            case "fpga2temperature":
+                self._fpga2_temperatures[logical_tile_id] = attribute_value
+            case "sysrefpresent":
+                self._sysref_present[logical_tile_id] = bool(attribute_value)
+            case "plllocked":
+                self._pll_locked[logical_tile_id] = bool(attribute_value)
+            case "ppspresent":
+                self._pps_present[logical_tile_id] = bool(attribute_value)
+            case "clockpresent":
+                self._clock_present[logical_tile_id] = bool(attribute_value)
+            case "testgeneratoractive":
+                self._test_generator_active[logical_tile_id] = bool(attribute_value)
+            case "isbeamformerrunning":
+                self._is_beamformer_running[logical_tile_id] = bool(attribute_value)
+            case "channeliserrounding":
+                try:
+                    self._channeliser_roundings[logical_tile_id, :] = attribute_value
+                except ValueError as e:
+                    self.logger.error(
+                        f"Unable to update channeliserRounding cache for tile "
+                        f"{logical_tile_id}: {repr(e)}"
+                    )
+            case "csprounding":
+                if logical_tile_id == self._number_of_tiles - 1:
+                    self._csp_rounding = list(attribute_value)
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "
@@ -2460,7 +2522,7 @@ class SpsStationComponentManager(
             )
         return ResultCode.OK, ""
 
-    @property  # type:ignore[misc]
+    @property  # type: ignore[misc]
     @check_communicating
     def is_configured(self: SpsStationComponentManager) -> bool:
         """
@@ -2576,10 +2638,9 @@ class SpsStationComponentManager(
 
         :return: Array of one value per tile, in nanoseconds
         """
-        for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            assert proxy._proxy.ppsDelay is not None
-            self._pps_delays[i] = proxy._proxy.ppsDelay
+        # self._pps_delays is kept current by _on_tile_attribute_change's
+        # "ppsdelay" case on every subscribed change event, so no live
+        # per-tile read is needed here.
         return copy.deepcopy(self._pps_delays)
 
     def _fire_pps_delay_spread(self: SpsStationComponentManager) -> None:
@@ -2642,11 +2703,9 @@ class SpsStationComponentManager(
 
         :return: Array of pps delay corrections, one value per tile, in nanoseconds
         """
-        for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            assert proxy._proxy.ppsDelayCorrection is not None
-            self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
-
+        # self._pps_delay_corrections is kept current by
+        # _on_tile_attribute_change's "ppsdelaycorrection" case, so no live
+        # per-tile read is needed here.
         return copy.deepcopy(self._pps_delay_corrections)
 
     @pps_delay_corrections.setter
@@ -2661,10 +2720,25 @@ class SpsStationComponentManager(
         :param delays: Array of one value per tile, in nanoseconds.
             Values are internally rounded to 1.25 ns steps
         """
-        for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.ppsDelayCorrection = delays[i]
+        tile_delays = {
+            id(dev._proxy): delays[i]
+            for i, dev in enumerate(self._tile_proxies.values())
+            if dev._proxy is not None
+        }
+
+        def _set_on_tile(proxy: MccsDeviceProxy) -> None:
+            if proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                proxy.ppsDelayCorrection = tile_delays[id(proxy)]
+
+        tile_proxies = [
+            dev._proxy for dev in self._tile_proxies.values() if dev._proxy is not None
+        ]
+        _, incomplete = self._run_on_tiles(tile_proxies, _set_on_tile, timeout=20)
+        if incomplete:
+            self.logger.warning(
+                f"{len(incomplete)} ppsDelayCorrection writes failed to "
+                "complete in time."
+            )
 
     @property
     def static_delays(self: SpsStationComponentManager) -> list[float]:
@@ -2697,18 +2771,28 @@ class SpsStationComponentManager(
             to the correct TPM.
         """
         self._desired_static_delays = delays
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            __tile_id = proxy._proxy.logicalTileId
-            if __tile_id is None:
+
+        def _set_on_tile(proxy: MccsDeviceProxy) -> None:
+            tile_id = proxy.logicalTileId
+            if tile_id is None:
                 raise RuntimeError(
                     "logicalTileId is not valid. "
                     "Unable to set static delays without knowledge of mapping"
                 )
-            start_entry = (__tile_id) * TileData.ADC_CHANNELS
-            end_entry = (__tile_id + 1) * TileData.ADC_CHANNELS
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
+            start_entry = tile_id * TileData.ADC_CHANNELS
+            end_entry = (tile_id + 1) * TileData.ADC_CHANNELS
+            if proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                proxy.staticTimeDelays = delays[start_entry:end_entry]
+
+        tile_proxies = [
+            dev._proxy for dev in self._tile_proxies.values() if dev._proxy is not None
+        ]
+        _, incomplete = self._run_on_tiles(tile_proxies, _set_on_tile, timeout=20)
+        if incomplete:
+            self.logger.warning(
+                f"{len(incomplete)} staticTimeDelays writes failed to "
+                "complete in time."
+            )
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
@@ -2721,18 +2805,10 @@ class SpsStationComponentManager(
 
         :returns: list of 512 values for each Tile, one per channel.
         """
-        channeliser_roundings: np.ndarray = np.zeros([16, 512])
-
-        for tile_idx, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            try:
-                channeliser_roundings[tile_idx, :] = proxy._proxy.channeliserRounding
-            except ValueError as e:
-                self.logger.error(
-                    f"unable to update array with {proxy._name} "
-                    f"channeliserRounding attribute: {repr(e)}"
-                )
-        return channeliser_roundings
+        # self._channeliser_roundings is kept current by
+        # _on_tile_attribute_change's "channeliserrounding" case, so no live
+        # per-tile read is needed here.
+        return self._channeliser_roundings.copy()
 
     @property
     def csp_rounding(self: SpsStationComponentManager) -> list[int] | None:
@@ -2746,9 +2822,10 @@ class SpsStationComponentManager(
 
         :return: CSP formatter rounding for each logical channel.
         """
-        proxy = list(self._tile_proxies.values())[-1]
-        assert proxy._proxy is not None  # for the type checker
-        return proxy._proxy.cspRounding
+        # self._csp_rounding is set at construction, kept current on every
+        # write, and kept current by _on_tile_attribute_change's
+        # "csprounding" case, so no live tile read is needed here.
+        return copy.deepcopy(self._csp_rounding)
 
     @csp_rounding.setter
     def csp_rounding(self: SpsStationComponentManager, truncation: list[int]) -> None:
@@ -2759,13 +2836,19 @@ class SpsStationComponentManager(
             Current hardware supports only a single value, thus oly 1st value is used
         """
         self._csp_rounding = copy.deepcopy(truncation)
-        proxy = list(self._tile_proxies.values())[-1]
-        assert proxy._proxy is not None  # for the type checker
-        if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-            self.logger.debug(
-                f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
-            )
-            proxy._proxy.cspRounding = truncation
+        last_proxy = list(self._tile_proxies.values())[-1]._proxy
+        assert last_proxy is not None  # for the type checker
+
+        def _set_on_tile(proxy: MccsDeviceProxy) -> None:
+            if proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                self.logger.debug(
+                    f"Writing csp rounding  {truncation[0]} in {proxy.name()}"
+                )
+                proxy.cspRounding = truncation
+
+        _, incomplete = self._run_on_tiles([last_proxy], _set_on_tile, timeout=20)
+        if incomplete:
+            self.logger.warning("cspRounding write failed to complete in time.")
 
     @property
     def global_reference_time(self: SpsStationComponentManager) -> str:
@@ -2788,9 +2871,19 @@ class SpsStationComponentManager(
         :param reference_time: Reference time in ISOT format, or null string
         """
         self._global_reference_time = reference_time
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.globalReferenceTime = reference_time
+
+        def _set_on_tile(proxy: MccsDeviceProxy) -> None:
+            proxy.globalReferenceTime = reference_time
+
+        tile_proxies = [
+            dev._proxy for dev in self._tile_proxies.values() if dev._proxy is not None
+        ]
+        _, incomplete = self._run_on_tiles(tile_proxies, _set_on_tile, timeout=20)
+        if incomplete:
+            self.logger.warning(
+                f"{len(incomplete)} globalReferenceTime writes failed to "
+                "complete in time."
+            )
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:
@@ -2813,17 +2906,31 @@ class SpsStationComponentManager(
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
         self._desired_preadu_levels = levels
-        i = 0
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.preaduLevels = levels[i : i + TileData.ADC_CHANNELS]
+        tile_slices = {
+            id(dev._proxy): levels[
+                i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS
+            ]
+            for i, dev in enumerate(self._tile_proxies.values())
+            if dev._proxy is not None
+        }
+
+        def _set_on_tile(proxy: MccsDeviceProxy) -> None:
+            if proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                proxy.preaduLevels = tile_slices[id(proxy)]
             else:
                 self.logger.error(
-                    f"Not setting preadu levels on {proxy._name}"
+                    f"Not setting preadu levels on {proxy.dev_name()} "
                     "TileProgramming state not `Initialised` or `Synchronised`."
                 )
-            i = i + TileData.ADC_CHANNELS
+
+        tile_proxies = [
+            dev._proxy for dev in self._tile_proxies.values() if dev._proxy is not None
+        ]
+        _, incomplete = self._run_on_tiles(tile_proxies, _set_on_tile, timeout=20)
+        if incomplete:
+            self.logger.warning(
+                f"{len(incomplete)} preaduLevels writes failed to complete in time."
+            )
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:
@@ -2943,10 +3050,10 @@ class SpsStationComponentManager(
 
         :return: True if at least one TPM uses test generator
         """
-        return any(
-            tile._proxy is not None and tile._proxy.testGeneratorActive
-            for tile in self._tile_proxies.values()
-        )
+        # self._test_generator_active is kept current by
+        # _on_tile_attribute_change's "testgeneratoractive" case, so no live
+        # per-tile read is needed here.
+        return any(self._test_generator_active)
 
     @property
     def is_beamformer_running(self: SpsStationComponentManager) -> bool:
@@ -2955,10 +3062,10 @@ class SpsStationComponentManager(
 
         :return: Get station beamformer state
         """
-        return all(
-            tile._proxy is not None and tile._proxy.isBeamformerRunning
-            for tile in self._tile_proxies.values()
-        )
+        # self._is_beamformer_running is kept current by
+        # _on_tile_attribute_change's "isbeamformerrunning" case, so no live
+        # per-tile read is needed here.
+        return all(self._is_beamformer_running)
 
     def tile_programming_state(self: SpsStationComponentManager) -> list[str]:
         """
@@ -2966,10 +3073,9 @@ class SpsStationComponentManager(
 
         :return: list of programming state for all TPMs
         """
-        for tile_id, tile in enumerate(self._tile_proxies.values()):
-            assert tile._proxy is not None  # for the type checker
-            assert tile._proxy.tileProgrammingState is not None
-            self._tile_programming_state[tile_id] = tile._proxy.tileProgrammingState
+        # self._tile_programming_state is kept current by
+        # _on_tile_attribute_change's "tileprogrammingstate" case on every
+        # subscribed change event, so no live per-tile read is needed here.
         return self._tile_programming_state.copy()
 
     def adc_power(self: SpsStationComponentManager) -> list[float]:
@@ -2992,11 +3098,10 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of board temperatures
         """
-        board_temperatures = [
-            tile._proxy.boardTemperature
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.boardTemperature is not None
-        ]
+        # self._board_temperatures is kept current by
+        # _on_tile_attribute_change's "boardtemperature" case, so no live
+        # per-tile read is needed here.
+        board_temperatures = [t for t in self._board_temperatures if t is not None]
         if len(board_temperatures) == 0:
             self.logger.info("No data available for summary.")
             return None
@@ -3014,16 +3119,11 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_1_temperatures = [
-            tile._proxy.fpga1Temperature
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.fpga1Temperature is not None
-        ]
-        fpga_2_temperatures = [
-            tile._proxy.fpga2Temperature
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.fpga2Temperature is not None
-        ]
+        # self._fpga1_temperatures/_fpga2_temperatures are kept current by
+        # _on_tile_attribute_change's "fpga1temperature"/"fpga2temperature"
+        # cases, so no live per-tile read is needed here.
+        fpga_1_temperatures = [t for t in self._fpga1_temperatures if t is not None]
+        fpga_2_temperatures = [t for t in self._fpga2_temperatures if t is not None]
         if len(fpga_1_temperatures) == 0 or len(fpga_2_temperatures) == 0:
             self.logger.info("No data available for summary.")
             return None
@@ -3036,11 +3136,10 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of PPS delays
         """
-        pps_delays = [
-            tile._proxy.ppsDelay
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.ppsDelay is not None
-        ]
+        # self._pps_delays/_pps_delays_reported are kept current by
+        # _on_tile_attribute_change's "ppsdelay" case, so no live per-tile
+        # read is needed here.
+        pps_delays = [self._pps_delays[i] for i in self._pps_delays_reported]
         if len(pps_delays) == 0:
             self.logger.info("No data available for summary.")
             return None
@@ -3053,10 +3152,9 @@ class SpsStationComponentManager(
 
         :return: TRUE if SYSREF is present in all tiles
         """
-        return all(
-            tile._proxy is not None and tile._proxy.sysrefPresent
-            for tile in self._tile_proxies.values()
-        )
+        # self._sysref_present is kept current by _on_tile_attribute_change's
+        # "sysrefpresent" case, so no live per-tile read is needed here.
+        return all(self._sysref_present)
 
     def pll_locked_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -3064,10 +3162,9 @@ class SpsStationComponentManager(
 
         :return: TRUE if PLL locked in all tiles
         """
-        return all(
-            tile._proxy is not None and tile._proxy.pllLocked
-            for tile in self._tile_proxies.values()
-        )
+        # self._pll_locked is kept current by _on_tile_attribute_change's
+        # "plllocked" case, so no live per-tile read is needed here.
+        return all(self._pll_locked)
 
     def pps_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -3075,10 +3172,9 @@ class SpsStationComponentManager(
 
         :return: TRUE if PPS is present in all tiles
         """
-        return all(
-            tile._proxy is not None and tile._proxy.ppsPresent
-            for tile in self._tile_proxies.values()
-        )
+        # self._pps_present is kept current by _on_tile_attribute_change's
+        # "ppspresent" case, so no live per-tile read is needed here.
+        return all(self._pps_present)
 
     def clock_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -3086,10 +3182,9 @@ class SpsStationComponentManager(
 
         :return: TRUE if 10 MHz clock is present in all tiles
         """
-        return all(
-            tile._proxy is not None and tile._proxy.clockPresent
-            for tile in self._tile_proxies.values()
-        )
+        # self._clock_present is kept current by _on_tile_attribute_change's
+        # "clockpresent" case, so no live per-tile read is needed here.
+        return all(self._clock_present)
 
     def forty_gb_network_errors(self: SpsStationComponentManager) -> list[int]:
         """
@@ -3257,7 +3352,7 @@ class SpsStationComponentManager(
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
 
-        (fqdn, proxy) = list(self._tile_proxies.items())[-1]
+        fqdn, proxy = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
             return ([ResultCode.FAILED], [f"{fqdn} is not in PowerState.ON"])
@@ -3455,12 +3550,15 @@ class SpsStationComponentManager(
 
         self.last_pointing_delays = delay_list
 
-        for tile_proxy in self._tile_proxies.values():
-            assert tile_proxy._proxy is not None
-
-            tile_no = tile_proxy._proxy.logicalTileId
-            delays_for_tile = tile_delays[tile_no]
-            tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
+        # Fan out concurrently, with a bounded wait, instead of a serial
+        # loop over tiles -- a serial loop means one slow/unresponsive
+        # tile delays every tile after it, and the whole thing runs on
+        # the Tango command-dispatch thread, holding this device's own
+        # monitor for as long as it takes.
+        self._execute_async_on_tiles(
+            "LoadPointingDelays",
+            lambda proxy: tile_delays[proxy.logicalTileId],
+        )
 
     def apply_pointing_delays(
         self: SpsStationComponentManager, load_time: str
@@ -3616,11 +3714,30 @@ class SpsStationComponentManager(
         :return: True if the beamformer is running
         """
         json_arg = json.dumps({"channel_groups": channel_groups})
-        return all(
-            tile._proxy is not None
-            and tile._proxy.BeamformerRunningForChannels(json_arg)
+
+        def _check_tile(proxy: MccsDeviceProxy) -> bool:
+            try:
+                return bool(proxy.BeamformerRunningForChannels(json_arg))
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                self.logger.error(
+                    "Error running BeamformerRunningForChannels on "
+                    f"{proxy.dev_name()}: {e}"
+                )
+                return False
+
+        tile_proxies = [
+            tile._proxy
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None
+        ]
+        results, incomplete = self._run_on_tiles(tile_proxies, _check_tile, timeout=20)
+        if incomplete:
+            self.logger.warning(
+                f"{len(incomplete)} BeamformerRunningForChannels calls failed "
+                "to complete in time."
+            )
+            return False
+        return all(result for _, result in results)
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,
@@ -4106,9 +4223,19 @@ class SpsStationComponentManager(
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
             return
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.cspSpeadFormat = spead_format
+
+        def _set_on_tile(proxy: MccsDeviceProxy) -> None:
+            proxy.cspSpeadFormat = spead_format
+
+        tile_proxies = [
+            dev._proxy for dev in self._tile_proxies.values() if dev._proxy is not None
+        ]
+        _, incomplete = self._run_on_tiles(tile_proxies, _set_on_tile, timeout=20)
+        if incomplete:
+            self.logger.warning(
+                f"{len(incomplete)} cspSpeadFormat writes failed to complete "
+                "in time."
+            )
 
     @check_communicating
     def set_channeliser_rounding(
@@ -4269,12 +4396,69 @@ class SpsStationComponentManager(
             return f"{test_name} appears to have no description."
         return docs
 
+    def _run_on_tiles(
+        self: SpsStationComponentManager,
+        tile_proxies: list[MccsDeviceProxy],
+        per_tile_action: Callable[[MccsDeviceProxy], Any],
+        timeout: int = 20,
+    ) -> tuple[list[tuple[MccsDeviceProxy, Any]], list[MccsDeviceProxy]]:
+        """
+        Run an action against a list of tile proxies concurrently.
+
+        This is the shared mechanism behind every "do something to every tile"
+        command/attribute on this device. Each call is given up to `timeout`
+        seconds to complete; tiles that haven't responded by then are logged
+        and reported back as incomplete. This method still waits for every
+        call to finish before returning, however long that takes.
+
+        :param tile_proxies: the tile device proxies to run the action on.
+        :param per_tile_action: a callable that takes a single tile's proxy
+            and returns a result for that tile. Callers are responsible for
+            catching and handling any exceptions they don't want to
+            propagate to the caller of this method.
+        :param timeout: the maximum time to wait before reporting a tile as
+            incomplete.
+
+        :return: a tuple of (results paired with the proxy they came from,
+            for tiles that completed in time), (proxies that did not
+            complete in time).
+        """
+        if not self.excecute_async:
+            return [(proxy, per_tile_action(proxy)) for proxy in tile_proxies], []
+
+        # We'd really prefer to use GreenMode.Asyncio or similar here. This appears
+        # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
+        # tango.asyncio.DeviceProxy to use that functionality, which would involve a
+        # general refactor of SpsStation. So for now we just spin up some threads,
+        # and execute each synchronous call in it's own thread manually.
+        with PyTangoThreadPoolExecutor(max_workers=len(tile_proxies)) as executor:
+            future_to_proxy: dict[Future, MccsDeviceProxy] = {
+                executor.submit(per_tile_action, proxy): proxy
+                for proxy in tile_proxies
+            }
+            complete, incomplete = wait(future_to_proxy, timeout=timeout)
+            if incomplete:
+                proxy_names = [
+                    future_to_proxy[future].dev_name()
+                    if hasattr(future_to_proxy[future], "dev_name")
+                    else repr(future_to_proxy[future])
+                    for future in incomplete
+                ]
+                self.logger.warning(
+                    f"{len(incomplete)} tile call(s) failed to complete within "
+                    f"{timeout}s: {proxy_names}"
+                )
+            results = [
+                (future_to_proxy[future], future.result()) for future in complete
+            ]
+        return results, [future_to_proxy[future] for future in incomplete]
+
     # pylint: disable=broad-exception-caught
     def _execute_async_on_tiles(
         self: SpsStationComponentManager,
         command_name: str,
         command_args: Optional[Any] = None,
-        timeout: float = 20.0,
+        timeout: int = 20,
         require_initialised: bool = False,
         require_synchronised: bool = False,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
@@ -4327,8 +4511,8 @@ class SpsStationComponentManager(
                     f"Command raised {str(type(e))}, check logs."
                 ]
 
-        commands_to_execute = [
-            (_run_while_handling_errors, dev._proxy)
+        tile_proxies = [
+            dev._proxy
             for dev in self._tile_proxies.values()
             if dev._proxy is not None
             and (
@@ -4353,7 +4537,7 @@ class SpsStationComponentManager(
                 base_msg += f" {command_name} requires Synchronised MccsTiles."
             return base_msg
 
-        if not commands_to_execute:
+        if not tile_proxies:
             msg = _build_msg(
                 command_name,
                 f"{command_name} wouldn't be called on any MccsTiles."
@@ -4364,51 +4548,30 @@ class SpsStationComponentManager(
             self.logger.error(msg)
             return [ResultCode.REJECTED], [msg]
 
-        if len(commands_to_execute) != len(self._tile_proxies):
+        if len(tile_proxies) != len(self._tile_proxies):
             msg = _build_msg(
                 command_name,
                 f"{command_name} won't be called on all tiles. Will be called on: "
-                f"{[proxy.dev_name() for _, proxy in commands_to_execute]}."
+                f"{[proxy.dev_name() for proxy in tile_proxies]}."
                 " Check MccsTile adminMode.",
                 require_initialised,
                 require_synchronised,
             )
             self.logger.warning(msg)
 
-        if not self.excecute_async:
-            self.logger.debug(f"Calling {command_name} synchronously.")
-            results = [command(proxy) for command, proxy in commands_to_execute]
-        else:
-            # We'd really prefer to use GreenMode.Asyncio or similar here. This appears
-            # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
-            # tango.asyncio.DeviceProxy to use that functionality, which would involve a
-            # general refactor of SpsStation. So for now we just spin up some threads,
-            # and execute each synchronous call in it's own thread manually.
-            #
-            # Note: exiting this `with` block calls Executor.__exit__, which
-            # calls shutdown(wait=True) -- this blocks until every submitted
-            # future has completed, even on the `return` below when some
-            # futures are still incomplete. So a hung tile call still holds up
-            # this method (and this device's own Tango monitor) until it
-            # finishes, regardless of `timeout`.
-            with PyTangoThreadPoolExecutor(
-                max_workers=len(self._tile_proxies)
-            ) as executor:
-                futures: list[Future] = [
-                    executor.submit(command, proxy)
-                    for command, proxy in commands_to_execute
-                ]
-                complete, incomplete = wait(futures, timeout=timeout)
-                if incomplete:
-                    msg = f"{len(incomplete)} commands failed to complete in time."
-                    self.logger.warning(msg)
-                    return [ResultCode.FAILED], [msg]
-                results = [future.result() for future in complete]
+        results, incomplete = self._run_on_tiles(
+            tile_proxies, _run_while_handling_errors, timeout=timeout
+        )
+        if incomplete:
+            msg = f"{len(incomplete)} commands failed to complete in time."
+            self.logger.warning(msg)
+            return [ResultCode.FAILED], [msg]
 
-        result_codes, _ = zip(*results)
-        self.logger.debug(f"Tiles response from {command_name}: {str(results)}")
-        if all(result[0] == ResultCode.OK for result in result_codes):
+        result_values = [result for _, result in results]
+        result_codes, _ = zip(*result_values)
+        self.logger.debug(f"Tiles response from {command_name}: {str(result_values)}")
+        if all(result_code[0] == ResultCode.OK for result_code in result_codes):
             return [ResultCode.OK], [f"{command_name} finished OK."]
         return [ResultCode.FAILED], [
-            f"{command_name} didn't finish OK. Results: {str(results)}"
+            f"{command_name} didn't finish OK. Results: {str(result_values)}"
         ]

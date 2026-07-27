@@ -1275,7 +1275,7 @@ def test_setting_cspRounding(
 
     # Set the last tile with a different cspRounding.
     mock_tile_device_proxies[-1].cspRounding = [6] * 384
-
+    time.sleep(1)
     assert all(station_device.cspRounding == [6] * 384)
 
     rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]

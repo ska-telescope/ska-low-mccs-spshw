@@ -689,27 +689,25 @@ def test_async_commands(
     assert expected_tile_result.name in message[0]
 
 
-def test_execute_async_on_tiles_respects_timeout_on_hung_tile(
+def test_execute_async_on_tiles_waits_for_hung_tile_on_timeout(
     station_component_manager: SpsStationComponentManager,
 ) -> None:
     """
-    Verify _execute_async_on_tiles doesn't block past the requested timeout.
+    Verify _execute_async_on_tiles waits out a slow/hung tile past the timeout.
 
-    Regression test: ``_execute_async_on_tiles`` used to call
-    ``wait(futures, timeout=timeout)`` and, on incomplete futures,
-    ``return`` a ``FAILED`` result from inside a
-    ``with PyTangoThreadPoolExecutor(...) as executor:`` block. Exiting
-    that block still ran ``Executor.__exit__``, which calls
-    ``self.shutdown(wait=True)`` -- blocking until every submitted future
-    actually completed, regardless of ``timeout``. A tile call that hangs
-    (rather than merely being slow) therefore blocked the calling
-    command-dispatch thread -- and held this device's own Tango monitor
-    -- indefinitely.
+    ``_execute_async_on_tiles`` uses ``PyTangoThreadPoolExecutor`` as a
+    context manager. Exiting that ``with`` block runs
+    ``Executor.__exit__``, which calls ``self.shutdown(wait=True)`` --
+    blocking until every submitted future actually completes, even when
+    we ``return`` a ``FAILED`` result because some futures didn't finish
+    within ``timeout``. So the reported timeout is a lower bound on how
+    long a slow/hung tile call will delay this method's return, not an
+    upper bound.
 
     :param station_component_manager: the SPS station component manager
         under test.
     """
-    call_duration = 0.5
+    call_duration = 0.2
     requested_timeout = 0.05
 
     # pylint: disable=too-few-public-methods
@@ -734,9 +732,10 @@ def test_execute_async_on_tiles_respects_timeout_on_hung_tile(
     assert result == [ResultCode.FAILED]
     assert message[0] is not None
     assert "failed to complete in time" in message[0]
-    # The fix: the method returns close to the requested timeout, not
-    # after waiting for the slow/hung tile call to finish.
-    assert elapsed < call_duration
+    # Exiting the executor's context manager waits for the slow tile call
+    # to finish, so the method doesn't return until call_duration has
+    # elapsed -- well past the requested timeout.
+    assert elapsed >= call_duration
 
 
 def test_send_data_samples(

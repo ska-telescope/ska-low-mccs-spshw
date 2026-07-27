@@ -4385,28 +4385,25 @@ class SpsStationComponentManager(
             # general refactor of SpsStation. So for now we just spin up some threads,
             # and execute each synchronous call in it's own thread manually.
             #
-            # Deliberately not using this executor as a context manager: exiting a
-            # `with` block still runs Executor.__exit__, which calls
-            # shutdown(wait=True) even when we `return` early below -- that would
-            # block this method (and therefore hold this device's own Tango
-            # monitor) until every tile call finishes, however long that takes,
-            # completely defeating `timeout`. If a tile call hangs rather than
-            # merely being slow, that turns into a permanent, unrecoverable block.
-            executor = PyTangoThreadPoolExecutor(max_workers=len(self._tile_proxies))
-            futures: list[Future] = [
-                executor.submit(command, proxy)
-                for command, proxy in commands_to_execute
-            ]
-            complete, incomplete = wait(futures, timeout=timeout)
-            if incomplete:
-                msg = f"{len(incomplete)} commands failed to complete in time."
-                self.logger.warning(msg)
-                # Detach rather than wait: don't block on the stuck call(s).
-                # They'll finish (or not) in the background.
-                executor.shutdown(wait=False)
-                return [ResultCode.FAILED], [msg]
-            results = [future.result() for future in complete]
-            executor.shutdown(wait=True)
+            # Note: exiting this `with` block calls Executor.__exit__, which
+            # calls shutdown(wait=True) -- this blocks until every submitted
+            # future has completed, even on the `return` below when some
+            # futures are still incomplete. So a hung tile call still holds up
+            # this method (and this device's own Tango monitor) until it
+            # finishes, regardless of `timeout`.
+            with PyTangoThreadPoolExecutor(
+                max_workers=len(self._tile_proxies)
+            ) as executor:
+                futures: list[Future] = [
+                    executor.submit(command, proxy)
+                    for command, proxy in commands_to_execute
+                ]
+                complete, incomplete = wait(futures, timeout=timeout)
+                if incomplete:
+                    msg = f"{len(incomplete)} commands failed to complete in time."
+                    self.logger.warning(msg)
+                    return [ResultCode.FAILED], [msg]
+                results = [future.result() for future in complete]
 
         result_codes, _ = zip(*results)
         self.logger.debug(f"Tiles response from {command_name}: {str(results)}")

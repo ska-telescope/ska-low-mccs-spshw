@@ -24,6 +24,7 @@ from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
+import tango
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -907,9 +908,47 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return json.dumps(self.component_manager._antenna_info)
 
+    def _tiles_command_allowed(
+        self: SpsStation,
+        require_initialised: bool = False,
+        require_synchronised: bool = False,
+    ) -> bool:
+        """
+        Check whether every tile is in a state that allows a command to run.
+
+        :param require_initialised: the command requires every tile to
+            be Initialised or Synchronised.
+        :param require_synchronised: the command requires every tile to
+            be Synchronised.
+
+        :return: True if every tile satisfies the requirement.
+        """
+        allowed, msg = self.component_manager.is_command_allowed(
+            require_initialised=require_initialised,
+            require_synchronised=require_synchronised,
+        )
+        if not allowed:
+            tango.Except.throw_exception("CommandNotAllowed", msg, self.get_name())
+        return allowed
+
+    def is_staticTimeDelays_allowed(
+        self: SpsStation, req_type: tango.AttReqType
+    ) -> bool:
+        """
+        Check if the staticTimeDelays attribute may be accessed.
+
+        :param req_type: the request type (read or write).
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        return self._tiles_command_allowed(require_initialised=True)
+
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=512,
+        fisallowed="is_staticTimeDelays_allowed",
     )
     def staticTimeDelays(self: SpsStation) -> list[float]:
         """
@@ -951,9 +990,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.channeliser_rounding
 
+    def is_cspRounding_allowed(self: SpsStation, req_type: tango.AttReqType) -> bool:
+        """
+        Check if the cspRounding attribute may be accessed.
+
+        :param req_type: the request type (read or write).
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        return self._tiles_command_allowed(require_initialised=True)
+
     @attribute(
         dtype=("DevLong",),
         max_dim_x=384,
+        fisallowed="is_cspRounding_allowed",
     )
     def cspRounding(self: SpsStation) -> list[int]:
         """
@@ -978,9 +1030,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.component_manager.csp_rounding = rounding
 
+    def is_preaduLevels_allowed(self: SpsStation, req_type: tango.AttReqType) -> bool:
+        """
+        Check if the preaduLevels attribute may be accessed.
+
+        :param req_type: the request type (read or write).
+
+        :return: True if access is allowed.
+        """
+        if req_type == tango.AttReqType.READ_REQ:
+            return True
+        return self._tiles_command_allowed(require_initialised=True)
+
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=512,
+        fisallowed="is_preaduLevels_allowed",
     )
     def preaduLevels(self: SpsStation) -> list[float]:
         """
@@ -1753,6 +1818,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         return task
 
+    def is_SetChanneliserRounding_allowed(
+        self: SpsStation,
+        request_type: stb.long_running_commands.LRCReqType | None = None,
+    ) -> bool:
+        """
+        Check if the SetChanneliserRounding command may be called.
+
+        :param request_type: the type of LRC request being checked.
+
+        :return: True if the command is allowed.
+        """
+        return self._tiles_command_allowed(require_initialised=True)
+
     @stb.long_running_commands.long_running_command
     def SetChanneliserRounding(
         self: SpsStation, channeliser_rounding: list[int]
@@ -2049,6 +2127,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
         return ([ResultCode.OK], ["UpdateStaticDelays command completed OK"])
 
+    def is_SetLmcDownload_allowed(self: SpsStation) -> bool:
+        """
+        Check if the SetLmcDownload command may be called.
+
+        :return: True if the command is allowed.
+        """
+        return self._tiles_command_allowed(require_initialised=True)
+
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
@@ -2094,6 +2180,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.set_lmc_download(
             mode, payload_length, dst_ip, src_port, dst_port
         )
+
+    def is_SetLmcIntegratedDownload_allowed(self: SpsStation) -> bool:
+        """
+        Check if the SetLmcIntegratedDownload command may be called.
+
+        :return: True if the command is allowed.
+        """
+        return self._tiles_command_allowed(require_initialised=True)
 
     @command(
         dtype_in="DevString",
@@ -2198,6 +2292,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             dst_port=self.DEFAULT_CSP_DST_PORT,
         )
 
+    def is_SetBeamFormerTable_allowed(self: SpsStation) -> bool:
+        """
+        Check if the SetBeamFormerTable command may be called.
+
+        :return: True if the command is allowed.
+        """
+        return self._tiles_command_allowed(require_initialised=True)
+
     @command(
         dtype_in="DevVarLongArray",
         dtype_out="DevVarLongStringArray",
@@ -2261,6 +2363,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 raise ValueError("Beam_index is out side of range 0-47")
             beamformer_table.append(group)
         return self.component_manager.set_beamformer_table(beamformer_table)
+
+    def is_SetBeamFormerRegions_allowed(self: SpsStation) -> bool:
+        """
+        Check if the SetBeamFormerRegions command may be called.
+
+        :return: True if the command is allowed.
+        """
+        return self._tiles_command_allowed(require_initialised=True)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -2791,6 +2901,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             information purpose only.
         """
         return self.component_manager.stop_integrated_data()
+
+    def is_SendDataSamples_allowed(self: SpsStation) -> bool:
+        """
+        Check if the SendDataSamples command may be called.
+
+        :return: True if the command is allowed.
+        """
+        return self._tiles_command_allowed(require_synchronised=True)
 
     @command(
         dtype_in="DevString",

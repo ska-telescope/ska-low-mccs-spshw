@@ -281,6 +281,7 @@ def test_trigger_adc_equalisation(
     for proxy in station_component_manager._tile_proxies.values():
         proxy._proxy.adcPower = [expected_adc] * 32  # type: ignore
         proxy._proxy.preaduLevels = [expected_preadu] * 32  # type: ignore
+        proxy._proxy.tileProgrammingState = "Synchronised"  # type: ignore
 
     # Assertion fails, the preadu levels may be empty or containing something
     # in a non deterministic way
@@ -672,7 +673,7 @@ def test_async_commands(
 
     assert result[0] == ResultCode.REJECTED
     assert message[0] is not None
-    assert f"{command} wouldn't be called on any MccsTiles" in message[0]
+    assert f"{command} rejected" in message[0]
 
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
 
@@ -758,7 +759,8 @@ def test_send_data_samples(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    mock_tiles[0].tileProgrammingState = "Synchronised"
+    for mock_tile in mock_tiles:
+        mock_tile.tileProgrammingState = "Synchronised"
     mock_tiles[0].pendingDataRequests = True
     [result], [msg] = station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})

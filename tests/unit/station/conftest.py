@@ -109,6 +109,14 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
     cache, every subsequent write to a subscribed attribute must also
     trigger the callback, not just the first one.
 
+    Note that ``MockDeviceBuilder``'s one-shot bootstrap delivery runs the
+    callback on a background thread ("more realistic if fired
+    asynchronously"), with no ordering guarantee relative to a write made
+    immediately after subscribing. That race let a fresh value set right
+    after ``adminMode`` goes ONLINE be silently clobbered by the stale
+    bootstrap replay arriving late, so it is replaced below with the same
+    synchronous delivery used for subsequent writes.
+
     :param mock_device: the mock device to patch.
     """
     event_name_to_type = {
@@ -117,7 +125,6 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         tango.EventType.ATTR_CONF_EVENT: "attr_conf",
     }
     subscriptions: dict[str, tuple[tango.EventType, Callable]] = {}
-    original_subscribe_event = mock_device.subscribe_event.side_effect
 
     def _subscribe_event(
         attribute_name: str,
@@ -126,7 +133,13 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         stateless: bool,
     ) -> None:
         subscriptions[attribute_name.lower()] = (event_type, callback)
-        original_subscribe_event(attribute_name, event_type, callback, stateless)
+        current_value = (
+            mock_device.state()
+            if attribute_name == "state"
+            else getattr(mock_device, attribute_name)
+        )
+        if current_value is not None:
+            _push_change_event(attribute_name, current_value)
 
     mock_device.subscribe_event.side_effect = _subscribe_event
 
@@ -141,10 +154,11 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         mock_event_data.attr_value.name = attribute_name
         mock_event_data.attr_value.value = value
         mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID
-        # Called synchronously (unlike the one-shot subscribe_event push
-        # above) so that by the time the attribute assignment returns, the
-        # station's cache has already been updated -- callers then don't
-        # need to sleep and poll waiting for a background thread to run.
+        # Called synchronously, both for the subscription bootstrap and for
+        # every subsequent write, so that by the time subscribe_event or
+        # the attribute assignment returns, the station's cache has
+        # already been updated -- callers then don't need to sleep and
+        # poll waiting for a background thread to run.
         callback(mock_event_data)
 
     # Each Mock() instance gets its own dynamically-created class, so
@@ -156,7 +170,7 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         original_setattr(self, name, value)
         _push_change_event(name, value)
 
-    mock_class.__setattr__ = _setattr
+    mock_class.__setattr__ = _setattr  # type: ignore[assignment]
 
 
 @pytest.fixture(name="mock_tile_builder")
@@ -261,6 +275,8 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
     builder.set_state(tango.DevState.ON)
     builder.add_attribute("receiverIP", "123.123.123")
     builder.add_attribute("receiverPorts", [4660])
+    builder.add_attribute("xPolBandpass", np.zeros(shape=(256, 512), dtype=float))
+    builder.add_attribute("yPolBandpass", np.zeros(shape=(256, 512), dtype=float))
     builder.add_command(
         "DaqStatus",
         json.dumps(

@@ -26,7 +26,7 @@ When interacting with firmware thresholds, the following operational flow applie
    When a threshold is written:
 
    - The value is first written to the **firmware**.
-   - If the firmware write succeeds, the **database (DB)** is updated to reflect 
+   - If the firmware write succeeds, the **Tango database (DB)** is updated to reflect 
      the desired value.
    - An automatic **comparison** between the DB and firmware values is then performed.
 

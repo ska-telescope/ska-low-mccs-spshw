@@ -3864,7 +3864,7 @@ class SpsStationComponentManager(
             if result_code[0] != ResultCode.OK:
                 return result_code, [f"Couldn't stop data transmission: {message[0]}"]
         return self._execute_async_on_tiles(
-            "SendDataSamples", argin, require_synchronised=True
+            "SendDataSamples", argin, require_synchronised=False
         )
 
     def stop_data_transmission(

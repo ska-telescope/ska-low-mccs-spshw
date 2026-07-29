@@ -1988,8 +1988,8 @@ def test_csp_set_reset(
             "destination_port": 2345,
         }
     )
-    rc, _ = on_station_device.SetCspIngest(csp_ingest_config)
-    assert rc == ResultCode.OK
+    rc, msg = on_station_device.SetCspIngest(csp_ingest_config)
+    assert rc == ResultCode.OK, msg
     assert csp_ingest_config == on_station_device.cspIngestConfig
 
     rc, _ = on_station_device.ResetCspIngest()

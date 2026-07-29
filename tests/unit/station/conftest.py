@@ -22,7 +22,10 @@ from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw import SpsStation
-from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
+from ska_low_mccs_spshw.station import (
+    SpsStationComponentManager,
+    SpsStationSelfCheckManager,
+)
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
 from tests.harness import get_subrack_name, get_tile_name
 
@@ -398,6 +401,49 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
         The extra commands allow us to mock the receipt of a state
         change event from subservient subrack devices.
         """
+
+        def create_component_manager(
+            self: PatchedSpsStationDevice,
+        ) -> SpsStationComponentManager:
+            """
+            Return a component manager with event serialisation disabled.
+
+            The real device wires the component manager up to the shared
+            :py:class:`~ska_low_mccs_common.EventSerialiser`, which
+            processes tile/subrack change events on its own worker
+            thread. In these unit tests, events are pushed synchronously
+            from the mock devices, so serialising them onto a separate
+            thread just introduces a race that tests would otherwise
+            have to paper over with sleeps. Passing ``event_serialiser=
+            None`` here makes ``MccsDeviceProxy`` invoke change event
+            callbacks synchronously, on the same thread that pushes the
+            mock event.
+
+            :return: a station component manager for testing.
+            """
+            return SpsStationComponentManager(
+                self.StationId,
+                self.SubrackFQDNs,
+                self.TileFQDNs,
+                self.LMCDaqTRL if self.LMCDaqTRL != " " else "",
+                self.BandpassDaqTRL if self.BandpassDaqTRL != " " else "",
+                self.WRENTRL if self.WRENTRL != " " else "",
+                ipaddress.IPv4Interface(self.SdnFirstInterface),
+                ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
+                ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
+                self.ChanneliserRounding,
+                self.CspRounding,
+                self.AntennaConfigURI,
+                self.StartBandpassesInInitialise,
+                self.BandpassIntegrationTime,
+                self.logger,
+                self._communication_state_changed,
+                self._component_state_changed,
+                self._health_model.tile_health_changed,
+                self._health_model.subrack_health_changed,
+                self.OnWorkaroundFlag,
+                event_serialiser=None,
+            )
 
         @command()
         def MockSubracksOff(self: PatchedSpsStationDevice) -> None:

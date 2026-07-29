@@ -761,7 +761,8 @@ def test_send_data_samples(
 
     for mock_tile in mock_tiles:
         mock_tile.tileProgrammingState = "Synchronised"
-    mock_tiles[0].pendingDataRequests = True
+    for mock_tile in mock_tiles:
+        mock_tile.pendingDataRequests = True
     [result], [msg] = station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})
     )
@@ -772,7 +773,8 @@ def test_send_data_samples(
     )
     assert result == ResultCode.OK
 
-    mock_tiles[0].pendingDataRequests = False
+    for mock_tile in mock_tiles:
+        mock_tile.pendingDataRequests = False
     [result], [msg] = station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})
     )

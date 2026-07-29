@@ -793,7 +793,7 @@ class SpsStationComponentManager(
         Submit a task to the calibration lane of the task executor.
 
         Tasks submitted here run independently of the tasks submitted with
-        :py:meth:`submit_task`, so a calibration acquisition does not stop other
+        :py:meth:`!submit_task`, so a calibration acquisition does not stop other
         commands from executing. ``Abort`` still aborts them, as it aborts every
         lane.
 

@@ -467,7 +467,7 @@ class SpsStationComponentManager(
         antenna_config_uri: Optional[list[str]],
         start_bandpasses_in_initialise: bool,
         bandpass_integration_time: float,
-        wren_health_check_enabled: bool,
+        wren_health_check_fail_on_timeout: bool,
         wren_health_check_timeout: float,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -512,7 +512,8 @@ class SpsStationComponentManager(
             in initialise.
         :param bandpass_integration_time: the integration time for channelised data
             capture started in initialise.
-        :param wren_health_check_enabled: Is the health check enabled in initialise
+        :param wren_health_check_fail_on_timeout: Should initialise fail in
+            WREN health check times-out
         :param wren_health_check_timeout: The timeout for the WREN initialisation
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
@@ -539,7 +540,7 @@ class SpsStationComponentManager(
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
         self._wren_trl = wren_trl
-        self._wren_health_check_enabled = wren_health_check_enabled
+        self._wren_health_check_fail_on_timeout = wren_health_check_fail_on_timeout
         self._wren_health_check_timeout = wren_health_check_timeout
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
@@ -2017,7 +2018,7 @@ class SpsStationComponentManager(
                     task_callback,
                     task_abort_event,
                     timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_enabled,
+                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
                 )
                 if task_callback:
                     task_callback(progress=65)
@@ -4312,24 +4313,24 @@ class SpsStationComponentManager(
             proxy._proxy.cspSpeadFormat = spead_format
 
     @property
-    def wren_health_check_enabled(self) -> bool:
+    def wren_health_check_fail_on_timeout(self) -> bool:
         """
         Get whether WREN health checking is enabled during initialisation.
 
         :returns: True if WREN health checking is enabled, False otherwise.
 
         """
-        return self._wren_health_check_enabled
+        return self._wren_health_check_fail_on_timeout
 
-    @wren_health_check_enabled.setter  # type: ignore[no-redef]
-    def wren_health_check_enabled(self, enabled: bool) -> None:
+    @wren_health_check_fail_on_timeout.setter  # type: ignore[no-redef]
+    def wren_health_check_fail_on_timeout(self, enabled: bool) -> None:
         """
         Set whether WREN health checking is enabled during initialisation.
 
         :param enabled: True to enable WREN health checking, False to disable.
 
         """
-        self._wren_health_check_enabled = enabled
+        self._wren_health_check_fail_on_timeout = enabled
 
     @property
     def wren_health_check_timeout(self) -> float:

@@ -88,35 +88,35 @@ def set_station_admin_mode(station: tango.DeviceProxy) -> None:
 
 
 @given(
-    parsers.parse("the SpsStation WRENHealthCheckEnabled is {enabled}"),
+    parsers.parse("the SpsStation WRENHealthCheckFailOnTimeout is {enabled}"),
     converters={"enabled": lambda x: {"true": True, "false": False}[x.lower()]},
 )
-def set_wren_health_check_enabled(
+def set_wren_health_check_fail_on_timeout(
     station: tango.DeviceProxy, enabled: bool
 ) -> Generator:
     """
     Set the WREN health check enabled flag.
 
     :param station: a proxy to the station under test.
-    :param enabled: is the WRENHealthCheckEnabled True/False.
+    :param enabled: is the WRENHealthCheckFailOnTimeout True/False.
 
     :yields: Gives back control after setting the enabled flag
 
     """
     # Get the original value of the enabled flag
-    initial_enabled = station.WrenHealthCheckEnabled
+    initial_enabled = station.WrenHealthCheckFailOnTimeout
 
     # Then set the new value
-    station.WrenHealthCheckEnabled = enabled
+    station.WrenHealthCheckFailOnTimeout = enabled
 
     # Ensure it is set
-    wait_for_condition(lambda: station.WrenHealthCheckEnabled == enabled)
+    wait_for_condition(lambda: station.WrenHealthCheckFailOnTimeout == enabled)
 
     # Yield the station device
     yield
 
     # Now reset the flag
-    station.WrenHealthCheckEnabled = initial_enabled
+    station.WrenHealthCheckFailOnTimeout = initial_enabled
 
 
 @given(

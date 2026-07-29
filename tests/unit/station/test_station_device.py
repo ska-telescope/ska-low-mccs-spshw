@@ -1574,26 +1574,29 @@ def test_stations_wren_trl(station_device: SpsStation) -> None:
     assert station_device.WrenTRL == get_wren_name()
 
 
-def test_stations_wren_health_check_enabled(station_device: SpsStation) -> None:
+def test_stations_wren_health_check_fail_on_timeout(station_device: SpsStation) -> None:
     """
-    Test that SPSStation properly exposes WREN health check enabled flag.
+    Test that SPSStation properly exposes WREN health check fail on timeout flag.
 
     :param station_device: The station device to use.
 
     """
     # Check the initial value is the same as the device property
     assert (
-        station_device.WrenHealthCheckEnabled == station_device.WRENHealthCheckEnabled
+        station_device.WrenHealthCheckFailOnTimeout
+        == station_device.WRENHealthCheckFailOnTimeout
     )
 
     # Toggle the value
-    new_value = not station_device.WRENHealthCheckEnabled
+    new_value = not station_device.WRENHealthCheckFailOnTimeout
 
     # Set the value
-    station_device.WrenHealthCheckEnabled = new_value  # type: ignore[method-assign]
+    station_device.WrenHealthCheckFailOnTimeout = (  # type: ignore[method-assign]
+        new_value
+    )
 
     # Check the new value has been set
-    assert station_device.WrenHealthCheckEnabled == new_value
+    assert station_device.WrenHealthCheckFailOnTimeout == new_value
 
 
 def test_stations_wren_health_check_timeout(station_device: SpsStation) -> None:

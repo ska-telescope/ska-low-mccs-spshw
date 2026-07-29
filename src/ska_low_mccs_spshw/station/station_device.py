@@ -114,10 +114,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
-    # Feature flags for WREN device. When WRENHealthCheckEnabled is True, the
-    # device will wait until WREN is ok during initialisation. If WREN timesout
-    # then device will not initialise.
-    WRENHealthCheckEnabled = device_property(dtype=bool, default_value=False)
+    # Feature flags for WREN device. When WRENHealthCheckFailOnTimeout is True,
+    # the device will wait until WREN is ok during initialisation. If WREN
+    # times-out then device will not initialise.
+    WRENHealthCheckFailOnTimeout = device_property(dtype=bool, default_value=False)
     WRENHealthCheckTimeout = device_property(dtype=float, default_value=120)
 
     # ---------------
@@ -276,7 +276,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.AntennaConfigURI,
             self.StartBandpassesInInitialise,
             self.BandpassIntegrationTime,
-            self.WRENHealthCheckEnabled,
+            self.WRENHealthCheckFailOnTimeout,
             self.WRENHealthCheckTimeout,
             self.logger,
             self._communication_state_changed,
@@ -876,24 +876,24 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.WRENTRL
 
     @attribute()
-    def WrenHealthCheckEnabled(self) -> bool:
+    def WrenHealthCheckFailOnTimeout(self) -> bool:
         """
         Return whether the WREN Health Check feature is enabled.
 
         :returns: The WREN Health Check feature is enabled.
 
         """
-        return self.component_manager.wren_health_check_enabled
+        return self.component_manager.wren_health_check_fail_on_timeout
 
-    @WrenHealthCheckEnabled.write  # type: ignore[no-redef]
-    def WrenHealthCheckEnabled(self, enabled: bool) -> None:
+    @WrenHealthCheckFailOnTimeout.write  # type: ignore[no-redef]
+    def WrenHealthCheckFailOnTimeout(self, enabled: bool) -> None:
         """
         Set whether the WREN Health Check feature is enabled.
 
         :param enabled: True to enable WREN Health Check, False to disable.
 
         """
-        self.component_manager.wren_health_check_enabled = enabled
+        self.component_manager.wren_health_check_fail_on_timeout = enabled
 
     @attribute()
     def WrenHealthCheckTimeout(self) -> float:

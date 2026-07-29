@@ -48,6 +48,10 @@ ACQUIRE_TIMEOUT = 180
 # acquisition.
 CONCURRENT_COMMAND_TIMEOUT = 90
 
+# The acquisition stops TPM transmission as it tears down, so pendingDataRequests
+# should clear on every tile shortly after it reports itself finished.
+TRANSMISSION_DRAIN_TIMEOUT = 60
+
 
 @given(
     parsers.cfparse("this test is running against station {expected_station}."),
@@ -375,3 +379,23 @@ def check_requested_correlator_files_produced(
         f"Expected {len(requested_channels)} correlator files, "
         f"got {received_count}. Dropped channels: {dropped_channels}"
     )
+
+
+@then("no tile is left transmitting data samples")
+def check_no_pending_data_requests(station_tiles: list[tango.DeviceProxy]) -> None:
+    """
+    Confirm every tile has finished the data request the acquisition made.
+
+    The acquisition stops transmission on its way out, whichever way it exits, so
+    ``pendingDataRequests`` should fall back to False on every tile once it
+    reports itself finished. Checking that here confirms the teardown really
+    happened, and stops a finished acquisition from transmitting into whatever
+    runs next.
+
+    :param station_tiles: the Tile devices belonging to the station under test.
+    """
+    assert station_tiles, "No tile devices were found for this station."
+    for tile in station_tiles:
+        AttributeWaiter(timeout=TRANSMISSION_DRAIN_TIMEOUT).wait_for_value(
+            tile, "pendingDataRequests", False, lookahead=5
+        )

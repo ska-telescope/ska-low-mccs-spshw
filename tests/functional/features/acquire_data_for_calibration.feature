@@ -17,6 +17,7 @@ Feature: Acquiring correlator data for calibration.
     And the SpsStation is synchronised
     When I acquire calibration data for channels <first_channel> to <last_channel>
     Then the requested number of correlator files are produced
+    And no tile is left transmitting data samples
 
     Examples: channels to acquire
       | expected_station | first_channel | last_channel |
@@ -30,7 +31,8 @@ Feature: Acquiring correlator data for calibration.
     And I start and stop the beamformer while the acquisition is still running
     Then the beamformer ran while calibration data was still being acquired
     And the requested number of correlator files are produced
+    And no tile is left transmitting data samples
 
     Examples: channels to acquire
       | expected_station | first_channel | last_channel |
-      | stfc-ral-2       | 64            | 70           |
+      | stfc-ral-2       | 64            | 74           |

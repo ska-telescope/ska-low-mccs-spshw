@@ -1,5 +1,9 @@
 # Version History
 
+## 14.1.0
+
+* [THORN-682] ``SpsStation.AcquireDataForCalibration`` no longer blocks other commands. It is still a long running command, reported through the usual LRC attributes, but the station's task executor now provides two independent lanes and the acquisition executes on a calibration lane of its own, rather than occupying the general lane for the whole acquisition. A scan can therefore be started and stopped while calibration data is being acquired. ``Abort`` stops an acquisition as before. The commands that would disrupt an acquisition in progress - ``Initialise``, ``ReInitialise``, ``StartAcquisition``, ``ConfigureStationForCalibration`` and ``SetLmcDownload`` - are now rejected for its duration.
+
 ## 14.0.2
 
 * [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.

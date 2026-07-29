@@ -602,6 +602,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"wren": HealthState.OK},
                 },
                 HealthState.OK,
                 "Health is OK.",
@@ -620,6 +621,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"wren": HealthState.OK},
                 },
                 HealthState.OK,
                 "Health is OK.",
@@ -659,6 +661,7 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
+        health_model._wren_health = sub_devices["wren"]
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,

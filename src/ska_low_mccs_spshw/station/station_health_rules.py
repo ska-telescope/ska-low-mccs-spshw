@@ -40,6 +40,7 @@ class SpsStationHealthRules(HealthRules):
         result = (
             HealthState.UNKNOWN in subrack_healths.values()
             or HealthState.UNKNOWN in tile_healths.values()
+            or HealthState.UNKNOWN in wren_health.values()
         )
         if result:
             tile_states = [
@@ -87,6 +88,8 @@ class SpsStationHealthRules(HealthRules):
             >= self._thresholds["tile_failed"]
             or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
             >= self._thresholds["subrack_failed"]
+            or self.get_fraction_in_states(wren_health, DEGRADED_STATES, default=0)
+            >= self._thresholds["wren_failed"]
         )
         if result:
             tile_states = [

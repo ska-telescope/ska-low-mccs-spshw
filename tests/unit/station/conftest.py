@@ -198,6 +198,23 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
     builder.add_result_command(
         "Start", result_code=ResultCode.QUEUED, status="Task queued"
     )
+    builder.add_result_command(
+        "Configure", result_code=ResultCode.OK, status="Configure completed OK."
+    )
+    return builder()
+
+
+@pytest.fixture(name="mock_wren_device_proxy")
+def mock_wren_device_proxy_fixture() -> MockDeviceBuilder:
+    """
+    Fixture that provides mock WREN device proxy.
+
+    :return: a mock WREN device proxy.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
     return builder()
 
 

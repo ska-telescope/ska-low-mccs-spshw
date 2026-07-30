@@ -102,6 +102,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     LMCDaqTRL = device_property(dtype=str, default_value="")
     BandpassDaqTRL = device_property(dtype=str, default_value="")
+    WRENTRL = device_property(dtype=str, default_value="")
+
     AntennaConfigURI = device_property(
         dtype=(str,),
         default_value=[],
@@ -172,6 +174,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
             f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
+            f"\tWRENTRL: {self.WRENTRL}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
@@ -255,6 +258,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # It appears the test context inputs a space into empty strings.
             self.LMCDaqTRL if self.LMCDaqTRL != " " else "",
             self.BandpassDaqTRL if self.BandpassDaqTRL != " " else "",
+            self.WRENTRL if self.WRENTRL != " " else "",
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
@@ -848,6 +852,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.BandpassDaqTRL = value
         self.component_manager._bandpass_daq_trl = value
+
+    @attribute(dtype=str)
+    def WrenTRL(self: SpsStation) -> str:
+        """
+        Report the Tango Resource Locator for this SpsStation's WREN instance.
+
+        :return: Return the current WREN TRL.
+        """
+        return self.WRENTRL
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:
@@ -1845,7 +1858,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            return self.component_manager.acquire_data_for_calibration(
+            self.component_manager.acquire_data_for_calibration(
                 first_channel,
                 last_channel,
                 start_time,
@@ -1881,7 +1894,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            return self.component_manager.configure_station_for_calibration(
+            self.component_manager.configure_station_for_calibration(
                 **json.loads(daq_config),
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,

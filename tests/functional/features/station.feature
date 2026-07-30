@@ -34,6 +34,13 @@ Feature: Test station
         Then we do not get any failures
 
 
+    Scenario: SpsStation attributes report Off tile attributes
+        Given an SPS deployment against HW
+        And the SpsStation is ON
+        When we turn off a single tile
+        Then the spsstation attributes present this
+
+
     Scenario: Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)
         Given an SPS deployment against HW
         And the station and its tiles are synchronised

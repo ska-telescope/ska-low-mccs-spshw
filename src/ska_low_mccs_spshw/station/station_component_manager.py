@@ -2785,14 +2785,7 @@ class SpsStationComponentManager(
         Set static time delay correction.
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
-
-        :raises RuntimeError: if not every tile is Initialised or Synchronised.
         """
-        allowed, msg = self.is_command_allowed(require_initialised=True)
-        if not allowed:
-            self.logger.error(msg)
-            raise RuntimeError(msg)
-
         self._desired_static_delays = delays
 
         def _set_on_tile(proxy: MccsDeviceProxy) -> None:
@@ -2925,14 +2918,7 @@ class SpsStationComponentManager(
         Set attenuator level of preADU channels, one per input channel.
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
-
-        :raises RuntimeError: if not every tile is Initialised or Synchronised.
         """
-        allowed, msg = self.is_command_allowed(require_initialised=True)
-        if not allowed:
-            self.logger.error(msg)
-            raise RuntimeError(msg)
-
         self._desired_preadu_levels = levels
         tile_slices = {
             id(dev._proxy): levels[
@@ -3864,7 +3850,7 @@ class SpsStationComponentManager(
             if result_code[0] != ResultCode.OK:
                 return result_code, [f"Couldn't stop data transmission: {message[0]}"]
         return self._execute_async_on_tiles(
-            "SendDataSamples", argin, require_synchronised=False
+            "SendDataSamples", argin, require_synchronised=True
         )
 
     def stop_data_transmission(
@@ -4277,16 +4263,6 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        allowed, reason = self.is_command_allowed(require_initialised=True)
-        if not allowed:
-            self.logger.error(reason)
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result=(ResultCode.REJECTED, reason),
-                )
-            return
-
         self._channeliser_rounding = list(channeliser_rounding)
 
         result_code = ResultCode.OK
@@ -4479,7 +4455,7 @@ class SpsStationComponentManager(
             ]
         return results, [future_to_proxy[future] for future in incomplete]
 
-    def is_command_allowed(
+    def _is_command_allowed(
         self: SpsStationComponentManager,
         require_initialised: bool = False,
         require_synchronised: bool = False,
@@ -4508,16 +4484,16 @@ class SpsStationComponentManager(
         else:
             allowed_states = None
 
-        # self._tile_programming_state is kept current by
-        # _on_tile_attribute_change's "tileprogrammingstate" case on every
-        # subscribed change event, so no live per-tile read is needed here.
+        # self._tile_programming_state cache can potentially be used,
+        # however this event is pass to the EventSerialiser and handled
+        # in another thread. We use a network call here instead.
         not_ready = [
             fqdn
             for i, (fqdn, dev) in enumerate(self._tile_proxies.items())
             if dev._proxy is None
             or (
                 allowed_states is not None
-                and self._tile_programming_state[i] not in allowed_states
+                and dev._proxy.tileProgrammingState not in allowed_states
             )
         ]
         if not_ready:
@@ -4587,7 +4563,7 @@ class SpsStationComponentManager(
                     f"Command raised {str(type(e))}, check logs."
                 ]
 
-        allowed, reason = self.is_command_allowed(
+        allowed, reason = self._is_command_allowed(
             require_initialised=require_initialised,
             require_synchronised=require_synchronised,
         )

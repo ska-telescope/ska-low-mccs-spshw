@@ -60,6 +60,51 @@ def wait_for_condition(
     return False
 
 
+# pylint: disable=too-many-arguments
+def wait_for_attribute_value(
+    device: tango.DeviceProxy,
+    attribute_name: str,
+    expected_value: Any,
+    timeout: float = 1.0,
+    allow_exceptions: tuple[type[BaseException], ...] = (),
+    poll_interval: float = 0.01,
+) -> bool:
+    """
+    Poll a device attribute until it reaches an expected value, or timeout.
+
+    Use in place of a bare ``time.sleep()`` before asserting on an
+    attribute that is updated asynchronously (e.g. via tile change
+    events), so tests take as long as they need to but no longer.
+
+    :param device: the Tango device proxy to poll.
+    :param attribute_name: the name of the attribute to poll.
+    :param expected_value: the value the attribute is expected to reach.
+        Compared with ``pytest.approx``, so floats, lists and arrays are
+        all supported.
+    :param timeout: seconds to keep polling before giving up.
+    :param allow_exceptions: exception types to swallow while polling
+        (e.g. transient ``tango.DevFailed`` while a proxy is not yet
+        ready), treated as "not yet reached". Anything else propagates
+        immediately.
+    :param poll_interval: seconds to sleep between polls.
+
+    :returns: True if the attribute reached expected_value within
+        timeout, False otherwise.
+    """
+
+    def _reached_expected_value() -> bool:
+        try:
+            return bool(
+                getattr(device, attribute_name) == pytest.approx(expected_value)
+            )
+        except allow_exceptions:
+            return False
+
+    return wait_for_condition(
+        _reached_expected_value, timeout=timeout, poll_interval=poll_interval
+    )
+
+
 class TpmStatus(enum.IntEnum):
     """
     Enumerated type for tile status.

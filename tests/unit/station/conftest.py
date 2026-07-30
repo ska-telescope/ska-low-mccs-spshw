@@ -12,6 +12,7 @@ import ipaddress
 import json
 import logging
 import unittest.mock
+from typing import Any, Callable
 
 import numpy as np
 import pytest
@@ -21,7 +22,10 @@ from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw import SpsStation
-from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
+from ska_low_mccs_spshw.station import (
+    SpsStationComponentManager,
+    SpsStationSelfCheckManager,
+)
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
 from tests.harness import get_subrack_name, get_tile_name
 
@@ -93,13 +97,92 @@ def tile_initial_beamformer_regions_fixture(
     return regions
 
 
+def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
+    """
+    Patch a mock device so that setting an attribute pushes a change event.
+
+    ``MockDeviceBuilder``'s mocked ``subscribe_event`` only ever calls the
+    registered callback once, with whatever value is current at
+    subscription time: see its docstring, "It doesn't actually support
+    publishing change events." Real hardware (and the real Tango event
+    mechanism) pushes a fresh change event every time an attribute's value
+    changes, and SpsStation's component manager caches tile attribute
+    values from those pushes rather than re-reading them live. So for a
+    mock tile to behave like the real thing from the perspective of that
+    cache, every subsequent write to a subscribed attribute must also
+    trigger the callback, not just the first one.
+
+    Note that ``MockDeviceBuilder``'s one-shot bootstrap delivery runs the
+    callback on a background thread ("more realistic if fired
+    asynchronously"), with no ordering guarantee relative to a write made
+    immediately after subscribing. That race let a fresh value set right
+    after ``adminMode`` goes ONLINE be silently clobbered by the stale
+    bootstrap replay arriving late, so it is replaced below with the same
+    synchronous delivery used for subsequent writes.
+
+    :param mock_device: the mock device to patch.
+    """
+    event_name_to_type = {
+        tango.EventType.ALARM_EVENT: "alarm",
+        tango.EventType.CHANGE_EVENT: "change",
+        tango.EventType.ATTR_CONF_EVENT: "attr_conf",
+    }
+    subscriptions: dict[str, tuple[tango.EventType, Callable]] = {}
+
+    def _subscribe_event(
+        attribute_name: str,
+        event_type: tango.EventType,
+        callback: Callable,
+        stateless: bool,
+    ) -> None:
+        subscriptions[attribute_name.lower()] = (event_type, callback)
+        current_value = (
+            mock_device.state()
+            if attribute_name == "state"
+            else getattr(mock_device, attribute_name)
+        )
+        if current_value is not None:
+            _push_change_event(attribute_name, current_value)
+
+    mock_device.subscribe_event.side_effect = _subscribe_event
+
+    def _push_change_event(attribute_name: str, value: Any) -> None:
+        subscription = subscriptions.get(attribute_name.lower())
+        if subscription is None:
+            return
+        event_type, callback = subscription
+        mock_event_data = unittest.mock.Mock()
+        mock_event_data.event = event_name_to_type[event_type]
+        mock_event_data.err = False
+        mock_event_data.attr_value.name = attribute_name
+        mock_event_data.attr_value.value = value
+        mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID
+        # Called synchronously, both for the subscription bootstrap and for
+        # every subsequent write, so that by the time subscribe_event or
+        # the attribute assignment returns, the station's cache has
+        # already been updated -- callers then don't need to sleep and
+        # poll waiting for a background thread to run.
+        callback(mock_event_data)
+
+    # Each Mock() instance gets its own dynamically-created class, so
+    # patching __setattr__ here is instance-scoped, not global.
+    mock_class = type(mock_device)
+    original_setattr = mock_class.__setattr__
+
+    def _setattr(self: unittest.mock.Mock, name: str, value: Any) -> None:
+        original_setattr(self, name, value)
+        _push_change_event(name, value)
+
+    mock_class.__setattr__ = _setattr  # type: ignore[assignment]
+
+
 @pytest.fixture(name="mock_tile_builder")
 def mock_tile_builder_fixture(
     tile_id: int,
     tile_initial_beamformer_table: list[int],
     tile_initial_beamformer_regions: list[int],
     tile_initial_pointing_delays: np.ndarray,
-) -> MockDeviceBuilder:
+) -> Callable[..., unittest.mock.Mock]:
     """
     Fixture that provides a builder for a mock MccsTile device.
 
@@ -120,7 +203,18 @@ def mock_tile_builder_fixture(
     builder.add_attribute("adcPower", np.array([17.0] * 32))
     builder.add_attribute("staticTimeDelays", np.array([0] * 32))
     builder.add_attribute("ppsDelay", 0)
+    builder.add_attribute("ppsDelayCorrection", 0)
     builder.add_attribute("cspRounding", np.array([2] * 384))
+    builder.add_attribute("channeliserRounding", np.array([3] * 512))
+    builder.add_attribute("boardTemperature", 25.0)
+    builder.add_attribute("fpga1Temperature", 25.0)
+    builder.add_attribute("fpga2Temperature", 25.0)
+    builder.add_attribute("sysrefPresent", True)
+    builder.add_attribute("pllLocked", True)
+    builder.add_attribute("ppsPresent", True)
+    builder.add_attribute("clockPresent", True)
+    builder.add_attribute("testGeneratorActive", False)
+    builder.add_attribute("isBeamformerRunning", False)
     builder.add_attribute("pendingDataRequests", False)
     builder.add_attribute("beamformerTable", tile_initial_beamformer_table)
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
@@ -164,7 +258,13 @@ def mock_tile_builder_fixture(
     )
     builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     builder.add_result_command("initialise", ResultCode.OK)
-    return builder
+
+    def _build(**kwargs: Any) -> unittest.mock.Mock:
+        mock_device = builder(**kwargs)
+        _make_mock_push_change_events(mock_device)
+        return mock_device
+
+    return _build
 
 
 @pytest.fixture(name="mock_daq_device_proxy")
@@ -178,6 +278,8 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
     builder.set_state(tango.DevState.ON)
     builder.add_attribute("receiverIP", "123.123.123")
     builder.add_attribute("receiverPorts", [4660])
+    builder.add_attribute("xPolBandpass", np.zeros(shape=(256, 512), dtype=float))
+    builder.add_attribute("yPolBandpass", np.zeros(shape=(256, 512), dtype=float))
     builder.add_command(
         "DaqStatus",
         json.dumps(
@@ -220,7 +322,7 @@ def mock_wren_device_proxy_fixture() -> MockDeviceBuilder:
 
 @pytest.fixture(name="mock_tile_device_proxy")
 def mock_tile_device_proxy_fixture(
-    mock_tile_builder: MockDeviceBuilder,
+    mock_tile_builder: Callable[..., unittest.mock.Mock],
     tile_id: int,
     station_id: int,
 ) -> unittest.mock.Mock:
@@ -251,7 +353,7 @@ def num_tiles_fixture() -> int:
 
 @pytest.fixture(name="mock_tile_device_proxies")
 def mock_tile_device_proxies_fixture(
-    mock_tile_builder: MockDeviceBuilder,
+    mock_tile_builder: Callable[..., unittest.mock.Mock],
     num_tiles: int,
     station_id: int,
     sdn_first_interface: str,
@@ -299,6 +401,49 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
         The extra commands allow us to mock the receipt of a state
         change event from subservient subrack devices.
         """
+
+        def create_component_manager(
+            self: PatchedSpsStationDevice,
+        ) -> SpsStationComponentManager:
+            """
+            Return a component manager with event serialisation disabled.
+
+            The real device wires the component manager up to the shared
+            :py:class:`~ska_low_mccs_common.EventSerialiser`, which
+            processes tile/subrack change events on its own worker
+            thread. In these unit tests, events are pushed synchronously
+            from the mock devices, so serialising them onto a separate
+            thread just introduces a race that tests would otherwise
+            have to paper over with sleeps. Passing ``event_serialiser=
+            None`` here makes ``MccsDeviceProxy`` invoke change event
+            callbacks synchronously, on the same thread that pushes the
+            mock event.
+
+            :return: a station component manager for testing.
+            """
+            return SpsStationComponentManager(
+                self.StationId,
+                self.SubrackFQDNs,
+                self.TileFQDNs,
+                self.LMCDaqTRL if self.LMCDaqTRL != " " else "",
+                self.BandpassDaqTRL if self.BandpassDaqTRL != " " else "",
+                self.WRENTRL if self.WRENTRL != " " else "",
+                ipaddress.IPv4Interface(self.SdnFirstInterface),
+                ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
+                ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
+                self.ChanneliserRounding,
+                self.CspRounding,
+                self.AntennaConfigURI,
+                self.StartBandpassesInInitialise,
+                self.BandpassIntegrationTime,
+                self.logger,
+                self._communication_state_changed,
+                self._component_state_changed,
+                self._health_model.tile_health_changed,
+                self._health_model.subrack_health_changed,
+                self.OnWorkaroundFlag,
+                event_serialiser=None,
+            )
 
         @command()
         def MockSubracksOff(self: PatchedSpsStationDevice) -> None:

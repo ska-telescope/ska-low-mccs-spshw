@@ -42,7 +42,12 @@ from tests.harness import (
     get_tile_name,
     get_wren_name,
 )
-from tests.test_tools import LRCManager, execute_lrc_to_completion, wait_for_lrc_result
+from tests.test_tools import (
+    LRCManager,
+    execute_lrc_to_completion,
+    wait_for_attribute_value,
+    wait_for_lrc_result,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -1230,6 +1235,11 @@ def test_write_read_channeliser_rounding(
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
 
+    assert wait_for_attribute_value(
+        station_device,
+        "tileProgrammingState",
+        ["Synchronised"] * len(mock_tile_device_proxies),
+    )
     channeliser_rounding_to_set = np.array([5] * 512)
     execute_lrc_to_completion(
         station_device,
@@ -1275,8 +1285,9 @@ def test_setting_cspRounding(
 
     # Set the last tile with a different cspRounding.
     mock_tile_device_proxies[-1].cspRounding = [6] * 384
-
-    assert all(station_device.cspRounding == [6] * 384)
+    # just set another tile, this should be ignored
+    mock_tile_device_proxies[-2].cspRounding = [1] * 384
+    assert wait_for_attribute_value(station_device, "cspRounding", [6] * 384)
 
     rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for _, tile in enumerate(mock_tile_device_proxies):
@@ -1519,9 +1530,9 @@ def test_station_tile_attributes(
             setattr(tile, "fpga2Temperature", init_tile_attribute_values(i))
         else:
             setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
-    time.sleep(0.1)
-    assert getattr(station_device, attribute_name) == pytest.approx(
-        init_expected_value(num_tiles)
+
+    assert wait_for_attribute_value(
+        station_device, attribute_name, init_expected_value(num_tiles)
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         if tile_attribute_name == "fpgaTemperature":
@@ -1529,9 +1540,8 @@ def test_station_tile_attributes(
             setattr(tile, "fpga2Temperature", final_tile_attribute_values(i))
         else:
             setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
-    time.sleep(0.1)
-    assert getattr(station_device, attribute_name) == pytest.approx(
-        final_expected_value(num_tiles)
+    assert wait_for_attribute_value(
+        station_device, attribute_name, final_expected_value(num_tiles)
     )
 
 
@@ -1686,12 +1696,15 @@ def test_AcquireDataForCalibration(
 
 def test_TriggerAdcEqualisation(
     station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test the TriggerAdcEqualisation command.
 
     :param station_device: The station device to use.
+    :param mock_tile_device_proxies: mock tile proxies that have been
+        configured with the required tile behaviours.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
@@ -1706,6 +1719,9 @@ def test_TriggerAdcEqualisation(
     station_device.MockTilesOn()
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    for mock_tile in mock_tile_device_proxies:
+        mock_tile.tileProgrammingState = "Synchronised"
 
     args = json.dumps({"target_adc": 18, "bias": 0.5})
 
@@ -1973,8 +1989,8 @@ def test_csp_set_reset(
             "destination_port": 2345,
         }
     )
-    rc, _ = on_station_device.SetCspIngest(csp_ingest_config)
-    assert rc == ResultCode.OK
+    rc, msg = on_station_device.SetCspIngest(csp_ingest_config)
+    assert rc == ResultCode.OK, msg
     assert csp_ingest_config == on_station_device.cspIngestConfig
 
     rc, _ = on_station_device.ResetCspIngest()

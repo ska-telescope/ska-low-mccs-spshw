@@ -183,6 +183,23 @@ def test_lock_contention_not_observed(
 
 @scenario(
     "features/station.feature",
+    "SpsStation attributes report Off tile attributes",
+)
+def test_spsstation_attributes_report_off_tile(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
     "Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)",
 )
 def test_standby_during_init(
@@ -1067,3 +1084,156 @@ def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
             "Not all tiles transitioned to OFF: "
             f"""{[(tile.dev_name(), tile.state()) for tile in station_tiles]}"""
         )
+
+
+@pytest.fixture(name="powered_off_tile")
+def powered_off_tile_fixture() -> Iterator[dict[str, Any]]:
+    """
+    Record which tile is powered off during a test, and restore it after.
+
+    :yields: an empty dict for the "we turn off a single tile" step to
+        record the powered-off tile in.
+    """
+    info: dict[str, Any] = {}
+
+    yield info
+
+    tile = info.get("tile")
+    if tile is not None:
+        tile.On()
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            if tile.tileProgrammingState != "Off":
+                break
+            time.sleep(1)
+
+
+@when("we turn off a single tile")
+def turn_off_single_tile(
+    station_tiles: list[tango.DeviceProxy],
+    powered_off_tile: dict[str, Any],
+) -> None:
+    """
+    Power off a single tile in the station and wait for it to report Off.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param powered_off_tile: a dict to record the powered-off tile in, so
+        that the Then step and teardown know which tile to check/restore.
+    """
+    assert station_tiles, "No station tiles were discovered"
+    tile = station_tiles[0]
+    powered_off_tile["tile"] = tile
+    powered_off_tile["logical_tile_id"] = tile.logicalTileId
+
+    tile.Off()
+
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        if tile.tileProgrammingState == "Off":
+            break
+        time.sleep(1)
+    else:
+        pytest.fail(f"Tile {tile.dev_name()} did not report Off in time")
+
+
+def _wait_until(predicate: Callable[[], bool], timeout: float, message: str) -> None:
+    """
+    Poll a predicate until it is true, or fail after a timeout.
+
+    :param predicate: a callable returning True once the condition holds.
+    :param timeout: the maximum time to wait, in seconds.
+    :param message: the failure message if the predicate never holds.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if predicate():
+            return
+        time.sleep(1)
+    pytest.fail(message)
+
+
+@then("the spsstation attributes present this")
+def spsstation_attributes_present_off_tile(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    powered_off_tile: dict[str, Any],
+) -> None:
+    """
+    Check SpsStation's cached attributes reflect a tile going Off.
+
+    A powered-off tile's attributes go ATTR_INVALID, which
+    station_component_manager.py handles by caching NaN (for array
+    attributes) or excluding the tile from station-wide boolean summaries,
+    rather than reporting a stale last-known-good value.
+
+    :param station: station device under test.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param powered_off_tile: a dict recording which tile was powered off.
+    """
+    off_tile_id = powered_off_tile["logical_tile_id"]
+    channels_per_tile = len(station.adcPower) // len(station_tiles)
+    start = off_tile_id * channels_per_tile
+    end = start + channels_per_tile
+
+    _wait_until(
+        lambda: station.tileProgrammingState[off_tile_id] == "Off",
+        60,
+        "SpsStation cache did not report tile "
+        f"{off_tile_id} as Off in time: {station.tileProgrammingState}",
+    )
+    _wait_until(
+        lambda: bool(np.all(np.isnan(station.adcPower[start:end]))),
+        60,
+        "SpsStation cache did not report NaN adcPower for offline tile "
+        f"{off_tile_id}: {station.adcPower[start:end]}",
+    )
+    _wait_until(
+        lambda: bool(np.all(np.isnan(station.staticTimeDelays[start:end]))),
+        60,
+        "SpsStation cache did not report NaN staticTimeDelays for offline "
+        f"tile {off_tile_id}: {station.staticTimeDelays[start:end]}",
+    )
+    _wait_until(
+        lambda: bool(np.all(np.isnan(station.preaduLevels[start:end]))),
+        60,
+        "SpsStation cache did not report NaN preaduLevels for offline tile "
+        f"{off_tile_id}: {station.preaduLevels[start:end]}",
+    )
+    _wait_until(
+        lambda: bool(np.all(np.isnan(station.channeliserRounding[off_tile_id]))),
+        60,
+        "SpsStation cache did not report NaN channeliserRounding for "
+        f"offline tile {off_tile_id}: {station.channeliserRounding[off_tile_id]}",
+    )
+    _wait_until(
+        lambda: station.sysrefPresentSummary is False,
+        60,
+        "SpsStation cache did not report sysrefPresentSummary False after "
+        "a tile went offline",
+    )
+    _wait_until(
+        lambda: station.pllLockedSummary is False,
+        60,
+        "SpsStation cache did not report pllLockedSummary False after "
+        "a tile went offline",
+    )
+    _wait_until(
+        lambda: station.ppsPresentSummary is False,
+        60,
+        "SpsStation cache did not report ppsPresentSummary False after "
+        "a tile went offline",
+    )
+    _wait_until(
+        lambda: station.clockPresentSummary is False,
+        60,
+        "SpsStation cache did not report clockPresentSummary False after "
+        "a tile went offline",
+    )
+    _wait_until(
+        lambda: station.isBeamformerRunning is False,
+        60,
+        "SpsStation cache did not report isBeamformerRunning False after "
+        "a tile went offline",
+    )

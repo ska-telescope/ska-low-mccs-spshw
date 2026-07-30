@@ -544,9 +544,12 @@ class SpsStationComponentManager(
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
         self._number_of_tiles = len(tile_fqdns)
-        self._adc_power: dict[int, Optional[list[float]]] = {}
+        # cppTango doesn't handle None in a list of floats well, so unknown
+        # per-tile readings are represented as an np.nan-filled np.ndarray
+        # rather than None.
+        self._adc_power: dict[int, np.ndarray] = {}
         self._static_delays: dict[int, np.ndarray] = {}
-        self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        self._preadu_levels: dict[int, np.ndarray] = {}
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
@@ -554,11 +557,13 @@ class SpsStationComponentManager(
         self._final_tile_fpga1_flagged_count: int = 0
         self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
         for logical_tile_id in range(self._number_of_tiles):
-            self._adc_power[logical_tile_id] = None
+            self._adc_power[logical_tile_id] = np.full(TileData.ADC_CHANNELS, np.nan)
             self._static_delays[logical_tile_id] = np.full(
                 TileData.ADC_CHANNELS, np.nan
             )
-            self._preadu_levels[logical_tile_id] = None
+            self._preadu_levels[logical_tile_id] = np.full(
+                TileData.ADC_CHANNELS, np.nan
+            )
             self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
             self._tile_dst_ips[logical_tile_id] = ("", "")
         # TODO
@@ -699,9 +704,17 @@ class SpsStationComponentManager(
         # Caches kept current from tile change-event subscriptions (see
         # _on_tile_attribute_change), so that reading a station-level
         # summary attribute doesn't require a live per-tile round trip.
-        self._board_temperatures: list[float | None] = [None] * self._number_of_tiles
-        self._fpga1_temperatures: list[float | None] = [None] * self._number_of_tiles
-        self._fpga2_temperatures: list[float | None] = [None] * self._number_of_tiles
+        # The temperature caches back attributes that expose a list of
+        # floats directly to Tango (boardTemperaturesSummary/
+        # fpgaTemperaturesSummary), and cppTango doesn't handle None in a
+        # list of floats well -- so unknown values are represented as
+        # np.nan rather than None.
+        self._board_temperatures: np.ndarray = np.full(self._number_of_tiles, np.nan)
+        self._fpga1_temperatures: np.ndarray = np.full(self._number_of_tiles, np.nan)
+        self._fpga2_temperatures: np.ndarray = np.full(self._number_of_tiles, np.nan)
+        # These caches only ever back a single scalar DevBoolean attribute
+        # (via all()/any()), so there's no list-of-floats-with-a-hole for
+        # cppTango to choke on -- None is fine here.
         self._sysref_present: list[bool | None] = [None] * self._number_of_tiles
         self._pll_locked: list[bool | None] = [None] * self._number_of_tiles
         self._pps_present: list[bool | None] = [None] * self._number_of_tiles
@@ -1148,15 +1161,66 @@ class SpsStationComponentManager(
     ) -> None:
         # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
-            if attribute_name.lower() == "ppsdelay":
-                self._pps_delays_reported.discard(logical_tile_id)
-                self._fire_pps_delay_spread()
-            elif attribute_name.lower() == "ppsdelaycorrection":
-                self._pps_delay_corrections_reported.discard(logical_tile_id)
-            elif attribute_name.lower() == "statictimedelays":
-                self._static_delays[logical_tile_id] = np.full(
-                    TileData.ADC_CHANNELS, np.nan
-                )
+            match attribute_name.lower():
+                case "ppsdelay":
+                    self._pps_delays_reported.discard(logical_tile_id)
+                    self._fire_pps_delay_spread()
+                case "ppsdelaycorrection":
+                    self._pps_delay_corrections_reported.discard(logical_tile_id)
+                case "statictimedelays":
+                    self._static_delays[logical_tile_id] = np.full(
+                        TileData.ADC_CHANNELS, np.nan
+                    )
+                case "adcpower":
+                    self._adc_power[logical_tile_id] = np.full(
+                        TileData.ADC_CHANNELS, np.nan
+                    )
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            adc_power=np.concatenate(list(self._adc_power.values()))
+                        )
+                case "preadulevels":
+                    self._preadu_levels[logical_tile_id] = np.full(
+                        TileData.ADC_CHANNELS, np.nan
+                    )
+                case "pointingdelays":
+                    self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+                case "tileprogrammingstate":
+                    self._tile_programming_state[logical_tile_id] = "Unknown"
+                    self._pps_delays_reported.discard(logical_tile_id)
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            tileProgrammingState=self._tile_programming_state
+                        )
+                    self._fire_pps_delay_spread()
+                case "dstip40gfpga1":
+                    _, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                    self._tile_dst_ips[logical_tile_id] = ("", ip2)
+                    self._validate_beamformer_daisy_chain()
+                case "dstip40gfpga2":
+                    ip1, _ = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                    self._tile_dst_ips[logical_tile_id] = (ip1, "")
+                    self._validate_beamformer_daisy_chain()
+                case "boardtemperature":
+                    self._board_temperatures[logical_tile_id] = np.nan
+                case "fpga1temperature":
+                    self._fpga1_temperatures[logical_tile_id] = np.nan
+                case "fpga2temperature":
+                    self._fpga2_temperatures[logical_tile_id] = np.nan
+                case "sysrefpresent":
+                    self._sysref_present[logical_tile_id] = None
+                case "plllocked":
+                    self._pll_locked[logical_tile_id] = None
+                case "ppspresent":
+                    self._pps_present[logical_tile_id] = None
+                case "clockpresent":
+                    self._clock_present[logical_tile_id] = None
+                case "testgeneratoractive":
+                    self._test_generator_active[logical_tile_id] = None
+                case "isbeamformerrunning":
+                    self._is_beamformer_running[logical_tile_id] = None
+                case "channeliserrounding":
+                    self._channeliser_roundings[logical_tile_id, :] = np.nan
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
                 f"has quality {attribute_quality}. "
@@ -1167,19 +1231,22 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
-                self._adc_power[logical_tile_id] = list(attribute_value)
-                adc_powers: list[float] = []
-                for _, adc_power in self._adc_power.items():
-                    if adc_power is not None:
-                        adc_powers += adc_power
-                self._update_component_state(adc_power=adc_powers)
+                self._adc_power[logical_tile_id] = np.array(
+                    attribute_value, dtype=float
+                )
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        adc_power=np.concatenate(list(self._adc_power.values()))
+                    )
             case "statictimedelays":
                 self._static_delays[logical_tile_id] = np.array(
                     attribute_value, dtype=float
                 )
             case "preadulevels":
                 # Note: Currently all we do is update the attribute value.
-                self._preadu_levels[logical_tile_id] = list(attribute_value)
+                self._preadu_levels[logical_tile_id] = np.array(
+                    attribute_value, dtype=float
+                )
             case "ppsdelay":
                 # Cache the value regardless of tile state so that when the
                 # tile later becomes Synchronised the value is available.
@@ -2875,11 +2942,7 @@ class SpsStationComponentManager(
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        preadu_levels_concatenated: list[float] = []
-        for preadu_levels in self._preadu_levels.values():
-            if preadu_levels is not None:
-                preadu_levels_concatenated += preadu_levels
-        return preadu_levels_concatenated
+        return np.concatenate(list(self._preadu_levels.values())).tolist()
 
     @preadu_levels.setter
     def preadu_levels(self: SpsStationComponentManager, levels: list[float]) -> None:
@@ -3070,14 +3133,16 @@ class SpsStationComponentManager(
         # self._board_temperatures is kept current by
         # _on_tile_attribute_change's "boardtemperature" case, so no live
         # per-tile read is needed here.
-        board_temperatures = [t for t in self._board_temperatures if t is not None]
+        board_temperatures = self._board_temperatures[
+            ~np.isnan(self._board_temperatures)
+        ]
         if len(board_temperatures) == 0:
             self.logger.info("No data available for summary.")
             return None
         return [
-            min(board_temperatures),
-            mean(board_temperatures),
-            max(board_temperatures),
+            float(np.min(board_temperatures)),
+            float(np.mean(board_temperatures)),
+            float(np.max(board_temperatures)),
         ]
 
     def fpga_temperature_summary(
@@ -3091,13 +3156,21 @@ class SpsStationComponentManager(
         # self._fpga1_temperatures/_fpga2_temperatures are kept current by
         # _on_tile_attribute_change's "fpga1temperature"/"fpga2temperature"
         # cases, so no live per-tile read is needed here.
-        fpga_1_temperatures = [t for t in self._fpga1_temperatures if t is not None]
-        fpga_2_temperatures = [t for t in self._fpga2_temperatures if t is not None]
+        fpga_1_temperatures = self._fpga1_temperatures[
+            ~np.isnan(self._fpga1_temperatures)
+        ]
+        fpga_2_temperatures = self._fpga2_temperatures[
+            ~np.isnan(self._fpga2_temperatures)
+        ]
         if len(fpga_1_temperatures) == 0 or len(fpga_2_temperatures) == 0:
             self.logger.info("No data available for summary.")
             return None
-        fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
-        return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
+        fpga_temperatures = np.concatenate([fpga_1_temperatures, fpga_2_temperatures])
+        return [
+            float(np.min(fpga_temperatures)),
+            float(np.mean(fpga_temperatures)),
+            float(np.max(fpga_temperatures)),
+        ]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float] | None:
         """

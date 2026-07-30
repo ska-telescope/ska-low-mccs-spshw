@@ -2004,8 +2004,11 @@ class SpsStationComponentManager(
                 "Starting station beamformer with empty channel_groups "
                 "to start the beamformer daisy chain during station initialise"
             )
+            start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
+                self.RFC_FORMAT
+            )
             self.start_beamformer(
-                start_time=None, duration=-1, channel_groups=[], scan_id=0
+                start_time=start_time, duration=-1, channel_groups=[], scan_id=0
             )
         else:
             self.logger.error(f"Initialisation failed: {failure_step}")
@@ -3549,6 +3552,12 @@ class SpsStationComponentManager(
     ) -> None:
         """
         Start the beamformer at the specified time.
+
+        NOTE: Supplying ``start_time`` is recommended. Transient station
+        beamformer error spikes at startup are caused by non-synchronised TPM
+        beamformer start (SKB-1397). Simultaneous starts avoid the issue.
+        A start time 4 seconds in the future is typically sufficient for
+        the request to arrive on the TPMs.
 
         :param start_time: time at which to start the beamformer,
             defaults to 0

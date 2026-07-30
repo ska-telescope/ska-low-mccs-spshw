@@ -3491,6 +3491,12 @@ class SpsStationComponentManager(
         """
         Start the beamformer at the specified time.
 
+        NOTE: Supplying ``start_time`` is recommended. Transient station
+        beamformer error spikes at startup are caused by non-synchronised TPM
+        beamformer start (SKB-1397). Simultaneous starts avoid the issue.
+        A start time 4 seconds in the future is typically sufficient for
+        the request to arrive on the TPMs.
+
         :param start_time: time at which to start the beamformer,
             defaults to 0
         :param duration: duration for which to run the beamformer,

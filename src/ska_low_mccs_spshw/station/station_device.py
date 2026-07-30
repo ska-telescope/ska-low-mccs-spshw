@@ -2570,6 +2570,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Start the beamformer at the specified time delay.
 
+        NOTE: Supplying ``start_time`` is recommended. Transient station
+        beamformer error spikes at startup are caused by non-synchronised TPM
+        beamformer start (SKB-1397). Simultaneous starts avoid the issue.
+        A start time 4 seconds in the future is typically sufficient for
+        the request to arrive on the TPMs.
+
         A json dictionary with optional keywords:
 
         :param start_time: (str, ISO UTC time) start time

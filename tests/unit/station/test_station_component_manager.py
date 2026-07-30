@@ -257,6 +257,7 @@ def test_trigger_adc_equalisation(
     result: float,
     target_adc: float,
     bias: float,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
 ) -> None:
     """
     Test the adc triggering equalisation.
@@ -267,6 +268,8 @@ def test_trigger_adc_equalisation(
     :param result: expected result after equalisation
     :param target_adc: the expected average power received by antennas in ADU units.
     :param bias: user specified bias.
+    :param mock_tile_device_proxies: a mock tile device proxy
+        that has been configured with the required subrack behaviours.
     """
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
 
@@ -278,10 +281,10 @@ def test_trigger_adc_equalisation(
     expected_adc = 16.0
     expected_preadu = 8.0
 
-    for proxy in station_component_manager._tile_proxies.values():
-        proxy._proxy.adcPower = [expected_adc] * 32  # type: ignore
-        proxy._proxy.preaduLevels = [expected_preadu] * 32  # type: ignore
-        proxy._proxy.tileProgrammingState = "Synchronised"  # type: ignore
+    for mock_tile in mock_tile_device_proxies:
+        mock_tile.adcPower = [expected_adc] * 32  # type: ignore
+        mock_tile.preaduLevels = [expected_preadu] * 32  # type: ignore
+        mock_tile.tileProgrammingState = "Synchronised"  # type: ignore
 
     # Assertion fails, the preadu levels may be empty or containing something
     # in a non deterministic way

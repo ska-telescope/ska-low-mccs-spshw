@@ -1845,6 +1845,17 @@ class SpsStationComponentManager(
                 )
             return
 
+        # Now, if the wren proxy is set, wait for the WREN to initialise
+        if self._wren_proxy:
+            if result_code == ResultCode.OK:
+                self.logger.debug("Waiting for WREN")
+                result_code, failure_step = self._wait_for_wren(
+                    task_callback,
+                    task_abort_event,
+                    timeout=self._wren_health_check_timeout,
+                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
+                )
+
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
@@ -1983,33 +1994,6 @@ class SpsStationComponentManager(
             result_code = ResultCode.FAILED
             failure_step = "tiles not on"
 
-        if result_code == ResultCode.OK:
-            self.logger.debug("Setting tile source IPs before initialisation")
-            result_code, failure_step = self._set_tile_source_ips(
-                task_callback, task_abort_event
-            )
-
-        if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=5)
-            self.logger.debug("Setting global reference time")
-            self._set_global_reference_time(global_reference_time)
-            # This is very quick to complete so no progress update here
-
-        if result_code == ResultCode.OK:
-            self.logger.debug("Re-initialising tiles")
-            result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=5, progress_end=60
-            )
-            # Progress is reported incrementally inside _reinitialise_tiles
-
-        if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tile parameters")
-            result_code, failure_step = self._initialise_tile_parameters(
-                task_callback,
-                task_abort_event,
-            )
-
         # Now, if the wren proxy is set, wait for the WREN to initialise
         if self._wren_proxy:
             if result_code == ResultCode.OK:
@@ -2021,7 +2005,34 @@ class SpsStationComponentManager(
                     fail_on_timeout=self._wren_health_check_fail_on_timeout,
                 )
                 if task_callback:
-                    task_callback(progress=65)
+                    task_callback(progress=5)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Setting tile source IPs before initialisation")
+            result_code, failure_step = self._set_tile_source_ips(
+                task_callback, task_abort_event
+            )
+
+        if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=10)
+            self.logger.debug("Setting global reference time")
+            self._set_global_reference_time(global_reference_time)
+            # This is very quick to complete so no progress update here
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Re-initialising tiles")
+            result_code, failure_step = self._reinitialise_tiles(
+                task_callback, task_abort_event, progress_start=10, progress_end=65
+            )
+            # Progress is reported incrementally inside _reinitialise_tiles
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising tile parameters")
+            result_code, failure_step = self._initialise_tile_parameters(
+                task_callback,
+                task_abort_event,
+            )
 
         if result_code == ResultCode.OK:
             if task_callback:

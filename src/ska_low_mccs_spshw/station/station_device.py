@@ -118,7 +118,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # the device will wait until WREN is ok during initialisation. If WREN
     # times-out then device will not initialise.
     WRENHealthCheckFailOnTimeout = device_property(dtype=bool, default_value=False)
-    WRENHealthCheckTimeout = device_property(dtype=float, default_value=120)
+    WRENHealthCheckTimeout = device_property(dtype=float, default_value=5 * 60)
 
     # ---------------
     # Initialisation

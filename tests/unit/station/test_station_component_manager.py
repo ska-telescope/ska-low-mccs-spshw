@@ -1022,6 +1022,9 @@ def test_initialise_progress_callbacks(
     ok = (ResultCode.OK, "")
     with (
         unittest.mock.patch.object(
+            station_component_manager, "_wait_for_wren", return_value=ok
+        ),
+        unittest.mock.patch.object(
             station_component_manager, "_set_tile_source_ips", return_value=ok
         ),
         unittest.mock.patch.object(
@@ -1037,9 +1040,6 @@ def test_initialise_progress_callbacks(
         ),
         unittest.mock.patch.object(
             station_component_manager, "_wren_proxy", return_value=object
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_wait_for_wren", return_value=ok
         ),
         unittest.mock.patch.object(
             station_component_manager, "_initialise_station", return_value=ok
@@ -1064,7 +1064,7 @@ def test_initialise_progress_callbacks(
         for call in task_callback.call_args_list
         if "progress" in call.kwargs
     ]
-    assert progress_calls == [5, 65, 70, 75, 85, 90, 95]
+    assert progress_calls == [5, 10, 70, 75, 85, 90, 95]
 
     task_callback.assert_called_with(
         status=TaskStatus.COMPLETED,

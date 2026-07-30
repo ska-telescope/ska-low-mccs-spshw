@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-672] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip.
+
 ## 14.0.2
 
 * [THORN-322] Add docs for Health of hardware facing devices.

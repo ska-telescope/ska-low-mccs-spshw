@@ -43,7 +43,7 @@ following steps, in order:
 9. Wait for the ARP table to be populated (``_wait_for_arp_table``).
 
 10. Route data to the DAQ/CSP destinations (``_route_data``). Route data streams to the relevant DAQ endpoints,
-   Internally uses ``SetLmcDownload``, ``SetLmcIntegratedDownload`` and ``ConfigureIntegratedChannelData``.
+    Internally uses ``SetLmcDownload``, ``SetLmcIntegratedDownload`` and ``ConfigureIntegratedChannelData``.
 
 11. Check station synchronisation (``_check_station_synchronisation``).
 

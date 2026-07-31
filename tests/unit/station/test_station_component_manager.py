@@ -13,6 +13,7 @@ import ipaddress
 import json
 import logging
 import random
+import threading
 import time
 import unittest.mock
 from types import SimpleNamespace
@@ -1334,21 +1335,23 @@ def test_wait_for_wren(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    # Set the expected WREN health
-    wren_health = HealthState.UNKNOWN if timedout else HealthState.OK
+    # Setup the health state ok event
+    health_state_ok = threading.Event()
+    if not timedout:
+        health_state_ok.set()
 
     # Create a mock wren proxy object
-    mock_wren_proxy = unittest.mock.Mock(healthState=wren_health)
+    mock_wren_proxy = unittest.mock.Mock(health_state_ok=health_state_ok)
 
     # Ensure healthState is as expected
-    assert mock_wren_proxy.healthState == wren_health
+    assert mock_wren_proxy.health_state_ok.is_set() != timedout
 
     # Mock the station component manager _wren_proxy
     station_component_manager._wren_proxy = mock_wren_proxy
 
     # Wait for the WREN to be in health state OK
     result_code, _ = station_component_manager._wait_for_wren(
-        None, None, timeout=1, poll_interval=0.1, fail_on_timeout=fail_on_timeout
+        None, None, timeout=1, fail_on_timeout=fail_on_timeout
     )
 
     # Check we get the expected result

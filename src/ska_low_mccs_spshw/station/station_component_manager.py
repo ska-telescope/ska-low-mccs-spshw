@@ -431,15 +431,56 @@ class _WrenProxy(DeviceComponentManager):
             event_serialiser=event_serialiser,
         )
 
+        # Create an event to store whether the health state is ok
+        self._health_state_ok = threading.Event()
+
+    def _update_health(
+        self,
+    ) -> None:
+        """Override the _update_health method."""
+        # The DeviceComponentManager expects the device to have admin mode
+        # ONLINE. The WREN simulator device does not have admin mode so lets
+        # just set the health state regardless of the admin mode.
+        health = self._device_health_state
+        if self._health != health:
+            self._health = health
+            if self._component_state_callback is not None:
+                self._component_state_callback(health=self._health)
+
+        # Update the health state ok event
+        self._update_health_state_ok(health)
+
+    def _update_health_state_ok(self, health: HealthState | None) -> None:
+        """
+        Update the health state ok event.
+
+        :param health: The current health.
+
+        """
+        # Set or clear the event depending on whether it is ok
+        if health == HealthState.OK:
+            self._health_state_ok.set()
+        else:
+            self._health_state_ok.clear()
+
+    def update_health_state(self) -> None:
+        """Update the health state."""
+        # Get the health state directly to ensure that if it is already ok and
+        # doesn't change we can pass immediately.
+        self._health = self._proxy.healthState if self._proxy else None
+
+        # Update the health state ok event
+        self._update_health_state_ok(self._health)
+
     @property
-    def healthState(self) -> HealthState | None:
+    def health_state_ok(self) -> threading.Event:
         """
-        Return the healthState.
+        Return the health state ok event.
 
-        :returns: The healthState
+        :returns: The health state ok event.
 
         """
-        return self._proxy.healthState if self._proxy else None
+        return self._health_state_ok
 
 
 # pylint: disable=too-many-instance-attributes
@@ -2355,7 +2396,7 @@ class SpsStationComponentManager(
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
         timeout: float = 120,
-        poll_interval: float = 0.5,
+        poll_interval: float = 0.1,
         fail_on_timeout: bool = False,
     ) -> tuple[ResultCode, str]:
         """
@@ -2373,6 +2414,9 @@ class SpsStationComponentManager(
         # Ensure we have the WREN Proxy object
         assert self._wren_proxy is not None, "WREN Proxy is None"
 
+        # Get the health once directly and thereafter wait for change events.
+        self._wren_proxy.update_health_state()
+
         # Start polling
         start_time = time.time()
         while True:
@@ -2381,18 +2425,9 @@ class SpsStationComponentManager(
                 self.logger.info("_wait_for_wren task has been aborted")
                 return ResultCode.ABORTED, "task aborted"
 
-            # Now try to get the wren proxy health state and return OK if the
-            # WREN health state is OK
-            try:
-                current_state = self._wren_proxy.healthState
-                if current_state == HealthState.OK:
-                    return ResultCode.OK, ""
-            except (
-                tango.ConnectionFailed,
-                tango.DevFailed,
-                tango.CommunicationFailed,
-            ):
-                current_state = HealthState.UNKNOWN
+            # Now check if the WREN health is ok
+            if self._wren_proxy.health_state_ok.is_set():
+                return ResultCode.OK, ""
 
             # Check if we should abort. Put this here to ensure we run the loop
             # once even if timeout == 0
@@ -2405,16 +2440,13 @@ class SpsStationComponentManager(
         # If we timeout then log a message with the final health state.
         message = (
             "Timed out waiting for WREN to come up, "
-            f"current state is '{current_state}'"
+            f"current state is '{self._wren_proxy.health}'"
         )
 
         # If the feature flag is set log an error and return FAILED. If the
         # feature flag is not set then result OK
-        result_code = ResultCode.FAILED if fail_on_timeout else ResultCode.OK
-
-        # Log the message and return the result
         self.logger.error(message)
-        return result_code, message
+        return ResultCode.FAILED if fail_on_timeout else ResultCode.OK, message
 
     @check_communicating
     def _initialise_tile_parameters(

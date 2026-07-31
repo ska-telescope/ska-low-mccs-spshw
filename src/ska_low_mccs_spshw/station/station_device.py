@@ -148,6 +148,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
+        self._health_rollup_members: list[str]
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
@@ -206,7 +207,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_rollup = self._setup_health_rollup()
+        (self._health_rollup, self._health_rollup_members) = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
@@ -358,7 +359,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _setup_health_rollup(
         self: SpsStation,
-    ) -> HealthRollup:
+    ) -> tuple[HealthRollup, list[str]]:
         #   Rollup is based on three configurable thresholds:
         # * the number of FAILED (or UNKNOWN) sources that cause health
         #   to roll up to overall FAILED;
@@ -419,7 +420,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             thresholds["beamformer_flagged_count"],
         )
 
-        return health_rollup
+        return health_rollup, rollup_members
 
     def _redefine_health_rollup(self: SpsStation) -> None:
         """
@@ -458,7 +459,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         old_report = json.loads(self._health_report)
         old_subdevice_healths = _flatten_dict(old_report)
         old_online = self._health_rollup.online
-        self._health_rollup = self._setup_health_rollup()
+        (self._health_rollup, self._health_rollup_members) = self._setup_health_rollup()
         self._health_rollup.online = old_online
         # Restore old healthstates.
         for subdevice, health in old_subdevice_healths.items():
@@ -542,7 +543,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 f"health = {None if health is None else health.name} "
             )
             if health is not None:
-                self._health_rollup.health_changed(device_name, health)
+                if device_name in self._health_rollup_members:
+                    self._health_rollup.health_changed(device_name, health)
+                else:
+                    self.logger.warning(f"{device_name} is not in health rollup")
         else:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power)
@@ -1504,7 +1508,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # if key == "subracks":
             #     self._health_rollup.define("subracks", self.SubrackFQDNs, threshold)
         # If we changed thresholds for subdevices, redefine health rollup.
-        if any(subdevice in thresholds for subdevice in ["tiles", "subracks"]):
+        if any(subdevice in thresholds for subdevice in ["tiles", "subracks", "wren"]):
             self.logger.info("Reconfiguring subdevice health thresholds.")
             self._redefine_health_rollup()
         # If old health model is around, update it too.

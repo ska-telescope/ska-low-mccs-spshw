@@ -134,10 +134,8 @@ class _TileProxy(DeviceComponentManager):
             "boardTemperature": self._on_attribute_change,
             "fpga1Temperature": self._on_attribute_change,
             "fpga2Temperature": self._on_attribute_change,
-            "sysrefPresent": self._on_attribute_change,
             "pllLocked": self._on_attribute_change,
             "ppsPresent": self._on_attribute_change,
-            "clockPresent": self._on_attribute_change,
             "testGeneratorActive": self._on_attribute_change,
             "isBeamformerRunning": self._on_attribute_change,
             "channeliserRounding": self._on_attribute_change,
@@ -1353,8 +1351,6 @@ class SpsStationComponentManager(
                 self._fpga1_temperatures[logical_tile_id] = attribute_value
             case "fpga2temperature":
                 self._fpga2_temperatures[logical_tile_id] = attribute_value
-            case "sysrefpresent":
-                self._sysref_present[logical_tile_id] = bool(attribute_value)
             case "plllocked":
                 self._pll_locked[logical_tile_id] = bool(attribute_value)
             case "ppspresent":

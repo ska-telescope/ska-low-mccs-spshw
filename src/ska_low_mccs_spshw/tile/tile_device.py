@@ -4288,7 +4288,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
-    @attribute(dtype="DevBoolean")
+    @attribute(dtype="DevBoolean", abs_change=1, archive_abs_change=1)
     def testGeneratorActive(self: MccsTile) -> bool:
         """
         Report if the test generator is used for some channels.

@@ -148,7 +148,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
-        self._health_rollup_members: list[str]
+        self._health_rollup_devices: list[str]
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
@@ -166,6 +166,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "pps_delta_failed": 9,
             "subracks": (1, 1, 1),
             "tiles": (1, 1, 2),
+            "wren": (1, 1, 1),
         }
         super().init_device()
 
@@ -183,7 +184,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
             f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
-            f"\tWRENTRL: {self.WRENTRL}\n"
+            f"\tWRENTRL: '{self.WRENTRL}'\n"
+            f"\tWRENHealthCheckFailOnTimeout: {self.WRENHealthCheckFailOnTimeout}\n"
+            f"\tWRENHealthCheckTimeout: {self.WRENHealthCheckTimeout}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
@@ -207,11 +210,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        (self._health_rollup, self._health_rollup_members) = self._setup_health_rollup()
+        self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
-            self.WRENTRL,
+            self.WRENTRL if self.WRENTRL != " " else "",
             self._old_health_changed,
         )
         # Update thresholds so we don't have to define ppsDelta in two places.
@@ -390,6 +393,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             rollup_members.append("tiles")
             thresholds["tiles"] = self._health_thresholds["tiles"]
 
+        # Add WREN device to rollup members. For reasons that are unclear to
+        # me, but which seems to affect other device properties too, if the
+        # WRENTRL is set to "" during testing it will be exposed here as " ",
+        # so let's strip the trl of surrounding white space
+        if self.WRENTRL not in ["", " "]:
+            rollup_members.append("wren")
+            thresholds["wren"] = self._health_thresholds["wren"]
+
         health_rollup = HealthRollup(
             rollup_members,
             thresholds["self"],
@@ -397,12 +408,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_summary_changed,
         )
 
+        health_rollup_devices = []
+
         if "subracks" in rollup_members:
             # Subrack Default Thresholds: 1 failed = failed, 1 failed = deg, 1 deg = deg
             health_rollup.define("subracks", self.SubrackFQDNs, thresholds["subracks"])
+            health_rollup_devices.extend(self.SubrackFQDNs)
         if "tiles" in rollup_members:
             # Tile Default Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
             health_rollup.define("tiles", self.TileFQDNs, thresholds["tiles"])
+            health_rollup_devices.extend(self.TileFQDNs)
+        if "wren" in rollup_members:
+            health_rollup.define("wren", [self.WRENTRL], thresholds["wren"])
+            health_rollup_devices.extend([self.WRENTRL])
 
         health_rollup.define(
             "tile_programming_state",
@@ -420,7 +438,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             thresholds["beamformer_flagged_count"],
         )
 
-        return health_rollup, rollup_members
+        return health_rollup, health_rollup_devices
 
     def _redefine_health_rollup(self: SpsStation) -> None:
         """
@@ -459,7 +477,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         old_report = json.loads(self._health_report)
         old_subdevice_healths = _flatten_dict(old_report)
         old_online = self._health_rollup.online
-        (self._health_rollup, self._health_rollup_members) = self._setup_health_rollup()
+        self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
         # Restore old healthstates.
         for subdevice, health in old_subdevice_healths.items():
@@ -543,7 +561,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 f"health = {None if health is None else health.name} "
             )
             if health is not None:
-                if device_name in self._health_rollup_members:
+                if device_name in self._health_rollup_devices:
                     self._health_rollup.health_changed(device_name, health)
                 else:
                     self.logger.warning(f"{device_name} is not in health rollup")

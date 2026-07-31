@@ -1965,6 +1965,7 @@ def test_programing_state_health_rollup(
                 "pps_delta_failed": 9,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
+                "wren": [1, 1, 1],
             },
             {
                 "subrack_degraded": 0.1,

@@ -47,9 +47,10 @@ class SpsStationHealthModel(BaseHealthModel):
         self._subrack_health: dict[str, Optional[HealthState]] = {
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
-        self._wren_health: dict[str, Optional[HealthState]] = {
-            wren_fqdn: HealthState.UNKNOWN
-        }
+        self._wren_health: dict[str, Optional[HealthState]] = (
+            {wren_fqdn: HealthState.UNKNOWN} if wren_fqdn else {}
+        )
+
         self._health_rules = SpsStationHealthRules(thresholds)
         # State entries to create.
         super().__init__(health_changed_callback, pps_delay_spread=0)

@@ -988,14 +988,16 @@ class TileComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         subrack_off_command_proxy = MccsCommandProxy(
-            self._subrack_fqdn, "PowerOffTpm", self.logger
+            self._subrack_fqdn,
+            "PowerOffTpm",
+            self.logger,
+            is_lrc=True,
+            wait_for_result=True,
         )
         # Pass the task callback to be updated by command proxy.
         result_code, _ = subrack_off_command_proxy(
             arg=self._subrack_tpm_id,
-            is_lrc=True,
             timeout=_POWER_COMMAND_TIMEOUT,
-            wait_for_result=True,
             task_callback=task_callback,
         )
         if result_code == ResultCode.OK:
@@ -1036,14 +1038,16 @@ class TileComponentManager(
                 "request provider is not yet initialised."
             )
         subrack_on_command_proxy = MccsCommandProxy(
-            self._subrack_fqdn, "PowerOnTpm", self.logger
+            self._subrack_fqdn,
+            "PowerOnTpm",
+            self.logger,
+            is_lrc=True,
+            wait_for_result=True,
         )
         # Do not pass the task_callback to command_proxy.
         # The on command is completed when initialisation has completed.
         subrack_on_command_proxy(
-            is_lrc=True,
             timeout=_POWER_COMMAND_TIMEOUT,
-            wait_for_result=True,
             arg=self._subrack_tpm_id,
         )
 

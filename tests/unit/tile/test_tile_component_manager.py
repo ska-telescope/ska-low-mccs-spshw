@@ -584,9 +584,11 @@ class TestTileComponentManager:
             tile_component_manager._subrack_fqdn,
             "PowerOnTpm",
             tile_component_manager.logger,
+            is_lrc=True,
+            wait_for_result=True,
         )
         mock_command_proxy_cls.return_value.assert_called_once_with(
-            is_lrc=True, timeout=20, wait_for_result=True, arg=subrack_tpm_id
+            timeout=20, arg=subrack_tpm_id
         )
 
         # mock an event from subrack announcing it to be turned on

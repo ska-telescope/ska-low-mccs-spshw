@@ -940,7 +940,9 @@ def test_station_tile_commands(
         tile_command_mock.assert_next_call(tile_command_args)
 
 
-@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCompositeCommandProxy")
+@patch(
+    "ska_low_mccs_spshw.station.station_component_manager.MccsCompositeOperationProxy"
+)
 @patch("ska_low_mccs_spshw.station.station_component_manager.MccsCommandProxy")
 @pytest.mark.parametrize(
     (
@@ -1018,7 +1020,7 @@ def test_station_tile_commands_lrc(
 
     :param mock_command_cls: a patched MccsCommandProxy
         class for to assert against.
-    :param mock_composite_cls: a patched MccsCompositeCommandProxy
+    :param mock_composite_cls: a patched MccsCompositeOperationProxy
         class for to assert against.
     :param station_device: The station device to use
     :param command: The command to call on the station
@@ -1083,7 +1085,9 @@ def test_station_tile_commands_lrc(
     )
 
 
-@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCompositeCommandProxy")
+@patch(
+    "ska_low_mccs_spshw.station.station_component_manager.MccsCompositeOperationProxy"
+)
 @patch("ska_low_mccs_spshw.station.station_component_manager.MccsCommandProxy")
 def test_start_beamformer_failure_reported_in_lrc_result(
     mock_command_cls: unittest.mock.Mock,
@@ -1098,7 +1102,7 @@ def test_start_beamformer_failure_reported_in_lrc_result(
     MccsTile.StartBeamformer fails on one or more tiles.
 
     :param mock_command_cls: a patched MccsCommandProxy class.
-    :param mock_composite_cls: a patched MccsCompositeCommandProxy class.
+    :param mock_composite_cls: a patched MccsCompositeOperationProxy class.
     :param station_device: The station device to use.
     :param mock_tile_device_proxies: mock tile proxies.
     """

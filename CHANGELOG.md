@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-680] Migrate SpsStation/Tile to the new MccsCommandProxy/MccsCompositeOperationProxy/MccsAttributeWriteProxy API. Per-tile attribute writes (pps delay corrections, static delays, CSP rounding, global reference time, preADU levels, CSP SPEAD format, channeliser rounding) and `_execute_async_on_tiles` commands are now dispatched via MccsCompositeOperationProxy instead of a manual thread pool, and are no longer silently skipped/filtered based on tileProgrammingState — the write/command is always attempted and the tile itself rejects it if it isn't possible. Removed the now-redundant `require_initialised`/`require_synchronised` parameters from `_execute_async_on_tiles`.
 * [SKB-1397] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip. Manual calls should
 set a scheduled start time too to avoid this blip,
 4s is typically enough.

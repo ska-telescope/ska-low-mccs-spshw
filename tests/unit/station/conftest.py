@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import functools
 import ipaddress
 import json
 import logging
@@ -24,6 +25,25 @@ from ska_low_mccs_spshw import SpsStation
 from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
 from tests.harness import get_subrack_name, get_tile_name
+
+
+def _mock_write_attribute(
+    mock_device: unittest.mock.Mock, name: str, value: object
+) -> None:
+    """
+    Mock side-effect for a device's write_attribute method.
+
+    MccsAttributeWriteProxy writes via ``DeviceProxy.write_attribute``,
+    whereas ``MockDeviceBuilder`` only wires reads (``read_attribute``) up
+    to plain attribute access on the mock. This mirrors a write_attribute
+    call back onto the mock's own attribute, so it round-trips the same
+    way a direct ``mock_device.<name> = value`` assignment would.
+
+    :param mock_device: the mock device being written to.
+    :param name: the name of the attribute being written.
+    :param value: the value being written.
+    """
+    setattr(mock_device, name, value)
 
 
 @pytest.fixture(name="sdn_first_interface", scope="session")
@@ -236,7 +256,9 @@ def mock_tile_device_proxy_fixture(
     :return: a mock MccsTile device proxy.
     """
     logical_tile_id = tile_id - 1
-    return mock_tile_builder(TileId=[logical_tile_id], StationID=[station_id])
+    mock = mock_tile_builder(TileId=[logical_tile_id], StationID=[station_id])
+    mock.write_attribute.side_effect = functools.partial(_mock_write_attribute, mock)
+    return mock
 
 
 @pytest.fixture(name="num_tiles")
@@ -274,6 +296,9 @@ def mock_tile_device_proxies_fixture(
     mocks = []
     for i in range(num_tiles):
         mock = mock_tile_builder(TileId=[i + 1], StationID=[station_id])
+        mock.write_attribute.side_effect = functools.partial(
+            _mock_write_attribute, mock
+        )
         if i < num_tiles - 1:
             mock.configure_mock(
                 dstip40gfpga1=str(sdn_base + 2 * i + 2),

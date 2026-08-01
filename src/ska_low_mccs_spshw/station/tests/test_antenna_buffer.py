@@ -220,11 +220,11 @@ class TestAntennaBuffer(BaseDaqTest):
                 device_name=tile.dev_name(),
                 command_name="StartAntennaBuffer",
                 logger=self.test_logger,
+                is_lrc=True,
+                wait_for_result=True,
             )
 
-            return_code, message = start_buffer(
-                arg=start_buffer_args, is_lrc=True, wait_for_result=True
-            )
+            return_code, message = start_buffer(arg=start_buffer_args)
 
             self.test_logger.info(f"{return_code =} | {message =}")
 
@@ -260,9 +260,11 @@ class TestAntennaBuffer(BaseDaqTest):
                 device_name=tile.dev_name(),
                 command_name="ReadAntennaBuffer",
                 logger=self.test_logger,
+                is_lrc=True,
+                wait_for_result=True,
             )
 
-            return_code, message = read_buffer(is_lrc=True, wait_for_result=True)
+            return_code, message = read_buffer()
 
             self.test_logger.info(f"{return_code =} | {message =}")
 

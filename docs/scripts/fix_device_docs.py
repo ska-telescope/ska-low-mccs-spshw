@@ -33,17 +33,19 @@ def _leading_tabs(line: str) -> str:
 
 def _ensure_blank_before_markers(text: str) -> str:
     """
-    Insert a blank line before a field/markup marker glued to prior text.
+    Insert a blank line before a field/markup/bullet marker glued to prior text.
 
     tangodocgen flattens nested field lists (e.g. a ``:Required
     entries:`` field list nested inside a ``:param kwargs:`` body) onto
     one indentation level, merging the outer field's own text straight
     into the first line of its nested body (e.g. ``kwargs (None):
-    :Required entries:``). Docutils only recognizes a field list if its
+    :Required entries:``). Docutils only recognizes a field list -- or a
+    bullet list whose items need a hanging multi-line body -- if its
     first marker starts a line right after a blank line (or the start
     of the block), so a marker glued to a preceding non-marker line
     instead gets swallowed into that line's paragraph -- and paragraphs
-    can't tolerate a later, deeper-indented line, unlike field lists.
+    can't tolerate a later, deeper-indented line, unlike field/bullet
+    lists.
 
     :param text: full contents of a generated RST file.
 
@@ -53,7 +55,7 @@ def _ensure_blank_before_markers(text: str) -> str:
     lines = text.split("\n")
     fixed = []
     for i, line in enumerate(lines):
-        match = FIELD_OR_COMMENT_RE.match(line)
+        match = _marker_match(line)
         previous = lines[i - 1] if i > 0 else None
         if (
             match
@@ -63,7 +65,7 @@ def _ensure_blank_before_markers(text: str) -> str:
             and match.group("indent")
             and previous is not None
             and previous.strip() != ""
-            and not FIELD_OR_COMMENT_RE.match(previous)
+            and not _marker_match(previous)
             and _leading_tabs(previous) == match.group("indent")
         ):
             fixed.append("")

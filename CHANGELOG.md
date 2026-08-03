@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-430] Added tangodiffdoc to the documentation pipeline
 * [THORN-125] Improve observability when UNPROGRAMMED.
 * [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL

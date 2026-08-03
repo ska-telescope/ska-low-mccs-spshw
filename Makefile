@@ -13,9 +13,12 @@ include .make/base.mk
 include .make-uv/make/docs-uv.mk
 
 DOCS_SPHINXOPTS = -W --keep-going
+DOCGEN_OUTPUT_DIR := docs/src/device-interfaces		# DIFDoc output dir
 
 docs-pre-build:
 	uv sync --frozen --group docs
+	uv run tangodocgen --timeout 15 --auto -o $(DOCGEN_OUTPUT_DIR)
+	uv run python docs/scripts/fix_device_docs.py $(DOCGEN_OUTPUT_DIR)
 
 .PHONY: docs-pre-build
 

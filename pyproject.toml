@@ -116,7 +116,8 @@ docs = [
     "uvicorn[standard] >= 0.23.2, <0.24.0",
     "ska-telmodel >= 1.4.1, <2.0.0",
     "ska-ser-snmp >= 0.6.1, <0.7.0",
-    "semver >= 3.0.4, <4.0.0"
+    "semver >= 3.0.4, <4.0.0",
+    "ska-tango-difdoc>=0.5.0",
 ]
 
 [project.scripts]
@@ -171,3 +172,15 @@ omit=[
 
 [tool.coverage.report]
 show_missing = false
+
+[tool.tangodifdoc.MccsPdu.properties]
+Model = "ENLOGIC"
+Host = "127.0.0.1"
+V2Community = "public"
+
+[tool.tangodifdoc.SpsStation.properties]
+SdnFirstInterface = "10.130.0.1/25"
+
+[tool.tangodifdoc.MccsTile.properties]
+SubrackFQDN = "low-mccs/subrack/01"
+SubrackBay = 1

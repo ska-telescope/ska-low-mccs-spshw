@@ -196,7 +196,17 @@ nitpick_ignore = [
     ("py:class", "tango.StdStringVector"),
     ("py:class", "Database"),
     ("py:class", "ska_tango_base.type_hints.DevVarLongStringArrayType"),
-    ("py:class", "ska_tango_base.type_hints.TaskFunctionType"),
+    ("py:class", "ska_tango_base.type_hints.TaskFunctionType"),    
+    # Ignored because of tangodiffdoc
+    ("py:class", "DevVarLongStringArray"),
+    ("py:class", "DevString"),
+    ("py:class", "DevUShort"),
+    ("py:class", "DevVarStringArray"),
+    ("py:class", "DevVoid"),
+    ("py:class", "DevBoolean"),
+    ("py:class", "DevVarFloatArray"),
+    ("py:class", "DevVarDoubleArray"),
+
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

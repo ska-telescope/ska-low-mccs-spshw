@@ -16,7 +16,8 @@ channel.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+import time
+from typing import Any, Callable, Generator, TypeVar
 
 import pytest
 import tango
@@ -29,8 +30,11 @@ from tests.functional.conftest import poll_until_state_change
 from tests.harness import get_lmc_daq_name, get_sps_station_name
 from tests.test_tools import (
     AttributeWaiter,
+    get_lrc_executing,
     get_lrc_finished,
+    get_lrc_queued,
     retry_communication,
+    wait_for_condition,
     wait_for_lrc_result,
 )
 
@@ -40,6 +44,35 @@ scenarios("./features/acquire_data_for_calibration.feature")
 # start the DAQ correlator, send channelised data from every tile and wait for
 # a correlator file per channel. Give it plenty of headroom on real hardware.
 ACQUIRE_TIMEOUT = 180
+
+# How long to allow a command submitted mid-acquisition to finish. It forwards to
+# every tile, so it is not instant, but it must not have to wait out the
+# acquisition.
+CONCURRENT_COMMAND_TIMEOUT = 90
+
+# The acquisition stops TPM transmission as it tears down, so pendingDataRequests
+# should clear on every tile shortly after it reports itself finished.
+TRANSMISSION_DRAIN_TIMEOUT = 60
+
+# How long to allow the acquisition to show up in lrcExecuting. The station reports
+# its long running commands through eventually-consistent attributes: the task is
+# only marked IN_PROGRESS once its worker thread has read tileProgrammingState, and
+# the attribute itself is fed by the signal bus's background thread. A command that
+# has just returned QUEUED is therefore not yet in lrcExecuting.
+ACQUISITION_START_TIMEOUT = 30
+
+# How long to let a still-running acquisition finish by itself during teardown
+# before aborting it. It gives up ~10 seconds after data stops arriving, so a
+# healthy acquisition either completes or bails out well inside this.
+ACQUISITION_TEARDOWN_GRACE = 60
+
+# How often to re-read the station's LRC attributes while waiting on a command.
+# Each poll reads two of them, so keep it coarse: nothing here needs to notice a
+# transition promptly, it just needs to notice it.
+_POLL_INTERVAL = 0.5
+
+# What the thing being waited for evaluates to once it has happened.
+_Found = TypeVar("_Found")
 
 
 @given(
@@ -157,13 +190,19 @@ def acquire_data_for_calibration(
     first_channel: int,
     last_channel: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
-) -> dict[str, Any]:
+) -> Generator[dict[str, Any], None, None]:
     """
     Command the station to acquire calibration data for a range of channels.
 
     Subscribes to the DAQ ``dataReceivedResult`` attribute before issuing the
     command so that the correlator file events emitted during acquisition are
     captured for the assertion step.
+
+    An acquisition owns the LMC DAQ and keeps every TPM transmitting for as long
+    as it runs, so one left behind by a scenario that failed part way through
+    reconfigures the DAQ out from under whatever test runs next. This therefore
+    cleans up after itself rather than relying on the scenario's ``then`` steps
+    having waited for the acquisition to finish.
 
     :param station: A 'tango.DeviceProxy' to the SpsStation device.
     :param daq_device: A 'tango.DeviceProxy' to the DAQ device.
@@ -172,7 +211,7 @@ def acquire_data_for_calibration(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
 
-    :return: details of the submitted acquisition, for the assertion step.
+    :yields: details of the submitted acquisition, for the assertion step.
     """
     daq_device.subscribe_event(
         "dataReceivedResult",
@@ -186,10 +225,214 @@ def acquire_data_for_calibration(
         json.dumps({"first_channel": first_channel, "last_channel": last_channel})
     )
     assert ResultCode(result_code) == ResultCode.QUEUED
-    return {
+
+    yield {
         "command_id": command_id,
         "requested_channels": list(range(first_channel, last_channel + 1)),
     }
+
+    if get_lrc_finished(station, command_id):
+        return
+    print(f"Acquisition {command_id} is still running; waiting for it to finish.")
+    if wait_for_condition(
+        lambda: bool(get_lrc_finished(station, command_id)),
+        timeout=ACQUISITION_TEARDOWN_GRACE,
+    ):
+        return
+    print(f"Acquisition {command_id} did not finish; aborting it.")
+    station.Abort()
+    assert wait_for_condition(
+        lambda: not get_lrc_executing(station, command_id)
+        and not get_lrc_queued(station, command_id),
+        timeout=CONCURRENT_COMMAND_TIMEOUT,
+    ), f"Acquisition {command_id} is still running after being aborted."
+
+
+def _await_while_acquiring(
+    station: tango.DeviceProxy,
+    acquisition_id: str,
+    wanted: Callable[[], _Found],
+    *,
+    waiting_for: str,
+    timeout: float,
+) -> _Found:
+    """
+    Wait for something to happen, while the acquisition is still running.
+
+    Everything this scenario waits for is only meaningful for as long as the
+    acquisition is executing, so the acquisition reaching ``lrcFinished`` is a
+    failure rather than something to keep waiting through: whatever we were
+    waiting for has not been shown to overlap with the acquisition. Stop and say
+    so, instead of timing out with no explanation.
+
+    Polls rather than subscribing to change events, so this works for attributes
+    the station reports on demand as well as for its LRC attributes.
+
+    :param station: A 'tango.DeviceProxy' to the SpsStation device.
+    :param acquisition_id: the acquisition that must still be running.
+    :param wanted: returns something truthy once the wait is over, such as the
+        LRC entry being waited for, and something falsy until then.
+    :param waiting_for: what is being waited for, for failure messages.
+    :param timeout: how long to wait, in seconds.
+
+    :return: whatever ``wanted`` returned once it was truthy.
+    """
+    deadline = time.time() + timeout
+    while True:
+        found = wanted()
+        if found:
+            return found
+        acquisition = get_lrc_finished(station, acquisition_id)
+        if acquisition:
+            pytest.fail(
+                f"The acquisition finished while waiting for {waiting_for}, so the "
+                f"two were not shown to overlap. Acquisition: {acquisition}"
+            )
+        if time.time() > deadline:
+            pytest.fail(
+                f"Timed out after {timeout} seconds waiting for {waiting_for}. "
+                f"lrcQueue={station.lrcQueue}, lrcExecuting={station.lrcExecuting}"
+            )
+        time.sleep(_POLL_INTERVAL)
+
+
+def _await_lrc_during_acquisition(
+    station: tango.DeviceProxy,
+    command_id: str,
+    acquisition_id: str,
+    description: str,
+) -> dict[str, Any]:
+    """
+    Wait for a command submitted mid-acquisition, failing if it was queued behind.
+
+    Whichever of the two commands reaches ``lrcFinished`` first tells us whether
+    they really executed concurrently: if the acquisition gets there first, the
+    other command was waiting for it rather than running alongside it.
+
+    :param station: A 'tango.DeviceProxy' to the SpsStation device.
+    :param command_id: the command to wait for.
+    :param acquisition_id: the acquisition it should not have waited for.
+    :param description: what the command is, for failure messages.
+
+    :return: the command's ``lrcFinished`` entry.
+    """
+    return _await_while_acquiring(
+        station,
+        acquisition_id,
+        lambda: get_lrc_finished(station, command_id),
+        waiting_for=f"{description} to finish",
+        timeout=CONCURRENT_COMMAND_TIMEOUT,
+    )
+
+
+@when(
+    "I start and stop the beamformer while the acquisition is still running",
+    target_fixture="beamformer_run",
+)
+def start_and_stop_beamformer_during_acquisition(
+    station: tango.DeviceProxy,
+    acquisition: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Run the beamformer up and down again while calibration data is coming in.
+
+    This is the scan half of an observation, exercised against a station that is
+    mid-acquisition. The TPMs can transmit beamformed and channelised data at the
+    same time, so both should proceed: ``StartBeamformer`` and
+    ``StopBeamformerForChannels`` are ordinary long running commands on the general
+    lane, and would have sat in the queue until the acquisition finished before
+    ``AcquireDataForCalibration`` was given a lane of its own.
+
+    :param station: A 'tango.DeviceProxy' to the SpsStation device.
+    :param acquisition: details of the submitted acquisition.
+
+    :return: what was observed while the beamformer ran, for the assertion step.
+    """
+    acquisition_id = acquisition["command_id"]
+    # AcquireDataForCalibration returns as soon as it has been queued on the
+    # calibration lane, so wait for the station to report it executing rather than
+    # assuming it already does.
+    _await_while_acquiring(
+        station,
+        acquisition_id,
+        lambda: get_lrc_executing(station, acquisition_id),
+        waiting_for="the acquisition to start executing",
+        timeout=ACQUISITION_START_TIMEOUT,
+    )
+
+    # Hardware may arrive with the beamformer already running, in which case
+    # starting it proves nothing. Put it in a known state first.
+    if station.isBeamformerRunning:
+        [result_code], [command_id] = station.StopBeamformerForChannels(json.dumps({}))
+        assert ResultCode(result_code) == ResultCode.QUEUED
+        _await_lrc_during_acquisition(
+            station, command_id, acquisition_id, "the initial StopBeamformer"
+        )
+        _await_while_acquiring(
+            station,
+            acquisition_id,
+            lambda: not station.isBeamformerRunning,
+            waiting_for="the beamformer to stop",
+            timeout=CONCURRENT_COMMAND_TIMEOUT,
+        )
+
+    observed: dict[str, Any] = {}
+
+    [start_code], [start_id] = station.StartBeamformer(json.dumps({"duration": -1}))
+    assert ResultCode(start_code) == ResultCode.QUEUED
+    observed["start"] = _await_lrc_during_acquisition(
+        station, start_id, acquisition_id, "StartBeamformer"
+    )
+    _await_while_acquiring(
+        station,
+        acquisition_id,
+        lambda: station.isBeamformerRunning,
+        waiting_for="the beamformer to start",
+        timeout=CONCURRENT_COMMAND_TIMEOUT,
+    )
+    observed["acquiring_while_beamforming"] = bool(
+        get_lrc_executing(station, acquisition_id)
+    )
+
+    [stop_code], [stop_id] = station.StopBeamformerForChannels(json.dumps({}))
+    assert ResultCode(stop_code) == ResultCode.QUEUED
+    observed["stop"] = _await_lrc_during_acquisition(
+        station, stop_id, acquisition_id, "StopBeamformerForChannels"
+    )
+    _await_while_acquiring(
+        station,
+        acquisition_id,
+        lambda: not station.isBeamformerRunning,
+        waiting_for="the beamformer to stop",
+        timeout=CONCURRENT_COMMAND_TIMEOUT,
+    )
+    observed["acquiring_after_beamforming"] = bool(
+        get_lrc_executing(station, acquisition_id)
+    )
+    return observed
+
+
+@then("the beamformer ran while calibration data was still being acquired")
+def check_beamformer_ran_during_acquisition(beamformer_run: dict[str, Any]) -> None:
+    """
+    Confirm the beamformer started and stopped without the acquisition ending.
+
+    :param beamformer_run: what was observed while the beamformer ran.
+    """
+    assert (
+        beamformer_run["start"]["status"] == "COMPLETED"
+    ), f"StartBeamformer did not complete: {beamformer_run['start']}"
+    assert (
+        beamformer_run["stop"]["status"] == "COMPLETED"
+    ), f"StopBeamformerForChannels did not complete: {beamformer_run['stop']}"
+    assert beamformer_run["acquiring_while_beamforming"], (
+        "The acquisition was no longer executing by the time the beamformer was "
+        "running, so the two were not shown to overlap."
+    )
+    assert beamformer_run["acquiring_after_beamforming"], (
+        "The acquisition finished while the beamformer was being stopped, so the "
+        "scan was not shown to complete within the acquisition."
+    )
 
 
 @then("the requested number of correlator files are produced")
@@ -237,3 +480,23 @@ def check_requested_correlator_files_produced(
         f"Expected {len(requested_channels)} correlator files, "
         f"got {received_count}. Dropped channels: {dropped_channels}"
     )
+
+
+@then("no tile is left transmitting data samples")
+def check_no_pending_data_requests(station_tiles: list[tango.DeviceProxy]) -> None:
+    """
+    Confirm every tile has finished the data request the acquisition made.
+
+    The acquisition stops transmission on its way out, whichever way it exits, so
+    ``pendingDataRequests`` should fall back to False on every tile once it
+    reports itself finished. Checking that here confirms the teardown really
+    happened, and stops a finished acquisition from transmitting into whatever
+    runs next.
+
+    :param station_tiles: the Tile devices belonging to the station under test.
+    """
+    assert station_tiles, "No tile devices were found for this station."
+    for tile in station_tiles:
+        AttributeWaiter(timeout=TRANSMISSION_DRAIN_TIMEOUT).wait_for_value(
+            tile, "pendingDataRequests", False, lookahead=5
+        )

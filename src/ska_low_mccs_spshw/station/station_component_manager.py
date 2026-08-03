@@ -34,7 +34,7 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
-from ska_low_mccs_common import EventSerialiser
+from ska_low_mccs_common import EventSerialiser, LanedTaskExecutor
 from ska_low_mccs_common.backoff import exp_backoff
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
@@ -63,6 +63,11 @@ __all__ = ["SpsStationComponentManager"]
 
 _LMC_INTEGRATED_MODE_RETRY_DELAY = 0.1
 _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
+
+# The name of the task executor lane that AcquireDataForCalibration runs on. It
+# runs for minutes at a time and must not stop other commands - notably Scan -
+# from executing, so it does not share the general lane with them.
+_CALIBRATION_LANE = "calibration"
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -707,6 +712,18 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+        # TaskExecutorComponentManager hard-codes the task executor it creates and
+        # offers no hook to substitute one, so swap in the station's own
+        # concurrency mechanism here. Nothing has been submitted to the executor
+        # created by the superclass, so discarding it is safe.
+        # It is possible to change the base class behaviour, however as we might
+        # be deleting the component managers anyway, this little bit of jank can live.
+        self._task_executor.shutdown()
+        self._task_executor = LanedTaskExecutor(  # type: ignore[assignment]
+            extra_lanes=[_CALIBRATION_LANE],
+            unhandled_exception_callback=self._on_unhandled_exception,
+        )
+
         optional_devices: dict[str, DeviceComponentManager] = {}
         if self._lmc_daq_proxy:
             optional_devices[self._lmc_daq_trl] = self._lmc_daq_proxy
@@ -763,6 +780,51 @@ class SpsStationComponentManager(
         # Superclass cleanup currently not implemented.
         # Expected in future versions.
         # super().cleanup()
+
+    def submit_calibration_task(
+        self: SpsStationComponentManager,
+        func: Callable,
+        args: Any = None,
+        kwargs: Any = None,
+        is_cmd_allowed: Optional[Callable[[], bool]] = None,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit a task to the calibration lane of the task executor.
+
+        Tasks submitted here run independently of the tasks submitted with
+        :py:meth:`!submit_task`, so a calibration acquisition does not stop other
+        commands from executing. ``Abort`` still aborts them, as it aborts every
+        lane.
+
+        :param func: function/bound method to be run
+        :param args: positional arguments to the function
+        :param kwargs: keyword arguments to the function
+        :param is_cmd_allowed: sanity check for func
+        :param task_callback: callback to be called whenever the status of the
+            task changes.
+
+        :return: tuple of TaskStatus & message
+        """
+        return self._laned_task_executor.submit_to(
+            _CALIBRATION_LANE,
+            func,
+            args,
+            kwargs,
+            is_cmd_allowed,
+            task_callback=task_callback,
+        )
+
+    @property
+    def _laned_task_executor(
+        self: SpsStationComponentManager,
+    ) -> LanedTaskExecutor:
+        """
+        Return the task executor, typed as the laned one this station installs.
+
+        :return: this station's task executor.
+        """
+        return cast(LanedTaskExecutor, self._task_executor)
 
     def _read_lmc_integrated_mode_from_bandpass_daq(
         self: SpsStationComponentManager,

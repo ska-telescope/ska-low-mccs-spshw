@@ -34,6 +34,8 @@ from ska_control_model import (
 )
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.faults import CmdNotAllowedError
+from ska_tango_base.long_running_commands import LRCReqType
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango import AttrQuality
@@ -1685,6 +1687,101 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # Slow Commands
     # -------------
 
+    def _check_not_acquiring_for_calibration(
+        self: SpsStation, command_name: str
+    ) -> bool:
+        """
+        Check that no calibration acquisition would be disrupted by a command.
+
+        A calibration acquisition now executes concurrently with other commands,
+        so the handful of commands that would pull the station out from under it -
+        by resynchronising the TPMs, or by repointing the LMC data stream - have to
+        be rejected for its duration. The beamformer commands used by a scan are
+        deliberately not among them: scanning while calibrating is the point.
+
+        :param command_name: name of the command being checked, used in the
+            error message.
+
+        :return: True if the command is allowed.
+
+        :raises CmdNotAllowedError: if an acquisition is in progress.
+        """
+        if self.component_manager.acquiring_data_for_calibration.is_set():
+            raise CmdNotAllowedError(
+                f"{command_name} would disrupt the calibration acquisition in "
+                "progress. Wait for it to finish, or Abort it first."
+            )
+        return True
+
+    def is_Initialise_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the Initialise command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("Initialise")
+
+    def is_ReInitialise_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the ReInitialise command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("ReInitialise")
+
+    def is_StartAcquisition_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the StartAcquisition command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("StartAcquisition")
+
+    def is_ConfigureStationForCalibration_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the ConfigureStationForCalibration command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration(
+            "ConfigureStationForCalibration"
+        )
+
+    def is_SetLmcDownload_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the SetLmcDownload command is allowed.
+
+        :param request_type: the request type. Unused, as SetLmcDownload is a fast
+            command, but accepted so that this keeps working if it ever becomes an
+            LRC.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("SetLmcDownload")
+
     @stb.long_running_commands.long_running_command
     def Initialise(
         self: SpsStation,
@@ -1821,7 +1918,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return task
 
     # pylint: disable=too-many-arguments
-    @stb.long_running_commands.long_running_command
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.long_running_commands.mark_long_running
     @stb.validators.validate_json_args
     def AcquireDataForCalibration(
         self: SpsStation,
@@ -1830,9 +1928,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         start_time: str | None = None,
         daq_mode: str = "TCC",
         nof_samples: int = 1835008,
-    ) -> stb.type_hints.TaskFunctionType:
+    ) -> DevVarLongStringArrayType:
         """
         Start acquiring data for calibration.
+
+        This is a long running command, but unlike the station's other LRCs it does
+        not execute on the general lane of the task executor. An acquisition runs
+        for as long as it takes the requested channels to arrive, and the station
+        must stay available for other commands - notably Scan - throughout. It
+        therefore executes on the calibration lane, and is reported through the
+        usual LRC attributes alongside whatever else is executing. Abort aborts
+        every lane, so it stops this too.
 
         A JSON string containing the keys:
 
@@ -1868,7 +1974,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 task_abort_event=task_abort_event,
             )
 
-        return task
+        command_id, task_callback = self.allocate_lrc("AcquireDataForCalibration")
+        status, message = self.component_manager.submit_calibration_task(
+            task, task_callback=task_callback
+        )
+        return cast(
+            DevVarLongStringArrayType,
+            self.convert_submission_result_to_lrc_return(command_id, status, message),
+        )
 
     @stb.long_running_commands.long_running_command
     def ConfigureStationForCalibration(

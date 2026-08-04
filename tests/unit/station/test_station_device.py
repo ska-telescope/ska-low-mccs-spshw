@@ -42,7 +42,12 @@ from tests.harness import (
     get_tile_name,
     get_wren_name,
 )
-from tests.test_tools import LRCManager, execute_lrc_to_completion, wait_for_lrc_result
+from tests.test_tools import (
+    FakeGroup,
+    LRCManager,
+    execute_lrc_to_completion,
+    wait_for_lrc_result,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -173,7 +178,11 @@ def test_context_fixture(
     harness.add_mock_bandpass_daq_device(mock_daq_device_proxy)
     # harness.add_mock_wren_device(mock_wren_device_proxy)
 
-    with harness as context:
+    # SpsStationComponentManager builds a real tango.Group over the tiles.
+    # A real Group makes genuine Tango connections, which don't exist for
+    # the mocked tile devices in this harness, so we substitute a fake
+    # that fans out to the same registered mocks instead.
+    with unittest.mock.patch.object(tango, "Group", FakeGroup), harness as context:
         yield context
 
 
@@ -895,7 +904,12 @@ def test_Standby(
             "LoadCalibrationCoefficientsForChannels",
             [2.0] + [3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4] * 256,
             "LoadCalibrationCoefficientsForChannels",
-            [2.0] + [3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4] * 16,
+            # This command's argument is passed to the tile through a
+            # tango.DeviceData round trip (see _group_command_inout_per_tile),
+            # which always hands back a numpy array on extraction, even
+            # though a plain list went in. pytest.approx compares element-wise
+            # and yields a real bool, unlike comparing two arrays with `==`.
+            pytest.approx([2.0] + [3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4] * 16),
         ),
     ],
 )

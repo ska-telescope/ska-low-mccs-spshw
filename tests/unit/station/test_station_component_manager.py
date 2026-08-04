@@ -37,7 +37,9 @@ from ska_low_mccs_spshw.station import (
     SpsStationSelfCheckManager,
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
+from ska_low_mccs_spshw.tile.tile_data import TileData
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
+from tests.test_tools import FakeGroup as _FakeGroup
 
 # pylint: disable=too-many-lines
 
@@ -167,30 +169,35 @@ def station_component_manager_fixture(
 
     :return: a station component manager.
     """
-    sps_station_component_manager = SpsStationComponentManager(
-        1,  # station_id
-        [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
-        [get_tile_name(tile_id + i) for i in range(0, num_tiles)],
-        "",  # lmc_daq_trl
-        "",  # bandpass_daq_trl
-        "",  # wren_trl
-        ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
-        None,  # sdn_gateway
-        None,  # csp_ingest_ip
-        None,  # channeliser_rounding
-        4,  # csp_rounding
-        antenna_uri,
-        True,  # whether or not to start bandpasses in initialise
-        5,  # Bandpass integration time
-        True,  # wren_health_check_fail_on_timeout
-        120,  # wren_health_check_timeout
-        logger,
-        callbacks["communication_status"],
-        callbacks["component_state"],
-        callbacks["tile_health"],
-        callbacks["subrack_health"],
-        callbacks["wren_health"],
-    )
+    # SpsStationComponentManager builds a real tango.Group over the tiles.
+    # A real Group makes genuine Tango connections, which don't exist in
+    # this mock-based harness, so we substitute a fake that fans out to
+    # the same registered mocks instead.
+    with unittest.mock.patch.object(station_cm.tango, "Group", _FakeGroup):
+        sps_station_component_manager = SpsStationComponentManager(
+            1,  # station_id
+            [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
+            [get_tile_name(tile_id + i) for i in range(0, num_tiles)],
+            "",  # lmc_daq_trl
+            "",  # bandpass_daq_trl
+            "",  # wren_trl
+            ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
+            None,  # sdn_gateway
+            None,  # csp_ingest_ip
+            None,  # channeliser_rounding
+            4,  # csp_rounding
+            antenna_uri,
+            True,  # whether or not to start bandpasses in initialise
+            5,  # Bandpass integration time
+            True,  # wren_health_check_fail_on_timeout
+            120,  # wren_health_check_timeout
+            logger,
+            callbacks["communication_status"],
+            callbacks["component_state"],
+            callbacks["tile_health"],
+            callbacks["subrack_health"],
+            callbacks["wren_health"],
+        )
     # Patching through our self check manager basic tests.
     sps_station_component_manager.self_check_manager = station_self_check_manager
     return sps_station_component_manager
@@ -359,7 +366,97 @@ def test_load_pointing_delays(
         expected_tile_arg[2 * channel + 1] = delay
         expected_tile_arg[2 * channel + 2] = delay_rate
 
-    mock_tiles[0].LoadPointingDelays.assert_next_call(expected_tile_arg)
+    mock_tiles[0].LoadPointingDelays.assert_next_call(pytest.approx(expected_tile_arg))
+
+
+def test_preadu_levels_fanout_to_correct_tile(
+    station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that preadu_levels sends each tile's slice to the correct tile.
+
+    preadu_levels slices its input by iteration order of
+    ``self._tile_proxies``, which matches the registration order of
+    ``mock_tiles``.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    expected_levels_by_index = {
+        i: [100.0 + i] * TileData.ADC_CHANNELS for i in range(num_tiles)
+    }
+    station_component_manager.preadu_levels = [
+        level for i in range(num_tiles) for level in expected_levels_by_index[i]
+    ]
+
+    for i in range(num_tiles):
+        assert list(mock_tiles[i].preaduLevels) == expected_levels_by_index[i]
+
+
+def test_static_delays_fanout_to_correct_tile(
+    station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that static_delays sends each tile's slice to the correct tile.
+
+    Unlike preadu_levels, static_delays slices its input by each tile's own
+    ``logicalTileId``, not by registration order. We reassign
+    ``logicalTileId`` to a non-identity permutation of the default mapping
+    so that the two orderings disagree -- this is what proves the setter is
+    actually keying off ``logicalTileId``, rather than coincidentally
+    passing because both orderings happen to match by default.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    assert num_tiles == 4  # test assumes 4 tiles, to define the permutation below.
+    logical_id_by_index = [3, 1, 2, 0]
+    for i, logical_id in enumerate(logical_id_by_index):
+        mock_tiles[i].logicalTileId = logical_id
+
+    expected_delays_by_logical_id = {
+        logical_id: [10.0 + logical_id] * TileData.ADC_CHANNELS
+        for logical_id in range(num_tiles)
+    }
+    station_component_manager.static_delays = [
+        delay
+        for logical_id in range(num_tiles)
+        for delay in expected_delays_by_logical_id[logical_id]
+    ]
+
+    for i, logical_id in enumerate(logical_id_by_index):
+        assert (
+            list(mock_tiles[i].staticTimeDelays)
+            == expected_delays_by_logical_id[logical_id]
+        )
+
+
+def test_global_reference_time_broadcast_to_all_tiles(
+    station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that global_reference_time broadcasts the same value to every tile.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    reference_time = "2026-08-04T00:00:00.000Z"
+    station_component_manager.global_reference_time = reference_time
+
+    for i in range(num_tiles):
+        assert mock_tiles[i].globalReferenceTime == reference_time
 
 
 def test_port_to_antenna_order(

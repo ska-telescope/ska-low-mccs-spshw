@@ -21,7 +21,7 @@ import sys
 import threading
 import time
 from collections.abc import Iterator
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Generator
 
 import numpy as np
@@ -32,9 +32,10 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
+from ska_low_mccs_spshw.tile.tile_data import TileData
 from tests.functional.conftest import verify_bandpass_state
 from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
-from tests.test_tools import wait_for_lrc_result
+from tests.test_tools import AttributeWaiter, wait_for_lrc_result
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 STRESS_TEST_PHASE_DURATION = 90.0  # seconds
@@ -186,6 +187,14 @@ def test_standby_during_init(
     """
     for device in stations_devices_exported:
         device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
+    "Fanout attribute writes reach the correct tile",
+)
+def test_fanout_attribute_writes_reach_correct_tile() -> None:
+    """Run a test scenario that verifies fanout writes reach the correct tile."""
 
 
 @given("an SPS deployment against HW")
@@ -1057,3 +1066,126 @@ def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
             "Not all tiles transitioned to OFF: "
             f"""{[(tile.dev_name(), tile.state()) for tile in station_tiles]}"""
         )
+
+
+@when(
+    parsers.parse("I write distinct {attribute} values to the station"),
+    target_fixture="fanout_expectations",
+)
+def write_distinct_fanout_values(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    attribute: str,
+) -> Iterator[dict[str, Any]]:
+    """
+    Write distinct per-tile values for a fanout attribute, then restore them.
+
+    Each of the three attributes under test picks its per-tile value using a
+    different ordering key, mirroring what
+    ``SpsStationComponentManager`` actually does:
+
+    - ``globalReferenceTime`` is broadcast: every tile gets the same value.
+    - ``preaduLevels`` is sliced by the station's ``TileFQDNs`` device
+      property order (the order the tile fanout group was built from).
+    - ``staticTimeDelays`` is sliced by each tile's own ``logicalTileId``.
+
+    :param station: station device under test.
+    :param station_tiles: List of TPM DeviceProxies.
+    :param attribute: name of the fanout attribute under test.
+
+    :raises NotImplementedError: if the scenario is run for an attribute
+        this step doesn't know how to compute per-tile values for.
+
+    :yields: a mapping from tile ``dev_name()`` to the value expected to be
+        read back from that tile.
+    """
+    assert station_tiles, "No station tiles were discovered"
+    originals = {tile.dev_name(): getattr(tile, attribute) for tile in station_tiles}
+
+    if attribute == "globalReferenceTime":
+        # The device rounds/reformats whatever we write (see
+        # SpsStation.globalReferenceTime.write), so the value actually fanned
+        # out to tiles is whatever the station reads back after the write,
+        # not the literal string we sent.
+        setattr(
+            station,
+            attribute,
+            datetime.strftime(datetime.now(timezone.utc), RFC_FORMAT),
+        )
+        value = station.globalReferenceTime
+        expected = {tile.dev_name(): value for tile in station_tiles}
+
+    elif attribute == "preaduLevels":
+        # AttributeWaiter._values_equal requires both sides to be np.ndarray
+        # once the tile's readback is one, so per-tile expected blocks are
+        # built as arrays rather than plain lists.
+        # Small ordinal values: preADU levels are a physical attenuator
+        # setting (realistically 0-31.5 dB), so this must stay in range
+        # regardless of station size, while still differing per tile.
+        fqdns = list(station.get_property("TileFQDNs")["TileFQDNs"])
+        per_fqdn = {
+            fqdn: np.array([float(i)] * TileData.ADC_CHANNELS)
+            for i, fqdn in enumerate(fqdns)
+        }
+        setattr(
+            station,
+            attribute,
+            np.concatenate([per_fqdn[fqdn] for fqdn in fqdns]),
+        )
+        expected = {
+            tile.dev_name(): per_fqdn[fqdn]
+            for tile in station_tiles
+            for fqdn in fqdns
+            if tile.dev_name().lower() == fqdn.lower()
+        }
+        assert len(expected) == len(station_tiles), (
+            "Could not match every station tile to an entry in TileFQDNs: "
+            f"{[tile.dev_name() for tile in station_tiles]} vs {fqdns}"
+        )
+
+    elif attribute == "staticTimeDelays":
+        # Small ordinal values, well within the +/-124 ns valid range.
+        per_logical_id = {
+            tile.logicalTileId: np.array(
+                [float(tile.logicalTileId)] * TileData.ADC_CHANNELS
+            )
+            for tile in station_tiles
+        }
+        n_tiles = len(station_tiles)
+        setattr(
+            station,
+            attribute,
+            np.concatenate([per_logical_id[i] for i in range(n_tiles)]),
+        )
+        expected = {
+            tile.dev_name(): per_logical_id[tile.logicalTileId]
+            for tile in station_tiles
+        }
+
+    else:
+        raise NotImplementedError(f"No fanout test defined for attribute {attribute}")
+
+    try:
+        yield expected
+    finally:
+        for tile in station_tiles:
+            setattr(tile, attribute, originals[tile.dev_name()])
+
+
+@then(parsers.parse("each tile reads back the correct {attribute} value"))
+def check_fanout_value_on_each_tile(
+    station_tiles: list[tango.DeviceProxy],
+    fanout_expectations: dict[str, Any],
+    attribute: str,
+) -> None:
+    """
+    Check each tile reads back the correct value for a fanout attribute.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param fanout_expectations: mapping from tile ``dev_name()`` to the
+        value expected to be read back from that tile.
+    :param attribute: name of the fanout attribute under test.
+    """
+    for tile in station_tiles:
+        expected_value = fanout_expectations[tile.dev_name()]
+        AttributeWaiter(timeout=30).wait_for_value(tile, attribute, expected_value)

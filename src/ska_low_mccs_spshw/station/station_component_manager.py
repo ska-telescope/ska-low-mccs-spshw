@@ -18,7 +18,6 @@ import json
 import logging
 import threading
 import time
-from concurrent.futures import Future, wait
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
@@ -49,7 +48,6 @@ from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
-from tango.utils import PyTangoThreadPoolExecutor
 
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
@@ -631,6 +629,15 @@ class SpsStationComponentManager(
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be relying on assumptions about TRL structure
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
+
+        # A single group over all tiles, used to fan attribute writes and commands
+        # out to every tile in parallel instead of one at a time. Built once here
+        # and never mutated again: its device order therefore always matches the
+        # iteration order of self._tile_proxies, so per-tile value lists for
+        # multi=True writes/DeviceDataList commands can be built positionally.
+        self._tile_group = tango.Group(f"station-{station_id}-tiles")
+        for tile_fqdn in tile_fqdns:
+            self._tile_group.add(tile_fqdn)
 
         self._subrack_proxies = {
             subrack_fqdn: DeviceComponentManager(
@@ -2252,16 +2259,23 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        for tile_id, tile_proxy in enumerate(list(self._tile_proxies.values())):
-            tile = tile_proxy._proxy
-            if tile is None:
+        tile_proxies = list(self._tile_proxies.values())
+        for tile_id, tile_proxy in enumerate(tile_proxies):
+            if tile_proxy._proxy is None:
                 msg = f"tile {tile_id} proxy not formed"
                 self.logger.error(msg)
                 return ResultCode.FAILED, msg
-            src_ip1 = str(self._sdn_first_address + 2 * tile_id)
-            src_ip2 = str(self._sdn_first_address + 2 * tile_id + 1)
-            tile.srcip40gfpga1 = src_ip1
-            tile.srcip40gfpga2 = src_ip2
+
+        src_ips1 = [
+            str(self._sdn_first_address + 2 * tile_id)
+            for tile_id in range(len(tile_proxies))
+        ]
+        src_ips2 = [
+            str(self._sdn_first_address + 2 * tile_id + 1)
+            for tile_id in range(len(tile_proxies))
+        ]
+        self._group_write_attribute("srcip40gfpga1", src_ips1, multi=True)
+        self._group_write_attribute("srcip40gfpga2", src_ips2, multi=True)
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2464,41 +2478,58 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        tile_no = 0
-        last_tile = len(self._tile_proxies.values()) - 1
-        for proxy in self._tile_proxies.values():
-            tile = proxy._proxy
-            if tile is None:
+        tiles = list(self._tile_proxies.values())
+        for proxy in tiles:
+            if proxy._proxy is None:
                 msg = f"tile proxy {proxy} not formed"
                 self.logger.error(msg)
                 return ResultCode.FAILED, msg
-            i1 = (
-                tile_no * TileData.ADC_CHANNELS
-            )  # indexes for parameters for individual signals
-            i2 = i1 + TileData.ADC_CHANNELS
-            self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
-            if self._desired_preadu_levels is not None:
-                self.logger.info(
-                    "Initialise routine overriding MccsTile instance PreaduAttenuation "
-                )
-                tile.preaduLevels = self._desired_preadu_levels[i1:i2]
-            if self._desired_static_delays is not None:
-                self.logger.info(
-                    "Initialise routine overriding MccsTile instance StaticTimeDelays "
-                )
-                tile.staticTimeDelays = self._desired_static_delays[i1:i2]
-            tile.channeliserRounding = self._channeliser_rounding
-            tile.cspRounding = self._csp_rounding
-            tile.cspSpeadFormat = self._csp_spead_format
-            tile.globalReferenceTime = self._global_reference_time
-            tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
-            tile.SetLmcDownload(json.dumps(self._lmc_param))
-            tile.ConfigureStationBeamformer(
-                json.dumps(
-                    {"is_first": (tile_no == 0), "is_last": (tile_no == last_tile)}
-                )
+
+        n_tiles = len(tiles)
+        last_tile = n_tiles - 1
+
+        def _per_tile_slices(values: list[Any]) -> list[Any]:
+            return [
+                values[i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS]
+                for i in range(n_tiles)
+            ]
+
+        if self._desired_preadu_levels is not None:
+            self.logger.info(
+                "Initialise routine overriding MccsTile instance PreaduAttenuation "
             )
-            tile_no = tile_no + 1
+            self._group_write_attribute(
+                "preaduLevels",
+                _per_tile_slices(self._desired_preadu_levels),
+                multi=True,
+            )
+        if self._desired_static_delays is not None:
+            self.logger.info(
+                "Initialise routine overriding MccsTile instance StaticTimeDelays "
+            )
+            self._group_write_attribute(
+                "staticTimeDelays",
+                _per_tile_slices(self._desired_static_delays),
+                multi=True,
+            )
+        self._group_write_attribute("channeliserRounding", self._channeliser_rounding)
+        self._group_write_attribute("cspRounding", self._csp_rounding)
+        self._group_write_attribute("cspSpeadFormat", self._csp_spead_format)
+        self._group_write_attribute("globalReferenceTime", self._global_reference_time)
+        self._group_write_attribute(
+            "ppsDelayCorrection",
+            self._pps_delay_corrections[:n_tiles],
+            multi=True,
+        )
+        self._group_command_inout("SetLmcDownload", json.dumps(self._lmc_param))
+        self._group_command_inout_per_tile(
+            "ConfigureStationBeamformer",
+            [
+                json.dumps({"is_first": tile_no == 0, "is_last": tile_no == last_tile})
+                for tile_no in range(n_tiles)
+            ],
+            tango.CmdArgType.DevString,
+        )
         self._set_beamformer_table()
         return ResultCode.OK, ""
 
@@ -2518,6 +2549,12 @@ class SpsStationComponentManager(
         :return: a result code and message
         """
         tiles = list(self._tile_proxies.values())
+        for proxy in tiles:
+            if proxy._proxy is None:
+                msg = f"tile proxy {proxy} not formed"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
+
         #
         # Configure 40G ports.
         # Each TPM has 2 IP addresses starting at the provided address
@@ -2527,12 +2564,8 @@ class SpsStationComponentManager(
         # ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
         # base_ip3 = int(ip_tail)
         last_tile_id = len(tiles) - 1
-        for tile_id, proxy in enumerate(tiles):
-            if proxy._proxy is None:
-                msg = f"tile proxy {proxy} not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
 
+        def _csp_download_args(tile_id: int) -> str:
             if tile_id == last_tile_id:
                 is_last_tile = True
                 dst_ip1 = self._csp_ingest_address
@@ -2541,34 +2574,37 @@ class SpsStationComponentManager(
                 is_last_tile = False
                 dst_ip1 = str(self._sdn_first_address + 2 * tile_id + 2)
                 dst_ip2 = str(self._sdn_first_address + 2 * tile_id + 3)
-
-            proxy._proxy.SetCspDownload(
-                json.dumps(
-                    {
-                        "source_port": self._source_port,
-                        "destination_ip_1": dst_ip1,
-                        "destination_ip_2": dst_ip2,
-                        "destination_port": self._destination_port,
-                        "is_last": is_last_tile,
-                        "netmask": self._sdn_netmask,
-                        "gateway": self._sdn_gateway,
-                    }
-                )
+            return json.dumps(
+                {
+                    "source_port": self._source_port,
+                    "destination_ip_1": dst_ip1,
+                    "destination_ip_2": dst_ip2,
+                    "destination_port": self._destination_port,
+                    "is_last": is_last_tile,
+                    "netmask": self._sdn_netmask,
+                    "gateway": self._sdn_gateway,
+                }
             )
 
-            proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
-            proxy._proxy.SetLmcIntegratedDownload(
-                json.dumps(
-                    {
-                        "mode": self._lmc_integrated_mode,
-                        "destination_ip": self._lmc_param["destination_ip"],
-                        "channel_payload_length": self._lmc_channel_payload_length,
-                        "beam_payload_length": self._lmc_beam_payload_length,
-                        "netmask_40g": self._sdn_netmask,
-                        "gateway_40g": self._sdn_gateway,
-                    }
-                )
-            )
+        self._group_command_inout_per_tile(
+            "SetCspDownload",
+            [_csp_download_args(tile_id) for tile_id in range(len(tiles))],
+            tango.CmdArgType.DevString,
+        )
+        self._group_command_inout("SetLmcDownload", json.dumps(self._lmc_param))
+        self._group_command_inout(
+            "SetLmcIntegratedDownload",
+            json.dumps(
+                {
+                    "mode": self._lmc_integrated_mode,
+                    "destination_ip": self._lmc_param["destination_ip"],
+                    "channel_payload_length": self._lmc_channel_payload_length,
+                    "beam_payload_length": self._lmc_beam_payload_length,
+                    "netmask_40g": self._sdn_netmask,
+                    "gateway_40g": self._sdn_gateway,
+                }
+            ),
+        )
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2900,9 +2936,9 @@ class SpsStationComponentManager(
         :param delays: Array of one value per tile, in nanoseconds.
             Values are internally rounded to 1.25 ns steps
         """
-        for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.ppsDelayCorrection = delays[i]
+        self._group_write_attribute(
+            "ppsDelayCorrection", delays[: len(self._tile_proxies)], multi=True
+        )
 
     @property
     def static_delays(self: SpsStationComponentManager) -> list[float]:
@@ -2935,6 +2971,7 @@ class SpsStationComponentManager(
             to the correct TPM.
         """
         self._desired_static_delays = delays
+        per_tile_delays = []
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             __tile_id = proxy._proxy.logicalTileId
@@ -2945,12 +2982,8 @@ class SpsStationComponentManager(
                 )
             start_entry = (__tile_id) * TileData.ADC_CHANNELS
             end_entry = (__tile_id + 1) * TileData.ADC_CHANNELS
-            try:
-                proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
-            except tango.DevFailed:
-                self.logger.warning(
-                    f"Failed to set static delays for {proxy._proxy.name()}"
-                )
+            per_tile_delays.append(delays[start_entry:end_entry])
+        self._group_write_attribute("staticTimeDelays", per_tile_delays, multi=True)
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
@@ -3032,9 +3065,7 @@ class SpsStationComponentManager(
         :param reference_time: Reference time in ISOT format, or null string
         """
         self._global_reference_time = reference_time
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.globalReferenceTime = reference_time
+        self._group_write_attribute("globalReferenceTime", reference_time)
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:
@@ -3057,14 +3088,12 @@ class SpsStationComponentManager(
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
         self._desired_preadu_levels = levels
-        i = 0
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            try:
-                proxy._proxy.preaduLevels = levels[i : i + TileData.ADC_CHANNELS]
-            except tango.DevFailed:
-                self.logger.warning(f"Failed to set preadu levels on {proxy._name}")
-            i = i + TileData.ADC_CHANNELS
+        n_tiles = len(self._tile_proxies)
+        per_tile_levels = [
+            levels[i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS]
+            for i in range(n_tiles)
+        ]
+        self._group_write_attribute("preaduLevels", per_tile_levels, multi=True)
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:
@@ -3637,15 +3666,24 @@ class SpsStationComponentManager(
 
         first_channel = calibration_coefficients[0]
         coefficients = np.array(calibration_coefficients[1:]).reshape([-1, 256, 8])
-        for t, proxy in enumerate(self._tile_proxies.values()):
-            tile_coefficients = [first_channel] + list(
-                coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1])
-            )
-            assert proxy._proxy is not None
-            proxy._proxy.LoadCalibrationCoefficientsForChannels(tile_coefficients)
+        n_tiles = len(self._tile_proxies)
+        per_tile_coefficients = [
+            [first_channel]
+            + list(coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1]))
+            for t in range(n_tiles)
+        ]
+        replies = self._group_command_inout_per_tile(
+            "LoadCalibrationCoefficientsForChannels",
+            per_tile_coefficients,
+            tango.CmdArgType.DevVarDoubleArray,
+        )
 
-        message = "Calibration coefficients loaded into all Tiles successfully."
-        result_code = ResultCode.OK
+        if any(reply.has_failed() for reply in replies):
+            message = "Failed to load calibration coefficients for 1 or more Tiles."
+            result_code = ResultCode.FAILED
+        else:
+            message = "Calibration coefficients loaded into all Tiles successfully."
+            result_code = ResultCode.OK
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
@@ -3699,19 +3737,16 @@ class SpsStationComponentManager(
 
         self.last_pointing_delays = delay_list
 
-        skipped_tiles = []
+        per_tile_delays = []
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
-
             tile_no = tile_proxy._proxy.logicalTileId
-            delays_for_tile = tile_delays[tile_no]
-            try:
-                tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
-            except tango.DevFailed:
-                self.logger.warning(
-                    f"Failed to load pointing delays for {tile_proxy._proxy.name()}"
-                )
-                skipped_tiles.append(tile_proxy._proxy.name())
+            per_tile_delays.append(tile_delays[tile_no])
+
+        replies = self._group_command_inout_per_tile(
+            "LoadPointingDelays", per_tile_delays, tango.CmdArgType.DevVarDoubleArray
+        )
+        skipped_tiles = [reply.dev_name() for reply in replies if reply.has_failed()]
 
         if skipped_tiles:
             return [ResultCode.FAILED], [
@@ -4044,9 +4079,7 @@ class SpsStationComponentManager(
 
         parameter_list = {"start_time": start_time, "delay": delay}
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StartAcquisition(json_argument)
+        self._group_command_inout("StartAcquisition", json_argument)
 
         if task_callback:
             if success:
@@ -4368,9 +4401,7 @@ class SpsStationComponentManager(
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
             return
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.cspSpeadFormat = spead_format
+        self._group_write_attribute("cspSpeadFormat", spead_format)
 
     @property
     def wren_health_check_fail_on_timeout(self) -> bool:
@@ -4432,21 +4463,16 @@ class SpsStationComponentManager(
 
         self._channeliser_rounding = list(channeliser_rounding)
 
-        result_code = ResultCode.OK
-        message = ""
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            self.logger.debug(f"Writing truncation in {proxy._proxy.name()}")
-            try:
-                proxy._proxy.channeliserRounding = channeliser_rounding
-            except tango.DevFailed:
-                self.logger.warning(
-                    f"Failed to load truncation for {proxy._proxy.name()}"
-                )
-                message = "Failed to set channeliserRounding for 1 or more Tiles."
-                result_code = ResultCode.FAILED
+        self.logger.debug("Writing channeliserRounding to all tiles")
+        replies = self._group_write_attribute(
+            "channeliserRounding", channeliser_rounding
+        )
 
-        if not message:
+        if any(reply.has_failed() for reply in replies):
+            result_code = ResultCode.FAILED
+            message = "Failed to set channeliserRounding for 1 or more Tiles."
+        else:
+            result_code = ResultCode.OK
             message = "channeliserRounding loaded into all Tiles successfully."
 
         if task_callback:
@@ -4564,6 +4590,99 @@ class SpsStationComponentManager(
             return f"{test_name} appears to have no description."
         return docs
 
+    def _group_command_inout(
+        self: SpsStationComponentManager,
+        command_name: str,
+        arg: Optional[Any] = None,
+        timeout: int = 20,
+    ) -> list[tuple[list[ResultCode], list[Optional[str]]]]:
+        """
+        Run a command on every tile in ``self._tile_group``, in parallel.
+
+        :param command_name: command to execute.
+        :param arg: single argument broadcast to every tile, or None.
+        :param timeout: timeout in seconds to wait for all replies.
+
+        :return: one ``(ResultCode list, message list)`` per tile, in the
+            same order as ``self._tile_proxies``.
+        """
+        self._tile_group.set_timeout_millis(timeout * 1000)  # pylint: disable=no-member
+        replies = self._tile_group.command_inout(command_name, arg)
+        results: list[tuple[list[ResultCode], list[Optional[str]]]] = []
+        for reply in replies:
+            if reply.has_failed():
+                self.logger.error(
+                    f"Error running {command_name} on {reply.dev_name()}: "
+                    f"{reply.get_err_stack()}"
+                )
+                results.append(
+                    (
+                        [ResultCode.FAILED],
+                        [f"Command raised {reply.get_err_stack()}, check logs."],
+                    )
+                )
+            else:
+                results.append(reply.get_data())
+        return results
+
+    def _group_write_attribute(
+        self: SpsStationComponentManager,
+        attr_name: str,
+        value: Any,
+        multi: bool = False,
+    ) -> list[Any]:
+        """
+        Write an attribute to every tile in ``self._tile_group``, in parallel.
+
+        :param attr_name: name of the attribute to write.
+        :param value: value to broadcast to every tile, or (if ``multi``)
+            a list of one value per tile, ordered as ``self._tile_proxies``.
+        :param multi: whether ``value`` is a per-tile list rather than a
+            single value to broadcast to every tile.
+
+        :return: one ``GroupReply`` per tile, in the same order as
+            ``self._tile_proxies``.
+        """
+        replies = self._tile_group.write_attribute(attr_name, value, multi=multi)
+        for reply in replies:
+            if reply.has_failed():
+                self.logger.warning(
+                    f"Failed to write {attr_name} on {reply.dev_name()}: "
+                    f"{reply.get_err_stack()}"
+                )
+        return replies
+
+    def _group_command_inout_per_tile(
+        self: SpsStationComponentManager,
+        command_name: str,
+        args: list[Any],
+        arg_type: tango.CmdArgType,
+    ) -> list[Any]:
+        """
+        Run a command on every tile in ``self._tile_group``, one arg per tile.
+
+        :param command_name: name of the command to run.
+        :param args: one argument per tile, ordered as ``self._tile_proxies``.
+        :param arg_type: the Tango argument type of ``command_name``'s input.
+
+        :return: one ``GroupCmdReply`` per tile, in the same order as
+            ``self._tile_proxies``.
+        """
+        device_data_list = tango.DeviceDataList()
+        for arg in args:
+            device_data = tango.DeviceData()
+            device_data.insert(arg_type, arg)
+            device_data_list.append(device_data)
+
+        replies = self._tile_group.command_inout(command_name, device_data_list)
+        for reply in replies:
+            if reply.has_failed():
+                self.logger.warning(
+                    f"Failed to run {command_name} on {reply.dev_name()}: "
+                    f"{reply.get_err_stack()}"
+                )
+        return replies
+
     # pylint: disable=broad-exception-caught
     def _execute_async_on_tiles(
         self: SpsStationComponentManager,
@@ -4572,7 +4691,7 @@ class SpsStationComponentManager(
         timeout: int = 20,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Execute a given command on all tile proxies in separate threads.
+        Execute a given command on all tile proxies, in parallel.
 
         This is for commands which return a DevVarLongStringArrayType.
 
@@ -4592,34 +4711,11 @@ class SpsStationComponentManager(
         self.logger.debug(f"calling {command_name} with {command_args=}")
         command_args = [command_args] if command_args is not None else []
 
-        # Ideally we wouldn't handle the exceptions, and let them hit the user.
-        # However we need to do more work in MccsTile before that. I'd like to get
-        # to a situation where MccsTile returns ResultCode.FAILED if we're OK with
-        # the failure (e.g failed to acquire lock), but raises an exception to us if
-        # something really janky happened, which should be sent straight to the user.
-        def _run_while_handling_errors(
-            proxy: MccsDeviceProxy,
-        ) -> tuple[list[ResultCode], list[Optional[str]]]:
-            try:
-                return proxy.command_inout(
-                    command_name,
-                    *command_args,
-                )
-            except Exception as e:
-                self.logger.error(
-                    f"Error running {command_name} on {proxy.dev_name()}: {e}"
-                )
-                return [ResultCode.FAILED], [
-                    f"Command raised {str(type(e))}, check logs."
-                ]
-
-        commands_to_execute = [
-            (_run_while_handling_errors, dev._proxy)
-            for dev in self._tile_proxies.values()
-            if dev._proxy is not None
+        connected_proxies = [
+            dev._proxy for dev in self._tile_proxies.values() if dev._proxy is not None
         ]
 
-        if not commands_to_execute:
+        if not connected_proxies:
             msg = (
                 f"{command_name} wouldn't be called on any MccsTiles."
                 " Check MccsTile adminMode."
@@ -4629,26 +4725,34 @@ class SpsStationComponentManager(
 
         if not self.excecute_async:
             self.logger.debug(f"Calling {command_name} synchronously.")
-            results = [command(proxy) for command, proxy in commands_to_execute]
+
+            # Ideally we wouldn't handle the exceptions, and let them hit the
+            # user. However we need to do more work in MccsTile before that.
+            # I'd like to get to a situation where MccsTile returns
+            # ResultCode.FAILED if we're OK with the failure (e.g failed to
+            # acquire lock), but raises an exception to us if something
+            # really janky happened, which should be sent straight to the
+            # user.
+            def _run_while_handling_errors(
+                proxy: MccsDeviceProxy,
+            ) -> tuple[list[ResultCode], list[Optional[str]]]:
+                try:
+                    return proxy.command_inout(
+                        command_name,
+                        *command_args,
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error running {command_name} on {proxy.dev_name()}: {e}"
+                    )
+                    return [ResultCode.FAILED], [
+                        f"Command raised {str(type(e))}, check logs."
+                    ]
+
+            results = [_run_while_handling_errors(proxy) for proxy in connected_proxies]
         else:
-            # We'd really prefer to use GreenMode.Asyncio or similar here. This appears
-            # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
-            # tango.asyncio.DeviceProxy to use that functionality, which would involve a
-            # general refactor of SpsStation. So for now we just spin up some threads,
-            # and execute each synchronous call in it's own thread manually.
-            with PyTangoThreadPoolExecutor(
-                max_workers=len(self._tile_proxies)
-            ) as executor:
-                futures: list[Future] = [
-                    executor.submit(command, proxy)
-                    for command, proxy in commands_to_execute
-                ]
-                complete, incomplete = wait(futures, timeout=timeout)
-                if incomplete:
-                    msg = f"{len(incomplete)} commands failed to complete in time."
-                    self.logger.warning(msg)
-                    return [ResultCode.FAILED], [msg]
-                results = [future.result() for future in complete]
+            arg = command_args[0] if command_args else None
+            results = self._group_command_inout(command_name, arg, timeout=timeout)
 
         result_codes, _ = zip(*results)
         self.logger.debug(f"Tiles response from {command_name}: {str(results)}")

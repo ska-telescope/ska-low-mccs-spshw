@@ -1,18 +1,23 @@
 ================================
-MCCS LMC Prototype documentation
+SKA-Low MCCS SPSHW documentation
 ================================
 
-This project is developing the Local Monitoring and Control (LMC)
-prototype for the `Square Kilometre Array`_.
+This project is developing the Signal Processing subsystem (SPS) of the Monitoring, Control and Calibration Subsystem (MCCS) 
+software for the SKA-Low radio telescope.
 
 .. _Square Kilometre Array: https://skatelescope.org/
 
 .. toctree::
    :maxdepth: 1
-   :caption: Guide
+   :caption: User Guide
 
-   guide/deploy
-   guide/merging
+   guide/user/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Developer Guide
+
+   guide/developer/index
 
 .. toctree::
    :maxdepth: 2

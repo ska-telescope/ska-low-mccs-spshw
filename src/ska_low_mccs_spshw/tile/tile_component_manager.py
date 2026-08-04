@@ -2296,6 +2296,8 @@ class TileComponentManager(
             if acquired:
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()
+                    self.logger.debug(f"fpga_current_frame: read timestamp: {self._fpga_current_frame}")
+                    
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(

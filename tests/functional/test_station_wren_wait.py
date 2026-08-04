@@ -56,18 +56,35 @@ def check_against_real_context(true_context: bool, station_label: str) -> None:
 
 
 @given("the SpsStation has a WREN TRL")
-def check_sps_station_has_a_wren_trl(station: tango.DeviceProxy, wren_trl: str) -> None:
+def check_sps_station_has_a_wren_trl(
+    station: tango.DeviceProxy, wren_trl: str
+) -> Generator:
     """
     Check the station has a WREN TRL.
 
     :param station: a proxy to the station under test.
     :param wren_trl: The WREN TRL.
 
+    :yields: None
+
     """
-    if station.WrenTRL == "":
+    # Get the initial TRL
+    initial_wren_trl = station.WrenTRL
+
+    # Set the TRL here
+    if initial_wren_trl != wren_trl:
         station.put_property({"WRENTRL": wren_trl})
         station.Init()
         assert station.WrenTRL == wren_trl
+
+    # Yield control
+    yield
+
+    # Reset the TRL to the initial value
+    if initial_wren_trl != station.WrenTRL:
+        station.put_property({"WRENTRL": ""})
+        station.Init()
+        assert station.WrenTRL == initial_wren_trl
 
 
 @given(

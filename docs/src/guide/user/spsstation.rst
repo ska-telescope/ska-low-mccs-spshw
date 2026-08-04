@@ -4,11 +4,18 @@ SpsStation Tango Device
 
 The ``SpsStation`` Tango device orchestrates a number of Tango devices that make up a station's SPS hardware.
 
-Typically, an ``SpsStation`` is responsible for 2 subracks, each containing 8 TPMs. This is the standard
+
+.. uml:: device_interactions.uml
+
+
+Typically, an ``SpsStation`` is responsible for 2 subracks, and 16 TPMs. This is the standard
 configuration for a station: each TPM has 32 ADC channels, covering the X and Y polarisations of 16 antennas,
-so a station with 2 subracks of 8 TPMs each has 16 TPMs and 512 ADC channels in total, i.e. a full 256-antenna
+so a station with 16 TPMs has 512 ADC channels in total, i.e. a full 256-antenna
 station. This is the typical configuration, but the ``SpsStation`` device can be configured to manage any number
 of subracks and TPMs, which is useful for testing in hardware facilities such as the ITF or RAL.
+
+It is worth familiarising yourself with the physical SPS cabinet to 
+understand how the Tango Devices map to physical topology.
 
 To understand an ``SpsStation``'s ability to operate, we can use its ``healthState`` and ``healthReport``
 attributes (see ``HealthState`` (https://developer.skao.int/projects/ska-control-model/en/0.3.4/health_state.html)).
@@ -66,3 +73,8 @@ For example, if ``low-mccs/tile/s8-1-tpm02`` alone reported ``DEGRADED``, its en
 overall ``healthState`` would still be ``OK``: per the ``tiles`` threshold of ``(1, 1, 2)`` shown in the diagrams
 above, a single degraded tile is not enough to degrade the whole station — a second degraded tile is needed for
 that.
+
+Drilling down
+-------------
+If a specific Tile or Subrack is reporting ``DEGRADED`` or ``FAILED``, you should then 
+drill down and check the ``HealthState`` of the offending device.

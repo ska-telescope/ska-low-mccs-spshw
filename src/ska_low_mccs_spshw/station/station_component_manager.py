@@ -2902,8 +2902,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.ppsDelayCorrection = delays[i]
+            proxy._proxy.ppsDelayCorrection = delays[i]
 
     @property
     def static_delays(self: SpsStationComponentManager) -> list[float]:
@@ -2946,8 +2945,12 @@ class SpsStationComponentManager(
                 )
             start_entry = (__tile_id) * TileData.ADC_CHANNELS
             end_entry = (__tile_id + 1) * TileData.ADC_CHANNELS
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+            try:
                 proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
+            except tango.DevFailed:
+                self.logger.warning(
+                    f"Failed to set static delays for {proxy._proxy.name()}"
+                )
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
@@ -3000,11 +3003,13 @@ class SpsStationComponentManager(
         self._csp_rounding = copy.deepcopy(truncation)
         proxy = list(self._tile_proxies.values())[-1]
         assert proxy._proxy is not None  # for the type checker
-        if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+        try:
             self.logger.debug(
                 f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
             )
             proxy._proxy.cspRounding = truncation
+        except tango.DevFailed:
+            self.logger.warning(f"Failed to set csp rounding for {proxy._proxy.name()}")
 
     @property
     def global_reference_time(self: SpsStationComponentManager) -> str:
@@ -3055,13 +3060,10 @@ class SpsStationComponentManager(
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+            try:
                 proxy._proxy.preaduLevels = levels[i : i + TileData.ADC_CHANNELS]
-            else:
-                self.logger.error(
-                    f"Not setting preadu levels on {proxy._name}"
-                    "TileProgramming state not `Initialised` or `Synchronised`."
-                )
+            except tango.DevFailed:
+                self.logger.warning(f"Failed to set preadu levels on {proxy._name}")
             i = i + TileData.ADC_CHANNELS
 
     @property
@@ -3419,9 +3421,7 @@ class SpsStationComponentManager(
         self._lmc_param["netmask_40g"] = self._sdn_netmask
         self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
-        return self._execute_async_on_tiles(
-            "SetLmcDownload", json_param, require_initialised=True
-        )
+        return self._execute_async_on_tiles("SetLmcDownload", json_param)
 
     def set_lmc_integrated_download(
         self: SpsStationComponentManager,
@@ -3473,9 +3473,7 @@ class SpsStationComponentManager(
                 "gateway_40g": self._sdn_gateway,
             }
         )
-        return self._execute_async_on_tiles(
-            "SetLmcIntegratedDownload", json_param, require_initialised=True
-        )
+        return self._execute_async_on_tiles("SetLmcIntegratedDownload", json_param)
 
     def set_csp_ingest(
         self: SpsStationComponentManager,
@@ -3581,7 +3579,6 @@ class SpsStationComponentManager(
         return self._execute_async_on_tiles(
             "SetBeamformerRegions",
             list(itertools.chain.from_iterable(beamformer_regions)),
-            require_initialised=True,
         )
 
     def load_calibration_coefficients(
@@ -3675,7 +3672,7 @@ class SpsStationComponentManager(
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -3688,18 +3685,40 @@ class SpsStationComponentManager(
         delay_list[2*eep] is the delay rate, in second/second, for antenna
         with given EEP index (range 1-256)
 
+        Only Synchronised tiles will accept pointing delays; tiles that
+        aren't are skipped (nothing is committed until the subsequent
+        :py:meth:`apply_pointing_delays`).
+
         :param delay_list: delay in seconds, and delay rate in seconds/second
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         tile_delays = self._calculate_delays_per_tile(delay_list)
 
         self.last_pointing_delays = delay_list
 
+        skipped_tiles = []
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
 
             tile_no = tile_proxy._proxy.logicalTileId
             delays_for_tile = tile_delays[tile_no]
-            tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
+            try:
+                tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
+            except tango.DevFailed:
+                self.logger.warning(
+                    f"Failed to load pointing delays for {tile_proxy._proxy.name()}"
+                )
+                skipped_tiles.append(tile_proxy._proxy.name())
+
+        if skipped_tiles:
+            return [ResultCode.FAILED], [
+                "Failed to set pointing delays for 1 or more Tiles: "
+                f"{skipped_tiles}."
+            ]
+        return [ResultCode.OK], ["LoadPointingDelays command completed OK"]
 
     def apply_pointing_delays(
         self: SpsStationComponentManager, load_time: str
@@ -3969,9 +3988,7 @@ class SpsStationComponentManager(
 
             if result_code[0] != ResultCode.OK:
                 return result_code, [f"Couldn't stop data transmission: {message[0]}"]
-        return self._execute_async_on_tiles(
-            "SendDataSamples", argin, require_synchronised=True
-        )
+        return self._execute_async_on_tiles("SendDataSamples", argin)
 
     def stop_data_transmission(
         self: SpsStationComponentManager,
@@ -4419,21 +4436,14 @@ class SpsStationComponentManager(
         message = ""
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(f"Writing truncation in {proxy._proxy.name()}")
-                try:
-                    proxy._proxy.channeliserRounding = channeliser_rounding
-                except tango.DevFailed:
-                    self.logger.warning(
-                        f"Failed to load truncation for {proxy._proxy.name()}"
-                    )
-                    message = "Failed to set channeliserRounding for 1 or more Tiles."
-                    result_code = ResultCode.FAILED
-            else:
-                message += (
-                    "unable to set channeliserRounding for 1 or more tiles. "
-                    "Tile not Initialised. "
+            self.logger.debug(f"Writing truncation in {proxy._proxy.name()}")
+            try:
+                proxy._proxy.channeliserRounding = channeliser_rounding
+            except tango.DevFailed:
+                self.logger.warning(
+                    f"Failed to load truncation for {proxy._proxy.name()}"
                 )
+                message = "Failed to set channeliserRounding for 1 or more Tiles."
                 result_code = ResultCode.FAILED
 
         if not message:
@@ -4527,7 +4537,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self._execute_async_on_tiles("StartADCs", require_synchronised=True)
+        return self._execute_async_on_tiles("StartADCs")
 
     def stop_adcs(
         self: SpsStationComponentManager,
@@ -4539,7 +4549,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self._execute_async_on_tiles("StopADCs", require_synchronised=True)
+        return self._execute_async_on_tiles("StopADCs")
 
     def describe_test(self, test_name: str) -> str:
         """
@@ -4560,21 +4570,20 @@ class SpsStationComponentManager(
         command_name: str,
         command_args: Optional[Any] = None,
         timeout: int = 20,
-        require_initialised: bool = False,
-        require_synchronised: bool = False,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Execute a given command on all tile proxies in separate threads.
 
         This is for commands which return a DevVarLongStringArrayType.
 
+        Whether a given tile is ready for this command is enforced by
+        MccsTile's own ``fisallowed`` checks: a tile that rejects the
+        command raises a ``tango.DevFailed``, which is caught below and
+        reported as a per-tile ``ResultCode.FAILED``.
+
         :param command_name: command to execute.
         :param command_args: args to execute commands with.
         :param timeout: timeout in which to expect command completion.
-        :param require_initialised: if this command can only execute on an initialised
-            tile.
-        :param require_synchronised: if this command can only execute on a synchronised
-            tile.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4608,49 +4617,15 @@ class SpsStationComponentManager(
             (_run_while_handling_errors, dev._proxy)
             for dev in self._tile_proxies.values()
             if dev._proxy is not None
-            and (
-                not require_initialised
-                or dev._proxy.tileProgrammingState in ["Initialised", "Synchronised"]
-            )
-            and (
-                not require_synchronised
-                or dev._proxy.tileProgrammingState in ["Synchronised"]
-            )
         ]
 
-        def _build_msg(
-            command_name: str,
-            base_msg: str,
-            require_initialised: bool,
-            require_synchronised: bool,
-        ) -> str:
-            if require_initialised:
-                base_msg += f" {command_name} requires Initialised MccsTiles."
-            if require_synchronised:
-                base_msg += f" {command_name} requires Synchronised MccsTiles."
-            return base_msg
-
         if not commands_to_execute:
-            msg = _build_msg(
-                command_name,
+            msg = (
                 f"{command_name} wouldn't be called on any MccsTiles."
-                " Check MccsTile adminMode.",
-                require_initialised,
-                require_synchronised,
+                " Check MccsTile adminMode."
             )
             self.logger.error(msg)
             return [ResultCode.REJECTED], [msg]
-
-        if len(commands_to_execute) != len(self._tile_proxies):
-            msg = _build_msg(
-                command_name,
-                f"{command_name} won't be called on all tiles. Will be called on: "
-                f"{[proxy.dev_name() for _, proxy in commands_to_execute]}."
-                " Check MccsTile adminMode.",
-                require_initialised,
-                require_synchronised,
-            )
-            self.logger.warning(msg)
 
         if not self.excecute_async:
             self.logger.debug(f"Calling {command_name} synchronously.")

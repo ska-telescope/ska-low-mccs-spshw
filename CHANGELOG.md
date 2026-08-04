@@ -2,6 +2,10 @@
 
 ## 14.1.0
 
+* [THORN-681] Move tile-readiness gating (Initialised/Synchronised) from ad-hoc `tileProgrammingState`
+checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
+`_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
+Synchronised tile (previously ungated).
 * [THORN-682] Update ska-low-mccs-daq reference to 7.0.2
 * [THORN-682] ``SpsStation.AcquireDataForCalibration`` no longer blocks other commands. It is still a long running command, reported through the usual LRC attributes, but the station's task executor now provides two independent lanes and the acquisition executes on a calibration lane of its own, rather than occupying the general lane for the whole acquisition. A scan can therefore be started and stopped while calibration data is being acquired. ``Abort`` stops an acquisition as before. The commands that would disrupt an acquisition in progress - ``Initialise``, ``ReInitialise``, ``StartAcquisition``, ``ConfigureStationForCalibration`` and ``SetLmcDownload`` - are now rejected for its duration.
 * [SKB-1397] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip. Manual calls should

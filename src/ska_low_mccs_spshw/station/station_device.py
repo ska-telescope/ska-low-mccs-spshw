@@ -2719,8 +2719,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
 
-        self.component_manager.load_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        return self.component_manager.load_pointing_delays(argin)
 
     @command(
         dtype_in="DevString",

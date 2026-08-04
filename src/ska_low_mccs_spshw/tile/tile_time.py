@@ -5,12 +5,12 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module implements a class to convert from-to unix time."""
+"""This module implements a class to convert from-to tile time."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import math
 
-import numpy as np
+from time_utils import integer_epoch_from_str_utc_time, str_from_integer_epoch_utc_time
 
 from .tile_data import TileData
 
@@ -29,8 +29,6 @@ class TileTime:
     expressed as a ISO-8601 (RFC3339) string, e.g.
     2021-03-02T12:34.56.789000Z.
     """
-
-    RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     def __init__(self: TileTime, reference_time: int = 0) -> None:
         """
@@ -59,10 +57,8 @@ class TileTime:
                 256 channelised samples
         :return: ISO-8601 formatted time
         """
-        time = datetime.fromtimestamp(
-            self._ref_time + TileData.FRAME_PERIOD * frame_count, tz=timezone.utc
-        )
-        return datetime.strftime(time, self.RFC_FORMAT)
+        frame_epoch_time = self._ref_time + TileData.FRAME_PERIOD * frame_count
+        return str_from_integer_epoch_utc_time(int(frame_epoch_time))
 
     def frame_from_utc_time(self: TileTime, utc_time: str) -> int:
         """
@@ -73,16 +69,14 @@ class TileTime:
         """
         if self._ref_time == 0:
             return -1
-        try:
-            dt = datetime.strptime(utc_time, self.RFC_FORMAT)
-            timestamp = dt.replace(tzinfo=timezone.utc).timestamp() - self._ref_time
-        except ValueError:
-            timestamp = -1
 
-        if timestamp < 0:
+        frame_time_from_string = integer_epoch_from_str_utc_time(utc_time)
+
+        if frame_time_from_string < 0:
             return -1
-        frame = int(np.ceil(timestamp / TileData.FRAME_PERIOD))
-        return frame
+
+        frame_time_from_ref_time = frame_time_from_string - self._ref_time
+        return math.ceil(frame_time_from_ref_time / TileData.FRAME_PERIOD)
 
     def timestamp_from_utc_time(self: TileTime, utc_time: str) -> int:
         """
@@ -93,16 +87,7 @@ class TileTime:
         :param utc_time: Utc Time in standard rfc3339 format
         :return: Unix timestamp equal or after specified time. -1 if error
         """
-        try:
-            dt = datetime.strptime(utc_time, self.RFC_FORMAT)
-            timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
-        except ValueError:
-            timestamp = -1
-
-        if timestamp < 0:
-            return -1
-        timestamp = int(np.ceil(timestamp))
-        return timestamp
+        return integer_epoch_from_str_utc_time(utc_time)
 
     def format_time_from_timestamp(self: TileTime, timestamp: int) -> str:
         """
@@ -115,5 +100,4 @@ class TileTime:
         :return: ISO-8601 formatted time
         :rtype: str
         """
-        time = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-        return datetime.strftime(time, self.RFC_FORMAT)
+        return str_from_integer_epoch_utc_time(timestamp)

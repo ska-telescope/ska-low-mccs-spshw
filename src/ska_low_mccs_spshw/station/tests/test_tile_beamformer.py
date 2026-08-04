@@ -13,14 +13,14 @@ import json
 import logging
 import random
 import time
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
+from time_utils import str_from_integer_epoch_utc_time
+
 from ...tile.tile_data import TileData
-from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest
 from .data_handlers import BeamDataReceivedHandler
 
@@ -328,9 +328,7 @@ class TestTileBeamformer(BaseDaqTest):
         self.component_manager.stop_adcs()
         self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 5), TileTime.RFC_FORMAT
-        )
+        start_time = str_from_integer_epoch_utc_time(int(time.time()) + 5)
         self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )

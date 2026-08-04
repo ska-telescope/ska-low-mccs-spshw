@@ -34,7 +34,7 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
-from ska_low_mccs_common import EventSerialiser
+from ska_low_mccs_common import EventSerialiser, LanedTaskExecutor
 from ska_low_mccs_common.backoff import exp_backoff
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
@@ -63,6 +63,11 @@ __all__ = ["SpsStationComponentManager"]
 
 _LMC_INTEGRATED_MODE_RETRY_DELAY = 0.1
 _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
+
+# The name of the task executor lane that AcquireDataForCalibration runs on. It
+# runs for minutes at a time and must not stop other commands - notably Scan -
+# from executing, so it does not share the general lane with them.
+_CALIBRATION_LANE = "calibration"
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -392,6 +397,41 @@ class _BandpassDaqProxy(DeviceComponentManager):
                 )
 
 
+class _WrenProxy(DeviceComponentManager):
+    """A proxy to a WREN for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self,
+        fqdn: str,
+        logger: logging.Logger,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param logger: the logger to be used by this object.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param event_serialiser: the event serialiser to be used by this object
+        """
+        super().__init__(
+            fqdn,
+            logger,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            event_serialiser=event_serialiser,
+        )
+
+
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
     MccsBaseComponentManager, TaskExecutorComponentManager
@@ -408,6 +448,7 @@ class SpsStationComponentManager(
         tile_fqdns: Sequence[str],
         lmc_daq_trl: str,
         bandpass_daq_trl: str,
+        wren_trl: str,
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
@@ -435,6 +476,8 @@ class SpsStationComponentManager(
         :param lmc_daq_trl: The TRL of this Station's DAQ Receiver for general LMC use.
             Could be empty if the device property is not set.
         :param bandpass_daq_trl: The TRL of this Station's DAQ Receiver for bandpasses.
+            Could be empty if the device property is not set.
+        :param wren_trl: The TRL of this Station's WREN instance.
             Could be empty if the device property is not set.
         :param sdn_first_interface: CIDR-style IP address with mask,
             for the first interface in the block assigned for science data
@@ -473,10 +516,12 @@ class SpsStationComponentManager(
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
+        self._wren_proxy: Optional[_WrenProxy] = None
         self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
+        self._wren_trl = wren_trl
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
@@ -566,6 +611,18 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._bandpass_daq_power_state = {bandpass_daq_trl: PowerState.UNKNOWN}
+        if self._wren_trl:
+            # TODO: Detect a bad wren trl.
+            self._wren_proxy = _WrenProxy(
+                self._wren_trl,
+                logger,
+                functools.partial(
+                    self._device_communication_state_changed, self._wren_trl
+                ),
+                functools.partial(self._wren_state_changed, self._wren_trl),
+                event_serialiser=self._event_serialiser,
+            )
+            self._wren_power_state = {wren_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
@@ -655,11 +712,25 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+        # TaskExecutorComponentManager hard-codes the task executor it creates and
+        # offers no hook to substitute one, so swap in the station's own
+        # concurrency mechanism here. Nothing has been submitted to the executor
+        # created by the superclass, so discarding it is safe.
+        # It is possible to change the base class behaviour, however as we might
+        # be deleting the component managers anyway, this little bit of jank can live.
+        self._task_executor.shutdown()
+        self._task_executor = LanedTaskExecutor(  # type: ignore[assignment]
+            extra_lanes=[_CALIBRATION_LANE],
+            unhandled_exception_callback=self._on_unhandled_exception,
+        )
+
         optional_devices: dict[str, DeviceComponentManager] = {}
         if self._lmc_daq_proxy:
             optional_devices[self._lmc_daq_trl] = self._lmc_daq_proxy
         if self._bandpass_daq_proxy:
             optional_devices[self._bandpass_daq_trl] = self._bandpass_daq_proxy
+        if self._wren_proxy:
+            optional_devices[self._wren_trl] = self._wren_proxy
 
         self._communication_manager = CommunicationManager(
             self._update_communication_state,
@@ -698,6 +769,8 @@ class SpsStationComponentManager(
             self._lmc_daq_proxy.cleanup()
         if self._bandpass_daq_proxy:
             self._bandpass_daq_proxy.cleanup()
+        if self._wren_proxy:
+            self._wren_proxy.cleanup()
         for tile_proxy in self._tile_proxies.values():
             tile_proxy.cleanup()
         for subrack_proxy in self._subrack_proxies.values():
@@ -707,6 +780,51 @@ class SpsStationComponentManager(
         # Superclass cleanup currently not implemented.
         # Expected in future versions.
         # super().cleanup()
+
+    def submit_calibration_task(
+        self: SpsStationComponentManager,
+        func: Callable,
+        args: Any = None,
+        kwargs: Any = None,
+        is_cmd_allowed: Optional[Callable[[], bool]] = None,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit a task to the calibration lane of the task executor.
+
+        Tasks submitted here run independently of the tasks submitted with
+        :py:meth:`!submit_task`, so a calibration acquisition does not stop other
+        commands from executing. ``Abort`` still aborts them, as it aborts every
+        lane.
+
+        :param func: function/bound method to be run
+        :param args: positional arguments to the function
+        :param kwargs: keyword arguments to the function
+        :param is_cmd_allowed: sanity check for func
+        :param task_callback: callback to be called whenever the status of the
+            task changes.
+
+        :return: tuple of TaskStatus & message
+        """
+        return self._laned_task_executor.submit_to(
+            _CALIBRATION_LANE,
+            func,
+            args,
+            kwargs,
+            is_cmd_allowed,
+            task_callback=task_callback,
+        )
+
+    @property
+    def _laned_task_executor(
+        self: SpsStationComponentManager,
+    ) -> LanedTaskExecutor:
+        """
+        Return the task executor, typed as the laned one this station installs.
+
+        :return: this station's task executor.
+        """
+        return cast(LanedTaskExecutor, self._task_executor)
 
     def _read_lmc_integrated_mode_from_bandpass_daq(
         self: SpsStationComponentManager,
@@ -1315,8 +1433,7 @@ class SpsStationComponentManager(
                 "dataReceivedResult", ("", "")
             )
             if (
-                data_received_result[0] == "correlator"
-                or data_received_result[0] == "tc_correlator"
+                data_received_result[0] in ("correlator", "tc_correlator")
                 and self.acquiring_data_for_calibration.is_set()
             ):
                 self.calibration_data_received_queue.put(
@@ -1344,6 +1461,25 @@ class SpsStationComponentManager(
             y_bandpass_data = state_change.get("yPolBandpass")
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
+
+    @threadsafe
+    def _wren_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        health: Optional[HealthState] = None,
+        fault: Optional[bool] = None,
+    ) -> None:
+        """
+        Handle the WREN state changed.
+
+        :param fqdn: The WREN TRL
+        :param power: The power state
+        :param health: The health state
+        :param fault: The fault state.
+
+        """
+        self.logger.warn("WREN state change currently unhandled")
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -1868,8 +2004,11 @@ class SpsStationComponentManager(
                 "Starting station beamformer with empty channel_groups "
                 "to start the beamformer daisy chain during station initialise"
             )
+            start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
+                self.RFC_FORMAT
+            )
             self.start_beamformer(
-                start_time=None, duration=-1, channel_groups=[], scan_id=0
+                start_time=start_time, duration=-1, channel_groups=[], scan_id=0
             )
         else:
             self.logger.error(f"Initialisation failed: {failure_step}")
@@ -3419,6 +3558,12 @@ class SpsStationComponentManager(
         """
         Start the beamformer at the specified time.
 
+        NOTE: Supplying ``start_time`` is recommended. Transient station
+        beamformer error spikes at startup are caused by non-synchronised TPM
+        beamformer start (SKB-1397). Simultaneous starts avoid the issue.
+        A start time 4 seconds in the future is typically sufficient for
+        the request to arrive on the TPMs.
+
         :param start_time: time at which to start the beamformer,
             defaults to 0
         :param duration: duration for which to run the beamformer,
@@ -3734,6 +3879,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         daq_mode: str,
     ) -> None:
+        # Stop any consumers left by a previous run so Start begins from idle.
+        self._stop_daq()
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         on_command = MccsCommandProxy(self._lmc_daq_trl, "Start", self.logger)
         result, message = on_command(json.dumps({"modes_to_start": daq_mode}))
@@ -3771,6 +3918,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         self.acquiring_data_for_calibration.set()
+        transmission_started = False
         try:
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
@@ -3800,12 +3948,34 @@ class SpsStationComponentManager(
 
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
-            self.configure_station_for_calibration(
+            config_result_code, config_message = self.configure_station_for_calibration(
                 nof_correlator_samples=nof_samples,
                 nof_tiles=(
                     16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
                 ),
             )
+            match config_result_code:
+                case ResultCode.ABORTED:
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.ABORTED,
+                            result=(ResultCode.ABORTED, config_message),
+                        )
+                    return
+                case ResultCode.OK:
+                    pass
+                case _:
+                    message = (
+                        "AcquireDataForCalibration failed to configure station "
+                        f"for calibration: {config_message}"
+                    )
+                    self.logger.error(message)
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.FAILED,
+                            result=(ResultCode.FAILED, message),
+                        )
+                    return
             self._start_daq(
                 "CORRELATOR_DATA"
                 if daq_mode.lower() == "xgpu"
@@ -3819,7 +3989,7 @@ class SpsStationComponentManager(
                     datetime.now(timezone.utc) + timedelta(seconds=2)
                 ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             # Send data from tpms
-            self.send_data_samples(
+            send_result_codes, send_messages = self.send_data_samples(
                 json.dumps(
                     {
                         "start_time": start_time,
@@ -3830,6 +4000,19 @@ class SpsStationComponentManager(
                     }
                 )
             )
+            if send_result_codes[0] != ResultCode.OK:
+                message = (
+                    "AcquireDataForCalibration failed to send data samples: "
+                    f"{send_messages[0]}"
+                )
+                self.logger.error(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(ResultCode.FAILED, message),
+                    )
+                return
+            transmission_started = True
             self.logger.debug(
                 f"Channel spigot sent for {first_channel=}, {last_channel=}"
             )
@@ -3859,29 +4042,39 @@ class SpsStationComponentManager(
                     f"Got data for {channel}, waiting "
                     f"for {last_channel}, {last_channel - channel} more."
                 )
-            self.logger.info("Stopping all consumers...")
-            self._stop_daq()
-
-            if task_callback:
-                if success:
-                    task_callback(
-                        status=TaskStatus.COMPLETED,
-                        result=(
-                            ResultCode.OK,
-                            {"dropped_channels": dropped_channels},
-                        ),
-                    )
-                else:
-                    task_callback(
-                        status=TaskStatus.FAILED,
-                        result=(
-                            ResultCode.FAILED,
-                            "No channels processed, maybe no data reached DAQ?",
-                        ),
-                    )
+            self.logger.info("Data acquisition finished; tearing down.")
         finally:
+            # Always stop producers then consumers, on every exit path, so a
+            # failed run cannot leave data flowing into the next one.
+            if transmission_started:
+                try:
+                    self.stop_data_transmission()
+                except Exception:  # pylint: disable=broad-except
+                    self.logger.exception("Failed to stop TPM transmission on teardown")
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
+            try:
+                self._stop_daq()
+            except Exception:  # pylint: disable=broad-except
+                self.logger.exception("Failed to stop DAQ on teardown")
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(
+                        ResultCode.OK,
+                        {"dropped_channels": dropped_channels},
+                    ),
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(
+                        ResultCode.FAILED,
+                        "No channels processed, maybe no data reached DAQ?",
+                    ),
+                )
 
     @check_communicating
     def configure_station_for_calibration(
@@ -3889,13 +4082,16 @@ class SpsStationComponentManager(
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
         **daq_config: Any,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Configure station for calibration.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         :param daq_config: any extra config to configure DAQ with
+
+        :return: A tuple containing the result code and a human-readable
+            status message.
         """
         assert self._lmc_daq_proxy is not None
         if task_callback:
@@ -3912,6 +4108,15 @@ class SpsStationComponentManager(
                 return True
             return False
 
+        def _fail(message: str) -> tuple[ResultCode, str]:
+            self.logger.error(message)
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, message),
+                )
+            return ResultCode.FAILED, message
+
         base_config = {
             "nof_tiles": 16,  # always 16 for correlation mode.
             "directory": "correlator_data",  # Appended to ADR-55 path.
@@ -3923,21 +4128,30 @@ class SpsStationComponentManager(
         configure_command = MccsCommandProxy(
             self._lmc_daq_trl, "Configure", self.logger
         )
-        configure_command(json.dumps(base_config), is_lrc=False)
+        result_code, message = configure_command(json.dumps(base_config), is_lrc=False)
+        if result_code != ResultCode.OK:
+            return _fail(f"Failed to configure DAQ for calibration: {message}")
         if _check_aborted():
-            return
+            return ResultCode.ABORTED, "Task aborted"
 
-        self.set_lmc_download(
+        [download_result_code], [download_message] = self.set_lmc_download(
             mode="10g",
             payload_length=8192,  # Default for using 10g
             dst_ip=self._lmc_daq_proxy.receiverIP,
             dst_port=self._lmc_daq_proxy.receiverPorts[0],
         )
+        if download_result_code != ResultCode.OK:
+            return _fail(
+                f"Failed to set LMC download for calibration: {download_message}"
+            )
+
+        message = "Station configured for calibration."
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result=(ResultCode.OK, "Station configured for calibration."),
+                result=(ResultCode.OK, message),
             )
+        return ResultCode.OK, message
 
     @property
     def csp_spead_format(self: SpsStationComponentManager) -> str:

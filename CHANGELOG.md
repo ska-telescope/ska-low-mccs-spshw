@@ -3,6 +3,26 @@
 ## Unreleased
 
 * [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values.
+
+## 14.1.0
+
+* [THORN-682] Update ska-low-mccs-daq reference to 7.0.2
+* [THORN-682] ``SpsStation.AcquireDataForCalibration`` no longer blocks other commands. It is still a long running command, reported through the usual LRC attributes, but the station's task executor now provides two independent lanes and the acquisition executes on a calibration lane of its own, rather than occupying the general lane for the whole acquisition. A scan can therefore be started and stopped while calibration data is being acquired. ``Abort`` stops an acquisition as before. The commands that would disrupt an acquisition in progress - ``Initialise``, ``ReInitialise``, ``StartAcquisition``, ``ConfigureStationForCalibration`` and ``SetLmcDownload`` - are now rejected for its duration.
+* [SKB-1397] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip. Manual calls should
+set a scheduled start time too to avoid this blip,
+4s is typically enough.
+
+## 14.0.2
+
+* [THORN-322] Add docs for Health of hardware facing devices.
+* [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.
+* [THORN-125] Improve observability when UNPROGRAMMED.
+* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
+* [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL
+
+## 14.0.1
+
+* [SKB-1462] Update `tpm-api` from **4.0.0** to **4.0.1**.
 * [THORN-607] Add conditional ska-sat-lmc dependency to ska-low-mccs-spshw chart. To disable please set ska-sat-lmc.enabled = false
 
 ## 14.0.0

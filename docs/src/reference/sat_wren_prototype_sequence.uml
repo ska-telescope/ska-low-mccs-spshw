@@ -1,0 +1,63 @@
+@startuml
+participant "TANGO Interface" as user
+participant "SpsStation" as station
+participant "MccsSubrack" as subrack
+participant "MccsTile" as tile
+participant "WREN\n(WhiteRabbit)" as wren
+
+== On() ==
+user -> station: On()
+
+loop until WREN healthState == OK, or wait_time elapses
+station -> wren: healthState
+wren --> station: healthState
+end
+
+alt healthState != OK (wait_time elapsed)
+station --> user: longRunningCommandResult (FAILED)
+else healthState == OK
+station -> subrack: _turn_on_subracks()\n(power up subrack + ports)
+subrack --> station: PowerState.ON
+
+station -> station: _set_tile_source_ips()\n_set_global_reference_time()
+
+station -> tile: _turn_on_tiles()
+tile --> station: PowerState.ON / tileProgrammingState
+
+note right of station
+  Continue with the pre-existing workflow:
+  _initialise_tile_parameters, _initialise_station,
+  _wait_for_arp_table, _route_data,
+  _check_station_synchronisation
+end note
+
+station --> user: longRunningCommandResult (COMPLETED)
+end
+
+== Initialise() ==
+user -> station: Initialise()
+
+loop until WREN healthState == OK, or wait_time elapses
+station -> wren: healthState
+wren --> station: healthState
+end
+
+alt healthState != OK (wait_time elapsed)
+station --> user: longRunningCommandResult (FAILED)
+else healthState == OK
+station -> station: _set_tile_source_ips()\n_set_global_reference_time()
+
+station -> tile: _reinitialise_tiles()\ninitialise() (per tile)
+tile --> station: tileProgrammingState
+
+note right of station
+  Continue with the pre-existing workflow:
+  _initialise_tile_parameters, _initialise_station,
+  _wait_for_arp_table, _route_data,
+  _check_station_synchronisation
+end note
+
+station --> user: longRunningCommandResult (COMPLETED)
+end
+
+@enduml

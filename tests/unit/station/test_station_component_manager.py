@@ -17,7 +17,7 @@ import threading
 import time
 import unittest.mock
 from types import SimpleNamespace
-from typing import Iterator
+from typing import Final, Iterator
 
 import numpy as np
 import pytest
@@ -37,11 +37,12 @@ from ska_low_mccs_spshw.station import (
     SpsStationSelfCheckManager,
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
-from ska_low_mccs_spshw.tile.tile_data import TileData
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 from tests.test_tools import FakeGroup as _FakeGroup
 
 # pylint: disable=too-many-lines
+
+ADC_CHANNELS: Final[int] = 32  # Number of ADC channels per tile, used in tests.
 
 
 # pylint: disable = too-many-arguments
@@ -386,9 +387,7 @@ def test_preadu_levels_fanout_to_correct_tile(
     :param mock_tiles: mock tile proxies, one per tile in the harness.
     :param num_tiles: number of tiles in the test.
     """
-    expected_levels_by_index = {
-        i: [100.0 + i] * TileData.ADC_CHANNELS for i in range(num_tiles)
-    }
+    expected_levels_by_index = {i: [100.0 + i] * ADC_CHANNELS for i in range(num_tiles)}
     station_component_manager.preadu_levels = [
         level for i in range(num_tiles) for level in expected_levels_by_index[i]
     ]
@@ -423,7 +422,7 @@ def test_static_delays_fanout_to_correct_tile(
         mock_tiles[i].logicalTileId = logical_id
 
     expected_delays_by_logical_id = {
-        logical_id: [10.0 + logical_id] * TileData.ADC_CHANNELS
+        logical_id: [10.0 + logical_id] * ADC_CHANNELS
         for logical_id in range(num_tiles)
     }
     station_component_manager.static_delays = [

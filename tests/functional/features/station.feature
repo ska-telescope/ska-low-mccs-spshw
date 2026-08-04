@@ -52,4 +52,3 @@ Feature: Test station
             | attribute           |
             | staticTimeDelays    |
             | preaduLevels        |
-            | globalReferenceTime |

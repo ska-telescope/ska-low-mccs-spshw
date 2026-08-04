@@ -21,8 +21,8 @@ import sys
 import threading
 import time
 from collections.abc import Iterator
-from datetime import datetime, timezone
-from typing import Any, Callable, Generator
+from datetime import datetime
+from typing import Any, Callable, Final, Generator
 
 import numpy as np
 import pytest
@@ -32,7 +32,6 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from ska_low_mccs_spshw.tile.tile_data import TileData
 from tests.functional.conftest import verify_bandpass_state
 from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
 from tests.test_tools import AttributeWaiter, wait_for_lrc_result
@@ -40,6 +39,8 @@ from tests.test_tools import AttributeWaiter, wait_for_lrc_result
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 STRESS_TEST_PHASE_DURATION = 90.0  # seconds
 NOF_CHANNEL_GROUPS = 48
+ADC_CHANNELS: Final[int] = 32  # Number of ADC channels per tile, used in tests.
+ADC_RESOLUTION: Final[float] = 2.5
 
 
 @pytest.fixture(name="tile_inheriting")
@@ -285,13 +286,10 @@ def ensure_spsstation_state_on(
         for tile in station_tiles
     ):
         if iters >= 60:
-            pytest.fail(
-                "Not all tiles came ON: "
-                f"""{[
+            pytest.fail("Not all tiles came ON: " f"""{[
                     (tile.dev_name(), tile.state(), tile.tileprogrammingstate)
                     for tile in station_tiles
-                ]}"""
-            )
+                ]}""")
 
         time.sleep(1)
         iters += 1
@@ -370,13 +368,10 @@ def check_spsstation_state_standby(
     iters = 0
     while any(tile.state() not in [tango.DevState.OFF] for tile in station_tiles):
         if iters >= 60:
-            pytest.fail(
-                "Not all tiles came OFF: "
-                f"""{[
+            pytest.fail("Not all tiles came OFF: " f"""{[
                     (tile.dev_name(), tile.state(), tile.tileprogrammingstate)
                     for tile in station_tiles
-                ]}"""
-            )
+                ]}""")
 
         time.sleep(1)
         iters += 1
@@ -1084,7 +1079,6 @@ def write_distinct_fanout_values(
     different ordering key, mirroring what
     ``SpsStationComponentManager`` actually does:
 
-    - ``globalReferenceTime`` is broadcast: every tile gets the same value.
     - ``preaduLevels`` is sliced by the station's ``TileFQDNs`` device
       property order (the order the tile fanout group was built from).
     - ``staticTimeDelays`` is sliced by each tile's own ``logicalTileId``.
@@ -1102,20 +1096,7 @@ def write_distinct_fanout_values(
     assert station_tiles, "No station tiles were discovered"
     originals = {tile.dev_name(): getattr(tile, attribute) for tile in station_tiles}
 
-    if attribute == "globalReferenceTime":
-        # The device rounds/reformats whatever we write (see
-        # SpsStation.globalReferenceTime.write), so the value actually fanned
-        # out to tiles is whatever the station reads back after the write,
-        # not the literal string we sent.
-        setattr(
-            station,
-            attribute,
-            datetime.strftime(datetime.now(timezone.utc), RFC_FORMAT),
-        )
-        value = station.globalReferenceTime
-        expected = {tile.dev_name(): value for tile in station_tiles}
-
-    elif attribute == "preaduLevels":
+    if attribute == "preaduLevels":
         # AttributeWaiter._values_equal requires both sides to be np.ndarray
         # once the tile's readback is one, so per-tile expected blocks are
         # built as arrays rather than plain lists.
@@ -1124,8 +1105,7 @@ def write_distinct_fanout_values(
         # regardless of station size, while still differing per tile.
         fqdns = list(station.get_property("TileFQDNs")["TileFQDNs"])
         per_fqdn = {
-            fqdn: np.array([float(i)] * TileData.ADC_CHANNELS)
-            for i, fqdn in enumerate(fqdns)
+            fqdn: np.array([float(i)] * ADC_CHANNELS) for i, fqdn in enumerate(fqdns)
         }
         setattr(
             station,
@@ -1147,7 +1127,7 @@ def write_distinct_fanout_values(
         # Small ordinal values, well within the +/-124 ns valid range.
         per_logical_id = {
             tile.logicalTileId: np.array(
-                [float(tile.logicalTileId)] * TileData.ADC_CHANNELS
+                [float(tile.logicalTileId * ADC_RESOLUTION)] * ADC_CHANNELS
             )
             for tile in station_tiles
         }

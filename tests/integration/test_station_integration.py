@@ -152,13 +152,15 @@ def test_initialise_can_execute(  # pylint: disable=too-many-arguments
 
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
-    change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+    change_event_callbacks["tile_programming_state"].assert_change_event(
+        "Off", lookahead=2, consume_nonmatches=True
+    )
 
     tile_device.On()
 
     change_event_callbacks["tile_programming_state"].assert_change_event(
         "NotProgrammed",
-        lookahead=2,
+        lookahead=3,
         consume_nonmatches=True,
     )
     change_event_callbacks["tile_programming_state"].assert_change_event(
@@ -279,14 +281,16 @@ class TestStationTileIntegration:
         change_event_callbacks["station_state"].assert_not_called()
         # The Subrack will be ONLINE and therefore will know the state of
         # the port the TPM is on.
-        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Off", lookahead=2, consume_nonmatches=True
+        )
 
         tile_device.On()
         # Depending where we are on the poll when on is executed
         # we may be Unconnected or NotProgrammed, hence the lookahead of 2.
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed",
-            lookahead=2,
+            lookahead=3,
             consume_nonmatches=True,
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(

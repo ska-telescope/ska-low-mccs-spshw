@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values.
 * [THORN-607] Add conditional ska-sat-lmc dependency to ska-low-mccs-spshw chart. To disable please set ska-sat-lmc.enabled = false
 
 ## 14.0.0

@@ -2569,8 +2569,10 @@ class SpsStationComponentManager(
         :return: Array of pps delay corrections, one value per tile, in nanoseconds
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            assert proxy._proxy.ppsDelayCorrection is not None
+            if proxy._proxy is None:
+                continue
+            if proxy._proxy.ppsDelayCorrection is None:
+                continue
             self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
 
         return copy.deepcopy(self._pps_delay_corrections)
@@ -2588,7 +2590,8 @@ class SpsStationComponentManager(
             Values are internally rounded to 1.25 ns steps
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
+            if proxy._proxy is None:
+                continue
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
                 proxy._proxy.ppsDelayCorrection = delays[i]
 
@@ -2893,8 +2896,10 @@ class SpsStationComponentManager(
         :return: list of programming state for all TPMs
         """
         for tile_id, tile in enumerate(self._tile_proxies.values()):
-            assert tile._proxy is not None  # for the type checker
-            assert tile._proxy.tileProgrammingState is not None
+            if tile._proxy is None:  # for the type checker
+                continue
+            if tile._proxy.tileProgrammingState is None:
+                continue
             self._tile_programming_state[tile_id] = tile._proxy.tileProgrammingState
         return self._tile_programming_state.copy()
 

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
-from typing import Any, Callable, Final, NoReturn, Optional, cast
+from typing import Any, Callable, Final, NoReturn, Optional
 
 import numpy as np
 import ska_tango_base as stb
@@ -50,16 +50,10 @@ from .attribute_converters import (
     clocks_to_list,
     flatten_list,
     lane_error_to_array,
-    serialise_np_object,
     serialise_object,
     udp_error_count_to_list,
 )
-from .attribute_managers import (
-    AlwaysPushAttributeManager,
-    AttributeManager,
-    BoolAttributeManager,
-    NpArrayAttributeManager,
-)
+from .attribute_managers import AttributeManager, BoolAttributeManager
 from .firmware_threshold_interface import (
     CURRENT_KEYS,
     TEMPERATURE_KEYS,
@@ -154,6 +148,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # -------
     # Signals
     # -------
+    # Using stored=True here allows us to read back the last
+    # emitted value from the signal directly in code where reading the
+    # attribute self.attr would return a `tango._tango.Attribute` object.
     board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
     fpga1_temperature_signal: AttrSignal[float] = AttrSignal[float]()
     fpga2_temperature_signal: AttrSignal[float] = AttrSignal[float]()
@@ -223,6 +220,132 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     forty_gb_destination_ips_signal: AttrSignal[list] = AttrSignal[list]()
     forty_gb_destination_ports_signal: AttrSignal[list] = AttrSignal[list]()
 
+    adc_pll_lock_status_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
+    adc_power_signal: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    tile_beamformer_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    station_beamformer_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    fpga0_station_beamformer_error_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_station_beamformer_error_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga0_station_beamformer_flagged_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_station_beamformer_flagged_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga0_crc_error_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_crc_error_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga0_bip_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga1_bip_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga0_decode_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga1_decode_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga0_linkup_loss_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_linkup_loss_count_signal: AttrSignal[int] = AttrSignal[int]()
+    io_data_router_status_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_data_router_status_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
+    data_router_discarded_packets_signal: AttrSignal[str] = AttrSignal[str]()
+    arp_signal: AttrSignal[bool] = AttrSignal[bool]()
+    udp_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    ddr_initialisation_signal: AttrSignal[bool] = AttrSignal[bool]()
+    fpga0_ddr_reset_counter_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_ddr_reset_counter_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_soft_error_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_soft_error_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_hard_error_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_hard_error_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga0_resync_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_resync_count_signal: AttrSignal[int] = AttrSignal[int]()
+    link_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    fpga0_lane_error_count_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
+    fpga1_lane_error_count_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
+    fpga0_clock_managers_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga1_clock_managers_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga0_clock_managers_status_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga1_clock_managers_status_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    ddr_write_size_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga0_clocks_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    fpga1_clocks_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    adc_sysref_counter_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    adc_sysref_timing_requirements_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    fpga0_qpll_status_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_qpll_status_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga0_qpll_counter_signal: AttrSignal[int] = AttrSignal[int]()
+    fpga1_qpll_counter_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_pll_status_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_pll_status_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_pll_status_fpga0_counter_signal: AttrSignal[int] = AttrSignal[
+        int
+    ]()
+    io_f2f_interface_pll_status_fpga1_counter_signal: AttrSignal[int] = AttrSignal[
+        int
+    ]()
+    timing_pll_lock_status_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_pll_count_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_pll_40g_lock_status_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_pll_40g_count_signal: AttrSignal[int] = AttrSignal[int]()
+    voltages_signal: AttrSignal[str] = AttrSignal[str]()
+    temperatures_signal: AttrSignal[str] = AttrSignal[str]()
+    currents_signal: AttrSignal[str] = AttrSignal[str]()
+    timing_signal: AttrSignal[str] = AttrSignal[str]()
+    io_signal: AttrSignal[str] = AttrSignal[str]()
+    dsp_signal: AttrSignal[str] = AttrSignal[str]()
+    adcs_signal: AttrSignal[str] = AttrSignal[str]()
+    I2C_access_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    temperature_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    voltage_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    SEM_wd_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    MCU_wd_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    cspDestinationIp_signal: AttrSignal[str] = AttrSignal[str]()
+    cspDestinationMac_signal: AttrSignal[str] = AttrSignal[str]()
+    cspDestinationPort_signal: AttrSignal[int] = AttrSignal[int]()
+    dstip40gfpga1_signal: AttrSignal[str] = AttrSignal[str]()
+    dstip40gfpga2_signal: AttrSignal[str] = AttrSignal[str]()
+    simulationMode_signal: AttrSignal[SimulationMode] = AttrSignal[SimulationMode]()
+    testMode_signal: AttrSignal[TestMode] = AttrSignal[TestMode]()
+    useAttributesForHealth_signal: AttrSignal[bool] = AttrSignal[bool]()
+    logicalTileId_signal: AttrSignal[int] = AttrSignal[int]()
+    tileProgrammingState_signal: AttrSignal[str] = AttrSignal[str](stored=True)
+    stationId_signal: AttrSignal[int] = AttrSignal[int]()
+    firmwareVersion_signal: AttrSignal[str] = AttrSignal[str]()
+    antennaIds_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    coreCommunicationStatus_signal: AttrSignal[str] = AttrSignal[str]()
+    ppsDrift_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    # Using bool for ppsPresent gives errors.
+    ppsPresent_signal: AttrSignal[int] = AttrSignal[int]()
+    pllLocked_signal: AttrSignal[bool] = AttrSignal[bool]()
+    beamformerTable_signal: AttrSignal[list[list[int]]] = AttrSignal[list[list[int]]]()
+    beamformerRegions_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    srcip40gfpga1_signal: AttrSignal[str] = AttrSignal[str]()
+    srcip40gfpga2_signal: AttrSignal[str] = AttrSignal[str]()
+    rfiCount_signal: AttrSignal[list[list[int]]] = AttrSignal[list[list[int]]]()
+    pfbVersion_signal: AttrSignal[str] = AttrSignal[str]()
+    rfiBlankingEnabledAntennas_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    broadbandRfiFactor_signal: AttrSignal[float] = AttrSignal[float]()
+    fortyGPacketCount_signal: AttrSignal[str] = AttrSignal[str]()
+    pointingDelays_signal: AttrSignal[list[list[float]]] = AttrSignal[
+        list[list[float]]
+    ]()
+    currentDraw_signal: AttrSignal[float] = AttrSignal[float]()
+    voltageDraw_signal: AttrSignal[float] = AttrSignal[float]()
+    powerDraw_signal: AttrSignal[float] = AttrSignal[float]()
+    firmwareTemperatureThresholds_signal: AttrSignal[str] = AttrSignal[str]()
+    firmwareVoltageThresholds_signal: AttrSignal[str] = AttrSignal[str]()
+    firmwareCurrentThresholds_signal: AttrSignal[str] = AttrSignal[str]()
+    phaseTerminalCount_signal: AttrSignal[int] = AttrSignal[int]()
+    channeliserRounding_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    staticTimeDelays_signal: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    cspRounding_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    preaduLevels_signal: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    faultReport_signal: AttrSignal[dict] = AttrSignal[dict](stored=True)
+    temperatureHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    voltageHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    currentHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    alarmHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    adcHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    timingHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    ioHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    dspHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
+    healthReport_signal: AttrSignal[str] = AttrSignal[str](stored=True)
+    stationBeamFlagEnabled_signal: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
@@ -288,6 +411,83 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltageVM_MGT1_AUX": "voltage_vm_mgt1_aux_signal",
         "voltageVM_PLL": "voltage_vm_pll_signal",
         "voltageVM_SW_AMP": "voltage_vm_sw_amp_signal",
+        "adc_pll_lock_status": "adc_pll_lock_status_signal",
+        "tile_beamformer_status": "tile_beamformer_status_signal",
+        "station_beamformer_status": "station_beamformer_status_signal",
+        "fpga0_station_beamformer_error_count": (
+            "fpga0_station_beamformer" "_error_count_signal"
+        ),
+        "fpga1_station_beamformer_error_count": (
+            "fpga1_station_beamformer" "_error_count_signal"
+        ),
+        "fpga0_crc_error_count": "fpga0_crc_error_count_signal",
+        "fpga1_crc_error_count": "fpga1_crc_error_count_signal",
+        "fpga0_bip_error_count": "fpga0_bip_error_count_signal",
+        "fpga1_bip_error_count": "fpga1_bip_error_count_signal",
+        "fpga0_decode_error_count": "fpga0_decode_error_count_signal",
+        "fpga1_decode_error_count": "fpga1_decode_error_count_signal",
+        "fpga0_linkup_loss_count": "fpga0_linkup_loss_count_signal",
+        "fpga1_linkup_loss_count": "fpga1_linkup_loss_count_signal",
+        "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
+        "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
+        "data_router_discarded_packets": "data_router_discarded_packets_signal",
+        "arp": "arp_signal",
+        "udp_status": "udp_status_signal",
+        "ddr_initialisation": "ddr_initialisation_signal",
+        "fpga0_ddr_reset_counter": "fpga0_ddr_reset_counter_signal",
+        "fpga1_ddr_reset_counter": "fpga1_ddr_reset_counter_signal",
+        "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0_signal",
+        "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1_signal",
+        "io_f2f_interface_hard_error_fpga0": "io_f2f_interface_hard_error_fpga0_signal",
+        "io_f2f_interface_hard_error_fpga1": "io_f2f_interface_hard_error_fpga1_signal",
+        "fpga0_resync_count": "fpga0_resync_count_signal",
+        "fpga1_resync_count": "fpga1_resync_count_signal",
+        "link_status": "link_status_signal",
+        "fpga0_lane_error_count": "fpga0_lane_error_count_signal",
+        "fpga1_lane_error_count": "fpga1_lane_error_count_signal",
+        "fpga0_clock_managers_count": "fpga0_clock_managers_count_signal",
+        "fpga1_clock_managers_count": "fpga1_clock_managers_count_signal",
+        "fpga0_clock_managers_status": "fpga0_clock_managers_status_signal",
+        "fpga1_clock_managers_status": "fpga1_clock_managers_status_signal",
+        "fpga0_clocks": "fpga0_clocks_signal",
+        "fpga1_clocks": "fpga1_clocks_signal",
+        "adc_sysref_counter": "adc_sysref_counter_signal",
+        "adc_sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
+        "fpga0_qpll_status": "fpga0_qpll_status_signal",
+        "fpga1_qpll_status": "fpga1_qpll_status_signal",
+        "fpga0_qpll_counter": "fpga0_qpll_counter_signal",
+        "fpga1_qpll_counter": "fpga1_qpll_counter_signal",
+        "io_f2f_interface_pll_status_fpga0": "io_f2f_interface_pll_status_fpga0_signal",
+        "io_f2f_interface_pll_status_fpga1": "io_f2f_interface_pll_status_fpga1_signal",
+        "io_f2f_interface_pll_status_fpga0_counter": (
+            "io_f2f_interface_pll_status" "_fpga0_counter_signal"
+        ),
+        "io_f2f_interface_pll_status_fpga1_counter": (
+            "io_f2f_interface_pll_status" "_fpga1_counter_signal"
+        ),
+        "timing_pll_lock_status": "timing_pll_lock_status_signal",
+        "timing_pll_count": "timing_pll_count_signal",
+        "timing_pll_40g_lock_status": "timing_pll_40g_lock_status_signal",
+        "timing_pll_40g_count": "timing_pll_40g_count_signal",
+        "voltages": "voltages_signal",
+        "temperatures": "temperatures_signal",
+        "currents": "currents_signal",
+        "timing": "timing_signal",
+        "io": "io_signal",
+        "dsp": "dsp_signal",
+        "adcs": "adcs_signal",
+        "ppsPresent": "ppsPresent_signal",
+    }
+
+    _INTERMEDIATE_HEALTH_SIGNAL_MAP: dict[str, str] = {
+        "temperatures": "temperatureHealth_signal",
+        "voltages": "voltageHealth_signal",
+        "currents": "currentHealth_signal",
+        "alarms": "alarmHealth_signal",
+        "adcs": "adcHealth_signal",
+        "timing": "timingHealth_signal",
+        "io": "ioHealth_signal",
+        "dsp": "dspHealth_signal",
     }
 
     # Maps each generic (non-health-sensor) signal-backed attribute's
@@ -307,6 +507,46 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "tile_info": "tile_info_signal",
         "forty_gb_destination_ips": "forty_gb_destination_ips_signal",
         "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
+        "adc_rms": "adc_power_signal",
+        "fpga0_station_beamformer_flagged_count": (
+            "fpga0_station_beamformer" "_flagged_count_signal"
+        ),
+        "fpga1_station_beamformer_flagged_count": (
+            "fpga1_station_beamformer" "_flagged_count_signal"
+        ),
+        "ddr_write_size": "ddr_write_size_signal",
+        "I2C_access_alm": "I2C_access_alm_signal",
+        "temperature_alm": "temperature_alm_signal",
+        "voltage_alm": "voltage_alm_signal",
+        "SEM_wd": "SEM_wd_signal",
+        "MCU_wd": "MCU_wd_signal",
+        "dst_ip_40g_fpga1": "dstip40gfpga1_signal",
+        "dst_ip_40g_fpga2": "dstip40gfpga2_signal",
+        "tile_id": "logicalTileId_signal",
+        "programming_state": "tileProgrammingState_signal",
+        "station_id": "stationId_signal",
+        "firmware_version": "firmwareVersion_signal",
+        "core_communication": "coreCommunicationStatus_signal",
+        "pps_drift": "ppsDrift_signal",
+        "pps_delay_correction": "ppsDelayCorrection_signal",
+        "pll_locked": "pllLocked_signal",
+        "beamformer_table": "beamformerTable_signal",
+        "beamformer_regions": "beamformerRegions_signal",
+        "rfi_count": "rfiCount_signal",
+        "pfb_version": "pfbVersion_signal",
+        "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas_signal",
+        "broadband_rfi_factor": "broadbandRfiFactor_signal",
+        "40g_packet_count": "fortyGPacketCount_signal",
+        "pointing_delays": "pointingDelays_signal",
+        "current_draw": "currentDraw_signal",
+        "voltage_draw": "voltageDraw_signal",
+        "power_draw": "powerDraw_signal",
+        "phase_terminal_count": "phaseTerminalCount_signal",
+        "channeliser_rounding": "channeliserRounding_signal",
+        "static_delays": "staticTimeDelays_signal",
+        "csp_rounding": "cspRounding_signal",
+        "preadu_levels": "preaduLevels_signal",
+        "is_station_beam_flagging_enabled": "stationBeamFlagEnabled_signal",
     }
 
     # -----------------
@@ -547,7 +787,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager: TileComponentManager
         self._stopping: bool
         self._health_recorder: TileHealthRecorder | None
-        self._health_report = ""
+        self.healthReport_signal = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds
         self.db_configuration_fault: tuple[bool | None, str] = (
@@ -556,7 +796,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
         self.component_manager_fault: bool | None = None
         self.power_state: PowerState | None = None
-        self.status_information: dict[str, str] = {}
+        self.faultReport_signal = {}
 
         self._intermediate_healths: dict[str, HealthState] = {
             "temperatures": HealthState.UNKNOWN,
@@ -569,9 +809,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "alarms": HealthState.UNKNOWN,
         }
         self._intermediate_attrs: dict[str, list[str]]
-        self._csp_destination_ip = ""
-        self._csp_destination_mac = ""
-        self._csp_destination_port = 0
+        # Not sure about these...
+        self.cspDestinationIp_signal = ""
+        self.cspDestinationMac_signal = ""
+        self.cspDestinationPort_signal = 0
+        self.simulationMode_signal = self.SimulationConfig
+        self.testMode_signal = self.TestConfig
+        self.useAttributesForHealth_signal = self.UseAttributesForHealth
+        self.stationId_signal = self.StationID
+        self.srcip40gfpga1_signal = ""
+        self.srcip40gfpga2_signal = ""
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -616,12 +863,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
     def init_device(self: MccsTile) -> None:
-        """
-        Initialise the device.
-
-        :raises TypeError: when attributes have a converter
-            that is not callable.
-        """
+        """Initialise the device."""
         self._stopping = False
         # Pre-compute absolute signal names for alarm handling in notify_emission.
         self._alarm_signal_map: dict[str, str] = {
@@ -630,183 +872,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
+        # Contains only those non-signal backed attributes that still remain.
         self.attr_map = {
-            "I2C_access_alm": "I2C_access_alm",
-            "temperature_alm": "temperature_alm",
-            "voltage_alm": "voltage_alm",
-            "SEM_wd": "SEM_wd",
-            "MCU_wd": "MCU_wd",
-            "programming_state": "tileProgrammingState",
-            "adc_rms": "adcPower",
-            "static_delays": "staticTimeDelays",
-            "preadu_levels": "preaduLevels",
-            "csp_rounding": "cspRounding",
-            "channeliser_rounding": "channeliserRounding",
-            "pll_locked": "pllLocked",
-            "pps_drift": "ppsDrift",
-            "pps_delay_correction": "ppsDelayCorrection",
-            "phase_terminal_count": "phaseTerminalCount",
-            "beamformer_table": "beamformerTable",
-            "beamformer_regions": "beamformerRegions",
-            "io": "io",
-            "dsp": "dsp",
-            "voltages": "voltages",
-            "temperatures": "temperatures",
-            "adcs": "adcs",
-            "timing": "timing",
-            "currents": "currents",
-            "tile_id": "logicalTileId",
-            "station_id": "stationId",
-            "adc_pll_lock_status": "adc_pll_lock_status",
-            "fpga0_qpll_status": "fpga0_qpll_status",
-            "fpga0_qpll_counter": "fpga0_qpll_counter",
-            "fpga1_qpll_status": "fpga1_qpll_status",
-            "fpga1_qpll_counter": "fpga1_qpll_counter",
-            "io_f2f_interface_pll_status_fpga0": "io_f2f_interface_pll_status_fpga0",
-            "io_f2f_interface_pll_status_fpga0_counter": (
-                "io_f2f_interface_pll_status_fpga0_counter"
-            ),
-            "io_f2f_interface_pll_status_fpga1": "io_f2f_interface_pll_status_fpga1",
-            "io_f2f_interface_pll_status_fpga1_counter": (
-                "io_f2f_interface_pll_status_fpga1_counter"
-            ),
-            "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0",
-            "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1",
-            "io_f2f_interface_hard_error_fpga0": "io_f2f_interface_hard_error_fpga0",
-            "io_f2f_interface_hard_error_fpga1": "io_f2f_interface_hard_error_fpga1",
-            "timing_pll_lock_status": "timing_pll_lock_status",
-            "timing_pll_count": "timing_pll_count",
-            "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
-            "timing_pll_40g_count": "timing_pll_40g_count",
-            "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
-            "adc_sysref_counter": "adc_sysref_counter",
-            "fpga0_clocks": "fpga0_clocks",
-            "fpga1_clocks": "fpga1_clocks",
-            "fpga0_clock_managers_count": "fpga0_clock_managers_count",
-            "fpga0_clock_managers_status": "fpga0_clock_managers_status",
-            "fpga1_clock_managers_count": "fpga1_clock_managers_count",
-            "fpga1_clock_managers_status": "fpga1_clock_managers_status",
-            "fpga0_lane_error_count": "fpga0_lane_error_count",
-            "fpga1_lane_error_count": "fpga1_lane_error_count",
-            "fpga0_resync_count": "fpga0_resync_count",
-            "fpga1_resync_count": "fpga1_resync_count",
-            "ddr_initialisation": "ddr_initialisation",
-            "fpga0_ddr_reset_counter": "fpga0_ddr_reset_counter",
-            "fpga1_ddr_reset_counter": "fpga1_ddr_reset_counter",
-            # "ddr_rd_cnt": "ddr_rd_cnt",
-            # "ddr_wr_cnt": "ddr_wr_cnt",
-            # "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
-            "fpga0_crc_error_count": "fpga0_crc_error_count",
-            "fpga1_crc_error_count": "fpga1_crc_error_count",
-            "fpga0_bip_error_count": "fpga0_bip_error_count",
-            "fpga0_decode_error_count": "fpga0_decode_error_count",
-            "fpga1_bip_error_count": "fpga1_bip_error_count",
-            "fpga1_decode_error_count": "fpga1_decode_error_count",
-            "fpga0_linkup_loss_count": "fpga0_linkup_loss_count",
-            "fpga1_linkup_loss_count": "fpga1_linkup_loss_count",
-            "io_data_router_status_fpga0": "io_data_router_status_fpga0",
-            "io_data_router_status_fpga1": "io_data_router_status_fpga1",
-            "data_router_discarded_packets": "data_router_discarded_packets",
-            "tile_beamformer_status": "tile_beamformer_status",
-            "station_beamformer_status": "station_beamformer_status",
-            "fpga0_station_beamformer_error_count": (
-                "fpga0_station_beamformer_error_count"
-            ),
-            "fpga1_station_beamformer_error_count": (
-                "fpga1_station_beamformer_error_count"
-            ),
-            "fpga0_station_beamformer_flagged_count": (
-                "fpga0_station_beamformer_flagged_count"
-            ),
-            "fpga1_station_beamformer_flagged_count": (
-                "fpga1_station_beamformer_flagged_count"
-            ),
-            "core_communication": "coreCommunicationStatus",
-            "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
-            "rfi_count": "rfiCount",
             "antenna_buffer_mode": "antennaBufferMode",
             "data_transmission_mode": "dataTransmissionMode",
             "integrated_data_transmission_mode": "integratedDataTransmissionMode",
-            "pfb_version": "pfbVersion",
-            "rfi_blanking_enabled_antennas": "rfiBlankingEnabledAntennas",
-            "broadband_rfi_factor": "broadbandRfiFactor",
-            "40g_packet_count": "fortyGPacketCount",
-            "pointing_delays": "pointingDelays",
-            "dst_ip_40g_fpga1": "dstip40gfpga1",
-            "dst_ip_40g_fpga2": "dstip40gfpga2",
-            "firmware_version": "firmwareVersion",
-            "current_draw": "currentDraw",
-            "power_draw": "powerDraw",
-            "voltage_draw": "voltageDraw",
-        }
-
-        attribute_converters: dict[str, Any] = {
-            "adc_pll_lock_status": adc_pll_to_list,
-            "fpga0_bip_error_count": udp_error_count_to_list,
-            "fpga0_decode_error_count": udp_error_count_to_list,
-            "fpga1_bip_error_count": udp_error_count_to_list,
-            "fpga1_decode_error_count": udp_error_count_to_list,
-            "fpga0_lane_error_count": lane_error_to_array,
-            "fpga1_lane_error_count": lane_error_to_array,
-            "fpga0_clock_managers_count": clock_managers_count,
-            "fpga0_clock_managers_status": clock_managers_status,
-            "fpga1_clock_managers_count": clock_managers_count,
-            "fpga1_clock_managers_status": clock_managers_status,
-            "fpga0_clocks": clocks_to_list,
-            "fpga1_clocks": clocks_to_list,
-            "adc_sysref_counter": adc_to_list,
-            "adc_sysref_timing_requirements": adc_to_list,
-            "timing_pll_lock_status": lambda val: (
-                int(val[0]) if val[0] is not None else None
-            ),
-            "timing_pll_40g_lock_status": lambda val: (
-                int(val[0]) if val[0] is not None else None
-            ),
-            "fpga0_qpll_status": lambda val: (
-                int(val[0]) if val[0] is not None else None
-            ),
-            "fpga1_qpll_status": lambda val: (
-                int(val[0]) if val[0] is not None else None
-            ),
-            "io_f2f_interface_pll_status_fpga0": lambda val: (
-                int(val[0]) if val[0] is not None else None
-            ),
-            "io_f2f_interface_pll_status_fpga1": lambda val: (
-                int(val[0]) if val[0] is not None else None
-            ),
-            "timing_pll_count": lambda val: int(val[1]) if val[1] is not None else None,
-            "io_f2f_interface_pll_status_fpga0_counter": lambda val: (
-                int(val[1]) if val[1] is not None else None
-            ),
-            "io_f2f_interface_pll_status_fpga1_counter": lambda val: (
-                int(val[1]) if val[1] is not None else None
-            ),
-            "timing_pll_40g_count": lambda val: (
-                int(val[1]) if val[1] is not None else None
-            ),
-            "fpga0_qpll_counter": lambda val: (
-                int(val[1]) if val[1] is not None else None
-            ),
-            "fpga1_qpll_counter": lambda val: (
-                int(val[1]) if val[1] is not None else None
-            ),
-            "io_data_router_status_fpga0": lambda val: (
-                int(val) if val is not None else None
-            ),
-            "io_data_router_status_fpga1": lambda val: (
-                int(val) if val is not None else None
-            ),
-            "coreCommunicationStatus": serialise_object,
-            "voltages": serialise_object,
-            "temperatures": serialise_object,
-            "currents": serialise_object,
-            "timing": serialise_object,
-            "io": serialise_object,
-            "dsp": serialise_np_object,
-            "data_router_discarded_packets": serialise_object,
-            "adcs": serialise_object,
-            "beamformerTable": flatten_list,
-            "beamformerRegions": flatten_list,
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -814,84 +884,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # generic attributes
         for attr_name in self.attr_map.values():
-            converter = attribute_converters.get(attr_name)
-            if converter is not None and not callable(converter):
-                raise TypeError(f"The converter for '{attr_name}' is not callable.")
             self._attribute_state[attr_name] = AttributeManager(
                 functools.partial(self.post_change_event, attr_name),
-                converter=converter,
             )
-
-        # Specialised attributes.
-        # - ppsPresent: tango does not have good ALARMs for Boolean
-        # - tileProgrammingState: TODO: is this state information ?
-        # Should we move into the _component_state_changed callback?
-        # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
-        # - rfiCount: np.ndarray needs a different truth comparison.
-        # We have a specific handler for this attribute.
-        self._attribute_state.update(
-            {
-                "ppsPresent": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "ppsPresent"),
-                    alarm_flag="LOW",
-                ),
-                "station_beamformer_status": BoolAttributeManager(
-                    functools.partial(
-                        self.post_change_event, "station_beamformer_status"
-                    ),
-                    alarm_flag="LOW",
-                ),
-                "tile_beamformer_status": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "tile_beamformer_status"),
-                    alarm_flag="LOW",
-                ),
-                "arp": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "arp"),
-                    alarm_flag="LOW",
-                ),
-                "udp_status": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "udp_status"),
-                    alarm_flag="LOW",
-                ),
-                "ddr_initialisation": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "ddr_initialisation"),
-                    alarm_flag="LOW",
-                ),
-                "link_status": BoolAttributeManager(
-                    functools.partial(self.post_change_event, "link_status"),
-                    alarm_flag="LOW",
-                ),
-                "tileProgrammingState": AttributeManager(
-                    functools.partial(self.post_change_event, "tileProgrammingState"),
-                    initial_value=TpmStatus.UNKNOWN.pretty_name(),
-                ),
-                "rfiCount": NpArrayAttributeManager(
-                    functools.partial(self.post_change_event, "rfiCount")
-                ),
-                "fortyGPacketCount": AttributeManager(
-                    functools.partial(self.post_change_event, "fortyGPacketCount"),
-                    converter=serialise_object,
-                ),
-                "pointingDelays": AlwaysPushAttributeManager(
-                    functools.partial(self.post_change_event, "pointingDelays")
-                ),
-                "dstip40gfpga1": AttributeManager(
-                    functools.partial(self.post_change_event, "dstip40gfpga1"),
-                    initial_value="",
-                ),
-                "dstip40gfpga2": AttributeManager(
-                    functools.partial(self.post_change_event, "dstip40gfpga2"),
-                    initial_value="",
-                ),
-            }
-        )
-
+        # Mapping of alarm name to alarm_signal
         self.__alarm_attribute_map: dict[str, str] = {
-            "I2C_access_alm": "I2C_access_alm",
-            "temperature_alm": "temperature_alm",
-            "voltage_alm": "voltage_alm",
-            "SEM_wd": "SEM_wd",
-            "MCU_wd": "MCU_wd",
+            "I2C_access_alm": "I2C_access_alm_signal",
+            "temperature_alm": "temperature_alm_signal",
+            "voltage_alm": "voltage_alm_signal",
+            "SEM_wd": "SEM_wd_signal",
+            "MCU_wd": "MCU_wd_signal",
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
@@ -1195,13 +1197,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.set_change_event(attr_name, True, verify_events)
             self.set_archive_event(attr_name, True, verify_events)
 
-        for attr_name in [
-            "firmwareVoltageThresholds",
-            "firmwareCurrentThresholds",
-            "firmwareTemperatureThresholds",
-        ]:
-            self.set_change_event(attr_name, True, self.VerifyEvents)
-            self.set_archive_event(attr_name, True, self.VerifyEvents)
+        # Not sure if we *should* need this but without doing it explicitly
+        # we don't get the UNKNOWN event as the tests expect.
+        # Do the tests need refactoring or ..?
+        self._update_attribute_callback(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
+
         self.init_completed()
 
     def _health_changed_new(
@@ -1216,7 +1218,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self._stopping:
             return
         if self.UseAttributesForHealth:
-            self._health_report = health_report
+            self.healthReport_signal = health_report
 
             if self._health_state != health:
                 self.logger.info(f"Health changed ==> {health=}, {health_report=}")
@@ -1236,6 +1238,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     "Intermediate Health changed ==> " f"{group=} {health=}"
                 )
                 self._intermediate_healths[group] = health
+                # if group in self._INTERMEDIATE_HEALTH_SIGNAL_MAP:
+                setattr(self, self._INTERMEDIATE_HEALTH_SIGNAL_MAP[group], health)
 
     def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
         """
@@ -1378,18 +1382,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
     def _handle_firmware_read(self: MccsTile) -> None:
-        """Handle a firmware read by pushing appropriate attribute events."""
+        """Handle a firmware read by assigning to appropriate attribute signals."""
         hw_threshold_cache = self.hw_firmware_thresholds.to_device_property_dict()
 
+        # Do we need a json.dumps here?
         for group, attr_value in hw_threshold_cache.items():
-            group_attribute_map = {
-                "voltages": "firmwareVoltageThresholds",
-                "currents": "firmwareCurrentThresholds",
-                "temperatures": "firmwareTemperatureThresholds",
-            }
-            serialised_value = json.dumps(attr_value)
-            self.push_change_event(group_attribute_map[group], serialised_value)
-            self.push_archive_event(group_attribute_map[group], serialised_value)
+            if group == "temperatures":
+                self.firmwareTemperatureThresholds_signal = attr_value
+            elif group == "voltages":
+                self.firmwareVoltageThresholds_signal = attr_value
+            elif group == "currents":
+                self.firmwareCurrentThresholds_signal = attr_value
 
     # pylint: disable=too-many-branches
     def _check_database_match(self: MccsTile) -> bool:
@@ -1532,6 +1535,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     setattr(self, signal, None)
                 for signal in self._GENERIC_SIGNAL_MAP.values():
                     setattr(self, signal, None)
+                for signal in self._INTERMEDIATE_HEALTH_SIGNAL_MAP.values():
+                    setattr(self, signal, None)
             case PowerState.ON:
                 # If the power state is ON then fetch subrack values
                 self.component_manager.fetch_subrack_values()
@@ -1560,17 +1565,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ) -> bool | None:
         if polling_fault is not None:
             self.component_manager_fault = polling_fault
-            self.status_information["polling_fault"] = (
+            fault_report = (  # For Typehinting
+                dict(self.faultReport_signal)
+                if isinstance(self.faultReport_signal, dict)
+                else {}
+            )
+            fault_report["polling_fault"] = (
                 "No fault"
                 if self.component_manager_fault is False
-                else "Reported power from subrack in dissagreement with polling"
+                else "Reported power from subrack in disagreement with polling"
             )
+            self.faultReport_signal = fault_report
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information[
-                "firmware_configuration_status"
-            ] = self.db_configuration_fault[1]
+            fault_report = (  # For Typehinting
+                dict(self.faultReport_signal)
+                if isinstance(self.faultReport_signal, dict)
+                else {}
+            )
+            fault_report["firmware_configuration_status"] = self.db_configuration_fault[
+                1
+            ]
+            self.faultReport_signal = fault_report
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault
@@ -1597,7 +1614,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Log and update component status if a fault is detected
         if has_fault is True:
-            fault_json = json.dumps(self.status_information)
+            fault_json = json.dumps(self.faultReport_signal)
             self.logger.error(f"Fault detected: {fault_json}")
             self.set_status(status=fault_json)
 
@@ -1615,16 +1632,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param mark_invalid: mark attribute as invalid.
         """
         if mark_invalid or alarms is None:
-            for alarm_name, _ in self.__alarm_attribute_map.items():
+            for alarm_name, alarm_signal in self.__alarm_attribute_map.items():
                 self.logger.warning(
                     f"Unable to read {alarm_name}, logging as invalid. "
-                    "However, attribute value is "
-                    f"last known value: {self._attribute_state[alarm_name].read()}"
+                    "However, attribute value is last known value: "
+                    f"{alarm_signal}"
                 )
         else:
-            for alarm_name, alarm_path in self.__alarm_attribute_map.items():
-                alarm_value = alarms.get(alarm_path)
-                self._attribute_state[alarm_name].update(alarm_value)
+            for alarm_name, alarm_signal in self.__alarm_attribute_map.items():
+                alarm_value = alarms.get(alarm_name)
+                setattr(self, alarm_signal, alarm_value)
 
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
@@ -1662,9 +1679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].update(attribute_value)
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
-                    emit_value = (
-                        cast(float, attribute_value) if attribute_value else None
-                    )
+                    emit_value = attribute_value
                     setattr(
                         self,
                         self._HEALTH_SIGNAL_MAP[attribute_name],
@@ -1741,9 +1756,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # on_emission only calls push_change_event; set_value + check_alarm are
         # needed so that Tango's internal alarm state (is_max_alarm()) is updated,
         # mirroring what post_change_event does for AttributeManager-backed attrs.
-        self.get_device_attr().get_attr_by_name(tango_attr_name).set_value(
-            cast(float, value)
-        )
+        self.get_device_attr().get_attr_by_name(tango_attr_name).set_value(value)
         self.get_device_attr().check_alarm(tango_attr_name)
         self.shutdown_on_max_alarm(tango_attr_name)
 
@@ -1826,7 +1839,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    boardTemperature = attribute_from_signal(  # noqa: N815
+    boardTemperature = attribute_from_signal(
         board_temperature_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -1840,7 +1853,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Board temperature in degrees Celsius.",
     )
 
-    @attribute(
+    @attribute_from_signal(  # noqa@ N815
+        adc_pll_lock_status_signal,
         dtype=(("DevShort",),),
         max_dim_x=16,
         max_dim_y=2,
@@ -1848,8 +1862,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the pll status of all 16 ADCs.",
     )
-    def adc_pll_lock_status(self: MccsTile) -> np.ndarray:
+    def adc_pll_lock_status(
+        self: MccsTile, raw_value: dict[str, tuple[bool, bool]] | None
+    ) -> np.ndarray | None:
         """
         Return the pll status of all 16 ADCs.
 
@@ -1859,190 +1876,102 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if PLL locked and loss of lock flag is low
             (lock has not fallen).
 
-        :example:
-            >>> tile.adc_pll_lock_status
-            [[1]*16,[1]*16]
+        :param raw_value: the raw pll status emitted on the signal, or
+            ``None`` when the value is being invalidated.
 
-        :return: the pll status of all ADCs
+        :return: the pll status of all ADCs, or ``None`` to invalidate
+            the attribute.
         """
-        return self._attribute_state["adc_pll_lock_status"].read()
+        if raw_value is None:
+            return None
+        return adc_pll_to_list(raw_value)
 
-    @attribute(dtype="DevBoolean", label="tile_beamformer_status")
-    def tile_beamformer_status(self: MccsTile) -> bool:
-        """
-        Return the status of the tile beamformer.
+    tile_beamformer_status = attribute_from_signal(
+        tile_beamformer_status_signal,
+        dtype="DevBoolean",
+        doc="Status of the tile beamformer. True if status OK.",
+    )
 
-        Expected: `True` if status OK.
+    station_beamformer_status = attribute_from_signal(
+        station_beamformer_status_signal,
+        dtype="DevBoolean",
+        doc="Status of the Station beamformer. True if status OK.",
+    )
 
-        :example:
-            >>> tile.tile_beamformer_status
-            True
-
-
-        :return: the status of the tile beamformer.
-        """
-        return self._attribute_state["tile_beamformer_status"].read()
-
-    @attribute(dtype="DevBoolean", label="station_beamformer_status")
-    def station_beamformer_status(self: MccsTile) -> bool:
-        """
-        Return the status of the station beamformer.
-
-        Expected: `True` if status OK.
-
-        :example:
-            >>> tile.station_beamformer_status
-            True
-
-        :return: the status of the station beamformer.
-        """
-        return self._attribute_state["station_beamformer_status"].read()
-
-    @attribute(
+    fpga0_station_beamformer_error_count = attribute_from_signal(
+        fpga0_station_beamformer_error_count_signal,
         dtype="DevShort",
-        label="fpga0_station_beamformer_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="the station beamformer error count for FPGA0. "
+        "Expected: 0 if no parity errors detected.",
     )
-    def fpga0_station_beamformer_error_count(self: MccsTile) -> int:
-        """
-        Return the station beamformer error count for FPGA0.
 
-        Expected: 0 if no parity errors detected.
-
-        :example:
-            >>> tile.fpga0_station_beamformer_error_count
-            0
-
-        :return: the station beamformer error count for FPGA0.
-        """
-        return self._attribute_state["fpga0_station_beamformer_error_count"].read()
-
-    @attribute(
+    fpga1_station_beamformer_error_count = attribute_from_signal(
+        fpga1_station_beamformer_error_count_signal,
         dtype="DevShort",
-        label="fpga1_station_beamformer_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="the station beamformer error count for FPGA1. "
+        "Expected: 0 if no parity errors detected.",
     )
-    def fpga1_station_beamformer_error_count(self: MccsTile) -> int:
-        """
-        Return the station beamformer error count for FPGA1.
 
-        Expected: 0 if no parity errors detected.
-
-        :example:
-            >>> tile.fpga1_station_beamformer_error_count
-            0
-
-        :return: the station beamformer error count for FPGA1.
-        """
-        return self._attribute_state["fpga1_station_beamformer_error_count"].read()
-
-    @attribute(
+    fpga0_station_beamformer_flagged_count = attribute_from_signal(
+        fpga0_station_beamformer_flagged_count_signal,
         dtype="DevShort",
-        label="fpga0_station_beamformer_flagged_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="the station beamformer error count for FPGA0. "
+        "Expected: 0 if no parity errors detected.",
     )
-    def fpga0_station_beamformer_flagged_count(self: MccsTile) -> int:
-        """
-        Return the station beamformer error count for FPGA0.
 
-        Note: When station beam flagging is enabled,
-        this returns a count of packets flagged,
-        but when station beam flagging is disabled,
-        this instead returns a count of packets discarded/dropped
-
-        Expected: 0 if no parity errors detected.
-
-        :example:
-            >>> tile.fpga0_station_beamformer_flagged_count
-            0
-
-        :return: the station beamformer error count for FPGA0.
-        """
-        return self._attribute_state["fpga0_station_beamformer_flagged_count"].read()
-
-    @attribute(
+    fpga1_station_beamformer_flagged_count = attribute_from_signal(
+        fpga1_station_beamformer_flagged_count_signal,
         dtype="DevShort",
-        label="fpga1_station_beamformer_flagged_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="the station beamformer error count for FPGA1. "
+        "Expected: 0 if no parity errors detected.",
     )
-    def fpga1_station_beamformer_flagged_count(self: MccsTile) -> int:
-        """
-        Return the station beamformer error count for FPGA1.
 
-        Note: When station beam flagging is enabled,
-        this returns a count of packets flagged,
-        but when station beam flagging is disabled,
-        this instead returns a count of packets discarded/dropped
-
-        Expected: 0 if no parity errors detected.
-
-        :example:
-            >>> tile.fpga1_station_beamformer_flagged_count
-            0
-
-        :return: the station beamformer error count for FPGA1.
-        """
-        return self._attribute_state["fpga1_station_beamformer_flagged_count"].read()
-
-    @attribute(
+    fpga0_crc_error_count = attribute_from_signal(
+        fpga0_crc_error_count_signal,
         dtype="DevShort",
-        label="fpga0_crc_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="the crc error count for FPGA0. "
+        "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
-    def fpga0_crc_error_count(self: MccsTile) -> int:
-        """
-        Return the crc error count for FPGA0.
 
-        Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
-
-        :example:
-            >>> tile.fpga0_crc_error_count
-            0
-
-        :return: the crc error count for FPGA0.
-        """
-        return self._attribute_state["fpga0_crc_error_count"].read()
-
-    @attribute(
+    fpga1_crc_error_count = attribute_from_signal(
+        fpga1_crc_error_count_signal,
         dtype="DevShort",
-        label="fpga1_crc_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="the crc error count for FPGA1. "
+        "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
-    def fpga1_crc_error_count(self: MccsTile) -> int:
-        """
-        Return the crc error count for FPGA1.
 
-        Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
-
-        :example:
-            >>> tile.fpga1_crc_error_count
-            0
-
-        :return: the crc error count for FPGA0.
-        """
-        return self._attribute_state["fpga1_crc_error_count"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        fpga0_bip_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         label="fpga0_bip_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the bip error count for FPGA0. "
+        "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
-    def fpga0_bip_error_count(self: MccsTile) -> list[int]:
+    def fpga0_bip_error_count(
+        self: MccsTile, raw_value: dict[str, int] | None
+    ) -> list[int] | None:
         """
         Return the bip error count for FPGA0.
 
@@ -2052,19 +1981,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga0_bip_error_count
             [0, 0, 0, 0]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the bip error count for FPGA0.
         """
-        return self._attribute_state["fpga0_bip_error_count"].read()
+        if raw_value is None:
+            return None
+        return udp_error_count_to_list(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        fpga1_bip_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         label="fpga1_bip_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the bip error count for FPGA1. "
+        "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
-    def fpga1_bip_error_count(self: MccsTile) -> list[int]:
+    def fpga1_bip_error_count(
+        self: MccsTile, raw_value: dict[str, int] | None
+    ) -> list[int] | None:
         """
         Return the bip error count for FPGA1.
 
@@ -2074,43 +2013,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga1_bip_error_count
             [0, 0, 0, 0]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the bip error count for FPGA1.
         """
-        return self._attribute_state["fpga1_bip_error_count"].read()
+        if raw_value is None:
+            return None
+        return udp_error_count_to_list(raw_value)
 
-    @attribute(
-        dtype=("DevShort",),
-        max_dim_x=4,
-        label="fpga1_decode_error_count",
-        max_alarm=1,
-        abs_change=1,
-        archive_abs_change=1,
-    )
-    def fpga1_decode_error_count(self: MccsTile) -> list[int]:
-        """
-        Return the decode error count per FPGA.
-
-        Expected: 0 if errors have not been detected.
-            Note: This counter increments when at least one error is
-            detected in a clock cycle.
-
-        :example:
-            >>> tile.fpga1_decode_error_count
-            [0, 0, 0, 0]
-
-        :return: the decode error count per FPGA.
-        """
-        return self._attribute_state["fpga1_decode_error_count"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        fpga0_decode_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         label="fpga0_decode_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the decode error count for FPGA0. "
+        "Expected: 0 if errors have not been detected.",
     )
-    def fpga0_decode_error_count(self: MccsTile) -> list[int]:
+    def fpga0_decode_error_count(
+        self: MccsTile, raw_value: dict[str, int] | None
+    ) -> list[int] | None:
         """
         Return the decode error count per FPGA.
 
@@ -2122,60 +2047,84 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga0_decode_error_count
             [0, 0, 0, 0]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the decode error count per FPGA.
         """
-        return self._attribute_state["fpga0_decode_error_count"].read()
+        if raw_value is None:
+            return None
+        return udp_error_count_to_list(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        fpga1_decode_error_count_signal,
+        dtype=("DevShort",),
+        max_dim_x=4,
+        label="fpga1_decode_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Return the decode error count for FPGA1. "
+        "Expected: 0 if errors have not been detected.",
+    )
+    def fpga1_decode_error_count(
+        self: MccsTile, raw_value: dict[str, int] | None
+    ) -> list[int] | None:
+        """
+        Return the decode error count per FPGA.
+
+        Expected: 0 if errors have not been detected.
+            Note: This counter increments when at least one error is
+            detected in a clock cycle.
+
+        :example:
+            >>> tile.fpga1_decode_error_count
+            [0, 0, 0, 0]
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the decode error count per FPGA.
+        """
+        if raw_value is None:
+            return None
+        return udp_error_count_to_list(raw_value)
+
+    fpga0_linkup_loss_count = attribute_from_signal(
+        fpga0_linkup_loss_count_signal,
         dtype="DevShort",
         label="fpga0_linkup_loss_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the linkup loss count for FPGA0. "
+        "Expected: 0 if no link loss events are detected.",
     )
-    def fpga0_linkup_loss_count(self: MccsTile) -> int:
-        """
-        Return the linkup loss count.
 
-        Expected: 0 if no link loss events are detected.
-
-        :example:
-            >>> tile.fpga0_linkup_loss_count
-            0
-
-        :return: the linkup loss count.
-        """
-        return self._attribute_state["fpga0_linkup_loss_count"].read()
-
-    @attribute(
+    fpga1_linkup_loss_count = attribute_from_signal(
+        fpga1_linkup_loss_count_signal,
         dtype="DevShort",
         label="fpga1_linkup_loss_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the linkup loss count for FPGA1. "
+        "Expected: 0 if no link loss events are detected.",
     )
-    def fpga1_linkup_loss_count(self: MccsTile) -> int:
-        """
-        Return the linkup loss count.
 
-        Expected: 0 if no link loss events are detected.
-
-        :example:
-            >>> tile.fpga1_linkup_loss_count
-            0
-
-        :return: the linkup loss count.
-        """
-        return self._attribute_state["fpga1_linkup_loss_count"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        io_data_router_status_fpga0_signal,
         dtype="DevShort",
         label="io_data_router_status_fpga0",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the status of the data router. "
+        "Expected: 1 if status OK, 0 otherwise.",
     )
-    def io_data_router_status_fpga0(self: MccsTile) -> int:
+    def io_data_router_status_fpga0(
+        self: MccsTile, raw_value: int | None
+    ) -> int | None:
         """
         Return the status of the data router.
 
@@ -2185,18 +2134,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.io_data_router_status_fpga0
             1
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the data router status for FPGA0.
         """
-        return self._attribute_state["io_data_router_status_fpga0"].read()
+        if raw_value is None:
+            return None
+        return int(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        io_data_router_status_fpga1_signal,
         dtype="DevShort",
         label="io_data_router_status_fpga1",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the status of the data router. "
+        "Expected: 1 if status OK, 0 otherwise.",
     )
-    def io_data_router_status_fpga1(self: MccsTile) -> int:
+    def io_data_router_status_fpga1(
+        self: MccsTile, raw_value: int | None
+    ) -> int | None:
         """
         Return the status of the data router.
 
@@ -2206,15 +2165,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.io_data_router_status_fpga1
             1
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the data router status for FPGA1.
         """
-        return self._attribute_state["io_data_router_status_fpga1"].read()
+        if raw_value is None:
+            return None
+        return int(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        data_router_discarded_packets_signal,
         dtype="DevString",
         label="data_router_discarded_packets",
+        doc="Return the number of discarded packets. "
+        "Expected: 0 if no packets are discarded.",
     )
-    def data_router_discarded_packets(self: MccsTile) -> str:
+    def data_router_discarded_packets(
+        self: MccsTile, raw_value: dict[str, Any] | None
+    ) -> str | None:
         """
         Return the number of discarded packets.
 
@@ -2224,285 +2193,147 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.data_router_discarded_packets
             '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
 
-        :return: the linkup loss count per FPGA.
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the number of discarded packets.
         """
         # NOTE: This is not implemented in ska-low-sps-tpm-api. it will
         # always return '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'.
-        return self._attribute_state["data_router_discarded_packets"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    arp = attribute_from_signal(
+        arp_signal,
         dtype="DevBoolean",
         label="arp",
+        doc="Return the arp status. "
+        "Expected: `True` if table entries are valid and resolved.",
     )
-    def arp(self: MccsTile) -> bool:
-        """
-        Return the arp status.
 
-        Expected: `True` if table entries are valid and resolved.
-
-        :example:
-            >>> tile.arp
-            True
-
-        :return: the arp status.
-        """
-        return self._attribute_state["arp"].read()
-
-    @attribute(
+    udp_status = attribute_from_signal(
+        udp_status_signal,
         dtype="DevBoolean",
         label="udp_status",
+        doc="Return the UDP status. "
+        "Expected: `True` if virtual lanes aligned and no BIP or CRC errors.",
     )
-    def udp_status(self: MccsTile) -> bool:
-        """
-        Return the UDP status.
 
-        Expected: `True` if virtual lanes aligned and no BIP or CRC errors.
-
-        :example:
-            >>> tile.udp_status
-            False
-
-        :return: the UDP status.
-        """
-        return self._attribute_state["udp_status"].read()
-
-    @attribute(
+    ddr_initialisation = attribute_from_signal(
+        ddr_initialisation_signal,
         dtype="DevBoolean",
         label="ddr_initialisation",
+        doc="Return the ddr initialisation status. "
+        "Expected: True if DDR interface was successfully initialised.",
     )
-    def ddr_initialisation(self: MccsTile) -> bool:
-        """
-        Return the ddr initialisation status.
 
-        Expected: True if DDR interface was successfully initialised.
-
-        :example:
-            >>> tile.ddr_initialisation
-            True
-
-        :return: the ddr initialisation status.
-        """
-        return self._attribute_state["ddr_initialisation"].read()
-
-    @attribute(
+    fpga0_ddr_reset_counter = attribute_from_signal(
+        fpga0_ddr_reset_counter_signal,
         dtype="DevShort",
         label="fpga0_ddr_reset_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the ddr reset count for FPGA0. "
+        "Expected: 0 if no reset events have occurred.",
     )
-    def fpga0_ddr_reset_counter(self: MccsTile) -> int:
-        """
-        Return the ddr reset count.
 
-        Expected: 0 if no reset events have occurred.
-
-        :example:
-            >>> tile.fpga0_ddr_reset_counter
-            0
-
-        :return: the ddr reset count.
-        """
-        return self._attribute_state["fpga0_ddr_reset_counter"].read()
-
-    @attribute(
+    fpga1_ddr_reset_counter = attribute_from_signal(
+        fpga1_ddr_reset_counter_signal,
         dtype="DevShort",
         label="fpga1_ddr_reset_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the ddr reset count for FPGA1. "
+        "Expected: 0 if no reset events have occurred.",
     )
-    def fpga1_ddr_reset_counter(self: MccsTile) -> int:
-        """
-        Return the ddr reset count.
 
-        Expected: 0 if no reset events have occurred.
-
-        :example:
-            >>> tile.fpga1_ddr_reset_counter
-            0
-
-        :return: the ddr reset count.
-        """
-        return self._attribute_state["fpga1_ddr_reset_counter"].read()
-
-    @attribute(
+    io_f2f_interface_soft_error_fpga0 = attribute_from_signal(
+        io_f2f_interface_soft_error_fpga0_signal,
         dtype="DevShort",
         label="io_f2f_interface_soft_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the FPGA0 f2f interface soft error count. "
+        "Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.",
     )
-    def io_f2f_interface_soft_error_fpga0(self: MccsTile) -> int:
-        """
-        Return the FPGA0 f2f interface soft error count.
 
-        Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
-
-        :example:
-            tile.io_f2f_interface_soft_error_fpga0
-            0
-
-        :return: the FPGA0 f2f interface soft error count.
-        """
-        return self._attribute_state["io_f2f_interface_soft_error_fpga0"].read()
-
-    @attribute(
+    io_f2f_interface_soft_error_fpga1 = attribute_from_signal(
+        io_f2f_interface_soft_error_fpga1_signal,
         dtype="DevShort",
         label="io_f2f_interface_soft_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the FPGA1 f2f interface soft error count. "
+        "Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.",
     )
-    def io_f2f_interface_soft_error_fpga1(self: MccsTile) -> int:
-        """
-        Return the FPGA1 f2f interface soft error count.
 
-        Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
-
-        :example:
-            tile.io_f2f_interface_soft_error_fpga1
-            0
-
-        :return: the FPGA1 f2f interface soft error count.
-        """
-        return self._attribute_state["io_f2f_interface_soft_error_fpga1"].read()
-
-    @attribute(
+    io_f2f_interface_hard_error_fpga0 = attribute_from_signal(
+        io_f2f_interface_hard_error_fpga0_signal,
         dtype="DevShort",
         label="io_f2f_interface_hard_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the FPGA0 f2f interface hard error count. "
+        "Expected: 0 if no hard errors detected in FPGA-to-FPGA interface. "
+        "Hard errors require the interface to be reset. This likely means "
+        "reinitialising the TPM entirely due to the impact on beamformers.",
     )
-    def io_f2f_interface_hard_error_fpga0(self: MccsTile) -> int:
-        """
-        Return the FPGA0 f2f interface hard error count.
 
-        Expected: 0 if no hard errors detected in FPGA-to-FPGA interface.
-            Hard errors require the interface to be reset. This likely means
-            reinitialising the TPM entirely due to the impact on beamformers.
-
-        :example:
-            >>> tile.io_f2f_interface_hard_error_fpga0
-            0
-
-        :return: the FPGA0 f2f interface hard error count.
-        """
-        return self._attribute_state["io_f2f_interface_hard_error_fpga0"].read()
-
-    @attribute(
+    io_f2f_interface_hard_error_fpga1 = attribute_from_signal(
+        io_f2f_interface_hard_error_fpga1_signal,
         dtype="DevShort",
         label="io_f2f_interface_hard_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the FPGA1 f2f interface hard error count. "
+        "Expected: 0 if no hard errors detected in FPGA-to-FPGA interface. "
+        "Hard errors require the interface to be reset. This likely means "
+        "reinitialising the TPM entirely due to the impact on beamformers.",
     )
-    def io_f2f_interface_hard_error_fpga1(self: MccsTile) -> int:
-        """
-        Return the FPGA1 f2f interface hard error count.
 
-        Expected: 0 if no hard errors detected in FPGA-to-FPGA interface.
-            Hard errors require the interface to be reset. This likely means
-            reinitialising the TPM entirely due to the impact on beamformers.
-
-        :example:
-            >>> tile.io_f2f_interface_hard_error_fpga1
-            0
-
-        :return: the FPGA1 f2f interface hard error count.
-        """
-        return self._attribute_state["io_f2f_interface_hard_error_fpga1"].read()
-
-    @attribute(
+    fpga0_resync_count = attribute_from_signal(
+        fpga0_resync_count_signal,
         dtype="DevShort",
         label="fpga0_resync_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the resync count for FPGA0. "
+        "Expected: 0 if no resync events have ocurred.",
     )
-    def fpga0_resync_count(self: MccsTile) -> int:
-        """
-        Return the resync count.
 
-        Expected: 0 if no resync events have ocurred.
-
-        :example:
-            >>> tile.fpga0_resync_count
-            0
-
-        :return: the resync count
-        """
-        return self._attribute_state["fpga0_resync_count"].read()
-
-    @attribute(
+    fpga1_resync_count = attribute_from_signal(
+        fpga1_resync_count_signal,
         dtype="DevShort",
         label="fpga1_resync_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the resync count for FPGA1. "
+        "Expected: 0 if no resync events have ocurred.",
     )
-    def fpga1_resync_count(self: MccsTile) -> int:
-        """
-        Return the resync count.
 
-        Expected: 0 if no resync events have ocurred.
-
-        :example:
-            >>> tile.fpga1_resync_count
-            0
-
-        :return: the resync count
-        """
-        return self._attribute_state["fpga1_resync_count"].read()
-
-    @attribute(
+    link_status = attribute_from_signal(
+        link_status_signal,
         dtype="DevBoolean",
         label="link_status",
+        doc="Return the jesd link status. "
+        "Expected: `True` if link up and synchronised.",
     )
-    def link_status(self: MccsTile) -> bool:
-        """
-        Return the jesd link status.
 
-        Expected: `True` if link up and synchronised.
-
-        :example:
-            >>> tile.link_status
-            True
-
-        :return: the link status.
-        """
-        return self._attribute_state["link_status"].read()
-
-    @attribute(
-        dtype=(("DevShort",),),
-        max_dim_x=8,  # lane
-        max_dim_y=2,  # core
-        label="fpga1_lane_error_count",
-        max_alarm=1,
-        abs_change=1,
-        archive_abs_change=1,
-    )
-    def fpga1_lane_error_count(self: MccsTile) -> list[int]:
-        """
-        Return the error count per lane, per core.
-
-        Expected: 0 for all lanes.
-
-        :example:
-            >>> tile.fpga1_lane_error_count
-            [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
-
-        :return: the error count per lane, per core
-            [[Core0],[Core1]]
-        """
-        return self._attribute_state["fpga1_lane_error_count"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        fpga0_lane_error_count_signal,
         dtype=(("DevShort",),),
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
@@ -2510,8 +2341,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the error count per lane, per core. Expected: 0 for all lanes.",
     )
-    def fpga0_lane_error_count(self: MccsTile) -> list[int]:
+    def fpga0_lane_error_count(
+        self: MccsTile, raw_value: dict[str, dict[str, int | None]] | None
+    ) -> np.ndarray | None:
         """
         Return the error count per lane, per core.
 
@@ -2521,21 +2355,63 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga0_lane_error_count
             [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
 
         :return: the error count per lane, per core
             [[Core0lanes],[Core1lanes]]
         """
-        return self._attribute_state["fpga0_lane_error_count"].read()
+        if raw_value is None:
+            return None
+        return lane_error_to_array(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        fpga1_lane_error_count_signal,
+        dtype=(("DevShort",),),
+        max_dim_x=8,  # lane
+        max_dim_y=2,  # core
+        label="fpga1_lane_error_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Return the error count per lane, per core. Expected: 0 for all lanes.",
+    )
+    def fpga1_lane_error_count(
+        self: MccsTile, raw_value: dict[str, dict[str, int | None]] | None
+    ) -> np.ndarray | None:
+        """
+        Return the error count per lane, per core.
+
+        Expected: 0 for all lanes.
+
+        :example:
+            >>> tile.fpga1_lane_error_count
+            [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the error count per lane, per core
+            [[Core0],[Core1]]
+        """
+        if raw_value is None:
+            return None
+        return lane_error_to_array(raw_value)
+
+    @attribute_from_signal(
+        fpga0_clock_managers_count_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # fpga
         label="fpga0_clock_managers_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the PLL lock loss counter for C2C, JESD and DSP. "
+        "Expected: `0` per interface if no lock loss events.",
     )
-    def fpga0_clock_managers_count(self: MccsTile) -> list[int]:
+    def fpga0_clock_managers_count(
+        self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
+    ) -> np.ndarray | None:
         """
         Return the PLL lock loss counter for C2C, JESD and DSP.
 
@@ -2547,19 +2423,63 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the lock loss counter for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
         """
-        return self._attribute_state["fpga0_clock_managers_count"].read()
+        if raw_value is None:
+            return None
+        return clock_managers_count(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        fpga1_clock_managers_count_signal,
+        dtype=("DevShort",),
+        max_dim_x=3,  # clock_managers
+        label="fpga1_clock_managers_count",
+        max_alarm=1,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Return the PLL lock loss counter for C2C, JESD and DSP. "
+        "Expected: `0` per interface if no lock loss events.",
+    )
+    def fpga1_clock_managers_count(
+        self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
+    ) -> np.ndarray | None:
+        """
+        Return the PLL lock loss counter for C2C, JESD and DSP.
+
+        Expected: `0` per interface if no lock loss events.
+
+        :example:
+            >>> tile.fpga1_clock_managers_count
+            [0, 0, 0]
+
+        3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the lock loss counter for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
+        """
+        if raw_value is None:
+            return None
+        return clock_managers_count(raw_value)
+
+    @attribute_from_signal(
+        fpga0_clock_managers_status_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         label="fpga0_clock_managers_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the PLL lock status C2C, JESD and DSP. "
+        "Expected: `1` if MMCM clock locked `0` otherwise",
     )
-    def fpga0_clock_managers_status(self: MccsTile) -> list[int]:
+    def fpga0_clock_managers_status(
+        self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
+    ) -> np.ndarray | None:
         """
         Return the PLL lock status C2C, JESD and DSP.
 
@@ -2572,43 +2492,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the clock status for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
         """
-        return self._attribute_state["fpga0_clock_managers_status"].read()
+        if raw_value is None:
+            return None
+        return clock_managers_status(raw_value)
 
-    @attribute(
-        dtype=("DevShort",),
-        max_dim_x=3,  # clock_managers
-        label="fpga1_clock_managers_count",
-        max_alarm=1,
-        abs_change=1,
-        archive_abs_change=1,
-    )
-    def fpga1_clock_managers_count(self: MccsTile) -> list[int]:
-        """
-        Return the PLL lock loss counter for C2C, JESD and DSP.
-
-        Expected: `0` per interface if no lock loss events.
-
-        :example:
-            >>> tile.fpga1_clock_managers_count
-            [0, 0, 0]
-
-        3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
-
-        :return: the lock loss counter for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
-        """
-        return self._attribute_state["fpga1_clock_managers_count"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        fpga1_clock_managers_status_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         label="fpga1_clock_managers_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the PLL lock status C2C, JESD and DSP. "
+        "Expected: `1` if MMCM clock locked `0` otherwise",
     )
-    def fpga1_clock_managers_status(self: MccsTile) -> list[int]:
+    def fpga1_clock_managers_status(
+        self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
+    ) -> np.ndarray | None:
         """
         Return the PLL lock status for C2C, JESD and DSP.
 
@@ -2621,117 +2527,71 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the clock status for ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"].
         """
-        return self._attribute_state["fpga1_clock_managers_status"].read()
+        if raw_value is None:
+            return None
+        return clock_managers_status(raw_value)
 
-    @attribute(
+    ddr_write_size = attribute_from_signal(
+        ddr_write_size_signal,
         dtype="DevLong",
         label="ddr_write_size",
+        doc="Return the ddr write size obtained from running start_antenna_buffer.",
     )
-    def ddr_write_size(self: MccsTile) -> int:
-        """
-        Return the ddr write size obtained from running start_antenna_buffer.
 
-        :example:
-            >>> tile.ddr_write_size
-
-        :return: ddr write size of a frame
-        """
-        return self.component_manager.ddr_write_size
-
-    # @attribute(
-    #     dtype="DevString",
-    #     label="ddr_rd_cnt",
-    # )
-    # def ddr_rd_cnt(self: MccsTile) -> str:
-    #     """
-    #     Return the read counter of the ddr interface.
-
-    #     Expected: `integer` number of times ddr interface has been read.
-
-    #     :example:
-    #         >>> tile.ddr_rd_cnt
-    #         '{"FPGA0": 0,
-    #         "FPGA1": 0}'
-
-    #     :return: number of times ddr interface has been read.
-    #     """
-    #     return self._attribute_state["ddr_rd_cnt"].read())
-
-    # @attribute(
-    #     dtype="DevString",
-    #     label="ddr_wr_cnt",
-    # )
-    # def ddr_wr_cnt(self: MccsTile) -> str:
-    #     """
-    #     Return the write counter of the ddr interface.
-
-    #     Expected: `integer` number of times ddr interface has been written to.
-
-    #     :example:
-    #         >>> tile.ddr_wr_cnt
-    #         '{"FPGA0": 0,
-    #         "FPGA1": 0}'
-
-    #     :return: number of times ddr interface has been written to.
-    #     """
-    #     return self._attribute_state["ddr_wr_cnt"].read())
-
-    # @attribute(
-    #     dtype="DevString",
-    #     label="ddr_rd_dat_cnt",
-    # )
-    # def ddr_rd_dat_cnt(self: MccsTile) -> str:
-    #     """
-    #     Return the read valid counter of the ddr interface.
-
-    #     Expected: `integer` number of times ddr interface has responded to a read
-    #     with valid data.
-
-    #     :example:
-    #         >>> tile.ddr_rd_dat_cnt
-    #         '{"FPGA0": 0,
-    #         "FPGA1": 0}'
-
-    #     :return: number of times ddr interface
-    #       has responded to a read with valid data.
-    #     """
-    #     return self._attribute_state["ddr_rd_dat_cnt"].read())
-
-    @attribute(
+    @attribute_from_signal(
+        fpga0_clocks_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
         label="fpga0_clocks",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the status of clocks for the interfaces of FPGA0. "
+        "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
-    def fpga0_clocks(self: MccsTile) -> list[int]:
+    def fpga0_clocks(
+        self: MccsTile, raw_value: dict[str, bool] | None
+    ) -> list[int] | None:
         """
         Return the status of clocks for the interfaces of FPGA0.
 
-        Expected: `1` per interface if status is OK. `0` if
-        not OK.
+        Expected: `1` per interface if status is OK. `0` if not OK.
 
         :example:
             >>> tile.fpga0_clocks
             [1, 1, 1]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the status of clocks for the interfaces of FPGA0.
             [1, 1, 1] == [JESD, DDR, UDP]
         """
-        return self._attribute_state["fpga0_clocks"].read()
+        if raw_value is None:
+            return None
+        if any(i is None for i in raw_value.values()):
+            return None
+        return clocks_to_list(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        fpga1_clocks_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
         label="fpga1_clocks",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the status of clocks for the interfaces of FPGA1. "
+        "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
-    def fpga1_clocks(self: MccsTile) -> str:
+    def fpga1_clocks(
+        self: MccsTile, raw_value: dict[str, bool] | None
+    ) -> list[int] | None:
         """
         Return the status of clocks for the interfaces of FPGA1.
 
@@ -2742,20 +2602,33 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga1_clocks
             [1, 1, 1]
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the status of clocks for the interfaces of FPGA1.
             [1, 1, 1] == [JESD, DDR, UDP]
         """
-        return self._attribute_state["fpga1_clocks"].read()
+        if raw_value is None:
+            return None
+        if any(i is None for i in raw_value.values()):
+            return None
+        return clocks_to_list(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        adc_sysref_counter_signal,
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
         label="adc_sysref_counter",
         min_alarm=0,  # SYSREF not present
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the sysref_counter of all ADCs. "
+        "Expected: `1` if SYSREF counter is incrementing (SYSREF is present), "
+        "`0` if not present.",
     )
-    def adc_sysref_counter(self: MccsTile) -> str:
+    def adc_sysref_counter(
+        self: MccsTile, raw_value: dict[str, bool] | None
+    ) -> list[int] | None:
         """
         Return the sysref_counter of all ADCs.
 
@@ -2766,20 +2639,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.adc_sysref_counter
             [1] * 16
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the sysref_counter of all ADCs
             idx0->ADC0, idx1->ADC1, ... idx15->ADC15
         """
-        return self._attribute_state["adc_sysref_counter"].read()
+        if raw_value is None:
+            return None
+        return adc_to_list(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        adc_sysref_timing_requirements_signal,
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
         label="adc_sysref_timing_requirements",
         min_alarm=0,  # requirements not met
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the sysref_timing_requirements of all ADCs. "
+        "Expected: `1` if setup and hold requirements for SYSREF are met, "
+        "else return `0`.",
     )
-    def adc_sysref_timing_requirements(self: MccsTile) -> str:
+    def adc_sysref_timing_requirements(
+        self: MccsTile, raw_value: dict[str, bool] | None
+    ) -> list[int] | None:
         """
         Return the sysref_timing_requirements of all ADCs.
 
@@ -2790,19 +2674,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.adc_sysref_timing_requirements
             [1] * 16
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the sysref_timing_requirements of all ADCs
             idx0->ADC0, idx1->ADC1, ... idx15->ADC15
         """
-        return self._attribute_state["adc_sysref_timing_requirements"].read()
+        if raw_value is None:
+            return None
+        return adc_to_list(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        fpga0_qpll_status_signal,
         dtype="DevShort",
         label="fpga0_qpll_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the QPLL lock status. Expected: `1` if QPLL locked.",
     )
-    def fpga0_qpll_status(self: MccsTile) -> int:
+    def fpga0_qpll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
         Return the QPLL lock status.
 
@@ -2812,18 +2703,58 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga0_qpll_status
             1
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the QPLL lock status and lock loss counter.
         """
-        return self._attribute_state["fpga0_qpll_status"].read()
+        if raw_value is None:
+            return None
+        if raw_value[0] is None:
+            return None
+        return int(raw_value[0])
 
-    @attribute(
+    @attribute_from_signal(
+        fpga1_qpll_status_signal,
+        dtype="DevShort",
+        label="fpga1_qpll_status",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Return the QPLL lock status. Expected: `1` if QPLL locked.",
+    )
+    def fpga1_qpll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
+        """
+        Return the QPLL lock status.
+
+        Expected: `1` if QPLL locked.
+
+        :example:
+            >>> tile.fpga1_qpll_status
+            1
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the QPLL lock status and lock loss counter.
+        """
+        if raw_value is None:
+            return None
+        if raw_value[0] is None:
+            return None
+        return int(raw_value[0])
+
+    @attribute_from_signal(
+        fpga0_qpll_counter_signal,
         dtype="DevShort",
         label="fpga0_qpll_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the QPLL lock loss counter. "
+        "Expected: `0` if no lock loss events detected.",
     )
-    def fpga0_qpll_counter(self: MccsTile) -> int:
+    def fpga0_qpll_counter(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
         Return the QPLL lock loss counter.
 
@@ -2834,39 +2765,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga0_qpll_counter
             0
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the QPLL lock loss counter.
         """
-        return self._attribute_state["fpga0_qpll_counter"].read()
+        if raw_value is None:
+            return None
+        if raw_value[1] is None:
+            return None
+        return int(raw_value[1])
 
-    @attribute(
-        dtype="DevShort",
-        label="fpga1_qpll_status",
-        min_alarm=0,
-        abs_change=1,
-        archive_abs_change=1,
-    )
-    def fpga1_qpll_status(self: MccsTile) -> int:
-        """
-        Return the QPLL lock status.
-
-        Expected: `1` if QPLL locked.
-
-        :example:
-            >>> tile.fpga1_qpll_status
-            '1'
-
-        :return: the QPLL lock status.
-        """
-        return self._attribute_state["fpga1_qpll_status"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        fpga1_qpll_counter_signal,
         dtype="DevShort",
         label="fpga1_qpll_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the QPLL lock loss counter. "
+        "Expected: `0` if no lock loss events detected.",
     )
-    def fpga1_qpll_counter(self: MccsTile) -> int:
+    def fpga1_qpll_counter(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
         Return the QPLL lock loss counter.
 
@@ -2877,11 +2797,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.fpga1_qpll_counter
             0
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the QPLL lock loss counter.
         """
-        return self._attribute_state["fpga1_qpll_counter"].read()
+        if raw_value is None:
+            return None
+        if raw_value[1] is None:
+            return None
+        return int(raw_value[1])
 
-    @attribute(
+    @attribute_from_signal(
+        io_f2f_interface_pll_status_fpga0_signal,
         dtype="DevShort",
         label="io_f2f_interface_pll_status_fpga0",
         min_alarm=0,
@@ -2889,8 +2817,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
+        doc="Return the FPGA0 f2f PLL lock status. "
+        "Expected: `1` if PLL locked, `0` otherwise.",
     )
-    def io_f2f_interface_pll_status_fpga0(self: MccsTile) -> int:
+    def io_f2f_interface_pll_status_fpga0(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the FPGA0 f2f PLL lock status.
 
@@ -2900,18 +2832,65 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.io_f2f_interface_pll_status_fpga0
             '1'
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the FPGA0 f2f PLL lock status.
         """
-        return self._attribute_state["io_f2f_interface_pll_status_fpga0"].read()
+        if raw_value is None:
+            return None
+        if raw_value[0] is None:
+            return None
+        return int(raw_value[0])
 
-    @attribute(
+    @attribute_from_signal(
+        io_f2f_interface_pll_status_fpga1_signal,
+        dtype="DevShort",
+        label="io_f2f_interface_pll_status_fpga1",
+        min_alarm=0,
+        abs_change=1,
+        max_value=2,
+        min_value=-1,
+        archive_abs_change=1,
+        doc="Return the FPGA1 f2f PLL lock status. "
+        "Expected: `1` if PLL locked, `0` otherwise.",
+    )
+    def io_f2f_interface_pll_status_fpga1(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
+        """
+        Return the FPGA1 f2f PLL lock status.
+
+        Expected: `1` if PLL locked, `0` otherwise.
+
+        :example:
+            >>> tile.io_f2f_interface_pll_status_fpga1
+            '1'
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the FPGA1 f2f PLL lock status.
+        """
+        if raw_value is None:
+            return None
+        if raw_value[0] is None:
+            return None
+        return int(raw_value[0])
+
+    @attribute_from_signal(
+        io_f2f_interface_pll_status_fpga0_counter_signal,
         dtype="DevShort",
         label="io_f2f_interface_pll_status_fpga0_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the FPGA0 f2f PLL lock loss counter. "
+        "Expected: `0` if no PLL lock loss events detected.",
     )
-    def io_f2f_interface_pll_status_fpga0_counter(self: MccsTile) -> int:
+    def io_f2f_interface_pll_status_fpga0_counter(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the FPGA0 f2f PLL lock loss counter.
 
@@ -2922,41 +2901,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.io_f2f_interface_pll_status_fpga0_counter
             '0'
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the FPGA0 f2f PLL lock loss counter.
         """
-        return self._attribute_state["io_f2f_interface_pll_status_fpga0_counter"].read()
+        if raw_value is None:
+            return None
+        if raw_value[1] is None:
+            return None
+        return int(raw_value[1])
 
-    @attribute(
-        dtype="DevShort",
-        label="io_f2f_interface_pll_status_fpga1",
-        min_alarm=0,
-        abs_change=1,
-        max_value=2,
-        min_value=-1,
-        archive_abs_change=1,
-    )
-    def io_f2f_interface_pll_status_fpga1(self: MccsTile) -> int:
-        """
-        Return the FPGA1 f2f PLL lock status.
-
-        Expected: `1` if PLL locked, `0` otherwise.
-
-        :example:
-            >>> tile.io_f2f_interface_pll_status_fpga1
-            '1'
-
-        :return: the FPGA1 f2f PLL lock status.
-        """
-        return self._attribute_state["io_f2f_interface_pll_status_fpga1"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        io_f2f_interface_pll_status_fpga1_counter_signal,
         dtype="DevShort",
         label="io_f2f_interface_pll_status_fpga1_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the FPGA1 f2f PLL lock loss counter. "
+        "Expected: `0` if no PLL lock loss events detected.",
     )
-    def io_f2f_interface_pll_status_fpga1_counter(self: MccsTile) -> int:
+    def io_f2f_interface_pll_status_fpga1_counter(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the FPGA1 f2f PLL lock loss counter.
 
@@ -2967,11 +2935,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.io_f2f_interface_pll_status_fpga1_counter
             '0'
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the FPGA1 f2f PLL lock loss counter.
         """
-        return self._attribute_state["io_f2f_interface_pll_status_fpga1_counter"].read()
+        if raw_value is None:
+            return None
+        if raw_value[1] is None:
+            return None
+        return int(raw_value[1])
 
-    @attribute(
+    @attribute_from_signal(
+        timing_pll_lock_status_signal,
         dtype="DevShort",
         label="timing_pll_lock_status",
         min_alarm=0,
@@ -2979,8 +2955,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_value=-1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the PLL lock status and lock loss counter. "
+        "Expected: `1` if PLL locked, `0` otherwise.",
     )
-    def timing_pll_lock_status(self: MccsTile) -> int:
+    def timing_pll_lock_status(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the PLL lock status and lock loss counter.
 
@@ -2990,18 +2970,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.timing_pll_lock_status
             1
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the PLL lock status.
         """
-        return self._attribute_state["timing_pll_lock_status"].read()
+        if raw_value is None:
+            return None
+        if raw_value[0] is None:
+            return None
+        return int(raw_value[0])
 
-    @attribute(
+    @attribute_from_signal(
+        timing_pll_count_signal,
         dtype="DevShort",
         label="timing_pll_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the PLL lock loss counter. "
+        "Expected: `0` if no lock loss events detected.",
     )
-    def timing_pll_count(self: MccsTile) -> int:
+    def timing_pll_count(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
         Return the PLL lock loss counter.
 
@@ -3013,11 +3003,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.timing_pll_count
             '0'
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the lock loss counter.
         """
-        return self._attribute_state["timing_pll_count"].read()
+        if raw_value is None:
+            return None
+        if raw_value[1] is None:
+            return None
+        return int(raw_value[1])
 
-    @attribute(
+    @attribute_from_signal(
+        timing_pll_40g_lock_status_signal,
         dtype="DevShort",
         label="timing_pll_40g_lock_status",
         min_alarm=0,
@@ -3025,8 +3023,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
+        doc="Return the PLL 40G lock status. Expected: `1` if PLL 40G locked.",
     )
-    def timing_pll_40g_lock_status(self: MccsTile) -> int:
+    def timing_pll_40g_lock_status(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the PLL 40G lock status.
 
@@ -3036,18 +3037,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.timing_pll_40g_lock_status
             '1`
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the PLL lock status and lock loss counter.
         """
-        return self._attribute_state["timing_pll_40g_lock_status"].read()
+        if raw_value is None:
+            return None
+        if raw_value[0] is None:
+            return None
+        return int(raw_value[0])
 
-    @attribute(
+    @attribute_from_signal(
+        timing_pll_40g_count_signal,
         dtype="DevShort",
         label="timing_pll_40g_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the PLL 40G lock loss counter. "
+        "Expected: `0` if PLL 40G has no lock loss events detected.",
     )
-    def timing_pll_40g_count(self: MccsTile) -> int:
+    def timing_pll_40g_count(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
         Return the PLL 40G lock loss counter.
 
@@ -3059,9 +3070,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             >>> tile.timing_pll_40g_count
             '0'
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the PLL lock loss counter.
         """
-        return self._attribute_state["timing_pll_40g_count"].read()
+        if raw_value is None:
+            return None
+        if raw_value[1] is None:
+            return None
+        return int(raw_value[1])
 
     @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:
@@ -3099,44 +3117,53 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return self._convert_ip_to_str(nested_dict)
 
-    @attribute(
+    @attribute_from_signal(
+        voltages_signal,
         dtype="DevString",
         label="voltages",
+        doc="Return all the voltage values available.",
     )
-    def voltages(self: MccsTile) -> str:
+    def voltages(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return all the voltage values available.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: voltages available
         """
-        return self._attribute_state["voltages"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        temperatures_signal,
         dtype="DevString",
         label="temperatures",
+        doc="Return all the temperatures values available.",
     )
-    def temperatures(self: MccsTile) -> str:
+    def temperatures(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return all the temperatures values available.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: temperatures available
         """
-        return self._attribute_state["temperatures"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    useAttributesForHealth = attribute_from_signal(
+        useAttributesForHealth_signal,
         dtype="DevBoolean",
         label="useAttributesForHealth",
+        doc="Return if adr115 is in use. "
+        "True if attributes quality is being evaluated in health.",
     )
-    def useAttributesForHealth(self: MccsTile) -> bool:
-        """
-        Return if adr115 is in use.
 
-        :return: True if attributes quality is
-            being evaluated in health.
-        """
-        return self.UseAttributesForHealth
-
-    temperatureADC0 = attribute_from_signal(  # noqa: N815
+    temperatureADC0 = attribute_from_signal(
         temperature_adc0_signal,
         dtype="DevFloat",
         label="ADC 0",
@@ -3148,7 +3175,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 0 temperature in degrees Celsius.",
     )
 
-    temperatureADC1 = attribute_from_signal(  # noqa: N815
+    temperatureADC1 = attribute_from_signal(
         temperature_adc1_signal,
         dtype="DevFloat",
         label="ADC 1",
@@ -3160,7 +3187,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 1 temperature in degrees Celsius.",
     )
 
-    temperatureADC2 = attribute_from_signal(  # noqa: N815
+    temperatureADC2 = attribute_from_signal(
         temperature_adc2_signal,
         dtype="DevFloat",
         label="ADC 2",
@@ -3172,7 +3199,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 2 temperature in degrees Celsius.",
     )
 
-    temperatureADC3 = attribute_from_signal(  # noqa: N815
+    temperatureADC3 = attribute_from_signal(
         temperature_adc3_signal,
         dtype="DevFloat",
         label="ADC 3",
@@ -3184,7 +3211,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 3 temperature in degrees Celsius.",
     )
 
-    temperatureADC4 = attribute_from_signal(  # noqa: N815
+    temperatureADC4 = attribute_from_signal(
         temperature_adc4_signal,
         dtype="DevFloat",
         label="ADC 4",
@@ -3196,7 +3223,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 4 temperature in degrees Celsius.",
     )
 
-    temperatureADC5 = attribute_from_signal(  # noqa: N815
+    temperatureADC5 = attribute_from_signal(
         temperature_adc5_signal,
         dtype="DevFloat",
         label="ADC 5",
@@ -3208,7 +3235,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 5 temperature in degrees Celsius.",
     )
 
-    temperatureADC6 = attribute_from_signal(  # noqa: N815
+    temperatureADC6 = attribute_from_signal(
         temperature_adc6_signal,
         dtype="DevFloat",
         label="ADC 6",
@@ -3220,7 +3247,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 6 temperature in degrees Celsius.",
     )
 
-    temperatureADC7 = attribute_from_signal(  # noqa: N815
+    temperatureADC7 = attribute_from_signal(
         temperature_adc7_signal,
         dtype="DevFloat",
         label="ADC 7",
@@ -3232,7 +3259,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 7 temperature in degrees Celsius.",
     )
 
-    temperatureADC8 = attribute_from_signal(  # noqa: N815
+    temperatureADC8 = attribute_from_signal(
         temperature_adc8_signal,
         dtype="DevFloat",
         label="ADC 8",
@@ -3244,7 +3271,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 8 temperature in degrees Celsius.",
     )
 
-    temperatureADC9 = attribute_from_signal(  # noqa: N815
+    temperatureADC9 = attribute_from_signal(
         temperature_adc9_signal,
         dtype="DevFloat",
         label="ADC 9",
@@ -3256,7 +3283,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 9 temperature in degrees Celsius.",
     )
 
-    temperatureADC10 = attribute_from_signal(  # noqa: N815
+    temperatureADC10 = attribute_from_signal(
         temperature_adc10_signal,
         dtype="DevFloat",
         label="ADC 10",
@@ -3268,7 +3295,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 10 temperature in degrees Celsius.",
     )
 
-    temperatureADC11 = attribute_from_signal(  # noqa: N815
+    temperatureADC11 = attribute_from_signal(
         temperature_adc11_signal,
         dtype="DevFloat",
         label="ADC 11",
@@ -3280,7 +3307,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 11 temperature in degrees Celsius.",
     )
 
-    temperatureADC12 = attribute_from_signal(  # noqa: N815
+    temperatureADC12 = attribute_from_signal(
         temperature_adc12_signal,
         dtype="DevFloat",
         label="ADC 12",
@@ -3292,7 +3319,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 12 temperature in degrees Celsius.",
     )
 
-    temperatureADC13 = attribute_from_signal(  # noqa: N815
+    temperatureADC13 = attribute_from_signal(
         temperature_adc13_signal,
         dtype="DevFloat",
         label="ADC 13",
@@ -3304,7 +3331,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 13 temperature in degrees Celsius.",
     )
 
-    temperatureADC14 = attribute_from_signal(  # noqa: N815
+    temperatureADC14 = attribute_from_signal(
         temperature_adc14_signal,
         dtype="DevFloat",
         label="ADC 14",
@@ -3316,7 +3343,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 14 temperature in degrees Celsius.",
     )
 
-    temperatureADC15 = attribute_from_signal(  # noqa: N815
+    temperatureADC15 = attribute_from_signal(
         temperature_adc15_signal,
         dtype="DevFloat",
         label="ADC 15",
@@ -3328,240 +3355,208 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 15 temperature in degrees Celsius.",
     )
 
-    @attribute(
+    @attribute_from_signal(
+        currents_signal,
         dtype="DevString",
         label="currents",
+        doc="Return all the currents values available.",
     )
-    def currents(self: MccsTile) -> str:
+    def currents(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return all the currents values available.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: currents available
         """
-        return self._attribute_state["currents"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        timing_signal,
         dtype="DevString",
         label="timing",
+        doc="Return a dictionary of the timing signals status.",
     )
-    def timing(self: MccsTile) -> str:
+    def timing(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return a dictionary of the timing signals status.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: timing signals status
         """
-        return self._attribute_state["timing"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        io_signal,
         dtype="DevString",
         label="io",
+        doc="Return a dictionary of I/O interfaces status available.",
     )
-    def io(self: MccsTile) -> str:
+    def io(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return a dictionary of I/O interfaces status available.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: I/O interfaces status
         """
-        return self._attribute_state["io"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        dsp_signal,
         dtype="DevString",
         label="dsp",
+        doc="Return the tile beamformer and station beamformer status.",
     )
-    def dsp(self: MccsTile) -> str:
+    def dsp(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return the tile beamformer and station beamformer status.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the tile beamformer and station beamformer status
         """
-        return self._attribute_state["dsp"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    @attribute_from_signal(
+        adcs_signal,
         dtype="DevString",
         label="adcs",
+        doc="Return the ADC status.",
     )
-    def adcs(self: MccsTile) -> str:
+    def adcs(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Return the ADC status.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the ADC status
         """
-        return self._attribute_state["adcs"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    I2C_access_alm = attribute_from_signal(
+        I2C_access_alm_signal,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the I2C alarm reading.",
     )
-    def I2C_access_alm(
-        self: MccsTile,
-    ) -> int | None:
-        """
-        Return the I2C alarm reading.
 
-        0 -> OK
-        1 -> WARN
-        2 -> ALARM
-
-        :return: The alarm state for I2C.
-        """
-        return self._attribute_state["I2C_access_alm"].read()
-
-    @attribute(
+    temperature_alm = attribute_from_signal(
+        temperature_alm_signal,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the Temperature alarm reading. "
+        "0 -> OK "
+        "1 -> WARN "
+        "2 -> ALARM",
     )
-    def temperature_alm(
-        self: MccsTile,
-    ) -> int | None:
-        """
-        Return the Temperature alarm reading.
 
-        0 -> OK
-        1 -> WARN
-        2 -> ALARM
-
-        :return: The alarm state for temperature.
-        """
-        return self._attribute_state["temperature_alm"].read()
-
-    @attribute(
-        dtype="DevShort", max_warning=1, max_alarm=2, abs_change=1, archive_abs_change=1
-    )
-    def voltage_alm(
-        self: MccsTile,
-    ) -> int | None:
-        """
-        Return the Voltage alarm reading.
-
-        0 -> OK
-        1 -> WARN
-        2 -> ALARM
-
-        :return: The alarm state for voltage.
-        """
-        return self._attribute_state["voltage_alm"].read()
-
-    @attribute(
+    voltage_alm = attribute_from_signal(
+        voltage_alm_signal,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the Voltage alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
-    def SEM_wd(
-        self: MccsTile,
-    ) -> int | None:
-        """
-        Return the SEMwd alarm reading.
 
-        0 -> OK
-        1 -> WARN
-        2 -> ALARM
-
-        :return: The alarm state for SEMwd.
-        """
-        return self._attribute_state["SEM_wd"].read()
-
-    @attribute(
+    SEM_wd = attribute_from_signal(
+        SEM_wd_signal,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        doc="Return the SEMwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
-    def MCU_wd(
-        self: MccsTile,
-    ) -> int | None:
-        """
-        Return the MCUwd alarm reading.
 
-        0 -> OK
-        1 -> WARN
-        2 -> ALARM
+    MCU_wd = attribute_from_signal(
+        MCU_wd_signal,
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Return the MCUwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
+    )
 
-        :return: The alarm state for MCUwd.
-        """
-        return self._attribute_state["MCU_wd"].read()
-
-    @attribute(
+    cspDestinationIp = attribute_from_signal(
+        cspDestinationIp_signal,
         dtype="DevString",
         label="cspDestinationIp",
+        write_to_signal=True,
+        doc="Return the IP address of the csp destination.",
     )
-    def cspDestinationIp(self: MccsTile) -> str:
-        """
-        Return the cspDestinationIp attribute.
 
-        :return: the IP address of the csp destination
-        """
-        return self._csp_destination_ip
-
-    @attribute(
+    cspDestinationMac = attribute_from_signal(
+        cspDestinationMac_signal,
         dtype="DevString",
         label="cspDestinationMac",
+        write_to_signal=True,
+        doc="the MAC address of the csp destination",
     )
-    def cspDestinationMac(self: MccsTile) -> str:
-        """
-        Return the cspDestinationMac attribute.
 
-        :return: the MAC address of the csp destination
-        """
-        return self._csp_destination_mac
-
-    @attribute(
-        dtype="DevLong", label="cspDestinationPort", abs_change=1, archive_abs_change=1
+    cspDestinationPort = attribute_from_signal(
+        cspDestinationPort_signal,
+        dtype="DevLong",
+        label="cspDestinationPort",
+        write_to_signal=True,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="the port of the csp destination",
     )
-    def cspDestinationPort(self: MccsTile) -> int:
-        """
-        Return the cspDestinationMac attribute.
 
-        :return: the port of the csp destination
-        """
-        return self._csp_destination_port
+    dstip40gfpga1 = attribute_from_signal(
+        dstip40gfpga1_signal,
+        dtype="DevString",
+        label="dstip40gfpga1",
+        doc="Return the 40G destination IP for FPGA1, set via SetCspDownload. "
+        "For non-last tiles this points at the next tile's FPGA1 source IP; "
+        "for the last tile it is the CSP ingest address.",
+    )
 
-    @attribute(dtype="DevString", label="dstip40gfpga1")
-    def dstip40gfpga1(self: MccsTile) -> Any:
-        """
-        Return the 40G destination IP for FPGA1, set via SetCspDownload.
+    dstip40gfpga2 = attribute_from_signal(
+        dstip40gfpga2_signal,
+        dtype="DevString",
+        label="dstip40gfpga2",
+        doc="Return the 40G destination IP for FPGA2, set via SetCspDownload. "
+        "For non-last tiles this points at the next tile's FPGA2 source IP; "
+        "for the last tile it is the CSP ingest address.",
+    )
 
-        For non-last tiles this points at the next tile's FPGA1 source IP;
-        for the last tile it is the CSP ingest address.
-
-        :return: the destination IP for FPGA1
-        """
-        return self._attribute_state["dstip40gfpga1"].read()
-
-    @attribute(dtype="DevString", label="dstip40gfpga2")
-    def dstip40gfpga2(self: MccsTile) -> Any:
-        """
-        Return the 40G destination IP for FPGA2, set via SetCspDownload.
-
-        For non-last tiles this points at the next tile's FPGA2 source IP;
-        for the last tile it is the CSP ingest address.
-
-        :return: the destination IP for FPGA2
-        """
-        return self._attribute_state["dstip40gfpga2"].read()
-
-    @attribute(
+    simulationMode = attribute_from_signal(
+        simulationMode_signal,
         dtype=SimulationMode,
         memorized=True,
         hw_memorized=True,
+        write_to_signal=True,
         abs_change=1,
         archive_abs_change=1,
+        doc="Report the simulation mode of the device.",
     )
-    def simulationMode(self: MccsTile) -> int:
-        """
-        Report the simulation mode of the device.
-
-        :return: Return the current simulation mode
-        """
-        return self.SimulationConfig
 
     @simulationMode.write  # type: ignore[no-redef]
     def simulationMode(self: MccsTile, value: SimulationMode) -> None:
@@ -3580,20 +3575,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "'SimulationConfig' property set as desired. "
         )
 
-    @attribute(
+    testMode = attribute_from_signal(
+        testMode_signal,
         dtype=TestMode,
         memorized=True,
         hw_memorized=True,
+        write_to_signal=True,
         abs_change=1,
         archive_abs_change=1,
+        doc="The test mode.",
     )
-    def testMode(self: MccsTile) -> int:
-        """
-        Report the test mode of the device.
-
-        :return: the current test mode
-        """
-        return self.TestConfig
 
     @testMode.write  # type: ignore[no-redef]
     def testMode(self: MccsTile, value: int) -> None:
@@ -3612,18 +3603,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "the 'TestConfig' property set as desired."
         )
 
-    @attribute(
-        dtype="DevShort", abs_change=1, archive_abs_change=1, min_value=0, max_value=15
+    logicalTileId = attribute_from_signal(
+        logicalTileId_signal,
+        dtype="DevShort",
+        abs_change=1,
+        archive_abs_change=1,
+        min_value=0,
+        max_value=15,
+        write_to_signal=True,
+        doc="The logical tile id is the id of the tile in the station.",
     )
-    def logicalTileId(self: MccsTile) -> int:
-        """
-        Return the logical tile id.
-
-        The logical tile id is the id of the tile in the station.
-
-        :return: the logical tile id
-        """
-        return self._attribute_state["logicalTileId"].read()
 
     @logicalTileId.write  # type: ignore[no-redef]
     def logicalTileId(self: MccsTile, value: int) -> None:
@@ -3636,26 +3625,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_tile_id(value)
 
-    @attribute(dtype="DevString")
-    def tileProgrammingState(self: MccsTile) -> str | None:
-        """
-        Get the tile programming state.
+    tileProgrammingState = attribute_from_signal(
+        tileProgrammingState_signal,
+        dtype="DevString",
+        doc="Get the tile programming state.",
+    )
 
-        :return: a string describing the programming state of the tile
-        """
-        return self._attribute_state["tileProgrammingState"].read()
-
-    @attribute(dtype="DevShort", abs_change=1, archive_abs_change=1)
-    def stationId(self: MccsTile) -> int:
-        """
-        Return the id of the station to which this tile is assigned.
-
-        :return: the id of the station to which this tile is assigned
-        """
-        station = self._attribute_state["stationId"].read()
-        message = f"stationId: read value = {station}"
-        self.logger.info(message)
-        return station
+    stationId = attribute_from_signal(
+        stationId_signal,
+        dtype="DevShort",
+        label="stationId",
+        write_to_signal=True,
+        abs_change=1,
+        archive_abs_change=1,
+        doc="the id of the station to which this tile is assigned",
+    )
 
     @stationId.write  # type: ignore[no-redef]
     def stationId(self: MccsTile, value: int) -> None:
@@ -3668,22 +3652,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.logger.info(message)
         self.component_manager.set_station_id(value)
 
-    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
+    @attribute_from_signal(
+        firmwareTemperatureThresholds_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="firmwareTemperatureThresholds",
+        doc="Return the temperature thresholds set in firmware.",
+        fisallowed="is_firmware_threshold_allowed",
+    )
     def firmwareTemperatureThresholds(
         self: MccsTile,
-    ) -> str | dict[str, float]:
+        raw_value: dict | None,
+    ) -> str:
         """
         Return the temperature thresholds set in firmware.
+
+        :param raw_value: the temperature thresholds emitted on the
+            signal, or ``None`` when the value is being invalidated.
 
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
-        hw_temperatures: str = json.dumps(
-            self.hw_firmware_thresholds.to_device_property_dict().get(
-                "temperatures", {}
-            )
-        )
-        return hw_temperatures
+        if raw_value is None:
+            return "{}"
+        return json.dumps(raw_value)
 
     @firmwareTemperatureThresholds.write  # type: ignore[no-redef]
     def firmwareTemperatureThresholds(self: MccsTile, value: str) -> None:
@@ -3735,20 +3727,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._check_database_match()
         self._handle_firmware_read()
 
-    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
+    @attribute_from_signal(
+        firmwareVoltageThresholds_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="firmwareVoltageThresholds",
+        doc="Return the voltage thresholds set in firmware.",
+        fisallowed="is_firmware_threshold_allowed",
+    )
     def firmwareVoltageThresholds(
         self: MccsTile,
-    ) -> str | dict[str, float]:
+        raw_value: dict | None,
+    ) -> str:
         """
         Return the voltage thresholds set in firmware.
+
+        :param raw_value: the temperature thresholds emitted on the
+            signal, or ``None`` when the value is being invalidated.
 
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
-        hw_voltages: str = json.dumps(
-            self.hw_firmware_thresholds.to_device_property_dict().get("voltages", {})
-        )
-        return hw_voltages
+        if raw_value is None:
+            return "{}"
+        return json.dumps(raw_value)
 
     @firmwareVoltageThresholds.write  # type: ignore[no-redef]
     def firmwareVoltageThresholds(self: MccsTile, value: str) -> None:
@@ -3833,20 +3835,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._check_database_match()
         self._handle_firmware_read()
 
-    @attribute(dtype="DevString", fisallowed="is_firmware_threshold_allowed")
+    @attribute_from_signal(
+        firmwareCurrentThresholds_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="firmwareCurrentThresholds",
+        doc="Return the current thresholds set in firmware.",
+        fisallowed="is_firmware_threshold_allowed",
+    )
     def firmwareCurrentThresholds(
         self: MccsTile,
-    ) -> str | dict[str, float]:
+        raw_value: dict | None,
+    ) -> str:
         """
         Return the current thresholds set in firmware.
+
+        :param raw_value: the temperature thresholds emitted on the
+            signal, or ``None`` when the value is being invalidated.
 
         :return: A serialised dictionary containing the thresholds.
             or a null string.
         """
-        hw_currents = json.dumps(
-            self.hw_firmware_thresholds.to_device_property_dict().get("currents", {})
-        )
-        return hw_currents
+        if raw_value is None:
+            return "{}"
+        return json.dumps(raw_value)
 
     @firmwareCurrentThresholds.write  # type: ignore[no-redef]
     def firmwareCurrentThresholds(self: MccsTile, value: str) -> None:
@@ -3925,6 +3937,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._check_database_match()
         self._handle_firmware_read()
 
+    # ----------------- NON SIGNAL ATTRS -----------------
+    # No point making attributes that return a cpt mgr property signal backed
+    # as they're only set from the cpt mgr itself.
+    # If we did then we'd need to add callbacks from the cpt mgr to keep
+    # the signals up to date with the cpt mgr copy which just adds complexity
+    # for zero gain.
+    # These may be worth refactoring to use signals when we bin the cpt mgrs.
     @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
         """
@@ -3941,18 +3960,191 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param value: firmware name
         """
+        # This may set the firmware name but there's no way to actually
+        # use the bitfile specified. Initialise overwrites it unconditionally.
         self.component_manager.firmware_name = value
 
+    @attribute(dtype="DevBoolean")
+    def testGeneratorActive(self: MccsTile) -> bool:
+        """
+        Report if the test generator is used for some channels.
+
+        :return: test generator status
+        """
+        return self.component_manager.test_generator_active
+
     @attribute(dtype="DevString")
-    def firmwareVersion(self: MccsTile) -> str:
+    def globalReferenceTime(self: MccsTile) -> str:
         """
-        Return the firmware version.
+        Return the global FPGA synchronization time.
 
-        :return: firmware version
+        :return: the global synchronization time, in UTC format
         """
-        return self._attribute_state["firmwareVersion"].read()
+        return self.component_manager.global_reference_time
 
-    isProgrammed = attribute_from_signal(  # noqa: N815
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        """
+        self.component_manager.global_reference_time = reference_time
+
+    @attribute(
+        dtype="DevString",
+        label="cspSpeadFormat",
+        fisallowed="_check_initialised_for_write",
+    )
+    def cspSpeadFormat(self: MccsTile) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format not in ["AAVS", "SKA"]:
+            self.logger.warning(
+                "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
+            )
+            spead_format = "AAVS"
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=2,  # [Delay, delay rate]
+        max_dim_y=16,  # channel (same for x and y)
+    )
+    def lastPointingDelays(self: MccsTile) -> list[list]:
+        """
+        Return last pointing delays applied to the tile.
+
+        Values are initialised to 0.0 if they haven't been set.
+        These values are in channel order, with each pair corresponding to
+        a delay and delay rate.
+
+        :returns: last pointing delays applied to the tile.
+        """
+        return self.component_manager.last_pointing_delays
+
+    @attribute(dtype="DevString")
+    def antennaBufferMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if antenna buffer is sending over SDN or NSDN.
+
+        :return: string of SND or NSDN
+        """
+        return self.component_manager.antenna_buffer_mode
+
+    @attribute(dtype="DevString")
+    def dataTransmissionMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if we're sending data through 1G or 10G port.
+
+        :return: Either 1G or 10G string
+        """
+        return self.component_manager.data_transmission_mode
+
+    @attribute(dtype="DevString")
+    def integratedDataTransmissionMode(
+        self: MccsTile,
+    ) -> str:
+        """
+        Return if we're sending integrated data through 1G or 10G port.
+
+        :return: Either 1G or 10G string
+        """
+        return self.component_manager.integrated_data_transmission_mode
+
+    # ----------------- DEPRECATED ATTRS -----------------
+    # Also no point to convert attrs for the old, unused health model.
+    # We should remove it and default to using attrs and then these can be deleted.
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: MccsTile) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        if self.UseAttributesForHealth:
+            return ""
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: MccsTile, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+
+        :raises NotImplementedError: If UseAttributesForHealth
+            if True
+        """
+        if self.UseAttributesForHealth:
+            raise NotImplementedError("")
+        self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
+
+    # ----------------- NOT IMPLEMENTED ATTRS -----------------
+    # Also no point to convert attrs that are not implemented.
+    @attribute(dtype="DevBoolean")
+    def clockPresent(self: MccsTile) -> NoReturn:
+        """
+        Report if 10 MHz clock signal is present at the TPM input.
+
+        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
+        """
+        raise NotImplementedError(
+            "method clockPresent not yet implemented in ska-low-sps-tpm-api"
+        )
+
+    @attribute(dtype="DevBoolean")
+    def sysrefPresent(self: MccsTile) -> NoReturn:
+        """
+        Report if SYSREF signal is present at the FPGA.
+
+        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
+        """
+        raise NotImplementedError(
+            "method sysrefPresent not yet implemented in ska-low-sps-tpm-api"
+        )
+
+    # ------------------------------------------------------------
+
+    firmwareVersion = attribute_from_signal(
+        firmwareVersion_signal,
+        dtype="DevString",
+        label="firmwareVersion",
+        doc="Return the firmware version.",
+    )
+
+    isProgrammed = attribute_from_signal(
         is_programmed_signal,
         dtype="DevBoolean",
         doc="whether or not the board is programmed",
@@ -3966,7 +4158,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: True if Tile is in Programmed, Initialised or Synchronised states.
         """
-        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        prog_state = self.tileProgrammingState_signal
         if prog_state in ["Programmed", "Initialised", "Synchronised"]:
             return True
         reason = "CommandNotAllowed"
@@ -4051,7 +4243,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             tango.Except.throw_exception(reason, msg, self.get_name())
             return False
 
-        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        prog_state = self.tileProgrammingState_signal
         if prog_state in ["Initialised", "Synchronised"]:
             return True
         reason = "CommandNotAllowed"
@@ -4063,7 +4255,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    fpga1Temperature = attribute_from_signal(  # noqa: N815
+    fpga1Temperature = attribute_from_signal(
         fpga1_temperature_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -4073,7 +4265,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Temperature of FPGA 1 in degrees Celsius.",
     )
 
-    fpga2Temperature = attribute_from_signal(  # noqa: N815
+    fpga2Temperature = attribute_from_signal(
         fpga2_temperature_signal,
         dtype="DevFloat",
         abs_change=0.2,
@@ -4083,7 +4275,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Temperature of FPGA 2 in degrees Celsius.",
     )
 
-    fpgasUnixTime = attribute_from_signal(  # noqa: N815
+    fpgasUnixTime = attribute_from_signal(
         fpgas_time_signal,
         dtype=("DevLong",),
         max_dim_x=2,
@@ -4093,38 +4285,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="the time for FPGAs",
     )
 
-    fpgaTime = attribute_from_signal(  # noqa: N815
+    fpgaTime = attribute_from_signal(
         fpga_time_signal,
         dtype="DevString",
         doc="the FPGA internal time, in UTC format",
     )
 
-    fpgaReferenceTime = attribute_from_signal(  # noqa: N815
+    fpgaReferenceTime = attribute_from_signal(
         fpga_reference_time_signal,
         dtype="DevString",
         doc="the FPGA synchronization timestamp, in UTC format",
     )
 
-    fpgaFrameTime = attribute_from_signal(  # noqa: N815
+    fpgaFrameTime = attribute_from_signal(
         fpga_frame_time_signal,
         dtype="DevString",
         doc="the FPGA synchronization timestamp, in UTC format",
     )
 
-    @attribute(
+    antennaIds = attribute_from_signal(
+        antennaIds_signal,
         dtype=("DevShort",),
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
-        label="Antenna ID's",
+        write_to_signal=True,
+        label="Antenna IDs",
+        doc="Antenna IDs",
     )
-    def antennaIds(self: MccsTile) -> list[int]:
-        """
-        Return the antenna IDs.
-
-        :return: the antenna IDs
-        """
-        return self._antenna_ids
 
     @antennaIds.write  # type: ignore[no-redef]
     def antennaIds(self: MccsTile, antenna_ids: list[int]) -> None:
@@ -4133,16 +4321,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param antenna_ids: the antenna IDs
         """
+        self.antennaIds_signal = list(antenna_ids)
         self._antenna_ids = list(antenna_ids)
 
-    fortyGbDestinationIps = attribute_from_signal(  # noqa: N815
+    fortyGbDestinationIps = attribute_from_signal(
         forty_gb_destination_ips_signal,
         dtype=("DevString",),
         max_dim_x=16,
         doc="the destination IPs for all 40Gb ports on the tile",
     )
 
-    fortyGbDestinationPorts = attribute_from_signal(  # noqa: N815
+    fortyGbDestinationPorts = attribute_from_signal(
         forty_gb_destination_ports_signal,
         dtype=("DevLong",),
         max_dim_x=16,
@@ -4151,20 +4340,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="the destination ports for all 40Gb ports on the tile",
     )
 
-    @attribute(
-        dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1
+    adcPower = attribute_from_signal(
+        adc_power_signal,
+        dtype=("DevDouble",),
+        max_dim_x=32,
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="RMS power of every ADC signal",
     )
-    def adcPower(self: MccsTile) -> list[float] | None:
-        """
-        Return the RMS power of every ADC signal.
 
-        so a TPM processes 16 antennas, this should return 32 RMS value.
-
-        :return: RMP power of ADC signals
-        """
-        return self._attribute_state["adcPower"].read()
-
-    currentTileBeamformerFrame = attribute_from_signal(  # noqa: N815
+    currentTileBeamformerFrame = attribute_from_signal(
         current_tile_beamformer_frame_signal,
         dtype="DevLong64",
         abs_change=1,
@@ -4175,8 +4360,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
     )
 
-    @attribute(dtype="DevString")
-    def coreCommunicationStatus(self: MccsTile) -> str | None:
+    @attribute_from_signal(
+        coreCommunicationStatus_signal,
+        dtype="DevString",
+        label="coreCommunicationStatus",
+        doc="Return status of connection to TPM, CPLD and FPGAs. "
+        "Return True if communication is OK else False",
+    )
+    def coreCommunicationStatus(
+        self: MccsTile, raw_value: dict[str, Any] | None
+    ) -> str | None:
         """
         Return status of connection to TPM, CPLD and FPGAs.
 
@@ -4188,12 +4381,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> print(core_communication_status)
         >>> {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: dictionary containing if the CPLD and FPGAs are
             connectable or None if not yet polled.
         """
-        return self._attribute_state["coreCommunicationStatus"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    currentFrame = attribute_from_signal(  # noqa: N815
+    currentFrame = attribute_from_signal(
         fpga_current_frame_signal,
         dtype="DevLong",
         abs_change=1,
@@ -4204,31 +4402,27 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
     )
 
-    pendingDataRequests = attribute_from_signal(  # noqa: N815
+    pendingDataRequests = attribute_from_signal(
         pending_data_requests_signal,
         dtype="DevBoolean",
         doc="whether there are data requests pending",
     )
 
-    isBeamformerRunning = attribute_from_signal(  # noqa: N815
+    isBeamformerRunning = attribute_from_signal(
         is_beamformer_running_signal,
         dtype="DevBoolean",
         doc="whether the beamformer is running",
     )
 
-    @attribute(
+    phaseTerminalCount = attribute_from_signal(
+        phaseTerminalCount_signal,
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
         fisallowed="_check_initialised_for_write",
+        label="phaseTerminalCount",
+        doc="Get phase terminal count.",
     )
-    def phaseTerminalCount(self: MccsTile) -> int:
-        """
-        Get phase terminal count.
-
-        :return: phase terminal count
-        """
-        return self._attribute_state["phaseTerminalCount"].read()
 
     @phaseTerminalCount.write  # type: ignore[no-redef]
     def phaseTerminalCount(self: MccsTile, value: int) -> None:
@@ -4238,8 +4432,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param value: the phase terminal count
         """
         self.component_manager.set_phase_terminal_count(value)
+        self.phaseTerminalCount_signal = value
 
-    ppsDelay = attribute_from_signal(  # noqa: N815
+    ppsDelay = attribute_from_signal(
         pps_delay_signal,
         dtype="DevLong",
         abs_change=1,
@@ -4247,34 +4442,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="the delay between PPS and 10 MHz clock, in 1.25ns units",
     )
 
-    @attribute(
+    ppsDrift = attribute_from_signal(
+        ppsDrift_signal,
         dtype="DevLong",
+        label="ppsDrift",
         archive_abs_change=1,
         abs_change=1,
         max_alarm=10,
         max_warning=4,
+        doc="Return the observed drift in the ppsDelay of this Tile.",
     )
-    def ppsDrift(self: MccsTile) -> int:
-        """
-        Return the observed drift in the ppsDelay of this Tile.
 
-        `ppsDrift` measures the difference between the TPM's currently reported
-        `ppsDelay` and the value it had when the Tile Tango device was initialised.
-        This will initially be zero and then will increase as reported value of
-        `ppsDelay` changes over time.
-
-        :return: Return the pps delay drift in 1.25ns units or `None` if not initialised
-        """
-        return self._attribute_state["ppsDrift"].read()
-
-    @attribute(dtype="DevLong", archive_abs_change=1, abs_change=1)
-    def ppsDelayCorrection(self: MccsTile) -> int | None:
-        """
-        Return the correction made to the pps delay.
-
-        :return: Return the PPS delay in 1.25ns units.
-        """
-        return self._attribute_state["ppsDelayCorrection"].read()
+    ppsDelayCorrection = attribute_from_signal(
+        ppsDelayCorrection_signal,
+        dtype="DevLong",
+        label="ppsDelayCorrection",
+        archive_abs_change=1,
+        abs_change=1,
+        doc="Return the correction made to the pps delay.",
+    )
 
     @ppsDelayCorrection.write  # type: ignore[no-redef]
     def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
@@ -4287,23 +4473,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
-    @attribute(dtype="DevBoolean")
-    def testGeneratorActive(self: MccsTile) -> bool:
-        """
-        Report if the test generator is used for some channels.
-
-        :return: test generator status
-        """
-        return self.component_manager.test_generator_active
-
-    @attribute(dtype="DevBoolean")
-    def ppsPresent(self: MccsTile) -> tuple[bool | None, float, tango.AttrQuality]:
-        """
-        Report if PPS signal is present at the TPM input.
-
-        :return: a tuple with attribute_value, time, quality
-        """
-        return self._attribute_state["ppsPresent"].read()
+    ppsPresent = attribute_from_signal(
+        ppsPresent_signal,
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+        # Changed to devshort from devbool because errors. Probably Tango alarm related
+        dtype="DevShort",
+        label="ppsPresent",
+        doc="Report if PPS signal is present at the TPM input.",
+    )
 
     def dev_state(self) -> tango.DevState:
         """
@@ -4333,55 +4512,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return tango.DevState.ALARM
         return automatic_state_analysis
 
-    @attribute(dtype="DevBoolean")
-    def clockPresent(self: MccsTile) -> NoReturn:
-        """
-        Report if 10 MHz clock signal is present at the TPM input.
+    pllLocked = attribute_from_signal(
+        pllLocked_signal,
+        dtype="DevBoolean",
+        label="pllLocked",
+        doc="Report if ADC clock PLL is in locked state.",
+    )
 
-        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
-        """
-        raise NotImplementedError(
-            "method clockPresent not yet implemented in ska-low-sps-tpm-api"
-        )
-
-    @attribute(dtype="DevBoolean")
-    def sysrefPresent(self: MccsTile) -> NoReturn:
-        """
-        Report if SYSREF signal is present at the FPGA.
-
-        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
-        """
-        raise NotImplementedError(
-            "method sysrefPresent not yet implemented in ska-low-sps-tpm-api"
-        )
-
-    @attribute(dtype="DevBoolean")
-    def pllLocked(self: MccsTile) -> bool | None:
-        """
-        Report if ADC clock PLL is in locked state.
-
-        :return: PLL lock state
-        """
-        return self._attribute_state["pllLocked"].read()
-
-    @attribute(
+    channeliserRounding = attribute_from_signal(
+        channeliserRounding_signal,
         dtype=("DevLong",),
         max_dim_x=512,
         archive_abs_change=1,
         abs_change=1,
         fisallowed="_check_initialised_for_write",
+        label="Channeliser Rounding",
+        doc="Channeliser rounding. "
+        "Number of LS bits dropped in each channeliser frequency channel. "
+        "Valid values 0-7 Same value applies to all antennas and polarizations.",
     )
-    def channeliserRounding(self: MccsTile) -> list[int]:
-        """
-        Channeliser rounding.
-
-        Number of LS bits dropped in each channeliser frequency channel.
-        Valid values 0-7 Same value applies to all antennas and
-        polarizations
-
-        :returns: list of 512 values, one per channel.
-        """
-        return self._attribute_state["channeliserRounding"].read()
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
@@ -4392,25 +4541,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             or a list of 512 values. Range 0 (no truncation) to 7
         """
         self.component_manager.set_channeliser_truncation(truncation)
+        self.channeliserRounding_signal = truncation
 
-    @attribute(
+    staticTimeDelays = attribute_from_signal(
+        staticTimeDelays_signal,
         dtype=("DevDouble",),
         max_dim_x=32,
         archive_abs_change=1,
         abs_change=1,
         fisallowed="_check_initialised_for_write",
+        label="Static Time Delays",
+        doc="Get static time delay correction. "
+        "Array of one value per antenna/polarization (32 per tile), in range +/-124. "
+        "Delay in nanoseconds (positive = increase the signal delay) to correct for "
+        "static delay mismatches, e.g. cable length.",
     )
-    def staticTimeDelays(self: MccsTile) -> list[int]:
-        """
-        Get static time delay correction.
-
-        Array of one value per antenna/polarization (32 per tile), in range +/-124.
-        Delay in nanoseconds (positive = increase the signal delay) to correct for
-        static delay mismathces, e.g. cable length.
-
-        :return: Array of one value per antenna/polarization (32 per tile)
-        """
-        return self._attribute_state["staticTimeDelays"].read()
 
     @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
@@ -4418,84 +4563,80 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Set static time delay.
 
         :param delays: Delay in nanoseconds (positive = increase the signal delay)
-             to correct for static delay mismathces, e.g. cable length.
+             to correct for static delay mismatches, e.g. cable length.
         """
         self.component_manager.set_static_delays(delays)
+        self.staticTimeDelays_signal = delays
 
-    @attribute(
+    cspRounding = attribute_from_signal(
+        cspRounding_signal,
         dtype=("DevLong",),
         max_dim_x=384,
         archive_abs_change=1,
         abs_change=1,
         fisallowed="_check_initialised_for_write",
+        label="CSP Rounding",
+        doc="CSP formatter rounding. "
+        "Rounding from 16 to 8 bits in final stage of the station beamformer, "
+        "before sending data to CSP."
+        "Array of (up to) 384 values, one for each logical channel."
+        "Range 0 to 7, as number of discarded LS bits.",
     )
-    def cspRounding(self: MccsTile) -> np.ndarray | None:
-        """
-        CSP formatter rounding.
-
-        Rounding from 16 to 8 bits in final stage of the
-        station beamformer, before sending data to CSP.
-        Array of (up to) 384 values, one for each logical channel.
-        Range 0 to 7, as number of discarded LS bits.
-
-        :return: CSP formatter rounding for each logical channel.
-        """
-        return self._attribute_state["cspRounding"].read()
 
     @cspRounding.write  # type: ignore[no-redef]
-    def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:
+    def cspRounding(self: MccsTile, rounding: list[int]) -> None:
         """
         Set CSP formatter rounding.
 
         :param rounding: list of up to 384 values in the range 0-7.
             Current hardware supports only a single value, thus oly 1st value is used
         """
-        self.component_manager.set_csp_rounding(rounding)
+        if self.component_manager.set_csp_rounding(rounding):
+            self.cspRounding_signal = rounding
 
-    @attribute(dtype="DevString")
-    def globalReferenceTime(self: MccsTile) -> str:
-        """
-        Return the global FPGA synchronization time.
-
-        :return: the global synchronization time, in UTC format
-        """
-        return self.component_manager.global_reference_time
-
-    @globalReferenceTime.write  # type: ignore[no-redef]
-    def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
-        """
-        Set the global global synchronization timestamp.
-
-        :param reference_time: the synchronization time, in ISO9660 format, or ""
-        """
-        self.component_manager.global_reference_time = reference_time
-
-    @attribute(
+    preaduLevels = attribute_from_signal(
+        preaduLevels_signal,
         dtype=(float,),
         max_dim_x=32,
         abs_change=0.1,
         archive_abs_change=0.1,
         fisallowed="_check_initialised_for_write",
+        label="pre-ADU Levels",
+        doc="Get attenuator level of preADU channels, one per input channel. "
+        "Array of one value per antenna/polarization (32 per tile)",
     )
-    def preaduLevels(self: MccsTile) -> list[float]:
-        """
-        Get attenuator level of preADU channels, one per input channel.
-
-        :return: Array of one value per antenna/polarization (32 per tile)
-        """
-        return self._attribute_state["preaduLevels"].read()
 
     @preaduLevels.write  # type: ignore[no-redef]
-    def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
+    def preaduLevels(self: MccsTile, levels: list[float]) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
 
-        :param levels: ttenuator level of preADU channels, one per input channel, in dB
+        :param levels: attenuator level of preADU channels, one per input channel, in dB
         """
-        self.component_manager.set_preadu_levels(levels)
+        self.component_manager.set_preadu_levels(np.array(levels))
+        self.preaduLevels_signal = levels
 
-    @attribute(dtype=("DevLong",), max_dim_x=336, archive_abs_change=1, abs_change=1)
-    def beamformerTable(self: MccsTile) -> list[int] | None:
+    @attribute_from_signal(
+        beamformerTable_signal,
+        dtype=("DevLong",),
+        max_dim_x=336,
+        archive_abs_change=1,
+        abs_change=1,
+        label="beamformerTable",
+        doc="Get beamformer region table."
+        "Bidimensional array of one row for each 8 channels, with elements:\n"
+        "0. start physical channel\n"
+        "1. beam number\n"
+        "2. subarray ID\n"
+        "3. subarray_logical_channel\n"
+        "4. subarray_beam_id\n"
+        "5. substation_id\n"
+        "6. aperture_id\n"
+        "Each row is a set of 7 consecutive elements in the list.",
+    )
+    def beamformerTable(
+        self: MccsTile, raw_value: list[list[int]] | None
+    ) -> list[int] | None:
         """
         Get beamformer region table.
 
@@ -4510,12 +4651,37 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Each row is a set of 7 consecutive elements in the list.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: list of up to 7*48 values
         """
-        return self._attribute_state["beamformerTable"].read()
+        if raw_value is None:
+            return None
+        return flatten_list(raw_value)
 
-    @attribute(dtype=("DevLong",), max_dim_x=384, archive_abs_change=1, abs_change=1)
-    def beamformerRegions(self: MccsTile) -> list[int] | None:
+    @attribute_from_signal(
+        beamformerRegions_signal,
+        dtype=("DevLong",),
+        max_dim_x=384,
+        archive_abs_change=1,
+        abs_change=1,
+        label="beamformerRegions",
+        doc="Get beamformer region table. "
+        "Bidimensional array of one row for each 8 channels, with elements:\n"
+        "0. start physical channel\n"
+        "1. number of channels\n"
+        "2. beam index\n"
+        "3. subarray ID\n"
+        "4. subarray_logical_channel\n"
+        "5. subarray_beam_id\n"
+        "6. substation_id\n"
+        "7. aperture_id\n"
+        "Each row is a set of 8 consecutive elements in the list.",
+    )
+    def beamformerRegions(
+        self: MccsTile, raw_value: list[list[int]] | None
+    ) -> list[int] | None:
         """
         Get beamformer region table.
 
@@ -4531,41 +4697,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         Each row is a set of 8 consecutive elements in the list.
 
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: list of up to 8*48 values
         """
-        return self._attribute_state["beamformerRegions"].read()
+        if raw_value is None:
+            return None
+        return flatten_list(raw_value)
 
-    @attribute(
-        dtype="DevString",
-        format="%s",
+    @attribute_from_signal(
+        temperatureHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="Temperature Health",
+        doc="Read the temperature Health State of the device. "
+        "This is an aggregated quantity representing if any of the temperature "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
     )
-    def healthModelParams(self: MccsTile) -> str:
-        """
-        Get the health params from the health model.
-
-        :return: the health params
-        """
-        if self.UseAttributesForHealth:
-            return ""
-        return json.dumps(self._health_model.health_params)
-
-    @healthModelParams.write  # type: ignore[no-redef]
-    def healthModelParams(self: MccsTile, argin: str) -> None:
-        """
-        Set the params for health transition rules.
-
-        :param argin: JSON-string of dictionary of health states
-
-        :raises NotImplementedError: If UseAttributesForHealth
-            if True
-        """
-        if self.UseAttributesForHealth:
-            raise NotImplementedError("")
-        self._health_model.health_params = json.loads(argin)
-        self._health_model.update_health()
-
-    @attribute(dtype=HealthState)
-    def temperatureHealth(self: MccsTile) -> HealthState:
+    def temperatureHealth(
+        self: MccsTile, raw_value: HealthState | None
+    ) -> HealthState | None:
         """
         Read the temperature Health State of the device.
 
@@ -4573,14 +4726,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points are outside of their thresholds. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: temperature Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["temperatures"]
-        return self._health_model.intermediate_healths["temperatures"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["temperatures"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def voltageHealth(self: MccsTile) -> HealthState:
+    # return raw_value if raw_value is not None else HealthState.UNKNOWN ?
+
+    @attribute_from_signal(
+        voltageHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="Voltage Health",
+        doc="Read the Voltage Health State of the device. "
+        "This is an aggregated quantity representing if any of the Voltage "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def voltageHealth(
+        self: MccsTile, raw_value: HealthState | None
+    ) -> HealthState | None:
         """
         Read the voltage Health State of the device.
 
@@ -4588,14 +4759,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points are outside of their thresholds. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: voltage Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["voltages"]
-        return self._health_model.intermediate_healths["voltages"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["voltages"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def currentHealth(self: MccsTile) -> HealthState:
+    @attribute_from_signal(
+        currentHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="Current Health",
+        doc="Read the Current Health State of the device. "
+        "This is an aggregated quantity representing if any of the Current "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def currentHealth(
+        self: MccsTile, raw_value: HealthState | None
+    ) -> HealthState | None:
         """
         Read the current Health State of the device.
 
@@ -4603,14 +4790,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points are outside of their thresholds. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: current Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["currents"]
-        return self._health_model.intermediate_healths["currents"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["currents"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def alarmHealth(self: MccsTile) -> HealthState:
+    @attribute_from_signal(
+        alarmHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="Alarm Health",
+        doc="Read the Alarm Health State of the device. "
+        "This is an aggregated quantity representing if any of the Alarm "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def alarmHealth(
+        self: MccsTile, raw_value: HealthState | None
+    ) -> HealthState | None:
         """
         Read the alarm Health State of the device.
 
@@ -4618,14 +4821,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points are outside of their thresholds. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: alarm Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["alarms"]
-        return self._health_model.intermediate_healths["alarms"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["alarms"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def adcHealth(self: MccsTile) -> HealthState:
+    @attribute_from_signal(
+        adcHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="ADC Health",
+        doc="Read the ADC Health State of the device. "
+        "This is an aggregated quantity representing if any of the ADC "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def adcHealth(self: MccsTile, raw_value: HealthState | None) -> HealthState | None:
         """
         Read the ADC Health State of the device.
 
@@ -4633,14 +4850,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points are outside of their thresholds. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: ADC Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["adcs"]
-        return self._health_model.intermediate_healths["adcs"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["adcs"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def timingHealth(self: MccsTile) -> HealthState:
+    @attribute_from_signal(
+        timingHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="Timing Health",
+        doc="Read the Timing Health State of the device. "
+        "This is an aggregated quantity representing if any of the Timing "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def timingHealth(
+        self: MccsTile, raw_value: HealthState | None
+    ) -> HealthState | None:
         """
         Read the timing Health State of the device.
 
@@ -4648,14 +4881,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points do not have a permitted value. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: timing Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["timing"]
-        return self._health_model.intermediate_healths["timing"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["timing"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def ioHealth(self: MccsTile) -> HealthState:
+    @attribute_from_signal(
+        ioHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="IO Health",
+        doc="Read the IO Health State of the device. "
+        "This is an aggregated quantity representing if any of the IO "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def ioHealth(self: MccsTile, raw_value: HealthState | None) -> HealthState | None:
         """
         Read the io Health State of the device.
 
@@ -4663,14 +4910,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points do not have a permitted value. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: io Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["io"]
-        return self._health_model.intermediate_healths["io"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["io"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype=HealthState)
-    def dspHealth(self: MccsTile) -> HealthState:
+    @attribute_from_signal(
+        dspHealth_signal,
+        dtype=HealthState,
+        write_to_signal=True,
+        label="DSP Health",
+        doc="Read the DSP Health State of the device. "
+        "This is an aggregated quantity representing if any of the DSP "
+        "monitoring points are outside of their thresholds. This is used to compute "
+        "the overall healthState of the tile.",
+    )
+    def dspHealth(self: MccsTile, raw_value: HealthState | None) -> HealthState | None:
         """
         Read the dsp Health State of the device.
 
@@ -4678,40 +4939,75 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         monitoring points do not have a permitted value. This is used to compute
         the overall healthState of the tile.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: dsp Health State of the device
         """
-        if self.UseAttributesForHealth:
-            return self._intermediate_healths["dsp"]
-        return self._health_model.intermediate_healths["dsp"][0]
+        if not self.UseAttributesForHealth:
+            return self._health_model.intermediate_healths["dsp"][0]
+        if raw_value is None:
+            return None
+        return raw_value
 
-    @attribute(dtype="DevString")
-    def healthReport(self: MccsTile) -> str:
+    @attribute_from_signal(
+        healthReport_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="Health Report",
+        doc="Get the health report.",
+    )
+    def healthReport(self: MccsTile, raw_value: str) -> str:
         """
         Get the health report.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the health report.
         """
-        if self.UseAttributesForHealth:
-            return self._health_report
-        self._health_model.set_logger(self.logger)
-        return self._health_model.health_report
+        if not self.UseAttributesForHealth:
+            return self._health_model.health_report
+        return raw_value
 
-    @attribute(dtype="DevString")
-    def faultReport(self: MccsTile) -> str:
+    @attribute_from_signal(
+        faultReport_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="Fault Report",
+        doc="Get the fault report.",
+    )
+    def faultReport(self: MccsTile, raw_value: dict[str, str | None]) -> str:
         """
         Get the fault report.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: the fault report.
         """
-        return json.dumps(self.status_information)
+        if raw_value is None:
+            return "{}"
+        return json.dumps(raw_value)
 
-    @attribute(dtype="DevString")
-    def srcip40gfpga1(self: MccsTile) -> str:
+    @attribute_from_signal(
+        srcip40gfpga1_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="srcip40gfpga1",
+        doc="Return source IP for FPGA1, to be set by SpsStation.",
+    )
+    def srcip40gfpga1(self: MccsTile, raw_value: str | None) -> str:
         """
         Return source IP for FPGA1, to be set by SpsStation.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: source IP for FPGA1.
         """
+        if raw_value is None:
+            return ""
         if self.component_manager.src_ip_40g_fpga1 is not None:
             return self.component_manager.src_ip_40g_fpga1
         self.logger.warning("Source IP for FPGA1 not set")
@@ -4725,14 +5021,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA1
         """
         self.component_manager.src_ip_40g_fpga1 = argin
+        self.srcip40gfpga1_signal = argin
 
-    @attribute(dtype="DevString")
-    def srcip40gfpga2(self: MccsTile) -> str:
+    @attribute_from_signal(
+        srcip40gfpga2_signal,
+        dtype="DevString",
+        write_to_signal=True,
+        label="srcip40gfpga2",
+        doc="Return source IP for FPGA2, to be set by SpsStation.",
+    )
+    def srcip40gfpga2(self: MccsTile, raw_value: str | None) -> str:
         """
         Return source IP for FPGA2, to be set by SpsStation.
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: source IP for FPGA2.
         """
+        if raw_value is None:
+            return ""
         if self.component_manager.src_ip_40g_fpga2 is not None:
             return self.component_manager.src_ip_40g_fpga2
         self.logger.warning("Source IP for FPGA2 not set")
@@ -4746,124 +5054,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA2
         """
         self.component_manager.src_ip_40g_fpga2 = argin
+        self.srcip40gfpga2_signal = argin
 
-    @attribute(
-        dtype="DevString",
-        label="cspSpeadFormat",
-        fisallowed="_check_initialised_for_write",
-    )
-    def cspSpeadFormat(self: MccsTile) -> str:
-        """
-        Get CSP SPEAD format.
-
-        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
-        using a reference Unix time specified in the header.
-        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
-
-        :return: CSP Spead format. AAVS or SKA
-        """
-        return self.component_manager.csp_spead_format
-
-    @cspSpeadFormat.write  # type: ignore[no-redef]
-    def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
-        """
-        Set CSP SPEAD format.
-
-        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
-        using a reference Unix time specified in the header.
-        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
-
-        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
-        """
-        if spead_format not in ["AAVS", "SKA"]:
-            self.logger.warning(
-                "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
-            )
-            spead_format = "AAVS"
-        if spead_format in ["AAVS", "SKA"]:
-            self.component_manager.csp_spead_format = spead_format
-        else:
-            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
-
-    @attribute(
-        dtype=(("DevFloat",),),
-        max_dim_x=2,  # [Delay, delay rate]
-        max_dim_y=16,  # channel (same for x and y)
-    )
-    def lastPointingDelays(self: MccsTile) -> list[list]:
-        """
-        Return last pointing delays applied to the tile.
-
-        Values are initialised to 0.0 if they haven't been set.
-        These values are in channel order, with each pair corresponding to
-        a delay and delay rate.
-
-        :returns: last pointing delays applied to the tile.
-        """
-        return self.component_manager.last_pointing_delays
-
-    @attribute(
+    rfiCount = attribute_from_signal(
+        rfiCount_signal,
         dtype=(("DevLong",),),
         max_dim_x=2,  # pol
         max_dim_y=16,  # antenna
         abs_change=1,
         archive_abs_change=1,
+        label="rfiCount",
+        doc="Return the RFI count per antenna/pol.",
     )
-    def rfiCount(self: MccsTile) -> list[list]:
-        """
-        Return the RFI count per antenna/pol.
 
-        :returns: the RFI count per antenna/pol.
-        """
-        return self._attribute_state["rfiCount"].read()
+    stationBeamFlagEnabled = attribute_from_signal(
+        stationBeamFlagEnabled_signal,
+        dtype=("DevBoolean",),
+        max_dim_x=2,  # fpga
+        fisallowed="_is_initialised",
+        label="Station Beam Flag Enabled",
+        doc="Return True if station beam data flagging is enabled.",
+    )
 
-    @attribute(
-        dtype=("DevBoolean",), max_dim_x=2, fisallowed="_is_initialised"
-    )  # fpgas
-    def stationBeamFlagEnabled(
-        self: MccsTile,
-    ) -> list[bool]:
-        """
-        Return True if station beam data flagging is enabled.
-
-        :return: a list of bool values corresponding to the fpgas
-        """
-        return self._attribute_state["stationBeamFlagEnabled"].read()
-
-    @attribute(dtype="DevString")
-    def antennaBufferMode(
-        self: MccsTile,
-    ) -> str:
-        """
-        Return if antenna buffer is sending over SDN or NSDN.
-
-        :return: string of SND or NSDN
-        """
-        return self.component_manager.antenna_buffer_mode
-
-    @attribute(dtype="DevString")
-    def dataTransmissionMode(
-        self: MccsTile,
-    ) -> str:
-        """
-        Return if we're sending data through 1G or 10G port.
-
-        :return: Either 1G or 10G string
-        """
-        return self.component_manager.data_transmission_mode
-
-    @attribute(dtype="DevString")
-    def integratedDataTransmissionMode(
-        self: MccsTile,
-    ) -> str:
-        """
-        Return if we're sending integrated data through 1G or 10G port.
-
-        :return: Either 1G or 10G string
-        """
-        return self.component_manager.integrated_data_transmission_mode
-
-    currentFE0 = attribute_from_signal(  # noqa: N815
+    currentFE0 = attribute_from_signal(  #
         current_fe0_signal,
         dtype="DevFloat",
         label="FE0 current",
@@ -4875,7 +5088,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE0 current in Amps.",
     )
 
-    currentFE1 = attribute_from_signal(  # noqa: N815
+    currentFE1 = attribute_from_signal(
         current_fe1_signal,
         dtype="DevFloat",
         label="FE1 current",
@@ -4887,7 +5100,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE1 current in Amps.",
     )
 
-    voltageAVDD3 = attribute_from_signal(  # noqa: N815
+    voltageAVDD3 = attribute_from_signal(
         voltage_avdd3_signal,
         dtype="DevFloat",
         label="Analog 2.5 V",
@@ -4901,7 +5114,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Analog 2.5 V voltage in Volts.",
     )
 
-    voltageVrefDDR0 = attribute_from_signal(  # noqa: N815
+    voltageVrefDDR0 = attribute_from_signal(
         voltage_vref_ddr0_signal,
         dtype="DevFloat",
         label="Vref voltage for DDR0",
@@ -4913,7 +5126,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Vref voltage for DDR0 in Volts.",
     )
 
-    voltageVrefDDR1 = attribute_from_signal(  # noqa: N815
+    voltageVrefDDR1 = attribute_from_signal(
         voltage_vref_ddr1_signal,
         dtype="DevFloat",
         label="Vref voltage for DDR1",
@@ -4925,17 +5138,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Vref voltage for DDR1 in Volts.",
     )
 
-    # TODO: add back when available in BIOS.
-    # @attribute(dtype="DevDouble", label="voltage VREF_2V5")
-    # def voltageVref2V5(self: MccsTile) -> float | None:
-    #     """
-    #     Handle a Tango attribute read of the Vref 2.5 V voltage.
-
-    #     :return: Vref 2.5 V voltage
-    #     """
-    #     return self._attribute_state["voltageVref2V5"].read()
-
-    voltageMan1V2 = attribute_from_signal(  # noqa: N815
+    voltageMan1V2 = attribute_from_signal(
         voltage_man1v2_signal,
         dtype="DevFloat",
         label="Management 1.2V",
@@ -4947,7 +5150,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 1.2V voltage in Volts.",
     )
 
-    voltageMGT_AVCC = attribute_from_signal(  # noqa: N815
+    voltageMGT_AVCC = attribute_from_signal(
         voltage_mgt_avcc_signal,
         dtype="DevFloat",
         label="FPGA MGT AV",
@@ -4959,7 +5162,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT AV voltage in Volts.",
     )
 
-    voltageMGT_AVTT = attribute_from_signal(  # noqa: N815
+    voltageMGT_AVTT = attribute_from_signal(
         voltage_mgt_avtt_signal,
         dtype="DevFloat",
         label="FPGA MGT AVTT",
@@ -4971,7 +5174,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT AVTT voltage in Volts.",
     )
 
-    voltageMon5V0 = attribute_from_signal(  # noqa: N815
+    voltageMon5V0 = attribute_from_signal(
         voltage_mon5v0_signal,
         dtype="DevFloat",
         label="Management 5V0",
@@ -4983,7 +5186,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 5V supply of the TPM in Volts.",
     )
 
-    voltageMon3V3 = attribute_from_signal(  # noqa: N815
+    voltageMon3V3 = attribute_from_signal(
         voltage_mon3v3_signal,
         dtype="DevFloat",
         label="Management 3V3",
@@ -4995,7 +5198,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 3.3 V supply of the TPM in Volts.",
     )
 
-    voltageMon1V8 = attribute_from_signal(  # noqa: N815
+    voltageMon1V8 = attribute_from_signal(
         voltage_mon1v8_signal,
         dtype="DevFloat",
         label="Management 1V8",
@@ -5007,7 +5210,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 1.8 V supply of the TPM in Volts.",
     )
 
-    voltageSW_AVDD1 = attribute_from_signal(  # noqa: N815
+    voltageSW_AVDD1 = attribute_from_signal(
         voltage_sw_avdd1_signal,
         dtype="DevFloat",
         label="SW Analog 1.1 V",
@@ -5019,7 +5222,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW Analog 1.1 V voltage in Volts.",
     )
 
-    voltageSW_AVDD2 = attribute_from_signal(  # noqa: N815
+    voltageSW_AVDD2 = attribute_from_signal(
         voltage_sw_avdd2_signal,
         dtype="DevFloat",
         label="SW Analog 2.3 V",
@@ -5031,7 +5234,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW Analog 2.3 V voltage in Volts.",
     )
 
-    voltageVIN = attribute_from_signal(  # noqa: N815
+    voltageVIN = attribute_from_signal(
         voltage_vin_signal,
         dtype="DevFloat",
         label="input supply",
@@ -5043,7 +5246,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Input supply voltage in Volts.",
     )
 
-    voltageVM_AGP0 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP0 = attribute_from_signal(
         voltage_vm_agp0_signal,
         dtype="DevFloat",
         label="AD AGP group 0",
@@ -5055,7 +5258,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 0 voltage in Volts.",
     )
 
-    voltageVM_AGP1 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP1 = attribute_from_signal(
         voltage_vm_agp1_signal,
         dtype="DevFloat",
         label="AD AGP group 1",
@@ -5067,7 +5270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 1 voltage in Volts.",
     )
 
-    voltageVM_AGP2 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP2 = attribute_from_signal(
         voltage_vm_agp2_signal,
         dtype="DevFloat",
         label="AD AGP group 2",
@@ -5079,7 +5282,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 2 voltage in Volts.",
     )
 
-    voltageVM_AGP3 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP3 = attribute_from_signal(
         voltage_vm_agp3_signal,
         dtype="DevFloat",
         label="AD AGP group 3",
@@ -5091,7 +5294,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 3 voltage in Volts.",
     )
 
-    voltageVM_AGP4 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP4 = attribute_from_signal(
         voltage_vm_agp4_signal,
         dtype="DevFloat",
         label="AD AGP group 4",
@@ -5103,7 +5306,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 4 voltage in Volts.",
     )
 
-    voltageVM_AGP5 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP5 = attribute_from_signal(
         voltage_vm_agp5_signal,
         dtype="DevFloat",
         label="AD AGP group 5",
@@ -5115,7 +5318,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 5 voltage in Volts.",
     )
 
-    voltageVM_AGP6 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP6 = attribute_from_signal(
         voltage_vm_agp6_signal,
         dtype="DevFloat",
         label="AD AGP group 6",
@@ -5127,7 +5330,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 6 voltage in Volts.",
     )
 
-    voltageVM_AGP7 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP7 = attribute_from_signal(
         voltage_vm_agp7_signal,
         dtype="DevFloat",
         label="AD AGP group 7",
@@ -5139,7 +5342,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 7 voltage in Volts.",
     )
 
-    voltageVM_CLK0B = attribute_from_signal(  # noqa: N815
+    voltageVM_CLK0B = attribute_from_signal(
         voltage_vm_clk0b_signal,
         dtype="DevFloat",
         label="Clock Buffer0 3.3V",
@@ -5151,7 +5354,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Clock Buffer0 3.3V voltage in Volts.",
     )
 
-    voltageVM_CLK1B = attribute_from_signal(  # noqa: N815
+    voltageVM_CLK1B = attribute_from_signal(
         voltage_vm_clk1b_signal,
         dtype="DevFloat",
         label="Clock Buffer1 3.3V",
@@ -5163,7 +5366,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Clock Buffer1 3.3V voltage in Volts.",
     )
 
-    voltageVM_DDR0_VTT = attribute_from_signal(  # noqa: N815
+    voltageVM_DDR0_VTT = attribute_from_signal(
         voltage_vm_ddr0_vtt_signal,
         dtype="DevFloat",
         label="DDR FPGA0 Vtt",
@@ -5175,7 +5378,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR FPGA0 Vtt voltage in Volts.",
     )
 
-    voltageVM_DDR1_VDD = attribute_from_signal(  # noqa: N815
+    voltageVM_DDR1_VDD = attribute_from_signal(
         voltage_vm_ddr1_vdd_signal,
         dtype="DevFloat",
         label="DDR4",
@@ -5187,7 +5390,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR4 voltage in Volts.",
     )
 
-    voltageVM_DDR1_VTT = attribute_from_signal(  # noqa: N815
+    voltageVM_DDR1_VTT = attribute_from_signal(
         voltage_vm_ddr1_vtt_signal,
         dtype="DevFloat",
         label="DDR FPGA1 Vtt",
@@ -5199,7 +5402,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR FPGA1 Vtt voltage in Volts.",
     )
 
-    voltageVM_DRVDD = attribute_from_signal(  # noqa: N815
+    voltageVM_DRVDD = attribute_from_signal(
         voltage_vm_drvdd_signal,
         dtype="DevFloat",
         label="SW DRVDD 1.8V",
@@ -5211,7 +5414,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW DRVDD 1.8V voltage in Volts.",
     )
 
-    voltageVM_DVDD = attribute_from_signal(  # noqa: N815
+    voltageVM_DVDD = attribute_from_signal(
         voltage_vm_dvdd_signal,
         dtype="DevFloat",
         label="AD DVDD",
@@ -5223,7 +5426,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD DVDD voltage in Volts.",
     )
 
-    voltageVM_FE0 = attribute_from_signal(  # noqa: N815
+    voltageVM_FE0 = attribute_from_signal(
         voltage_vm_fe0_signal,
         dtype="DevFloat",
         label="FE0",
@@ -5235,7 +5438,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE0 voltage in Volts. PreADU must be on.",
     )
 
-    voltageVM_FE1 = attribute_from_signal(  # noqa: N815
+    voltageVM_FE1 = attribute_from_signal(
         voltage_vm_fe1_signal,
         dtype="DevFloat",
         label="FE1",
@@ -5247,7 +5450,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE1 voltage in Volts. PreADU must be on.",
     )
 
-    voltageVM_MGT0_AUX = attribute_from_signal(  # noqa: N815
+    voltageVM_MGT0_AUX = attribute_from_signal(
         voltage_vm_mgt0_aux_signal,
         dtype="DevFloat",
         label="FPGA MGT0 AUX",
@@ -5259,7 +5462,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT0 AUX voltage in Volts.",
     )
 
-    voltageVM_MGT1_AUX = attribute_from_signal(  # noqa: N815
+    voltageVM_MGT1_AUX = attribute_from_signal(
         voltage_vm_mgt1_aux_signal,
         dtype="DevFloat",
         label="FPGA MGT1 AUX",
@@ -5271,7 +5474,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT1 AUX voltage in Volts.",
     )
 
-    voltageVM_PLL = attribute_from_signal(  # noqa: N815
+    voltageVM_PLL = attribute_from_signal(
         voltage_vm_pll_signal,
         dtype="DevFloat",
         label="ANALOG PLL",
@@ -5283,7 +5486,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ANALOG PLL voltage in Volts.",
     )
 
-    voltageVM_SW_AMP = attribute_from_signal(  # noqa: N815
+    voltageVM_SW_AMP = attribute_from_signal(
         voltage_vm_sw_amp_signal,
         dtype="DevFloat",
         label="VGA DC-DC",
@@ -5295,54 +5498,41 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="VGA DC-DC voltage in Volts.",
     )
 
-    @attribute(dtype="DevString", label="Polyphase Filter Version")
-    def pfbVersion(self: MccsTile) -> str:
-        """
-        Return the version of the polyphase filter firmware.
+    pfbVersion = attribute_from_signal(
+        pfbVersion_signal,
+        dtype="DevString",
+        label="Polyphase Filter Version",
+        doc="Return the version of the polyphase filter firmware.",
+    )
 
-        :return: the version of the polyphase filter firmware
-        """
-        return self._attribute_state["pfbVersion"].read()
-
-    @attribute(
+    rfiBlankingEnabledAntennas = attribute_from_signal(
+        rfiBlankingEnabledAntennas_signal,
         dtype=("DevLong",),
         max_dim_x=16,
         label="RFI Blanking-enabled Antennas",
         abs_change=1,
         archive_abs_change=1,
+        doc="Get the list of antennas for broadband RFI blanking is currently enabled.",
     )
-    def rfiBlankingEnabledAntennas(self: MccsTile) -> list[int]:
-        """
-        Get the list of antennas for broadband RFI blanking is currently enabled.
 
-        :return: list of antennas with RFI blanking enabled
-        :rtype: list(int)
-        """
-        return self._attribute_state["rfiBlankingEnabledAntennas"].read()
-
-    @attribute(
+    broadbandRfiFactor = attribute_from_signal(
+        broadbandRfiFactor_signal,
         dtype="DevFloat",
         label="Broadband RFI Factor",
         abs_change=0.00000001,  # Below resolution of DevFloat
         archive_abs_change=0.00000001,  # Below resolution of DevFloat
+        doc="Get the RFI factor for broadband RFI detection."
+        "Note: Only the RFI factor of FPGA1 is read since the "
+        "same value is loaded into all FPGAs.",
     )
-    def broadbandRfiFactor(self: MccsTile) -> float:
-        """
-        Get the RFI factor for broadband RFI detection.
 
-        Note: Only the RFI factor of FPGA1 is read,
-            since the same value is loaded into all FPGAs.
-
-        :return: rfi_factor: the sensitivity value for the RFI detection
-        :rtype: float
-        """
-        return self._attribute_state["broadbandRfiFactor"].read()
-
-    @attribute(
+    @attribute_from_signal(
+        fortyGPacketCount_signal,
         dtype="DevString",
         label="40G Packet Count",
+        doc="Get 40G packet counts.",
     )
-    def fortyGPacketCount(self: MccsTile) -> str:
+    def fortyGPacketCount(self: MccsTile, raw_value: dict | None) -> str | None:
         """
         Get 40G packet counts.
 
@@ -5377,74 +5567,56 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 }
             }
 
+        :param raw_value: the raw value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
         :return: Packet counts per active 40G core. Returns an empty dictionary
                 if no 40G cores are active.
         """
-        return self._attribute_state["fortyGPacketCount"].read()
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
 
-    @attribute(
+    pointingDelays = attribute_from_signal(
+        pointingDelays_signal,
         dtype=(("DevFloat",),),
         max_dim_x=32,  # Channels
         max_dim_y=8,  # Antennas
         label="Pointing Delays",
         rel_change=0.01,
         archive_rel_change=0.01,
+        doc="Get the pointing delays for beam 0.",
     )
-    def pointingDelays(self: MccsTile) -> list[float]:
-        """
-        Get the pointing delays for beam 0.
 
-        :return: list of pointing delays for beam 0
-        """
-        return self._attribute_state["pointingDelays"].read()
-
-    @attribute(
+    currentDraw = attribute_from_signal(
+        currentDraw_signal,
         dtype="DevFloat",
         label="Subrack Current",
         min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
+        doc="Get the Tile current as measured by the subrack.",
     )
-    def currentDraw(self: MccsTile) -> float | None:
-        """
-        Get the Tile current as measured by the subrack.
 
-        :return: The Tile current as measured by the subrack.
-
-        """
-        return self._attribute_state["currentDraw"].read()
-
-    @attribute(
+    powerDraw = attribute_from_signal(
+        powerDraw_signal,
         dtype="DevFloat",
         label="Subrack Power",
         min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
+        doc="Get the Tile power as measured by the subrack.",
     )
-    def powerDraw(self: MccsTile) -> float | None:
-        """
-        Get the Tile power as measured by the subrack.
 
-        :return: The Tile power as measured by the subrack.
-
-        """
-        return self._attribute_state["powerDraw"].read()
-
-    @attribute(
+    voltageDraw = attribute_from_signal(
+        voltageDraw_signal,
         dtype="DevFloat",
         label="Subrack Voltage",
         min_alarm=11.4,
         max_alarm=12.6,
         abs_change=0.1,
+        doc="Get the Tile voltage as measured by the subrack.",
     )
-    def voltageDraw(self: MccsTile) -> float | None:
-        """
-        Get the Tile voltage as measured by the subrack.
-
-        :return: The Tile voltage as measured by the subrack.
-
-        """
-        return self._attribute_state["voltageDraw"].read()
 
     # --------
     # Commands
@@ -5469,11 +5641,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
 
         def apply_if_valid(attr: Any, default: Any) -> Any:
-            if isinstance(attr, type(default)):
+            if isinstance(attr, list):
                 return attr
             return default
 
         self._antenna_ids = apply_if_valid(antenna_ids, self._antenna_ids)
+        self.antennaIds_signal = self._antenna_ids
         if fixed_delays is not None:
             self.component_manager.set_static_delays(fixed_delays)
 

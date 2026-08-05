@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-import datetime
 import gc
 import json
 import time
@@ -30,6 +29,7 @@ from tests.test_tools import (
     execute_lrc_to_completion,
     wait_for_completed_command_to_clear_from_queue,
 )
+from time_utils import str_from_integer_epoch_utc_time
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -468,9 +468,7 @@ class TestMccsTileTpmDriver:
         )
         assert tile_device.tileprogrammingstate == "Initialised"
         delay_time = 2  # seconds
-        start_time = datetime.datetime.strftime(
-            datetime.datetime.fromtimestamp(int(time.time()) + delay_time), RFC_FORMAT
-        )
+        start_time = str_from_integer_epoch_utc_time(int(time.time()) + delay_time)
         [[result_code], [message]] = tile_device.StartAcquisition(
             json.dumps({"start_time": start_time})
         )

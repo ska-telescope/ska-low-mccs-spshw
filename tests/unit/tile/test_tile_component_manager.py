@@ -41,6 +41,7 @@ from ska_low_mccs_spshw.tile import (
     TpmStatus,
 )
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
+from time_utils import str_from_integer_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -1333,13 +1334,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Call start_acquisition and check fpga_timestamp is moving
         # ---------------------------------------------------------
         future_time = 4.0
-        start_time = datetime.datetime.strftime(
-            datetime.datetime.fromtimestamp(int(time.time()) + future_time), RFC_FORMAT
-        )
+        start_time_str = str_from_integer_epoch_utc_time(int(time.time()) + future_time)
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(
-            start_time=start_time, delay=1, task_callback=callbacks["task"]
+            start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
         time.sleep(future_time)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS, lookahead=5)
@@ -1364,13 +1363,13 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
         tile_component_manager.start_acquisition(
-            start_time=start_time, delay=1, task_callback=callbacks["task"]
+            start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
         tile_simulator.start_acquisition = (  # type: ignore[assignment]
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
         tile_component_manager.start_acquisition(
-            start_time=start_time, delay=1, task_callback=callbacks["task"]
+            start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
 
     def test_communication_when_connection_failed(

@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
+* [LOW-2454] Improve error detection, handling and logging during SpsStation's initialise sequence. All MccsTile command failures should now cause initialisation to fail, some critical operations are retried, and initialisation steps are logged at INFO level rather than DEBUG.
 
 ## 14.1.0
 

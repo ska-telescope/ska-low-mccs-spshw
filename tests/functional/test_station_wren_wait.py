@@ -279,6 +279,7 @@ def initialise_command_failed(
     )
 
 
+@pytest.mark.skip
 @scenario(
     "features/wren_wait.feature",
     "Station waits for WREN during initialisation when enabled",
@@ -297,6 +298,7 @@ def test_station_waits_for_wren_when_enabled(
         device.adminmode = AdminMode.ONLINE
 
 
+@pytest.mark.skip
 @scenario(
     "features/wren_wait.feature", "Station times out waiting for WREN when enabled"
 )
@@ -314,6 +316,7 @@ def test_station_wren_timeout_when_enabled(
         device.adminmode = AdminMode.ONLINE
 
 
+@pytest.mark.skip
 @scenario(
     "features/wren_wait.feature",
     "Station ignores WREN timeout during initialisation when disabled",

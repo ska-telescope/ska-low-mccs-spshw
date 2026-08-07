@@ -40,6 +40,7 @@ class FakeGroupReply:
     def __init__(
         self: FakeGroupReply,
         dev_name: str,
+        obj_name: str,
         data: Any = None,
         exception: Optional[Exception] = None,
     ) -> None:
@@ -47,10 +48,12 @@ class FakeGroupReply:
         Initialise a new instance.
 
         :param dev_name: name of the device this reply is for.
+        :param obj_name: the name of the object in question.
         :param data: the data returned by the device, if it succeeded.
         :param exception: the exception raised by the device, if it failed.
         """
         self._dev_name = dev_name
+        self._obj_name = obj_name
         self._data = data
         self._exception = exception
 
@@ -62,6 +65,14 @@ class FakeGroupReply:
         """
         return self._exception is not None
 
+    def obj_name(self: FakeGroupReply) -> str:
+        """
+        Return the name of the device this reply is for.
+
+        :return: the name of the device this reply is for.
+        """
+        return self._obj_name
+
     def dev_name(self: FakeGroupReply) -> str:
         """
         Return the name of the device this reply is for.
@@ -70,13 +81,20 @@ class FakeGroupReply:
         """
         return self._dev_name
 
-    def get_err_stack(self: FakeGroupReply) -> list[str]:
+    def get_err_stack(self: FakeGroupReply) -> list[tango.DevError]:
         """
         Return the error stack, if this device's call failed.
 
         :return: the error stack, if this device's call failed.
         """
-        return [str(self._exception)] if self._exception is not None else []
+        if self._exception is None:
+            return []
+        error = tango.DevError()
+        error.reason = str(self._exception)
+        error.desc = str(self._exception)
+        error.origin = self._obj_name
+        error.severity = tango.ErrSeverity.ERR
+        return [error]
 
     def get_data(self: FakeGroupReply) -> Any:
         """
@@ -162,9 +180,9 @@ class FakeGroup:
                     data = proxy.command_inout(cmd_name)
                 else:
                     data = proxy.command_inout(cmd_name, device_arg)
-                replies.append(FakeGroupReply(device_name, data=data))
+                replies.append(FakeGroupReply(device_name, cmd_name, data=data))
             except Exception as e:  # pylint: disable=broad-exception-caught
-                replies.append(FakeGroupReply(device_name, exception=e))
+                replies.append(FakeGroupReply(device_name, cmd_name, exception=e))
         return replies
 
     def write_attribute(
@@ -192,9 +210,9 @@ class FakeGroup:
             proxy = ContextDeviceProxy(device_name)
             try:
                 setattr(proxy, attr_name, device_value)
-                replies.append(FakeGroupReply(device_name))
+                replies.append(FakeGroupReply(device_name, attr_name))
             except Exception as e:  # pylint: disable=broad-exception-caught
-                replies.append(FakeGroupReply(device_name, exception=e))
+                replies.append(FakeGroupReply(device_name, attr_name, exception=e))
         return replies
 
 

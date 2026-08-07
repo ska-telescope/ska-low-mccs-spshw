@@ -17,7 +17,7 @@ import threading
 import time
 import unittest.mock
 from types import SimpleNamespace
-from typing import Final, Generator, Iterator
+from typing import Any, Final, Generator, Iterator
 
 import numpy as np
 import pytest
@@ -39,10 +39,40 @@ from ska_low_mccs_spshw.station import (
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 from tests.test_tools import FakeGroup as _FakeGroup
+from tests.test_tools import FakeGroupReply as _FakeGroupReply
 
 # pylint: disable=too-many-lines
 
 ADC_CHANNELS: Final[int] = 32  # Number of ADC channels per tile, used in tests.
+
+
+def _mock_group(name: str, tile_fqdns: list[str]) -> unittest.mock.Mock:
+    """
+    Build a tile group test double, for injection via ``tile_group=``.
+
+    ``SpsStationComponentManager`` would otherwise build a real
+    ``tango.Group``, which makes genuine Tango connections that don't
+    exist in this mock-based harness. The mock returned here is spec'd
+    against the real ``tango.Group`` (so a typo'd or removed method is
+    caught) and wraps a ``_FakeGroup``, which fans calls out to the same
+    registered mock tile devices the rest of the test suite uses.
+    Individual tests can still override one method for one case, e.g.
+    ``tile_group.write_attribute.side_effect = ...``.
+
+    An injected group is trusted by ``SpsStationComponentManager`` to
+    already contain every tile, so -- unlike when it builds a group
+    itself -- it will not add these devices for us; we do it here
+    instead.
+
+    :param name: name of the group.
+    :param tile_fqdns: FQDNs of the tiles to add to the group.
+
+    :return: a mock tile group.
+    """
+    fake_group = _FakeGroup(name)
+    for tile_fqdn in tile_fqdns:
+        fake_group.add(tile_fqdn)
+    return unittest.mock.Mock(spec=tango.Group, wraps=fake_group)
 
 
 # pylint: disable = too-many-arguments
@@ -170,35 +200,32 @@ def station_component_manager_fixture(
 
     :return: a station component manager.
     """
-    # SpsStationComponentManager builds a real tango.Group over the tiles.
-    # A real Group makes genuine Tango connections, which don't exist in
-    # this mock-based harness, so we substitute a fake that fans out to
-    # the same registered mocks instead.
-    with unittest.mock.patch.object(station_cm.tango, "Group", _FakeGroup):
-        sps_station_component_manager = SpsStationComponentManager(
-            1,  # station_id
-            [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
-            [get_tile_name(tile_id + i) for i in range(0, num_tiles)],
-            "",  # lmc_daq_trl
-            "",  # bandpass_daq_trl
-            "",  # wren_trl
-            ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
-            None,  # sdn_gateway
-            None,  # csp_ingest_ip
-            None,  # channeliser_rounding
-            4,  # csp_rounding
-            antenna_uri,
-            True,  # whether or not to start bandpasses in initialise
-            5,  # Bandpass integration time
-            True,  # wren_health_check_fail_on_timeout
-            120,  # wren_health_check_timeout
-            logger,
-            callbacks["communication_status"],
-            callbacks["component_state"],
-            callbacks["tile_health"],
-            callbacks["subrack_health"],
-            callbacks["wren_health"],
-        )
+    tile_fqdns = [get_tile_name(tile_id + i) for i in range(0, num_tiles)]
+    sps_station_component_manager = SpsStationComponentManager(
+        1,  # station_id
+        [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
+        tile_fqdns,
+        "",  # lmc_daq_trl
+        "",  # bandpass_daq_trl
+        "",  # wren_trl
+        ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
+        None,  # sdn_gateway
+        None,  # csp_ingest_ip
+        None,  # channeliser_rounding
+        4,  # csp_rounding
+        antenna_uri,
+        True,  # whether or not to start bandpasses in initialise
+        5,  # Bandpass integration time
+        True,  # wren_health_check_fail_on_timeout
+        120,  # wren_health_check_timeout
+        logger,
+        callbacks["communication_status"],
+        callbacks["component_state"],
+        callbacks["tile_health"],
+        callbacks["subrack_health"],
+        callbacks["wren_health"],
+        tile_group=_mock_group("station-1-tiles", tile_fqdns),
+    )
     # Patching through our self check manager basic tests.
     sps_station_component_manager.self_check_manager = station_self_check_manager
     return sps_station_component_manager
@@ -440,6 +467,71 @@ def test_static_delays_fanout_to_correct_tile(
             list(mock_tiles[i].staticTimeDelays)
             == expected_delays_by_logical_id[logical_id]
         )
+
+
+def test_static_delays_reports_tile_write_failure(
+    communicating_station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that a tile write failure is reported via tango.DevFailed.
+
+    When one tile in the group fails to write staticTimeDelays,
+    ``_group_write_attribute`` must raise ``tango.DevFailed`` carrying
+    that tile's own failure reason through to the caller -- not a
+    generic or empty error -- while the other tiles' writes still go
+    through.
+
+    The failure is injected at the tile group itself (rather than by
+    patching the mock tile device proxy), since the group is what
+    ``_group_write_attribute`` actually talks to.
+
+    :param communicating_station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    failing_index = 0
+    failure_reason = "SimulatedStaticTimeDelaysFailure"
+    expected_delays = [10.0] * ADC_CHANNELS
+
+    tile_group = communicating_station_component_manager._tile_group
+    real_write_attribute = tile_group.write_attribute
+
+    def _write_attribute_with_one_failure(
+        attr_name: str, value: Any, **kwargs: Any
+    ) -> list[Any]:
+        replies = real_write_attribute(attr_name, value, **kwargs)
+        if attr_name == "staticTimeDelays":
+            replies[failing_index] = _FakeGroupReply(
+                replies[failing_index].dev_name(),
+                attr_name,
+                exception=tango.DevFailed(failure_reason),
+            )
+        return replies
+
+    with (
+        unittest.mock.patch.object(
+            tile_group,
+            "write_attribute",
+            side_effect=_write_attribute_with_one_failure,
+        ),
+        pytest.raises(tango.DevFailed) as exc_info,
+    ):
+        communicating_station_component_manager.static_delays = (
+            expected_delays * num_tiles
+        )
+
+    error_stack = exc_info.value.args
+    assert len(error_stack) == 1
+    assert failure_reason in error_stack[0].reason
+    assert error_stack[0].origin == "staticTimeDelays"
+
+    for i in range(num_tiles):
+        if i == failing_index:
+            continue
+        assert list(mock_tiles[i].staticTimeDelays) == expected_delays
 
 
 def test_global_reference_time_broadcast_to_all_tiles(

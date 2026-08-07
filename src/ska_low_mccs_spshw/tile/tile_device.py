@@ -3654,8 +3654,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the id of the station to which this tile is assigned
         """
         station = self._attribute_state["stationId"].read()
-        message = f"stationId: read value = {station}"
-        self.logger.info(message)
         return station
 
     @stationId.write  # type: ignore[no-redef]

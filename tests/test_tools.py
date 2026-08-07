@@ -62,7 +62,7 @@ def wait_for_condition(
 
 def wait_for_device(
     trl: str, timeout: float = 120, poll_interval: float = 3
-) -> tango.DeviceProxy:
+) -> tango.DeviceProxy | None:
     """
     Wait for the device with a timeout.
 

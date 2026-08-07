@@ -3,6 +3,7 @@ Feature: Test WREN wait functionality
 
     Scenario: Station waits for WREN during initialisation when enabled
         Given an SPS deployment against a real context
+        And the WREN simulator is present
         And the SpsStation has a WREN TRL
         And the SpsStation WRENHealthCheckFailOnTimeout is True
         And the SpsStation is in AdminMode.ONLINE
@@ -14,6 +15,7 @@ Feature: Test WREN wait functionality
 
     Scenario: Station times out waiting for WREN when enabled
         Given an SPS deployment against a real context
+        And the WREN simulator is present
         And the SpsStation has a WREN TRL
         And the SpsStation WRENHealthCheckFailOnTimeout is True
         And the SpsStation WRENHealthCheckTimeout is set to 5 seconds
@@ -25,6 +27,7 @@ Feature: Test WREN wait functionality
 
     Scenario: Station ignores WREN timeout during initialisation when disabled
         Given an SPS deployment against a real context
+        And the WREN simulator is present
         And the SpsStation has a WREN TRL
         And the SpsStation WRENHealthCheckFailOnTimeout is False
         And the SpsStation WRENHealthCheckTimeout is set to 5 seconds

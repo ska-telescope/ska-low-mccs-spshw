@@ -31,7 +31,7 @@ def wren_trl_fixture() -> str:
 
 
 @pytest.fixture(name="wren")
-def wren_fixture(wren_trl: str) -> tango.DeviceProxy:
+def wren_fixture(wren_trl: str) -> tango.DeviceProxy | None:
     """
     Return the WREN device proxy.
 
@@ -40,11 +40,11 @@ def wren_fixture(wren_trl: str) -> tango.DeviceProxy:
     :returns: The WREN device proxy.
 
     """
-    return wait_for_device(tango.DeviceProxy(wren_trl))
+    return wait_for_device(wren_trl)
 
 
 @pytest.fixture(name="station_admin")
-def station_admin_fixture(station: tango.DeviceProxy) -> tango.DeviceProxy:
+def station_admin_fixture(station: tango.DeviceProxy) -> tango.DeviceProxy | None:
     """
     Return the station admin device proxy.
 
@@ -53,7 +53,7 @@ def station_admin_fixture(station: tango.DeviceProxy) -> tango.DeviceProxy:
     :returns: The station admin device proxy.
 
     """
-    return wait_for_device(tango.DeviceProxy(station.adm_name()))
+    return wait_for_device(station.adm_name())
 
 
 @given("an SPS deployment against a real context")
@@ -63,9 +63,22 @@ def check_against_real_context(true_context: bool, station_label: str) -> None:
 
     :param true_context: whether or not the current context is real.
     :param station_label: Station to test against.
+
     """
     if not true_context:
         pytest.skip("This test requires real context.")
+
+
+@given("the WREN simulator is present")
+def check_wren_simulator_is_present(wren: tango.DeviceProxy | None) -> None:
+    """
+    Skip the test if WREN simulator is not present.
+
+    :param wren: The WREN device
+
+    """
+    if wren is None:
+        pytest.skip("This test requires the WREN simulator.")
 
 
 @given("the SpsStation has a WREN TRL")
@@ -82,6 +95,9 @@ def check_sps_station_has_a_wren_trl(
     :yields: None
 
     """
+    # Ensure station admin is present
+    assert station_admin is not None
+
     # Get the initial TRL
     initial_wren_trl = station.WrenTRL
     assert initial_wren_trl == ""

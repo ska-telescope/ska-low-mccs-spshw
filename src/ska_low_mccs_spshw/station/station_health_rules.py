@@ -259,11 +259,13 @@ class SpsStationHealthRules(HealthRules):
 
         :return: the default thresholds
         """
+        # For the WREN device we have only 1 device, if that 1 device goes to
+        # FAILED or DEGRADED we proceed to FAILED state in the SpsStation.
         return {
             "subrack_degraded": 0.05,
             "subrack_failed": 0.2,
             "tile_degraded": 0.05,
             "tile_failed": 0.2,
-            "wren_degraded": 0.05,
-            "wren_failed": 0.2,
+            "wren_degraded": 1.0,
+            "wren_failed": 1.0,
         }

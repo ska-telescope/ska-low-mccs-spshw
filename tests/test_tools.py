@@ -60,6 +60,31 @@ def wait_for_condition(
     return False
 
 
+def wait_for_device(
+    trl: str, timeout: float = 120, poll_interval: float = 3
+) -> tango.DeviceProxy:
+    """
+    Wait for the device with a timeout.
+
+    :param trl: The device trl
+    :param timeout: The timeout in seconds
+    :param poll_interval: The polling interval
+    :returns: True/False if all condition is satisfied.
+
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            return tango.DeviceProxy(trl)
+        except (
+            tango.ConnectionFailed,
+            tango.DevFailed,
+            tango.CommunicationFailed,
+        ):
+            time.sleep(poll_interval)
+    return None
+
+
 class TpmStatus(enum.IntEnum):
     """
     Enumerated type for tile status.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -9,14 +8,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenario, then, when
 from ska_control_model import AdminMode, HealthState, ResultCode
 
-from tests.test_tools import wait_for_condition, wait_for_lrc_result
+from tests.test_tools import wait_for_condition, wait_for_device, wait_for_lrc_result
 
 
 @pytest.fixture(name="wren_trl")
@@ -40,7 +40,20 @@ def wren_fixture(wren_trl: str) -> tango.DeviceProxy:
     :returns: The WREN device proxy.
 
     """
-    return tango.DeviceProxy(wren_trl)
+    return wait_for_device(tango.DeviceProxy(wren_trl))
+
+
+@pytest.fixture(name="station_admin")
+def station_admin_fixture(station: tango.DeviceProxy) -> tango.DeviceProxy:
+    """
+    Return the station admin device proxy.
+
+    :param station: The station device
+
+    :returns: The station admin device proxy.
+
+    """
+    return wait_for_device(tango.DeviceProxy(station.adm_name()))
 
 
 @given("an SPS deployment against a real context")
@@ -57,12 +70,13 @@ def check_against_real_context(true_context: bool, station_label: str) -> None:
 
 @given("the SpsStation has a WREN TRL")
 def check_sps_station_has_a_wren_trl(
-    station: tango.DeviceProxy, wren_trl: str
+    station: tango.DeviceProxy, station_admin: tango.DeviceProxy, wren_trl: str
 ) -> Generator:
     """
     Check the station has a WREN TRL.
 
     :param station: a proxy to the station under test.
+    :param station_admin: a proxy to the station under test admin device.
     :param wren_trl: The WREN TRL.
 
     :yields: None
@@ -70,21 +84,30 @@ def check_sps_station_has_a_wren_trl(
     """
     # Get the initial TRL
     initial_wren_trl = station.WrenTRL
+    assert initial_wren_trl == ""
 
-    # Set the TRL here
-    if initial_wren_trl != wren_trl:
-        station.put_property({"WRENTRL": wren_trl})
-        station.Init()
+    # Ensure that we reset the WRENTRL
+    try:
+        # Set the TRL and restart the device
+        # We also set the timeout to something small
+        station.put_property(
+            {
+                "WRENTRL": wren_trl,
+                "WRENHealthCheckTimeout": 5,
+            }
+        )
+        station_admin.RestartServer()
+        assert wait_for_condition(lambda: station.WrenTRL == wren_trl)
         assert station.WrenTRL == wren_trl
 
-    # Yield control
-    yield
+        # Yield control
+        yield
 
-    # Reset the TRL to the initial value
-    if initial_wren_trl != station.WrenTRL:
-        station.put_property({"WRENTRL": ""})
-        station.Init()
-        assert station.WrenTRL == initial_wren_trl
+    finally:
+        # Reset the TRL to the initial value and restart the device
+        station.put_property({"WRENTRL": initial_wren_trl})
+        station_admin.RestartServer()
+        assert wait_for_condition(lambda: station.WrenTRL == initial_wren_trl)
 
 
 @given(
@@ -102,6 +125,7 @@ def set_station_admin_mode(station: tango.DeviceProxy) -> None:
 
     # Wait to ensure it is in that state
     assert wait_for_condition(lambda: station.adminMode == AdminMode.ONLINE)
+    assert wait_for_condition(lambda: station.state() == tango.DevState.ON)
 
 
 @given(
@@ -123,17 +147,24 @@ def set_wren_health_check_fail_on_timeout(
     # Get the original value of the enabled flag
     initial_enabled = station.WrenHealthCheckFailOnTimeout
 
-    # Then set the new value
-    station.WrenHealthCheckFailOnTimeout = enabled
+    try:
+        # Then set the new value
+        station.WrenHealthCheckFailOnTimeout = enabled
 
-    # Ensure it is set
-    wait_for_condition(lambda: station.WrenHealthCheckFailOnTimeout == enabled)
+        # Ensure it is set
+        wait_for_condition(lambda: station.WrenHealthCheckFailOnTimeout == enabled)
 
-    # Yield the station device
-    yield
+        # Yield the station device
+        yield
 
-    # Now reset the flag
-    station.WrenHealthCheckFailOnTimeout = initial_enabled
+    finally:
+        # Now reset the flag
+        station.WrenHealthCheckFailOnTimeout = initial_enabled
+
+        # Ensure it is set
+        wait_for_condition(
+            lambda: station.WrenHealthCheckFailOnTimeout == initial_enabled
+        )
 
 
 @given(
@@ -155,14 +186,22 @@ def set_wren_health_check_timeout(
     # Get the original value of the enabled flag
     initial_timeout = station.WrenHealthCheckTimeout
 
-    # Then set the new value
-    station.WrenHealthCheckTimeout = timeout
+    try:
+        # Then set the new value
+        station.WrenHealthCheckTimeout = timeout
 
-    # Yield the station device
-    yield
+        # Ensure it is set
+        wait_for_condition(lambda: station.WrenHealthCheckTimeout == timeout)
 
-    # Reset the timeout
-    station.WrenHealthCheckTimeout = initial_timeout
+        # Yield the station device
+        yield
+
+    finally:
+        # Reset the timeout
+        station.WrenHealthCheckTimeout = initial_timeout
+
+        # Ensure it is set
+        wait_for_condition(lambda: station.WrenHealthCheckTimeout == initial_timeout)
 
 
 @given("the WREN is initially unhealthy")
@@ -279,7 +318,6 @@ def initialise_command_failed(
     )
 
 
-@pytest.mark.skip
 @scenario(
     "features/wren_wait.feature",
     "Station waits for WREN during initialisation when enabled",
@@ -298,7 +336,6 @@ def test_station_waits_for_wren_when_enabled(
         device.adminmode = AdminMode.ONLINE
 
 
-@pytest.mark.skip
 @scenario(
     "features/wren_wait.feature", "Station times out waiting for WREN when enabled"
 )
@@ -316,7 +353,6 @@ def test_station_wren_timeout_when_enabled(
         device.adminmode = AdminMode.ONLINE
 
 
-@pytest.mark.skip
 @scenario(
     "features/wren_wait.feature",
     "Station ignores WREN timeout during initialisation when disabled",

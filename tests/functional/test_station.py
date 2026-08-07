@@ -1174,4 +1174,24 @@ def check_fanout_value_on_each_tile(
     """
     for tile in station_tiles:
         expected_value = fanout_expectations[tile.dev_name()]
+        if attribute == "preaduLevels":
+            # Mirrors the mask TileComponentManager.set_preadu_levels applies:
+            # a channel only reflects the written level if its preADU is
+            # fitted, otherwise hardware reads back 0 for that channel. With
+            # only one of the two preADUs fitted, half the channels are
+            # zeroed rather than all of them.
+            # get_property() only returns explicitly-stored DB values; when
+            # unset it returns [], whereas the device itself falls back to
+            # its device_property default of [True, True].
+            raw_pre_adu_fitted = tile.get_property("PreAduFitted")["PreAduFitted"]
+            pre_adu_fitted = (
+                [value.lower() == "true" for value in raw_pre_adu_fitted]
+                if raw_pre_adu_fitted
+                else [True, True]
+            )
+            mask = np.repeat(
+                np.array(pre_adu_fitted[::-1] * 2, dtype=float),
+                ADC_CHANNELS // 4,
+            )
+            expected_value = mask * expected_value
         AttributeWaiter(timeout=30).wait_for_value(tile, attribute, expected_value)

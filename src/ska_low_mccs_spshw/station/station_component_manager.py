@@ -49,11 +49,11 @@ from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
-from tango import DevFailed
 
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 from ..tile.tile_data import TileData
+from .group_utils import group_command, group_write_attribute, raise_for_group_failures
 from .station_on_workaround_utils import ensure_tpms_on
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
@@ -68,12 +68,6 @@ _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
 # runs for minutes at a time and must not stop other commands - notably Scan -
 # from executing, so it does not share the general lane with them.
 _CALIBRATION_LANE = "calibration"
-
-# Default client-side timeout for tile group calls. All group methods set this
-# explicitly before use, rather than relying on whatever a previous call last
-# left it as -- tango.Group's timeout is a mutable property of the shared
-# group object, not a per-call argument, so it does not reset itself.
-_DEFAULT_GROUP_TIMEOUT_SECONDS = 20
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -2285,8 +2279,18 @@ class SpsStationComponentManager(
             str(self._sdn_first_address + 2 * tile_id + 1)
             for tile_id in range(len(tile_proxies))
         ]
-        self._group_write_attribute("srcip40gfpga1", src_ips1, multi=True)
-        self._group_write_attribute("srcip40gfpga2", src_ips2, multi=True)
+        raise_for_group_failures(
+            "write srcip40gfpga1",
+            group_write_attribute(
+                self._tile_group, "srcip40gfpga1", src_ips1, multi=True
+            ),
+        )
+        raise_for_group_failures(
+            "write srcip40gfpga2",
+            group_write_attribute(
+                self._tile_group, "srcip40gfpga2", src_ips2, multi=True
+            ),
+        )
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2509,37 +2513,79 @@ class SpsStationComponentManager(
             self.logger.info(
                 "Initialise routine overriding MccsTile instance PreaduAttenuation "
             )
-            self._group_write_attribute(
-                "preaduLevels",
-                _per_tile_slices(self._desired_preadu_levels),
-                multi=True,
+            raise_for_group_failures(
+                "write preaduLevels",
+                group_write_attribute(
+                    self._tile_group,
+                    "preaduLevels",
+                    _per_tile_slices(self._desired_preadu_levels),
+                    multi=True,
+                ),
             )
         if self._desired_static_delays is not None:
             self.logger.info(
                 "Initialise routine overriding MccsTile instance StaticTimeDelays "
             )
-            self._group_write_attribute(
-                "staticTimeDelays",
-                _per_tile_slices(self._desired_static_delays),
-                multi=True,
+            raise_for_group_failures(
+                "write staticTimeDelays",
+                group_write_attribute(
+                    self._tile_group,
+                    "staticTimeDelays",
+                    _per_tile_slices(self._desired_static_delays),
+                    multi=True,
+                ),
             )
-        self._group_write_attribute("channeliserRounding", self._channeliser_rounding)
-        self._group_write_attribute("cspRounding", self._csp_rounding)
-        self._group_write_attribute("cspSpeadFormat", self._csp_spead_format)
-        self._group_write_attribute("globalReferenceTime", self._global_reference_time)
-        self._group_write_attribute(
-            "ppsDelayCorrection",
-            self._pps_delay_corrections[:n_tiles],
-            multi=True,
+        raise_for_group_failures(
+            "write channeliserRounding",
+            group_write_attribute(
+                self._tile_group, "channeliserRounding", self._channeliser_rounding
+            ),
         )
-        self._group_command_inout("SetLmcDownload", json.dumps(self._lmc_param))
-        self._group_command_inout_per_tile(
-            "ConfigureStationBeamformer",
-            [
-                json.dumps({"is_first": tile_no == 0, "is_last": tile_no == last_tile})
-                for tile_no in range(n_tiles)
-            ],
-            tango.CmdArgType.DevString,
+        raise_for_group_failures(
+            "write cspRounding",
+            group_write_attribute(self._tile_group, "cspRounding", self._csp_rounding),
+        )
+        raise_for_group_failures(
+            "write cspSpeadFormat",
+            group_write_attribute(
+                self._tile_group, "cspSpeadFormat", self._csp_spead_format
+            ),
+        )
+        raise_for_group_failures(
+            "write globalReferenceTime",
+            group_write_attribute(
+                self._tile_group, "globalReferenceTime", self._global_reference_time
+            ),
+        )
+        raise_for_group_failures(
+            "write ppsDelayCorrection",
+            group_write_attribute(
+                self._tile_group,
+                "ppsDelayCorrection",
+                self._pps_delay_corrections[:n_tiles],
+                multi=True,
+            ),
+        )
+        raise_for_group_failures(
+            "run SetLmcDownload",
+            group_command(
+                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
+            ),
+        )
+        raise_for_group_failures(
+            "run ConfigureStationBeamformer",
+            group_command(
+                self._tile_group,
+                "ConfigureStationBeamformer",
+                [
+                    json.dumps(
+                        {"is_first": tile_no == 0, "is_last": tile_no == last_tile}
+                    )
+                    for tile_no in range(n_tiles)
+                ],
+                multi=True,
+                arg_type=tango.CmdArgType.DevString,
+            ),
         )
         self._set_beamformer_table()
         return ResultCode.OK, ""
@@ -2597,23 +2643,37 @@ class SpsStationComponentManager(
                 }
             )
 
-        self._group_command_inout_per_tile(
-            "SetCspDownload",
-            [_csp_download_args(tile_id) for tile_id in range(len(tiles))],
-            tango.CmdArgType.DevString,
+        raise_for_group_failures(
+            "run SetCspDownload",
+            group_command(
+                self._tile_group,
+                "SetCspDownload",
+                [_csp_download_args(tile_id) for tile_id in range(len(tiles))],
+                multi=True,
+                arg_type=tango.CmdArgType.DevString,
+            ),
         )
-        self._group_command_inout("SetLmcDownload", json.dumps(self._lmc_param))
-        self._group_command_inout(
-            "SetLmcIntegratedDownload",
-            json.dumps(
-                {
-                    "mode": self._lmc_integrated_mode,
-                    "destination_ip": self._lmc_param["destination_ip"],
-                    "channel_payload_length": self._lmc_channel_payload_length,
-                    "beam_payload_length": self._lmc_beam_payload_length,
-                    "netmask_40g": self._sdn_netmask,
-                    "gateway_40g": self._sdn_gateway,
-                }
+        raise_for_group_failures(
+            "run SetLmcDownload",
+            group_command(
+                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
+            ),
+        )
+        raise_for_group_failures(
+            "run SetLmcIntegratedDownload",
+            group_command(
+                self._tile_group,
+                "SetLmcIntegratedDownload",
+                json.dumps(
+                    {
+                        "mode": self._lmc_integrated_mode,
+                        "destination_ip": self._lmc_param["destination_ip"],
+                        "channel_payload_length": self._lmc_channel_payload_length,
+                        "beam_payload_length": self._lmc_beam_payload_length,
+                        "netmask_40g": self._sdn_netmask,
+                        "gateway_40g": self._sdn_gateway,
+                    }
+                ),
             ),
         )
         return ResultCode.OK, ""
@@ -2947,8 +3007,14 @@ class SpsStationComponentManager(
         :param delays: Array of one value per tile, in nanoseconds.
             Values are internally rounded to 1.25 ns steps
         """
-        self._group_write_attribute(
-            "ppsDelayCorrection", delays[: len(self._tile_proxies)], multi=True
+        raise_for_group_failures(
+            "write ppsDelayCorrection",
+            group_write_attribute(
+                self._tile_group,
+                "ppsDelayCorrection",
+                delays[: len(self._tile_proxies)],
+                multi=True,
+            ),
         )
 
     @property
@@ -2994,7 +3060,12 @@ class SpsStationComponentManager(
             start_entry = (__tile_id) * TileData.ADC_CHANNELS
             end_entry = (__tile_id + 1) * TileData.ADC_CHANNELS
             per_tile_delays.append(delays[start_entry:end_entry])
-        self._group_write_attribute("staticTimeDelays", per_tile_delays, multi=True)
+        raise_for_group_failures(
+            "write staticTimeDelays",
+            group_write_attribute(
+                self._tile_group, "staticTimeDelays", per_tile_delays, multi=True
+            ),
+        )
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
@@ -3070,7 +3141,12 @@ class SpsStationComponentManager(
         :param reference_time: Reference time in ISOT format, or null string
         """
         self._global_reference_time = reference_time
-        self._group_write_attribute("globalReferenceTime", reference_time)
+        raise_for_group_failures(
+            "write globalReferenceTime",
+            group_write_attribute(
+                self._tile_group, "globalReferenceTime", reference_time
+            ),
+        )
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:
@@ -3098,7 +3174,12 @@ class SpsStationComponentManager(
             levels[i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS]
             for i in range(n_tiles)
         ]
-        self._group_write_attribute("preaduLevels", per_tile_levels, multi=True)
+        raise_for_group_failures(
+            "write preaduLevels",
+            group_write_attribute(
+                self._tile_group, "preaduLevels", per_tile_levels, multi=True
+            ),
+        )
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:
@@ -3677,22 +3758,21 @@ class SpsStationComponentManager(
             + list(coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1]))
             for t in range(n_tiles)
         ]
-        replies = self._group_command_inout_per_tile(
-            "LoadCalibrationCoefficientsForChannels",
-            per_tile_coefficients,
-            tango.CmdArgType.DevVarDoubleArray,
+        raise_for_group_failures(
+            "run LoadCalibrationCoefficientsForChannels",
+            group_command(
+                self._tile_group,
+                "LoadCalibrationCoefficientsForChannels",
+                per_tile_coefficients,
+                multi=True,
+                arg_type=tango.CmdArgType.DevVarDoubleArray,
+            ),
         )
 
-        if any(reply.has_failed() for reply in replies):
-            message = "Failed to load calibration coefficients for 1 or more Tiles."
-            result_code = ResultCode.FAILED
-        else:
-            message = "Calibration coefficients loaded into all Tiles successfully."
-            result_code = ResultCode.OK
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
-                result=(result_code, message),
+                result=(ResultCode.OK, "Command Executed without issue"),
             )
 
     def apply_calibration(
@@ -3748,8 +3828,12 @@ class SpsStationComponentManager(
             tile_no = tile_proxy._proxy.logicalTileId
             per_tile_delays.append(tile_delays[tile_no])
 
-        replies = self._group_command_inout_per_tile(
-            "LoadPointingDelays", per_tile_delays, tango.CmdArgType.DevVarDoubleArray
+        replies = group_command(
+            self._tile_group,
+            "LoadPointingDelays",
+            per_tile_delays,
+            multi=True,
+            arg_type=tango.CmdArgType.DevVarDoubleArray,
         )
         skipped_tiles = [reply.dev_name() for reply in replies if reply.has_failed()]
 
@@ -4072,8 +4156,6 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        success = True
-
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -4084,20 +4166,16 @@ class SpsStationComponentManager(
 
         parameter_list = {"start_time": start_time, "delay": delay}
         json_argument = json.dumps(parameter_list)
-        self._group_command_inout("StartAcquisition", json_argument)
+        raise_for_group_failures(
+            "run StartAcquisition",
+            group_command(self._tile_group, "StartAcquisition", json_argument),
+        )
 
         if task_callback:
-            if success:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result=(ResultCode.OK, "Start acquisition has completed"),
-                )
-            else:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result=(ResultCode.FAILED, "Start acquisition task failed"),
-                )
-            return
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "Start acquisition has completed"),
+            )
 
     def _start_daq(
         self: SpsStationComponentManager,
@@ -4406,7 +4484,10 @@ class SpsStationComponentManager(
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
             return
-        self._group_write_attribute("cspSpeadFormat", spead_format)
+        raise_for_group_failures(
+            "write cspSpeadFormat",
+            group_write_attribute(self._tile_group, "cspSpeadFormat", spead_format),
+        )
 
     @property
     def wren_health_check_fail_on_timeout(self) -> bool:
@@ -4469,8 +4550,8 @@ class SpsStationComponentManager(
         self._channeliser_rounding = list(channeliser_rounding)
 
         self.logger.debug("Writing channeliserRounding to all tiles")
-        replies = self._group_write_attribute(
-            "channeliserRounding", channeliser_rounding, raise_on_failure=False
+        replies = group_write_attribute(
+            self._tile_group, "channeliserRounding", channeliser_rounding
         )
 
         if any(reply.has_failed() for reply in replies):
@@ -4595,141 +4676,6 @@ class SpsStationComponentManager(
             return f"{test_name} appears to have no description."
         return docs
 
-    def _group_command_inout(
-        self: SpsStationComponentManager,
-        command_name: str,
-        arg: Optional[Any] = None,
-        timeout: int = _DEFAULT_GROUP_TIMEOUT_SECONDS,
-    ) -> list[tuple[list[ResultCode], list[Optional[str]]]]:
-        """
-        Run a command on every tile in ``self._tile_group``, in parallel.
-
-        :param command_name: command to execute.
-        :param arg: single argument broadcast to every tile, or None.
-        :param timeout: timeout in seconds to wait for all replies.
-
-        :return: one ``(ResultCode list, message list)`` per tile, in the
-            same order as ``self._tile_proxies``.
-        """
-        self._tile_group.set_timeout_millis(timeout * 1000)
-        replies = self._tile_group.command_inout(command_name, arg)
-        results: list[tuple[list[ResultCode], list[Optional[str]]]] = []
-        for reply in replies:
-            if reply.has_failed():
-                self.logger.error(
-                    f"Error running {command_name} on {reply.dev_name()}: "
-                    f"{reply.get_err_stack()}"
-                )
-                results.append(
-                    (
-                        [ResultCode.FAILED],
-                        [f"Command raised {reply.get_err_stack()}, check logs."],
-                    )
-                )
-            else:
-                results.append(reply.get_data())
-        return results
-
-    def _group_write_attribute(
-        self: SpsStationComponentManager,
-        attr_name: str,
-        value: Any,
-        multi: bool = False,
-        timeout: float = _DEFAULT_GROUP_TIMEOUT_SECONDS,
-        raise_on_failure: bool = True,
-    ) -> list[Any]:
-        """
-        Write an attribute to every tile in ``self._tile_group``, in parallel.
-
-        This should always attempt execution on all tiles in group.
-
-        :param attr_name: name of the attribute to write.
-        :param value: value to broadcast to every tile, or (if ``multi``)
-            a list of one value per tile, ordered as ``self._tile_proxies``.
-        :param multi: whether ``value`` is a per-tile list rather than a
-            single value to broadcast to every tile.
-        :param timeout: An optional timeout defaulting
-            to _DEFAULT_GROUP_TIMEOUT_SECONDS
-        :param raise_on_failure: whether to raise an exception if any write
-            operation failed.
-        :return: one ``GroupReply`` per tile, in the same order as
-            ``self._tile_proxies``.
-
-        :raises DevFailed: if one or more tiles failed to write the
-            attribute. The exception's error stack contains one
-            ``tango.DevError`` per failed tile.
-        """
-        self._tile_group.set_timeout_millis(timeout * 1000)
-        replies = self._tile_group.write_attribute(attr_name, value, multi=multi)
-        failures = [reply for reply in replies if reply.has_failed()]
-
-        if not failures:
-            return replies
-
-        if not raise_on_failure:
-            for reply in failures:
-                self.logger.warning(
-                    "Failed to write %s on %s: %s",
-                    attr_name,
-                    reply.dev_name(),
-                    reply.get_err_stack(),
-                )
-            return replies
-
-        errors: list[tango.DevError] = []
-
-        for reply in failures:
-            err_stack = reply.get_err_stack()
-            if err_stack:
-                errors.extend(err_stack)
-                continue
-
-            error = tango.DevError()
-            error.reason = "GroupWriteFailed"
-            error.desc = (
-                f"Failed to write {attr_name} on {reply.dev_name()}: unknown error"
-            )
-            error.origin = "_group_write_attribute"
-            error.severity = tango.ErrSeverity.ERR
-            errors.append(error)
-
-        raise DevFailed(*errors)
-
-    def _group_command_inout_per_tile(
-        self: SpsStationComponentManager,
-        command_name: str,
-        args: list[Any],
-        arg_type: tango.CmdArgType,
-        timeout: float = _DEFAULT_GROUP_TIMEOUT_SECONDS,
-    ) -> list[Any]:
-        """
-        Run a command on every tile in ``self._tile_group``, one arg per tile.
-
-        :param command_name: name of the command to run.
-        :param args: one argument per tile, ordered as ``self._tile_proxies``.
-        :param arg_type: the Tango argument type of ``command_name``'s input.
-        :param timeout: An optional timeout defaulting
-            to _DEFAULT_GROUP_TIMEOUT_SECONDS
-
-        :return: one ``GroupCmdReply`` per tile, in the same order as
-            ``self._tile_proxies``.
-        """
-        device_data_list = tango.DeviceDataList()
-        for arg in args:
-            device_data = tango.DeviceData()
-            device_data.insert(arg_type, arg)
-            device_data_list.append(device_data)
-
-        self._tile_group.set_timeout_millis(timeout * 1000)
-        replies = self._tile_group.command_inout(command_name, device_data_list)
-        for reply in replies:
-            if reply.has_failed():
-                self.logger.warning(
-                    f"Failed to run {command_name} on {reply.dev_name()}: "
-                    f"{reply.get_err_stack()}"
-                )
-        return replies
-
     # pylint: disable=broad-exception-caught
     def _execute_async_on_tiles(
         self: SpsStationComponentManager,
@@ -4799,7 +4745,20 @@ class SpsStationComponentManager(
             results = [_run_while_handling_errors(proxy) for proxy in connected_proxies]
         else:
             arg = command_args[0] if command_args else None
-            results = self._group_command_inout(command_name, arg, timeout=timeout)
+            replies = group_command(
+                self._tile_group, command_name, arg, timeout=timeout
+            )
+            results = []
+            for reply in replies:
+                if reply.has_failed():
+                    results.append(
+                        (
+                            [ResultCode.FAILED],
+                            [f"Command raised {reply.get_err_stack()}, check logs."],
+                        )
+                    )
+                else:
+                    results.append(reply.get_data())
 
         result_codes, _ = zip(*results)
         self.logger.debug(f"Tiles response from {command_name}: {str(results)}")

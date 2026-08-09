@@ -2,6 +2,7 @@
 
 ## 14.1.0
 
+* [THORN-680] Make use of tango.Groups to parallelise writes and commands in spsstation.
 * [THORN-681] Move tile-readiness gating (Initialised/Synchronised) from ad-hoc `tileProgrammingState`
 checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
 `_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a

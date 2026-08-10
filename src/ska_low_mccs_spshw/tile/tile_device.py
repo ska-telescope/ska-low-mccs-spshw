@@ -1851,17 +1851,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_warning=16.0,
         max_warning=65.0,
         doc="Board temperature in degrees Celsius.",
+        label="Board Temperature",
+        unit="C",
     )
 
-    @attribute_from_signal(  # noqa@ N815
+    @attribute_from_signal(
         adc_pll_lock_status_signal,
         dtype=(("DevShort",),),
         max_dim_x=16,
         max_dim_y=2,
-        label="adc_pll_lock_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        label="ADC PLL Lock Status",
         doc="Return the pll status of all 16 ADCs.",
     )
     def adc_pll_lock_status(
@@ -1889,12 +1891,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     tile_beamformer_status = attribute_from_signal(
         tile_beamformer_status_signal,
         dtype="DevBoolean",
+        label="Tile Beamformer Status",
         doc="Status of the tile beamformer. True if status OK.",
     )
 
     station_beamformer_status = attribute_from_signal(
         station_beamformer_status_signal,
         dtype="DevBoolean",
+        label="Station Beamformer Status",
         doc="Status of the Station beamformer. True if status OK.",
     )
 
@@ -1904,7 +1908,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="the station beamformer error count for FPGA0. "
+        label="FPGA0 Station Beamformer Error Count",
+        doc="The station beamformer error count for FPGA0. "
         "Expected: 0 if no parity errors detected.",
     )
 
@@ -1914,7 +1919,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="the station beamformer error count for FPGA1. "
+        label="FPGA1 Station Beamformer Error Count",
+        doc="The station beamformer error count for FPGA1. "
         "Expected: 0 if no parity errors detected.",
     )
 
@@ -1924,7 +1930,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="the station beamformer error count for FPGA0. "
+        label="FPGA0 Station Beamformer Flagged Count",
+        doc="The station beamformer flagged count for FPGA0. "
         "Expected: 0 if no parity errors detected.",
     )
 
@@ -1934,7 +1941,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="the station beamformer error count for FPGA1. "
+        label="FPGA1 Station Beamformer Flagged Count",
+        doc="the station beamformer flagged count for FPGA1. "
         "Expected: 0 if no parity errors detected.",
     )
 
@@ -1944,7 +1952,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="the crc error count for FPGA0. "
+        label="FPGA0 CRC Error Count",
+        doc="The CRC error count for FPGA0. "
         "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
 
@@ -1954,7 +1963,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="the crc error count for FPGA1. "
+        label="FPGA1 CRC Error Count",
+        doc="The CRC error count for FPGA1. "
         "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
 
@@ -1962,11 +1972,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_bip_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
-        label="fpga0_bip_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the bip error count for FPGA0. "
+        label="FPGA0 BIP Error Count",
+        doc="Return the BIP error count for FPGA0. "
         "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
     def fpga0_bip_error_count(
@@ -1994,10 +2004,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_bip_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
-        label="fpga1_bip_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA1 BIP Error Count",
         doc="Return the bip error count for FPGA1. "
         "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
@@ -2026,10 +2036,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_decode_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
-        label="fpga0_decode_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA0 Decode Error Count",
         doc="Return the decode error count for FPGA0. "
         "Expected: 0 if errors have not been detected.",
     )
@@ -2060,10 +2070,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_decode_error_count_signal,
         dtype=("DevShort",),
         max_dim_x=4,
-        label="fpga1_decode_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA1 Decode Error Count",
         doc="Return the decode error count for FPGA1. "
         "Expected: 0 if errors have not been detected.",
     )
@@ -2093,10 +2103,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fpga0_linkup_loss_count = attribute_from_signal(
         fpga0_linkup_loss_count_signal,
         dtype="DevShort",
-        label="fpga0_linkup_loss_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA0 Linkup Loss Count",
         doc="Return the linkup loss count for FPGA0. "
         "Expected: 0 if no link loss events are detected.",
     )
@@ -2104,10 +2114,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fpga1_linkup_loss_count = attribute_from_signal(
         fpga1_linkup_loss_count_signal,
         dtype="DevShort",
-        label="fpga1_linkup_loss_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA1 Linkup Loss Count",
         doc="Return the linkup loss count for FPGA1. "
         "Expected: 0 if no link loss events are detected.",
     )
@@ -2115,11 +2125,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_data_router_status_fpga0_signal,
         dtype="DevShort",
-        label="io_data_router_status_fpga0",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the status of the data router. "
+        label="FPGA0 IO Data Router Status",
+        doc="Return the status of the data router for FPGA0. "
         "Expected: 1 if status OK, 0 otherwise.",
     )
     def io_data_router_status_fpga0(
@@ -2146,11 +2156,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_data_router_status_fpga1_signal,
         dtype="DevShort",
-        label="io_data_router_status_fpga1",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the status of the data router. "
+        label="FPGA1 IO Data Router Status",
+        doc="Return the status of the data router for FPGA1. "
         "Expected: 1 if status OK, 0 otherwise.",
     )
     def io_data_router_status_fpga1(
@@ -2177,7 +2187,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         data_router_discarded_packets_signal,
         dtype="DevString",
-        label="data_router_discarded_packets",
+        label="Data Router Discarded Packets",
         doc="Return the number of discarded packets. "
         "Expected: 0 if no packets are discarded.",
     )
@@ -2207,15 +2217,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     arp = attribute_from_signal(
         arp_signal,
         dtype="DevBoolean",
-        label="arp",
-        doc="Return the arp status. "
+        label="ARP",
+        doc="Return the ARP status. "
         "Expected: `True` if table entries are valid and resolved.",
     )
 
     udp_status = attribute_from_signal(
         udp_status_signal,
         dtype="DevBoolean",
-        label="udp_status",
+        label="UDP Status",
         doc="Return the UDP status. "
         "Expected: `True` if virtual lanes aligned and no BIP or CRC errors.",
     )
@@ -2223,66 +2233,66 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ddr_initialisation = attribute_from_signal(
         ddr_initialisation_signal,
         dtype="DevBoolean",
-        label="ddr_initialisation",
-        doc="Return the ddr initialisation status. "
+        label="DDR Initialisation Status",
+        doc="Return the DDR initialisation status. "
         "Expected: True if DDR interface was successfully initialised.",
     )
 
     fpga0_ddr_reset_counter = attribute_from_signal(
         fpga0_ddr_reset_counter_signal,
         dtype="DevShort",
-        label="fpga0_ddr_reset_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the ddr reset count for FPGA0. "
+        label="FPGA0 DDR Reset Counter",
+        doc="Return the DDR reset count for FPGA0. "
         "Expected: 0 if no reset events have occurred.",
     )
 
     fpga1_ddr_reset_counter = attribute_from_signal(
         fpga1_ddr_reset_counter_signal,
         dtype="DevShort",
-        label="fpga1_ddr_reset_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the ddr reset count for FPGA1. "
+        label="FPGA1 DDR Reset Counter",
+        doc="Return the DDR reset count for FPGA1. "
         "Expected: 0 if no reset events have occurred.",
     )
 
     io_f2f_interface_soft_error_fpga0 = attribute_from_signal(
         io_f2f_interface_soft_error_fpga0_signal,
         dtype="DevShort",
-        label="io_f2f_interface_soft_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the FPGA0 f2f interface soft error count. "
+        label="FPGA0 IO F2F Interface Soft Error Count",
+        doc="Return the FPGA0 F2F interface soft error count. "
         "Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.",
     )
 
     io_f2f_interface_soft_error_fpga1 = attribute_from_signal(
         io_f2f_interface_soft_error_fpga1_signal,
         dtype="DevShort",
-        label="io_f2f_interface_soft_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the FPGA1 f2f interface soft error count. "
+        label="FPGA1 IO F2F Interface Soft Error Count",
+        doc="Return the FPGA1 F2F interface soft error count. "
         "Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.",
     )
 
     io_f2f_interface_hard_error_fpga0 = attribute_from_signal(
         io_f2f_interface_hard_error_fpga0_signal,
         dtype="DevShort",
-        label="io_f2f_interface_hard_error_fpga0",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the FPGA0 f2f interface hard error count. "
+        label="FPGA0 IO F2F Interface Hard Error Count",
+        doc="Return the FPGA0 F2F interface hard error count. "
         "Expected: 0 if no hard errors detected in FPGA-to-FPGA interface. "
         "Hard errors require the interface to be reset. This likely means "
         "reinitialising the TPM entirely due to the impact on beamformers.",
@@ -2291,12 +2301,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     io_f2f_interface_hard_error_fpga1 = attribute_from_signal(
         io_f2f_interface_hard_error_fpga1_signal,
         dtype="DevShort",
-        label="io_f2f_interface_hard_error_fpga1",
         max_alarm=1,
         min_alarm=-1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the FPGA1 f2f interface hard error count. "
+        label="FPGA0 IO F2F Interface Hard Error Count",
+        doc="Return the FPGA1 F2F interface hard error count. "
         "Expected: 0 if no hard errors detected in FPGA-to-FPGA interface. "
         "Hard errors require the interface to be reset. This likely means "
         "reinitialising the TPM entirely due to the impact on beamformers.",
@@ -2305,10 +2315,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fpga0_resync_count = attribute_from_signal(
         fpga0_resync_count_signal,
         dtype="DevShort",
-        label="fpga0_resync_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA0 Resync Count",
         doc="Return the resync count for FPGA0. "
         "Expected: 0 if no resync events have ocurred.",
     )
@@ -2316,10 +2326,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fpga1_resync_count = attribute_from_signal(
         fpga1_resync_count_signal,
         dtype="DevShort",
-        label="fpga1_resync_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA1 Resync Count",
         doc="Return the resync count for FPGA1. "
         "Expected: 0 if no resync events have ocurred.",
     )
@@ -2327,8 +2337,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     link_status = attribute_from_signal(
         link_status_signal,
         dtype="DevBoolean",
-        label="link_status",
-        doc="Return the jesd link status. "
+        label="Link Status",
+        doc="Return the JESD link status. "
         "Expected: `True` if link up and synchronised.",
     )
 
@@ -2337,11 +2347,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevShort",),),
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
-        label="fpga0_lane_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the error count per lane, per core. Expected: 0 for all lanes.",
+        label="FPGA0 Lane Error Count",
+        doc="Return the error count per lane, per core for FPGA0. "
+        "Expected: 0 for all lanes.",
     )
     def fpga0_lane_error_count(
         self: MccsTile, raw_value: dict[str, dict[str, int | None]] | None
@@ -2370,11 +2381,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevShort",),),
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
-        label="fpga1_lane_error_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the error count per lane, per core. Expected: 0 for all lanes.",
+        label="FPGA1 Lane Error Count",
+        doc="Return the error count per lane, per core for FPGA1. "
+        "Expected: 0 for all lanes.",
     )
     def fpga1_lane_error_count(
         self: MccsTile, raw_value: dict[str, dict[str, int | None]] | None
@@ -2402,11 +2414,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_clock_managers_count_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # fpga
-        label="fpga0_clock_managers_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the PLL lock loss counter for C2C, JESD and DSP. "
+        label="FPGA0 Clock Managers Count Signal",
+        doc="Return the FPGA0 PLL lock loss counter for C2C, JESD and DSP. "
         "Expected: `0` per interface if no lock loss events.",
     )
     def fpga0_clock_managers_count(
@@ -2436,11 +2448,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_clock_managers_count_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
-        label="fpga1_clock_managers_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the PLL lock loss counter for C2C, JESD and DSP. "
+        label="FPGA1 Clock Managers Count Signal",
+        doc="Return the FPGA1 PLL lock loss counter for C2C, JESD and DSP. "
         "Expected: `0` per interface if no lock loss events.",
     )
     def fpga1_clock_managers_count(
@@ -2470,11 +2482,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_clock_managers_status_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
-        label="fpga0_clock_managers_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the PLL lock status C2C, JESD and DSP. "
+        label="FPGA0 Clock Managers Status",
+        doc="Return the FPGA0 PLL lock status C2C, JESD and DSP. "
         "Expected: `1` if MMCM clock locked `0` otherwise",
     )
     def fpga0_clock_managers_status(
@@ -2505,11 +2517,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_clock_managers_status_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
-        label="fpga1_clock_managers_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the PLL lock status C2C, JESD and DSP. "
+        label="FPGA1 Clock Managers Status",
+        doc="Return the FPGA1 PLL lock status C2C, JESD and DSP. "
         "Expected: `1` if MMCM clock locked `0` otherwise",
     )
     def fpga1_clock_managers_status(
@@ -2539,7 +2551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ddr_write_size = attribute_from_signal(
         ddr_write_size_signal,
         dtype="DevLong",
-        label="ddr_write_size",
+        label="DDR Write Size",
         doc="Return the ddr write size obtained from running start_antenna_buffer.",
     )
 
@@ -2547,10 +2559,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_clocks_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
-        label="fpga0_clocks",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA0 Clocks",
         doc="Return the status of clocks for the interfaces of FPGA0. "
         "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
@@ -2582,10 +2594,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_clocks_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
-        label="fpga1_clocks",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
+        label="FPGA1 Clocks",
         doc="Return the status of clocks for the interfaces of FPGA1. "
         "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
@@ -2618,10 +2630,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         adc_sysref_counter_signal,
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
-        label="adc_sysref_counter",
         min_alarm=0,  # SYSREF not present
         abs_change=1,
         archive_abs_change=1,
+        label="ADC SysRef Counter",
         doc="Return the sysref_counter of all ADCs. "
         "Expected: `1` if SYSREF counter is incrementing (SYSREF is present), "
         "`0` if not present.",
@@ -2653,10 +2665,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         adc_sysref_timing_requirements_signal,
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
-        label="adc_sysref_timing_requirements",
         min_alarm=0,  # requirements not met
         abs_change=1,
         archive_abs_change=1,
+        label="ADC SysRef Timing Requirements",
         doc="Return the sysref_timing_requirements of all ADCs. "
         "Expected: `1` if setup and hold requirements for SYSREF are met, "
         "else return `0`.",
@@ -2687,11 +2699,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         fpga0_qpll_status_signal,
         dtype="DevShort",
-        label="fpga0_qpll_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the QPLL lock status. Expected: `1` if QPLL locked.",
+        label="FPGA0 QPLL Status",
+        doc="Return the QPLL lock status for FPGA0. Expected: `1` if QPLL locked.",
     )
     def fpga0_qpll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
@@ -2717,11 +2729,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         fpga1_qpll_status_signal,
         dtype="DevShort",
-        label="fpga1_qpll_status",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the QPLL lock status. Expected: `1` if QPLL locked.",
+        label="FPGA1 QPLL Status",
+        doc="Return the QPLL lock status for FPGA1. Expected: `1` if QPLL locked.",
     )
     def fpga1_qpll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
@@ -2747,11 +2759,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         fpga0_qpll_counter_signal,
         dtype="DevShort",
-        label="fpga0_qpll_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the QPLL lock loss counter. "
+        label="FPGA0 QPLL Counter",
+        doc="Return the QPLL lock loss counter for FPGA0. "
         "Expected: `0` if no lock loss events detected.",
     )
     def fpga0_qpll_counter(self: MccsTile, raw_value: list[int] | None) -> int | None:
@@ -2779,11 +2791,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         fpga1_qpll_counter_signal,
         dtype="DevShort",
-        label="fpga1_qpll_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the QPLL lock loss counter. "
+        label="FPGA1 QPLL Counter",
+        doc="Return the QPLL lock loss counter for FPGA1. "
         "Expected: `0` if no lock loss events detected.",
     )
     def fpga1_qpll_counter(self: MccsTile, raw_value: list[int] | None) -> int | None:
@@ -2811,13 +2823,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_f2f_interface_pll_status_fpga0_signal,
         dtype="DevShort",
-        label="io_f2f_interface_pll_status_fpga0",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
-        doc="Return the FPGA0 f2f PLL lock status. "
+        label="FPGA0 IO F2F Interface PLL Status",
+        doc="Return the FPGA0 F2F PLL lock status. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
     def io_f2f_interface_pll_status_fpga0(
@@ -2846,13 +2858,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_f2f_interface_pll_status_fpga1_signal,
         dtype="DevShort",
-        label="io_f2f_interface_pll_status_fpga1",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
-        doc="Return the FPGA1 f2f PLL lock status. "
+        label="FPGA1 IO F2F Interface PLL Status",
+        doc="Return the FPGA1 F2F PLL lock status. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
     def io_f2f_interface_pll_status_fpga1(
@@ -2881,11 +2893,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_f2f_interface_pll_status_fpga0_counter_signal,
         dtype="DevShort",
-        label="io_f2f_interface_pll_status_fpga0_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the FPGA0 f2f PLL lock loss counter. "
+        label="FPGA0 IO F2F Interface PLL Status Counter",
+        doc="Return the FPGA0 F2F PLL lock loss counter. "
         "Expected: `0` if no PLL lock loss events detected.",
     )
     def io_f2f_interface_pll_status_fpga0_counter(
@@ -2915,11 +2927,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_f2f_interface_pll_status_fpga1_counter_signal,
         dtype="DevShort",
-        label="io_f2f_interface_pll_status_fpga1_counter",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
-        doc="Return the FPGA1 f2f PLL lock loss counter. "
+        label="FPGA1 IO F2F Interface PLL Status Counter",
+        doc="Return the FPGA1 F2F PLL lock loss counter. "
         "Expected: `0` if no PLL lock loss events detected.",
     )
     def io_f2f_interface_pll_status_fpga1_counter(
@@ -2949,12 +2961,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         timing_pll_lock_status_signal,
         dtype="DevShort",
-        label="timing_pll_lock_status",
         min_alarm=0,
         max_value=2,
         min_value=-1,
         abs_change=1,
         archive_abs_change=1,
+        label="Timing PLL Lock Status",
         doc="Return the PLL lock status and lock loss counter. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
@@ -2984,10 +2996,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         timing_pll_count_signal,
         dtype="DevShort",
-        label="timing_pll_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="Timing PLL Count",
         doc="Return the PLL lock loss counter. "
         "Expected: `0` if no lock loss events detected.",
     )
@@ -3017,12 +3029,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         timing_pll_40g_lock_status_signal,
         dtype="DevShort",
-        label="timing_pll_40g_lock_status",
         min_alarm=0,
         abs_change=1,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
+        label="Timing PLL 40G Lock Status",
         doc="Return the PLL 40G lock status. Expected: `1` if PLL 40G locked.",
     )
     def timing_pll_40g_lock_status(
@@ -3051,10 +3063,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         timing_pll_40g_count_signal,
         dtype="DevShort",
-        label="timing_pll_40g_count",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
+        label="Timing PLL 40G Count",
         doc="Return the PLL 40G lock loss counter. "
         "Expected: `0` if PLL 40G has no lock loss events detected.",
     )
@@ -3081,7 +3093,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return int(raw_value[1])
 
-    @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
+    @attribute_from_signal(
+        tile_info_signal,
+        dtype="DevString",
+        label="Tile Info",
+        doc="Return all the tile info available.",
+    )
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:
         """
         Return all the tile info available.
@@ -3120,7 +3137,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         voltages_signal,
         dtype="DevString",
-        label="voltages",
+        label="Voltages",
+        unit="Volt",
         doc="Return all the voltage values available.",
     )
     def voltages(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3139,7 +3157,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         temperatures_signal,
         dtype="DevString",
-        label="temperatures",
+        label="Temperatures",
+        unit="Celsius",
         doc="Return all the temperatures values available.",
     )
     def temperatures(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3158,7 +3177,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     useAttributesForHealth = attribute_from_signal(
         useAttributesForHealth_signal,
         dtype="DevBoolean",
-        label="useAttributesForHealth",
+        label="Use Attributes For Health",
         doc="Return if adr115 is in use. "
         "True if attributes quality is being evaluated in health.",
     )
@@ -3166,199 +3185,200 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     temperatureADC0 = attribute_from_signal(
         temperature_adc0_signal,
         dtype="DevFloat",
-        label="ADC 0",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 0 Temperature",
         doc="ADC 0 temperature in degrees Celsius.",
     )
 
     temperatureADC1 = attribute_from_signal(
         temperature_adc1_signal,
         dtype="DevFloat",
-        label="ADC 1",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 1 Temperature",
         doc="ADC 1 temperature in degrees Celsius.",
     )
 
     temperatureADC2 = attribute_from_signal(
         temperature_adc2_signal,
         dtype="DevFloat",
-        label="ADC 2",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 2 Temperature",
         doc="ADC 2 temperature in degrees Celsius.",
     )
 
     temperatureADC3 = attribute_from_signal(
         temperature_adc3_signal,
         dtype="DevFloat",
-        label="ADC 3",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 3 Temperature",
         doc="ADC 3 temperature in degrees Celsius.",
     )
 
     temperatureADC4 = attribute_from_signal(
         temperature_adc4_signal,
         dtype="DevFloat",
-        label="ADC 4",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 4 Temperature",
         doc="ADC 4 temperature in degrees Celsius.",
     )
 
     temperatureADC5 = attribute_from_signal(
         temperature_adc5_signal,
         dtype="DevFloat",
-        label="ADC 5",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 5 Temperature",
         doc="ADC 5 temperature in degrees Celsius.",
     )
 
     temperatureADC6 = attribute_from_signal(
         temperature_adc6_signal,
         dtype="DevFloat",
-        label="ADC 6",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 6 Temperature",
         doc="ADC 6 temperature in degrees Celsius.",
     )
 
     temperatureADC7 = attribute_from_signal(
         temperature_adc7_signal,
         dtype="DevFloat",
-        label="ADC 7",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 7 Temperature",
         doc="ADC 7 temperature in degrees Celsius.",
     )
 
     temperatureADC8 = attribute_from_signal(
         temperature_adc8_signal,
         dtype="DevFloat",
-        label="ADC 8",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 8 Temperature",
         doc="ADC 8 temperature in degrees Celsius.",
     )
 
     temperatureADC9 = attribute_from_signal(
         temperature_adc9_signal,
         dtype="DevFloat",
-        label="ADC 9",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 9 Temperature",
         doc="ADC 9 temperature in degrees Celsius.",
     )
 
     temperatureADC10 = attribute_from_signal(
         temperature_adc10_signal,
         dtype="DevFloat",
-        label="ADC 10",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 10 Temperature",
         doc="ADC 10 temperature in degrees Celsius.",
     )
 
     temperatureADC11 = attribute_from_signal(
         temperature_adc11_signal,
         dtype="DevFloat",
-        label="ADC 11",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 11 Temperature",
         doc="ADC 11 temperature in degrees Celsius.",
     )
 
     temperatureADC12 = attribute_from_signal(
         temperature_adc12_signal,
         dtype="DevFloat",
-        label="ADC 12",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 12 Temperature",
         doc="ADC 12 temperature in degrees Celsius.",
     )
 
     temperatureADC13 = attribute_from_signal(
         temperature_adc13_signal,
         dtype="DevFloat",
-        label="ADC 13",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 13 Temperature",
         doc="ADC 13 temperature in degrees Celsius.",
     )
 
     temperatureADC14 = attribute_from_signal(
         temperature_adc14_signal,
         dtype="DevFloat",
-        label="ADC 14",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 14 Temperature",
         doc="ADC 14 temperature in degrees Celsius.",
     )
 
     temperatureADC15 = attribute_from_signal(
         temperature_adc15_signal,
         dtype="DevFloat",
-        label="ADC 15",
         unit="Celsius",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
+        label="ADC 15 Temperature",
         doc="ADC 15 temperature in degrees Celsius.",
     )
 
     @attribute_from_signal(
         currents_signal,
         dtype="DevString",
-        label="currents",
+        label="Currents",
+        unit="Ampere",
         doc="Return all the currents values available.",
     )
     def currents(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3377,7 +3397,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         timing_signal,
         dtype="DevString",
-        label="timing",
+        label="Timing",
         doc="Return a dictionary of the timing signals status.",
     )
     def timing(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3396,7 +3416,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_signal,
         dtype="DevString",
-        label="io",
+        label="IO",
         doc="Return a dictionary of I/O interfaces status available.",
     )
     def io(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3415,7 +3435,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         dsp_signal,
         dtype="DevString",
-        label="dsp",
+        label="DSP",
         doc="Return the tile beamformer and station beamformer status.",
     )
     def dsp(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3434,7 +3454,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         adcs_signal,
         dtype="DevString",
-        label="adcs",
+        label="ADCs",
         doc="Return the ADC status.",
     )
     def adcs(self: MccsTile, raw_value: dict | None) -> str | None:
@@ -3457,6 +3477,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        label="I2C Access Alarm",
         doc="Return the I2C alarm reading.",
     )
 
@@ -3467,6 +3488,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        label="Temperature Alarm",
         doc="Return the Temperature alarm reading. "
         "0 -> OK "
         "1 -> WARN "
@@ -3480,6 +3502,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        label="Voltage Alarm",
         doc="Return the Voltage alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
@@ -3490,6 +3513,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        label="SEMwd Alarm",
         doc="Return the SEMwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
@@ -3500,39 +3524,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        label="MCUwd Alarm",
         doc="Return the MCUwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
     cspDestinationIp = attribute_from_signal(
         cspDestinationIp_signal,
         dtype="DevString",
-        label="cspDestinationIp",
         write_to_signal=True,
-        doc="Return the IP address of the csp destination.",
+        label="CSP Destination IP",
+        doc="Return the IP address of the CSP destination.",
     )
 
     cspDestinationMac = attribute_from_signal(
         cspDestinationMac_signal,
         dtype="DevString",
-        label="cspDestinationMac",
         write_to_signal=True,
-        doc="the MAC address of the csp destination",
+        label="CSP Destination MAC",
+        doc="The MAC address of the CSP destination",
     )
 
     cspDestinationPort = attribute_from_signal(
         cspDestinationPort_signal,
         dtype="DevLong",
-        label="cspDestinationPort",
         write_to_signal=True,
         abs_change=1,
         archive_abs_change=1,
-        doc="the port of the csp destination",
+        label="CSP Destination Port",
+        doc="The port of the CSP destination",
     )
 
+    # These attrs should probably be FPGA0/1 rather than 1/2?
+    # Changing the names will cause issues though...
     dstip40gfpga1 = attribute_from_signal(
         dstip40gfpga1_signal,
         dtype="DevString",
-        label="dstip40gfpga1",
+        label="FPGA1 40G Destination IP",
         doc="Return the 40G destination IP for FPGA1, set via SetCspDownload. "
         "For non-last tiles this points at the next tile's FPGA1 source IP; "
         "for the last tile it is the CSP ingest address.",
@@ -3541,7 +3568,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     dstip40gfpga2 = attribute_from_signal(
         dstip40gfpga2_signal,
         dtype="DevString",
-        label="dstip40gfpga2",
+        label="FPGA2 40G Destination IP",
         doc="Return the 40G destination IP for FPGA2, set via SetCspDownload. "
         "For non-last tiles this points at the next tile's FPGA2 source IP; "
         "for the last tile it is the CSP ingest address.",
@@ -3555,6 +3582,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         write_to_signal=True,
         abs_change=1,
         archive_abs_change=1,
+        label="Simulation Mode",
         doc="Report the simulation mode of the device.",
     )
 
@@ -3583,6 +3611,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         write_to_signal=True,
         abs_change=1,
         archive_abs_change=1,
+        label="Test Mode",
         doc="The test mode.",
     )
 
@@ -3611,7 +3640,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_value=0,
         max_value=15,
         write_to_signal=True,
-        doc="The logical tile id is the id of the tile in the station.",
+        label="Logical Tile ID",
+        doc="The logical tile ID is the ID of the tile in the station.",
     )
 
     @logicalTileId.write  # type: ignore[no-redef]
@@ -3628,17 +3658,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     tileProgrammingState = attribute_from_signal(
         tileProgrammingState_signal,
         dtype="DevString",
+        label="Tile Programming State",
         doc="Get the tile programming state.",
     )
 
     stationId = attribute_from_signal(
         stationId_signal,
         dtype="DevShort",
-        label="stationId",
         write_to_signal=True,
         abs_change=1,
         archive_abs_change=1,
-        doc="the id of the station to which this tile is assigned",
+        label="Station ID",
+        doc="The ID of the station to which this tile is assigned",
     )
 
     @stationId.write  # type: ignore[no-redef]
@@ -3656,7 +3687,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         firmwareTemperatureThresholds_signal,
         dtype="DevString",
         write_to_signal=True,
-        label="firmwareTemperatureThresholds",
+        unit="Celsius",
+        label="Firmware Temperature Thresholds",
         doc="Return the temperature thresholds set in firmware.",
         fisallowed="is_firmware_threshold_allowed",
     )
@@ -3731,7 +3763,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         firmwareVoltageThresholds_signal,
         dtype="DevString",
         write_to_signal=True,
-        label="firmwareVoltageThresholds",
+        unit="Volts",
+        label="Firmware Voltage Thresholds",
         doc="Return the voltage thresholds set in firmware.",
         fisallowed="is_firmware_threshold_allowed",
     )
@@ -3839,7 +3872,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         firmwareCurrentThresholds_signal,
         dtype="DevString",
         write_to_signal=True,
-        label="firmwareCurrentThresholds",
+        unit="Amperes",
+        label="Firmware Current Thresholds",
         doc="Return the current thresholds set in firmware.",
         fisallowed="is_firmware_threshold_allowed",
     )
@@ -3944,7 +3978,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # the signals up to date with the cpt mgr copy which just adds complexity
     # for zero gain.
     # These may be worth refactoring to use signals when we bin the cpt mgrs.
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Firmware Name",
+        description="The name of the firmware bitfile in use.",
+    )
     def firmwareName(self: MccsTile) -> str:
         """
         Return the firmware name.
@@ -3964,7 +4002,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # use the bitfile specified. Initialise overwrites it unconditionally.
         self.component_manager.firmware_name = value
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Test Generator Active",
+        description="Whether the test generator is being used.",
+    )
     def testGeneratorActive(self: MccsTile) -> bool:
         """
         Report if the test generator is used for some channels.
@@ -3973,7 +4015,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.test_generator_active
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Global Reference Time",
+        description="The global FPGA synchronization time (UTC).",
+    )
     def globalReferenceTime(self: MccsTile) -> str:
         """
         Return the global FPGA synchronization time.
@@ -3993,7 +4039,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="cspSpeadFormat",
+        label="CSP Spead Format",
+        description="The format of Spead header in use. Either AAVS or SKA.",
         fisallowed="_check_initialised_for_write",
     )
     def cspSpeadFormat(self: MccsTile) -> str:
@@ -4033,6 +4080,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevFloat",),),
         max_dim_x=2,  # [Delay, delay rate]
         max_dim_y=16,  # channel (same for x and y)
+        description="The last pointing delays applied to the Tile. "
+        "Values are initialised to 0.0 if they haven't been set. "
+        "These values are in channel order, with each pair corresponding to "
+        "a delay and delay rate.",
+        label="Last Pointing Delays",
     )
     def lastPointingDelays(self: MccsTile) -> list[list]:
         """
@@ -4046,7 +4098,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.last_pointing_delays
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Antenna Buffer Mode",
+        description="Shows whether antenna buffer is sending over SDN or NSDN.",
+    )
     def antennaBufferMode(
         self: MccsTile,
     ) -> str:
@@ -4057,7 +4113,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.antenna_buffer_mode
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Data Transmission Mode",
+        description="Shows whether data is being transmitted over 1G or 10G.",
+    )
     def dataTransmissionMode(
         self: MccsTile,
     ) -> str:
@@ -4068,7 +4128,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.data_transmission_mode
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Integrated Data Transmission Mode",
+        description="Shows whether integrated data is transmitted over 1G or 10G.",
+    )
     def integratedDataTransmissionMode(
         self: MccsTile,
     ) -> str:
@@ -4085,6 +4149,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         format="%s",
+        label="Health Model Params",
+        description="Health model parameters for the old health model.",
     )
     def healthModelParams(self: MccsTile) -> str:
         """
@@ -4113,7 +4179,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     # ----------------- NOT IMPLEMENTED ATTRS -----------------
     # Also no point to convert attrs that are not implemented.
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Clock Present",
+        description="Reports whether the 10MHz clock signal "
+        "is present at the TPM input.",
+    )
     def clockPresent(self: MccsTile) -> NoReturn:
         """
         Report if 10 MHz clock signal is present at the TPM input.
@@ -4124,7 +4195,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "method clockPresent not yet implemented in ska-low-sps-tpm-api"
         )
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="SYSREF Present",
+        description="Reports whether SYSREF signal is present at the FPGA.",
+    )
     def sysrefPresent(self: MccsTile) -> NoReturn:
         """
         Report if SYSREF signal is present at the FPGA.
@@ -4140,14 +4215,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     firmwareVersion = attribute_from_signal(
         firmwareVersion_signal,
         dtype="DevString",
-        label="firmwareVersion",
+        label="Firmware Version",
         doc="Return the firmware version.",
     )
 
     isProgrammed = attribute_from_signal(
         is_programmed_signal,
         dtype="DevBoolean",
-        doc="whether or not the board is programmed",
+        label="Is Programmed",
+        doc="Whether or not the board is programmed.",
     )
 
     def _is_programmed(self: MccsTile, *args: Any) -> bool:
@@ -4262,6 +4338,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         min_alarm=10.0,
         max_alarm=95.0,
+        unit="Celsius",
+        label="FPGA1 Temperature",
         doc="Temperature of FPGA 1 in degrees Celsius.",
     )
 
@@ -4272,6 +4350,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.2,
         min_alarm=10.0,
         max_alarm=95.0,
+        unit="Celsius",
+        label="FPGA2 Temperature",
         doc="Temperature of FPGA 2 in degrees Celsius.",
     )
 
@@ -4282,25 +4362,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         abs_change=1,
         archive_abs_change=1,
         fisallowed="_check_initialised_for_write",
-        doc="the time for FPGAs",
+        label="FPGAs UNIX Time",
+        doc="The current UNIX time for the FPGAs",
     )
 
     fpgaTime = attribute_from_signal(
         fpga_time_signal,
         dtype="DevString",
-        doc="the FPGA internal time, in UTC format",
+        label="FPGAs UTC Time",
+        doc="The FPGA internal time, in UTC format",
     )
 
     fpgaReferenceTime = attribute_from_signal(
         fpga_reference_time_signal,
         dtype="DevString",
-        doc="the FPGA synchronization timestamp, in UTC format",
+        label="FPGA Reference Time",
+        doc="The FPGA synchronization timestamp, in UTC format",
     )
 
     fpgaFrameTime = attribute_from_signal(
         fpga_frame_time_signal,
         dtype="DevString",
-        doc="the FPGA synchronization timestamp, in UTC format",
+        label="FPGA Frame Time",
+        doc="The FPGA frame timestamp, in UTC format",
     )
 
     antennaIds = attribute_from_signal(
@@ -4328,7 +4412,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         forty_gb_destination_ips_signal,
         dtype=("DevString",),
         max_dim_x=16,
-        doc="the destination IPs for all 40Gb ports on the tile",
+        label="40Gb Destination IPs",
+        doc="The destination IPs for all 40Gb ports on the tile",
     )
 
     fortyGbDestinationPorts = attribute_from_signal(
@@ -4337,7 +4422,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=16,
         abs_change=1,
         archive_abs_change=1,
-        doc="the destination ports for all 40Gb ports on the tile",
+        label="40Gn Destination Ports",
+        doc="The destination ports for all 40Gb ports on the tile",
     )
 
     adcPower = attribute_from_signal(
@@ -4346,6 +4432,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         abs_change=0.1,
         archive_abs_change=0.1,
+        unit="Watts",
+        label="ACD Power",
         doc="RMS power of every ADC signal",
     )
 
@@ -4354,8 +4442,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong64",
         abs_change=1,
         archive_abs_change=1,
+        label="Current Tile Beamformer Frame",
         doc=(
-            "current frame, in units of 256 ADC frames (276.48 us). "
+            "Current frame, in units of 256 ADC frames (276.48 us). "
             "Currently this is required, not sure if it will remain so."
         ),
     )
@@ -4363,7 +4452,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         coreCommunicationStatus_signal,
         dtype="DevString",
-        label="coreCommunicationStatus",
+        label="Core Communication Status",
         doc="Return status of connection to TPM, CPLD and FPGAs. "
         "Return True if communication is OK else False",
     )
@@ -4396,6 +4485,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
+        label="Current Frame",
         doc=(
             "current frame, in units of 256 ADC frames (276.48 us). "
             "Currently this is required, not sure if it will remain so."
@@ -4405,13 +4495,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     pendingDataRequests = attribute_from_signal(
         pending_data_requests_signal,
         dtype="DevBoolean",
-        doc="whether there are data requests pending",
+        label="Pending Data Requests",
+        doc="Whether there are data requests pending.",
     )
 
     isBeamformerRunning = attribute_from_signal(
         is_beamformer_running_signal,
         dtype="DevBoolean",
-        doc="whether the beamformer is running",
+        label="Is Beamformer Running",
+        doc="Whether the beamformer is running.",
     )
 
     phaseTerminalCount = attribute_from_signal(
@@ -4420,7 +4512,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         abs_change=1,
         archive_abs_change=1,
         fisallowed="_check_initialised_for_write",
-        label="phaseTerminalCount",
+        label="Phase Terminal Count",
         doc="Get phase terminal count.",
     )
 
@@ -4439,27 +4531,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevLong",
         abs_change=1,
         archive_abs_change=1,
-        doc="the delay between PPS and 10 MHz clock, in 1.25ns units",
+        label="PPS Delay",
+        doc="The delay between PPS and 10 MHz clock, in 1.25ns units.",
     )
 
     ppsDrift = attribute_from_signal(
         ppsDrift_signal,
         dtype="DevLong",
-        label="ppsDrift",
         archive_abs_change=1,
         abs_change=1,
         max_alarm=10,
         max_warning=4,
-        doc="Return the observed drift in the ppsDelay of this Tile.",
+        label="PPS Drift",
+        doc="Return the observed drift in the ppsDelay of this Tile, in 1.25ns units.",
     )
 
     ppsDelayCorrection = attribute_from_signal(
         ppsDelayCorrection_signal,
         dtype="DevLong",
-        label="ppsDelayCorrection",
         archive_abs_change=1,
         abs_change=1,
-        doc="Return the correction made to the pps delay.",
+        label="PPS Delay Correction",
+        doc="Return the correction made to the pps delay, in 1.25ns units.",
     )
 
     @ppsDelayCorrection.write  # type: ignore[no-redef]
@@ -4480,7 +4573,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=1,
         # Changed to devshort from devbool because errors. Probably Tango alarm related
         dtype="DevShort",
-        label="ppsPresent",
+        label="PPS Present",
         doc="Report if PPS signal is present at the TPM input.",
     )
 
@@ -4515,7 +4608,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     pllLocked = attribute_from_signal(
         pllLocked_signal,
         dtype="DevBoolean",
-        label="pllLocked",
+        label="PLL Locked",
         doc="Report if ADC clock PLL is in locked state.",
     )
 
@@ -4601,7 +4694,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         fisallowed="_check_initialised_for_write",
-        label="pre-ADU Levels",
+        label="Pre-ADU Levels",
         doc="Get attenuator level of preADU channels, one per input channel. "
         "Array of one value per antenna/polarization (32 per tile)",
     )
@@ -4622,7 +4715,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=336,
         archive_abs_change=1,
         abs_change=1,
-        label="beamformerTable",
+        label="Beamformer Table",
         doc="Get beamformer region table."
         "Bidimensional array of one row for each 8 channels, with elements:\n"
         "0. start physical channel\n"
@@ -4666,7 +4759,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=384,
         archive_abs_change=1,
         abs_change=1,
-        label="beamformerRegions",
+        label="Beamformer Regions",
         doc="Get beamformer region table. "
         "Bidimensional array of one row for each 8 channels, with elements:\n"
         "0. start physical channel\n"
@@ -4736,8 +4829,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if raw_value is None:
             return None
         return raw_value
-
-    # return raw_value if raw_value is not None else HealthState.UNKNOWN ?
 
     @attribute_from_signal(
         voltageHealth_signal,
@@ -4994,7 +5085,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         srcip40gfpga1_signal,
         dtype="DevString",
         write_to_signal=True,
-        label="srcip40gfpga1",
+        label="FPGA1 40G Source IP",
         doc="Return source IP for FPGA1, to be set by SpsStation.",
     )
     def srcip40gfpga1(self: MccsTile, raw_value: str | None) -> str:
@@ -5027,7 +5118,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         srcip40gfpga2_signal,
         dtype="DevString",
         write_to_signal=True,
-        label="srcip40gfpga2",
+        label="FPGA2 40G Source IP",
         doc="Return source IP for FPGA2, to be set by SpsStation.",
     )
     def srcip40gfpga2(self: MccsTile, raw_value: str | None) -> str:
@@ -5063,7 +5154,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_y=16,  # antenna
         abs_change=1,
         archive_abs_change=1,
-        label="rfiCount",
+        label="RFI Count",
         doc="Return the RFI count per antenna/pol.",
     )
 
@@ -5079,422 +5170,422 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currentFE0 = attribute_from_signal(  #
         current_fe0_signal,
         dtype="DevFloat",
-        label="FE0 current",
-        unit="Amp",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
+        unit="Amperes",
+        label="FE0 Current",
         doc="FE0 current in Amps.",
     )
 
     currentFE1 = attribute_from_signal(
         current_fe1_signal,
         dtype="DevFloat",
-        label="FE1 current",
-        unit="Amp",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
+        unit="Amperes",
+        label="FE1 Current",
         doc="FE1 current in Amps.",
     )
 
     voltageAVDD3 = attribute_from_signal(
         voltage_avdd3_signal,
         dtype="DevFloat",
-        label="Analog 2.5 V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.57,
         min_warning=2.40,
         min_alarm=2.37,
-        doc="Analog 2.5 V voltage in Volts.",
+        label="Analog 2.5V Voltage",
+        unit="Volts",
+        doc="Analog 2.5V voltage in Volts.",
     )
 
     voltageVrefDDR0 = attribute_from_signal(
         voltage_vref_ddr0_signal,
         dtype="DevFloat",
-        label="Vref voltage for DDR0",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
+        label="Vref voltage for DDR0 Voltage",
+        unit="Volts",
         doc="Vref voltage for DDR0 in Volts.",
     )
 
     voltageVrefDDR1 = attribute_from_signal(
         voltage_vref_ddr1_signal,
         dtype="DevFloat",
-        label="Vref voltage for DDR1",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
+        label="Vref voltage for DDR1 Voltage",
+        unit="Volts",
         doc="Vref voltage for DDR1 in Volts.",
     )
 
     voltageMan1V2 = attribute_from_signal(
         voltage_man1v2_signal,
         dtype="DevFloat",
-        label="Management 1.2V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.26,
         min_alarm=1.14,
+        label="Management 1.2V Voltage",
+        unit="Volts",
         doc="Management 1.2V voltage in Volts.",
     )
 
     voltageMGT_AVCC = attribute_from_signal(
         voltage_mgt_avcc_signal,
         dtype="DevFloat",
-        label="FPGA MGT AV",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.97,
         min_alarm=0.83,
+        label="FPGA MGT AV Voltage",
+        unit="Volts",
         doc="FPGA MGT AV voltage in Volts.",
     )
 
     voltageMGT_AVTT = attribute_from_signal(
         voltage_mgt_avtt_signal,
         dtype="DevFloat",
-        label="FPGA MGT AVTT",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.26,
         min_alarm=1.104,
+        label="FPGA MGT AVTT Voltage",
+        unit="Volts",
         doc="FPGA MGT AVTT voltage in Volts.",
     )
 
     voltageMon5V0 = attribute_from_signal(
         voltage_mon5v0_signal,
         dtype="DevFloat",
-        label="Management 5V0",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=5.19,
         min_alarm=4.69,
+        label="Management 5V0 Voltage",
+        unit="Volts",
         doc="Management 5V supply of the TPM in Volts.",
     )
 
     voltageMon3V3 = attribute_from_signal(
         voltage_mon3v3_signal,
         dtype="DevFloat",
-        label="Management 3V3",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.88,
         min_alarm=3.51,
+        label="Management 3V3 Voltage",
+        unit="Volts",
         doc="Management 3.3 V supply of the TPM in Volts.",
     )
 
     voltageMon1V8 = attribute_from_signal(
         voltage_mon1v8_signal,
         dtype="DevFloat",
-        label="Management 1V8",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=2.10,
         min_alarm=1.90,
+        label="Management 1V8 Voltage",
+        unit="Volts",
         doc="Management 1.8 V supply of the TPM in Volts.",
     )
 
     voltageSW_AVDD1 = attribute_from_signal(
         voltage_sw_avdd1_signal,
         dtype="DevFloat",
-        label="SW Analog 1.1 V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.16,
         min_alarm=1.04,
-        doc="SW Analog 1.1 V voltage in Volts.",
+        label="SW Analog 1.1V Voltage",
+        unit="Volts",
+        doc="SW Analog 1.1V voltage in Volts.",
     )
 
     voltageSW_AVDD2 = attribute_from_signal(
         voltage_sw_avdd2_signal,
         dtype="DevFloat",
-        label="SW Analog 2.3 V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=2.42,
         min_alarm=2.18,
+        label="SW Analog 2.3V Voltage",
+        unit="Volts",
         doc="SW Analog 2.3 V voltage in Volts.",
     )
 
     voltageVIN = attribute_from_signal(
         voltage_vin_signal,
         dtype="DevFloat",
-        label="input supply",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=12.6,
         min_alarm=11.4,
+        label="Input Supply Voltage",
+        unit="Volts",
         doc="Input supply voltage in Volts.",
     )
 
     voltageVM_AGP0 = attribute_from_signal(
         voltage_vm_agp0_signal,
         dtype="DevFloat",
-        label="AD AGP group 0",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 0 Voltage",
+        unit="Volts",
         doc="AD AGP group 0 voltage in Volts.",
     )
 
     voltageVM_AGP1 = attribute_from_signal(
         voltage_vm_agp1_signal,
         dtype="DevFloat",
-        label="AD AGP group 1",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 1 Voltage",
+        unit="Volts",
         doc="AD AGP group 1 voltage in Volts.",
     )
 
     voltageVM_AGP2 = attribute_from_signal(
         voltage_vm_agp2_signal,
         dtype="DevFloat",
-        label="AD AGP group 2",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 2 Voltage",
+        unit="Volts",
         doc="AD AGP group 2 voltage in Volts.",
     )
 
     voltageVM_AGP3 = attribute_from_signal(
         voltage_vm_agp3_signal,
         dtype="DevFloat",
-        label="AD AGP group 3",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 3 Voltage",
+        unit="Volts",
         doc="AD AGP group 3 voltage in Volts.",
     )
 
     voltageVM_AGP4 = attribute_from_signal(
         voltage_vm_agp4_signal,
         dtype="DevFloat",
-        label="AD AGP group 4",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 4 Voltage",
+        unit="Volts",
         doc="AD AGP group 4 voltage in Volts.",
     )
 
     voltageVM_AGP5 = attribute_from_signal(
         voltage_vm_agp5_signal,
         dtype="DevFloat",
-        label="AD AGP group 5",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 5 Voltage",
+        unit="Volts",
         doc="AD AGP group 5 voltage in Volts.",
     )
 
     voltageVM_AGP6 = attribute_from_signal(
         voltage_vm_agp6_signal,
         dtype="DevFloat",
-        label="AD AGP group 6",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 6 Voltage",
+        unit="Volts",
         doc="AD AGP group 6 voltage in Volts.",
     )
 
     voltageVM_AGP7 = attribute_from_signal(
         voltage_vm_agp7_signal,
         dtype="DevFloat",
-        label="AD AGP group 7",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
+        label="AD AGP Group 7 Voltage",
+        unit="Volts",
         doc="AD AGP group 7 voltage in Volts.",
     )
 
     voltageVM_CLK0B = attribute_from_signal(
         voltage_vm_clk0b_signal,
         dtype="DevFloat",
-        label="Clock Buffer0 3.3V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
+        label="Clock Buffer0 3.3V Voltage",
+        unit="Volts",
         doc="Clock Buffer0 3.3V voltage in Volts.",
     )
 
     voltageVM_CLK1B = attribute_from_signal(
         voltage_vm_clk1b_signal,
         dtype="DevFloat",
-        label="Clock Buffer1 3.3V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
+        label="Clock Buffer1 3.3V Voltage",
+        unit="Volts",
         doc="Clock Buffer1 3.3V voltage in Volts.",
     )
 
     voltageVM_DDR0_VTT = attribute_from_signal(
         voltage_vm_ddr0_vtt_signal,
         dtype="DevFloat",
-        label="DDR FPGA0 Vtt",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.65,
         min_alarm=0.55,
+        label="FPGA0 DDR Vtt Voltage",
+        unit="Volts",
         doc="DDR FPGA0 Vtt voltage in Volts.",
     )
 
     voltageVM_DDR1_VDD = attribute_from_signal(
         voltage_vm_ddr1_vdd_signal,
         dtype="DevFloat",
-        label="DDR4",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.30,
         min_alarm=1.10,
+        label="DDR4 Voltage",
+        unit="Volts",
         doc="DDR4 voltage in Volts.",
     )
 
     voltageVM_DDR1_VTT = attribute_from_signal(
         voltage_vm_ddr1_vtt_signal,
         dtype="DevFloat",
-        label="DDR FPGA1 Vtt",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=0.65,
         min_alarm=0.55,
+        label="FPGA1 DDR Vtt Voltage",
+        unit="Volts",
         doc="DDR FPGA1 Vtt voltage in Volts.",
     )
 
     voltageVM_DRVDD = attribute_from_signal(
         voltage_vm_drvdd_signal,
         dtype="DevFloat",
-        label="SW DRVDD 1.8V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.89,
         min_alarm=1.71,
+        label="SW DRVDD 1.8V Voltage",
+        unit="Volts",
         doc="SW DRVDD 1.8V voltage in Volts.",
     )
 
     voltageVM_DVDD = attribute_from_signal(
         voltage_vm_dvdd_signal,
         dtype="DevFloat",
-        label="AD DVDD",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.19,
         min_alarm=1.01,
+        label="AD DVDD Voltage",
+        unit="Volts",
         doc="AD DVDD voltage in Volts.",
     )
 
     voltageVM_FE0 = attribute_from_signal(
         voltage_vm_fe0_signal,
         dtype="DevFloat",
-        label="FE0",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
+        label="FE0 Voltage",
+        unit="Volts",
         doc="FE0 voltage in Volts. PreADU must be on.",
     )
 
     voltageVM_FE1 = attribute_from_signal(
         voltage_vm_fe1_signal,
         dtype="DevFloat",
-        label="FE1",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
+        label="FE1 Voltage",
+        unit="Volts",
         doc="FE1 voltage in Volts. PreADU must be on.",
     )
 
     voltageVM_MGT0_AUX = attribute_from_signal(
         voltage_vm_mgt0_aux_signal,
         dtype="DevFloat",
-        label="FPGA MGT0 AUX",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.94,
         min_alarm=1.66,
+        label="FPGA MGT0 AUX Voltage",
+        unit="Volts",
         doc="FPGA MGT0 AUX voltage in Volts.",
     )
 
     voltageVM_MGT1_AUX = attribute_from_signal(
         voltage_vm_mgt1_aux_signal,
         dtype="DevFloat",
-        label="FPGA MGT1 AUX",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=1.94,
         min_alarm=1.66,
+        label="FPGA MGT1 AUX Voltage",
+        unit="Volts",
         doc="FPGA MGT1 AUX voltage in Volts.",
     )
 
     voltageVM_PLL = attribute_from_signal(
         voltage_vm_pll_signal,
         dtype="DevFloat",
-        label="ANALOG PLL",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
+        label="ANALOG PLL Voltage",
+        unit="Volts",
         doc="ANALOG PLL voltage in Volts.",
     )
 
     voltageVM_SW_AMP = attribute_from_signal(
         voltage_vm_sw_amp_signal,
         dtype="DevFloat",
-        label="VGA DC-DC",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
+        label="VGA DC-DC Voltage",
+        unit="Volts",
         doc="VGA DC-DC voltage in Volts.",
     )
 
@@ -5509,18 +5600,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         rfiBlankingEnabledAntennas_signal,
         dtype=("DevLong",),
         max_dim_x=16,
-        label="RFI Blanking-enabled Antennas",
         abs_change=1,
         archive_abs_change=1,
+        label="RFI Blanking-enabled Antennas",
         doc="Get the list of antennas for broadband RFI blanking is currently enabled.",
     )
 
     broadbandRfiFactor = attribute_from_signal(
         broadbandRfiFactor_signal,
         dtype="DevFloat",
-        label="Broadband RFI Factor",
         abs_change=0.00000001,  # Below resolution of DevFloat
         archive_abs_change=0.00000001,  # Below resolution of DevFloat
+        label="Broadband RFI Factor",
         doc="Get the RFI factor for broadband RFI detection."
         "Note: Only the RFI factor of FPGA1 is read since the "
         "same value is loaded into all FPGAs.",
@@ -5582,39 +5673,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevFloat",),),
         max_dim_x=32,  # Channels
         max_dim_y=8,  # Antennas
-        label="Pointing Delays",
         rel_change=0.01,
         archive_rel_change=0.01,
+        label="Pointing Delays",
         doc="Get the pointing delays for beam 0.",
     )
 
     currentDraw = attribute_from_signal(
         currentDraw_signal,
         dtype="DevFloat",
-        label="Subrack Current",
         min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
+        unit="Amperes",
+        label="Subrack Current",
         doc="Get the Tile current as measured by the subrack.",
     )
 
     powerDraw = attribute_from_signal(
         powerDraw_signal,
         dtype="DevFloat",
-        label="Subrack Power",
         min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
+        unit="Watts",
+        label="Subrack Power",
         doc="Get the Tile power as measured by the subrack.",
     )
 
     voltageDraw = attribute_from_signal(
         voltageDraw_signal,
         dtype="DevFloat",
-        label="Subrack Voltage",
         min_alarm=11.4,
         max_alarm=12.6,
         abs_change=0.1,
+        unit="Volts",
+        label="Subrack Voltage",
         doc="Get the Tile voltage as measured by the subrack.",
     )
 

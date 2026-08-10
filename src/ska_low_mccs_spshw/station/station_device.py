@@ -741,7 +741,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # Attributes
     # ----------
 
-    @attribute(dtype=str)
+    @attribute(
+        dtype=str,
+        label="CSP Ingest Config",
+        doc="Report the CSP Ingest configuration in use for this station.",
+    )
     def cspIngestConfig(self: SpsStation) -> str:
         """
         Report the CspIngest configuration in use for this station.
@@ -761,6 +765,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=512,  # Channels
         max_dim_y=256,  # Antennas
         archive_period=5000,
+        label="X-Polarisation Bandpass",
+        doc="Read the last bandpass plot for the x-polarisation.",
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -775,6 +781,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=512,  # Channels
         max_dim_y=256,  # Antennas
         archive_period=5000,
+        label="Y-Polarisation Bandpass",
+        doc="Read the last bandpass plot for the y-polarisation.",
     )
     def yPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -788,6 +796,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("str",),
         max_dim_x=2,  # Always the last result (unique_id, JSON-encoded result)
         archive_period=5000,
+        label="Data Received Result",
+        doc="Read the result of the receiving of data. "
+        "A tuple containing the data mode and a json string with additional info.",
     )
     def dataReceivedResult(self: SpsStation) -> tuple[str, str] | None:
         """
@@ -799,7 +810,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self._data_received_result
 
-    @attribute(dtype=str)
+    @attribute(
+        dtype=str,
+        label="LMC Daq TRL",
+        doc="The TRL of this SpsStation's LMC Daq instance.",
+    )
     def LMCdaqTRL(self: SpsStation) -> str:
         """
         Report the Tango Resource Locator for this SpsStation's LMC DAQ instance.
@@ -818,7 +833,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.LMCDaqTRL = value
         self.component_manager._lmc_daq_trl = value
 
-    @attribute(dtype=bool)
+    @attribute(
+        dtype=bool,
+        label="OnWorkaround",
+        doc="Report the status of the `On` workaround.",
+    )
     def OnWorkaround(self: SpsStation) -> bool:  # noqa: F811
         """
         Report the status of the OnWorkaroundFlag.
@@ -836,7 +855,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.OnWorkaroundFlag = value
 
-    @attribute(dtype=str)
+    @attribute(
+        dtype=str,
+        label="Bandpass Daq TRL",
+        doc="The TRL of this SpsStation's Bandpass Daq instance.",
+    )
     def BandpassdaqTRL(self: SpsStation) -> str:
         """
         Report the Tango Resource Locator for this SpsStation's Bandpass DAQ instance.
@@ -855,7 +878,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.BandpassDaqTRL = value
         self.component_manager._bandpass_daq_trl = value
 
-    @attribute(dtype=str)
+    @attribute(
+        dtype=str,
+        label="WREN TRL",
+        doc="The TRL of this SpsStation's White Rabbit End Node (WREN) instance.",
+    )
     def WrenTRL(self: SpsStation) -> str:
         """
         Report the Tango Resource Locator for this SpsStation's WREN instance.
@@ -864,7 +891,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.WRENTRL
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Is Calibrated",
+        doc="Return a flag indicating whether this station is currently calibrated.",
+    )
     def isCalibrated(self: SpsStation) -> bool:
         """
         Return a flag indicating whether this station is currently calibrated or not.
@@ -874,7 +905,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self._is_calibrated
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Is Configured",
+        doc="Return a flag indicating whether this station is currently configured.",
+    )
     def isConfigured(self: SpsStation) -> bool:
         """
         Return a flag indicating whether this station is currently configured or not.
@@ -884,7 +919,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager._is_configured
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Antenna Mapping",
+        doc="Return a mapping of antenna number to TPM port number.",
+    )
     def antennasMapping(self: SpsStation) -> str:
         """
         Return the mappings of the antennas.
@@ -896,7 +935,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return json.dumps(self.component_manager._antenna_mapping)
 
-    @attribute(dtype="DevString", archive_period=5000)
+    @attribute(
+        dtype="DevString",
+        archive_period=5000,
+        label="Antenna Info",
+        doc="Return a json string coded by antenna number containing an antenna's "
+        "Station_ID, Tile_ID and location information.",
+    )
     def antennaInfo(self: SpsStation) -> str:
         """
         Return antenna information.
@@ -912,6 +957,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=512,
+        label="Static Time Delays",
+        unit="Nanoseconds",
+        doc="Get the current static time delays. "
+        "Array of one value per antenna/polarization (32 per tile), in range +/-124. "
+        "Delay in nanoseconds (positive = increase the signal delay) to correct for "
+        "static delay mismatches, e.g. cable length.",
     )
     def staticTimeDelays(self: SpsStation) -> list[float]:
         """
@@ -919,7 +970,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
         Delay in nanoseconds (positive = increase the signal delay) to correct for
-        static delay mismathces, e.g. cable length.
+        static delay mismatches, e.g. cable length.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
@@ -931,7 +982,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Set static time delay.
 
         :param delays: Delay in nanoseconds (positive = increase the signal delay)
-             to correct for static delay mismathces, e.g. cable length.
+             to correct for static delay mismatches, e.g. cable length.
              2 values per antenna (pol. X and Y), 32 values per tile, 512 total.
         """
         self.component_manager.static_delays = delays
@@ -940,6 +991,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(("DevLong",),),
         max_dim_x=512,  # Channels
         max_dim_y=16,  # Tiles
+        label="Channeliser Rounding",
+        doc="Number of LS bits dropped in each channeliser freq channel.",
     )
     def channeliserRounding(self: SpsStation) -> ndarray:
         """
@@ -956,6 +1009,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=384,
+        label="CSP Rounding",
+        doc="CSP formatter rounding. Range 0 to 7, as number of discarded LS bits.",
     )
     def cspRounding(self: SpsStation) -> list[int]:
         """
@@ -983,6 +1038,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=512,
+        label="Pre-ADU Levels",
+        doc="Get attenuator level of preADU channels, one per input channel.",
     )
     def preaduLevels(self: SpsStation) -> list[float]:
         """
@@ -1005,10 +1062,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=16,
+        label="PPS Delays",
+        unit="Nanoseconds",
+        doc="Get PPS delay, one value per tile.",
     )
     def ppsDelays(self: SpsStation) -> list[int]:
         """
-        Get PPS delay correction, one per tile.
+        Get PPS delay, one per tile.
 
         :return: Array of PPS delay in nanoseconds, one value per tile.
         """
@@ -1017,6 +1077,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=16,
+        label="PPS Delay Corrections",
+        unit="Nanoseconds",
+        doc="Get PPS delay corrections, one value per tile.",
     )
     def ppsDelayCorrections(self: SpsStation) -> list[int]:
         """
@@ -1038,7 +1101,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.component_manager.pps_delay_corrections = delays
 
-    @attribute(dtype="DevLong", archive_period=5000)
+    @attribute(
+        dtype="DevLong",
+        archive_period=5000,
+        label="PPS Delay Spread",
+        doc="Returns the difference between the max and min PPS delays across all "
+        "tiles in this Station.",
+    )
     def ppsDelaySpread(self: SpsStation) -> int:
         """
         Get difference between maximum and minimum delays.
@@ -1050,7 +1119,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.pps_delay_spread
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Beamformer Daisychain Valid",
+        doc="Return whether all TPMs are correctly daisy-chained for beamforming.",
+    )
     def beamformerDaisyChainValid(self: SpsStation) -> bool:
         """
         Return whether all TPMs are correctly daisy-chained for beamforming.
@@ -1063,7 +1136,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return bool(self.component_manager.beamformer_daisy_chain_valid)
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Final Tile Beamformer Flagged Count OK",
+        doc="Return whether the final tile's station beamformer flagged packet "
+        "count is zero.",
+    )
     def finalTileBeamformerFlaggedCountOk(self: SpsStation) -> bool:
         """
         Return whether the final tile's station beamformer flagged packet count is zero.
@@ -1077,7 +1155,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return bool(self.component_manager.final_tile_beamformer_flagged_count_ok)
 
-    @attribute(dtype=("DevLong",), max_dim_x=336, archive_period=5000)
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=336,
+        archive_period=5000,
+        label="Beamformer Table",
+        doc="Get beamformer region table. "
+        "Bidimensional array of one row for each 8 channels, with elements: "
+        "0. start physical channel, "
+        "1. beam number, "
+        "2. subarray ID, "
+        "3. subarray_logical_channel, "
+        "4. subarray_beam_id, "
+        "5. substation_id, "
+        "6. aperture_id "
+        "Each row is a set of 7 consecutive elements in the list.",
+    )
     def beamformerTable(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
@@ -1099,7 +1192,23 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             itertools.chain.from_iterable(self.component_manager.beamformer_table)
         )
 
-    @attribute(dtype=("DevLong",), max_dim_x=384, archive_period=5000)
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=384,
+        archive_period=5000,
+        label="Beamformer Regions",
+        doc="Get beamformer region table."
+        "Bidimensional array of one row for each 8 channels, with elements: "
+        "0. start physical channel, "
+        "1. number of channels, "
+        "2. beam index, "
+        "3. subarray ID, "
+        "4. subarray_logical_channel, "
+        "5. subarray_beam_id, "
+        "6. substation_id, "
+        "8. aperture_id. "
+        "Each row is a set of 8 consecutive elements in the list.",
+    )
     def beamformerRegions(self: SpsStation) -> list[int] | None:
         """
         Get beamformer region table.
@@ -1122,7 +1231,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             itertools.chain.from_iterable(self.component_manager.beamformer_regions)
         )
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="40Gb Network Address",
+        doc="Get the 40Gb network address for this station.",
+    )
     def fortyGbNetworkAddress(self: SpsStation) -> str:
         """
         Get 40Gb network address for this station.
@@ -1131,7 +1244,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.forty_gb_network_address
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="CSP Ingest Address",
+        doc="Get the CSP ingest address for this station.",
+    )
     def cspIngestAddress(self: SpsStation) -> str:
         """
         Get CSP ingest IP address.
@@ -1142,7 +1259,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.csp_ingest_address
 
-    @attribute(dtype="DevLong")
+    @attribute(
+        dtype="DevLong",
+        label="CSP Ingest Port",
+        doc="Get the CSP ingest port for this station.",
+    )
     def cspIngestPort(self: SpsStation) -> int:
         """
         Get CSP ingest port.
@@ -1153,7 +1274,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.csp_ingest_port
 
-    @attribute(dtype="DevLong")
+    @attribute(
+        dtype="DevLong",
+        label="CSP Source Port",
+        doc="Get the CSP source port for this station.",
+    )
     def cspSourcePort(self: SpsStation) -> int:
         """
         Get CSP source port.
@@ -1164,7 +1289,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.csp_source_port
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Gloabal Reference Time",
+        doc="Return the global FPGA synchronization time. (UTC)",
+    )
     def globalReferenceTime(self: SpsStation) -> str:
         """
         Return the global FPGA synchronization time.
@@ -1245,12 +1374,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     timeToFrameCounterWrap = attribute_from_signal(  # noqa: N815
         time_to_frame_counter_wrap,
         abs_change=1,
-        doc="Number of seconds until the station's frame counter wraps around.",
         min_alarm=0,
         min_warning=86400,  # 24 hours notice of wrap-around
+        label="Time to Frame Counter Wrap",
+        unit="Seconds",
+        doc="Number of seconds until the station's frame counter wraps around.",
     )
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Is Programmed",
+        doc="Return a flag indicating whether of not the TPM boards are programmed. "
+        "Attribute is False if at least one TPM is not programmed.",
+    )
     def isProgrammed(self: SpsStation) -> bool:
         """
         Return a flag indicating whether of not the TPM boards are programmed.
@@ -1261,7 +1397,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.is_programmed
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Test Generator Active",
+        doc="Get the state of the test generator across this station's tiles. "
+        "Returns ``True`` if the test generator is active in at least one tile.",
+    )
     def testGeneratorActive(self: SpsStation) -> bool:
         """
         Get the state of the test generator.
@@ -1270,16 +1411,27 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.test_generator_active
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Is Beamformer Running",
+        doc="Get the state of the beamformer across this station's tiles. "
+        "Returns ``True`` if the beamformer is active in all tiles.",
+    )
     def isBeamformerRunning(self: SpsStation) -> bool:
         """
-        Get the state of the test generator.
+        Get the state of the beamformer.
 
-        :return: true if the test generator is active in at least one tile
+        :return: true if the beamformer is active in all tiles.
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(dtype=("DevString",), max_dim_x=16, archive_period=5000)
+    @attribute(
+        dtype=("DevString",),
+        max_dim_x=16,
+        archive_period=5000,
+        label="Tile Programming State",
+        doc="Returns the Tile Programming State of all tiles in this Station.",
+    )
     def tileProgrammingState(self: SpsStation) -> list[str]:
         """
         Get the tile programming state.
@@ -1288,7 +1440,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.tile_programming_state()
 
-    @attribute(dtype=("DevDouble",), max_dim_x=512, archive_period=5000)
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=512,
+        archive_period=5000,
+        label="ADC Power",
+        unit="ADC units",
+        doc="Get the ADC RMS input levels for all input signals.",
+    )
     def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.
@@ -1300,7 +1459,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self._adc_power
 
-    @attribute(dtype=("DevDouble",), max_dim_x=3)
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=3,
+        label="Board Temperatures Summary",
+        unit="Celsius",
+        doc="Get summary of board temperatures (minimum, average, maximum).",
+    )
     def boardTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
         Get summary of board temperatures (minimum, average, maximum).
@@ -1309,7 +1474,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.board_temperature_summary()
 
-    @attribute(dtype=("DevDouble",), max_dim_x=3)
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=3,
+        label="FPGA Temperatures Summary",
+        unit="Celsius",
+        doc="Get summary of FPGA temperatures (minimum, average, maximum).",
+    )
     def fpgaTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
         Get summary of FPGA temperatures (minimum, average, maximum).
@@ -1318,25 +1489,40 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.fpga_temperature_summary()
 
-    @attribute(dtype=("DevDouble",), max_dim_x=3)
+    @attribute(
+        dtype=("DevDouble",),
+        max_dim_x=3,
+        label="PPS Delay Summary",
+        doc="Get summary of PPS delays (minimum, average, maximum).",
+    )
     def ppsDelaySummary(self: SpsStation) -> list[float] | None:
         """
         Get summary of PPS delay (minimum, average, maximum).
 
-        :returns: minimum, average, maximum board temperatures, in deg Celsius
+        :returns: minimum, average, maximum PPS delays.
         """
         return self.component_manager.pps_delay_summary()
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="SYSREF Present Summary",
+        doc="Get summary of SYSREF present status for all tiles. "
+        "True if SYSREF signal is present in all tiles.",
+    )
     def sysrefPresentSummary(self: SpsStation) -> bool:
         """
-        Get summary of sysrf present status for all tiles.
+        Get summary of SYSREF present status for all tiles.
 
         :returns: True if SYSREF signal is present in all tiles
         """
         return self.component_manager.sysref_present_summary()
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="PLL Locked Summary",
+        doc="Get summary of PLL locked status for all tiles. "
+        "True if PLL is locked to reference in all tiles.",
+    )
     def pllLockedSummary(self: SpsStation) -> bool:
         """
         Get summary of PLL locked status for all tiles.
@@ -1345,7 +1531,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.pll_locked_summary()
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="PPS Present Summary",
+        doc="Get summary of PPS present status for all tiles. "
+        "True if PPS signal is present in all tiles.",
+    )
     def ppsPresentSummary(self: SpsStation) -> bool:
         """
         Get summary of PPS present status for all tiles.
@@ -1354,7 +1545,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.pps_present_summary()
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Clock Present Summary",
+        doc="Get a summary of clock present status for all tiles. "
+        "True if 10 MHz clock signal is present in all tiles.",
+    )
     def clockPresentSummary(self: SpsStation) -> bool:
         """
         Get summary of clock present status for all tiles.
@@ -1363,7 +1559,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.clock_present_summary()
 
-    @attribute(dtype=("DevLong",), max_dim_x=32)
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=32,
+        label="40Gb Network Errors",
+        doc="Get the number of network errors for all 40Gb interfaces.",
+    )
     def fortyGbNetworkErrors(self: SpsStation) -> list[int]:
         """
         Get number of network errors for all 40 Gb interfaces.
@@ -1375,6 +1576,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype="DevString",
         format="%s",
+        label="Health Thresholds (New health model)",
+        doc="Get the current health thresholds in use. (New health model.)",
     )
     def healthThresholds(self: SpsStation) -> str:
         """
@@ -1465,6 +1668,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype="DevString",
         format="%s",
+        label="Health Model Params (old Health Model)",
+        doc="Get the health model parameters (old Health Model).",
     )
     def healthModelParams(self: SpsStation) -> str:
         """
@@ -1503,7 +1708,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString", label="Health Report", doc="The current health report."
+    )
     def healthReport(self: SpsStation) -> str:
         """
         Get the health report.
@@ -1517,6 +1724,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype="DevString",
         format="%s",
+        label="Test Logs",
+        doc="Get logs of the most recently run self-check test.",
     )
     def testLogs(self: SpsStation) -> str:
         """
@@ -1529,6 +1738,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype="DevString",
         format="%s",
+        label="Test Report",
+        doc="Get the report for the most recently run self-check test set.",
     )
     def testReport(self: SpsStation) -> str:
         """
@@ -1538,7 +1749,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.test_report
 
-    @attribute(dtype=("DevString",), format="%s", max_dim_x=32)
+    @attribute(
+        dtype=("DevString",),
+        format="%s",
+        max_dim_x=32,
+        label="Test List",
+        doc="Get the list of available self-check tests.",
+    )
     def testList(self: SpsStation) -> list[str]:
         """
         Get the list of self-check tests available.
@@ -1547,7 +1764,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.test_list
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="CSP SPEAD Format",
+        doc="Gets the SPEAD format currently in use. (AAVS or SKA)",
+    )
     def cspSpeadFormat(self: SpsStation) -> str:
         """
         Get CSP SPEAD format.
@@ -1576,7 +1797,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
 
-    @attribute(dtype=("DevFloat",), max_dim_x=513)
+    @attribute(
+        dtype=("DevFloat",),
+        max_dim_x=513,
+        label="Last Pointing Delays",
+        doc="Return the last pointing delays applied to the tiles. "
+        "Values in antenna EEP order.",
+    )
     def lastPointingDelays(self: SpsStation) -> list:
         """
         Return last pointing delays applied to the tiles.
@@ -1588,7 +1815,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self.component_manager.last_pointing_delays
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Execute Async",
+        doc="Whether to execute MccsTile methods asynchronously.",
+    )
     def executeAsync(self: SpsStation) -> bool:
         """
         Return whether to execute MccsTile methods asynchronously.
@@ -1612,7 +1843,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.component_manager.excecute_async = execute_async
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Keep Test Data",
+        doc="Whether to keep or discard test data after self-check tests are run.",
+    )
     def keepTestData(self: SpsStation) -> bool:
         """
         Return whether to keep test data.
@@ -1634,7 +1869,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.component_manager.keep_test_data = keep_test_data
 
-    @attribute(dtype="DevBoolean")
+    @attribute(
+        dtype="DevBoolean",
+        label="Use New Health Model",
+        doc="Return a flag indicating whether the new health model is in use.",
+    )
     def useNewHealthModel(self: SpsStation) -> bool:
         """
         Return a flag indicating whether this station is using the new health model.
@@ -1654,7 +1893,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self._use_new_health_model = argin
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Daq Path",
+        doc="The folder location where DAQ data files are stored.",
+    )
     def daqPath(self: SpsStation) -> str:
         """
         Get DAQ data path.
@@ -1674,6 +1917,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(("DevFloat",),),
         max_dim_x=512,  # Channels
         max_dim_y=8,  # Antennas
+        label="Pointing Delays",
+        doc="Read the last pointing delays received from hardware.",
     )
     def pointingDelays(self: SpsStation) -> np.ndarray:
         """

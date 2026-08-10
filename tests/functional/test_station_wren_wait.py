@@ -40,6 +40,8 @@ def wren_fixture(wren_trl: str) -> tango.DeviceProxy | None:
     :returns: The WREN device proxy.
 
     """
+    if not tango.Database().get_device_exported(wren_trl):
+        pytest.skip("This test requires the WREN simulator.")
     return wait_for_device(wren_trl)
 
 
@@ -77,8 +79,6 @@ def check_wren_simulator_is_present(wren: tango.DeviceProxy | None) -> None:
     :param wren: The WREN device
 
     """
-    if wren is None:
-        pytest.skip("This test requires the WREN simulator.")
 
 
 @given("the SpsStation has a WREN TRL")

@@ -431,6 +431,57 @@ class _WrenProxy(DeviceComponentManager):
             event_serialiser=event_serialiser,
         )
 
+        # Create an event to store whether the health state is ok
+        self._health_state_ok = threading.Event()
+
+    def _update_health(
+        self,
+    ) -> None:
+        """Override the _update_health method."""
+        # The DeviceComponentManager expects the device to have admin mode
+        # ONLINE. The WREN simulator device does not have admin mode so lets
+        # just set the health state regardless of the admin mode.
+        health = self._device_health_state
+        if self._health != health:
+            self._health = health
+            if self._component_state_callback is not None:
+                self._component_state_callback(health=self._health)
+
+        # Update the health state ok event
+        self._update_health_state_ok(health)
+
+    def _update_health_state_ok(self, health: HealthState | None) -> None:
+        """
+        Update the health state ok event.
+
+        :param health: The current health.
+
+        """
+        # Set or clear the event depending on whether it is ok
+        if health == HealthState.OK:
+            self._health_state_ok.set()
+        else:
+            self._health_state_ok.clear()
+
+    def update_health_state(self) -> None:
+        """Update the health state."""
+        # Get the health state directly to ensure that if it is already ok and
+        # doesn't change we can pass immediately.
+        self._health = self._proxy.healthState if self._proxy else None
+
+        # Update the health state ok event
+        self._update_health_state_ok(self._health)
+
+    @property
+    def health_state_ok(self) -> threading.Event:
+        """
+        Return the health state ok event.
+
+        :returns: The health state ok event.
+
+        """
+        return self._health_state_ok
+
 
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
@@ -457,11 +508,14 @@ class SpsStationComponentManager(
         antenna_config_uri: Optional[list[str]],
         start_bandpasses_in_initialise: bool,
         bandpass_integration_time: float,
+        wren_health_check_fail_on_timeout: bool,
+        wren_health_check_timeout: float,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        wren_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         on_workaround_flag: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
@@ -499,6 +553,9 @@ class SpsStationComponentManager(
             in initialise.
         :param bandpass_integration_time: the integration time for channelised data
             capture started in initialise.
+        :param wren_health_check_fail_on_timeout: Should initialise fail in
+            WREN health check times-out
+        :param wren_health_check_timeout: The timeout for the WREN initialisation
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -509,6 +566,8 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param wren_health_changed_callback: callback to be
+            called when a WREN's health changed
         :param on_workaround_flag: whether to enable the workaround
         :param event_serialiser: the event serialiser to be used by this object.
         """
@@ -522,6 +581,8 @@ class SpsStationComponentManager(
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
         self._wren_trl = wren_trl
+        self._wren_health_check_fail_on_timeout = wren_health_check_fail_on_timeout
+        self._wren_health_check_timeout = wren_health_check_timeout
         self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
@@ -611,6 +672,9 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._bandpass_daq_power_state = {bandpass_daq_trl: PowerState.UNKNOWN}
+
+        # Create the WREN proxy and WREN power state variable. If the WREN TRL
+        # isn't set, create an empty dict for the WREN power state
         if self._wren_trl:
             # TODO: Detect a bad wren trl.
             self._wren_proxy = _WrenProxy(
@@ -623,11 +687,15 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._wren_power_state = {wren_trl: PowerState.UNKNOWN}
+        else:
+            self._wren_power_state = {}
+
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
         self._tile_health_changed_callback = tile_health_changed_callback
         self._subrack_health_changed_callback = subrack_health_changed_callback
+        self._wren_health_changed_callback = wren_health_changed_callback
         # configuration parameters
         # more to come
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
@@ -747,6 +815,7 @@ class SpsStationComponentManager(
             tile_trls=list(self._tile_proxies.keys()),
             subrack_trls=list(self._subrack_proxies.keys()),
             daq_trl=self._lmc_daq_trl,
+            wren_trl=self._wren_trl,
         )
 
         self.acquiring_data_for_calibration = threading.Event()
@@ -1479,7 +1548,22 @@ class SpsStationComponentManager(
         :param fault: The fault state.
 
         """
-        self.logger.warn("WREN state change currently unhandled")
+        # Handle the power state change
+        if power is not None:
+            with self._power_state_lock:
+                self._wren_power_state[fqdn] = power
+                self._evaluate_power_state()
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, power=power)
+
+        # Handle the health state change
+        if health is not None:
+            # Old health model.
+            self._wren_health_changed_callback(fqdn, HealthState(health))
+
+            # New health model.
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, health=health)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -1504,6 +1588,12 @@ class SpsStationComponentManager(
         with self._power_state_lock:
             tile_power_states = list(self._tile_power_states.values())
             subrack_power_states = list(self._subrack_power_states.values())
+
+            # Get the WREN power state. At the moment, we just log the power
+            # state, the WREN power state does not have an effect on the
+            # evaluated_power_state.
+            wren_power_state = self._wren_power_state.values()
+
             # Assume that with any Tile ON the subrack must also be ON.
             if any(power_state == PowerState.ON for power_state in tile_power_states):
                 evaluated_power_state = PowerState.ON  # 1
@@ -1535,12 +1625,14 @@ class SpsStationComponentManager(
                 # Any tile UNKNOWN AND no tile ON
                 self.logger.debug(f"tile powers: {tile_power_states}")
                 self.logger.debug(f"subrack powers: {subrack_power_states}")
+                self.logger.debug(f"WREN power: {wren_power_state}")
                 evaluated_power_state = PowerState.UNKNOWN  # 5
 
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
+                f"\tWREN: {self._wren_power_state.values()}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self._update_component_state(power=evaluated_power_state)
@@ -1794,6 +1886,17 @@ class SpsStationComponentManager(
                 )
             return
 
+        # Now, if the wren proxy is set, wait for the WREN to initialise
+        if self._wren_proxy:
+            if result_code == ResultCode.OK:
+                self.logger.debug("Waiting for WREN")
+                result_code, failure_step = self._wait_for_wren(
+                    task_callback,
+                    task_abort_event,
+                    timeout=self._wren_health_check_timeout,
+                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
+                )
+
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
@@ -1890,7 +1993,7 @@ class SpsStationComponentManager(
 
     @check_communicating
     # pylint: disable=too-many-branches
-    def initialise(
+    def initialise(  # noqa: C901
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
@@ -1932,6 +2035,19 @@ class SpsStationComponentManager(
             result_code = ResultCode.FAILED
             failure_step = "tiles not on"
 
+        # Now, if the wren proxy is set, wait for the WREN to initialise
+        if self._wren_proxy:
+            if result_code == ResultCode.OK:
+                self.logger.debug("Waiting for WREN")
+                result_code, failure_step = self._wait_for_wren(
+                    task_callback,
+                    task_abort_event,
+                    timeout=self._wren_health_check_timeout,
+                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
+                )
+                if task_callback:
+                    task_callback(progress=5)
+
         if result_code == ResultCode.OK:
             self.logger.debug("Setting tile source IPs before initialisation")
             result_code, failure_step = self._set_tile_source_ips(
@@ -1940,7 +2056,7 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             if task_callback:
-                task_callback(progress=5)
+                task_callback(progress=10)
             self.logger.debug("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
             # This is very quick to complete so no progress update here
@@ -1948,7 +2064,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=5, progress_end=65
+                task_callback, task_abort_event, progress_start=10, progress_end=65
             )
             # Progress is reported incrementally inside _reinitialise_tiles
 
@@ -2273,6 +2389,64 @@ class SpsStationComponentManager(
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg
+
+    @check_communicating
+    def _wait_for_wren(
+        self,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+        timeout: float = 120,
+        poll_interval: float = 0.1,
+        fail_on_timeout: bool = False,
+    ) -> tuple[ResultCode, str]:
+        """
+        Wait for the WREN to be health.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :param timeout: The timeout (seconds)
+        :param poll_interval: The polling interval (seconds)
+        :param fail_on_timeout: Return failed on timeout
+
+        :return: a result code and message
+
+        """
+        # Ensure we have the WREN Proxy object
+        assert self._wren_proxy is not None, "WREN Proxy is None"
+
+        # Get the health once directly and thereafter wait for change events.
+        self._wren_proxy.update_health_state()
+
+        # Start polling
+        start_time = time.time()
+        while True:
+            # If abort is set then return early
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("_wait_for_wren task has been aborted")
+                return ResultCode.ABORTED, "task aborted"
+
+            # Now check if the WREN health is ok
+            if self._wren_proxy.health_state_ok.is_set():
+                return ResultCode.OK, ""
+
+            # Check if we should abort. Put this here to ensure we run the loop
+            # once even if timeout == 0
+            if time.time() - start_time > timeout:
+                break
+
+            # Wait for a moment
+            time.sleep(poll_interval)
+
+        # If we timeout then log a message with the final health state.
+        message = (
+            "Timed out waiting for WREN to come up, "
+            f"current state is '{self._wren_proxy.health}'"
+        )
+
+        # If the feature flag is set log an error and return FAILED. If the
+        # feature flag is not set then result OK
+        self.logger.error(message)
+        return ResultCode.FAILED if fail_on_timeout else ResultCode.OK, message
 
     @check_communicating
     def _initialise_tile_parameters(
@@ -4180,6 +4354,46 @@ class SpsStationComponentManager(
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             proxy._proxy.cspSpeadFormat = spead_format
+
+    @property
+    def wren_health_check_fail_on_timeout(self) -> bool:
+        """
+        Get whether WREN health checking is enabled during initialisation.
+
+        :returns: True if WREN health checking is enabled, False otherwise.
+
+        """
+        return self._wren_health_check_fail_on_timeout
+
+    @wren_health_check_fail_on_timeout.setter  # type: ignore[no-redef]
+    def wren_health_check_fail_on_timeout(self, enabled: bool) -> None:
+        """
+        Set whether WREN health checking is enabled during initialisation.
+
+        :param enabled: True to enable WREN health checking, False to disable.
+
+        """
+        self._wren_health_check_fail_on_timeout = enabled
+
+    @property
+    def wren_health_check_timeout(self) -> float:
+        """
+        Get the timeout for WREN health checking during initialisation.
+
+        :returns: The timeout in seconds for WREN health checking.
+
+        """
+        return self._wren_health_check_timeout
+
+    @wren_health_check_timeout.setter  # type: ignore[no-redef]
+    def wren_health_check_timeout(self, timeout: float) -> None:
+        """
+        Set the timeout for WREN health checking during initialisation.
+
+        :param timeout: The timeout in seconds for WREN health checking.
+
+        """
+        self._wren_health_check_timeout = timeout
 
     @check_communicating
     def set_channeliser_rounding(

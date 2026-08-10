@@ -27,7 +27,9 @@ class TestSpsStationHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
+        health_model = SpsStationHealthModel(
+            ["subrack"], ["tile"], "wren", MockCallable()
+        )
         _health_thresholds = {
             "pps_delta_degraded": 4,
             "pps_delta_failed": 9,
@@ -54,6 +56,7 @@ class TestSpsStationHealthModel:
                         f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.OK,
@@ -72,11 +75,12 @@ class TestSpsStationHealthModel:
                         f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: [] Subracks: ['low-mccs/subrack/00 - FAILED']",
+                "Tiles: [] Subracks: ['low-mccs/subrack/00 - FAILED'] WREN: []",
                 id="One subrack unhealthy, expect DEGRADED",
             ),
             pytest.param(
@@ -91,11 +95,12 @@ class TestSpsStationHealthModel:
                         f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {"subrack_degraded": 0.00001, "subrack_failed": 0.02},
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: [] Subracks: ['low-mccs/subrack/00 - FAILED']",
+                "Tiles: [] Subracks: ['low-mccs/subrack/00 - FAILED'] WREN: []",
                 id="One subrack unhealthy, lowered thresholds, expect FAILED",
             ),
             pytest.param(
@@ -110,11 +115,12 @@ class TestSpsStationHealthModel:
                         )
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: ['low-mccs/tile/0000 - FAILED'] Subracks: []",
+                "Tiles: ['low-mccs/tile/0000 - FAILED'] Subracks: [] WREN: []",
                 id="One tile unhealthy, expect DEGRADED",
             ),
             pytest.param(
@@ -129,11 +135,12 @@ class TestSpsStationHealthModel:
                         )
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {"tile_degraded": 0.00001, "tile_failed": 0.02},
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: ['low-mccs/tile/0000 - FAILED'] Subracks: []",
+                "Tiles: ['low-mccs/tile/0000 - FAILED'] Subracks: [] WREN: []",
                 id="One tile unhealthy, lowered thresholds, expect FAILED",
             ),
             pytest.param(
@@ -148,12 +155,14 @@ class TestSpsStationHealthModel:
                         f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
                 "Tiles: [] "
-                f"Subracks: {[f'low-mccs/subrack/0{i} - FAILED' for i in range(4)]}",
+                f"Subracks: {[f'low-mccs/subrack/0{i} - FAILED' for i in range(4)]} "
+                "WREN: []",
                 id="Many subracks unhealthy, expect FAILED",
             ),
             pytest.param(
@@ -168,12 +177,14 @@ class TestSpsStationHealthModel:
                         )
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
                 f"Tiles: {[f'low-mccs/tile/000{i} - FAILED' for i in range(5)]} "
-                "Subracks: []",
+                "Subracks: [] "
+                "WREN: []",
                 id="Five tiles unhealthy, expect FAILED",
             ),
             pytest.param(
@@ -188,12 +199,14 @@ class TestSpsStationHealthModel:
                         f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.UNKNOWN,
                 "Some devices are unknown: "
                 "Tiles: [] "
-                f"Subracks: {[f'low-mccs/subrack/0{i}' for i in range(2)]}",
+                f"Subracks: {[f'low-mccs/subrack/0{i}' for i in range(2)]} "
+                "WREN: []",
                 id="Some subracks UNKNOWN, expect UNKNOWN",
             ),
             pytest.param(
@@ -208,10 +221,15 @@ class TestSpsStationHealthModel:
                         )
                         for i in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 None,
                 HealthState.UNKNOWN,
-                "Some devices are unknown: Tiles: ['low-mccs/tile/0000'] Subracks: []",
+                (
+                    "Some devices are unknown: Tiles: ['low-mccs/tile/0000'] "
+                    "Subracks: [] "
+                    "WREN: []"
+                ),
                 id="One tile UNKNOWN, expect UNKNOWN",
             ),
         ],
@@ -237,6 +255,7 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
+        health_model._wren_health = sub_devices["wren"]
 
         if thresholds is not None:
             health_model.health_params = thresholds
@@ -262,6 +281,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {
                     "subrack": {
@@ -273,7 +293,8 @@ class TestSpsStationHealthModel:
                 "Health is OK.",
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: Tiles: [] Subracks: "
-                f"{[f'low-mccs/subrack/ci-1-sr{i} - FAILED' for i in range(3)]}",
+                f"{[f'low-mccs/subrack/ci-1-sr{i} - FAILED' for i in range(3)]} "
+                "WREN: []",
                 id="All devices healthy, expect OK, then 3 subracks FAILED, "
                 "expect FAILED",
             ),
@@ -286,6 +307,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {
                     "subrack": {
@@ -297,7 +319,8 @@ class TestSpsStationHealthModel:
                 "Health is OK.",
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: Tiles: [] "
-                "Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED']",
+                "Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED'] "
+                "WREN: []",
                 id="All devices healthy, expect OK, then 1 subrack FAILED,"
                 "expect DEGRADED",
             ),
@@ -313,13 +336,14 @@ class TestSpsStationHealthModel:
                         )
                         for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {
                     "tile": {get_tile_name(0): HealthState.OK},
                 },
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: ['low-mccs/tile/ci-1-tpm00 - FAILED'] Subracks: []",
+                "Tiles: ['low-mccs/tile/ci-1-tpm00 - FAILED'] Subracks: [] WREN: []",
                 HealthState.OK,
                 "Health is OK.",
                 id="One tile unhealthy, expect DEGRADED, then tile becomes OK, "
@@ -334,6 +358,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {
                     "subrack": {
@@ -345,7 +370,8 @@ class TestSpsStationHealthModel:
                 "Health is OK.",
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: Tiles: [] "
-                "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED']",
+                "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED'] "
+                "WREN: []",
                 id="All devices healthy, expect OK, then 1 subrack DEGRADED,"
                 "expect DEGRADED",
             ),
@@ -358,6 +384,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {
                     "subrack": {
@@ -371,7 +398,8 @@ class TestSpsStationHealthModel:
                 "Too many subdevices are in a bad state: Tiles: [] "
                 "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED', "
                 "'low-mccs/subrack/ci-1-sr1 - DEGRADED', "
-                "'low-mccs/subrack/ci-1-sr2 - DEGRADED']",
+                "'low-mccs/subrack/ci-1-sr2 - DEGRADED'] "
+                "WREN: []",
                 id="All devices healthy, expect OK, then 3 subracks DEGRADED,"
                 "expect FAILED",
             ),
@@ -406,6 +434,7 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
+        health_model._wren_health = sub_devices["wren"]
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,
@@ -449,11 +478,12 @@ class TestSpsStationHealthModel:
                         )
                         for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {"tile_degraded": 0.05, "tile_failed": 0.2},
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: ['low-mccs/tile/ci-1-tpm00 - FAILED'] Subracks: []",
+                "Tiles: ['low-mccs/tile/ci-1-tpm00 - FAILED'] Subracks: [] WREN: []",
                 {"tile_degraded": 0.15, "tile_failed": 0.3},
                 HealthState.OK,
                 "Health is OK.",
@@ -471,15 +501,16 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {"subrack_degraded": 0.05, "subrack_failed": 0.2},
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: [] Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED']",
+                "Tiles: [] Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED'] WREN: []",
                 {"subrack_degraded": 0.0004, "subrack_failed": 0.008},
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: [] Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED']",
+                "Tiles: [] Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED'] WREN: []",
                 id="One subrack unhealthy, expect DEGRADED, then lower DEGRADED and "
                 "FAILED threshold, expect FAILED",
             ),
@@ -494,6 +525,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"low-sat/wren/ci-A1": HealthState.OK},
                 },
                 {"subrack_degraded": 0.6, "subrack_failed": 0.8},
                 HealthState.OK,
@@ -536,6 +568,7 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
+        health_model._wren_health = sub_devices["wren"]
 
         health_model.health_params = init_thresholds
 
@@ -569,6 +602,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"wren": HealthState.OK},
                 },
                 HealthState.OK,
                 "Health is OK.",
@@ -587,6 +621,7 @@ class TestSpsStationHealthModel:
                     "tile": {
                         get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
+                    "wren": {"wren": HealthState.OK},
                 },
                 HealthState.OK,
                 "Health is OK.",
@@ -626,6 +661,7 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
+        health_model._wren_health = sub_devices["wren"]
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,

@@ -7,6 +7,7 @@
 * [SKB-1397] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip. Manual calls should
 set a scheduled start time too to avoid this blip,
 4s is typically enough.
+* [THORN-613] SpsStation waits for WREN to be OK during initialise
 
 ## 14.0.2
 

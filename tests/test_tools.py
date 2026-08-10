@@ -60,6 +60,31 @@ def wait_for_condition(
     return False
 
 
+def wait_for_device(
+    trl: str, timeout: float = 120, poll_interval: float = 3
+) -> tango.DeviceProxy | None:
+    """
+    Wait for the device with a timeout.
+
+    :param trl: The device trl
+    :param timeout: The timeout in seconds
+    :param poll_interval: The polling interval
+    :returns: True/False if all condition is satisfied.
+
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            return tango.DeviceProxy(trl)
+        except (
+            tango.ConnectionFailed,
+            tango.DevFailed,
+            tango.CommunicationFailed,
+        ):
+            time.sleep(poll_interval)
+    return None
+
+
 class TpmStatus(enum.IntEnum):
     """
     Enumerated type for tile status.
@@ -160,7 +185,11 @@ def wait_for_completed_command_to_clear_from_queue(
 
 
 def wait_for_lrc_result(
-    device: tango.DeviceProxy, uid: str, expected_result: ResultCode, timeout: float
+    device: tango.DeviceProxy,
+    uid: str,
+    expected_result: ResultCode,
+    timeout: float,
+    expected_status: str = "COMPLETED",
 ) -> None:
     """
     Wait for a specific result from a LRC.
@@ -169,6 +198,7 @@ def wait_for_lrc_result(
     :param uid: The uid used to identify the task under question.
     :param expected_result: The expected ResultCode from execution.
     :param timeout: A time to wait in seconds.
+    :param expected_status: The expected status string from execution.
 
     :raises TimeoutError: When the commands failed to exit the queue in time.
     :raises ValueError: When the Result is incorrect or the result not found.
@@ -189,10 +219,10 @@ def wait_for_lrc_result(
     for finished_result in device.lrcfinished:
         loaded_result = json.loads(finished_result)
         if loaded_result["uid"] == uid:
-            if loaded_result["status"] != "COMPLETED":
+            if loaded_result["status"] != expected_status:
                 raise ValueError(
                     f"Status for {uid} = {loaded_result['status']}. "
-                    "Expected COMPLETED!"
+                    f"Expected {expected_status}!"
                 )
             actual_result = ResultCode(loaded_result["result"][0])
             if actual_result == expected_result:

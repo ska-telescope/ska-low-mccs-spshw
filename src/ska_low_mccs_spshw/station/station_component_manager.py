@@ -483,7 +483,7 @@ class _WrenProxy(DeviceComponentManager):
         return self._health_state_ok
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes, too-many-branches
 class SpsStationComponentManager(
     MccsBaseComponentManager, TaskExecutorComponentManager
 ):

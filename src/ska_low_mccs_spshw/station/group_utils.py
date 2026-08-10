@@ -15,13 +15,6 @@ from typing import Any, Optional
 import tango
 from tango import DevFailed
 
-# Default client-side timeout, in seconds, for tile group calls. Callers
-# set this explicitly on every call via group_write_attribute/group_command,
-# rather than relying on whatever a previous call last left it as --
-# tango.Group's timeout is a mutable property of the shared group object,
-# not a per-call argument, so it does not reset itself.
-_DEFAULT_GROUP_TIMEOUT_SECONDS = 1  # TODO: tmp for testing
-
 __all__ = ["raise_for_group_failures", "group_write_attribute", "group_command"]
 
 
@@ -79,10 +72,13 @@ def group_write_attribute(
     value: Any,
     *,
     multi: bool = False,
-    timeout: float = _DEFAULT_GROUP_TIMEOUT_SECONDS,
 ) -> list[Any]:
     """
     Write an attribute to every device in ``group``, in parallel.
+
+    This is a very thin wrapper purely to create a clean API
+    so both commands and attribute writes have a similar API.
+    ``group_write_attribute`` and ``group_command``.
 
     This should always attempt execution on every device in the group.
     It is purely a dispatcher: it does not inspect the replies for
@@ -98,14 +94,48 @@ def group_write_attribute(
         list.
     :param multi: whether ``value`` is a per-device list rather than a
         single value to broadcast to every device.
-    :param timeout: client-side timeout, in seconds, defaulting to
-        ``_DEFAULT_GROUP_TIMEOUT_SECONDS``.
 
     :return: one ``GroupReply`` per device, in the same order as
         ``group``'s device list.
     """
-    group.set_timeout_millis(timeout * 1000)
     return group.write_attribute(attr_name, value, multi=multi)
+
+
+def _prepare_group_command(
+    arg: Any,
+    multi: bool = False,
+    arg_type: Optional[tango.CmdArgType] = None,
+) -> Any:
+    """Prepare a command argument for ``Group.command_inout``.
+
+    :param arg: single argument to broadcast to every device, or (if
+        ``multi``) a list of one argument per device, ordered as
+        ``group``'s device list.
+    :param multi: whether ``arg`` is a per-device list rather than a
+        single value to broadcast to every device.
+    :param arg_type: the Tango argument type of ``command_name``'s
+        input, required when ``multi`` is True.
+
+    :return: A ``DeviceDataList`` when in multimode, else
+        simply return arg
+
+    :raises ValueError: When multi mode is used without a specified
+        arg_type
+    """
+    if not multi:
+        return arg
+
+    if arg_type is None:
+        raise ValueError("arg_type is required when multi is True")
+
+    device_data_list = tango.DeviceDataList()
+
+    for device_arg in arg:
+        device_data = tango.DeviceData()
+        device_data.insert(arg_type, device_arg)
+        device_data_list.append(device_data)
+
+    return device_data_list
 
 
 def group_command(
@@ -115,7 +145,6 @@ def group_command(
     *,
     multi: bool = False,
     arg_type: Optional[tango.CmdArgType] = None,
-    timeout: float = _DEFAULT_GROUP_TIMEOUT_SECONDS,
 ) -> list[Any]:
     """
     Run a command on every device in ``group``, in parallel.
@@ -134,29 +163,10 @@ def group_command(
     :param multi: whether ``arg`` is a per-device list rather than a
         single value to broadcast to every device.
     :param arg_type: the Tango argument type of ``command_name``'s
-        input, required when ``multi`` is True (used to build the
-        per-device ``tango.DeviceDataList``); ignored otherwise.
-    :param timeout: client-side timeout, in seconds, defaulting to
-        ``_DEFAULT_GROUP_TIMEOUT_SECONDS``.
+        input, required when ``multi`` is True.
 
     :return: one ``GroupCmdReply`` per device, in the same order as
         ``group``'s device list.
-
-    :raises ValueError: if ``multi`` is True and ``arg_type`` is None.
     """
-    group.set_timeout_millis(timeout * 1000)
-
-    if not multi:
-        return group.command_inout(command_name, arg)
-
-    if arg_type is None:
-        raise ValueError("arg_type is required when multi is True")
-
-    device_data_list = tango.DeviceDataList()
-
-    for device_arg in arg:
-        device_data = tango.DeviceData()
-        device_data.insert(arg_type, device_arg)
-        device_data_list.append(device_data)
-
-    return group.command_inout(command_name, device_data_list)
+    sanitised = _prepare_group_command(arg, multi, arg_type)
+    return group.command_inout(command_name, sanitised)

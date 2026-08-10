@@ -483,7 +483,7 @@ class _WrenProxy(DeviceComponentManager):
         return self._health_state_ok
 
 
-# pylint: disable=too-many-instance-attributes, too-many-branches
+# pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
     MccsBaseComponentManager, TaskExecutorComponentManager
 ):
@@ -516,9 +516,9 @@ class SpsStationComponentManager(
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         wren_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        tile_group: tango.Group,
         on_workaround_flag: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
-        tile_group: tango.Group | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -634,14 +634,6 @@ class SpsStationComponentManager(
             # But this code should not be relying on assumptions about TRL structure
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
-        # A single group over all tiles, used to fan attribute writes and commands
-        # out to every tile in parallel instead of one at a time. An injected
-        # group is trusted to already contain every tile; one built here is
-        # populated before use, and never mutated again afterwards.
-        if tile_group is None:
-            tile_group = tango.Group(f"station-{station_id}-tiles")
-            for tile_fqdn in tile_fqdns:
-                tile_group.add(tile_fqdn)
         self._tile_group = tile_group
 
         self._subrack_proxies = {
@@ -2165,6 +2157,9 @@ class SpsStationComponentManager(
             ):
                 results = {}
                 for proxy in self._subrack_proxies.values():
+                    # BUG: This is fire and forget.
+                    # If the device is OFFLINE, we do not listen to the reply and
+                    # proceed to wait for 180 seconds. THORN-690
                     results[proxy._name] = proxy.on()
                 failed = [
                     name for name, rc in results.items() if rc == ResultCode.FAILED
@@ -4661,7 +4656,6 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         command_name: str,
         command_args: Optional[Any] = None,
-        timeout: int = 20,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Execute a given command on all tile proxies, in parallel.
@@ -4675,7 +4669,6 @@ class SpsStationComponentManager(
 
         :param command_name: command to execute.
         :param command_args: args to execute commands with.
-        :param timeout: timeout in which to expect command completion.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4725,9 +4718,7 @@ class SpsStationComponentManager(
             results = [_run_while_handling_errors(proxy) for proxy in connected_proxies]
         else:
             arg = command_args[0] if command_args else None
-            replies = group_command(
-                self._tile_group, command_name, arg, timeout=timeout
-            )
+            replies = group_command(self._tile_group, command_name, arg)
             results = []
             for reply in replies:
                 if reply.has_failed():

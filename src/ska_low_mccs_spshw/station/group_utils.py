@@ -20,7 +20,7 @@ from tango import DevFailed
 # rather than relying on whatever a previous call last left it as --
 # tango.Group's timeout is a mutable property of the shared group object,
 # not a per-call argument, so it does not reset itself.
-_DEFAULT_GROUP_TIMEOUT_SECONDS = 20
+_DEFAULT_GROUP_TIMEOUT_SECONDS = 1  # TODO: tmp for testing
 
 __all__ = ["raise_for_group_failures", "group_write_attribute", "group_command"]
 
@@ -62,7 +62,10 @@ def raise_for_group_failures(
 
         error = tango.DevError()
         error.reason = "GroupOperationFailed"
-        error.desc = f"Failed to {action} on {reply.dev_name()}: unknown error"
+        error.desc = (
+            f"Failed to {action} on {reply.dev_name()}: unknown error. "
+            "No error stack was provided. This may indicate a PyTango bug."
+        )
         error.origin = "raise_for_group_failures"
         error.severity = tango.ErrSeverity.ERR
         errors.append(error)

@@ -1,0 +1,22 @@
+@startuml
+left to right direction
+skinparam componentStyle rectangle
+
+component "SpsStation" as station
+
+component "MccsTile" as tile
+component "MccsSubrack" as subrack
+component "MccsDaq" as daq
+
+node "TPM hardware" as tpm
+node "Subrack hardware" as subrack_hw
+node "Network interface\n(mounted)" as nic
+
+station --> tile : monitors & controls
+station --> subrack : monitors & controls
+station --> daq : monitors & controls
+
+tile --> tpm : monitors & controls
+subrack --> subrack_hw : monitors & controls
+daq --> nic : receives data via
+@enduml

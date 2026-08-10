@@ -77,4 +77,7 @@ that.
 Drilling down
 -------------
 If a specific Tile or Subrack is reporting ``DEGRADED`` or ``FAILED``, you should then 
-drill down and check the ``HealthState`` of the offending device.
+check the ``HealthState`` and ``healthReport`` attributes of the offending device. 
+This may already be presented in a dashboard, but if not, 
+you can read the attribues directly from the device using the Tango Device API.
+(https://tango-controls.readthedocs.io/projects/pytango/en/v10.3.1/tutorial/servers.html).

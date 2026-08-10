@@ -2264,20 +2264,13 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        tile_proxies = list(self._tile_proxies.values())
-        for tile_id, tile_proxy in enumerate(tile_proxies):
-            if tile_proxy._proxy is None:
-                msg = f"tile {tile_id} proxy not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
-
         src_ips1 = [
             str(self._sdn_first_address + 2 * tile_id)
-            for tile_id in range(len(tile_proxies))
+            for tile_id in range(self._number_of_tiles)
         ]
         src_ips2 = [
             str(self._sdn_first_address + 2 * tile_id + 1)
-            for tile_id in range(len(tile_proxies))
+            for tile_id in range(self._number_of_tiles)
         ]
         raise_for_group_failures(
             "write srcip40gfpga1",
@@ -2493,14 +2486,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        tiles = list(self._tile_proxies.values())
-        for proxy in tiles:
-            if proxy._proxy is None:
-                msg = f"tile proxy {proxy} not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
-
-        n_tiles = len(tiles)
+        n_tiles = self._number_of_tiles
         last_tile = n_tiles - 1
 
         def _per_tile_slices(values: list[Any]) -> list[Any]:
@@ -2605,13 +2591,6 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        tiles = list(self._tile_proxies.values())
-        for proxy in tiles:
-            if proxy._proxy is None:
-                msg = f"tile proxy {proxy} not formed"
-                self.logger.error(msg)
-                return ResultCode.FAILED, msg
-
         #
         # Configure 40G ports.
         # Each TPM has 2 IP addresses starting at the provided address
@@ -2620,7 +2599,7 @@ class SpsStationComponentManager(
         #
         # ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
         # base_ip3 = int(ip_tail)
-        last_tile_id = len(tiles) - 1
+        last_tile_id = self._number_of_tiles - 1
 
         def _csp_download_args(tile_id: int) -> str:
             if tile_id == last_tile_id:
@@ -2648,7 +2627,10 @@ class SpsStationComponentManager(
             group_command(
                 self._tile_group,
                 "SetCspDownload",
-                [_csp_download_args(tile_id) for tile_id in range(len(tiles))],
+                [
+                    _csp_download_args(tile_id)
+                    for tile_id in range(self._number_of_tiles)
+                ],
                 multi=True,
                 arg_type=tango.CmdArgType.DevString,
             ),
@@ -3012,7 +2994,7 @@ class SpsStationComponentManager(
             group_write_attribute(
                 self._tile_group,
                 "ppsDelayCorrection",
-                delays[: len(self._tile_proxies)],
+                delays[: self._number_of_tiles],
                 multi=True,
             ),
         )
@@ -3169,7 +3151,7 @@ class SpsStationComponentManager(
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
         self._desired_preadu_levels = levels
-        n_tiles = len(self._tile_proxies)
+        n_tiles = self._number_of_tiles
         per_tile_levels = [
             levels[i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS]
             for i in range(n_tiles)
@@ -3752,7 +3734,7 @@ class SpsStationComponentManager(
 
         first_channel = calibration_coefficients[0]
         coefficients = np.array(calibration_coefficients[1:]).reshape([-1, 256, 8])
-        n_tiles = len(self._tile_proxies)
+        n_tiles = self._number_of_tiles
         per_tile_coefficients = [
             [first_channel]
             + list(coefficients[:, (t * 16) : ((t + 1) * 16), :].reshape([-1]))
@@ -4252,9 +4234,7 @@ class SpsStationComponentManager(
                 task_callback(status=TaskStatus.IN_PROGRESS)
             config_result_code, config_message = self.configure_station_for_calibration(
                 nof_correlator_samples=nof_samples,
-                nof_tiles=(
-                    16 if daq_mode.lower() == "xgpu" else len(self._tile_proxies)
-                ),
+                nof_tiles=(16 if daq_mode.lower() == "xgpu" else self._number_of_tiles),
             )
             match config_result_code:
                 case ResultCode.ABORTED:

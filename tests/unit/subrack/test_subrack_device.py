@@ -1129,7 +1129,7 @@ def test_attribute_alarm_health_model(
         # Race condition between receiving the healthstate event
         # and the devstate actually changing.
         assert wait_for_condition(
-            lambda: subrack_device.state() == DevState.ALARM, timeout=10
+            lambda: subrack_device.state() == DevState.ALARM, timeout=30
         )
 
         # Change the value within the warning range

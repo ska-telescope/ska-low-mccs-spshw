@@ -415,10 +415,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "tile_beamformer_status": "tile_beamformer_status_signal",
         "station_beamformer_status": "station_beamformer_status_signal",
         "fpga0_station_beamformer_error_count": (
-            "fpga0_station_beamformer" "_error_count_signal"
+            "fpga0_station_beamformer_error_count_signal"
         ),
         "fpga1_station_beamformer_error_count": (
-            "fpga1_station_beamformer" "_error_count_signal"
+            "fpga1_station_beamformer_error_count_signal"
         ),
         "fpga0_crc_error_count": "fpga0_crc_error_count_signal",
         "fpga1_crc_error_count": "fpga1_crc_error_count_signal",
@@ -460,15 +460,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_f2f_interface_pll_status_fpga0": "io_f2f_interface_pll_status_fpga0_signal",
         "io_f2f_interface_pll_status_fpga1": "io_f2f_interface_pll_status_fpga1_signal",
         "io_f2f_interface_pll_status_fpga0_counter": (
-            "io_f2f_interface_pll_status" "_fpga0_counter_signal"
+            "io_f2f_interface_pll_status_fpga0_counter_signal"
         ),
         "io_f2f_interface_pll_status_fpga1_counter": (
-            "io_f2f_interface_pll_status" "_fpga1_counter_signal"
+            "io_f2f_interface_pll_status_fpga1_counter_signal"
         ),
         "timing_pll_lock_status": "timing_pll_lock_status_signal",
         "timing_pll_count": "timing_pll_count_signal",
         "timing_pll_40g_lock_status": "timing_pll_40g_lock_status_signal",
-        "timing_pll_40g_count": "timing_pll_40g_count_signal",
         "voltages": "voltages_signal",
         "temperatures": "temperatures_signal",
         "currents": "currents_signal",
@@ -509,10 +508,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
         "adc_rms": "adc_power_signal",
         "fpga0_station_beamformer_flagged_count": (
-            "fpga0_station_beamformer" "_flagged_count_signal"
+            "fpga0_station_beamformer_flagged_count_signal"
         ),
         "fpga1_station_beamformer_flagged_count": (
-            "fpga1_station_beamformer" "_flagged_count_signal"
+            "fpga1_station_beamformer_flagged_count_signal"
         ),
         "ddr_write_size": "ddr_write_size_signal",
         "I2C_access_alm": "I2C_access_alm_signal",
@@ -547,6 +546,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "csp_rounding": "cspRounding_signal",
         "preadu_levels": "preaduLevels_signal",
         "is_station_beam_flagging_enabled": "stationBeamFlagEnabled_signal",
+        "timing_pll_40g_count": "timing_pll_40g_count_signal",
     }
 
     # -----------------

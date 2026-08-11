@@ -198,6 +198,9 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
     builder.add_result_command(
         "Start", result_code=ResultCode.QUEUED, status="Task queued"
     )
+    builder.add_result_command(
+        "Configure", result_code=ResultCode.OK, status="Configure completed OK."
+    )
     return builder()
 
 
@@ -585,6 +588,7 @@ def station_self_check_manager_fixture(
         tile_trls=tile_trls,
         subrack_trls=subrack_trls,
         daq_trl="",
+        wren_trl="",
     )
     # Jank to get around https://github.com/python/mypy/issues/3115 and
     # https://github.com/python/mypy/issues/16509
@@ -595,6 +599,7 @@ def station_self_check_manager_fixture(
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
             daq_trl="",
+            wren_trl="",
         )
         for tpm_test in [
             PassTest,
@@ -608,6 +613,7 @@ def station_self_check_manager_fixture(
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
             daq_trl="",
+            wren_trl="",
         )
         for tpm_test in [
             ErrorTest,

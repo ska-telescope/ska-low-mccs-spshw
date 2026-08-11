@@ -24,6 +24,7 @@ from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
+import tango
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -34,6 +35,8 @@ from ska_control_model import (
 )
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.faults import CmdNotAllowedError
+from ska_tango_base.long_running_commands import LRCReqType
 from ska_tango_base.obs import SKAObsDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango import AttrQuality
@@ -112,6 +115,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
+    # Feature flags for WREN device. When WRENHealthCheckFailOnTimeout is True,
+    # the device will wait until WREN is ok during initialisation. If WREN
+    # times-out then device will not initialise.
+    WRENHealthCheckFailOnTimeout = device_property(dtype=bool, default_value=False)
+    WRENHealthCheckTimeout = device_property(dtype=float, default_value=5 * 60)
+
+    TileGroupTimeout = device_property(
+        dtype=float,
+        doc=(
+            "Set the timeout [ms] for all devices in the tile group. "
+            "Any method which takes longer than "
+            "this time to execute will throw an exception."
+        ),
+        default_value=2400,  # [ms]
+    )
+
     # ---------------
     # Initialisation
     # ---------------
@@ -140,6 +159,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
+        self._health_rollup_devices: list[str]
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
@@ -157,6 +177,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "pps_delta_failed": 9,
             "subracks": (1, 1, 1),
             "tiles": (1, 1, 2),
+            "wren": (1, 1, 1),
         }
         super().init_device()
 
@@ -174,7 +195,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
             f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
-            f"\tWRENTRL: {self.WRENTRL}\n"
+            f"\tWRENTRL: '{self.WRENTRL}'\n"
+            f"\tWRENHealthCheckFailOnTimeout: {self.WRENHealthCheckFailOnTimeout}\n"
+            f"\tWRENHealthCheckTimeout: {self.WRENHealthCheckTimeout}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
@@ -198,10 +221,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_rollup = self._setup_health_rollup()
+        self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
+            self.WRENTRL if self.WRENTRL != " " else "",
             self._old_health_changed,
         )
         # Update thresholds so we don't have to define ppsDelta in two places.
@@ -251,6 +275,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: a component manager for this device.
         """
+        # A single group over all tiles,
+        # Constructed using device_properties.
+        # As it stands a builder pattern seemed overkill for this.
+        # We are constructing here since this hook is commonly overriden for
+        # injection in tests.
+        tile_group = tango.Group(f"station-{self.StationId}-tiles")
+
+        for tile_fqdn in self.TileFQDNs:
+            tile_group.add(tile_fqdn)
+
+        tile_group.set_timeout_millis(  # pylint: disable=no-member
+            self.TileGroupTimeout
+        )
+
         return SpsStationComponentManager(
             self.StationId,
             self.SubrackFQDNs,
@@ -267,11 +305,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.AntennaConfigURI,
             self.StartBandpassesInInitialise,
             self.BandpassIntegrationTime,
+            self.WRENHealthCheckFailOnTimeout,
+            self.WRENHealthCheckTimeout,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
+            self._health_model.wren_health_changed,
+            tile_group,
             self.OnWorkaroundFlag,
             event_serialiser=self._event_serialiser,
         )
@@ -346,7 +388,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _setup_health_rollup(
         self: SpsStation,
-    ) -> HealthRollup:
+    ) -> tuple[HealthRollup, list[str]]:
         #   Rollup is based on three configurable thresholds:
         # * the number of FAILED (or UNKNOWN) sources that cause health
         #   to roll up to overall FAILED;
@@ -377,6 +419,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             rollup_members.append("tiles")
             thresholds["tiles"] = self._health_thresholds["tiles"]
 
+        # Add WREN device to rollup members. For reasons that are unclear to
+        # me, but which seems to affect other device properties too, if the
+        # WRENTRL is set to "" during testing it will be exposed here as " ",
+        # so let's strip the trl of surrounding white space
+        if self.WRENTRL not in ["", " "]:
+            rollup_members.append("wren")
+            thresholds["wren"] = self._health_thresholds["wren"]
+
         health_rollup = HealthRollup(
             rollup_members,
             thresholds["self"],
@@ -384,12 +434,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_summary_changed,
         )
 
+        health_rollup_devices = []
+
         if "subracks" in rollup_members:
             # Subrack Default Thresholds: 1 failed = failed, 1 failed = deg, 1 deg = deg
             health_rollup.define("subracks", self.SubrackFQDNs, thresholds["subracks"])
+            health_rollup_devices.extend(self.SubrackFQDNs)
         if "tiles" in rollup_members:
             # Tile Default Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
             health_rollup.define("tiles", self.TileFQDNs, thresholds["tiles"])
+            health_rollup_devices.extend(self.TileFQDNs)
+        if "wren" in rollup_members:
+            health_rollup.define("wren", [self.WRENTRL], thresholds["wren"])
+            health_rollup_devices.extend([self.WRENTRL])
 
         health_rollup.define(
             "tile_programming_state",
@@ -407,7 +464,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             thresholds["beamformer_flagged_count"],
         )
 
-        return health_rollup
+        return health_rollup, health_rollup_devices
 
     def _redefine_health_rollup(self: SpsStation) -> None:
         """
@@ -446,7 +503,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         old_report = json.loads(self._health_report)
         old_subdevice_healths = _flatten_dict(old_report)
         old_online = self._health_rollup.online
-        self._health_rollup = self._setup_health_rollup()
+        self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
         # Restore old healthstates.
         for subdevice, health in old_subdevice_healths.items():
@@ -530,7 +587,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 f"health = {None if health is None else health.name} "
             )
             if health is not None:
-                self._health_rollup.health_changed(device_name, health)
+                if device_name in self._health_rollup_devices:
+                    self._health_rollup.health_changed(device_name, health)
+                else:
+                    self.logger.warning(f"{device_name} is not in health rollup")
         else:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power)
@@ -853,14 +913,55 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.BandpassDaqTRL = value
         self.component_manager._bandpass_daq_trl = value
 
-    @attribute(dtype=str)
+    @attribute()
     def WrenTRL(self: SpsStation) -> str:
         """
         Report the Tango Resource Locator for this SpsStation's WREN instance.
 
         :return: Return the current WREN TRL.
+
         """
         return self.WRENTRL
+
+    @attribute()
+    def WrenHealthCheckFailOnTimeout(self) -> bool:
+        """
+        Return whether the WREN Health Check feature is enabled.
+
+        :returns: The WREN Health Check feature is enabled.
+
+        """
+        return self.component_manager.wren_health_check_fail_on_timeout
+
+    @WrenHealthCheckFailOnTimeout.write  # type: ignore[no-redef]
+    def WrenHealthCheckFailOnTimeout(self, enabled: bool) -> None:
+        """
+        Set whether the WREN Health Check feature is enabled.
+
+        :param enabled: True to enable WREN Health Check, False to disable.
+
+        """
+        self.component_manager.wren_health_check_fail_on_timeout = enabled
+
+    @attribute()
+    def WrenHealthCheckTimeout(self) -> float:
+        """
+        Return the WREN Health Check timeout in seconds.
+
+        :returns: The WREN Health Check timeout.
+
+        """
+        return self.component_manager.wren_health_check_timeout
+
+    @WrenHealthCheckTimeout.write  # type: ignore[no-redef]
+    def WrenHealthCheckTimeout(self, timeout: float) -> None:
+        """
+        Set the WREN Health Check timeout in seconds.
+
+        :param timeout: The timeout in seconds for WREN Health Check.
+
+        """
+        self.component_manager.wren_health_check_timeout = timeout
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:
@@ -1451,7 +1552,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # if key == "subracks":
             #     self._health_rollup.define("subracks", self.SubrackFQDNs, threshold)
         # If we changed thresholds for subdevices, redefine health rollup.
-        if any(subdevice in thresholds for subdevice in ["tiles", "subracks"]):
+        if any(subdevice in thresholds for subdevice in ["tiles", "subracks", "wren"]):
             self.logger.info("Reconfiguring subdevice health thresholds.")
             self._redefine_health_rollup()
         # If old health model is around, update it too.
@@ -1685,6 +1786,101 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # Slow Commands
     # -------------
 
+    def _check_not_acquiring_for_calibration(
+        self: SpsStation, command_name: str
+    ) -> bool:
+        """
+        Check that no calibration acquisition would be disrupted by a command.
+
+        A calibration acquisition now executes concurrently with other commands,
+        so the handful of commands that would pull the station out from under it -
+        by resynchronising the TPMs, or by repointing the LMC data stream - have to
+        be rejected for its duration. The beamformer commands used by a scan are
+        deliberately not among them: scanning while calibrating is the point.
+
+        :param command_name: name of the command being checked, used in the
+            error message.
+
+        :return: True if the command is allowed.
+
+        :raises CmdNotAllowedError: if an acquisition is in progress.
+        """
+        if self.component_manager.acquiring_data_for_calibration.is_set():
+            raise CmdNotAllowedError(
+                f"{command_name} would disrupt the calibration acquisition in "
+                "progress. Wait for it to finish, or Abort it first."
+            )
+        return True
+
+    def is_Initialise_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the Initialise command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("Initialise")
+
+    def is_ReInitialise_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the ReInitialise command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("ReInitialise")
+
+    def is_StartAcquisition_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the StartAcquisition command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("StartAcquisition")
+
+    def is_ConfigureStationForCalibration_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the ConfigureStationForCalibration command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration(
+            "ConfigureStationForCalibration"
+        )
+
+    def is_SetLmcDownload_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the SetLmcDownload command is allowed.
+
+        :param request_type: the request type. Unused, as SetLmcDownload is a fast
+            command, but accepted so that this keeps working if it ever becomes an
+            LRC.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("SetLmcDownload")
+
     @stb.long_running_commands.long_running_command
     def Initialise(
         self: SpsStation,
@@ -1821,7 +2017,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return task
 
     # pylint: disable=too-many-arguments
-    @stb.long_running_commands.long_running_command
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @stb.long_running_commands.mark_long_running
     @stb.validators.validate_json_args
     def AcquireDataForCalibration(
         self: SpsStation,
@@ -1830,9 +2027,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         start_time: str | None = None,
         daq_mode: str = "TCC",
         nof_samples: int = 1835008,
-    ) -> stb.type_hints.TaskFunctionType:
+    ) -> DevVarLongStringArrayType:
         """
         Start acquiring data for calibration.
+
+        This is a long running command, but unlike the station's other LRCs it does
+        not execute on the general lane of the task executor. An acquisition runs
+        for as long as it takes the requested channels to arrive, and the station
+        must stay available for other commands - notably Scan - throughout. It
+        therefore executes on the calibration lane, and is reported through the
+        usual LRC attributes alongside whatever else is executing. Abort aborts
+        every lane, so it stops this too.
 
         A JSON string containing the keys:
 
@@ -1858,7 +2063,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            return self.component_manager.acquire_data_for_calibration(
+            self.component_manager.acquire_data_for_calibration(
                 first_channel,
                 last_channel,
                 start_time,
@@ -1868,7 +2073,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 task_abort_event=task_abort_event,
             )
 
-        return task
+        command_id, task_callback = self.allocate_lrc("AcquireDataForCalibration")
+        status, message = self.component_manager.submit_calibration_task(
+            task, task_callback=task_callback
+        )
+        return cast(
+            DevVarLongStringArrayType,
+            self.convert_submission_result_to_lrc_return(command_id, status, message),
+        )
 
     @stb.long_running_commands.long_running_command
     def ConfigureStationForCalibration(
@@ -1894,7 +2106,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            return self.component_manager.configure_station_for_calibration(
+            self.component_manager.configure_station_for_calibration(
                 **json.loads(daq_config),
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,
@@ -2533,8 +2745,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
 
-        self.component_manager.load_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        return self.component_manager.load_pointing_delays(argin)
 
     @command(
         dtype_in="DevString",
@@ -2569,6 +2780,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     ) -> stb.type_hints.TaskFunctionType:
         """
         Start the beamformer at the specified time delay.
+
+        NOTE: Supplying ``start_time`` is recommended. Transient station
+        beamformer error spikes at startup are caused by non-synchronised TPM
+        beamformer start (SKB-1397). Simultaneous starts avoid the issue.
+        A start time 4 seconds in the future is typically sufficient for
+        the request to arrive on the TPMs.
 
         A json dictionary with optional keywords:
 

@@ -45,6 +45,7 @@ class SpsStationSelfCheckManager:
         tile_trls: list[str],
         subrack_trls: list[str],
         daq_trl: str,
+        wren_trl: str,
         component_manager: SpsStationComponentManager,
     ) -> None:
         """
@@ -54,6 +55,7 @@ class SpsStationSelfCheckManager:
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param wren_trl: trl of the WREN the station has.
         :param component_manager: SpsStation component manager under test.
         """
         self.logger = logger
@@ -63,6 +65,7 @@ class SpsStationSelfCheckManager:
         self._tile_trls = tile_trls
         self._subrack_trls = subrack_trls
         self._daq_trl = daq_trl
+        self._wren_trl = wren_trl
         self._component_manager = component_manager
         self._keep_test_data = True
 
@@ -75,6 +78,7 @@ class SpsStationSelfCheckManager:
                 tile_trls=list(self._tile_trls),
                 subrack_trls=list(self._subrack_trls),
                 daq_trl=self._daq_trl,
+                wren_trl=self._wren_trl,
             )
 
         tpm_tests = [

@@ -2,9 +2,27 @@
 
 ## Unreleased
 
+* [THORN-680] Make use of tango.Groups to parallelise writes and commands in spsstation.
+* [THORN-681] Move tile-readiness gating (Initialised/Synchronised) from ad-hoc `tileProgrammingState`
+checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
+`_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
+Synchronised tile (previously ungated).
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+
+## 14.1.0
+
+* [THORN-682] Update ska-low-mccs-daq reference to 7.0.2
+* [THORN-682] ``SpsStation.AcquireDataForCalibration`` no longer blocks other commands. It is still a long running command, reported through the usual LRC attributes, but the station's task executor now provides two independent lanes and the acquisition executes on a calibration lane of its own, rather than occupying the general lane for the whole acquisition. A scan can therefore be started and stopped while calibration data is being acquired. ``Abort`` stops an acquisition as before. The commands that would disrupt an acquisition in progress - ``Initialise``, ``ReInitialise``, ``StartAcquisition``, ``ConfigureStationForCalibration`` and ``SetLmcDownload`` - are now rejected for its duration.
+* [SKB-1397] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip. Manual calls should
+set a scheduled start time too to avoid this blip,
+4s is typically enough.
+* [THORN-613] SpsStation waits for WREN to be OK during initialise
+
+## 14.0.2
+
+* [THORN-322] Add docs for Health of hardware facing devices.
+* [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.
 * [THORN-125] Improve observability when UNPROGRAMMED.
-* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL
 
 ## 14.0.1

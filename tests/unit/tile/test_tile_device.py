@@ -2433,7 +2433,14 @@ class TestMccsTileCommands:
         args = [] if arg is None else [arg]
         with pytest.raises(
             DevFailed,
-            match="Communication with component is not established",
+            match=(
+                r"Communication with component is not established\."
+                r"|To execute this command we must be in state 'Synchronised'! "
+                r"Tile is currently in state Unknown"
+                r"|To execute this command we must be in state "
+                r"'Initialised' or 'Synchronised'! "
+                r"Tile is currently in state Unknown"
+            ),
         ):
             _ = getattr(tile_device, device_command)(*args)
 

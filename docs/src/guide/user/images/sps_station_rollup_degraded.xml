@@ -1,0 +1,186 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="SpsStation health rollup — DEGRADED" id="sps-health-rollup-degraded">
+    <mxGraphModel dx="1522" dy="935" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="820" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="top" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3c800;strokeColor=#B09500;fontColor=#000000;" value="SpsStation&lt;div&gt;DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="160" x="483" y="13" as="geometry" />
+        </mxCell>
+        <mxCell id="orTop" parent="1" style="shape=xor;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="OR" vertex="1">
+          <mxGeometry height="44.5" width="50" x="538" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="e_orTop_top" edge="1" parent="1" source="orTop" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;entryX=0.5;entryY=1;exitDx=0;exitDy=0;exitPerimeter=0;" target="top">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="self&lt;div&gt;DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="160" x="60" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="beamformer_flagged_count&lt;div&gt;DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="200" x="280" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="k-of-n voting gate&lt;div&gt;subracks &amp;mdash; 1 of N DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="190" x="560" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="b4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="k-of-n voting gate&lt;div&gt;tiles &amp;mdash; 2 of N DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="190" x="980" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="e_b1" edge="1" parent="1" source="b1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=0;" target="orTop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_b2" edge="1" parent="1" source="b2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=0;" target="orTop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_b3" edge="1" parent="1" source="b3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=0;" target="orTop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_b4" edge="1" parent="1" source="b4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=0;" target="orTop">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" parent="1" style="ellipse;whiteSpace=wrap;html=1;shapeInside=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;pps_delta_degraded &amp;le; ppsDelaySpread &amp;lt; pps_delta_failed&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="140" x="70" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="e_l1" edge="1" parent="1" source="l1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" target="b1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" parent="1" style="ellipse;whiteSpace=wrap;html=1;shapeInside=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;finalTileBeamformerFlaggedCountOk is False&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="200" x="280" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="e_l2" edge="1" parent="1" source="l2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" target="b2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g1" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="508" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g1_tri" parent="g1" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T1" vertex="1">
+          <mxGeometry height="30" width="50" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g1_lbl" parent="g1" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Subrack 1&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="70" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="g2" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="593" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g2_tri" parent="g2" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T2" vertex="1">
+          <mxGeometry height="30" width="50" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g2_lbl" parent="g2" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Subrack 2&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="70" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dots1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;&amp;hellip;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="40" x="678" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="g3" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="763" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g3_tri" parent="g3" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="TN" vertex="1">
+          <mxGeometry height="30" width="50" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g3_lbl" parent="g3" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Subrack N&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="70" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g1" edge="1" parent="1" source="g1_tri" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="b3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g2" edge="1" parent="1" source="g2_tri" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="b3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g3" edge="1" parent="1" source="g3_tri" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="b3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g4" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="928" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g4_tri" parent="g4" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T1" vertex="1">
+          <mxGeometry height="30" width="50" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g4_lbl" parent="g4" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Tile 1&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="70" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="g5" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="1013" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g5_tri" parent="g5" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T2" vertex="1">
+          <mxGeometry height="30" width="50" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g5_lbl" parent="g5" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Tile 2&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="70" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dots2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;&amp;hellip;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="40" x="1098" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="g6" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="1183" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g6_tri" parent="g6" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="TN" vertex="1">
+          <mxGeometry height="30" width="50" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="g6_lbl" parent="g6" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Tile N&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="70" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g4" edge="1" parent="1" source="g4_tri" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="b4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g5" edge="1" parent="1" source="g5_tri" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="b4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_g6" edge="1" parent="1" source="g6_tri" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="b4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legendBox" parent="1" style="rounded=1;dashed=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#5c6d69;" value="" vertex="1">
+          <mxGeometry height="70" width="518" x="20" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="legendTri" parent="1" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T" vertex="1">
+          <mxGeometry height="30" width="50" x="45" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="legendTxt" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;rounded=0;fontSize=11;fontColor=#5c6d69;" value="= a device&#39;s own HealthState. That device&#39;s own fault tree lives inside the device itself." vertex="1">
+          <mxGeometry height="50" width="545" x="107.5" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;rounded=0;fontSize=11;fontColor=#5c6d69;" value="Root threshold (1,1,1): degraded‑to‑degraded = 1, so a single DEGRADED child (with none FAILED) is enough to degrade the station." vertex="1">
+          <mxGeometry height="100" width="640" x="578" y="490" as="geometry" />
+        </mxCell>
+
+        <!-- expansion: what each T above actually is -->
+        <mxCell id="expLabel" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;fontSize=11;fontColor=#5c6d69;fontStyle=1;" value="Each T above expands to that device&#39;s own HealthRecorder result:" vertex="1">
+          <mxGeometry height="20" width="500" x="20" y="610" as="geometry" />
+        </mxCell>
+
+        <mxCell id="srWarn" parent="1" style="ellipse;whiteSpace=wrap;html=1;shapeInside=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Any monitored Tango attribute in ATTR_WARNING, and none in ATTR_ALARM&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="220" x="20" y="635" as="geometry" />
+        </mxCell>
+        <mxCell id="srBox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Subrack&lt;div&gt;DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="150" x="60" y="725" as="geometry" />
+        </mxCell>
+        <mxCell id="e_srWarn" edge="1" parent="1" source="srWarn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="srBox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="srTri" parent="1" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T" vertex="1">
+          <mxGeometry height="30" width="50" x="225" y="725" as="geometry" />
+        </mxCell>
+        <mxCell id="srTriLbl" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="&amp;equiv; T above" vertex="1">
+          <mxGeometry height="20" width="90" x="210" y="758" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tileWarn" parent="1" style="ellipse;whiteSpace=wrap;html=1;shapeInside=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Any monitored Tango attribute in ATTR_WARNING, and none in ATTR_ALARM&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="220" x="340" y="635" as="geometry" />
+        </mxCell>
+        <mxCell id="tileBox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Tile&lt;div&gt;DEGRADED&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="150" x="380" y="725" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tileWarn" edge="1" parent="1" source="tileWarn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="tileBox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tileTri" parent="1" style="triangle;whiteSpace=wrap;html=1;shapeInside=1;direction=north;fillColor=#d5e8d4;strokeColor=#82b366;" value="T" vertex="1">
+          <mxGeometry height="30" width="50" x="545" y="725" as="geometry" />
+        </mxCell>
+        <mxCell id="tileTriLbl" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;" value="&amp;equiv; T above" vertex="1">
+          <mxGeometry height="20" width="90" x="530" y="758" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tileGroupsNote" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;rounded=0;fontSize=10;fontColor=#5c6d69;" value="MccsTile also derives 7 per-group *Health attributes (temperature, voltage, current, ADC, timing, I/O, DSP) the same worst-of-quality way. Device healthState is the worst across all monitored attributes, not just these groups." vertex="1">
+          <mxGeometry height="95" width="280" x="610" y="635" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -24,6 +24,7 @@ from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
+import tango
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -119,6 +120,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # times-out then device will not initialise.
     WRENHealthCheckFailOnTimeout = device_property(dtype=bool, default_value=False)
     WRENHealthCheckTimeout = device_property(dtype=float, default_value=5 * 60)
+
+    TileGroupTimeout = device_property(
+        dtype=float,
+        doc=(
+            "Set the timeout [ms] for all devices in the tile group. "
+            "Any method which takes longer than "
+            "this time to execute will throw an exception."
+        ),
+        default_value=2400,  # [ms]
+    )
 
     # ---------------
     # Initialisation
@@ -264,6 +275,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: a component manager for this device.
         """
+        # A single group over all tiles,
+        # Constructed using device_properties.
+        # As it stands a builder pattern seemed overkill for this.
+        # We are constructing here since this hook is commonly overriden for
+        # injection in tests.
+        tile_group = tango.Group(f"station-{self.StationId}-tiles")
+
+        for tile_fqdn in self.TileFQDNs:
+            tile_group.add(tile_fqdn)
+
+        tile_group.set_timeout_millis(  # pylint: disable=no-member
+            self.TileGroupTimeout
+        )
+
         return SpsStationComponentManager(
             self.StationId,
             self.SubrackFQDNs,
@@ -288,6 +313,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
             self._health_model.wren_health_changed,
+            tile_group,
             self.OnWorkaroundFlag,
             event_serialiser=self._event_serialiser,
         )
@@ -2719,8 +2745,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
 
-        self.component_manager.load_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        return self.component_manager.load_pointing_delays(argin)
 
     @command(
         dtype_in="DevString",

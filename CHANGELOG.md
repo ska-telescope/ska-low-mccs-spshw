@@ -1,5 +1,13 @@
 # Version History
 
+## Unreleased
+
+* [THORN-680] Make use of tango.Groups to parallelise writes and commands in spsstation.
+* [THORN-681] Move tile-readiness gating (Initialised/Synchronised) from ad-hoc `tileProgrammingState`
+checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
+`_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
+Synchronised tile (previously ungated).
+
 ## 14.1.0
 
 * [THORN-682] Update ska-low-mccs-daq reference to 7.0.2
@@ -14,7 +22,6 @@ set a scheduled start time too to avoid this blip,
 * [THORN-322] Add docs for Health of hardware facing devices.
 * [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.
 * [THORN-125] Improve observability when UNPROGRAMMED.
-* [THORN-125] Bump daq version: 6.1.0 -> 6.1.1
 * [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL
 
 ## 14.0.1

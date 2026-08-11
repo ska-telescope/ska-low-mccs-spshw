@@ -184,3 +184,4 @@ SdnFirstInterface = "10.130.0.1/25"
 [tool.tangodifdoc.MccsTile.properties]
 SubrackFQDN = "low-mccs/subrack/01"
 SubrackBay = 1
+UseAttributesForHealth = false

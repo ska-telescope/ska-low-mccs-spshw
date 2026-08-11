@@ -1126,7 +1126,11 @@ def test_attribute_alarm_health_model(
             )
         )
         change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-        assert subrack_device.state() == DevState.ALARM
+        # Race condition between receiving the healthstate event
+        # and the devstate actually changing.
+        assert wait_for_condition(
+            lambda: subrack_device.state() == DevState.ALARM, timeout=10
+        )
 
         # Change the value within the warning range
         subrack_device.ChangeHardwareAttributeValue(

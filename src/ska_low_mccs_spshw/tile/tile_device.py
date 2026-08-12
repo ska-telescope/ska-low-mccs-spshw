@@ -476,6 +476,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
         "ppsPresent": "ppsPresent_signal",
+        "fpga0_station_beamformer_flagged_count": (
+            "fpga0_station_beamformer_flagged_count_signal"
+        ),
+        "fpga1_station_beamformer_flagged_count": (
+            "fpga1_station_beamformer_flagged_count_signal"
+        ),
     }
 
     _INTERMEDIATE_HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -507,12 +513,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "forty_gb_destination_ips": "forty_gb_destination_ips_signal",
         "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
         "adc_rms": "adc_power_signal",
-        "fpga0_station_beamformer_flagged_count": (
-            "fpga0_station_beamformer_flagged_count_signal"
-        ),
-        "fpga1_station_beamformer_flagged_count": (
-            "fpga1_station_beamformer_flagged_count_signal"
-        ),
+        # "fpga0_station_beamformer_flagged_count": (
+        #     "fpga0_station_beamformer_flagged_count_signal"
+        # ),
+        # "fpga1_station_beamformer_flagged_count": (
+        #     "fpga1_station_beamformer_flagged_count_signal"
+        # ),
         "ddr_write_size": "ddr_write_size_signal",
         "I2C_access_alm": "I2C_access_alm_signal",
         "temperature_alm": "temperature_alm_signal",

@@ -420,6 +420,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga1_station_beamformer_error_count": (
             "fpga1_station_beamformer_error_count_signal"
         ),
+        "fpga0_station_beamformer_flagged_count": (
+            "fpga0_station_beamformer_flagged_count_signal"
+        ),
+        "fpga1_station_beamformer_flagged_count": (
+            "fpga1_station_beamformer_flagged_count_signal"
+        ),
         "fpga0_crc_error_count": "fpga0_crc_error_count_signal",
         "fpga1_crc_error_count": "fpga1_crc_error_count_signal",
         "fpga0_bip_error_count": "fpga0_bip_error_count_signal",
@@ -476,12 +482,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
         "ppsPresent": "ppsPresent_signal",
-        "fpga0_station_beamformer_flagged_count": (
-            "fpga0_station_beamformer_flagged_count_signal"
-        ),
-        "fpga1_station_beamformer_flagged_count": (
-            "fpga1_station_beamformer_flagged_count_signal"
-        ),
     }
 
     _INTERMEDIATE_HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -513,12 +513,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "forty_gb_destination_ips": "forty_gb_destination_ips_signal",
         "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
         "adc_rms": "adc_power_signal",
-        # "fpga0_station_beamformer_flagged_count": (
-        #     "fpga0_station_beamformer_flagged_count_signal"
-        # ),
-        # "fpga1_station_beamformer_flagged_count": (
-        #     "fpga1_station_beamformer_flagged_count_signal"
-        # ),
         "ddr_write_size": "ddr_write_size_signal",
         "I2C_access_alm": "I2C_access_alm_signal",
         "temperature_alm": "temperature_alm_signal",
@@ -1244,7 +1238,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     "Intermediate Health changed ==> " f"{group=} {health=}"
                 )
                 self._intermediate_healths[group] = health
-                # if group in self._INTERMEDIATE_HEALTH_SIGNAL_MAP:
                 setattr(self, self._INTERMEDIATE_HEALTH_SIGNAL_MAP[group], health)
 
     def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
@@ -1642,12 +1635,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.logger.warning(
                     f"Unable to read {alarm_name}, logging as invalid. "
                     "However, attribute value is last known value: "
-                    f"{alarm_signal}"
+                    f"{getattr(self, alarm_name)}"
                 )
         else:
             for alarm_name, alarm_signal in self.__alarm_attribute_map.items():
                 alarm_value = alarms.get(alarm_name)
-                setattr(self, alarm_signal, alarm_value)
+                setattr(self, alarm_name, alarm_value)
 
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False

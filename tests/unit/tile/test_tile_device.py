@@ -404,9 +404,6 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
 #   version used by this test harness (see `null_value_attributes` fixture).
 # - timing_pll_40g_count: not populated for the simulated bios version used
 #   by this test harness (see `null_value_attributes` fixture).
-# - fpga0/1_station_beamformer_flagged_count: these are actually driven via
-#   MccsTile._GENERIC_SIGNAL_MAP/_update_attribute_callback, not via the
-#   health structure, despite appearing in attribute_monitoring_point_map.
 
 HEALTH_ATTRIBUTE_CASES: list[tuple[str, list[str], Optional[Callable[[Any], Any]]]] = [
     (name, path, HEALTH_ATTRIBUTE_CONVERTERS.get(name))

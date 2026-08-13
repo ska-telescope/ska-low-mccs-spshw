@@ -1635,12 +1635,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.logger.warning(
                     f"Unable to read {alarm_name}, logging as invalid. "
                     "However, attribute value is last known value: "
-                    f"{getattr(self, alarm_name)}"
+                    f"{alarm_signal}"
                 )
         else:
             for alarm_name, alarm_signal in self.__alarm_attribute_map.items():
                 alarm_value = alarms.get(alarm_name)
-                setattr(self, alarm_name, alarm_value)
+                setattr(self, alarm_signal, alarm_value)
 
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
@@ -1659,6 +1659,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._attribute_state[attribute_name].mark_stale()
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
                     setattr(self, self._HEALTH_SIGNAL_MAP[attribute_name], None)
+                elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                    setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1682,6 +1684,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     setattr(
                         self,
                         self._HEALTH_SIGNAL_MAP[attribute_name],
+                        emit_value,
+                    )
+                elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                    emit_value = attribute_value
+                    setattr(
+                        self,
+                        self._GENERIC_SIGNAL_MAP[attribute_name],
                         emit_value,
                     )
                 else:
@@ -3471,6 +3480,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     I2C_access_alm = attribute_from_signal(
         I2C_access_alm_signal,
+        write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
@@ -3482,6 +3492,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     temperature_alm = attribute_from_signal(
         temperature_alm_signal,
+        write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
@@ -3496,6 +3507,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     voltage_alm = attribute_from_signal(
         voltage_alm_signal,
+        write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
@@ -3507,6 +3519,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     SEM_wd = attribute_from_signal(
         SEM_wd_signal,
+        write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
@@ -3518,6 +3531,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     MCU_wd = attribute_from_signal(
         MCU_wd_signal,
+        write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,

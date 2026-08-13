@@ -232,8 +232,6 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "timing_pll_40g_count",  # This is only available in specific bios versions
         # (the simulator is configured to be on a version > 0.6.0 hence
         # this attibute has value None and is never updated)
-        "antennaIds",  # reads `None` until configure
-        "ddr_write_size",  # reads `None` until configure
     ] + [f"temperatureADC{i}" for i in range(16)]
 
 

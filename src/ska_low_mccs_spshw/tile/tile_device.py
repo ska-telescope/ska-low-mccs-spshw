@@ -679,7 +679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_count": "timing_pll_count",
             "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
             "timing_pll_40g_count": "timing_pll_40g_count",
-            "timing_sync_time": "timing_sync_time",
+            "timing_sync_time": "timestamp_cnt",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
             "fpga0_clocks": "fpga0_clocks",
@@ -785,9 +785,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ),
             "timing_pll_40g_count": lambda val: (
                 int(val[1]) if val[1] is not None else None
-            ),
-            "timing_sync_time": lambda val: (
-                bool(val[1]) if val[1] is not None else None
             ),
             "fpga0_qpll_counter": lambda val: (
                 int(val[1]) if val[1] is not None else None
@@ -3084,12 +3081,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if the sync time counters have rolled over.
 
         :example:
-           >>> tile.timing_sync_time
+           >>> tile.timestamp_cnt
            'False'
 
         :return: the sync time health status.
         """
-        return self._attribute_state["timing_sync_time"].read()
+        return self._attribute_state["timestamp_cnt"].read()
     
     @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:

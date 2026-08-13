@@ -764,6 +764,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
+            "timestamp_cnt": lambda val: (
+                int(val) if val is not None else None
+            ),
             "fpga0_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
@@ -3067,22 +3070,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["timing_pll_40g_count"].read()
 
     @attribute(
-        dtype="DevBoolean",
+        dtype="DevShort",
         label="timestamp_cnt",
-        max_alarm=1,
+        min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def timestamp_cnt(self: MccsTile) -> bool:
+    def timestamp_cnt(self: MccsTile) -> int:
         """
         Return the sync time status.
 
-        Expected: `True` if the sync time health is good. False
+        Expected: `1` if the sync time health is good. `0`
         if the sync time counters have rolled over.
 
         :example:
            >>> tile.timestamp_cnt
-           'False'
+           '1'
 
         :return: the sync time health status.
         """

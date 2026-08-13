@@ -3071,12 +3071,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevBoolean",
-        label="timing_sync_time",
+        label="timestamp_cnt",
         max_alarm=1,
         abs_change=1,
         archive_abs_change=1,
     )
-    def timing_sync_time(self: MccsTile) -> bool:
+    def timestamp_cnt(self: MccsTile) -> bool:
         """
         Return the sync time status.
 

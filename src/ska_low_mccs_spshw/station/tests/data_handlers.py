@@ -85,12 +85,12 @@ class BaseDataReceivedHandler(abc.ABC):
         :param quality: the tango.AttrQuality of the event.
         """
         self._logger.debug(f"Got event: {name}, {value}, {quality}")
-        if self.ignore_next_event:
-            self.ignore_next_event = False
-            return
-        if quality != AttrQuality.ATTR_VALID:
-            return
         with self._callback_lock:
+            if self.ignore_next_event:
+                self.ignore_next_event = False
+                return
+            if quality != AttrQuality.ATTR_VALID:
+                return
             assert name.lower() == "datareceivedresult"
             file = json.loads(value[1])["file_name"]
             if file in self._tile_files.values():

@@ -389,10 +389,15 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         for tile_id in range(self._nof_tiles):
             with h5py.File(self._tile_files[tile_id], "r") as f:
                 n_pols = int(f["root"].attrs["n_pols"])
+                n_antennas = int(f["root"].attrs["n_antennas"])
                 raw = f["raw_"]["data"][:, : self._nof_samples]
-            tile_data = raw.reshape(TileData.ANTENNA_COUNT, n_pols, self._nof_samples)
-            start_idx = TileData.ANTENNA_COUNT * tile_id
-            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
+            assert n_antennas == self._nof_antennas, (
+                f"File reports {n_antennas} antennas, "
+                f"handler configured for {self._nof_antennas}"
+            )
+            tile_data = raw.reshape(self._nof_antennas, n_pols, self._nof_samples)
+            start_idx = self._nof_antennas * tile_id
+            end_idx = self._nof_antennas * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
 
     def set_nof_samples(self: AntennaBufferDataHandler, nof_samples: int) -> None:

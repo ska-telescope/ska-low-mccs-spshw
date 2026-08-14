@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import itertools
-import json
 import logging
 import random
 import time
@@ -98,14 +97,7 @@ class TestTileBeamformer(BaseDaqTest):
 
     def _send_beam_data(self: TestTileBeamformer) -> None:
         """Send beam data to the DAQ."""
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "beam",
-                    "seconds": 0.2,
-                }
-            )
-        )
+        self._send_data_samples(data_type="beam", seconds=0.2)
 
     def _get_beam_value(
         self: TestTileBeamformer, tile_no: int, pol: int, channel: int

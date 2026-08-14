@@ -20,6 +20,7 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
+from ska_control_model import ResultCode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from tango import EventType
 
@@ -143,6 +144,34 @@ class BaseDaqTest(TpmSelfCheckTest):
             daq_status["Receiver IP"][0],
             0xF0D0,
             daq_status["Receiver Ports"][0],
+        )
+
+    def _send_data_samples(self: BaseDaqTest, **params: Any) -> None:
+        """
+        Request a data transmission from all tiles, and check it was accepted.
+
+        ``force`` is set because SpsStation gates SendDataSamples on the
+        ``pendingDataRequests`` attribute of every tile, which is polled
+        rather than read live. A stale ``True`` on any one tile makes the
+        station return REJECTED without transmitting from any tile. With
+        ``force`` the station aborts the previous send and proceeds, which is
+        what we want here: the caller has already consumed the data from the
+        previous request.
+
+        The result code is checked because a rejected request is a return
+        value, not an exception. Ignoring it turns "nothing was transmitted"
+        into a timeout waiting for data that was never asked for.
+
+        :param params: parameters for SendDataSamples.
+
+        :raises AssertionError: if the request was not accepted.
+        """
+        result_codes, messages = self.component_manager.send_data_samples(
+            json.dumps(params), force=True
+        )
+        assert result_codes[0] == ResultCode.OK, (
+            f"SendDataSamples({params}) was not accepted: "
+            f"{result_codes[0].name} - {messages[0]}"
         )
 
     def _configure_and_start_pattern_generator(

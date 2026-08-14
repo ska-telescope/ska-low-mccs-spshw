@@ -8,7 +8,6 @@
 """An implementation of a test for the tile pointing."""
 from __future__ import annotations
 
-import json
 import logging
 import random
 import time
@@ -90,14 +89,7 @@ class TestTilePointing(BaseDaqTest):
 
     def _send_beam_data(self: TestTilePointing) -> None:
         """Send beam data to the DAQ."""
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "beam",
-                    "seconds": 0.2,
-                }
-            )
-        )
+        self._send_data_samples(data_type="beam", seconds=0.2)
 
     def _get_beam_value(
         self: TestTilePointing, pol: int, channel: int

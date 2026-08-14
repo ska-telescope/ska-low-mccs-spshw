@@ -8,7 +8,6 @@
 """An implementation of a test for beamformed data from tiles."""
 from __future__ import annotations
 
-import json
 import time
 from copy import copy
 
@@ -45,14 +44,7 @@ class TestBeam(BaseDaqTest):
     """
 
     def _send_beam_data(self: TestBeam) -> None:
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "beam",
-                    "seconds": 0.2,
-                }
-            )
-        )
+        self._send_data_samples(data_type="beam", seconds=0.2)
 
     # pylint: disable=too-many-locals
     def _check_beam(self: TestBeam) -> None:

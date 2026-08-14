@@ -273,15 +273,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
         self.test_logger.info("Sending raw data samples (testing)")
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "raw",
-                    "seconds": 1,
-                    "sync": sync,
-                }
-            )
-        )
+        self._send_data_samples(data_type="raw", seconds=1, sync=sync)
 
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
         """Check that DAQ data is as expected.

@@ -8,7 +8,6 @@
 """An implementation of a test for raw data from tiles."""
 from __future__ import annotations
 
-import json
 import time
 from copy import copy
 
@@ -45,15 +44,7 @@ class TestRaw(BaseDaqTest):
     """
 
     def _send_raw_data(self: TestRaw, sync: bool) -> None:
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "raw",
-                    "seconds": 1,
-                    "sync": sync,
-                }
-            )
-        )
+        self._send_data_samples(data_type="raw", seconds=1, sync=sync)
 
     def _check_raw(self: TestRaw, raw_data_synchronised: bool = False) -> None:
         self.test_logger.debug("Checking received data")

@@ -28,9 +28,9 @@ class TestStationBeamDataRate(BaseDaqTest):
     ##########
 
     1. Configure the beamformer table for your TPMs to be for the full bandwidth
-    2. Start the beamformer.
+    2. Stop the beamformer, then start it again.
     3. Measure the data rate from DAQ for 1 min, comparing to expected rate.
-    4. Repeat for n iterations.
+    4. Repeat for n iterations, restarting the beamformer each time.
 
     #################
     TEST REQUIREMENTS
@@ -42,6 +42,31 @@ class TestStationBeamDataRate(BaseDaqTest):
     3. Your TPMs must be synchronised.
     4. You must have a DAQ available.
     """
+
+    BEAMFORMER_START_DELAY = 3  # seconds
+    BEAMFORMER_STATE_TIMEOUT = 20  # seconds
+    DATA_RATE_SETTLE_TIME = 5  # seconds
+
+    def _wait_for_beamformer_running(
+        self: TestStationBeamDataRate, running: bool, timeout: float
+    ) -> None:
+        """
+        Wait for the station beamformer running state to settle.
+
+        :param running: the state to wait for.
+        :param timeout: seconds to wait before giving up.
+
+        :raises AssertionError: if the state was not reached within the
+            timeout.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.component_manager.is_beamformer_running == running:
+                return
+            time.sleep(0.5)
+        raise AssertionError(
+            f"Beamformer did not report running={running} within {timeout}s"
+        )
 
     def _configure_beamformer_all_regions(self: TestStationBeamDataRate) -> None:
         """Configure the beamformer table on each TPM to be for the full bandwidth."""
@@ -86,8 +111,14 @@ class TestStationBeamDataRate(BaseDaqTest):
 
         with self.reset_context():
             for iteration in test_iterations:
+                self.component_manager.stop_beamformer(None)
+                self._wait_for_beamformer_running(False, self.BEAMFORMER_STATE_TIMEOUT)
+
                 beamformer_start_time = datetime.strftime(
-                    datetime.fromtimestamp(int(time.time()) + 3), TileTime.RFC_FORMAT
+                    datetime.fromtimestamp(
+                        int(time.time()) + self.BEAMFORMER_START_DELAY
+                    ),
+                    TileTime.RFC_FORMAT,
                 )
                 self.component_manager.start_beamformer(
                     start_time=beamformer_start_time,
@@ -95,9 +126,14 @@ class TestStationBeamDataRate(BaseDaqTest):
                     channel_groups=None,
                     scan_id=0,
                 )
-                time.sleep(5)
+                self._wait_for_beamformer_running(
+                    True, self.BEAMFORMER_START_DELAY + self.BEAMFORMER_STATE_TIMEOUT
+                )
 
-                assert self.component_manager.is_beamformer_running
+                self.test_logger.debug(
+                    f"Letting data rate settle for {self.DATA_RATE_SETTLE_TIME}s"
+                )
+                time.sleep(self.DATA_RATE_SETTLE_TIME)
 
                 data_rate_start_time = time.time()
 
@@ -121,6 +157,5 @@ class TestStationBeamDataRate(BaseDaqTest):
                     time.sleep(1)
 
                 self.test_logger.info(f"Test passed for iteration {iteration + 1}")
-                self.component_manager.stop_beamformer(None)
 
         self.test_logger.info("Test station beamformer data rate passed!")

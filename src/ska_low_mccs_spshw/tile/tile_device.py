@@ -518,7 +518,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "type": "object",
         "properties": {
             "ddr_start_byte_address": {"type": "integer", "minimum": 0},
-            "max_ddr_byte_size": {"type": "integer"},
+            "max_ddr_byte_size": {"type": ["integer", "null"]},
             "mode": {"type": "string"},
         },
     }

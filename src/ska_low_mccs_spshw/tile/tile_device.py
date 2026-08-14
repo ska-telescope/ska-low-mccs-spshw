@@ -679,7 +679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_count": "timing_pll_count",
             "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
             "timing_pll_40g_count": "timing_pll_40g_count",
-            "timing_sync_time": "timestamp_cnt",
+            "timing_sync_time": "timing_sync_time",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
             "fpga0_clocks": "fpga0_clocks",
@@ -3071,12 +3071,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevShort",
-        label="timestamp_cnt",
+        label="timing_sync_time",
         min_alarm=0,
         abs_change=1,
         archive_abs_change=1,
     )
-    def timestamp_cnt(self: MccsTile) -> int:
+    def timing_sync_time(self: MccsTile) -> int:
         """
         Return the sync time status.
 
@@ -3089,7 +3089,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the sync time health status.
         """
-        return self._attribute_state["timestamp_cnt"].read()
+        return self._attribute_state["timing_sync_time"].read()
     
     @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:

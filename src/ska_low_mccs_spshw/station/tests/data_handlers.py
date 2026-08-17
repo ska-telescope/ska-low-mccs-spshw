@@ -107,13 +107,36 @@ class BaseDataReceivedHandler(abc.ABC):
                 self._handle_data_with_backoff()
                 self._logger.debug("Handled data, calling back.")
                 self._data_created_callback(data=self.data)
-                self.reset()
+                self._reset_locked()
             except Exception as e:  # pylint: disable=broad-exception-caught
                 self._logger.error(f"Got error in callback: {repr(e)}, {e}")
                 self._logger.error(traceback.format_exc())
 
+    def prepare_for_new_watch(self: BaseDataReceivedHandler) -> None:
+        """
+        Arm the handler for a new subscription.
+
+        Flags the initial event pushed on subscription to be ignored and clears
+        any state left by a previous watch. Both are done under
+        ``_callback_lock`` so that a callback still in flight from a previous
+        subscription cannot consume the ignore flag partway through, nor race
+        the clearing of the accumulated files.
+        """
+        with self._callback_lock:
+            self.ignore_next_event = True
+            self._reset_locked()
+
     def reset(self: BaseDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""
+        with self._callback_lock:
+            self._reset_locked()
+
+    def _reset_locked(self: BaseDataReceivedHandler) -> None:
+        """
+        Reset instance variables for re-use.
+
+        The caller must already hold ``_callback_lock``.
+        """
         self._tile_files = {}
         self.initialise_data()
 
@@ -406,8 +429,9 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
 
         :param nof_samples: the new number of samples.
         """
-        self._nof_samples = nof_samples
-        self.initialise_data()
+        with self._callback_lock:
+            self._nof_samples = nof_samples
+            self.initialise_data()
 
     def initialise_data(self: AntennaBufferDataHandler) -> None:
         """Initialise empty antenna buffer data struct.

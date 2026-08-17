@@ -820,6 +820,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.stationId_signal = self.StationID
         self.srcip40gfpga1_signal = ""
         self.srcip40gfpga2_signal = ""
+        self.antennaIds_signal = self._antenna_ids
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -2557,13 +2558,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return clock_managers_status(raw_value)
 
-    ddr_write_size = attribute_from_signal(
-        ddr_write_size_signal,
-        dtype="DevLong",
-        label="DDR Write Size",
-        doc="Return the ddr write size obtained from running start_antenna_buffer.",
-    )
-
     @attribute_from_signal(
         fpga0_clocks_signal,
         dtype=("DevShort",),
@@ -3992,6 +3986,22 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # the signals up to date with the cpt mgr copy which just adds complexity
     # for zero gain.
     # These may be worth refactoring to use signals when we bin the cpt mgrs.
+    @attribute(
+        dtype="DevLong",
+        label="DDR Write Size",
+        doc="Return the ddr write size obtained from running start_antenna_buffer.",
+    )
+    def ddr_write_size(self: MccsTile) -> int:
+        """
+        Return the ddr write size obtained from running start_antenna_buffer.
+
+        :example:
+            >>> tile.ddr_write_size
+
+        :return: ddr write size of a frame
+        """
+        return self.component_manager.ddr_write_size
+
     @attribute(
         dtype="DevString",
         label="Firmware Name",

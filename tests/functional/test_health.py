@@ -158,8 +158,7 @@ def set_tpm_attribute_in_simulator(
     params = {"type": "setattribute", "param": attribute, "value": values_json}
 
     # Make the request
-    # response = requests.get(url, params=params)
-    response = requests.post(url, params=params)
+    response = requests.get(url, params=params)
 
     # Ensure the response is OK
     assert response.json().get("status") == "OK"

@@ -2536,7 +2536,7 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert tile_device.antennaIds == []
+        assert np.array_equal(tile_device.antennaIds, [])
         new_ids = tuple(range(8))
         tile_device.antennaIds = new_ids
         assert tuple(tile_device.antennaIds) == new_ids

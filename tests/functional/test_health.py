@@ -748,11 +748,13 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     new_voltages = [max_alarm + 1.0 for v in original_voltages]
 
     # Set the new voltages
+    print(f"SETTING NEW ATTRIBUTE ALARM THRESHOLDS to `tpm_voltages`: {new_voltages=}")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", new_voltages)
 
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
     assert all([abs(a - b) < 1e-3 for a, b in zip(new_voltages, validate_voltages)])
+    print("VOLTAGES SHOULD BE VALIDATED AT THIS POINT")
 
     # Here we yield in order to test the outcome of exceeding the thresholds.
     # When we return control to this function we are then able to reset the
@@ -760,6 +762,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     yield
 
     # Reset the original voltages
+    print("RESETTING ALARM THRESHOLDS AFTER TEST")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", original_voltages)
 
     # Ensure the voltages are as expected
@@ -767,6 +770,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     assert all(
         [abs(a - b) < 1e-3 for a, b in zip(original_voltages, validate_voltages)]
     )
+    print("RESTORED ALARM THRESHOLDS VALIDATED")
 
 
 @when("the Subracks board temperature thresholds are adjusted")

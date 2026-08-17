@@ -473,6 +473,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
         "timing_pll_lock_status": "timing_pll_lock_status_signal",
         "timing_pll_count": "timing_pll_count_signal",
+        "timing_pll_40g_count": "timing_pll_40g_count_signal",
         "timing_pll_40g_lock_status": "timing_pll_40g_lock_status_signal",
         "voltages": "voltages_signal",
         "temperatures": "temperatures_signal",
@@ -546,7 +547,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "csp_rounding": "cspRounding_signal",
         "preadu_levels": "preaduLevels_signal",
         "is_station_beam_flagging_enabled": "stationBeamFlagEnabled_signal",
-        "timing_pll_40g_count": "timing_pll_40g_count_signal",
     }
 
     # -----------------
@@ -1464,6 +1464,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self._handle_firmware_read()
 
             elif attribute_name == "global_status_alarms":
+                print(f"Trying to unpack alarms with {attribute_value=}")
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             elif attribute_name in self._GENERIC_SIGNAL_MAP:
                 setattr(
@@ -1635,7 +1636,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.logger.warning(
                     f"Unable to read {alarm_name}, logging as invalid. "
                     "However, attribute value is last known value: "
-                    f"{alarm_signal}"
+                    # f"{alarm_signal}"
+                    f"{getattr(self, alarm_name)}"
                 )
         else:
             for alarm_name, alarm_signal in self.__alarm_attribute_map.items():

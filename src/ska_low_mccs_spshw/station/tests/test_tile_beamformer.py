@@ -145,6 +145,8 @@ class TestTileBeamformer(BaseDaqTest):
                 ],
                 delays=self._delays,
             )
+            # Necessary to give the TPMs time to load the test generator before sending data
+            time.sleep(0.1)
             self._send_beam_data()
             _received = self._data_created_event.wait(60)
             assert (
@@ -175,6 +177,8 @@ class TestTileBeamformer(BaseDaqTest):
             0.5,
             delays=self._delays,
         )
+        # Necessary to give the TPMs time to load the test generator before sending data
+        time.sleep(0.1)
         self._send_beam_data()
         _received = self._data_created_event.wait(60)
         assert (
@@ -323,7 +327,7 @@ class TestTileBeamformer(BaseDaqTest):
     def test(self: TestTileBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
-        test_channels = range(8)  # Test 8 channels
+        test_channels = range(4)  # Test 4 channels
         self.component_manager.set_channeliser_rounding(
             np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
         )

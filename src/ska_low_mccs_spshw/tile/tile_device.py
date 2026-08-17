@@ -764,9 +764,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "timestamp_cnt": lambda val: (
-                int(val) if val is not None else None
-            ),
+            "timing_sync_time": lambda val: (int(val) if val is not None else None),
             "fpga0_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
@@ -1028,7 +1026,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # by use of converters.
             "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
-            "timing_sync_time": [ "timing", "sync_time" ],
+            "timing_sync_time": ["timing", "sync_time"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "fpga0_clocks": ["timing", "clocks", "FPGA0"],
@@ -3014,7 +3012,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `0` if no lock loss events detected.
         Increments for each lock loss event.
         These are combined readings for both PLLs within the AD9528.
-                   
+
         :example:
             >>> tile.timing_pll_count
             '0'
@@ -3090,7 +3088,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the sync time health status.
         """
         return self._attribute_state["timing_sync_time"].read()
-    
+
     @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:
         """

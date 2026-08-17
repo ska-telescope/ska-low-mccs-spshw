@@ -49,6 +49,7 @@ from .firmware_threshold_interface import (
     VOLTAGE_KEYS,
     FirmwareThresholds,
 )
+from .tile_data import TileData
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -67,6 +68,14 @@ FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
+
+# This cannot be raised arbitrarily. The load frame must still arrive before the
+# caller captures data, so it needs to stay well short of the delay between
+# configuring the generator and requesting a data transmission.
+_TEST_GENERATOR_LOAD_DELAY: Final[float] = 0.25  # seconds
+_TEST_GENERATOR_LOAD_DELAY_FRAMES: Final[int] = int(
+    _TEST_GENERATOR_LOAD_DELAY / TileData.FRAME_PERIOD
+)
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -4268,10 +4277,14 @@ class TileComponentManager(
         ) as acquired:
             if acquired:
                 try:
-                    # If load time not specified, is "now" + 30 ms
+                    # If load time not specified, is "now" plus
+                    # _TEST_GENERATOR_LOAD_DELAY
                     end_time: int = 0
                     if load_frame == 0:
-                        load_frame = self.tile.get_fpga_timestamp() + 180
+                        load_frame = (
+                            self.tile.get_fpga_timestamp()
+                            + _TEST_GENERATOR_LOAD_DELAY_FRAMES
+                        )
                         self.logger.info(
                             f"Tile generator uses asynchronous timestamp {load_frame}"
                         )

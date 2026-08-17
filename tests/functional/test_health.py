@@ -138,10 +138,10 @@ def set_tpm_attribute_in_simulator(
     host: str, port: int, attribute: str, values: list[float] | None
 ) -> None:
     """
-    Set the TPM attribute.
+    Set the TPM attribute in the subrack simulator.
 
-    :param host: The Tile simulator host.
-    :param port: The Tile simulator port.
+    :param host: The Subrack simulator host.
+    :param port: The Subrack simulator port.
     :param attribute: The attribute name to set.
     :param values: The values to set for the attribute.
 
@@ -158,7 +158,8 @@ def set_tpm_attribute_in_simulator(
     params = {"type": "setattribute", "param": attribute, "value": values_json}
 
     # Make the request
-    response = requests.get(url, params=params)
+    # response = requests.get(url, params=params)
+    response = requests.post(url, params=params)
 
     # Ensure the response is OK
     assert response.json().get("status") == "OK"
@@ -168,10 +169,10 @@ def get_tpm_attribute_from_simulator(
     host: str, port: int, attribute: str
 ) -> list[float]:
     """
-    Get the TPM attribute from the simulator.
+    Get the TPM attribute from the subrack simulator.
 
-    :param host: The Tile simulator host.
-    :param port: The Tile simulator port.
+    :param host: The Subrack simulator host.
+    :param port: The Subrack simulator port.
     :param attribute: The attribute name to get.
 
     :returns: The attribute values or None if not found.
@@ -252,11 +253,11 @@ def station_name_fixture(true_context: bool) -> str:
 @pytest.fixture(name="simulator_host")
 def simulator_host_fixture(subrack_id: int) -> str:
     """
-    Get the simulator host name.
+    Get the subrack simulator host name.
 
     :param subrack_id: the ID number of the subrack in the station.
 
-    :returns: The simulator host name.
+    :returns: The subrack simulator host name.
 
     """
     label = os.getenv("STATION_LABEL") or "real-daq-1"
@@ -724,8 +725,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     Simulate tile subrack power thresholds being exceeded and reset on teardown.
 
     :param station_devices: dictionary of device proxies.
-    :param simulator_host: the simulator host name.
-    :param simulator_port: the simulator port number.
+    :param simulator_host: the subrack simulator host name.
+    :param simulator_port: the subrack simulator port number.
 
     :yields: control back to the test.
     """
@@ -733,7 +734,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     host = simulator_host
     port = simulator_port
 
-    # Get current Tile simulator values
+    # Get current Subrack simulator values
     original_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
 
     # Get the highest alarm

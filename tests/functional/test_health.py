@@ -747,7 +747,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # Set a voltage outside the alarm range
     new_voltages = [max_alarm + 1.0 for v in original_voltages]
 
-    def _print_info(devices: list[tango.DeviceProxy]):
+    def _print_info(devices: list[tango.DeviceProxy]) -> None:
         for device in devices:
             print(f"{device} in state {device.state()}")
             print(f"And health: {device.healthstate, device.healthreport}")

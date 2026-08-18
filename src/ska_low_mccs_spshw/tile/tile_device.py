@@ -1446,6 +1446,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         **state_change: Any,
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
+            if attribute_name.lower() == "tpmvoltages":
+                print("UPDATING TPMVOLTAGES")
             if attribute_name == "tile_health_structure":
                 if mark_invalid:
                     self.tile_health_structure = {}
@@ -1470,6 +1472,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                print(
+                    "UPDATING GENERIC SIGNAL MAP: "
+                    f"{attribute_name=}, {attribute_value=}, {mark_invalid=}"
+                )
                 setattr(
                     self,
                     self._GENERIC_SIGNAL_MAP[attribute_name],

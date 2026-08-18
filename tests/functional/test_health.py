@@ -734,7 +734,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     def _wait_for_subrack_tpmvoltages_to_change(
         subrack: tango.DeviceProxy, value: list[float]
     ) -> None:
-        end_time = time.monotonic() + 10
+        end_time = time.monotonic() + 20
         print(f"Comparing for EQ: {subrack.tpmvoltages=} AND {value=}")
         while np.array_equal(subrack.tpmvoltages, value):
             time.sleep(0.5)

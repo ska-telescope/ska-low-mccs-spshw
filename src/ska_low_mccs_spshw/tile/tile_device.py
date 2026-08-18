@@ -1446,8 +1446,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         **state_change: Any,
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
-            if attribute_name.lower() == "tpmvoltages":
-                print("UPDATING TPMVOLTAGES")
+            if attribute_name.lower() == "voltage_draw":
+                print(f"UPDATING voltage_draw with: {locals()=}")
             if attribute_name == "tile_health_structure":
                 if mark_invalid:
                     self.tile_health_structure = {}

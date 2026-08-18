@@ -751,10 +751,12 @@ def tile_subrack_power_thresholds_exceeded_fixture(
         for device in devices:
             print(f"{device} in state {device.state()}")
             print(f"And health: {device.healthstate, device.healthreport}")
-            print(f"with tpm_voltages: {getattr(device, 'tpm_voltages', None)}")
+            print(f"with tpmvoltages: {getattr(device, 'tpmvoltages', None)}")
 
     print("INITIAL SUBRACKS STATE:")
     _print_info(station_devices["Subracks"])
+    print("INITIAL TILES STATE:")
+    _print_info(station_devices["Tiles"])
 
     # Set the new voltages
     print(f"SETTING NEW ATTRIBUTE ALARM THRESHOLDS to `tpm_voltages`: {new_voltages=}")
@@ -762,6 +764,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
 
     print("MODIFIED SUBRACKS STATE:")
     _print_info(station_devices["Subracks"])
+    print("MODIFIED TILES STATE:")
+    _print_info(station_devices["Tiles"])
 
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
@@ -769,6 +773,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     print("VOLTAGES SHOULD BE VALIDATED AT THIS POINT")
     print("DOUBLE CHECK SUBRACKS STATE:")
     _print_info(station_devices["Subracks"])
+    print("DOUBLE CHECK TILES STATE:")
+    _print_info(station_devices["Tiles"])
 
     # Here we yield in order to test the outcome of exceeding the thresholds.
     # When we return control to this function we are then able to reset the
@@ -787,6 +793,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     print("RESTORED ALARM THRESHOLDS VALIDATED")
     print("FINAL SUBRACKS STATE:")
     _print_info(station_devices["Subracks"])
+    print("FINAL TILES STATE:")
+    _print_info(station_devices["Tiles"])
 
 
 @when("the Subracks board temperature thresholds are adjusted")

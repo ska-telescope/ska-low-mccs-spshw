@@ -304,7 +304,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     tileProgrammingState_signal: AttrSignal[str] = AttrSignal[str](stored=True)
     stationId_signal: AttrSignal[int] = AttrSignal[int]()
     firmwareVersion_signal: AttrSignal[str] = AttrSignal[str]()
-    antennaIds_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    antennaIds_signal: AttrSignal[list[int]] = AttrSignal[list[int]](stored=True)
     coreCommunicationStatus_signal: AttrSignal[str] = AttrSignal[str]()
     ppsDrift_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
     ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
@@ -783,7 +783,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
-        self._antenna_ids: list[int] = []
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
         self._stopping: bool
@@ -820,7 +819,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.stationId_signal = self.StationID
         self.srcip40gfpga1_signal = ""
         self.srcip40gfpga2_signal = ""
-        self.antennaIds_signal = self._antenna_ids
+
+        self._antenna_ids: list[int] = []
+        self.antennaIds_signal = []
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -1661,8 +1662,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._attribute_state[attribute_name].mark_stale()
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
                     setattr(self, self._HEALTH_SIGNAL_MAP[attribute_name], None)
-                elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                    setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
+                # elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                #     setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1688,13 +1689,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         self._HEALTH_SIGNAL_MAP[attribute_name],
                         emit_value,
                     )
-                elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                    emit_value = attribute_value
-                    setattr(
-                        self,
-                        self._GENERIC_SIGNAL_MAP[attribute_name],
-                        emit_value,
-                    )
+                # elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                #     emit_value = attribute_value
+                #     setattr(
+                #         self,
+                #         self._GENERIC_SIGNAL_MAP[attribute_name],
+                #         emit_value,
+                #     )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
             except Exception as e:  # pylint: disable=broad-except
@@ -5699,6 +5700,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_y=8,  # Antennas
         rel_change=0.01,
         archive_rel_change=0.01,
+        write_to_signal=True,
         label="Pointing Delays",
         doc="Get the pointing delays for beam 0.",
     )

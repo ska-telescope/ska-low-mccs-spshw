@@ -844,7 +844,7 @@ def read_all_tile_attributes(
     # Given the deployed PollRate is 0.4 this is an additional 0.8s sleep.
     # I am accepting this regression since PollRate is configurable anyway
     # and adding 1 second.
-    time.sleep(11)
+    time.sleep(15)
 
     tiles = station_devices["Tiles"]
     for i, tile in enumerate(tiles):
@@ -871,7 +871,7 @@ def read_all_tile_attributes(
             if attr in all_excluded_tile_attributes:
                 continue
             try:
-                attribute_read_info[attr] = getattr(tile, attr)
+                attribute_read_info[attr] = getattr(tile, attr, None)
             except tango.DevFailed as df:
                 print(f"Exeption raised when reading {attr}: {df}")
                 attribute_read_info[attr] = None

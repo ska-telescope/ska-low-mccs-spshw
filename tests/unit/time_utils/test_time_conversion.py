@@ -9,6 +9,7 @@
 import pytest
 
 from time_utils.time_conversion import (
+    float_epoch_from_str_utc_time,
     integer_epoch_from_str_utc_time,
     str_from_float_epoch_utc_time,
     str_from_integer_epoch_utc_time,
@@ -78,3 +79,20 @@ def test_string_from_epoch_valid_float() -> None:
         str_from_float_epoch_utc_time(TEST_VALID_EPOCH_FLOAT)
         == TEST_VALID_EPOCH_STRING_PRECISE
     )
+
+
+def test_float_epoch_from_string_garbage() -> None:
+    """Cause the parsing to fail with a bad string."""
+    assert float_epoch_from_str_utc_time("wibble") == -1.0
+
+
+def test_float_epoch_from_pre_1970_string() -> None:
+    """Check pre 1970 string."""
+    assert float_epoch_from_str_utc_time(TEST_PRE_1970_EPOCH_STRING) == -1.0
+
+
+def test_float_epoch_from_string_preserves_sub_second_precision() -> None:
+    """Unlike the integer variant, no rounding up should occur."""
+    assert float_epoch_from_str_utc_time(
+        TEST_VALID_EPOCH_STRING_PRECISE
+    ) == pytest.approx(TEST_VALID_EPOCH_FLOAT, abs=1e-6)

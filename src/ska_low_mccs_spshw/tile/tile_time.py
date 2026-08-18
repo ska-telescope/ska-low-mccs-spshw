@@ -10,7 +10,12 @@ from __future__ import annotations
 
 import math
 
-from time_utils import integer_epoch_from_str_utc_time, str_from_integer_epoch_utc_time
+from time_utils import (
+    float_epoch_from_str_utc_time,
+    integer_epoch_from_str_utc_time,
+    str_from_float_epoch_utc_time,
+    str_from_integer_epoch_utc_time,
+)
 
 from .tile_data import TileData
 
@@ -58,7 +63,7 @@ class TileTime:
         :return: ISO-8601 formatted time
         """
         frame_epoch_time = self._ref_time + TileData.FRAME_PERIOD * frame_count
-        return str_from_integer_epoch_utc_time(int(frame_epoch_time))
+        return str_from_float_epoch_utc_time(frame_epoch_time)
 
     def frame_from_utc_time(self: TileTime, utc_time: str) -> int:
         """
@@ -70,12 +75,16 @@ class TileTime:
         if self._ref_time == 0:
             return -1
 
-        frame_time_from_string = integer_epoch_from_str_utc_time(utc_time)
+        frame_time_from_string = float_epoch_from_str_utc_time(utc_time)
 
         if frame_time_from_string < 0:
             return -1
 
         frame_time_from_ref_time = frame_time_from_string - self._ref_time
+
+        if frame_time_from_ref_time < 0:
+            return -1
+
         return math.ceil(frame_time_from_ref_time / TileData.FRAME_PERIOD)
 
     def timestamp_from_utc_time(self: TileTime, utc_time: str) -> int:

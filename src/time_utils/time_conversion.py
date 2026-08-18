@@ -17,12 +17,36 @@ import math
 from datetime import datetime, timezone
 
 __all__ = [
+    "float_epoch_from_str_utc_time",
     "integer_epoch_from_str_utc_time",
     "str_from_integer_epoch_utc_time",
     "str_from_float_epoch_utc_time",
 ]
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+def float_epoch_from_str_utc_time(utc_time: str) -> float:
+    """
+    Return the (sub-second precision) Unix epoch of the specified time.
+
+    Does not account for leap seconds, utc_time must avoid them.
+
+    :param utc_time: Utc Time in standard rfc3339 format
+    :return: Unix epoch of the specified time. -1.0 if error
+    """
+    try:
+        dt = datetime.strptime(utc_time, RFC_FORMAT)
+        timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        return -1.0
+
+    # TODO: I think this should raise an exception since it's not
+    # TODO: valid data for the SKAO system
+    if timestamp < 0:
+        return -1.0
+
+    return timestamp
 
 
 def integer_epoch_from_str_utc_time(utc_time: str) -> int:
@@ -34,14 +58,8 @@ def integer_epoch_from_str_utc_time(utc_time: str) -> int:
     :param utc_time: Utc Time in standard rfc3339 format
     :return: Unix timestamp equal or after specified time. -1 if error
     """
-    try:
-        dt = datetime.strptime(utc_time, RFC_FORMAT)
-        timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
-    except ValueError:
-        return -1
+    timestamp = float_epoch_from_str_utc_time(utc_time)
 
-    # TODO: I think this should raise an exception since it's not
-    # TODO: valid data for the SKAO system
     if timestamp < 0:
         return -1
 

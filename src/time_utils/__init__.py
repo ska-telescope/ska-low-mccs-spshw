@@ -15,12 +15,14 @@ formats.
 
 
 __all__ = [
+    "float_epoch_from_str_utc_time",
     "integer_epoch_from_str_utc_time",
     "str_from_integer_epoch_utc_time",
     "str_from_float_epoch_utc_time",
 ]
 
 from .time_conversion import (
+    float_epoch_from_str_utc_time,
     integer_epoch_from_str_utc_time,
     str_from_float_epoch_utc_time,
     str_from_integer_epoch_utc_time,

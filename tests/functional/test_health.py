@@ -747,14 +747,28 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # Set a voltage outside the alarm range
     new_voltages = [max_alarm + 1.0 for v in original_voltages]
 
+    def _print_info(devices: list[tango.DeviceProxy]):
+        for device in devices:
+            print(f"{device} in state {device.state()}")
+            print(f"And health: {device.healthstate, device.healthreport}")
+            print(f"with tpm_voltages: {getattr(device, 'tpm_voltages', None)}")
+
+    print("INITIAL SUBRACKS STATE:")
+    _print_info(station_devices["Subracks"])
+
     # Set the new voltages
     print(f"SETTING NEW ATTRIBUTE ALARM THRESHOLDS to `tpm_voltages`: {new_voltages=}")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", new_voltages)
+
+    print("MODIFIED SUBRACKS STATE:")
+    _print_info(station_devices["Subracks"])
 
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
     assert all([abs(a - b) < 1e-3 for a, b in zip(new_voltages, validate_voltages)])
     print("VOLTAGES SHOULD BE VALIDATED AT THIS POINT")
+    print("DOUBLE CHECK SUBRACKS STATE:")
+    _print_info(station_devices["Subracks"])
 
     # Here we yield in order to test the outcome of exceeding the thresholds.
     # When we return control to this function we are then able to reset the
@@ -771,6 +785,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
         [abs(a - b) < 1e-3 for a, b in zip(original_voltages, validate_voltages)]
     )
     print("RESTORED ALARM THRESHOLDS VALIDATED")
+    print("FINAL SUBRACKS STATE:")
+    _print_info(station_devices["Subracks"])
 
 
 @when("the Subracks board temperature thresholds are adjusted")
@@ -877,6 +893,9 @@ def read_all_tile_attributes(
                     if attribute_read_info[attr] is None:
                         time.sleep(5)
                         print(f"SECOND TRY AT ANTENNA IDS: {getattr(tile, attr, None)}")
+                        print(f"THIRD TRY? {tile.antennaIds=}")
+                        print(f"{tile.adminMode=}")
+                        print(f"{tile.state()=}")
             except tango.DevFailed as df:
                 print(f"Exeption raised when reading {attr}: {df}")
                 attribute_read_info[attr] = None

@@ -15,6 +15,7 @@ import time
 from datetime import datetime
 from typing import Any, Callable, Generator
 
+import numpy as np
 import pytest
 import requests
 import tango
@@ -729,6 +730,19 @@ def tile_subrack_power_thresholds_exceeded_fixture(
 
     :yields: control back to the test.
     """
+
+    def _wait_for_subrack_tpmvoltages_to_change(
+        subrack: tango.DeviceProxy, value: list[float]
+    ) -> None:
+        end_time = time.monotonic() + 10
+        print(f"Comparing for EQ: {subrack.tpmvoltages=} AND {value=}")
+        while np.array_equal(subrack.tpmvoltages, value):
+            time.sleep(0.5)
+            if time.monotonic() > end_time:
+                print("Subrack.tpmVoltages did not change from initial value.")
+                break
+
+    subrack_device = station_devices["Subracks"][0]
     # The simulator service parameters
     host = simulator_host
     port = simulator_port
@@ -762,6 +776,9 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     print(f"SETTING NEW ATTRIBUTE ALARM THRESHOLDS to `tpm_voltages`: {new_voltages=}")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", new_voltages)
 
+    # Wait for the subrack device to register the change.
+    _wait_for_subrack_tpmvoltages_to_change(subrack_device, original_voltages)
+
     print("MODIFIED SUBRACKS STATE:")
     _print_info(station_devices["Subracks"])
     print("MODIFIED TILES STATE:")
@@ -784,6 +801,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # Reset the original voltages
     print("RESETTING ALARM THRESHOLDS AFTER TEST")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", original_voltages)
+    # Wait for the subrack device to register the change.
+    _wait_for_subrack_tpmvoltages_to_change(subrack_device, new_voltages)
 
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
@@ -792,6 +811,7 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     )
     print("RESTORED ALARM THRESHOLDS VALIDATED")
     print("FINAL SUBRACKS STATE:")
+    # By the time we got to here the subrack was FAILED (not Tile tho)
     _print_info(station_devices["Subracks"])
     print("FINAL TILES STATE:")
     _print_info(station_devices["Tiles"])
@@ -897,10 +917,12 @@ def read_all_tile_attributes(
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)
                 if attr.lower() == "antennaids":
-                    print(f"READING {attr}: VALUE = {getattr(tile, attr, None)}")
+                    print(f"READING {attr}: VALUE = {getattr(tile, attr, 'not found')}")
                     if attribute_read_info[attr] is None:
-                        time.sleep(5)
-                        print(f"SECOND TRY AT ANTENNA IDS: {getattr(tile, attr, None)}")
+                        print(
+                            "SECOND TRY AT ANTENNA IDS: "
+                            f"{getattr(tile, attr, 'not found')}"
+                        )
                         print(f"THIRD TRY? {tile.antennaIds=}")
                         print(f"{tile.adminMode=}")
                         print(f"{tile.state()=}")

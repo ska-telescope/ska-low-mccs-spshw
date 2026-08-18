@@ -820,6 +820,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.srcip40gfpga1_signal = ""
         self.srcip40gfpga2_signal = ""
 
+        print("Writing `[]` to antenna ID signal")
         self._antenna_ids: list[int] = []
         self.antennaIds_signal = []
 
@@ -1662,8 +1663,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._attribute_state[attribute_name].mark_stale()
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
                     setattr(self, self._HEALTH_SIGNAL_MAP[attribute_name], None)
-                # elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                #     setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
+                elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                    setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -1689,13 +1690,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         self._HEALTH_SIGNAL_MAP[attribute_name],
                         emit_value,
                     )
-                # elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                #     emit_value = attribute_value
-                #     setattr(
-                #         self,
-                #         self._GENERIC_SIGNAL_MAP[attribute_name],
-                #         emit_value,
-                #     )
+                elif attribute_name in self._GENERIC_SIGNAL_MAP:
+                    emit_value = attribute_value
+                    setattr(
+                        self,
+                        self._GENERIC_SIGNAL_MAP[attribute_name],
+                        emit_value,
+                    )
                 else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
             except Exception as e:  # pylint: disable=broad-except

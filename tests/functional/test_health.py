@@ -844,7 +844,7 @@ def read_all_tile_attributes(
     # Given the deployed PollRate is 0.4 this is an additional 0.8s sleep.
     # I am accepting this regression since PollRate is configurable anyway
     # and adding 1 second.
-    time.sleep(15)
+    time.sleep(11)
 
     tiles = station_devices["Tiles"]
     for i, tile in enumerate(tiles):
@@ -872,6 +872,11 @@ def read_all_tile_attributes(
                 continue
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)
+                if attr.lower() == "antennaids":
+                    print(f"READING {attr}: VALUE = {getattr(tile, attr, None)}")
+                    if attribute_read_info[attr] is None:
+                        time.sleep(5)
+                        print(f"SECOND TRY AT ANTENNA IDS: {getattr(tile, attr, None)}")
             except tango.DevFailed as df:
                 print(f"Exeption raised when reading {attr}: {df}")
                 attribute_read_info[attr] = None

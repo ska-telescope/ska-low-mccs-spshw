@@ -5734,6 +5734,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=11.4,
         max_alarm=12.6,
         abs_change=0.1,
+        write_to_signal=True,
         unit="Volts",
         label="Subrack Voltage",
         doc="Get the Tile voltage as measured by the subrack.",

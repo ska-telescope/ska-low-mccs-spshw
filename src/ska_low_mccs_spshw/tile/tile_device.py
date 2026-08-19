@@ -4372,7 +4372,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             tango.Except.throw_exception(reason, msg, self.get_name())
             return False
 
-        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        prog_state = self.tileProgrammingState_signal
         if prog_state == "Synchronised":
             return True
         reason = "CommandNotAllowed"

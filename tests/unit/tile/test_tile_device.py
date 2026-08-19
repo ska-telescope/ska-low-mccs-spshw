@@ -1318,7 +1318,7 @@ class TestMccsTile:
                 },
                 {
                     "fixed_delays": [],
-                    "antenna_ids": None,  # Keeps signal default.
+                    "antenna_ids": [],
                 },
                 id="invalid named configs are skipped",
             ),
@@ -1359,10 +1359,10 @@ class TestMccsTile:
 
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
 
-        if expected_config["antenna_ids"] is None:
-            assert on_tile_device.antennaIds is None
-        else:
-            assert list(on_tile_device.antennaIds) == expected_config["antenna_ids"]
+        # if expected_config["antenna_ids"] is None:
+        #     assert on_tile_device.antennaIds is None
+        # else:
+        assert list(on_tile_device.antennaIds) == expected_config["antenna_ids"]
 
         value = expected_config["fixed_delays"]
         write_value = np.array(value)
@@ -2542,8 +2542,7 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        # assert np.array_equal(tile_device.antennaIds, [])
-        assert tile_device.antennaIds is None
+        assert np.array_equal(tile_device.antennaIds, [])
         new_ids = tuple(range(8))
         tile_device.antennaIds = new_ids
         assert tuple(tile_device.antennaIds) == new_ids

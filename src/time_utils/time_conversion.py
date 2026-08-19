@@ -13,11 +13,10 @@ tests as well to ensure consistent conversion from
 epoch to string and back again.
 """
 
-import math
 from datetime import datetime, timezone
 
 __all__ = [
-    "integer_epoch_from_str_utc_time",
+    "float_epoch_from_str_utc_time",
     "str_from_integer_epoch_utc_time",
     "str_from_float_epoch_utc_time",
 ]

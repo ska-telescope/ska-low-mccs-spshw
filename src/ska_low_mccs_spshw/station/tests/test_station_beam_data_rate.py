@@ -85,9 +85,7 @@ class TestStationBeamDataRate(BaseDaqTest):
 
         with self.reset_context():
             for iteration in test_iterations:
-                beamformer_start_time = str_from_float_epoch_utc_time(
-                    time.time() + 3
-                )
+                beamformer_start_time = str_from_float_epoch_utc_time(time.time() + 3)
                 self.component_manager.start_beamformer(
                     start_time=beamformer_start_time,
                     duration=-1,

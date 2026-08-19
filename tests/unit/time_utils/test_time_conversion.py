@@ -32,22 +32,24 @@ def test_epoch_from_string_garbage() -> None:
 def test_epoch_from_string_valid_string_int() -> None:
     """Parse a valid integer time string."""
     assert (
-        float_epoch_from_str_utc_time(TEST_VALID_EPOCH_STRING_INT) == TEST_VALID_EPOCH_INT
+        float_epoch_from_str_utc_time(TEST_VALID_EPOCH_STRING_INT)
+        == TEST_VALID_EPOCH_INT
     )
 
-    
+
 def test_epoch_from_string_valid_string_float() -> None:
     """Parse a valid float time string."""
     assert (
-        float_epoch_from_str_utc_time(TEST_VALID_EPOCH_STRING_FLOAT) == TEST_VALID_EPOCH_FLOAT_LOST_PRECISION
+        float_epoch_from_str_utc_time(TEST_VALID_EPOCH_STRING_FLOAT)
+        == TEST_VALID_EPOCH_FLOAT_LOST_PRECISION
     )
 
-    
+
 def test_epoch_from_pre_1970_string() -> None:
     """Check pre 1970 string."""
     assert float_epoch_from_str_utc_time(TEST_PRE_1970_EPOCH_STRING) == -1
 
-    
+
 def test_string_from_epoch_invalid_number() -> None:
     """Negative epoch raises an error."""
     with pytest.raises(ValueError):
@@ -57,7 +59,8 @@ def test_string_from_epoch_invalid_number() -> None:
 def test_string_from_epoch_valid_int() -> None:
     """Valid epoch value."""
     assert (
-        str_from_integer_epoch_utc_time(TEST_VALID_EPOCH_INT) == TEST_VALID_EPOCH_STRING_INT
+        str_from_integer_epoch_utc_time(TEST_VALID_EPOCH_INT)
+        == TEST_VALID_EPOCH_STRING_INT
     )
 
 
@@ -67,7 +70,7 @@ def test_round_trip_from_int() -> None:
     epoch_from_string = float_epoch_from_str_utc_time(epoch_to_string)
     assert epoch_from_string == TEST_VALID_EPOCH_INT
 
-    
+
 def test_string_from_float_invalid_number() -> None:
     """Negative float epoch value raises an error."""
     with pytest.raises(ValueError):

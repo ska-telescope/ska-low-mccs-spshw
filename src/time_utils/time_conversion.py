@@ -61,7 +61,7 @@ def str_from_integer_epoch_utc_time(timestamp: int) -> str:
     :raises ValueError: if the timestamp is invalid
     """
     if timestamp < 0:
-        raise ValueError()
+        raise ValueError("A negative time value is invalid")
 
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(RFC_FORMAT)
 
@@ -79,6 +79,6 @@ def str_from_float_epoch_utc_time(timestamp: float) -> str:
     :raises ValueError: if the timestamp is invalid
     """
     if timestamp < 0:
-        raise ValueError()
+        raise ValueError("A negative time value is invalid")
 
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(RFC_FORMAT)

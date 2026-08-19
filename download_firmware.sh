@@ -12,6 +12,5 @@ shutil.copyfileobj(
 " | tar -xzO ./tpm_firmware.bit > "tpm_firmware_$1.bit"
 }
 
-download_and_extract $FIRMWARE_VERSION
 download_and_extract $FIRMWARE_VERSION || exit 1
 download_and_extract $FIRMWARE_VERSION_NEW || exit 1

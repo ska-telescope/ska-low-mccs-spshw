@@ -782,6 +782,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
+        self._antenna_ids: list[int] = []
         self._info: dict[str, Any] = {}
         self.component_manager: TileComponentManager
         self._stopping: bool
@@ -818,10 +819,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.stationId_signal = self.StationID
         self.srcip40gfpga1_signal = ""
         self.srcip40gfpga2_signal = ""
-
-        print("Writing `[]` to antenna ID signal")
-        self._antenna_ids: list[int] = []
-        self.antennaIds_signal = []
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -1449,8 +1446,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         **state_change: Any,
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
-            if attribute_name.lower() == "voltage_draw":
-                print(f"UPDATING voltage_draw with: {locals()=}")
             if attribute_name == "tile_health_structure":
                 if mark_invalid:
                     self.tile_health_structure = {}
@@ -1475,10 +1470,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             elif attribute_name == "global_status_alarms":
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                print(
-                    "UPDATING GENERIC SIGNAL MAP: "
-                    f"{attribute_name=}, {attribute_value=}, {mark_invalid=}"
-                )
                 setattr(
                     self,
                     self._GENERIC_SIGNAL_MAP[attribute_name],

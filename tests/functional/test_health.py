@@ -735,9 +735,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
         subrack: tango.DeviceProxy, value: list[float]
     ) -> None:
         end_time = time.monotonic() + 20
-        print(f"Comparing for EQ: {subrack.tpmvoltages=} AND {value=}")
         while np.array_equal(subrack.tpmvoltages, value):
-            time.sleep(0.5)
+            time.sleep(0.1)
             if time.monotonic() > end_time:
                 print("Subrack.tpmVoltages did not change from initial value.")
                 break
@@ -761,37 +760,15 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # Set a voltage outside the alarm range
     new_voltages = [max_alarm + 1.0 for v in original_voltages]
 
-    def _print_info(devices: list[tango.DeviceProxy]) -> None:
-        for device in devices:
-            print(f"{device} in state {device.state()}")
-            print(f"And health: {device.healthstate, device.healthreport}")
-            print(f"with tpmvoltages: {getattr(device, 'tpmvoltages', None)}")
-
-    print("INITIAL SUBRACKS STATE:")
-    _print_info(station_devices["Subracks"])
-    print("INITIAL TILES STATE:")
-    _print_info(station_devices["Tiles"])
-
     # Set the new voltages
-    print(f"SETTING NEW ATTRIBUTE ALARM THRESHOLDS to `tpm_voltages`: {new_voltages=}")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", new_voltages)
 
     # Wait for the subrack device to register the change.
     _wait_for_subrack_tpmvoltages_to_change(subrack_device, original_voltages)
 
-    print("MODIFIED SUBRACKS STATE:")
-    _print_info(station_devices["Subracks"])
-    print("MODIFIED TILES STATE:")
-    _print_info(station_devices["Tiles"])
-
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
     assert all([abs(a - b) < 1e-3 for a, b in zip(new_voltages, validate_voltages)])
-    print("VOLTAGES SHOULD BE VALIDATED AT THIS POINT")
-    print("DOUBLE CHECK SUBRACKS STATE:")
-    _print_info(station_devices["Subracks"])
-    print("DOUBLE CHECK TILES STATE:")
-    _print_info(station_devices["Tiles"])
 
     # Here we yield in order to test the outcome of exceeding the thresholds.
     # When we return control to this function we are then able to reset the
@@ -799,7 +776,6 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     yield
 
     # Reset the original voltages
-    print("RESETTING ALARM THRESHOLDS AFTER TEST")
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", original_voltages)
     # Wait for the subrack device to register the change.
     _wait_for_subrack_tpmvoltages_to_change(subrack_device, new_voltages)
@@ -809,12 +785,6 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     assert all(
         [abs(a - b) < 1e-3 for a, b in zip(original_voltages, validate_voltages)]
     )
-    print("RESTORED ALARM THRESHOLDS VALIDATED")
-    print("FINAL SUBRACKS STATE:")
-    # By the time we got to here the subrack was FAILED (not Tile tho)
-    _print_info(station_devices["Subracks"])
-    print("FINAL TILES STATE:")
-    _print_info(station_devices["Tiles"])
 
 
 @when("the Subracks board temperature thresholds are adjusted")
@@ -916,16 +886,6 @@ def read_all_tile_attributes(
                 continue
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)
-                if attr.lower() == "antennaids":
-                    print(f"READING {attr}: VALUE = {getattr(tile, attr, 'not found')}")
-                    if attribute_read_info[attr] is None:
-                        print(
-                            "SECOND TRY AT ANTENNA IDS: "
-                            f"{getattr(tile, attr, 'not found')}"
-                        )
-                        print(f"THIRD TRY? {tile.antennaIds=}")
-                        print(f"{tile.adminMode=}")
-                        print(f"{tile.state()=}")
             except tango.DevFailed as df:
                 print(f"Exeption raised when reading {attr}: {df}")
                 attribute_read_info[attr] = None

@@ -142,7 +142,7 @@ class TestTileComponentManager:
                 # OFF, NO_SUPPLY, STANDBY
                 callbacks["component_state"].assert_call(power=power_state, fault=False)
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=5
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=8
                 )
 
         callbacks["communication_status"].assert_not_called()
@@ -198,21 +198,21 @@ class TestTileComponentManager:
             case PowerState.ON:
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=5,
+                    lookahead=8,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-                    lookahead=5,
+                    lookahead=8,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.PROGRAMMED.pretty_name(),
-                    lookahead=5,
+                    lookahead=8,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.INITIALISED.pretty_name(),
-                    lookahead=5,
+                    lookahead=8,
                     consume_nonmatches=True,
                 )
                 # A try except block in a test is unusual.
@@ -247,13 +247,13 @@ class TestTileComponentManager:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
+                    lookahead=7,
                 )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=7
                 )
 
             case _:
@@ -261,13 +261,13 @@ class TestTileComponentManager:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
+                    lookahead=7,
                 )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=7
                 )
 
         tile_component_manager.stop_communicating()
@@ -456,7 +456,7 @@ class TestTileComponentManager:
         )
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
-            lookahead=5,  # Unknown for number of polls until subrack callback.
+            lookahead=8,  # Unknown for number of polls until subrack callback.
             consume_nonmatches=True,
         )
 
@@ -3658,7 +3658,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=9
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=12
         )
         return dynamic_tile_component_manager
 

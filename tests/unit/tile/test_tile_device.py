@@ -1594,8 +1594,14 @@ class TestMccsTile:
                 try:
                     assert tile_device[attr].quality == tango.AttrQuality.ATTR_VALID
                 except AssertionError:
-                    print(f"{attr=} was not in quality ATTR_VALID")
-                    pytest.fail(f"{attr=} was not in quality ATTR_VALID")
+                    print(
+                        f"{attr=} was not in quality ATTR_VALID: "
+                        f"{tile_device.healthreport=}"
+                    )
+                    pytest.fail(
+                        f"{attr=} was not in quality ATTR_VALID: "
+                        f"{tile_device.healthreport=}"
+                    )
 
         tile_device.Off()
         tile_component_manager._subrack_says_tpm_power_changed(
@@ -2536,7 +2542,8 @@ class TestMccsTile:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert np.array_equal(tile_device.antennaIds, [])
+        # assert np.array_equal(tile_device.antennaIds, [])
+        assert tile_device.antennaIds is None
         new_ids = tuple(range(8))
         tile_device.antennaIds = new_ids
         assert tuple(tile_device.antennaIds) == new_ids

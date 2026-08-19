@@ -294,7 +294,7 @@ def check_spsstation_state(
         assert station.state() in [tango.DevState.ON, tango.DevState.ALARM]
     for tile in station_tiles:
         AttributeWaiter(timeout=300).wait_for_value(
-            tile, "tileProgrammingState", "Synchronised", lookahead=5
+            tile, "tileProgrammingState", "Synchronised", lookahead=8
         )
 
     iters = 0

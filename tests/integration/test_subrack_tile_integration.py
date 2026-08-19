@@ -468,7 +468,10 @@ class TestMccsTileTpmDriver:
         )
         assert tile_device.tileprogrammingstate == "Initialised"
         delay_time = 2  # seconds
-        start_time = str_from_float_epoch_utc_time(time.time() + delay_time)
+        # TODO: Using an int() has to be done so that, when it's used,
+        # TODO: this timestamp doesn't get rounded up (there is a call
+        # TODO: to ceil)
+        start_time = str_from_float_epoch_utc_time(int(time.time()) + delay_time)
         [[result_code], [message]] = tile_device.StartAcquisition(
             json.dumps({"start_time": start_time})
         )

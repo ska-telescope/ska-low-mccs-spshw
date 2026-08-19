@@ -519,7 +519,8 @@ class TestMccsTileTpmDriver:
         )
         with pytest.raises(
             tango.DevFailed,
-            match="ValueError: Cannot send data before StartAcquisition",
+            match="To execute this command we must be in state 'Synchronised'! "
+            "Tile is currently in state Initialised",
         ):
             [[result_code], [message]] = tile_device.SendDataSamples(
                 json.dumps({"data_type": "beam"})

@@ -1980,6 +1980,7 @@ class TileComponentManager(
                 dst_ip_40g_fpga1,
                 dst_ip_40g_fpga2,
             ) = self._read_40g_destination_ips()
+            preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -2000,6 +2001,7 @@ class TileComponentManager(
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,
             forty_gb_destination_ips=forty_gb_destination_ips,
             forty_gb_destination_ports=forty_gb_destination_ports,
+            preadu_levels=preadu_levels,
         )
 
         self.logger.info("Configuration information read from TPM")

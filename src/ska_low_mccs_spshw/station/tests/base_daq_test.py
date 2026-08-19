@@ -54,6 +54,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         tile_trls: list[str],
         subrack_trls: list[str],
         daq_trl: str,
+        wren_trl: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -62,6 +63,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param wren_trl: trl of the wren the station has.
         :param component_manager: SpsStation component manager under test.
         """
         self._data: np.ndarray | None = None
@@ -75,7 +77,9 @@ class BaseDaqTest(TpmSelfCheckTest):
         )
         self._test_folder = f"/product/{self.__class__.__name__}_{random_id}/"
         self.keep_data = True
-        super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
+        super().__init__(
+            component_manager, logger, tile_trls, subrack_trls, daq_trl, wren_trl
+        )
 
     def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
         self._data = data

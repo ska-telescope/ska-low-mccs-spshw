@@ -41,7 +41,7 @@ from ska_low_mccs_spshw.tile import (
     TpmStatus,
 )
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
-from time_utils import str_from_integer_epoch_utc_time
+from time_utils import str_from_float_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -1334,7 +1334,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Call start_acquisition and check fpga_timestamp is moving
         # ---------------------------------------------------------
         future_time = 4.0
-        start_time_str = str_from_integer_epoch_utc_time(int(time.time()) + future_time)
+        start_time_str = str_from_float_epoch_utc_time(time.time() + future_time)
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(

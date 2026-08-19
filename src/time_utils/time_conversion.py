@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 
 __all__ = [
     "float_epoch_from_str_utc_time",
-    "str_from_integer_epoch_utc_time",
     "str_from_float_epoch_utc_time",
 ]
 
@@ -47,27 +46,9 @@ def float_epoch_from_str_utc_time(utc_time: str) -> float:
     return timestamp
 
 
-def str_from_integer_epoch_utc_time(timestamp: int) -> str:
-    """
-    Format a time expressed as an integer epoch value into ISO-8601.
-
-    Format a time expressed as an interger epoch value into a properly
-    formatted ISO-8601 (RFC3339) string, e.g. 2021-03-02T12:34.56.789000Z.
-
-    :param timestamp: Unix timestamp of the (integer) reference time
-    :return: ISO-8601 formatted time
-    :rtype: str
-    :raises ValueError: if the timestamp is invalid
-    """
-    if timestamp < 0:
-        raise ValueError("A negative time value is invalid")
-
-    return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(RFC_FORMAT)
-
-
 def str_from_float_epoch_utc_time(timestamp: float) -> str:
     """
-    Format a time expressed as a frame count into ISO-8601.
+    Format a time expressed as float into ISO-8601.
 
     Format a time expressed as a frame count into a properly formatted ISO-8601
     (RFC3339) string, e.g. 2021-03-02T12:34.56.789000Z.

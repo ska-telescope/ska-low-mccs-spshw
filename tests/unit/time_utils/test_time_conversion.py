@@ -11,7 +11,6 @@ import pytest
 from time_utils.time_conversion import (
     float_epoch_from_str_utc_time,
     str_from_float_epoch_utc_time,
-    str_from_integer_epoch_utc_time,
 )
 
 TEST_VALID_EPOCH_INT = 1785862384
@@ -51,30 +50,17 @@ def test_epoch_from_pre_1970_string() -> None:
 
 
 def test_string_from_epoch_invalid_number() -> None:
-    """Negative epoch raises an error."""
+    """Negative float epoch value raises an error."""
     with pytest.raises(ValueError):
-        str_from_integer_epoch_utc_time(-1)
+        str_from_float_epoch_utc_time(-1.0)
 
 
 def test_string_from_epoch_valid_int() -> None:
     """Valid epoch value."""
     assert (
-        str_from_integer_epoch_utc_time(TEST_VALID_EPOCH_INT)
+        str_from_float_epoch_utc_time(TEST_VALID_EPOCH_INT)
         == TEST_VALID_EPOCH_STRING_INT
     )
-
-
-def test_round_trip_from_int() -> None:
-    """Check conversion to string and then back again works."""
-    epoch_to_string = str_from_integer_epoch_utc_time(TEST_VALID_EPOCH_INT)
-    epoch_from_string = float_epoch_from_str_utc_time(epoch_to_string)
-    assert epoch_from_string == TEST_VALID_EPOCH_INT
-
-
-def test_string_from_float_invalid_number() -> None:
-    """Negative float epoch value raises an error."""
-    with pytest.raises(ValueError):
-        str_from_float_epoch_utc_time(-1.0)
 
 
 def test_string_from_epoch_valid_float() -> None:
@@ -83,6 +69,13 @@ def test_string_from_epoch_valid_float() -> None:
         str_from_float_epoch_utc_time(TEST_VALID_EPOCH_FLOAT)
         == TEST_VALID_EPOCH_STRING_FLOAT
     )
+
+
+def test_round_trip_from_int() -> None:
+    """Check conversion to string and then back again works."""
+    epoch_to_string = str_from_float_epoch_utc_time(TEST_VALID_EPOCH_INT)
+    epoch_from_string = float_epoch_from_str_utc_time(epoch_to_string)
+    assert epoch_from_string == TEST_VALID_EPOCH_INT
 
 
 def test_round_trip_from_float() -> None:

@@ -5436,7 +5436,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Subrack Current",
-        min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
     )
@@ -5452,7 +5451,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Subrack Power",
-        min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
     )

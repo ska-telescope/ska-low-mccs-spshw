@@ -13,4 +13,5 @@ shutil.copyfileobj(
 }
 
 download_and_extract $FIRMWARE_VERSION
-download_and_extract $FIRMWARE_VERSION_NEW
+download_and_extract $FIRMWARE_VERSION || exit 1
+download_and_extract $FIRMWARE_VERSION_NEW || exit 1

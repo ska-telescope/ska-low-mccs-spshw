@@ -60,6 +60,7 @@ class TestTilePointing(BaseDaqTest):
         tile_trls: list[str],
         subrack_trls: list[str],
         daq_trl: str,
+        wren_trl: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -68,6 +69,7 @@ class TestTilePointing(BaseDaqTest):
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param wren_trl: trl of the wren the station has.
         :param component_manager: SpsStation component manager under test.
         """
         # Random seed for repeatability
@@ -82,7 +84,9 @@ class TestTilePointing(BaseDaqTest):
             self._delays.append(random_val)
 
         self._start_freq = 156.25e6  # Hz
-        super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
+        super().__init__(
+            component_manager, logger, tile_trls, subrack_trls, daq_trl, wren_trl
+        )
 
     def _send_beam_data(self: TestTilePointing) -> None:
         """Send beam data to the DAQ."""

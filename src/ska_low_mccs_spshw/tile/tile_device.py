@@ -17,6 +17,7 @@ import os.path
 import re
 import sys
 import threading
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
@@ -3653,8 +3654,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the id of the station to which this tile is assigned
         """
         station = self._attribute_state["stationId"].read()
-        message = f"stationId: read value = {station}"
-        self.logger.info(message)
         return station
 
     @stationId.write  # type: ignore[no-redef]
@@ -4063,6 +4062,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
+    def _is_synchronised(self: MccsTile, *args: Any) -> bool:
+        """
+        Return a flag representing whether we are in Synchronised state.
+
+        :param args: The tango.AttReqType.
+
+        :return: True if Tile is in Synchronised state.
+        """
+        if self.component_manager._initialise_executing:
+            reason = "CommandNotAllowed"
+            msg = "Cannot execute this command while initialise is executing!"
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+
+        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        if prog_state == "Synchronised":
+            return True
+        reason = "CommandNotAllowed"
+        msg = (
+            "To execute this command we must be in state "
+            f"'Synchronised'! Tile is currently in state {prog_state}"
+        )
+        tango.Except.throw_exception(reason, msg, self.get_name())
+        return False
+
     fpga1Temperature = attribute_from_signal(  # noqa: N815
         fpga1_temperature_signal,
         dtype="DevFloat",
@@ -4362,6 +4386,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: PLL lock state
         """
+        # NOTE: duplication of timing_pll_lock_status. This is undesired
+        # but to assist with migration to new API,
+        # we are keeping this attribute for now.
+        # It will be removed in the future and
+        # users should migrate to using timing_pll_lock_status instead.
+        warnings.warn(
+            "MccsTile's pllLocked attribute is deprecated "
+            "and will be removed in a future release. "
+            "Please use timing_pll_lock_status instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._attribute_state["pllLocked"].read()
 
     @attribute(
@@ -5849,7 +5885,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return json.dumps(item_new[0])
         return json.dumps(item_new)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_initialised",
+    )
     @stb.validators.validate_json_args(schema=SetLmcDownload_SCHEMA)
     def SetLmcDownload(
         self: MccsTile,
@@ -5903,7 +5943,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.component_manager.refresh_tile_info()
         return (result_codes, messages)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_initialised",
+    )
     @stb.validators.validate_json_args(schema=SetLmcIntegratedDownload_SCHEMA)
     def SetLmcIntegratedDownload(
         self: MccsTile,
@@ -6147,7 +6191,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             cls=NumpyEncoder,
         )
 
-    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevVarLongArray",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_initialised",
+    )
     def SetBeamFormerRegions(
         self: MccsTile, argin: list[int]
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6445,7 +6493,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.apply_calibration(switch_time)
 
-    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_synchronised",
+    )
     def LoadPointingDelays(
         self: MccsTile, argin: list[float]
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6492,7 +6544,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         return self.component_manager.load_pointing_delays(delay_array, beam_index)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_synchronised",
+    )
     def ApplyPointingDelays(
         self: MccsTile, start_time: str
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6738,7 +6794,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.stop_integrated_data()
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_synchronised",
+    )
     @stb.validators.validate_json_args(schema=SendDataSamples_SCHEMA)
     def SendDataSamples(
         self: MccsTile,
@@ -7119,7 +7179,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([ResultCode.OK], ["StartPatternGenerator command completed OK"])
 
     @engineering_mode_required
-    @command(dtype_out="DevVarLongStringArray")
+    @command(dtype_out="DevVarLongStringArray", fisallowed="_is_synchronised")
     def StartADCs(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Start the ADCs.
@@ -7136,7 +7196,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([ResultCode.OK], ["StartAdcs command completed OK"])
 
     @engineering_mode_required
-    @command(dtype_out="DevVarLongStringArray")
+    @command(dtype_out="DevVarLongStringArray", fisallowed="_is_synchronised")
     def StopADCs(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Stop the ADCs.

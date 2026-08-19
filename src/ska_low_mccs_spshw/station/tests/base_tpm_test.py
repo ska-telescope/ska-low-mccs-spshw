@@ -49,6 +49,7 @@ class TpmSelfCheckTest(abc.ABC):
         tile_trls: list[str],
         subrack_trls: list[str],
         daq_trl: str,
+        wren_trl: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -57,6 +58,7 @@ class TpmSelfCheckTest(abc.ABC):
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param wren_trl: trl of the wren the station has.
         :param component_manager: SpsStation component manager under test.
         """
         self.component_manager = component_manager

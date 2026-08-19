@@ -60,6 +60,22 @@ Feature: Test tile
         Then the live calibration coefficients can be read back correctly from the Tile
         And the staged calibration coefficients can be read back correctly from the Tile
 
+    Scenario: Tile monitors a firmware overheating event and can be turned off afterwards
+        Given an SPS deployment against HW
+        And the SpsStation and tiles are ON
+        And the Tile is available
+        # Trigger the firmware shutdown. The CPLD will turn off FPGAs for safety
+        When the Tile overheats
+        # We should be Unprogrammed now. And since the FPGAs are not ON, We can only trust
+        # a subset of attribtutes.
+        Then the Tile reports the overheat condition as expected
+        And the expected CPLD attributes are VALID
+        # After this overheating event we can still turn off the TPM.
+        When the Tile is powered OFF
+        # Check both State and tileprogrammingstate report OFF.
+        Then the tile reports it is in the OFF state
+
+
 # Scenario: Tile state recovered after dev_init
 #     Given an SPS deployment against HW
 #     And the SpsStation and tiles are ON

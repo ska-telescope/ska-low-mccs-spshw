@@ -27,10 +27,193 @@ import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, ResultCode, TaskStatus
+from ska_tango_testing.context import DeviceProxy as ContextDeviceProxy
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+class FakeGroupReply:
+    """A stand-in for tango's GroupReply/GroupCmdReply, for unit testing."""
+
+    def __init__(
+        self: FakeGroupReply,
+        dev_name: str,
+        obj_name: str,
+        data: Any = None,
+        exception: Optional[Exception] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param dev_name: name of the device this reply is for.
+        :param obj_name: the name of the object in question.
+        :param data: the data returned by the device, if it succeeded.
+        :param exception: the exception raised by the device, if it failed.
+        """
+        self._dev_name = dev_name
+        self._obj_name = obj_name
+        self._data = data
+        self._exception = exception
+
+    def has_failed(self: FakeGroupReply) -> bool:
+        """
+        Return whether this device's part of the group call failed.
+
+        :return: whether this device's part of the group call failed.
+        """
+        return self._exception is not None
+
+    def obj_name(self: FakeGroupReply) -> str:
+        """
+        Return the name of the device this reply is for.
+
+        :return: the name of the device this reply is for.
+        """
+        return self._obj_name
+
+    def dev_name(self: FakeGroupReply) -> str:
+        """
+        Return the name of the device this reply is for.
+
+        :return: the name of the device this reply is for.
+        """
+        return self._dev_name
+
+    def get_err_stack(self: FakeGroupReply) -> list[tango.DevError]:
+        """
+        Return the error stack, if this device's call failed.
+
+        :return: the error stack, if this device's call failed.
+        """
+        if self._exception is None:
+            return []
+        error = tango.DevError()
+        error.reason = str(self._exception)
+        error.desc = str(self._exception)
+        error.origin = self._obj_name
+        error.severity = tango.ErrSeverity.ERR
+        return [error]
+
+    def get_data(self: FakeGroupReply) -> Any:
+        """
+        Return the data returned by the device, if it succeeded.
+
+        :return: the data returned by the device, if it succeeded.
+        """
+        return self._data
+
+
+class FakeGroup:
+    """
+    A stand-in for tango.Group, for unit testing.
+
+    Real tests can't use a real ``tango.Group``: it makes genuine Tango
+    connections, and these unit tests mock out tile devices with plain
+    ``unittest.mock.Mock`` objects registered via ``TangoTestHarness``,
+    with no real Tango device server behind them. This fake instead
+    fans each call out (sequentially, that's fine for a test double) to
+    the same mocks the rest of the test suite already configures, via
+    ``ska_tango_testing.context.DeviceProxy`` -- which is how those
+    mocks get resolved by name in the first place.
+    """
+
+    def __init__(self: FakeGroup, name: str) -> None:
+        """
+        Initialise a new instance.
+
+        :param name: name of the group (unused, kept for API parity).
+        """
+        self._name = name
+        self._device_names: list[str] = []
+
+    def add(self: FakeGroup, device_name: str) -> None:
+        """
+        Add a device to the group.
+
+        :param device_name: name of the device to add.
+        """
+        self._device_names.append(device_name)
+
+    def get_device_list(self: FakeGroup) -> list[str]:
+        """
+        Return the names of the devices in this group.
+
+        :return: the names of the devices in this group.
+        """
+        return list(self._device_names)
+
+    def set_timeout_millis(self: FakeGroup, timeout_ms: int) -> None:
+        """
+        Set the timeout for group calls. A no-op in this fake.
+
+        :param timeout_ms: timeout in milliseconds.
+        """
+
+    def command_inout(
+        self: FakeGroup,
+        cmd_name: str,
+        arg: Any = None,
+        forward: bool = True,
+    ) -> list[FakeGroupReply]:
+        """
+        Run a command on every device in the group.
+
+        :param cmd_name: name of the command to run.
+        :param arg: a single argument to broadcast to every device, or a
+            ``tango.DeviceDataList`` with one argument per device.
+        :param forward: unused, kept for API parity.
+
+        :return: one reply per device.
+        """
+        if isinstance(arg, tango.DeviceDataList):
+            per_device_args = [dd.extract() for dd in arg]
+        else:
+            per_device_args = [arg] * len(self._device_names)
+
+        replies = []
+        for device_name, device_arg in zip(self._device_names, per_device_args):
+            proxy = ContextDeviceProxy(device_name)
+            try:
+                if device_arg is None:
+                    data = proxy.command_inout(cmd_name)
+                else:
+                    data = proxy.command_inout(cmd_name, device_arg)
+                replies.append(FakeGroupReply(device_name, cmd_name, data=data))
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                replies.append(FakeGroupReply(device_name, cmd_name, exception=e))
+        return replies
+
+    def write_attribute(
+        self: FakeGroup,
+        attr_name: str,
+        value: Any,
+        forward: bool = True,
+        multi: bool = False,
+    ) -> list[FakeGroupReply]:
+        """
+        Write an attribute on every device in the group.
+
+        :param attr_name: name of the attribute to write.
+        :param value: value to broadcast to every device, or (if
+            ``multi``) a list of one value per device.
+        :param forward: unused, kept for API parity.
+        :param multi: whether ``value`` is a per-device list.
+
+        :return: one reply per device.
+        """
+        values = value if multi else [value] * len(self._device_names)
+
+        replies = []
+        for device_name, device_value in zip(self._device_names, values):
+            proxy = ContextDeviceProxy(device_name)
+            try:
+                setattr(proxy, attr_name, device_value)
+                replies.append(FakeGroupReply(device_name, attr_name))
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                replies.append(FakeGroupReply(device_name, attr_name, exception=e))
+        return replies
 
 
 def wait_for_condition(
@@ -58,6 +241,31 @@ def wait_for_condition(
         ):
             pass
     return False
+
+
+def wait_for_device(
+    trl: str, timeout: float = 120, poll_interval: float = 3
+) -> tango.DeviceProxy | None:
+    """
+    Wait for the device with a timeout.
+
+    :param trl: The device trl
+    :param timeout: The timeout in seconds
+    :param poll_interval: The polling interval
+    :returns: True/False if all condition is satisfied.
+
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            return tango.DeviceProxy(trl)
+        except (
+            tango.ConnectionFailed,
+            tango.DevFailed,
+            tango.CommunicationFailed,
+        ):
+            time.sleep(poll_interval)
+    return None
 
 
 class TpmStatus(enum.IntEnum):
@@ -160,7 +368,11 @@ def wait_for_completed_command_to_clear_from_queue(
 
 
 def wait_for_lrc_result(
-    device: tango.DeviceProxy, uid: str, expected_result: ResultCode, timeout: float
+    device: tango.DeviceProxy,
+    uid: str,
+    expected_result: ResultCode,
+    timeout: float,
+    expected_status: str = "COMPLETED",
 ) -> None:
     """
     Wait for a specific result from a LRC.
@@ -169,6 +381,7 @@ def wait_for_lrc_result(
     :param uid: The uid used to identify the task under question.
     :param expected_result: The expected ResultCode from execution.
     :param timeout: A time to wait in seconds.
+    :param expected_status: The expected status string from execution.
 
     :raises TimeoutError: When the commands failed to exit the queue in time.
     :raises ValueError: When the Result is incorrect or the result not found.
@@ -189,6 +402,11 @@ def wait_for_lrc_result(
     for finished_result in device.lrcfinished:
         loaded_result = json.loads(finished_result)
         if loaded_result["uid"] == uid:
+            if loaded_result["status"] != expected_status:
+                raise ValueError(
+                    f"Status for {uid} = {loaded_result['status']}. "
+                    f"Expected {expected_status}!"
+                )
             actual_result = ResultCode(loaded_result["result"][0])
             if actual_result == expected_result:
                 return
@@ -592,8 +810,8 @@ class _ProgrammingStateAccess:
                 # trigger a overheating event.
                 cached_adminmode = obj._tile_device.adminMode
                 obj._tile_device.adminMode = AdminMode.ENGINEERING
-                obj._tile_device.SetFirmwareTemperatureThresholds(
-                    json.dumps({"board_temperature_threshold": 32.0})
+                obj._tile_device.firmwareTemperatureThresholds = json.dumps(
+                    {"board_alarm_threshold": 30}
                 )
                 obj._tile_device.adminMode = cached_adminmode
 

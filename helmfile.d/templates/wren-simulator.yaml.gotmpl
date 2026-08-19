@@ -1,0 +1,47 @@
+{{- $is_sat_simulated := dig "platform" "sat" "simulated" false .Values}}
+{{- if $is_sat_simulated}}
+{{- $trl := "low-sat/whiterabbitsimulator/ci-1" }}
+{{- $registry := "registry.gitlab.com/ska-telescope/ska-sat-lmc" }}
+{{- $tag := "1.0.0-dev.c99938c45" }}
+ska-sat-lmc:
+  enabled: true
+  ska-tango-devices:
+    deviceServerTypes:
+      WhiteRabbitSimulator:
+        metadata:
+          component: sat
+        image:
+          registry: {{$registry}}
+          name: ska-sat-lmc
+          tag: {{$tag}}
+          pullPolicy: IfNotPresent
+        command: WhiteRabbitSimulator
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+        livenessProbe:
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+    deviceServers:
+      WhiteRabbitSimulator:
+        whiterabbitsim-1:
+          devices:
+            WhiteRabbitSimulator:
+            - {{$trl}}
+    devices:
+      WhiteRabbitSimulator:
+        {{$trl}}:
+          Host: 127.0.0.1
+{{- end }}

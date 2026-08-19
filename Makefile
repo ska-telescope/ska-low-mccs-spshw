@@ -100,6 +100,7 @@ ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
 	--selector chart=ska-low-mccs-spshw \
 	--selector chart=ska-tango-base \
+	--selector chart=ska-sat-lmc \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \
 	--set ska-tango-devices.deviceServerTypes.spshw.image.registry=$(CI_REGISTRY_IMAGE) \

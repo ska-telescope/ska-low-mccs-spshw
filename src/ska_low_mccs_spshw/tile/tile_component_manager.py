@@ -9,13 +9,12 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 import threading
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Final, Iterator, List, NoReturn, Optional, cast
+from typing import Any, Callable, Final, Iterator, List, Optional, cast
 
 import numpy as np
 import semver
@@ -113,7 +112,7 @@ _ATTRIBUTE_MAP: Final = {
     "IS_PROGRAMMED": "is_programmed",
     "PENDING_DATA_REQUESTS": "pending_data_requests",
     "BEAMFORMER_TABLE": "beamformer_table",
-    "CHECK_CPLD_COMMS": "global_status_alarms",
+    "CHECK_ALARM_STATUS": "global_status_alarms",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
     "40G_PACKET_COUNT": "40g_packet_count",
@@ -449,7 +448,7 @@ class TileComponentManager(
             return None
 
         match request_spec:
-            case "CHECK_CPLD_COMMS":
+            case "CHECK_ALARM_STATUS":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_global_status_alarms,
@@ -676,7 +675,10 @@ class TileComponentManager(
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with acquire_timeout(
-            self._hardware_lock, self._poll_timeout, raise_exception=True
+            self._hardware_lock,
+            self._poll_timeout,
+            raise_exception=True,
+            context=f"{poll_request.name} kwargs={poll_request._kwargs}",
         ):
             result = poll_request()
             self._last_known_connected = True
@@ -1581,6 +1583,7 @@ class TileComponentManager(
                     self._update_attribute_callback(
                         programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                     )
+
                 prog_status = False
                 tile_info = self.tile.info
                 bios = tile_info.get("hardware", {}).get("bios", "")
@@ -1915,6 +1918,7 @@ class TileComponentManager(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
+            context=getattr(func, "__name__", repr(func)),
         ):
             return func()
 
@@ -1974,6 +1978,7 @@ class TileComponentManager(
                 dst_ip_40g_fpga1,
                 dst_ip_40g_fpga2,
             ) = self._read_40g_destination_ips()
+            preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
 
         self._update_attribute_callback(
             static_delays=static_delays,
@@ -1994,6 +1999,7 @@ class TileComponentManager(
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,
             forty_gb_destination_ips=forty_gb_destination_ips,
             forty_gb_destination_ports=forty_gb_destination_ports,
+            preadu_levels=preadu_levels,
         )
 
         self.logger.info("Configuration information read from TPM")
@@ -2155,30 +2161,6 @@ class TileComponentManager(
     # ---------------------------------------------
     # Timed commands. Convert time to frame number.
     # ---------------------------------------------
-
-    @property
-    @check_communicating
-    def clock_present(self: TileComponentManager) -> NoReturn:
-        """
-        Check if 10 MHz clock signal is present.
-
-        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
-        """
-        raise NotImplementedError(
-            "methods clock_present not yet implemented in ska-low-sps-tpm-api"
-        )
-
-    @property
-    @check_communicating
-    def sysref_present(self: TileComponentManager) -> NoReturn:
-        """
-        Check if SYSREF signal is present.
-
-        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
-        """
-        raise NotImplementedError(
-            "methods sysref_present not yet implemented in ska-low-sps-tpm-api"
-        )
 
     @property
     @check_communicating
@@ -2354,23 +2336,6 @@ class TileComponentManager(
             raise_exception=True,
         ):
             return self.tile.current_tile_beamformer_frame()
-
-    @check_communicating
-    def get_tpm_temperature_thresholds(
-        self: TileComponentManager,
-    ) -> None | dict[str, float]:
-        """
-        Return the temperature thresholds in firmware.
-
-        :returns: A dictionary containing the thresholds or
-            None if lock could not be acquired in 0.4 seconds.
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_tpm_temperature_thresholds()
 
     @property
     @check_communicating
@@ -4188,158 +4153,6 @@ class TileComponentManager(
             return self.tile.check_pending_data_requests()
 
     @property
-    @check_communicating
-    def pps_present(self: TileComponentManager) -> bool:
-        """
-        Check if PPS signal is present.
-
-        :return: True if PPS is present. Checked in poll loop, cached
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["timing"]["pps"]["status"]
-
-    @property
-    @check_communicating
-    def voltage_mon(self: TileComponentManager) -> float:
-        """
-        Return the internal 5V supply of the TPM.
-
-        :return: the internal 5V supply of the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["voltages"]["MON_5V0"]
-
-    @property
-    @check_communicating
-    def flagged_packets(self: TileComponentManager) -> dict:
-        """
-        Return the total number of flagged packets by the TPM.
-
-        :return: the total number of flagged packets by the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["dsp"]["station_beamf"][
-                "discarded_or_flagged_packet_count"
-            ]
-
-    @property
-    @check_communicating
-    def data_router_status(self: TileComponentManager) -> dict:
-        """
-        Return the data router values.
-
-        :return: The status of both FPGAs
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["io"]["data_router"]
-
-    @property
-    @check_communicating
-    def data_router_discarded_packets(self: TileComponentManager) -> dict:
-        """
-        Return the data router values.
-
-        :return: The number of discarded packets
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["io"]["data_router"]
-
-    @property
-    @check_communicating
-    def fpga1_temperature(self: TileComponentManager) -> float:
-        """
-        Return the temperature of FPGA 1.
-
-        :return: the temperature of FPGA 1
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["temperatures"]["FPGA0"]
-
-    @property
-    @check_communicating
-    def fpga2_temperature(self: TileComponentManager) -> float:
-        """
-        Return the temperature of FPGA 2.
-
-        :return: the temperature of FPGA 2
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["temperatures"]["FPGA1"]
-
-    @property
-    @check_communicating
-    def board_temperature(self: TileComponentManager) -> float:
-        """
-        Return the temperature of the TPM.
-
-        :return: the temperature of the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["temperatures"]["board"]
-
-    @property
-    @check_communicating
-    def adcs(self: TileComponentManager) -> dict[str, Any]:
-        """
-        Return the ADC status in the TPM.
-
-        :return: ADC status in the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["adcs"]
-
-    @property
-    @check_communicating
-    def alarms(self: TileComponentManager) -> dict[str, Any]:
-        """
-        Return the alarms status in the TPM.
-
-        :return: alarms status in the TPM
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            return self.tile.get_health_status()["alarms"]
-
-    @property
     def is_programmed(self: TileComponentManager) -> bool:
         """
         Return whether this TPM is programmed (i.e. firmware has been downloaded to it).
@@ -4656,31 +4469,6 @@ class TileComponentManager(
             is_station_beam_flagging_enabled=flagging_enabled
         )
 
-    def get_voltage_warning_thresholds(
-        self: TileComponentManager,
-        voltage: str = "",
-    ) -> str:
-        """
-        Get the voltage warning thresholds.
-
-        :param voltage: The voltage type to get the thresholds for.
-
-        :return: a jsonified dictionary with the voltage warning thresholds
-            or a message if the specified voltage is not recognized.
-        """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            if voltage:
-                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds(
-                    voltage
-                )
-            else:
-                thresholds = self.tile.tpm_monitor.get_voltage_warning_thresholds()
-            if thresholds is None:
-                return f"Specified voltage '{voltage}' not recognized."
-            return json.dumps(thresholds)
-
     def set_voltage_warning_thresholds(
         self: TileComponentManager,
         voltage: str,
@@ -4706,31 +4494,6 @@ class TileComponentManager(
             if set_correctly:
                 return self.tile.tpm_monitor.get_voltage_warning_thresholds(voltage)
             return None
-
-    def get_current_warning_thresholds(
-        self: TileComponentManager,
-        current: str = "",
-    ) -> str:
-        """
-        Get the current warning thresholds.
-
-        :param current: The current type to get the thresholds for.
-
-        :return: a jsonified dictionary with the current warning thresholds
-            or a message if the specified current is not recognized.
-        """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            if current:
-                thresholds = self.tile.tpm_monitor.get_current_warning_thresholds(
-                    current
-                )
-            else:
-                thresholds = self.tile.tpm_monitor.get_current_warning_thresholds()
-            if thresholds is None:
-                return f"Specified current '{current}' not recognized."
-            return json.dumps(thresholds)
 
     def set_current_warning_thresholds(
         self: TileComponentManager,
@@ -4770,32 +4533,6 @@ class TileComponentManager(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             return self.tile.is_station_beam_flagging_enabled()
-
-    @property
-    @check_communicating
-    def broadband_rfi_factor(self: TileComponentManager) -> float:
-        """
-        Return the broadband RFI factor.
-
-        :return: the broadband RFI factor
-        """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            return self.tile.broadband_rfi_factor
-
-    @property
-    @check_communicating
-    def rfi_blanking_enabled_antennas(self: TileComponentManager) -> list[int]:
-        """
-        Return the list of antennas with RFI blanking enabled.
-
-        :return: list of antennas with RFI blanking enabled
-        """
-        with acquire_timeout(
-            self._hardware_lock, self._default_lock_timeout, raise_exception=True
-        ):
-            return self.tile.rfi_blanking_enabled_antennas
 
     def enable_broadband_rfi_blanking(
         self: TileComponentManager, antennas: list[int]

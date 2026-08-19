@@ -4407,6 +4407,16 @@ class SpsStationComponentManager(
         }
         base_config.update(daq_config)
 
+        try:
+            self._stop_daq()
+        except ValueError as stop_error:
+            return _fail(
+                "Failed to stop DAQ before configuring for calibration: "
+                f"{stop_error}"
+            )
+        if _check_aborted():
+            return ResultCode.ABORTED, "Task aborted"
+
         configure_command = MccsCommandProxy(
             self._lmc_daq_trl, "Configure", self.logger
         )

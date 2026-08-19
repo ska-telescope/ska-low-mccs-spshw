@@ -547,7 +547,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "csp_rounding": "cspRounding_signal",
         "preadu_levels": "preaduLevels_signal",
         "is_station_beam_flagging_enabled": "stationBeamFlagEnabled_signal",
-        "antennaIds": "antennaIds_signal",
     }
 
     # -----------------
@@ -1287,6 +1286,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             healthful_attrs = set(self._attribute_state.keys())
             # Add signal-backed attributes that are not in _attribute_state.
             healthful_attrs |= set(MccsTile._HEALTH_SIGNAL_MAP.keys())
+            # Subrack-reported draw attributes were previously AttributeManager
+            # backed (and so included via self._attribute_state above); now
+            # that they are signal backed they must be added explicitly.
+            healthful_attrs |= {"voltageDraw", "currentDraw", "powerDraw"}
 
             healthful_attrs = healthful_attrs - {
                 "dataTransmissionMode",

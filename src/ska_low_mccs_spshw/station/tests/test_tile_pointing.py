@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from time_utils import str_from_integer_epoch_utc_time
+from time_utils import str_from_float_epoch_utc_time
 
 from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
@@ -211,7 +211,7 @@ class TestTilePointing(BaseDaqTest):
         self._configure_beamformer(self._start_freq)
         self._reset_tpm_calibration(1.0)
         self._clear_pointing_delays()
-        start_time = str_from_integer_epoch_utc_time(int(time.time()) + 2)
+        start_time = str_from_float_epoch_utc_time(time.time() + 2)
         self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )

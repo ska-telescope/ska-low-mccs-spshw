@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
-from time_utils import str_from_integer_epoch_utc_time
+from time_utils import str_from_float_epoch_utc_time
 
 from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
@@ -328,7 +328,7 @@ class TestTileBeamformer(BaseDaqTest):
         self.component_manager.stop_adcs()
         self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()
-        start_time = str_from_integer_epoch_utc_time(int(time.time()) + 5)
+        start_time = str_from_float_epoch_utc_time(time.time() + 5)
         self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )

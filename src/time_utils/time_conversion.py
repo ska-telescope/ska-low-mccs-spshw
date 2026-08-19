@@ -25,7 +25,7 @@ __all__ = [
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
-def integer_epoch_from_str_utc_time(utc_time: str) -> int:
+def float_epoch_from_str_utc_time(utc_time: str) -> float:
     """
     Return first timestamp (Unix) second after specified time.
 
@@ -45,7 +45,7 @@ def integer_epoch_from_str_utc_time(utc_time: str) -> int:
     if timestamp < 0:
         return -1
 
-    return math.ceil(timestamp)
+    return timestamp
 
 
 def str_from_integer_epoch_utc_time(timestamp: int) -> str:

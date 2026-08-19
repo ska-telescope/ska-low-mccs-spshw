@@ -24,6 +24,7 @@ from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
+import tango
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -114,6 +115,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
     OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
+    # Feature flags for WREN device. When WRENHealthCheckFailOnTimeout is True,
+    # the device will wait until WREN is ok during initialisation. If WREN
+    # times-out then device will not initialise.
+    WRENHealthCheckFailOnTimeout = device_property(dtype=bool, default_value=False)
+    WRENHealthCheckTimeout = device_property(dtype=float, default_value=5 * 60)
+
+    TileGroupTimeout = device_property(
+        dtype=float,
+        doc=(
+            "Set the timeout [ms] for all devices in the tile group. "
+            "Any method which takes longer than "
+            "this time to execute will throw an exception."
+        ),
+        default_value=2400,  # [ms]
+    )
+
     # ---------------
     # Initialisation
     # ---------------
@@ -142,6 +159,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
+        self._health_rollup_devices: list[str]
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
@@ -159,6 +177,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "pps_delta_failed": 9,
             "subracks": (1, 1, 1),
             "tiles": (1, 1, 2),
+            "wren": (1, 1, 1),
         }
         super().init_device()
 
@@ -176,7 +195,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
             f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
-            f"\tWRENTRL: {self.WRENTRL}\n"
+            f"\tWRENTRL: '{self.WRENTRL}'\n"
+            f"\tWRENHealthCheckFailOnTimeout: {self.WRENHealthCheckFailOnTimeout}\n"
+            f"\tWRENHealthCheckTimeout: {self.WRENHealthCheckTimeout}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
@@ -200,10 +221,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_rollup = self._setup_health_rollup()
+        self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
+            self.WRENTRL if self.WRENTRL != " " else "",
             self._old_health_changed,
         )
         # Update thresholds so we don't have to define ppsDelta in two places.
@@ -253,6 +275,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :return: a component manager for this device.
         """
+        # A single group over all tiles,
+        # Constructed using device_properties.
+        # As it stands a builder pattern seemed overkill for this.
+        # We are constructing here since this hook is commonly overriden for
+        # injection in tests.
+        tile_group = tango.Group(f"station-{self.StationId}-tiles")
+
+        for tile_fqdn in self.TileFQDNs:
+            tile_group.add(tile_fqdn)
+
+        tile_group.set_timeout_millis(  # pylint: disable=no-member
+            self.TileGroupTimeout
+        )
+
         return SpsStationComponentManager(
             self.StationId,
             self.SubrackFQDNs,
@@ -269,11 +305,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.AntennaConfigURI,
             self.StartBandpassesInInitialise,
             self.BandpassIntegrationTime,
+            self.WRENHealthCheckFailOnTimeout,
+            self.WRENHealthCheckTimeout,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
+            self._health_model.wren_health_changed,
+            tile_group,
             self.OnWorkaroundFlag,
             event_serialiser=self._event_serialiser,
         )
@@ -348,7 +388,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _setup_health_rollup(
         self: SpsStation,
-    ) -> HealthRollup:
+    ) -> tuple[HealthRollup, list[str]]:
         #   Rollup is based on three configurable thresholds:
         # * the number of FAILED (or UNKNOWN) sources that cause health
         #   to roll up to overall FAILED;
@@ -379,6 +419,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             rollup_members.append("tiles")
             thresholds["tiles"] = self._health_thresholds["tiles"]
 
+        # Add WREN device to rollup members. For reasons that are unclear to
+        # me, but which seems to affect other device properties too, if the
+        # WRENTRL is set to "" during testing it will be exposed here as " ",
+        # so let's strip the trl of surrounding white space
+        if self.WRENTRL not in ["", " "]:
+            rollup_members.append("wren")
+            thresholds["wren"] = self._health_thresholds["wren"]
+
         health_rollup = HealthRollup(
             rollup_members,
             thresholds["self"],
@@ -386,12 +434,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_summary_changed,
         )
 
+        health_rollup_devices = []
+
         if "subracks" in rollup_members:
             # Subrack Default Thresholds: 1 failed = failed, 1 failed = deg, 1 deg = deg
             health_rollup.define("subracks", self.SubrackFQDNs, thresholds["subracks"])
+            health_rollup_devices.extend(self.SubrackFQDNs)
         if "tiles" in rollup_members:
             # Tile Default Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
             health_rollup.define("tiles", self.TileFQDNs, thresholds["tiles"])
+            health_rollup_devices.extend(self.TileFQDNs)
+        if "wren" in rollup_members:
+            health_rollup.define("wren", [self.WRENTRL], thresholds["wren"])
+            health_rollup_devices.extend([self.WRENTRL])
 
         health_rollup.define(
             "tile_programming_state",
@@ -409,7 +464,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             thresholds["beamformer_flagged_count"],
         )
 
-        return health_rollup
+        return health_rollup, health_rollup_devices
 
     def _redefine_health_rollup(self: SpsStation) -> None:
         """
@@ -448,7 +503,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         old_report = json.loads(self._health_report)
         old_subdevice_healths = _flatten_dict(old_report)
         old_online = self._health_rollup.online
-        self._health_rollup = self._setup_health_rollup()
+        self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
         # Restore old healthstates.
         for subdevice, health in old_subdevice_healths.items():
@@ -532,7 +587,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 f"health = {None if health is None else health.name} "
             )
             if health is not None:
-                self._health_rollup.health_changed(device_name, health)
+                if device_name in self._health_rollup_devices:
+                    self._health_rollup.health_changed(device_name, health)
+                else:
+                    self.logger.warning(f"{device_name} is not in health rollup")
         else:
             if power is not None:
                 self._health_model.update_state(fault=fault, power=power)
@@ -855,14 +913,55 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.BandpassDaqTRL = value
         self.component_manager._bandpass_daq_trl = value
 
-    @attribute(dtype=str)
+    @attribute()
     def WrenTRL(self: SpsStation) -> str:
         """
         Report the Tango Resource Locator for this SpsStation's WREN instance.
 
         :return: Return the current WREN TRL.
+
         """
         return self.WRENTRL
+
+    @attribute()
+    def WrenHealthCheckFailOnTimeout(self) -> bool:
+        """
+        Return whether the WREN Health Check feature is enabled.
+
+        :returns: The WREN Health Check feature is enabled.
+
+        """
+        return self.component_manager.wren_health_check_fail_on_timeout
+
+    @WrenHealthCheckFailOnTimeout.write  # type: ignore[no-redef]
+    def WrenHealthCheckFailOnTimeout(self, enabled: bool) -> None:
+        """
+        Set whether the WREN Health Check feature is enabled.
+
+        :param enabled: True to enable WREN Health Check, False to disable.
+
+        """
+        self.component_manager.wren_health_check_fail_on_timeout = enabled
+
+    @attribute()
+    def WrenHealthCheckTimeout(self) -> float:
+        """
+        Return the WREN Health Check timeout in seconds.
+
+        :returns: The WREN Health Check timeout.
+
+        """
+        return self.component_manager.wren_health_check_timeout
+
+    @WrenHealthCheckTimeout.write  # type: ignore[no-redef]
+    def WrenHealthCheckTimeout(self, timeout: float) -> None:
+        """
+        Set the WREN Health Check timeout in seconds.
+
+        :param timeout: The timeout in seconds for WREN Health Check.
+
+        """
+        self.component_manager.wren_health_check_timeout = timeout
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:
@@ -1453,7 +1552,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # if key == "subracks":
             #     self._health_rollup.define("subracks", self.SubrackFQDNs, threshold)
         # If we changed thresholds for subdevices, redefine health rollup.
-        if any(subdevice in thresholds for subdevice in ["tiles", "subracks"]):
+        if any(subdevice in thresholds for subdevice in ["tiles", "subracks", "wren"]):
             self.logger.info("Reconfiguring subdevice health thresholds.")
             self._redefine_health_rollup()
         # If old health model is around, update it too.
@@ -2646,8 +2745,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
 
-        self.component_manager.load_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        return self.component_manager.load_pointing_delays(argin)
 
     @command(
         dtype_in="DevString",

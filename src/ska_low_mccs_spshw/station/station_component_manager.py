@@ -1882,15 +1882,14 @@ class SpsStationComponentManager(
             return
 
         # Now, if the wren proxy is set, wait for the WREN to initialise
-        if self._wren_proxy:
-            if result_code == ResultCode.OK:
-                self.logger.debug("Waiting for WREN")
-                result_code, failure_step = self._wait_for_wren(
-                    task_callback,
-                    task_abort_event,
-                    timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
-                )
+        if self._wren_proxy and result_code == ResultCode.OK:
+            self.logger.info("Waiting for WREN")
+            result_code, failure_step = self._wait_for_wren(
+                task_callback,
+                task_abort_event,
+                timeout=self._wren_health_check_timeout,
+                fail_on_timeout=self._wren_health_check_fail_on_timeout,
+            )
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
@@ -2270,7 +2269,7 @@ class SpsStationComponentManager(
             str(self._sdn_first_address + 2 * tile_id + 1)
             for tile_id in range(self._number_of_tiles)
         ]
-        for tile_id, src_ip1, src_ip2 in enumerate(zip(src_ips1,src_ips2)):
+        for tile_id, (src_ip1, src_ip2) in enumerate(zip(src_ips1, src_ips2)):
             self.logger.debug(
                 f"Setting source IPs on tile {tile_id}: {src_ip1}, {src_ip2}"
             )
@@ -2565,12 +2564,6 @@ class SpsStationComponentManager(
             ),
         )
         raise_for_group_failures(
-            "run SetLmcDownload",
-            group_command(
-                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
-            ),
-        )
-        raise_for_group_failures(
             "run ConfigureStationBeamformer",
             group_command(
                 self._tile_group,
@@ -2645,29 +2638,6 @@ class SpsStationComponentManager(
                 ],
                 multi=True,
                 arg_type=tango.CmdArgType.DevString,
-            ),
-        )
-        raise_for_group_failures(
-            "run SetLmcDownload",
-            group_command(
-                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
-            ),
-        )
-        raise_for_group_failures(
-            "run SetLmcIntegratedDownload",
-            group_command(
-                self._tile_group,
-                "SetLmcIntegratedDownload",
-                json.dumps(
-                    {
-                        "mode": self._lmc_integrated_mode,
-                        "destination_ip": self._lmc_param["destination_ip"],
-                        "channel_payload_length": self._lmc_channel_payload_length,
-                        "beam_payload_length": self._lmc_beam_payload_length,
-                        "netmask_40g": self._sdn_netmask,
-                        "gateway_40g": self._sdn_gateway,
-                    }
-                ),
             ),
         )
         return ResultCode.OK, ""

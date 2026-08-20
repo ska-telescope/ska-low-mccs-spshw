@@ -3082,7 +3082,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if the sync time counters have rolled over.
 
         :example:
-           >>> tile.timestamp_cnt
+           >>> tile.timing_sync_time
            '1'
 
         :return: the sync time health status.

@@ -564,7 +564,7 @@ class TestOn:
         # On reconnect the component manager should re-assert known hardware power
         # so the device can leave op_state UNKNOWN.
         callbacks["component_state"].assert_call(
-            power=PowerState.ON, lookahead=2, consume_nonmatches=True
+            power=PowerState.ON, consume_nonmatches=True
         )
 
     # pylint: disable=too-many-arguments

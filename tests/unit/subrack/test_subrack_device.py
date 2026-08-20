@@ -857,6 +857,7 @@ def test_subrack_recovery_from_upstream_comms_loss(
     change_event_callbacks["state"].assert_change_event(
         DevState.UNKNOWN, lookahead=3, consume_nonmatches=True
     )
+    assert subrack_device.state() == tango.DevState.UNKNOWN
 
     # Simulate upstream comms recovery while subrack polling continues.
     subrack_device.SimulateUpstreamPowerSupplyCommunicationState("ESTABLISHED")
@@ -865,6 +866,7 @@ def test_subrack_recovery_from_upstream_comms_loss(
     change_event_callbacks["state"].assert_change_event(
         DevState.ON, lookahead=3, consume_nonmatches=True
     )
+    assert subrack_device.state() == tango.DevState.ON
 
 
 def test_health_status_attributes(

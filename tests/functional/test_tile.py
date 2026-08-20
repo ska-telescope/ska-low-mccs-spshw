@@ -933,8 +933,11 @@ def verify_overheat_condition(
     AttributeWaiter(timeout=60).wait_for_value(
         tile_device, "healthState", HealthState.FAILED, lookahead=5
     )
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if "temperature_alm" in tile_device.healthReport:
+            break
     assert "temperature_alm" in tile_device.healthReport
-    time.sleep(5)  # Allow time for all attributes to update after overheat
 
 
 @then("the expected CPLD attributes are VALID")

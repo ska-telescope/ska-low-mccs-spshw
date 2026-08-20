@@ -1207,12 +1207,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Re-seed stored signals that are read before being written elsewhere
         # (e.g. faultReport_signal is read-then-merged in _evaluate_fault).
-        # __init__ only runs once per process so these
-        # need seeding here too or a later re-init leaves them permanently
-        # unset and any unconditional read of them raises AttributeError.
+        # On a later Init command, init_device runs standalone and __init__
+        # does not run again, so these need seeding here too, or they're
+        # permanently unset thereafter and any unconditional read of them
+        # raises AttributeError. On first construction, init_device instead
+        # runs *nested inside* __init__'s own super().__init__() call, i.e.
+        # before the rest of __init__'s body (including self._antenna_ids)
+        # has executed, so antennaIds_signal can't just read self._antenna_ids
+        # here - use getattr with the same default __init__ would assign.
         self.faultReport_signal = {}
         self.healthReport_signal = ""
-        self.antennaIds_signal = self._antenna_ids
+        self.antennaIds_signal = getattr(self, "_antenna_ids", [])
 
         self.init_completed()
 

@@ -605,6 +605,49 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
         print(f"Device {device_proxy.dev_name()} is already ONLINE nothing to do.")
 
 
+class _ArrayEqual:
+    """
+    Wrap an expected value so array-aware equality survives ``!=``.
+
+    ``ska_tango_testing``'s event matching does a plain ``value !=
+    payload[key]`` when checking characteristics. If ``value`` is a
+    numpy array with more than one element, that raises ``ValueError:
+    The truth value of an array with more than one element is
+    ambiguous`` instead of comparing. Wrapping the expected value in
+    this class makes ``!=``/``==`` resolve via ``np.array_equal``,
+    which always yields a single bool, regardless of whether the
+    other side is an ndarray, list, or tuple.
+    """
+
+    def __init__(self: _ArrayEqual, value: np.ndarray) -> None:
+        """
+        Initialise a new _ArrayEqual.
+
+        :param value: the expected array value to compare against.
+        """
+        self._value = value
+
+    def __eq__(self: _ArrayEqual, other: Any) -> bool:
+        """
+        Return whether other is array-equal to the wrapped value.
+
+        Python derives ``!=`` from this automatically.
+
+        :param other: the value to compare against.
+
+        :return: True if the values are array-equal.
+        """
+        return bool(np.array_equal(self._value, other))
+
+    def __repr__(self: _ArrayEqual) -> str:
+        """
+        Return a repr of the wrapped value.
+
+        :return: the repr of the wrapped value.
+        """
+        return repr(self._value)
+
+
 class AttributeWaiter:  # pylint: disable=too-few-public-methods
     """A AttributeWaiter class."""
 
@@ -636,6 +679,9 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
             use None for Any change event.
         :param attr_value: the value of the attribute
         :param lookahead: the lookahead.
+
+        :raises AssertionError: if the attribute did not reach the
+            expected value within the timeout.
         """
         with tango_event_subscription(
             device_proxy,
@@ -652,11 +698,23 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
                 read_attr_value = read_attr_value()
 
             if not self._values_equal(read_attr_value, attr_value):
-                self._attr_callback["attr_callback"].assert_change_event(
-                    attr_value if attr_value is not None else Anything,
-                    lookahead=lookahead,
-                    consume_nonmatches=True,
-                )
+                expected: Any
+                if isinstance(attr_value, np.ndarray):
+                    expected = _ArrayEqual(attr_value)
+                else:
+                    expected = attr_value if attr_value is not None else Anything
+                try:
+                    self._attr_callback["attr_callback"].assert_change_event(
+                        expected,
+                        lookahead=lookahead,
+                        consume_nonmatches=True,
+                    )
+                except AssertionError as assertion_error:
+                    raise AssertionError(
+                        f"Timed out waiting for {device_proxy.dev_name()}."
+                        f"{attr_name} to become {attr_value!r} "
+                        f"(last read value: {read_attr_value!r})."
+                    ) from assertion_error
 
     def _values_equal(
         self: AttributeWaiter, read_value: Any, expected_value: Any

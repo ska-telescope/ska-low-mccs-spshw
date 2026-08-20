@@ -1205,6 +1205,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
 
+        # Re-seed stored signals that are read before being written elsewhere
+        # (e.g. faultReport_signal is read-then-merged in _evaluate_fault).
+        # __init__ only runs once per process so these
+        # need seeding here too or a later re-init leaves them permanently
+        # unset and any unconditional read of them raises AttributeError.
+        self.faultReport_signal = {}
+        self.healthReport_signal = ""
+        self.antennaIds_signal = self._antenna_ids
+
         self.init_completed()
 
     def _health_changed_new(
@@ -1562,6 +1571,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             else:
                 self._health_model.update_state(fault=fault)
 
+    def _current_fault_report(self: MccsTile) -> dict:
+        """
+        Return the last emitted faultReport_signal value.
+
+        faultReport_signal is only ever written here, after first being
+        read back to merge in the new key. If nothing has emitted it yet
+        (e.g. immediately after init, before any fault has been
+        evaluated), reading it raises AttributeError rather than
+        returning a default, so callers must not read it directly.
+
+        :return: the current fault report, or {} if never emitted.
+        """
+        try:
+            current = self.faultReport_signal
+        except AttributeError:
+            return {}
+        return dict(current) if isinstance(current, dict) else {}
+
     def _evaluate_fault(
         self: MccsTile,
         db_configuration_fault: tuple[bool, str] | None = None,
@@ -1569,11 +1596,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ) -> bool | None:
         if polling_fault is not None:
             self.component_manager_fault = polling_fault
-            fault_report = (  # For Typehinting
-                dict(self.faultReport_signal)
-                if isinstance(self.faultReport_signal, dict)
-                else {}
-            )
+            fault_report = self._current_fault_report()
             fault_report["polling_fault"] = (
                 "No fault"
                 if self.component_manager_fault is False
@@ -1583,11 +1606,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            fault_report = (  # For Typehinting
-                dict(self.faultReport_signal)
-                if isinstance(self.faultReport_signal, dict)
-                else {}
-            )
+            fault_report = self._current_fault_report()
             fault_report["firmware_configuration_status"] = self.db_configuration_fault[
                 1
             ]
@@ -1618,7 +1637,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         # Log and update component status if a fault is detected
         if has_fault is True:
-            fault_json = json.dumps(self.faultReport_signal)
+            fault_json = json.dumps(self._current_fault_report())
             self.logger.error(f"Fault detected: {fault_json}")
             self.set_status(status=fault_json)
 

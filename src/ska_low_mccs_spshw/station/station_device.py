@@ -1211,7 +1211,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         4. subarray_logical_channel
         5. subarray_beam_id
         6. substation_id
-        8. aperture_id
+        7. aperture_id
 
         Each row is a set of 8 consecutive elements in the list.
 
@@ -3029,7 +3029,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         raw:
 
         * sync: bool: send synchronised samples for all antennas, vs. round robin
-                larger snapshot from each antenna
+            larger snapshot from each antenna
 
         channel:
 

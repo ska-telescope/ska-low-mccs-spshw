@@ -1300,10 +1300,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             healthful_attrs |= set(MccsTile._HEALTH_SIGNAL_MAP.keys())
             # Add signal-backed alarm attributes that are no longer in _attribute_state
             healthful_attrs |= self.__alarm_attribute_map.keys()
-            # Subrack-reported draw attributes were previously AttributeManager
-            # backed (and so included via self._attribute_state above); now
-            # that they are signal backed they must be added explicitly.
-            healthful_attrs |= {"voltageDraw", "currentDraw", "powerDraw"}
+            # The remaining attributes below were previously AttributeManager backed
+            # pre-refactor (and so included via self._attribute_state above)
+            # now that they are signal backed they must be added explicitly.
+            healthful_attrs |= {
+                "voltageDraw",
+                "currentDraw",
+                "powerDraw",
+                "adcPower",
+                "beamformerRegions",
+                "beamformerTable",
+                "broadbandRfiFactor",
+                "channeliserRounding",
+                "cspRounding",
+                "firmwareVersion",
+                "fortyGPacketCount",
+                "logicalTileId",
+                "pfbVersion",
+                "phaseTerminalCount",
+                "pllLocked",
+                "ppsDelayCorrection",
+                "ppsDrift",
+                "preaduLevels",
+                "rfiBlankingEnabledAntennas",
+                "rfiCount",
+                "staticTimeDelays",
+                "stationBeamFlagEnabled",
+                "stationId",
+            }
 
             healthful_attrs = healthful_attrs - {
                 "dataTransmissionMode",

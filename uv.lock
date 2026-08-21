@@ -2182,7 +2182,7 @@ docs = [
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<0.7.0" },
     { name = "ska-ser-sphinx-theme", specifier = ">=0.2.1,<1.0.0" },
-    { name = "ska-tango-difdoc", specifier = ">=0.5.0" },
+    { name = "ska-tango-difdoc", specifier = ">=0.6.0" },
     { name = "ska-telmodel", specifier = ">=1.4.1,<2.0.0" },
     { name = "sphinx", specifier = ">=8.1.0,<9.0.0" },
     { name = "sphinx-autodoc-typehints", specifier = ">=1.23.0,<2.0.0" },
@@ -2274,15 +2274,15 @@ wheels = [
 
 [[package]]
 name = "ska-tango-difdoc"
-version = "0.5.0"
+version = "0.6.0"
 source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "pytango" },
     { name = "tomli" },
 ]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-difdoc/0.5.0/ska_tango_difdoc-0.5.0.tar.gz", hash = "sha256:c1438a120dba630438bbb1a6f450384bd80895a061b8e56f573b70431d05d463" }
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-difdoc/0.6.0/ska_tango_difdoc-0.6.0.tar.gz", hash = "sha256:730c36fd84db96b093f5e0097e5dc8e61e340d6a5d2f07f3a266b4b39e4d07b0" }
 wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-difdoc/0.5.0/ska_tango_difdoc-0.5.0-py3-none-any.whl", hash = "sha256:08f5aa5aae6888288e450671e2c817a013705880e0ecaa3de0d402c465dde635" },
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-difdoc/0.6.0/ska_tango_difdoc-0.6.0-py3-none-any.whl", hash = "sha256:601b70c269586e7e9922f8e27e51053da88ea0689e5487e29560f6c56cab4c81" },
 ]
 
 [[package]]

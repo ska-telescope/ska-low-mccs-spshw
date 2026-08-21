@@ -53,7 +53,7 @@ spec:
 {{- end}}
         imagePullPolicy: IfNotPresent
         command:
-          - "SubrackSimulator"
+          - "subrackSimulator"
         env:
           - name: SUBRACK_SIMULATOR_PORT
             value: {{$port | quote}}

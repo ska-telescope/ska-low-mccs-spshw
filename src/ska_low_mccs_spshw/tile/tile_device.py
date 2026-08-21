@@ -1298,6 +1298,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             healthful_attrs = set(self._attribute_state.keys())
             # Add signal-backed attributes that are not in _attribute_state.
             healthful_attrs |= set(MccsTile._HEALTH_SIGNAL_MAP.keys())
+            # Add signal-backed alarm attributes that are no longer in _attribute_state
+            healthful_attrs |= self.__alarm_attribute_map.keys()
             # Subrack-reported draw attributes were previously AttributeManager
             # backed (and so included via self._attribute_state above); now
             # that they are signal backed they must be added explicitly.
@@ -1674,6 +1676,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         else:
             for alarm_name, alarm_signal in self.__alarm_attribute_map.items():
                 alarm_value = alarms.get(alarm_name)
+                print(f"SETTING ALM: {alarm_signal=} WITH VALUE: {alarm_value=}")
                 setattr(self, alarm_signal, alarm_value)
 
     def update_tile_health_attributes(

@@ -4563,7 +4563,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         4. subarray_logical_channel
         5. subarray_beam_id
         6. substation_id
-        8. aperture_id
+        7. aperture_id
 
         Each row is a set of 8 consecutive elements in the list.
 

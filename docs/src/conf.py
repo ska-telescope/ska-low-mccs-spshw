@@ -206,6 +206,9 @@ nitpick_ignore = [
     ("py:class", "DevBoolean"),
     ("py:class", "DevVarFloatArray"),
     ("py:class", "DevVarDoubleArray"),
+    ("py:class", "DevVarLongArray"),
+    ("py:class", "DevVarULongArray"),
+    ("py:class", "DevVarBooleanArray"),
 
 ]
 

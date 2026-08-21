@@ -9,4 +9,5 @@ Device Interfaces
    mccs-subrack-device
    power-marshaller-device
    sps-station-device
+   mccs-tile-device
    

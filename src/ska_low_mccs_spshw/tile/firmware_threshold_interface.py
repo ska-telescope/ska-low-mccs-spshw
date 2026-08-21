@@ -66,17 +66,41 @@ class FirmwareThresholdsDbAdapter:
         """
         self._device_name = device_name
         self._thresholds = thresholds
-        self._db_connection = db_connection or Database()
+        # Move the database object creation to a bit later so that the tile
+        # can start in no_db mode
+        self._db_connection = db_connection
         self._logger = logger
         self._sync_class_cache_with_db()
+
+    def _get_db_connection(self: FirmwareThresholdsDbAdapter) -> Database:
+        """
+        Return a connection to the Tango database, connecting if needed.
+
+        :returns: a connection to the Tango database.
+        """
+        if self._db_connection is None:
+            self._db_connection = Database()
+        return self._db_connection
 
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Update threshold cache from database."""
         if self._logger:
             self._logger.debug("Syncing class cache with DB...")
-        firmware_thresholds = self._db_connection.get_device_attribute_property(
-            self._device_name, self._thresholds.to_device_property_keys_only()
-        )
+        try:
+            firmware_thresholds = (
+                self._get_db_connection().get_device_attribute_property(
+                    self._device_name, self._thresholds.to_device_property_keys_only()
+                )
+            )
+        except tango.DevFailed:
+            if self._logger:
+                self._logger.warning(
+                    "Could not reach the Tango database to sync firmware alarm "
+                    "thresholds; keeping current values until it is reachable.",
+                    exc_info=True,
+                )
+            return
+
         self._thresholds.update_from_dict(
             firmware_thresholds["temperatures"], self._logger
         )
@@ -87,9 +111,18 @@ class FirmwareThresholdsDbAdapter:
 
     def write_threshold_to_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Put thresholds into database."""
-        self._db_connection.put_device_attribute_property(
-            self._device_name, self._thresholds.to_device_property_dict()
-        )
+        try:
+            self._get_db_connection().put_device_attribute_property(
+                self._device_name, self._thresholds.to_device_property_dict()
+            )
+        except tango.DevFailed:
+            if self._logger:
+                self._logger.warning(
+                    "Could not reach the Tango database to persist firmware "
+                    "alarm thresholds; changes will not survive a restart "
+                    "until it is reachable.",
+                    exc_info=True,
+                )
 
     def resync_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Resync class with db values."""

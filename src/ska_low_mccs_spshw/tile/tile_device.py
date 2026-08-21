@@ -1483,6 +1483,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self._handle_firmware_read()
 
             elif attribute_name == "global_status_alarms":
+                # TODO: Remove log.
+                self.logger.warning(
+                    f"UNPACKING {attribute_name=} WITH "
+                    f"{attribute_value=} ({mark_invalid=})"
+                )
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             elif attribute_name in self._GENERIC_SIGNAL_MAP:
                 setattr(

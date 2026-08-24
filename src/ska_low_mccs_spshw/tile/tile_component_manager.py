@@ -4704,13 +4704,6 @@ class TileComponentManager(
         """
         Read pointing delays from the TPM for all beams.
 
-        Each beam requires a separate round trip to the hardware, and this
-        is called with the hardware lock already held by the poller (see
-        :py:meth:`poll`), so this directly extends how long that lock is
-        held for. Widening this from 8 to 48 beams makes this poll roughly
-        6x slower, which risks starving other requests (e.g. LRCs such as
-        ``LoadPointingDelays``) of the hardware lock while it runs.
-
         Older firmware/BIOS only supports 8 beams (see
         ``BeamfFD.max_beams`` in ska-low-sps-tpm-api), and raises a
         ``PluginError`` for beam indices beyond what it supports. Rows for

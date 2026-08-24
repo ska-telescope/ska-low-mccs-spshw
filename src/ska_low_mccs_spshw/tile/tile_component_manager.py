@@ -323,7 +323,7 @@ class TileComponentManager(
         self.integrated_data_transmission_mode: str = "Not transmitting"
         self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str = self.FIRMWARE_NAME
+        self._firmware_name: str | None = None  # self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -1587,9 +1587,8 @@ class TileComponentManager(
                 prog_status = False
                 tile_info = self.tile.info
                 bios = tile_info.get("hardware", {}).get("bios", "")
-                # Firmware bitfile is unconditionally overwritten here.
-                # TODO: Detect whether a user wrote to _firmware_name or not.
-                self._firmware_name = _select_firmware_name(bios)
+                if self._firmware_name is None:
+                    self._firmware_name = _select_firmware_name(bios)
 
                 if self.tile.is_programmed() is False:
                     self.logger.info(
@@ -2081,7 +2080,7 @@ class TileComponentManager(
 
         :return: firmware name
         """
-        return self._firmware_name
+        return self._firmware_name or self.FIRMWARE_NAME
 
     @firmware_name.setter
     def firmware_name(self: TileComponentManager, new_firmware_name: str) -> None:

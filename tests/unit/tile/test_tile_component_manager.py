@@ -1963,6 +1963,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
+        # Clear the firmware name and replace the BIOS version of the simulator.
+        # This is necessary as the simulator default BIOS is 0.6.0 and the
+        # `_firmware_name` will be chosen during the startup initialise accordingly.
+        # This means that the call to initialise below will be required to
+        # again automatically detect the BIOS version.
+        # An alternative is to create a separate TileSimulator with the
+        # BIOS set to ^1.0.0
+        tile_component_manager._firmware_name = None
         tile_simulator.tpm._bios_version = (
             "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
         )

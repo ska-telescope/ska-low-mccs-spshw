@@ -967,17 +967,32 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
         "ppsPresent",
         "fpga0_qpll_status",
     ]
+    acceptable_valid_qualities = (
+        tango.AttrQuality.ATTR_VALID,
+        tango.AttrQuality.ATTR_ALARM,
+        tango.AttrQuality.ATTR_WARNING,
+    )
+
+    def _wait_for_quality(
+        attr_name: str, acceptable_qualities: tuple, timeout: float = 5.0
+    ) -> tango.AttrQuality:
+        deadline = time.time() + timeout
+        quality = tile_device.read_attribute(attr_name).quality
+        while quality not in acceptable_qualities and time.time() < deadline:
+            time.sleep(0.1)
+            quality = tile_device.read_attribute(attr_name).quality
+        return quality
+
     # We are not testing that the attributes are in the correct quality here,
     # just testing that they are VALID or a subset of VALID (i.e ALARM, WARNING)
+
     for attr in valid_attrs:
-        quality = tile_device.read_attribute(attr).quality
-        assert quality in (
-            tango.AttrQuality.ATTR_VALID,
-            tango.AttrQuality.ATTR_ALARM,
-            tango.AttrQuality.ATTR_WARNING,
+        quality = _wait_for_quality(attr, acceptable_valid_qualities)
+        assert (
+            quality in acceptable_valid_qualities
         ), f"{attr} expected ATTR_VALID, ATTR_ALARM, or ATTR_WARNING but got {quality}"
     for attr in invalid_attrs:
-        quality = tile_device.read_attribute(attr).quality
+        quality = _wait_for_quality(attr, (tango.AttrQuality.ATTR_INVALID,))
         assert (
             quality == tango.AttrQuality.ATTR_INVALID
         ), f"{attr} expected ATTR_INVALID but got {quality}"

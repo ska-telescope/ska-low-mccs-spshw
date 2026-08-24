@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import math
 import time
-from datetime import datetime
+
+from time_utils import str_from_float_epoch_utc_time
 
 from ...tile.tile_data import TileData
-from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest
 
 __all__ = ["TestStationBeamDataRate"]
@@ -85,9 +85,7 @@ class TestStationBeamDataRate(BaseDaqTest):
 
         with self.reset_context():
             for iteration in test_iterations:
-                beamformer_start_time = datetime.strftime(
-                    datetime.fromtimestamp(int(time.time()) + 3), TileTime.RFC_FORMAT
-                )
+                beamformer_start_time = str_from_float_epoch_utc_time(time.time() + 3)
                 self.component_manager.start_beamformer(
                     start_time=beamformer_start_time,
                     duration=-1,

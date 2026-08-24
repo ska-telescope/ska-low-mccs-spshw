@@ -56,7 +56,7 @@ from .tile_poll_management import (
     TileResponse,
 )
 from .tile_simulator import DynamicTileSimulator, TileSimulator
-from .time_util import TileTime
+from .tile_time import TileTime
 from .tpm_status import TpmStatus
 from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
@@ -2308,6 +2308,13 @@ class TileComponentManager(
             if acquired:
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()
+                    self.logger.debug(
+                        (
+                            "fpga_current_frame: read timestamp: "
+                            f"{self._fpga_current_frame}"
+                        )
+                    )
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(

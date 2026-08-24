@@ -8,6 +8,8 @@
 checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
 `_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
 Synchronised tile (previously ungated).
+* [THORN-530] Expose timestamp_cnt rollover in Tile health attributes
+
 
 ## 14.1.0
 

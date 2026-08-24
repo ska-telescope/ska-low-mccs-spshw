@@ -679,6 +679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_count": "timing_pll_count",
             "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
             "timing_pll_40g_count": "timing_pll_40g_count",
+            "timing_sync_time": "timing_sync_time",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
             "fpga0_clocks": "fpga0_clocks",
@@ -763,6 +764,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
+            "timing_sync_time": lambda val: (int(val) if val is not None else None),
             "fpga0_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
@@ -1024,6 +1026,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # by use of converters.
             "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
+            "timing_sync_time": ["timing", "sync_time"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "fpga0_clocks": ["timing", "clocks", "FPGA0"],
@@ -3063,6 +3066,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the PLL lock loss counter.
         """
         return self._attribute_state["timing_pll_40g_count"].read()
+
+    @attribute(
+        dtype="DevShort",
+        label="timing_sync_time",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def timing_sync_time(self: MccsTile) -> int:
+        """
+        Return the sync time status.
+
+        Expected: `1` if the sync time health is good. `0`
+        if the sync time counters have rolled over.
+
+        :example:
+           >>> tile.timing_sync_time
+           '1'
+
+        :return: the sync time health status.
+        """
+        return self._attribute_state["timing_sync_time"].read()
 
     @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:

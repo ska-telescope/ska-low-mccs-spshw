@@ -30,31 +30,33 @@ def test_no_running_server_defaults_to_real_database_behaviour() -> None:
     assert _is_running_without_database() is False
 
 
-def test_no_db_mode_skips_sync_without_touching_database(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_no_db_mode_swallows_a_failed_sync(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Test that no-db mode skips the database phase entirely.
+    Test that a DB failure in no-db mode is swallowed, leaving defaults.
 
     :param monkeypatch: pytest fixture for patching module attributes.
     """
     monkeypatch.setattr(
         firmware_threshold_interface, "_is_running_without_database", lambda: True
     )
-    unused_database = MagicMock()
-    monkeypatch.setattr(firmware_threshold_interface, "Database", unused_database)
+    failing_db = MagicMock()
+    failing_db.get_device_attribute_property.side_effect = tango.DevFailed(
+        "Failed to connect to database"
+    )
+    failing_db.put_device_attribute_property.side_effect = tango.DevFailed(
+        "Failed to connect to database"
+    )
 
     thresholds = FirmwareThresholds()
     adapter = FirmwareThresholdsDbAdapter(
         device_name="test/tile/1",
         thresholds=thresholds,
+        db_connection=failing_db,
     )
     assert thresholds.fpga1_alarm_threshold == "Undefined"
 
-    adapter.write_threshold_to_db()
-    adapter.resync_with_db()
-
-    unused_database.assert_not_called()
+    adapter.write_threshold_to_db()  # should not raise
+    adapter.resync_with_db()  # should not raise
 
 
 def test_real_database_failure_at_init_propagates() -> None:
@@ -95,11 +97,19 @@ def test_real_database_write_failure_propagates() -> None:
         adapter.write_threshold_to_db()
 
 
-def test_injected_connection_is_used_even_if_no_db_mode_detected(
+def test_no_db_detection_is_irrelevant_when_database_call_succeeds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Test that an explicitly injected DB connection overrides no-db detection.
+    Test that a successful DB call is used as-is, regardless of no-db detection.
+
+    This is a regression guard for the "try first, only consult no-db
+    detection on failure" ordering: a device server that mocks/injects a
+    working database connection (as our own device-level unit tests do,
+    via a patched ``Database`` class) must have that connection used
+    normally, even though those tests also happen to run inside a
+    file-based Tango test context that would otherwise look like a
+    deliberate no-db (e.g. ``tangodocgen``) scenario.
 
     :param monkeypatch: pytest fixture for patching module attributes.
     """

@@ -724,15 +724,6 @@ class SpsStationComponentManager(
         self._sdn_netmask = str(sdn_first_interface.netmask)
         self._sdn_gateway: str | None = str(sdn_gateway) if sdn_gateway else None
 
-        self._lmc_param: dict[str, str | int | None] = {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": self._destination_port,
-            "source_port": self._source_port,
-            "netmask_40g": self._sdn_netmask,
-            "gateway_40g": self._sdn_gateway,
-        }
         self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
         self._lmc_integrated_ip = "0.0.0.0"
@@ -1869,8 +1860,8 @@ class SpsStationComponentManager(
         # pylint: disable=too-many-branches
         message: str = ""
         failure_step: str = ""
-        self.logger.debug("Starting on sequence.")
-        self.logger.debug("State transitions suppressed during power command.")
+        self.logger.info("Starting on sequence.")
+        self.logger.info("State transitions suppressed during power command.")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
@@ -1881,7 +1872,7 @@ class SpsStationComponentManager(
             and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
             for proxy in self._tile_proxies.values()
         ):
-            self.logger.debug("Tiles already initialised")
+            self.logger.info("Tiles already initialised")
             result_code = ResultCode.OK
             if task_callback:
                 task_callback(
@@ -1891,41 +1882,41 @@ class SpsStationComponentManager(
             return
 
         # Now, if the wren proxy is set, wait for the WREN to initialise
-        if self._wren_proxy:
-            if result_code == ResultCode.OK:
-                self.logger.debug("Waiting for WREN")
-                result_code, failure_step = self._wait_for_wren(
-                    task_callback,
-                    task_abort_event,
-                    timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
-                )
+        if self._wren_proxy and result_code == ResultCode.OK:
+            self.logger.info("Waiting for WREN")
+            result_code, failure_step = self._wait_for_wren(
+                task_callback,
+                task_abort_event,
+                timeout=self._wren_health_check_timeout,
+                fail_on_timeout=self._wren_health_check_fail_on_timeout,
+            )
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on subracks")
+            self.logger.info("Starting on sequence on subracks")
             result_code, failure_step = self._turn_on_subracks(
                 task_callback, task_abort_event
             )
-        self.logger.debug("Subracks now on")
+        if result_code == ResultCode.OK:
+            self.logger.info("Subracks now on")
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting tile source IPs before initialisation")
+            self.logger.info("Setting tile source IPs before initialisation")
             result_code, failure_step = self._set_tile_source_ips(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting global reference time")
+            self.logger.info("Setting global reference time")
             self._set_global_reference_time(self._global_reference_time or None)
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on tiles")
+            self.logger.info("Starting on sequence on tiles")
             result_code, failure_step = self._turn_on_tiles(
                 task_callback, task_abort_event
             )
@@ -1949,38 +1940,38 @@ class SpsStationComponentManager(
                 message = f"On Command failed: {failure_step}"
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tiles")
+            self.logger.info("Initialising tiles")
             result_code, failure_step = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
             # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising station")
+            self.logger.info("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Waiting for ARP table")
+            self.logger.info("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Routing data")
+            self.logger.info("Routing data")
             result_code, failure_step = self._route_data(
                 None, task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Checking synchronisation")
+            self.logger.info("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            self.logger.debug("End initialisation")
+            self.logger.info("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
         elif result_code is ResultCode.ABORTED:
@@ -2019,7 +2010,7 @@ class SpsStationComponentManager(
         """
         message: str = ""
         failure_step: str = ""
-        self.logger.debug("Starting initialise sequence")
+        self.logger.info("Starting initialise sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
@@ -2027,7 +2018,7 @@ class SpsStationComponentManager(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
         ):
-            self.logger.debug("Subracks not on.")
+            self.logger.info("Subracks not on.")
             result_code = ResultCode.FAILED
             failure_step = "subracks not on"
 
@@ -2035,7 +2026,7 @@ class SpsStationComponentManager(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
         ):
-            self.logger.debug("Tiles not on.")
+            self.logger.info("Tiles not on.")
             result_code = ResultCode.FAILED
             failure_step = "tiles not on"
 
@@ -2053,7 +2044,7 @@ class SpsStationComponentManager(
                     task_callback(progress=5)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting tile source IPs before initialisation")
+            self.logger.info("Setting tile source IPs before initialisation")
             result_code, failure_step = self._set_tile_source_ips(
                 task_callback, task_abort_event
             )
@@ -2061,19 +2052,19 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=10)
-            self.logger.debug("Setting global reference time")
+            self.logger.info("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
             # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Re-initialising tiles")
+            self.logger.info("Re-initialising tiles")
             result_code, failure_step = self._reinitialise_tiles(
                 task_callback, task_abort_event, progress_start=10, progress_end=65
             )
             # Progress is reported incrementally inside _reinitialise_tiles
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tile parameters")
+            self.logger.info("Initialising tile parameters")
             result_code, failure_step = self._initialise_tile_parameters(
                 task_callback,
                 task_abort_event,
@@ -2082,7 +2073,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=70)
-            self.logger.debug("Initialising station")
+            self.logger.info("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
@@ -2090,7 +2081,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=75)
-            self.logger.debug("Waiting for ARP table")
+            self.logger.info("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
             )
@@ -2098,7 +2089,7 @@ class SpsStationComponentManager(
                 task_callback(progress=85)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Routing data")
+            self.logger.info("Routing data")
             result_code, failure_step = self._route_data(
                 start_bandpasses,
                 task_callback,
@@ -2108,7 +2099,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=90)
-            self.logger.debug("Checking synchronisation")
+            self.logger.info("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
@@ -2116,11 +2107,11 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             if task_callback:
                 task_callback(progress=95)
-            self.logger.debug("End initialisation")
+            self.logger.info("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "Initialisation Complete"
 
-            self.logger.debug(
+            self.logger.info(
                 "Starting station beamformer with empty channel_groups "
                 "to start the beamformer daisy chain during station initialise"
             )
@@ -2162,7 +2153,9 @@ class SpsStationComponentManager(
                     # proceed to wait for 180 seconds. THORN-690
                     results[proxy._name] = proxy.on()
                 failed = [
-                    name for name, rc in results.items() if rc == ResultCode.FAILED
+                    name
+                    for name, (status, _) in results.items()
+                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
                 ]
                 if failed:
                     msg = f"subracks failed to power on: {failed}"
@@ -2210,7 +2203,9 @@ class SpsStationComponentManager(
                     results[proxy._proxy.name()] = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                 failed = [
-                    name for name, rc in results.items() if rc == TaskStatus.FAILED
+                    name
+                    for name, (status, _) in results.items()
+                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
                 ]
                 if failed:
                     msg = f"tiles failed to power on: {failed}"
@@ -2219,7 +2214,8 @@ class SpsStationComponentManager(
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
-        last_time = time.time() + timeout
+        start_time = time.time()
+        last_time = start_time + timeout
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
@@ -2228,15 +2224,21 @@ class SpsStationComponentManager(
             if task_abort_event and task_abort_event.is_set():
                 self.logger.info("_turn_on_tiles task has been aborted")
                 return ResultCode.ABORTED, "task aborted"
-            states = self.tile_programming_state()
+            states = self._tile_programming_state
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
+                self.logger.info(
+                    f"All {len(states)} tiles reached {desired_states} "
+                    f"in {time.time() - start_time:.0f}s"
+                )
                 return ResultCode.OK, ""
 
-        states = self.tile_programming_state()
         not_ready = {
             trl: state
-            for trl, state in zip(self._tile_proxies.keys(), states)
+            for trl, state in zip(
+                self._tile_proxies.keys(),
+                self._tile_programming_state,
+            )
             if state not in desired_states
         }
         msg = (
@@ -2267,6 +2269,10 @@ class SpsStationComponentManager(
             str(self._sdn_first_address + 2 * tile_id + 1)
             for tile_id in range(self._number_of_tiles)
         ]
+        for tile_id, (src_ip1, src_ip2) in enumerate(zip(src_ips1, src_ips2)):
+            self.logger.debug(
+                f"Setting source IPs on tile {tile_id}: {src_ip1}, {src_ip2}"
+            )
         raise_for_group_failures(
             "write srcip40gfpga1",
             group_write_attribute(
@@ -2286,7 +2292,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager, global_reference_time: Optional[str] = None
     ) -> ResultCode:
         if self.csp_spead_format != "SKA":
-            self.logger.debug("Not setting global reference time for non-SKA format")
+            self.logger.info("Not setting global reference time for non-SKA format")
             return ResultCode.OK
         if global_reference_time is not None:
             self.global_reference_time = global_reference_time
@@ -2303,7 +2309,7 @@ class SpsStationComponentManager(
             self.global_reference_time = datetime.strftime(
                 datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
             )
-        self.logger.debug(f"Global reference time: {self.global_reference_time}")
+        self.logger.info(f"Global reference time: {self.global_reference_time}")
         return ResultCode.OK
 
     @check_communicating
@@ -2321,6 +2327,7 @@ class SpsStationComponentManager(
         """
         timeout = 30
         tick = 2
+        start_time = time.time()
         for tile_trl, tile_proxy in self._tile_proxies.items():
             last_time = time.time() + timeout
             tile = tile_proxy._proxy
@@ -2338,6 +2345,10 @@ class SpsStationComponentManager(
                 self.logger.error(msg)
                 return ResultCode.FAILED, msg
             self.logger.debug(f"Got ARP table for {tile_trl}")
+        self.logger.info(
+            f"ARP tables populated for all {len(self._tile_proxies)} tiles "
+            f"in {time.time() - start_time:.0f}s"
+        )
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2382,7 +2393,8 @@ class SpsStationComponentManager(
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
-        last_time = time.time() + timeout
+        start_time = time.time()
+        last_time = start_time + timeout
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
@@ -2394,6 +2406,10 @@ class SpsStationComponentManager(
             self.logger.debug(f"tileProgrammingState: {states}")
             ready_count = sum(state in desired_states for state in states)
             if ready_count == n_tiles:
+                self.logger.info(
+                    f"All {n_tiles} tiles reached {desired_states} "
+                    f"in {time.time() - start_time:.0f}s"
+                )
                 if task_callback:
                     task_callback(progress=progress_end)
                 return ResultCode.OK, ""
@@ -2548,12 +2564,6 @@ class SpsStationComponentManager(
             ),
         )
         raise_for_group_failures(
-            "run SetLmcDownload",
-            group_command(
-                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
-            ),
-        )
-        raise_for_group_failures(
             "run ConfigureStationBeamformer",
             group_command(
                 self._tile_group,
@@ -2630,29 +2640,6 @@ class SpsStationComponentManager(
                 arg_type=tango.CmdArgType.DevString,
             ),
         )
-        raise_for_group_failures(
-            "run SetLmcDownload",
-            group_command(
-                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
-            ),
-        )
-        raise_for_group_failures(
-            "run SetLmcIntegratedDownload",
-            group_command(
-                self._tile_group,
-                "SetLmcIntegratedDownload",
-                json.dumps(
-                    {
-                        "mode": self._lmc_integrated_mode,
-                        "destination_ip": self._lmc_param["destination_ip"],
-                        "channel_payload_length": self._lmc_channel_payload_length,
-                        "beam_payload_length": self._lmc_beam_payload_length,
-                        "netmask_40g": self._sdn_netmask,
-                        "gateway_40g": self._sdn_gateway,
-                    }
-                ),
-            ),
-        )
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2693,9 +2680,12 @@ class SpsStationComponentManager(
                 result = result + list(proxy._proxy.GetFpgaUnixTime())
             self.logger.debug(f"Current FPGA times:{result}")
             if any(result[0] != time_n for time_n in result):
-                self.logger.error("FPGA time counters not synced, try again")
+                self.logger.warning("FPGA time counters not synced, try again")
                 time.sleep(1)
             else:
+                self.logger.info(
+                    f"Station synchronised: all {len(result)} FPGA times = {result[0]}"
+                )
                 return ResultCode.OK, ""
 
         # Loop over tiles, comparing tile n FPGA0, FPGA1 reference time to tile 1 FPGA0
@@ -2751,12 +2741,12 @@ class SpsStationComponentManager(
             if mode is not None:
                 self._lmc_integrated_mode = mode
                 self._lmc_integrated_mode_locked = True
-        self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
-        self.logger.debug(
+
+        self.logger.info(
             "Configuring LMC Integrated Download: "
             f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
         )
-        self.set_lmc_integrated_download(
+        integrated_result_code, integrated_message = self.set_lmc_integrated_download(
             mode=self._lmc_integrated_mode,
             dst_ip=self._lmc_integrated_ip,
             dst_port=self._lmc_integrated_port,
@@ -2764,12 +2754,25 @@ class SpsStationComponentManager(
             beam_payload_length=self._lmc_beam_payload_length,
             lock_mode=False,
         )
-        self.set_lmc_download(
+        if integrated_result_code[0] != ResultCode.OK:
+            msg = (
+                f"Failed to configure LMC integrated download: {integrated_message[0]}"
+            )
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
+
+        self.logger.info(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
+        lmc_result_code, lmc_message = self.set_lmc_download(
             mode=self._lmc_mode,
             dst_ip=self._lmc_ip,
             dst_port=self._lmc_port,
             payload_length=self._lmc_payload_length,
         )
+        if lmc_result_code[0] != ResultCode.OK:
+            msg = f"Failed to configure LMC download: {lmc_message[0]}"
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
+
         if (
             start_bandpasses
             if start_bandpasses is not None
@@ -3509,14 +3512,17 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        self._lmc_param["mode"] = mode
-        self._lmc_param["payload_length"] = payload_length
-        self._lmc_param["destination_ip"] = dst_ip
-        self._lmc_param["source_port"] = src_port
-        self._lmc_param["destination_port"] = int(dst_port)
-        self._lmc_param["netmask_40g"] = self._sdn_netmask
-        self._lmc_param["gateway_40g"] = self._sdn_gateway
-        json_param = json.dumps(self._lmc_param)
+        json_param = json.dumps(
+            {
+                "mode": mode,
+                "payload_length": payload_length,
+                "destination_ip": dst_ip,
+                "destination_port": int(dst_port),
+                "source_port": src_port,
+                "netmask_40g": self._sdn_netmask,
+                "gateway_40g": self._sdn_gateway,
+            }
+        )
         return self._execute_async_on_tiles("SetLmcDownload", json_param)
 
     def set_lmc_integrated_download(
@@ -3556,7 +3562,7 @@ class SpsStationComponentManager(
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
         if dst_ip == "":
-            dst_ip = cast(str, self._lmc_param["destination_ip"])
+            dst_ip = self._lmc_integrated_ip
         json_param = json.dumps(
             {
                 "mode": mode,
@@ -4177,7 +4183,6 @@ class SpsStationComponentManager(
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to stop: {message}")
 
-    # pylint: disable = too-many-branches
     @check_communicating
     def acquire_data_for_calibration(
         self: SpsStationComponentManager,

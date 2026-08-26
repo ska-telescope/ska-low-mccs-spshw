@@ -3,12 +3,15 @@
 ## Unreleased
 
 * [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values.
+* [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
+* [LOW-2454] Improve error detection, handling and logging during SpsStation's initialise sequence. All MccsTile command failures should now cause initialisation to fail, some critical operations are retried, and initialisation steps are logged at INFO level rather than DEBUG.
 * [THORN-698] Fix AcquireDataForCalibration when DAQ is running.
 * [THORN-680] Make use of tango.Groups to parallelise writes and commands in spsstation.
 * [THORN-681] Move tile-readiness gating (Initialised/Synchronised) from ad-hoc `tileProgrammingState`
 checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
 `_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
 Synchronised tile (previously ungated).
+* [THORN-530] Expose timestamp_cnt rollover in Tile health attributes
 
 ## 14.1.0
 

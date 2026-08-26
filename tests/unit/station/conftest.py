@@ -157,6 +157,12 @@ def mock_tile_builder_fixture(
             command_name, ([ResultCode.OK], [f"{command_name} completed OK."])
         )
     builder.add_command("BeamformerRunningForChannels", True)
+    # Configured as a plain mock return value (not add_command) so tests can still
+    # introspect ConfigureStationBeamformer.mock_calls.
+    builder.add_attribute(
+        "ConfigureStationBeamformer.return_value",
+        ([ResultCode.OK], ["ConfigureStationBeamformer completed OK."]),
+    )
     # Dummy commands for testing the async commands method
     builder.add_command("FailedCommand", ([ResultCode.FAILED], ["Command failed."]))
     builder.add_command(

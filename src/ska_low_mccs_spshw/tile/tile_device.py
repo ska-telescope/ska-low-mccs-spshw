@@ -1026,6 +1026,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # by use of converters.
             "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
+            "timing_sync_time": ["timing", "sync_time"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "fpga0_clocks": ["timing", "clocks", "FPGA0"],
@@ -1192,11 +1193,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
         for attr_name in self._attribute_state:
-            verify_events = (
-                False if attr_name == "pointingDelays" else self.VerifyEvents
-            )
-            self.set_change_event(attr_name, True, verify_events)
-            self.set_archive_event(attr_name, True, verify_events)
+            # VerifyEvents now applies to archive events only. Change events are
+            # always pushed.
+            self.set_change_event(attr_name, True, False)
+            self.set_archive_event(attr_name, True, self.VerifyEvents)
 
         # Not sure if we *should* need this but without doing it explicitly
         # we don't get the UNKNOWN event as the tests expect.
@@ -1291,7 +1291,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
 
-        self.set_change_event("healthState", True, self.VerifyEvents)
+        self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, self.VerifyEvents)
 
         if self.UseAttributesForHealth:
@@ -5791,7 +5791,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currentDraw = attribute_from_signal(
         currentDraw_signal,
         dtype="DevFloat",
-        min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
         unit="Amperes",
@@ -5802,7 +5801,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     powerDraw = attribute_from_signal(
         powerDraw_signal,
         dtype="DevFloat",
-        min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
         unit="Watts",

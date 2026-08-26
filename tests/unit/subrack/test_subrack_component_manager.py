@@ -87,7 +87,7 @@ class TestNoSupply:
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.stop_communicating()
-        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
         callbacks["component_state"].assert_not_called()
 
 
@@ -241,7 +241,7 @@ class TestOff:
             result=(ResultCode.OK, "Command completed"),
         )
         callbacks["task"].assert_not_called()
-        callbacks["component_state"].assert_call(power=PowerState.OFF, lookahead=2)
+        callbacks["component_state"].assert_call(power=PowerState.OFF)
         callbacks["component_state"].assert_call(
             fault=None,
             **{
@@ -428,7 +428,7 @@ class TestOn:
 
         subrack_component_manager.stop_communicating()
 
-        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=3)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
         callbacks["component_state"].assert_call(
             fault=None,
             **{

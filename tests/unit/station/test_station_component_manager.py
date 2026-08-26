@@ -1134,7 +1134,7 @@ def test_beamformer_table(
     )
     callbacks["component_state"].assert_call(
         beamformerRegions=tile_initial_beamformer_regions,
-        lookahead=20,
+        lookahead=10,
     )
     np.testing.assert_array_equal(
         communicating_station_component_manager._beamformer_regions,

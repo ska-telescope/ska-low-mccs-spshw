@@ -65,6 +65,7 @@ helm-pre-build:
 ########################################################################
 K8S_USE_HELMFILE = true
 K8S_HELMFILE = helmfile.d/helmfile.yaml.gotmpl
+K8S_HELMFILE_ARGS =
 K8S_WAIT_EXPECTED_PODS ?= 10
 K8S_WAIT_EXPECTED_PODS_TIMEOUT ?= 60s
 

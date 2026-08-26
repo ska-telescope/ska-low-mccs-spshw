@@ -56,7 +56,7 @@ from .tile_poll_management import (
     TileResponse,
 )
 from .tile_simulator import DynamicTileSimulator, TileSimulator
-from .time_util import TileTime
+from .tile_time import TileTime
 from .tpm_status import TpmStatus
 from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
@@ -1328,7 +1328,9 @@ class TileComponentManager(
 
         :return: information relevant to tile.
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             return self.tile.info
 
     def refresh_tile_info(self: TileComponentManager) -> None:
@@ -1942,6 +1944,7 @@ class TileComponentManager(
         static_delays = None
         beamformer_table = None
         beamformer_regions = None
+        beamformer_running = None
         pfb_version = None
         rfi_blanking_enabled_antennas = None
         broadband_rfi_factor = None
@@ -1962,6 +1965,9 @@ class TileComponentManager(
             beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
             beamformer_regions = self._with_hardware_lock(
                 self.tile.get_beamformer_regions
+            )
+            beamformer_running = self._with_hardware_lock(
+                self.tile.beamformer_is_running
             )
             pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
             rfi_blanking_enabled_antennas = self._with_hardware_lock(
@@ -1988,6 +1994,7 @@ class TileComponentManager(
             channeliser_rounding=channeliser_rounding,
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
+            beamformer_running=beamformer_running,
             pfb_version=pfb_version,
             firmware_thresholds=firmware_thresholds,
             firmware_version=firmware_version,
@@ -2296,6 +2303,13 @@ class TileComponentManager(
             if acquired:
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()
+                    self.logger.debug(
+                        (
+                            "fpga_current_frame: read timestamp: "
+                            f"{self._fpga_current_frame}"
+                        )
+                    )
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(

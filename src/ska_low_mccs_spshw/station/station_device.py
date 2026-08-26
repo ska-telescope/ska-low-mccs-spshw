@@ -1109,6 +1109,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("DevLong",),
         max_dim_x=384,
         label="CSP Rounding",
+        unit="Decibel",
         doc="CSP formatter rounding. Range 0 to 7, as number of discarded LS bits.",
     )
     def cspRounding(self: SpsStation) -> list[int]:
@@ -1162,7 +1163,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("DevLong",),
         max_dim_x=16,
         label="PPS Delays",
-        unit="Nanoseconds",
+        unit="Clock Cycle (/1.25ns)",
         doc="Get PPS delay, one value per tile.",
     )
     def ppsDelays(self: SpsStation) -> list[int]:
@@ -1177,7 +1178,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("DevLong",),
         max_dim_x=16,
         label="PPS Delay Corrections",
-        unit="Nanoseconds",
+        unit="Clock Cycle (/1.25ns)",
         doc="Get PPS delay corrections, one value per tile.",
     )
     def ppsDelayCorrections(self: SpsStation) -> list[int]:
@@ -1204,6 +1205,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevLong",
         archive_period=5000,
         label="PPS Delay Spread",
+        unit="Clock Cycle (/1.25ns)",
         doc="Returns the difference between the max and min PPS delays across all "
         "tiles in this Station.",
     )
@@ -1390,7 +1392,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     @attribute(
         dtype="DevString",
-        label="Gloabal Reference Time",
+        label="Global Reference Time",
         doc="Return the global FPGA synchronization time. (UTC)",
     )
     def globalReferenceTime(self: SpsStation) -> str:
@@ -1592,6 +1594,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("DevDouble",),
         max_dim_x=3,
         label="PPS Delay Summary",
+        unit="Clock Cycle (/1.25ns)",
         doc="Get summary of PPS delays (minimum, average, maximum).",
     )
     def ppsDelaySummary(self: SpsStation) -> list[float] | None:

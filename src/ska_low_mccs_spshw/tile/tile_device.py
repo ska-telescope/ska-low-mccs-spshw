@@ -3830,7 +3830,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         firmwareVoltageThresholds_signal,
         dtype="DevString",
         write_to_signal=True,
-        unit="Volts",
+        unit="Volt",
         label="Firmware Voltage Thresholds",
         doc="Return the voltage thresholds set in firmware.",
         fisallowed="is_firmware_threshold_allowed",
@@ -3939,7 +3939,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         firmwareCurrentThresholds_signal,
         dtype="DevString",
         write_to_signal=True,
-        unit="Amperes",
+        unit="Ampere",
         label="Firmware Current Thresholds",
         doc="Return the current thresholds set in firmware.",
         fisallowed="is_firmware_threshold_allowed",
@@ -4540,7 +4540,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         abs_change=0.1,
         archive_abs_change=0.1,
-        unit="Watts",
+        unit="Watt",
         label="ACD Power",
         doc="RMS power of every ADC signal",
     )
@@ -5282,7 +5282,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        unit="Amperes",
+        unit="Ampere",
         label="FE0 Current",
         doc="FE0 current in Amps.",
     )
@@ -5294,7 +5294,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
-        unit="Amperes",
+        unit="Ampere",
         label="FE1 Current",
         doc="FE1 current in Amps.",
     )
@@ -5309,7 +5309,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_warning=2.40,
         min_alarm=2.37,
         label="Analog 2.5V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Analog 2.5V voltage in Volts.",
     )
 
@@ -5321,7 +5321,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.63,
         min_alarm=0.57,
         label="Vref voltage for DDR0 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Vref voltage for DDR0 in Volts.",
     )
 
@@ -5333,7 +5333,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.63,
         min_alarm=0.57,
         label="Vref voltage for DDR1 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Vref voltage for DDR1 in Volts.",
     )
 
@@ -5345,7 +5345,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.26,
         min_alarm=1.14,
         label="Management 1.2V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Management 1.2V voltage in Volts.",
     )
 
@@ -5357,7 +5357,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.97,
         min_alarm=0.83,
         label="FPGA MGT AV Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="FPGA MGT AV voltage in Volts.",
     )
 
@@ -5369,7 +5369,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.26,
         min_alarm=1.104,
         label="FPGA MGT AVTT Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="FPGA MGT AVTT voltage in Volts.",
     )
 
@@ -5381,7 +5381,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=5.19,
         min_alarm=4.69,
         label="Management 5V0 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Management 5V supply of the TPM in Volts.",
     )
 
@@ -5393,7 +5393,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.88,
         min_alarm=3.51,
         label="Management 3V3 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Management 3.3 V supply of the TPM in Volts.",
     )
 
@@ -5405,7 +5405,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2.10,
         min_alarm=1.90,
         label="Management 1V8 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Management 1.8 V supply of the TPM in Volts.",
     )
 
@@ -5417,7 +5417,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.16,
         min_alarm=1.04,
         label="SW Analog 1.1V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="SW Analog 1.1V voltage in Volts.",
     )
 
@@ -5429,7 +5429,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2.42,
         min_alarm=2.18,
         label="SW Analog 2.3V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="SW Analog 2.3 V voltage in Volts.",
     )
 
@@ -5441,7 +5441,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=12.6,
         min_alarm=11.4,
         label="Input Supply Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Input supply voltage in Volts.",
     )
 
@@ -5453,7 +5453,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 0 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 0 voltage in Volts.",
     )
 
@@ -5465,7 +5465,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 1 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 1 voltage in Volts.",
     )
 
@@ -5477,7 +5477,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 2 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 2 voltage in Volts.",
     )
 
@@ -5489,7 +5489,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 3 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 3 voltage in Volts.",
     )
 
@@ -5501,7 +5501,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 4 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 4 voltage in Volts.",
     )
 
@@ -5513,7 +5513,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 5 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 5 voltage in Volts.",
     )
 
@@ -5525,7 +5525,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 6 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 6 voltage in Volts.",
     )
 
@@ -5537,7 +5537,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.99,
         min_alarm=0.84,
         label="AD AGP Group 7 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD AGP group 7 voltage in Volts.",
     )
 
@@ -5549,7 +5549,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.56,
         min_alarm=3.04,
         label="Clock Buffer0 3.3V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Clock Buffer0 3.3V voltage in Volts.",
     )
 
@@ -5561,7 +5561,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.56,
         min_alarm=3.04,
         label="Clock Buffer1 3.3V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Clock Buffer1 3.3V voltage in Volts.",
     )
 
@@ -5573,7 +5573,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.65,
         min_alarm=0.55,
         label="FPGA0 DDR Vtt Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="DDR FPGA0 Vtt voltage in Volts.",
     )
 
@@ -5585,7 +5585,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.30,
         min_alarm=1.10,
         label="DDR4 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="DDR4 voltage in Volts.",
     )
 
@@ -5597,7 +5597,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=0.65,
         min_alarm=0.55,
         label="FPGA1 DDR Vtt Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="DDR FPGA1 Vtt voltage in Volts.",
     )
 
@@ -5609,7 +5609,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.89,
         min_alarm=1.71,
         label="SW DRVDD 1.8V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="SW DRVDD 1.8V voltage in Volts.",
     )
 
@@ -5621,7 +5621,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.19,
         min_alarm=1.01,
         label="AD DVDD Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="AD DVDD voltage in Volts.",
     )
 
@@ -5633,7 +5633,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.78,
         min_alarm=3.22,
         label="FE0 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="FE0 voltage in Volts. PreADU must be on.",
     )
 
@@ -5645,7 +5645,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.78,
         min_alarm=3.22,
         label="FE1 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="FE1 voltage in Volts. PreADU must be on.",
     )
 
@@ -5657,7 +5657,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.94,
         min_alarm=1.66,
         label="FPGA MGT0 AUX Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="FPGA MGT0 AUX voltage in Volts.",
     )
 
@@ -5669,7 +5669,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1.94,
         min_alarm=1.66,
         label="FPGA MGT1 AUX Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="FPGA MGT1 AUX voltage in Volts.",
     )
 
@@ -5681,7 +5681,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.56,
         min_alarm=3.04,
         label="ANALOG PLL Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="ANALOG PLL voltage in Volts.",
     )
 
@@ -5693,7 +5693,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=3.78,
         min_alarm=3.22,
         label="VGA DC-DC Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="VGA DC-DC voltage in Volts.",
     )
 
@@ -5793,7 +5793,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevFloat",
         max_alarm=10.53,
         abs_change=0.1,
-        unit="Amperes",
+        unit="Ampere",
         label="Subrack Current",
         doc="Get the Tile current as measured by the subrack.",
     )
@@ -5803,7 +5803,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevFloat",
         max_alarm=120.0,
         abs_change=0.1,
-        unit="Watts",
+        unit="Watt",
         label="Subrack Power",
         doc="Get the Tile power as measured by the subrack.",
     )
@@ -5815,7 +5815,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=12.6,
         abs_change=0.1,
         write_to_signal=True,
-        unit="Volts",
+        unit="Volt",
         label="Subrack Voltage",
         doc="Get the Tile voltage as measured by the subrack.",
     )

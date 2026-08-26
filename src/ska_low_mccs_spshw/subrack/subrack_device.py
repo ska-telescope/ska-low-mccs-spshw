@@ -1002,8 +1002,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=("DevFloat",),
         abs_change=0.1,
         label="Board Current",
-        unit="Amperes",
-        doc="Read the total current provided by the two power supplied.",
+        unit="Ampere",
+        doc="Read the total current provided by the two power supplies.",
     )
     def boardCurrent(self: MccsSubrack) -> list[float] | None:
         """
@@ -1052,7 +1052,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=("DevFloat",),
         max_dim_x=2,
         abs_change=0.1,
-        unit="Amperes",
+        unit="Ampere",
         label="Power Supply Currents",
         doc="Read the currents of the power supplies.",
     )
@@ -1112,7 +1112,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         max_dim_x=2,
         abs_change=0.1,
         label="Power Supply Powers",
-        unit="Watts",
+        unit="Watt",
         doc="Output power of Subrack power supplies.",
     )
     def powerSupplyPowers(self: MccsSubrack) -> list[float] | None:
@@ -1140,7 +1140,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         max_dim_x=2,
         abs_change=0.1,
         label="Power Supply Voltages",
-        unit="Volts",
+        unit="Volt",
         doc="Output voltage of the Subrack power supplies.",
     )
     def powerSupplyVoltages(self: MccsSubrack) -> list[float] | None:
@@ -1404,7 +1404,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_1V1 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 1V1 supply voltage in Volts.",
     )
 
@@ -1414,7 +1414,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_1V5 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 1V5 supply voltage in Volts.",
     )
 
@@ -1424,7 +1424,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_2V5 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 2V5 supply voltage in Volts.",
     )
 
@@ -1434,7 +1434,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_2V8 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 2V8 supply voltage in Volts.",
     )
 
@@ -1444,7 +1444,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_3V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 3V supply voltage in Volts.",
     )
 
@@ -1454,7 +1454,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_3V3 Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 3V3 supply voltage in Volts.",
     )
 
@@ -1464,7 +1464,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_5V Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal 5V supply voltage in Volts.",
     )
 
@@ -1474,7 +1474,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_ARM Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal ARM supply voltage in Volts.",
     )
 
@@ -1484,7 +1484,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_CORE Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal CORE supply voltage in Volts.",
     )
 
@@ -1494,7 +1494,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_DDR Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal DDR supply voltage in Volts.",
     )
 
@@ -1504,7 +1504,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_POWERIN Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack power input voltage in Volts.",
     )
 
@@ -1514,7 +1514,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="V_SOC Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="Subrack internal SOC supply voltage in Volts.",
     )
 
@@ -1540,7 +1540,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Input Power",
-        unit="Watts",
+        unit="Watt",
         doc="PSU1 input power in Watts.",
     )
 
@@ -1552,7 +1552,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Input Power",
-        unit="Watts",
+        unit="Watt",
         doc="PSU2 input power in Watts.",
     )
 
@@ -1564,7 +1564,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Output Power",
-        unit="Watts",
+        unit="Watt",
         doc="PSU1 output power in Watts.",
     )
 
@@ -1576,7 +1576,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Output Power",
-        unit="Watts",
+        unit="Watt",
         doc="PSU2 output power in Watts.",
     )
 
@@ -1590,7 +1590,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Input Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="PSU1 input voltage in Volts.",
     )
 
@@ -1604,7 +1604,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Input Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="PSU2 input voltage in Volts.",
     )
 
@@ -1618,7 +1618,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Output Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="PSU1 output voltage in Volts.",
     )
 
@@ -1632,7 +1632,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Output Voltage",
-        unit="Volts",
+        unit="Volt",
         doc="PSU2 output voltage in Volts.",
     )
 
@@ -1738,7 +1738,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         label="PDU Port Currents",
-        unit="Amperes",
+        unit="Ampere",
         doc="Read the PDU port currents.",
     )
     def pduPortCurrents(self: MccsSubrack) -> list[float] | None:
@@ -1752,7 +1752,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         label="PDU Port Voltages",
-        unit="Volts",
+        unit="Volt",
         doc="Read the PDU port voltages.",
     )
     def pduPortVoltages(self: MccsSubrack) -> list[float] | None:
@@ -1768,7 +1768,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         max_dim_x=8,
         abs_change=0.1,
         label="TPM Currents",
-        unit="Amperes",
+        unit="Ampere",
         doc="Read the current of all TPMs.",
     )
     def tpmCurrents(self: MccsSubrack) -> list[float] | None:
@@ -1797,7 +1797,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         max_alarm=120.0,
         abs_change=0.1,
         label="TPM Powers",
-        unit="Watts",
+        unit="Watt",
         doc="Read the powers of all TPMs.",
     )
     def tpmPowers(self: MccsSubrack) -> list[float] | None:
@@ -1840,7 +1840,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         max_alarm=12.6,
         abs_change=0.1,
         label="TPM Voltages",
-        unit="Volts",
+        unit="Volt",
         doc="Read the voltages of all TPMs.",
     )
     def tpmVoltages(self: MccsSubrack) -> list[float] | None:

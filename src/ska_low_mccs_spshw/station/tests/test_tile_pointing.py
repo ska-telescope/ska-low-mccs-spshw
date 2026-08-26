@@ -12,13 +12,13 @@ import json
 import logging
 import random
 import time
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
 
+from time_utils import str_from_float_epoch_utc_time
+
 from ...tile.tile_data import TileData
-from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest
 from .data_handlers import BeamDataReceivedHandler
 
@@ -60,6 +60,7 @@ class TestTilePointing(BaseDaqTest):
         tile_trls: list[str],
         subrack_trls: list[str],
         daq_trl: str,
+        wren_trl: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -68,6 +69,7 @@ class TestTilePointing(BaseDaqTest):
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param wren_trl: trl of the wren the station has.
         :param component_manager: SpsStation component manager under test.
         """
         # Random seed for repeatability
@@ -82,7 +84,9 @@ class TestTilePointing(BaseDaqTest):
             self._delays.append(random_val)
 
         self._start_freq = 156.25e6  # Hz
-        super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
+        super().__init__(
+            component_manager, logger, tile_trls, subrack_trls, daq_trl, wren_trl
+        )
 
     def _send_beam_data(self: TestTilePointing) -> None:
         """Send beam data to the DAQ."""
@@ -207,9 +211,7 @@ class TestTilePointing(BaseDaqTest):
         self._configure_beamformer(self._start_freq)
         self._reset_tpm_calibration(1.0)
         self._clear_pointing_delays()
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
-        )
+        start_time = str_from_float_epoch_utc_time(time.time() + 2)
         self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )

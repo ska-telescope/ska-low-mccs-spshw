@@ -1109,7 +1109,34 @@ class TileSimulator:
             health_status["dsp"]["station_beamf"][
                 "discarded_or_flagged_packet_count"
             ] = {"FPGA0": None, "FPGA1": None}
+        if not self.is_programmed():
+            return self._filter_cpld_only(health_status)
         return health_status
+
+    def _filter_cpld_only(
+        self: TileSimulator, structure: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Return a copy of structure containing only CPLD-accessible monitoring points.
+
+        When FPGAs are not programmed the real tile API omits monitoring points that
+        require FPGA communication. This helper mirrors that behaviour using the
+        CPLD_ONLY_HEALTH_KEYS defined in TileData.
+
+        :param structure: full health structure to filter.
+        :return: filtered health structure.
+        """
+        result: dict[str, Any] = {}
+        for group, keys in TileData.CPLD_ONLY_HEALTH_KEYS.items():
+            if group not in structure:
+                continue
+            if keys is None:
+                result[group] = structure[group]
+            else:
+                filtered = {k: v for k, v in structure[group].items() if k in keys}
+                if filtered:
+                    result[group] = filtered
+        return result
 
     def define_monitoring_point_filter(
         self: TileSimulator, path: str, override: bool = True, **kwargs: Any
@@ -2976,8 +3003,18 @@ class TileSimulator:
                 break
             time_utc = time.time()
             _fpgatime = int(time_utc)
+            self.logger.debug(
+                (
+                    f"TimedThread: fpgaTime: {_fpgatime},"
+                    f" sync time: {self.sync_time},"
+                    f" time_utc: {time_utc}"
+                )
+            )
             if self.sync_time > 0 and self.sync_time < time_utc:
                 self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
+                self.logger.debug(
+                    f"TimedThread: updating timestamp to: {self._timestamp}"
+                )
                 reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
                 reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
                 if self.tpm:

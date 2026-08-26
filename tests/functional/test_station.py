@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -11,12 +12,17 @@ This file contains a test for the station syncronisation.
 Depending on your exact deployment the individual tests may or may not be run.
 This test just checks that anything which can run passes.
 """
+
 from __future__ import annotations
 
 import json
+import random
+import sys
+import threading
 import time
+from collections.abc import Iterator
 from datetime import datetime
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Final, Generator
 
 import numpy as np
 import pytest
@@ -28,18 +34,36 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.functional.conftest import verify_bandpass_state
 from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
+from tests.test_tools import AttributeWaiter, wait_for_lrc_result
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+STRESS_TEST_PHASE_DURATION = 90.0  # seconds
+NOF_CHANNEL_GROUPS = 48
+ADC_CHANNELS: Final[int] = 32  # Number of ADC channels per tile, used in tests.
+ADC_RESOLUTION: Final[float] = 2.5
 
 
-@pytest.fixture(name="command_info")
-def command_info_fixture() -> dict[str, Any]:
+@pytest.fixture(name="tile_inheriting")
+def tile_inheriting_fixture(station_tiles: list[tango.DeviceProxy]) -> Iterator[None]:
     """
-    Fixture to store command ID.
+    Temporarily enable ``inheritmodes`` for all station tiles.
 
-    :returns: Empty dictionary.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: facilitate teardown
     """
-    return {}
+    initial_inherit = [tile.inheritmodes for tile in station_tiles]
+
+    for tile in station_tiles:
+        tile.inheritmodes = True
+
+    time.sleep(1)
+
+    yield
+
+    for tile, initial_mode in zip(station_tiles, initial_inherit):
+        tile.inheritmodes = initial_mode
 
 
 @pytest.fixture(name="change_event_callbacks")
@@ -132,6 +156,48 @@ def test_station_on_workaround(
         device.adminmode = AdminMode.ONLINE
 
 
+@scenario(
+    "features/station.feature",
+    "Stress testing the interface does not cause lock contention (SKB-1440 regression)",
+)
+def test_lock_contention_not_observed(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that stress tests the SpsStation/Tile interface.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
+    "Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)",
+)
+def test_standby_during_init(
+    stations_devices_exported: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a test scenario that tests the station device.
+
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    """
+    for device in stations_devices_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario(
+    "features/station.feature",
+    "Fanout attribute writes reach the correct tile",
+)
+def test_fanout_attribute_writes_reach_correct_tile() -> None:
+    """Run a test scenario that verifies fanout writes reach the correct tile."""
+
+
 @given("an SPS deployment against HW")
 def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
@@ -145,7 +211,7 @@ def check_against_hardware(hw_context: bool, station_label: str) -> None:
 
 
 @given("the SpsStation is ON")
-def check_spsstation_state(
+def ensure_spsstation_state_on(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     stations_devices_exported: list[tango.DeviceProxy],
@@ -320,6 +386,34 @@ def check_spsstation_state_standby(
         pytest.fail(f"SpsStation state {station.state()} != {tango.DevState.STANDBY}")
 
 
+@given("the station and its tiles are synchronised")
+def check_station_and_tiles_synchronised(
+    station: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
+) -> None:
+    """
+    Check the SpsStation is ON and all its tiles are Synchronised.
+
+    :param station: a proxy to the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    """
+    ensure_spsstation_state_on(
+        station, change_event_callbacks, stations_devices_exported, station_tiles
+    )
+
+    if any(status != "Synchronised" for status in station.tileProgrammingState):
+        station.Initialise()
+
+    station_is_synced(station)
+
+
 @given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag}"))
 def check_spsstation_on_workaround_flag_param(
     station: tango.DeviceProxy, flag: str
@@ -349,7 +443,7 @@ def turn_station_on(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    ([result_code], [_]) = station.On()
+    [result_code], [_] = station.On()
     assert result_code == ResultCode.QUEUED
 
 
@@ -561,3 +655,543 @@ def bandpass_daq_receiving(
 
     assert np.count_nonzero(bandpass_daq_device.xPolBandpass) > 0
     assert np.count_nonzero(bandpass_daq_device.yPolBandpass) > 0
+
+
+@pytest.fixture(name="stress_test_failures")
+def stress_test_failures_fixture() -> list[str]:
+    """
+    Fixture to store failures observed while stress testing the interface.
+
+    :returns: an empty list to append failure descriptions to.
+    """
+    return []
+
+
+def _poll_all_tile_attributes(
+    station_tiles: list[tango.DeviceProxy],
+    excluded_tile_attributes: list[str],
+    failures: list[str],
+    stop_event: threading.Event,
+) -> None:
+    """
+    Continuously poll every attribute on every tile until told to stop.
+
+    This is used as a background stressor for the TPM hardware lock while
+    other operations are driven against the station, per SKB-1440.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param excluded_tile_attributes: Attribute names to skip, as they are
+        known to fail for reasons unrelated to hardware lock contention.
+    :param failures: a list to append failure descriptions to.
+    :param stop_event: an event used to signal the loop to stop.
+    """
+    tile_exclusions = {}
+    for i, tile in enumerate(station_tiles):
+        exclusions = set(excluded_tile_attributes)
+        if i != len(station_tiles) - 1:
+            # These are documented by the API as do not use unless final tile.
+            exclusions.update(
+                {
+                    "fpga0_station_beamformer_flagged_count",
+                    "fpga1_station_beamformer_flagged_count",
+                }
+            )
+        tile_exclusions[tile.dev_name()] = exclusions
+
+    while not stop_event.is_set():
+        for tile in station_tiles:
+            exclusions = tile_exclusions[tile.dev_name()]
+            try:
+                attribute_names = tile.get_attribute_list()
+            except tango.DevFailed as error:
+                failures.append(
+                    f"get_attribute_list failed on {tile.dev_name()}: {error}"
+                )
+                continue
+            for attr in attribute_names:
+                if stop_event.is_set():
+                    return
+                if attr in exclusions:
+                    continue
+                try:
+                    getattr(tile, attr)
+                except tango.DevFailed as error:
+                    failures.append(f"Failed to read {tile.dev_name()}.{attr}: {error}")
+
+
+def _wait_for_preadu_levels(station: tango.DeviceProxy, timeout: float = 60.0) -> Any:
+    """
+    Wait for the SpsStation preaduLevels attribute to populate.
+
+    :param station: station device under test.
+    :param timeout: the maximum time to wait, in seconds.
+
+    :raises TimeoutError: if preaduLevels does not populate in time.
+
+    :return: the populated preaduLevels values.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        levels = station.preaduLevels
+        if levels is not None and len(levels) > 0:
+            return levels
+        time.sleep(1)
+    raise TimeoutError("Timed out waiting for preaduLevels to populate on SpsStation")
+
+
+def _stress_initialise_and_preadu_levels(
+    station: tango.DeviceProxy,
+    failures: list[str],
+    duration: float = STRESS_TEST_PHASE_DURATION,
+) -> None:
+    """
+    Repeatedly Initialise the station and read/write preaduLevels.
+
+    :param station: station device under test.
+    :param failures: a list to append failure descriptions to.
+    :param duration: how long to run this phase for, in seconds.
+
+    :raises tango.DevFailed: when the origional preadu level
+        could not be reset.
+    """
+    deadline = time.time() + duration
+    while time.time() < deadline:
+        try:
+            [result_code], [command_id] = station.Initialise()
+            if result_code != ResultCode.QUEUED:
+                failures.append(f"Initialise not queued, got {result_code}")
+                continue
+            wait_for_lrc_result(
+                device=station,
+                uid=command_id,
+                expected_result=ResultCode.OK,
+                timeout=60,
+            )
+        except (tango.DevFailed, TimeoutError, ValueError) as error:
+            failures.append(f"Initialise failed: {error}")
+            continue
+
+        try:
+            original_levels = list(_wait_for_preadu_levels(station))
+        except TimeoutError as error:
+            failures.append(str(error))
+            continue
+
+        raised_levels = [level + 1 for level in original_levels]
+        try:
+            station.preaduLevels = raised_levels
+        except tango.DevFailed as error:
+            failures.append(f"preaduLevels raise failed: {error}")
+        finally:
+            # Restore is not optional cleanup: leaving the station at
+            # raised_levels would corrupt the baseline for every later
+            # iteration (and any observation that follows this test), so
+            # a failure here must abort the stress loop rather than be
+            # logged and skipped like the other failures in this loop.
+            try:
+                station.preaduLevels = original_levels
+            except tango.DevFailed as error:
+                failures.append(
+                    f"preaduLevels restore failed, hardware left modified: {error}"
+                )
+                raise
+
+
+def _stress_beamformer_running_for_channels(
+    station: tango.DeviceProxy,
+    failures: list[str],
+    duration: float = STRESS_TEST_PHASE_DURATION,
+) -> None:
+    """
+    Repeatedly call BeamformerRunningForChannels for every channel group.
+
+    :param station: station device under test.
+    :param failures: a list to append failure descriptions to.
+    :param duration: how long to run this phase for, in seconds.
+    """
+    deadline = time.time() + duration
+    while time.time() < deadline:
+        for channel_group in range(NOF_CHANNEL_GROUPS):
+            try:
+                station.command_inout(
+                    "BeamformerRunningForChannels",
+                    json.dumps({"channel_groups": [channel_group]}),
+                )
+            except tango.DevFailed as error:
+                failures.append(
+                    "BeamformerRunningForChannels failed for channel group "
+                    f"{channel_group}: {error}"
+                )
+            if time.time() >= deadline:
+                break
+
+
+@pytest.fixture(name="stressed_tiles")
+def stressed_tiles_fixture(
+    station_tiles: list[tango.DeviceProxy],
+) -> Iterator[None]:
+    """
+    Configure station tiles for stress testing.
+
+    Temporarily reduces the poll rate and lock timeout, reinitialises
+    each tile, waits for the expected state transitions, and restores
+    the original configuration after the test.
+
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+
+    :yields: before teardown.
+
+    :raises RuntimeError: when we fail to restore initial state.
+        State left modified by test.
+    """
+    expected_states_after_init = [
+        tango.DevState.UNKNOWN,
+        tango.DevState.DISABLE,
+        tango.DevState.INIT,
+        tango.DevState.DISABLE,
+        tango.DevState.UNKNOWN,
+        tango.DevState.ON,
+    ]
+
+    original_properties = []
+
+    try:
+        for tile in station_tiles:
+            props = tile.get_property("PollRate")
+            props.update(tile.get_property("DefaultLockTimeout"))
+            original_properties.append(props)
+
+            tile.put_property({"PollRate": 0.05})
+            tile.put_property({"DefaultLockTimeout": 0.3})
+
+            state_callback = MockTangoEventCallbackGroup(
+                "state",
+                timeout=15,
+            )
+            tile.subscribe_event(
+                "state",
+                tango.EventType.CHANGE_EVENT,
+                state_callback["state"],
+            )
+
+            state_callback.assert_change_event("state", tango.DevState.ON)
+
+            tile.init()
+
+            for state in expected_states_after_init:
+                state_callback.assert_change_event("state", state)
+
+        yield
+
+    finally:
+        cleanup_errors = []
+
+        for tile, props in zip(station_tiles, original_properties):
+            tile.put_property({"PollRate": props["PollRate"]})
+            tile.put_property({"DefaultLockTimeout": props["DefaultLockTimeout"]})
+
+            try:
+                tile.init()
+
+                for state in expected_states_after_init:
+                    state_callback.assert_change_event("state", state)
+            except Exception as e:  # pylint: disable=broad-except
+                cleanup_errors.append(f"{tile}: {e}")
+
+        if cleanup_errors:
+            raise RuntimeError(
+                "Failed to restore test state:\n" + "\n".join(cleanup_errors)
+            )
+
+
+@when("we stress test the interface")
+def stress_test_interface(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    excluded_tile_attributes: list[str],
+    stress_test_failures: list[str],
+) -> None:
+    """
+    Stress test the SpsStation/Tile interface to check for lock contention.
+
+    A background thread continuously polls every attribute on every tile
+    while, concurrently, the station is repeatedly Initialised and its
+    preaduLevels are read and written, followed by repeated
+    BeamformerRunningForChannels queries. This reproduces the conditions of
+    SKB-1440, where prolonged holding of the TPM hardware lock by one
+    operation starved out others.
+
+    :param station: station device under test.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param excluded_tile_attributes: A list of attributes to not poll.
+    :param stress_test_failures: a list to record failure descriptions in.
+
+    :raises RuntimeError: When unable to join thread in timeout period.
+    """
+    assert station_tiles, "No station tiles were discovered"
+
+    stop_polling = threading.Event()
+    poll_thread = threading.Thread(
+        target=_poll_all_tile_attributes,
+        args=(
+            station_tiles,
+            excluded_tile_attributes,
+            stress_test_failures,
+            stop_polling,
+        ),
+        daemon=True,
+    )
+    poll_thread.start()
+
+    try:
+        _stress_initialise_and_preadu_levels(station, stress_test_failures)
+        _stress_beamformer_running_for_channels(station, stress_test_failures)
+    finally:
+        stop_polling.set()
+        poll_thread.join(timeout=30)
+        if poll_thread.is_alive():
+            # Print out previous exception, to help debugging.
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print(f"Exception type: {exc_type}")
+            print(f"Exception value: {exc_value}")
+            print(f"Traceback object: {exc_traceback}")
+            raise RuntimeError("Poll thread did not terminate in time")
+
+
+@then("we do not get any failures")
+def check_no_failures(stress_test_failures: list[str]) -> None:
+    """
+    Assert that no failures were observed during the stress test.
+
+    :param stress_test_failures: a list of failure descriptions collected
+        during the stress test.
+    """
+    assert not stress_test_failures, (
+        f"{len(stress_test_failures)} failure(s) observed during stress test:\n"
+        + "\n".join(stress_test_failures)
+    )
+
+
+@when("we trigger skb-1402")
+def trigger_skb_1402(
+    station: tango.DeviceProxy,
+    tile_inheriting: Any,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    command_info: dict[str, Any],
+) -> None:
+    """
+    Call Tango Init, then Standby as soon as the station re-enters UNKNOWN.
+
+    This reproduces the SKB-1402 race: Init tears down and rebuilds the
+    station's communication with its TPMs, cycling the device state through
+    UNKNOWN -> DISABLE -> INIT -> DISABLE -> UNKNOWN. Commanding Standby
+    the moment we re-enter UNKNOWN used to hang if a TPM read was in flight
+    when the TPM lost power.
+
+    :param station: station device under test.
+    :param tile_inheriting: fixture to ensure tiles are inheriting.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param command_info: a dict in which to store command IDs.
+    """
+    state_callback = MockTangoEventCallbackGroup(
+        "state",
+        timeout=15,
+    )
+    station.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        state_callback["state"],
+    )
+    state_callback.assert_change_event("state", tango.DevState.ON)
+
+    station.Init()
+
+    # Command can be invoked as soon as we restart and enter UNKNOWN.
+    for expected_state in [
+        tango.DevState.UNKNOWN,
+        tango.DevState.DISABLE,
+        tango.DevState.INIT,
+        tango.DevState.DISABLE,
+        tango.DevState.UNKNOWN,
+    ]:
+        state_callback.assert_change_event("state", expected_state)
+
+    for i in range(10):
+        try:
+            time.sleep(random.randrange(1, 10) / 50)
+            [result_code], [command_id] = station.Standby()
+            break
+        except tango.DevFailed:
+            time.sleep(0.1)
+
+    assert result_code == ResultCode.QUEUED
+    command_info["Standby"] = command_id
+
+
+@then("the Standby command completed successfully")
+def standby_command_completed_successfully(
+    station: tango.DeviceProxy, command_info: dict[str, Any]
+) -> None:
+    """
+    Check the Standby command completed with ResultCode.OK.
+
+    :param station: station device under test.
+    :param command_info: a dict containing command IDs.
+    """
+    wait_for_lrc_result(
+        device=station,
+        uid=command_info["Standby"],
+        expected_result=ResultCode.OK,
+        timeout=300,
+    )
+
+
+@then("all TPMs transition to Off state")
+def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
+    """
+    Check all TPMs reach OFF state.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    """
+    assert station_tiles, "No station tiles were discovered"
+    deadline = time.time() + 300
+    while time.time() < deadline:
+        if all(tile.state() == tango.DevState.OFF for tile in station_tiles):
+            break
+        time.sleep(2)
+    else:
+        pytest.fail(
+            "Not all tiles transitioned to OFF: "
+            f"""{[(tile.dev_name(), tile.state()) for tile in station_tiles]}"""
+        )
+
+
+@when(
+    parsers.parse("I write distinct {attribute} values to the station"),
+    target_fixture="fanout_expectations",
+)
+def write_distinct_fanout_values(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    attribute: str,
+) -> Iterator[dict[str, Any]]:
+    """
+    Write distinct per-tile values for a fanout attribute, then restore them.
+
+    Each of the three attributes under test picks its per-tile value using a
+    different ordering key, mirroring what
+    ``SpsStationComponentManager`` actually does:
+
+    - ``preaduLevels`` is sliced by the station's ``TileFQDNs`` device
+      property order (the order the tile fanout group was built from).
+    - ``staticTimeDelays`` is sliced by each tile's own ``logicalTileId``.
+
+    :param station: station device under test.
+    :param station_tiles: List of TPM DeviceProxies.
+    :param attribute: name of the fanout attribute under test.
+
+    :raises NotImplementedError: if the scenario is run for an attribute
+        this step doesn't know how to compute per-tile values for.
+
+    :yields: a mapping from tile ``dev_name()`` to the value expected to be
+        read back from that tile.
+    """
+    assert station_tiles, "No station tiles were discovered"
+    originals = {tile.dev_name(): getattr(tile, attribute) for tile in station_tiles}
+
+    if attribute == "preaduLevels":
+        # AttributeWaiter._values_equal requires both sides to be np.ndarray
+        # once the tile's readback is one, so per-tile expected blocks are
+        # built as arrays rather than plain lists.
+        # Small ordinal values: preADU levels are a physical attenuator
+        # setting (realistically 0-31.5 dB), so this must stay in range
+        # regardless of station size, while still differing per tile.
+        fqdns = list(station.get_property("TileFQDNs")["TileFQDNs"])
+        per_fqdn = {
+            fqdn: np.array([float(i)] * ADC_CHANNELS) for i, fqdn in enumerate(fqdns)
+        }
+        setattr(
+            station,
+            attribute,
+            np.concatenate([per_fqdn[fqdn] for fqdn in fqdns]),
+        )
+        expected = {
+            tile.dev_name(): per_fqdn[fqdn]
+            for tile in station_tiles
+            for fqdn in fqdns
+            if tile.dev_name().lower() == fqdn.lower()
+        }
+        assert len(expected) == len(station_tiles), (
+            "Could not match every station tile to an entry in TileFQDNs: "
+            f"{[tile.dev_name() for tile in station_tiles]} vs {fqdns}"
+        )
+
+    elif attribute == "staticTimeDelays":
+        # Small ordinal values, well within the +/-124 ns valid range.
+        per_logical_id = {
+            tile.logicalTileId: np.array(
+                [float(tile.logicalTileId * ADC_RESOLUTION)] * ADC_CHANNELS
+            )
+            for tile in station_tiles
+        }
+        n_tiles = len(station_tiles)
+        setattr(
+            station,
+            attribute,
+            np.concatenate([per_logical_id[i] for i in range(n_tiles)]),
+        )
+        expected = {
+            tile.dev_name(): per_logical_id[tile.logicalTileId]
+            for tile in station_tiles
+        }
+
+    else:
+        raise NotImplementedError(f"No fanout test defined for attribute {attribute}")
+
+    try:
+        yield expected
+    finally:
+        for tile in station_tiles:
+            setattr(tile, attribute, originals[tile.dev_name()])
+
+
+@then(parsers.parse("each tile reads back the correct {attribute} value"))
+def check_fanout_value_on_each_tile(
+    station_tiles: list[tango.DeviceProxy],
+    fanout_expectations: dict[str, Any],
+    attribute: str,
+) -> None:
+    """
+    Check each tile reads back the correct value for a fanout attribute.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param fanout_expectations: mapping from tile ``dev_name()`` to the
+        value expected to be read back from that tile.
+    :param attribute: name of the fanout attribute under test.
+    """
+    for tile in station_tiles:
+        expected_value = fanout_expectations[tile.dev_name()]
+        if attribute == "preaduLevels":
+            # Mirrors the mask TileComponentManager.set_preadu_levels applies:
+            # a channel only reflects the written level if its preADU is
+            # fitted, otherwise hardware reads back 0 for that channel. With
+            # only one of the two preADUs fitted, half the channels are
+            # zeroed rather than all of them.
+            # get_property() only returns explicitly-stored DB values; when
+            # unset it returns [], whereas the device itself falls back to
+            # its device_property default of [True, True].
+            raw_pre_adu_fitted = tile.get_property("PreAduFitted")["PreAduFitted"]
+            pre_adu_fitted = (
+                [value.lower() == "true" for value in raw_pre_adu_fitted]
+                if raw_pre_adu_fitted
+                else [True, True]
+            )
+            mask = np.repeat(
+                np.array(pre_adu_fitted[::-1] * 2, dtype=float),
+                ADC_CHANNELS // 4,
+            )
+            expected_value = mask * expected_value
+        AttributeWaiter(timeout=30).wait_for_value(tile, attribute, expected_value)

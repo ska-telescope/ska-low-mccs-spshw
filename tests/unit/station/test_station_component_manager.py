@@ -13,10 +13,11 @@ import ipaddress
 import json
 import logging
 import random
+import threading
 import time
 import unittest.mock
 from types import SimpleNamespace
-from typing import Iterator
+from typing import Any, Final, Generator, Iterator
 
 import numpy as np
 import pytest
@@ -37,8 +38,41 @@ from ska_low_mccs_spshw.station import (
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
+from tests.test_tools import FakeGroup as _FakeGroup
+from tests.test_tools import FakeGroupReply as _FakeGroupReply
 
 # pylint: disable=too-many-lines
+
+ADC_CHANNELS: Final[int] = 32  # Number of ADC channels per tile, used in tests.
+
+
+def _mock_group(name: str, tile_fqdns: list[str]) -> unittest.mock.Mock:
+    """
+    Build a tile group test double, for injection via ``tile_group=``.
+
+    ``SpsStationComponentManager`` would otherwise build a real
+    ``tango.Group``, which makes genuine Tango connections that don't
+    exist in this mock-based harness. The mock returned here is spec'd
+    against the real ``tango.Group`` (so a typo'd or removed method is
+    caught) and wraps a ``_FakeGroup``, which fans calls out to the same
+    registered mock tile devices the rest of the test suite uses.
+    Individual tests can still override one method for one case, e.g.
+    ``tile_group.write_attribute.side_effect = ...``.
+
+    An injected group is trusted by ``SpsStationComponentManager`` to
+    already contain every tile, so -- unlike when it builds a group
+    itself -- it will not add these devices for us; we do it here
+    instead.
+
+    :param name: name of the group.
+    :param tile_fqdns: FQDNs of the tiles to add to the group.
+
+    :return: a mock tile group.
+    """
+    fake_group = _FakeGroup(name)
+    for tile_fqdn in tile_fqdns:
+        fake_group.add(tile_fqdn)
+    return unittest.mock.Mock(spec=tango.Group, wraps=fake_group)
 
 
 # pylint: disable = too-many-arguments
@@ -99,6 +133,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         "tile_health",
         "subrack_health",
+        "wren_health",
         timeout=15.0,
     )
 
@@ -165,12 +200,14 @@ def station_component_manager_fixture(
 
     :return: a station component manager.
     """
+    tile_fqdns = [get_tile_name(tile_id + i) for i in range(0, num_tiles)]
     sps_station_component_manager = SpsStationComponentManager(
-        1,
+        1,  # station_id
         [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
-        [get_tile_name(tile_id + i) for i in range(0, num_tiles)],
-        "",
-        "",
+        tile_fqdns,
+        "",  # lmc_daq_trl
+        "",  # bandpass_daq_trl
+        "",  # wren_trl
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
         None,  # csp_ingest_ip
@@ -179,11 +216,15 @@ def station_component_manager_fixture(
         antenna_uri,
         True,  # whether or not to start bandpasses in initialise
         5,  # Bandpass integration time
+        True,  # wren_health_check_fail_on_timeout
+        120,  # wren_health_check_timeout
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],
         callbacks["tile_health"],
         callbacks["subrack_health"],
+        callbacks["wren_health"],
+        tile_group=_mock_group("station-1-tiles", tile_fqdns),
     )
     # Patching through our self check manager basic tests.
     sps_station_component_manager.self_check_manager = station_self_check_manager
@@ -250,8 +291,7 @@ def test_communication(
     ],
 )
 def test_trigger_adc_equalisation(
-    station_component_manager: SpsStationComponentManager,
-    callbacks: MockCallableGroup,
+    communicating_station_component_manager: SpsStationComponentManager,
     result: float,
     target_adc: float,
     bias: float,
@@ -259,58 +299,41 @@ def test_trigger_adc_equalisation(
     """
     Test the adc triggering equalisation.
 
-    :param station_component_manager: the SPS station component manager
-        under test
-    :param callbacks: dictionary of driver callbacks.
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param result: expected result after equalisation
     :param target_adc: the expected average power received by antennas in ADU units.
     :param bias: user specified bias.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     expected_adc = 16.0
     expected_preadu = 8.0
 
-    for proxy in station_component_manager._tile_proxies.values():
+    for proxy in communicating_station_component_manager._tile_proxies.values():
         proxy._proxy.adcPower = [expected_adc] * 32  # type: ignore
         proxy._proxy.preaduLevels = [expected_preadu] * 32  # type: ignore
 
     # Assertion fails, the preadu levels may be empty or containing something
     # in a non deterministic way
-    # assert station_component_manager.preadu_levels == []
+    # assert communicating_station_component_manager.preadu_levels == []
 
-    station_component_manager.trigger_adc_equalisation(target_adc, bias)
+    communicating_station_component_manager.trigger_adc_equalisation(target_adc, bias)
 
-    assert station_component_manager._desired_preadu_levels is not None
-    for value in station_component_manager._desired_preadu_levels:
+    assert communicating_station_component_manager._desired_preadu_levels is not None
+    for value in communicating_station_component_manager._desired_preadu_levels:
         assert value == result
 
 
 def test_load_pointing_delays(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     mock_tiles: list[MccsDeviceProxy],
-    callbacks: MockCallableGroup,
 ) -> None:
     """
     Test mapping in load pointing delays.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param mock_tiles: mock tile proxies, one per tile in the harness.
-    :param callbacks: dictionary of driver callbacks.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     # First we need an example mapping for our antennas, we only have 1 tile in tests,
     # but lets pretend we have a whole station
     channels = list(range(16))
@@ -320,7 +343,7 @@ def test_load_pointing_delays(
     antenna_no = 1
     for tpm in range(16):
         for channel in channels:
-            station_component_manager._antenna_mapping[antenna_no] = {
+            communicating_station_component_manager._antenna_mapping[antenna_no] = {
                 "tpm": tpm,  # tpm is 0 based (logical ID)
                 "tpm_y_channel": channel * 2,
                 "tpm_x_channel": channel * 2 + 1,
@@ -332,7 +355,9 @@ def test_load_pointing_delays(
     # is un-realistic but useful for testing
     antenna_order_delays = [float(x) for x in range(513)]
 
-    station_component_manager.load_pointing_delays(copy.deepcopy(antenna_order_delays))
+    communicating_station_component_manager.load_pointing_delays(
+        copy.deepcopy(antenna_order_delays)
+    )
 
     # The zero-th element should be the zero-th element of the original input
     expected_tile_arg = [antenna_order_delays[0]] + [0.0] * 32
@@ -342,7 +367,7 @@ def test_load_pointing_delays(
         for (
             antenna_no,
             antenna_config,
-        ) in station_component_manager._antenna_mapping.items():
+        ) in communicating_station_component_manager._antenna_mapping.items():
             tile_no = antenna_config["tpm"]
             y_channel = antenna_config["tpm_y_channel"]
             if tile_no == 0 and int(y_channel / 2) == channel:  # First tile
@@ -353,27 +378,196 @@ def test_load_pointing_delays(
         expected_tile_arg[2 * channel + 1] = delay
         expected_tile_arg[2 * channel + 2] = delay_rate
 
-    mock_tiles[0].LoadPointingDelays.assert_next_call(expected_tile_arg)
+    mock_tiles[0].LoadPointingDelays.assert_next_call(pytest.approx(expected_tile_arg))
 
 
-def test_port_to_antenna_order(
+def test_preadu_levels_fanout_to_correct_tile(
     station_component_manager: SpsStationComponentManager,
-    callbacks: MockCallableGroup,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
 ) -> None:
     """
-    Test that `port_to_antenna_order` properly re-orders data.
+    Test that preadu_levels sends each tile's slice to the correct tile.
+
+    preadu_levels slices its input by iteration order of
+    ``self._tile_proxies``, which matches the registration order of
+    ``mock_tiles``.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    expected_levels_by_index = {i: [100.0 + i] * ADC_CHANNELS for i in range(num_tiles)}
+    station_component_manager.preadu_levels = [
+        level for i in range(num_tiles) for level in expected_levels_by_index[i]
+    ]
+
+    for i in range(num_tiles):
+        assert list(mock_tiles[i].preaduLevels) == expected_levels_by_index[i]
+
+
+@pytest.fixture(name="communicating_station_component_manager")
+def communicating_station_component_manager_fixture(
+    station_component_manager: SpsStationComponentManager, callbacks: MockCallableGroup
+) -> Generator[SpsStationComponentManager, None, None]:
+    """
+    Yield a component manager with connections to mocks established.
 
     :param station_component_manager: the SPS station component manager
         under test
     :param callbacks: dictionary of driver callbacks.
+
+    :yields: the component manager
     """
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-    assert station_component_manager._antenna_mapping != {}
+
+    yield station_component_manager
+
+
+def test_static_delays_fanout_to_correct_tile(
+    communicating_station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that static_delays sends each tile's slice to the correct tile.
+
+    Unlike preadu_levels, static_delays slices its input by each tile's own
+    ``logicalTileId``, not by registration order. We reassign
+    ``logicalTileId`` to a non-identity permutation of the default mapping
+    so that the two orderings disagree -- this is what proves the setter is
+    actually keying off ``logicalTileId``, rather than coincidentally
+    passing because both orderings happen to match by default.
+
+    :param communicating_station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    assert num_tiles == 4  # test assumes 4 tiles, to define the permutation below.
+    logical_id_by_index = [3, 1, 2, 0]
+    for i, logical_id in enumerate(logical_id_by_index):
+        mock_tiles[i].logicalTileId = logical_id
+
+    expected_delays_by_logical_id = {
+        logical_id: [10.0 + logical_id] * ADC_CHANNELS
+        for logical_id in range(num_tiles)
+    }
+    communicating_station_component_manager.static_delays = [
+        delay
+        for logical_id in range(num_tiles)
+        for delay in expected_delays_by_logical_id[logical_id]
+    ]
+
+    for i, logical_id in enumerate(logical_id_by_index):
+        assert (
+            list(mock_tiles[i].staticTimeDelays)
+            == expected_delays_by_logical_id[logical_id]
+        )
+
+
+def test_static_delays_reports_tile_write_failure(
+    communicating_station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that a tile write failure is reported via tango.DevFailed.
+
+    When one tile in the group fails to write staticTimeDelays,
+    ``_group_write_attribute`` must raise ``tango.DevFailed`` carrying
+    that tile's own failure reason through to the caller -- not a
+    generic or empty error -- while the other tiles' writes still go
+    through.
+
+    The failure is injected at the tile group itself (rather than by
+    patching the mock tile device proxy), since the group is what
+    ``_group_write_attribute`` actually talks to.
+
+    :param communicating_station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    failing_index = 0
+    failure_reason = "SimulatedStaticTimeDelaysFailure"
+    expected_delays = [10.0] * ADC_CHANNELS
+
+    tile_group = communicating_station_component_manager._tile_group
+    real_write_attribute = tile_group.write_attribute
+
+    def _write_attribute_with_one_failure(
+        attr_name: str, value: Any, **kwargs: Any
+    ) -> list[Any]:
+        replies = real_write_attribute(attr_name, value, **kwargs)
+        if attr_name == "staticTimeDelays":
+            replies[failing_index] = _FakeGroupReply(
+                replies[failing_index].dev_name(),
+                attr_name,
+                exception=tango.DevFailed(failure_reason),
+            )
+        return replies
+
+    with (
+        unittest.mock.patch.object(
+            tile_group,
+            "write_attribute",
+            side_effect=_write_attribute_with_one_failure,
+        ),
+        pytest.raises(tango.DevFailed) as exc_info,
+    ):
+        communicating_station_component_manager.static_delays = (
+            expected_delays * num_tiles
+        )
+
+    error_stack = exc_info.value.args
+    assert len(error_stack) == 1
+    assert failure_reason in error_stack[0].reason
+    assert error_stack[0].origin == "staticTimeDelays"
+
+    for i in range(num_tiles):
+        if i == failing_index:
+            continue
+        assert list(mock_tiles[i].staticTimeDelays) == expected_delays
+
+
+def test_global_reference_time_broadcast_to_all_tiles(
+    station_component_manager: SpsStationComponentManager,
+    mock_tiles: list[MccsDeviceProxy],
+    num_tiles: int,
+) -> None:
+    """
+    Test that global_reference_time broadcasts the same value to every tile.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param mock_tiles: mock tile proxies, one per tile in the harness.
+    :param num_tiles: number of tiles in the test.
+    """
+    reference_time = "2026-08-04T00:00:00.000Z"
+    station_component_manager.global_reference_time = reference_time
+
+    for i in range(num_tiles):
+        assert mock_tiles[i].globalReferenceTime == reference_time
+
+
+def test_port_to_antenna_order(
+    communicating_station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that `port_to_antenna_order` properly re-orders data.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    """
+    antenna_mapping = communicating_station_component_manager._antenna_mapping
+    assert antenna_mapping != {}
 
     tpm_x_mapping = np.zeros((16, 16))
-    for antenna, antenna_info in station_component_manager._antenna_mapping.items():
+    for antenna, antenna_info in antenna_mapping.items():
         tpm = int(antenna_info["tpm"])
         x_port = antenna_info["tpm_x_channel"]
         # Create a simple dataset where map[tpm][port] = antenna_number
@@ -382,8 +576,10 @@ def test_port_to_antenna_order(
 
     reshaped_x_tpm_map = tpm_x_mapping.reshape((256, 1))
 
-    antenna_ordered_map = station_component_manager._port_to_antenna_order(
-        station_component_manager._antenna_mapping, reshaped_x_tpm_map
+    antenna_ordered_map = (
+        communicating_station_component_manager._port_to_antenna_order(
+            antenna_mapping, reshaped_x_tpm_map
+        )
     )
     for i, antenna in enumerate(antenna_ordered_map, 1):  # Antenna number is 1-based.
         # Assert we're in antenna order
@@ -482,25 +678,16 @@ def test_read_lmc_integrated_mode_retries_proxy_not_ready_then_returns_none(
 
 
 def test_get_static_delays(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     tile_id: int,
-    callbacks: MockCallableGroup,
 ) -> None:
     """
     Test getting static delays from dummy TelModel.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param tile_id: id of the tile which the component manager has been given.
-    :param callbacks: dictionary of driver callbacks.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     # First we need an example mapping for our antennas, we have 4 tiles in tests,
     # but lets pretend we have a whole station
     channels = list(range(16))
@@ -511,7 +698,7 @@ def test_get_static_delays(
     antenna_no = 1
     for tpm in range(16):
         for channel in channels:
-            station_component_manager._antenna_mapping[antenna_no] = {
+            communicating_station_component_manager._antenna_mapping[antenna_no] = {
                 "tpm": tpm,
                 "tpm_y_channel": channel * 2,
                 "tpm_x_channel": channel * 2 + 1,
@@ -519,13 +706,13 @@ def test_get_static_delays(
             }
             antenna_no += 1
 
-    static_delays = station_component_manager._update_static_delays()
-    expected_static_delays = [
-        0 for _ in range(station_component_manager._number_of_tiles * 2 * len(channels))
-    ]
-    for antenna, antenna_config in station_component_manager._antenna_mapping.items():
+    static_delays = communicating_station_component_manager._update_static_delays()
+    number_of_tiles = communicating_station_component_manager._number_of_tiles
+    expected_static_delays = [0 for _ in range(number_of_tiles * 2 * len(channels))]
+    antenna_mapping = communicating_station_component_manager._antenna_mapping
+    for antenna, antenna_config in antenna_mapping.items():
         if int(antenna_config["tpm"]) in range(
-            station_component_manager._number_of_tiles
+            number_of_tiles
         ):  # Check against 0-based logical IDs [0, 1, 2, 3]
             expected_static_delays[
                 (antenna_config["tpm"] * 2 * len(channels))
@@ -539,24 +726,17 @@ def test_get_static_delays(
 
 
 def test_self_check(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
 ) -> None:
     """
     Test running a self_check with example tests.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param callbacks: dictionary of driver callbacks.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
-    station_component_manager.self_check(task_callback=callbacks["task"])
+    communicating_station_component_manager.self_check(task_callback=callbacks["task"])
 
     callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
 
@@ -577,26 +757,19 @@ def test_self_check(
     ],
 )
 def test_run_test(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
     test_name: str,
 ) -> None:
     """
     Test running a run_test with example tests.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param callbacks: dictionary of driver callbacks.
     :param test_name: name of test to run.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
-    station_component_manager.run_test(
+    communicating_station_component_manager.run_test(
         task_callback=callbacks["task"], test_name=test_name, count=1
     )
 
@@ -688,61 +861,49 @@ def test_async_commands(
 
 
 def test_send_data_samples(
-    station_component_manager: SpsStationComponentManager,
-    callbacks: MockCallableGroup,
+    communicating_station_component_manager: SpsStationComponentManager,
     mock_tiles: list[MccsDeviceProxy],
 ) -> None:
     """
     Test the method to run commands async.
 
-    :param station_component_manager: the SPS station component manager
-        under test
-    :param callbacks: dictionary of driver callbacks.
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param mock_tiles: mock tile proxies, one per tile in the harness.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     mock_tiles[0].tileProgrammingState = "Synchronised"
     mock_tiles[0].pendingDataRequests = True
-    [result], [msg] = station_component_manager.send_data_samples(
+    [result], [msg] = communicating_station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})
     )
     assert result == ResultCode.REJECTED
 
-    [result], [msg] = station_component_manager.send_data_samples(
+    [result], [msg] = communicating_station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"}), force=True
     )
     assert result == ResultCode.OK
 
     mock_tiles[0].pendingDataRequests = False
-    [result], [msg] = station_component_manager.send_data_samples(
+    [result], [msg] = communicating_station_component_manager.send_data_samples(
         json.dumps({"data_type": "raw"})
     )
     assert result == ResultCode.OK
 
 
 def test_power_state_transitions(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
 ) -> None:
     """
     Test SpsStation's state transitions.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param callbacks: dictionary of driver callbacks.
     """
-    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
-
-    # takes the component out of DISABLED.
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    # Local alias to avoid reformatting every line below to fit the
+    # longer fixture name within the line-length limit.
+    station_component_manager = communicating_station_component_manager
 
     for subrack in station_component_manager._subrack_proxies.values():
         assert subrack._proxy is not None
@@ -932,7 +1093,7 @@ def test_pps_delay_spread(
 
 
 def test_beamformer_table(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
     mock_tiles: list[MccsDeviceProxy],
     tile_initial_beamformer_table: list[int],
@@ -941,17 +1102,13 @@ def test_beamformer_table(
     """
     Test the method to run commands async.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param callbacks: dictionary of driver callbacks.
     :param mock_tiles: mock tile proxies.
     :param tile_initial_beamformer_table: an initial beamformer table for a tile.
     :param tile_initial_beamformer_regions: an initial beamformer regions for a tile.
     """
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     # Component manager stores these in np.ndarrays of dims (48, 7 or 8)
     # Should we be converting the tango atttribute to do the same?
     expected_initial_beamformer_regions = np.reshape(
@@ -980,18 +1137,17 @@ def test_beamformer_table(
         lookahead=20,
     )
     np.testing.assert_array_equal(
-        station_component_manager._beamformer_regions,
+        communicating_station_component_manager._beamformer_regions,
         expected_initial_beamformer_regions,
     )
     np.testing.assert_array_equal(
-        station_component_manager._beamformer_table,
+        communicating_station_component_manager._beamformer_table,
         expected_initial_beamformer_table,
     )
 
 
 def test_initialise_progress_callbacks(
-    station_component_manager: SpsStationComponentManager,
-    callbacks: MockCallableGroup,
+    communicating_station_component_manager: SpsStationComponentManager,
 ) -> None:
     """
     Test that initialise fires progress callbacks at each step in the right order.
@@ -999,12 +1155,12 @@ def test_initialise_progress_callbacks(
     The per-tile incremental progress inside ``_reinitialise_tiles`` is
     covered by the dedicated test below.
 
-    :param station_component_manager: the SPS station component manager under test
-    :param callbacks: dictionary of driver callbacks.
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     """
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    # Local alias to avoid reformatting every line below to fit the
+    # longer fixture name within the line-length limit.
+    station_component_manager = communicating_station_component_manager
 
     # All subracks and tiles must report ON for initialise to proceed.
     for fqdn in station_component_manager._subrack_power_states:
@@ -1016,6 +1172,9 @@ def test_initialise_progress_callbacks(
 
     ok = (ResultCode.OK, "")
     with (
+        unittest.mock.patch.object(
+            station_component_manager, "_wait_for_wren", return_value=ok
+        ),
         unittest.mock.patch.object(
             station_component_manager, "_set_tile_source_ips", return_value=ok
         ),
@@ -1029,6 +1188,9 @@ def test_initialise_progress_callbacks(
         ),
         unittest.mock.patch.object(
             station_component_manager, "_initialise_tile_parameters", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_wren_proxy", return_value=object
         ),
         unittest.mock.patch.object(
             station_component_manager, "_initialise_station", return_value=ok
@@ -1053,7 +1215,7 @@ def test_initialise_progress_callbacks(
         for call in task_callback.call_args_list
         if "progress" in call.kwargs
     ]
-    assert progress_calls == [5, 70, 75, 85, 90, 95]
+    assert progress_calls == [5, 10, 70, 75, 85, 90, 95]
 
     task_callback.assert_called_with(
         status=TaskStatus.COMPLETED,
@@ -1062,8 +1224,7 @@ def test_initialise_progress_callbacks(
 
 
 def test_reinitialise_tiles_progress_callbacks(
-    station_component_manager: SpsStationComponentManager,
-    callbacks: MockCallableGroup,
+    communicating_station_component_manager: SpsStationComponentManager,
     num_tiles: int,
 ) -> None:
     """
@@ -1073,16 +1234,14 @@ def test_reinitialise_tiles_progress_callbacks(
     based on how many tiles have reached the desired state, and a callback
     should only fire when that count changes.
 
-    :param station_component_manager: the SPS station component manager under test
-    :param callbacks: dictionary of driver callbacks.
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param num_tiles: number of TPMs in the test.
     """
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     # Set a non-empty global reference time so the desired state is only "Synchronised"
-    station_component_manager._global_reference_time = "2026-01-01T00:00:00.000000Z"
+    communicating_station_component_manager._global_reference_time = (
+        "2026-01-01T00:00:00.000000Z"
+    )
 
     task_callback = unittest.mock.Mock()
 
@@ -1104,12 +1263,12 @@ def test_reinitialise_tiles_progress_callbacks(
             "ska_low_mccs_spshw.station.station_component_manager.time.sleep"
         ),
         unittest.mock.patch.object(
-            station_component_manager,
+            communicating_station_component_manager,
             "tile_programming_state",
             mock_tile_programming_state,
         ),
     ):
-        result_code, _ = station_component_manager._reinitialise_tiles(
+        result_code, _ = communicating_station_component_manager._reinitialise_tiles(
             task_callback=task_callback,
             progress_start=progress_start,
             progress_end=progress_end,
@@ -1127,7 +1286,7 @@ def test_reinitialise_tiles_progress_callbacks(
 
 
 def test_pointing_delays(
-    station_component_manager: SpsStationComponentManager,
+    communicating_station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
     num_tiles: int,
     tile_initial_pointing_delays: np.ndarray,
@@ -1135,17 +1294,13 @@ def test_pointing_delays(
     """
     Test we record pointing delays correctly.
 
-    :param station_component_manager: the SPS station component manager
-        under test
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
     :param tile_initial_pointing_delays: intial pointing delays the TPMs
         are mocked to have
     """
-    station_component_manager.start_communicating()
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
     expected_call = {
         tile_id: tile_initial_pointing_delays for tile_id in range(num_tiles)
     }
@@ -1284,3 +1439,63 @@ def test_beamformer_flagged_count(
         tango.AttrQuality.ATTR_VALID,
     )
     callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=True)
+
+
+@pytest.mark.parametrize(
+    ("fail_on_timeout", "timedout", "expected_result"),
+    [
+        (True, True, ResultCode.FAILED),
+        (True, False, ResultCode.OK),
+        (False, True, ResultCode.OK),
+        (False, False, ResultCode.OK),
+    ],
+)
+def test_wait_for_wren(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    fail_on_timeout: bool,
+    timedout: bool,
+    expected_result: ResultCode,
+) -> None:
+    """
+    Test the wait for WREN functionality.
+
+    Checks the following:
+    - If fail_on_timeout is True and timeout return FAILED
+    - If fail_on_timeout is True and not timeout return OK
+    - If fail_on_timeout is False and timeout return OK
+    - If fail_on_timeout is False and not timeout return OK
+
+    :param station_component_manager: the SPS station component manager under test.
+    :param callbacks: dictionary of driver callbacks.
+    :param fail_on_timeout: Is the fail on timeout flag set
+    :param timedout: Does the command timeout
+    :param expected_result: The expected result
+
+    """
+    # Start communicating
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # Setup the health state ok event
+    health_state_ok = threading.Event()
+    if not timedout:
+        health_state_ok.set()
+
+    # Create a mock wren proxy object
+    mock_wren_proxy = unittest.mock.Mock(health_state_ok=health_state_ok)
+
+    # Ensure healthState is as expected
+    assert mock_wren_proxy.health_state_ok.is_set() != timedout
+
+    # Mock the station component manager _wren_proxy
+    station_component_manager._wren_proxy = mock_wren_proxy
+
+    # Wait for the WREN to be in health state OK
+    result_code, _ = station_component_manager._wait_for_wren(
+        None, None, timeout=1, fail_on_timeout=fail_on_timeout
+    )
+
+    # Check we get the expected result
+    assert result_code == expected_result

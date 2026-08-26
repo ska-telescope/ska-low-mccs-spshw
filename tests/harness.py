@@ -18,6 +18,26 @@ if TYPE_CHECKING:
 DEFAULT_STATION_LABEL = "ci-1"  # station 1 of cluster "ci"
 
 
+def get_facility_name() -> str:
+    """
+    Return the facility name for the WREN.
+
+    :returns: The facility name
+
+    """
+    return "ci"
+
+
+def get_cabinet_name() -> str:
+    """
+    Return the cabinet name for the WREN.
+
+    :returns: The cabinet name
+
+    """
+    return "A1"
+
+
 def get_sps_station_name(station_label: str | None = None) -> str:
     """
     Return the SPS station Tango device name.
@@ -87,6 +107,18 @@ def get_bandpass_daq_name(station_label: str | None = None) -> str:
     :return: the DAQ Tango device name
     """
     return f"low-mccs/daqreceiver/{station_label or DEFAULT_STATION_LABEL}-bandpass"
+
+
+def get_wren_name() -> str:
+    """
+    Construct the WREN Tango device name from its facility and cabinet.
+
+    :return: the WREN Tango device name
+
+    """
+    facility = get_facility_name()
+    cabinet = get_cabinet_name()
+    return f"low-sat/endnode/{facility}-{cabinet}"
 
 
 class SpsTangoTestHarnessContext:
@@ -220,6 +252,7 @@ class SpsTangoTestHarness:
         tile_ids: Iterable[int] = range(1, 17),
         lmc_daq_trl: str = "",
         bandpass_daq_trl: str = "",
+        wren_trl: str = "",
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.SpsStation",
     ) -> None:
@@ -235,6 +268,7 @@ class SpsTangoTestHarness:
         :param tile_ids: IDS of the tiles in this station.
         :param lmc_daq_trl: TRL of this Station's LMC DAQ.
         :param bandpass_daq_trl: TRL of this Station's Bandpass DAQ.
+        :param wren_trl: TRL of this Station's WREN.
         :param logging_level: the Tango device's default logging level.
         :param device_class: The device class to use.
             This may be used to override the usual device class,
@@ -246,6 +280,7 @@ class SpsTangoTestHarness:
             StationId=1,
             LMCDaqTRL=lmc_daq_trl,
             BandpassDaqTRL=bandpass_daq_trl,
+            WRENTRL=wren_trl,
             TileFQDNs=[
                 get_tile_name(tile_id, station_label=self._station_label)
                 for tile_id in tile_ids
@@ -524,6 +559,17 @@ class SpsTangoTestHarness:
         self._tango_test_harness.add_mock_device(
             get_bandpass_daq_name(self._station_label), mock
         )
+
+    def add_mock_wren_device(
+        self: SpsTangoTestHarness,
+        mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Add a mock WREN Tango device to this test harness.
+
+        :param mock: the mock to be used as a mock WREN device.
+        """
+        self._tango_test_harness.add_mock_device(get_wren_name(), mock)
 
     def __enter__(
         self: SpsTangoTestHarness,

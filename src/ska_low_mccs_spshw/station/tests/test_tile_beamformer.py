@@ -13,14 +13,14 @@ import json
 import logging
 import random
 import time
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
+from time_utils import str_from_float_epoch_utc_time
+
 from ...tile.tile_data import TileData
-from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest
 from .data_handlers import BeamDataReceivedHandler
 
@@ -68,6 +68,7 @@ class TestTileBeamformer(BaseDaqTest):
         tile_trls: list[str],
         subrack_trls: list[str],
         daq_trl: str,
+        wren_trl: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -76,6 +77,7 @@ class TestTileBeamformer(BaseDaqTest):
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param wren_trl: trl of the wren the station has.
         :param component_manager: SpsStation component manager under test.
         """
         # Random seed for repeatability
@@ -90,7 +92,9 @@ class TestTileBeamformer(BaseDaqTest):
         self._ref_pol = randomiser.randrange(0, TileData.POLS_PER_ANTENNA, 1)
 
         self._start_freq = 156.25e6  # Hz
-        super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
+        super().__init__(
+            component_manager, logger, tile_trls, subrack_trls, daq_trl, wren_trl
+        )
 
     def _send_beam_data(self: TestTileBeamformer) -> None:
         """Send beam data to the DAQ."""
@@ -324,9 +328,7 @@ class TestTileBeamformer(BaseDaqTest):
         self.component_manager.stop_adcs()
         self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 5), TileTime.RFC_FORMAT
-        )
+        start_time = str_from_float_epoch_utc_time(time.time() + 5)
         self.component_manager.start_beamformer(
             start_time=start_time, channel_groups=None, duration=-1, scan_id=0
         )

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests of the bandpass monitor functionality."""
+
 from __future__ import annotations
 
 import json
@@ -303,7 +304,21 @@ def station_in_synchronised_state(
     # FPGA re-lock is non-deterministic: a tile can land at a different PPS
     # sample each time. Normalise all synchronised tiles to the minimum delay
     # so ppsDelaySpread stays below the DEGRADED threshold.
-    delays = list(station.ppsDelays)
+    # THORN-681: The changes to parallelise writes
+    # sped up the initialise routing by ~5 seconds.
+    # This meant that the initialise routine had
+    # finished before the tile had polled the ppsDelay.
+    # we give a 4 second deadline for this to be read.
+    deadline = time.time() + 4
+    while time.time() < deadline:
+        try:
+            delays = list(station.ppsDelays)
+            break
+        except tango.DevFailed:
+            continue
+    else:
+        pytest.fail("Timeout")
+
     synchronised_delays = [d for d in delays if d != 0]
     if synchronised_delays:
         reference = min(synchronised_delays)

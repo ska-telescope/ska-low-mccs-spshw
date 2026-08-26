@@ -25,3 +25,30 @@ Feature: Test station
         And the SpsStation OnWorkaroundFlag is set to True
         When the SpsStation is turned ON
         Then all TPMs eventually transition to Synchronised state
+
+
+    Scenario: Stress testing the interface does not cause lock contention (SKB-1440 regression)
+        Given an SPS deployment against HW
+        And the SpsStation is ON
+        When we stress test the interface
+        Then we do not get any failures
+
+
+    Scenario: Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)
+        Given an SPS deployment against HW
+        And the station and its tiles are synchronised
+        When we trigger skb-1402
+        Then the Standby command completed successfully
+        And all TPMs transition to Off state
+
+
+    Scenario Outline: Fanout attribute writes reach the correct tile
+        Given an SPS deployment against HW
+        And the SpsStation is ON
+        When I write distinct <attribute> values to the station
+        Then each tile reads back the correct <attribute> value
+
+        Examples:
+            | attribute           |
+            | staticTimeDelays    |
+            | preaduLevels        |

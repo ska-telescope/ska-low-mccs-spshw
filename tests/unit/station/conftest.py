@@ -157,6 +157,12 @@ def mock_tile_builder_fixture(
             command_name, ([ResultCode.OK], [f"{command_name} completed OK."])
         )
     builder.add_command("BeamformerRunningForChannels", True)
+    # Configured as a plain mock return value (not add_command) so tests can still
+    # introspect ConfigureStationBeamformer.mock_calls.
+    builder.add_attribute(
+        "ConfigureStationBeamformer.return_value",
+        ([ResultCode.OK], ["ConfigureStationBeamformer completed OK."]),
+    )
     # Dummy commands for testing the async commands method
     builder.add_command("FailedCommand", ([ResultCode.FAILED], ["Command failed."]))
     builder.add_command(
@@ -198,6 +204,23 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
     builder.add_result_command(
         "Start", result_code=ResultCode.QUEUED, status="Task queued"
     )
+    builder.add_result_command(
+        "Configure", result_code=ResultCode.OK, status="Configure completed OK."
+    )
+    return builder()
+
+
+@pytest.fixture(name="mock_wren_device_proxy")
+def mock_wren_device_proxy_fixture() -> MockDeviceBuilder:
+    """
+    Fixture that provides mock WREN device proxy.
+
+    :return: a mock WREN device proxy.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
     return builder()
 
 
@@ -571,6 +594,7 @@ def station_self_check_manager_fixture(
         tile_trls=tile_trls,
         subrack_trls=subrack_trls,
         daq_trl="",
+        wren_trl="",
     )
     # Jank to get around https://github.com/python/mypy/issues/3115 and
     # https://github.com/python/mypy/issues/16509
@@ -581,6 +605,7 @@ def station_self_check_manager_fixture(
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
             daq_trl="",
+            wren_trl="",
         )
         for tpm_test in [
             PassTest,
@@ -594,6 +619,7 @@ def station_self_check_manager_fixture(
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
             daq_trl="",
+            wren_trl="",
         )
         for tpm_test in [
             ErrorTest,

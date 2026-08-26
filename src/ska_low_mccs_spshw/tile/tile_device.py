@@ -17,6 +17,7 @@ import os.path
 import re
 import sys
 import threading
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
@@ -678,6 +679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_count": "timing_pll_count",
             "timing_pll_40g_lock_status": "timing_pll_40g_lock_status",
             "timing_pll_40g_count": "timing_pll_40g_count",
+            "timing_sync_time": "timing_sync_time",
             "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
             "adc_sysref_counter": "adc_sysref_counter",
             "fpga0_clocks": "fpga0_clocks",
@@ -762,6 +764,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
+            "timing_sync_time": lambda val: (int(val) if val is not None else None),
             "fpga0_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
@@ -1023,6 +1026,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # by use of converters.
             "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
+            "timing_sync_time": ["timing", "sync_time"],
             "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "fpga0_clocks": ["timing", "clocks", "FPGA0"],
@@ -1189,18 +1193,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
         for attr_name in self._attribute_state:
-            verify_events = (
-                False if attr_name == "pointingDelays" else self.VerifyEvents
-            )
-            self.set_change_event(attr_name, True, verify_events)
-            self.set_archive_event(attr_name, True, verify_events)
+            # VerifyEvents now applies to archive events only. Change events are
+            # always pushed.
+            self.set_change_event(attr_name, True, False)
+            self.set_archive_event(attr_name, True, self.VerifyEvents)
 
         for attr_name in [
             "firmwareVoltageThresholds",
             "firmwareCurrentThresholds",
             "firmwareTemperatureThresholds",
         ]:
-            self.set_change_event(attr_name, True, self.VerifyEvents)
+            self.set_change_event(attr_name, True, False)
             self.set_archive_event(attr_name, True, self.VerifyEvents)
         self.init_completed()
 
@@ -1273,7 +1276,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
 
-        self.set_change_event("healthState", True, self.VerifyEvents)
+        self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, self.VerifyEvents)
 
         if self.UseAttributesForHealth:
@@ -3063,6 +3066,28 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["timing_pll_40g_count"].read()
 
+    @attribute(
+        dtype="DevShort",
+        label="timing_sync_time",
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+    )
+    def timing_sync_time(self: MccsTile) -> int:
+        """
+        Return the sync time status.
+
+        Expected: `1` if the sync time health is good. `0`
+        if the sync time counters have rolled over.
+
+        :example:
+           >>> tile.timing_sync_time
+           '1'
+
+        :return: the sync time health status.
+        """
+        return self._attribute_state["timing_sync_time"].read()
+
     @attribute_from_signal(tile_info_signal, dtype="DevString", label="tile_info")
     def tile_info(self: MccsTile, nested_dict: dict[str, Any] | None) -> str | None:
         """
@@ -3653,8 +3678,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: the id of the station to which this tile is assigned
         """
         station = self._attribute_state["stationId"].read()
-        message = f"stationId: read value = {station}"
-        self.logger.info(message)
         return station
 
     @stationId.write  # type: ignore[no-redef]
@@ -4063,6 +4086,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
+    def _is_synchronised(self: MccsTile, *args: Any) -> bool:
+        """
+        Return a flag representing whether we are in Synchronised state.
+
+        :param args: The tango.AttReqType.
+
+        :return: True if Tile is in Synchronised state.
+        """
+        if self.component_manager._initialise_executing:
+            reason = "CommandNotAllowed"
+            msg = "Cannot execute this command while initialise is executing!"
+            tango.Except.throw_exception(reason, msg, self.get_name())
+            return False
+
+        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        if prog_state == "Synchronised":
+            return True
+        reason = "CommandNotAllowed"
+        msg = (
+            "To execute this command we must be in state "
+            f"'Synchronised'! Tile is currently in state {prog_state}"
+        )
+        tango.Except.throw_exception(reason, msg, self.get_name())
+        return False
+
     fpga1Temperature = attribute_from_signal(  # noqa: N815
         fpga1_temperature_signal,
         dtype="DevFloat",
@@ -4362,6 +4410,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: PLL lock state
         """
+        # NOTE: duplication of timing_pll_lock_status. This is undesired
+        # but to assist with migration to new API,
+        # we are keeping this attribute for now.
+        # It will be removed in the future and
+        # users should migrate to using timing_pll_lock_status instead.
+        warnings.warn(
+            "MccsTile's pllLocked attribute is deprecated "
+            "and will be removed in a future release. "
+            "Please use timing_pll_lock_status instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._attribute_state["pllLocked"].read()
 
     @attribute(
@@ -5401,7 +5461,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Subrack Current",
-        min_alarm=0.0,
         max_alarm=10.53,
         abs_change=0.1,
     )
@@ -5417,7 +5476,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevFloat",
         label="Subrack Power",
-        min_alarm=0.0,
         max_alarm=120.0,
         abs_change=0.1,
     )
@@ -5849,7 +5907,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return json.dumps(item_new[0])
         return json.dumps(item_new)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_initialised",
+    )
     @stb.validators.validate_json_args(schema=SetLmcDownload_SCHEMA)
     def SetLmcDownload(
         self: MccsTile,
@@ -5903,7 +5965,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.component_manager.refresh_tile_info()
         return (result_codes, messages)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_initialised",
+    )
     @stb.validators.validate_json_args(schema=SetLmcIntegratedDownload_SCHEMA)
     def SetLmcIntegratedDownload(
         self: MccsTile,
@@ -6147,7 +6213,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             cls=NumpyEncoder,
         )
 
-    @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevVarLongArray",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_initialised",
+    )
     def SetBeamFormerRegions(
         self: MccsTile, argin: list[int]
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6445,7 +6515,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.apply_calibration(switch_time)
 
-    @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_synchronised",
+    )
     def LoadPointingDelays(
         self: MccsTile, argin: list[float]
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6492,7 +6566,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         return self.component_manager.load_pointing_delays(delay_array, beam_index)
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_synchronised",
+    )
     def ApplyPointingDelays(
         self: MccsTile, start_time: str
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6738,7 +6816,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.stop_integrated_data()
 
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="_is_synchronised",
+    )
     @stb.validators.validate_json_args(schema=SendDataSamples_SCHEMA)
     def SendDataSamples(
         self: MccsTile,
@@ -7119,7 +7201,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([ResultCode.OK], ["StartPatternGenerator command completed OK"])
 
     @engineering_mode_required
-    @command(dtype_out="DevVarLongStringArray")
+    @command(dtype_out="DevVarLongStringArray", fisallowed="_is_synchronised")
     def StartADCs(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Start the ADCs.
@@ -7136,7 +7218,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([ResultCode.OK], ["StartAdcs command completed OK"])
 
     @engineering_mode_required
-    @command(dtype_out="DevVarLongStringArray")
+    @command(dtype_out="DevVarLongStringArray", fisallowed="_is_synchronised")
     def StopADCs(self: MccsTile) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Stop the ADCs.

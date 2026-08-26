@@ -3,6 +3,37 @@
 ## Unreleased
 
 * [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.
+* [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
+* [LOW-2454] Improve error detection, handling and logging during SpsStation's initialise sequence. All MccsTile command failures should now cause initialisation to fail, some critical operations are retried, and initialisation steps are logged at INFO level rather than DEBUG.
+* [THORN-698] Fix AcquireDataForCalibration when DAQ is running.
+* [THORN-680] Make use of tango.Groups to parallelise writes and commands in spsstation.
+* [THORN-681] Move tile-readiness gating (Initialised/Synchronised) from ad-hoc `tileProgrammingState`
+checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks, adding a new
+`_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
+Synchronised tile (previously ungated).
+* [THORN-530] Expose timestamp_cnt rollover in Tile health attributes
+
+
+## 14.1.0
+
+* [THORN-682] Update ska-low-mccs-daq reference to 7.0.2
+* [THORN-682] ``SpsStation.AcquireDataForCalibration`` no longer blocks other commands. It is still a long running command, reported through the usual LRC attributes, but the station's task executor now provides two independent lanes and the acquisition executes on a calibration lane of its own, rather than occupying the general lane for the whole acquisition. A scan can therefore be started and stopped while calibration data is being acquired. ``Abort`` stops an acquisition as before. The commands that would disrupt an acquisition in progress - ``Initialise``, ``ReInitialise``, ``StartAcquisition``, ``ConfigureStationForCalibration`` and ``SetLmcDownload`` - are now rejected for its duration.
+* [SKB-1397] Apply start_time in StartBeamformer calls during SpsStation.Initialise() to squish transient failed health blip. Manual calls should
+set a scheduled start time too to avoid this blip,
+4s is typically enough.
+* [THORN-613] SpsStation waits for WREN to be OK during initialise
+
+## 14.0.2
+
+* [THORN-322] Add docs for Health of hardware facing devices.
+* [SKB-1445] Update ``AcquireDataForCalibration`` to be more resilient to DAQ errors.
+* [THORN-125] Improve observability when UNPROGRAMMED.
+* [THORN-611] Add `WrenTRL` device property to SpsStation for WREN TRL
+
+## 14.0.1
+
+* [SKB-1462] Update `tpm-api` from **4.0.0** to **4.0.1**.
+* [THORN-607] Add conditional ska-sat-lmc dependency to ska-low-mccs-spshw chart. To disable please set ska-sat-lmc.enabled = false
 
 ## 14.0.0
 

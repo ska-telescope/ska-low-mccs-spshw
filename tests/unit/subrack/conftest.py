@@ -127,7 +127,6 @@ def subrack_component_manager_fixture(
         logger,
         "low-mccs/pdu/pdu_1",
         [1, 2],
-        # "",
         "low-mccs/powermarshaller/powermarshaller",
         True,
         callbacks["communication_status"],

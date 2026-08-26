@@ -249,18 +249,14 @@ def test_fast_adminMode_switch(
         # whether or not we'll see some of them so we only assert that we reach
         # the correct state in a timely manner.
         assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
-        # assert _wait_for_state(subrack_device, DevState.DISABLE)
         subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
         assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
-        # assert _wait_for_state(subrack_device, DevState.ON)
 
         subrack_device.adminmode = AdminMode.OFFLINE
         assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
-        # assert _wait_for_state(subrack_device, DevState.DISABLE)
 
         subrack_device.adminmode = AdminMode.ONLINE
         assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
-        # assert _wait_for_state(subrack_device, DevState.ON, timeout=10)
 
         number_of_communication_cycles: int = 4
 
@@ -280,14 +276,12 @@ def test_fast_adminMode_switch(
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
         assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
-        # assert _wait_for_state(subrack_device, DevState.ON)
 
         assert subrack_device.adminMode == AdminMode.ONLINE
         assert subrack_device.state() == DevState.ON
 
         subrack_device.adminmode = AdminMode.OFFLINE
         assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
-        # assert _wait_for_state(subrack_device, DevState.DISABLE)
         print(f"Iteration {i}")
 
 

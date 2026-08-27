@@ -4078,17 +4078,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.firmware_name
 
-    @firmwareName.write  # type: ignore[no-redef]
-    def firmwareName(self: MccsTile, value: str) -> None:
-        """
-        Set the firmware name.
-
-        :param value: firmware name
-        """
-        # This may set the firmware name but there's no way to actually
-        # use the bitfile specified. Initialise overwrites it unconditionally.
-        self.component_manager.firmware_name = value
-
     @attribute(
         dtype="DevBoolean",
         label="Test Generator Active",

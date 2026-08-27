@@ -1261,7 +1261,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=336,
         archive_period=5000,
         label="Beamformer Table",
-        doc="Get beamformer region table. "
+        doc="Get beamformer table. "
         "Bidimensional array of one row for each 8 channels, with elements: "
         "0. start physical channel, "
         "1. beam number, "
@@ -1274,7 +1274,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     def beamformerTable(self: SpsStation) -> list[int] | None:
         """
-        Get beamformer region table.
+        Get beamformer table.
 
         Bidimensional array of one row for each 8 channels, with elements:
         0. start physical channel

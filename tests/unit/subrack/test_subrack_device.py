@@ -1130,7 +1130,7 @@ def test_attribute_alarm_health_model(
         # and the devstate actually changing.
         assert wait_for_condition(
             lambda: subrack_device.state() == DevState.ALARM, timeout=30
-        )
+        ), (subrack_device.state(), subrack_device.healthreport)
 
         # Change the value within the warning range
         subrack_device.ChangeHardwareAttributeValue(

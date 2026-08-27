@@ -817,8 +817,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.testMode_signal = self.TestConfig
         self.useAttributesForHealth_signal = self.UseAttributesForHealth
         self.stationId_signal = self.StationID
-        self.srcip40gfpga1_signal = None
-        self.srcip40gfpga2_signal = None
+        self.srcip40gfpga1_signal = ""
+        self.srcip40gfpga2_signal = ""
+        self.dstip40gfpga1_signal = ""
+        self.dstip40gfpga2_signal = ""
+        self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
         self.antennaIds_signal = self._antenna_ids
 
     def delete_device(self: MccsTile) -> None:
@@ -1201,9 +1204,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Not sure if we *should* need this but without doing it explicitly
         # we don't get the UNKNOWN event as the tests expect.
         # Do the tests need refactoring or ..?
-        self._update_attribute_callback(
-            programming_state=TpmStatus.UNKNOWN.pretty_name()
-        )
+        # self._update_attribute_callback(
+        #     programming_state=TpmStatus.UNKNOWN.pretty_name()
+        # )
 
         # Re-seed stored signals that are read before being written elsewhere
         # (e.g. faultReport_signal is read-then-merged in _evaluate_fault).
@@ -1509,11 +1512,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self._handle_firmware_read()
 
             elif attribute_name == "global_status_alarms":
-                # TODO: Remove log.
-                self.logger.warning(
-                    f"UNPACKING {attribute_name=} WITH "
-                    f"{attribute_value=} ({mark_invalid=})"
-                )
                 self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             elif attribute_name in self._GENERIC_SIGNAL_MAP:
                 setattr(
@@ -1700,7 +1698,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         else:
             for alarm_name, alarm_signal in self.__alarm_attribute_map.items():
                 alarm_value = alarms.get(alarm_name)
-                print(f"SETTING ALM: {alarm_signal=} WITH VALUE: {alarm_value=}")
                 setattr(self, alarm_signal, alarm_value)
 
     def update_tile_health_attributes(

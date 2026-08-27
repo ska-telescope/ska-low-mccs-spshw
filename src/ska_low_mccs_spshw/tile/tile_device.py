@@ -817,8 +817,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.testMode_signal = self.TestConfig
         self.useAttributesForHealth_signal = self.UseAttributesForHealth
         self.stationId_signal = self.StationID
-        self.srcip40gfpga1_signal = ""
-        self.srcip40gfpga2_signal = ""
+        self.srcip40gfpga1_signal = None
+        self.srcip40gfpga2_signal = None
         self.antennaIds_signal = self._antenna_ids
 
     def delete_device(self: MccsTile) -> None:

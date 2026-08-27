@@ -53,7 +53,7 @@ from .attribute_converters import (
     serialise_object,
     udp_error_count_to_list,
 )
-from .attribute_managers import AttributeManager, BoolAttributeManager
+from .attribute_managers import AttributeManager
 from .firmware_threshold_interface import (
     CURRENT_KEYS,
     TEMPERATURE_KEYS,
@@ -1742,7 +1742,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._attribute_state[attribute_name].update(attribute_value)
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
                     emit_value = attribute_value
-                    if attribute_name.lower() == "ppspresent" and attribute_value==False:
+                    if (
+                        attribute_name.lower() == "ppspresent"
+                        and attribute_value is False
+                    ):
                         # Signal ALARM quality directly rather than relying on
                         # Tango's min_alarm, which isn't usable on a DevBoolean.
                         emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
@@ -4684,34 +4687,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="PPS Present",
         doc="Report if PPS signal is present at the TPM input.",
     )
-
-    def dev_state(self) -> tango.DevState:
-        """
-        Calculate this device state.
-
-        The base device offers some automatic state discovery.
-        However we have some attributes that require explicit
-        analysis as to whether they are in ALARM or not,
-
-        e.g. DevBoolean
-
-        :return: the 'tango.DevState' calculated
-        """
-        automatic_state_analysis: tango.DevState = super().dev_state()
-        force_alarm: bool = False
-        for _, attr_manager in self._attribute_state.items():
-            if isinstance(attr_manager, BoolAttributeManager):
-                value = attr_manager.read()
-                if (
-                    value is not None
-                    and isinstance(value, (list, tuple))
-                    and len(value) > 0
-                ):
-                    if value[0] is False:
-                        force_alarm = True
-        if force_alarm:
-            return tango.DevState.ALARM
-        return automatic_state_analysis
 
     pllLocked = attribute_from_signal(
         pllLocked_signal,

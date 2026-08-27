@@ -309,7 +309,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ppsDrift_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
     ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
     # Using bool for ppsPresent gives errors.
-    ppsPresent_signal: AttrSignal[int] = AttrSignal[int]()
+    ppsPresent_signal: AttrSignal[bool] = AttrSignal[bool]()
     pllLocked_signal: AttrSignal[bool] = AttrSignal[bool]()
     beamformerTable_signal: AttrSignal[list[list[int]]] = AttrSignal[list[list[int]]]()
     beamformerRegions_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
@@ -1742,6 +1742,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._attribute_state[attribute_name].update(attribute_value)
                 elif attribute_name in self._HEALTH_SIGNAL_MAP:
                     emit_value = attribute_value
+                    if attribute_name.lower() == "ppspresent" and attribute_value==False:
+                        # Signal ALARM quality directly rather than relying on
+                        # Tango's min_alarm, which isn't usable on a DevBoolean.
+                        emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
                     setattr(
                         self,
                         self._HEALTH_SIGNAL_MAP[attribute_name],
@@ -4676,11 +4680,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     ppsPresent = attribute_from_signal(
         ppsPresent_signal,
-        min_alarm=0,
-        abs_change=1,
-        archive_abs_change=1,
-        # Changed to devshort from devbool because errors. Probably Tango alarm related
-        dtype="DevShort",
+        dtype="DevBoolean",
         label="PPS Present",
         doc="Report if PPS signal is present at the TPM input.",
     )

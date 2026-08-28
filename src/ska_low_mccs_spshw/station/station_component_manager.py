@@ -1169,6 +1169,10 @@ class SpsStationComponentManager(
                     self._static_delays[logical_tile_id] = np.full(
                         TileData.ADC_CHANNELS, np.nan
                     )
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            staticTimeDelays=self.static_delays
+                        )
                 case "adcpower":
                     self._adc_power[logical_tile_id] = np.full(
                         TileData.ADC_CHANNELS, np.nan
@@ -1181,6 +1185,8 @@ class SpsStationComponentManager(
                     self._preadu_levels[logical_tile_id] = np.full(
                         TileData.ADC_CHANNELS, np.nan
                     )
+                    if self._component_state_callback:
+                        self._component_state_callback(preaduLevels=self.preadu_levels)
                 case "pointingdelays":
                     self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
                 case "tileprogrammingstate":
@@ -1209,16 +1215,32 @@ class SpsStationComponentManager(
                     self._sysref_present[logical_tile_id] = None
                 case "plllocked":
                     self._pll_locked[logical_tile_id] = None
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            pllLockedSummary=self.pll_locked_summary()
+                        )
                 case "ppspresent":
                     self._pps_present[logical_tile_id] = None
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            ppsPresentSummary=self.pps_present_summary()
+                        )
                 case "clockpresent":
                     self._clock_present[logical_tile_id] = None
                 case "testgeneratoractive":
                     self._test_generator_active[logical_tile_id] = None
                 case "isbeamformerrunning":
                     self._is_beamformer_running[logical_tile_id] = None
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            isBeamformerRunning=self.is_beamformer_running
+                        )
                 case "channeliserrounding":
                     self._channeliser_roundings[logical_tile_id, :] = np.nan
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            channeliserRounding=self.channeliser_rounding
+                        )
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "
                 f"has quality {attribute_quality}. "
@@ -1240,11 +1262,15 @@ class SpsStationComponentManager(
                 self._static_delays[logical_tile_id] = np.array(
                     attribute_value, dtype=float
                 )
+                if self._component_state_callback:
+                    self._component_state_callback(staticTimeDelays=self.static_delays)
             case "preadulevels":
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = np.array(
                     attribute_value, dtype=float
                 )
+                if self._component_state_callback:
+                    self._component_state_callback(preaduLevels=self.preadu_levels)
             case "ppsdelay":
                 # Cache the value regardless of tile state so that when the
                 # tile later becomes Synchronised the value is available.
@@ -1353,14 +1379,26 @@ class SpsStationComponentManager(
                 self._fpga2_temperatures[logical_tile_id] = attribute_value
             case "plllocked":
                 self._pll_locked[logical_tile_id] = bool(attribute_value)
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        pllLockedSummary=self.pll_locked_summary()
+                    )
             case "ppspresent":
                 self._pps_present[logical_tile_id] = bool(attribute_value)
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        ppsPresentSummary=self.pps_present_summary()
+                    )
             case "clockpresent":
                 self._clock_present[logical_tile_id] = bool(attribute_value)
             case "testgeneratoractive":
                 self._test_generator_active[logical_tile_id] = bool(attribute_value)
             case "isbeamformerrunning":
                 self._is_beamformer_running[logical_tile_id] = bool(attribute_value)
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        isBeamformerRunning=self.is_beamformer_running
+                    )
             case "channeliserrounding":
                 try:
                     self._channeliser_roundings[logical_tile_id, :] = attribute_value
@@ -1369,6 +1407,11 @@ class SpsStationComponentManager(
                         f"Unable to update channeliserRounding cache for tile "
                         f"{logical_tile_id}: {repr(e)}"
                     )
+                else:
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            channeliserRounding=self.channeliser_rounding
+                        )
             case "csprounding":
                 if logical_tile_id == self._number_of_tiles - 1:
                     self._csp_rounding = list(attribute_value)

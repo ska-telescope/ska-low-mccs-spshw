@@ -34,7 +34,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.functional.conftest import verify_bandpass_state
 from tests.harness import DEFAULT_STATION_LABEL, get_bandpass_daq_name
-from tests.test_tools import wait_for_lrc_result
+from tests.test_tools import AttributeWaiter, wait_for_lrc_result
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 STRESS_TEST_PHASE_DURATION = 90.0  # seconds
@@ -114,6 +114,14 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_5_programming_state",
         "tile_6_programming_state",
         "tile_7_programming_state",
+        "station_tile_programming_state",
+        "station_adc_power",
+        "station_static_time_delays",
+        "station_preadu_levels",
+        "station_channeliser_rounding",
+        "station_pll_locked_summary",
+        "station_pps_present_summary",
+        "station_is_beamformer_running",
         timeout=300.0,
     )
 
@@ -183,7 +191,7 @@ def test_lock_contention_not_observed(
 
 @scenario(
     "features/station.feature",
-    "SpsStation attributes report Off tile attributes",
+    "Reading SpsStation attributes when tile is Off",
 )
 def test_spsstation_attributes_report_off_tile(
     stations_devices_exported: list[tango.DeviceProxy],
@@ -1101,11 +1109,9 @@ def powered_off_tile_fixture() -> Iterator[dict[str, Any]]:
     tile = info.get("tile")
     if tile is not None:
         tile.On()
-        deadline = time.time() + 60
-        while time.time() < deadline:
-            if tile.tileProgrammingState != "Off":
-                break
-            time.sleep(1)
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile, "tileProgrammingState", None, lookahead=5
+        )
 
 
 @when("we turn off a single tile")
@@ -1128,29 +1134,36 @@ def turn_off_single_tile(
 
     tile.Off()
 
-    deadline = time.time() + 60
-    while time.time() < deadline:
-        if tile.tileProgrammingState == "Off":
-            break
-        time.sleep(1)
-    else:
-        pytest.fail(f"Tile {tile.dev_name()} did not report Off in time")
+    AttributeWaiter(timeout=60).wait_for_value(
+        tile, "tileProgrammingState", "Off", lookahead=5
+    )
 
 
-def _wait_until(predicate: Callable[[], bool], timeout: float, message: str) -> None:
-    """
-    Poll a predicate until it is true, or fail after a timeout.
+# pylint: disable=too-few-public-methods
+class _Predicate:
+    """Equality placeholder that matches when ``predicate(other)`` is true."""
 
-    :param predicate: a callable returning True once the condition holds.
-    :param timeout: the maximum time to wait, in seconds.
-    :param message: the failure message if the predicate never holds.
-    """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if predicate():
-            return
-        time.sleep(1)
-    pytest.fail(message)
+    def __init__(self, predicate: Callable[[Any], bool]) -> None:
+        """
+        Initialise a new instance.
+
+        :param predicate: a callable that returns True when ``other``
+            (the value it is compared against) should be considered a match.
+        """
+        self._predicate = predicate
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Check whether ``other`` satisfies this placeholder's predicate.
+
+        :param other: the object against which to test the predicate.
+
+        :return: whether the predicate holds for ``other``.
+        """
+        try:
+            return bool(self._predicate(other))
+        except (TypeError, ValueError, IndexError):
+            return False
 
 
 @then("the spsstation attributes present this")
@@ -1158,6 +1171,7 @@ def spsstation_attributes_present_off_tile(
     station: tango.DeviceProxy,
     station_tiles: list[tango.DeviceProxy],
     powered_off_tile: dict[str, Any],
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Check SpsStation's cached attributes reflect a tile going Off.
@@ -1171,69 +1185,64 @@ def spsstation_attributes_present_off_tile(
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
     :param powered_off_tile: a dict recording which tile was powered off.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
     """
     off_tile_id = powered_off_tile["logical_tile_id"]
     channels_per_tile = len(station.adcPower) // len(station_tiles)
     start = off_tile_id * channels_per_tile
     end = start + channels_per_tile
 
-    _wait_until(
-        lambda: station.tileProgrammingState[off_tile_id] == "Off",
-        60,
-        "SpsStation cache did not report tile "
-        f"{off_tile_id} as Off in time: {station.tileProgrammingState}",
+    for attribute_name, callback_name in [
+        ("tileProgrammingState", "station_tile_programming_state"),
+        ("adcPower", "station_adc_power"),
+        ("staticTimeDelays", "station_static_time_delays"),
+        ("preaduLevels", "station_preadu_levels"),
+        ("channeliserRounding", "station_channeliser_rounding"),
+        ("pllLockedSummary", "station_pll_locked_summary"),
+        ("ppsPresentSummary", "station_pps_present_summary"),
+        ("isBeamformerRunning", "station_is_beamformer_running"),
+    ]:
+        station.subscribe_event(
+            attribute_name,
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks[callback_name],
+        )
+
+    def _all_nan_in(lo: int, hi: int) -> Callable[[Any], bool]:
+        return lambda v: bool(np.all(np.isnan(np.asarray(v)[lo:hi])))
+
+    change_event_callbacks["station_tile_programming_state"].assert_change_event(
+        _Predicate(lambda v: v[off_tile_id] == "Off"),
+        lookahead=10,
+        consume_nonmatches=True,
     )
-    _wait_until(
-        lambda: bool(np.all(np.isnan(station.adcPower[start:end]))),
-        60,
-        "SpsStation cache did not report NaN adcPower for offline tile "
-        f"{off_tile_id}: {station.adcPower[start:end]}",
+    change_event_callbacks["station_adc_power"].assert_change_event(
+        _Predicate(_all_nan_in(start, end)),
+        lookahead=10,
+        consume_nonmatches=True,
     )
-    _wait_until(
-        lambda: bool(np.all(np.isnan(station.staticTimeDelays[start:end]))),
-        60,
-        "SpsStation cache did not report NaN staticTimeDelays for offline "
-        f"tile {off_tile_id}: {station.staticTimeDelays[start:end]}",
+    change_event_callbacks["station_static_time_delays"].assert_change_event(
+        _Predicate(_all_nan_in(start, end)),
+        lookahead=10,
+        consume_nonmatches=True,
     )
-    _wait_until(
-        lambda: bool(np.all(np.isnan(station.preaduLevels[start:end]))),
-        60,
-        "SpsStation cache did not report NaN preaduLevels for offline tile "
-        f"{off_tile_id}: {station.preaduLevels[start:end]}",
+    change_event_callbacks["station_preadu_levels"].assert_change_event(
+        _Predicate(_all_nan_in(start, end)),
+        lookahead=10,
+        consume_nonmatches=True,
     )
-    _wait_until(
-        lambda: bool(np.all(np.isnan(station.channeliserRounding[off_tile_id]))),
-        60,
-        "SpsStation cache did not report NaN channeliserRounding for "
-        f"offline tile {off_tile_id}: {station.channeliserRounding[off_tile_id]}",
+    change_event_callbacks["station_channeliser_rounding"].assert_change_event(
+        _Predicate(_all_nan_in(off_tile_id, off_tile_id + 1)),
+        lookahead=10,
+        consume_nonmatches=True,
     )
-    _wait_until(
-        lambda: station.sysrefPresentSummary is False,
-        60,
-        "SpsStation cache did not report sysrefPresentSummary False after "
-        "a tile went offline",
+    change_event_callbacks["station_pll_locked_summary"].assert_change_event(
+        False, lookahead=10, consume_nonmatches=True
     )
-    _wait_until(
-        lambda: station.pllLockedSummary is False,
-        60,
-        "SpsStation cache did not report pllLockedSummary False after "
-        "a tile went offline",
+    change_event_callbacks["station_pps_present_summary"].assert_change_event(
+        False, lookahead=10, consume_nonmatches=True
     )
-    _wait_until(
-        lambda: station.ppsPresentSummary is False,
-        60,
-        "SpsStation cache did not report ppsPresentSummary False after "
-        "a tile went offline",
-    )
-    _wait_until(
-        lambda: station.clockPresentSummary is False,
-        60,
-        "SpsStation cache did not report clockPresentSummary False after "
-        "a tile went offline",
-    )
-    _wait_until(
-        lambda: station.isBeamformerRunning is False,
-        60,
-        "SpsStation cache did not report isBeamformerRunning False after "
-        "a tile went offline",
+    change_event_callbacks["station_is_beamformer_running"].assert_change_event(
+        False, lookahead=10, consume_nonmatches=True
     )

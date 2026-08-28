@@ -308,7 +308,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     coreCommunicationStatus_signal: AttrSignal[str] = AttrSignal[str]()
     ppsDrift_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
     ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    # Using bool for ppsPresent gives errors.
     ppsPresent_signal: AttrSignal[bool] = AttrSignal[bool]()
     pllLocked_signal: AttrSignal[bool] = AttrSignal[bool]()
     beamformerTable_signal: AttrSignal[list[list[int]]] = AttrSignal[list[list[int]]]()

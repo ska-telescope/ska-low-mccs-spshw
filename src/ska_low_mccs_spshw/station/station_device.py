@@ -131,6 +131,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         default_value=2400,  # [ms]
     )
 
+    # JSON value containing all the the health thresholds
+    HealthThresholds = device_property(
+        dtype=str,
+        doc=(
+            "The health theshholds are provided as a JSON string where"
+            "keys are the devices names and values are an array of"
+            "three values corresponding to the rollup thresholds"
+            ),
+        default_value="",
+    )
+    
+    
     # ---------------
     # Initialisation
     # ---------------

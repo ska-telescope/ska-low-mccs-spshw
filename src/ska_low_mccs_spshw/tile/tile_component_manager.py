@@ -735,6 +735,9 @@ class TileComponentManager(
         self.power_state = self._subrack_says_tpm_power
         self.update_fault_state(poll_success=False)
 
+        if self._subrack_says_tpm_power != PowerState.ON:
+            self._tile_time.set_reference_time(0)
+
         self._update_component_state(
             power=self._subrack_says_tpm_power, fault=self.fault_state
         )
@@ -1210,9 +1213,6 @@ class TileComponentManager(
                         assert self._request_provider is not None
 
                         self._request_provider.enqueue_lrc(request, priority=0)
-
-        else:
-            self._tile_time.set_reference_time(0)
 
     def _subrack_says_state_changed(
         self: TileComponentManager,

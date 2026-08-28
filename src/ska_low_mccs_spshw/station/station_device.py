@@ -244,6 +244,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("beamformerRegions", True, False)
         self.set_change_event("beamformerDaisyChainValid", True, False)
         self.set_change_event("finalTileBeamformerFlaggedCountOk", True, False)
+        self.set_change_event("pointingDelays", True, False)
 
         self.set_archive_event("xPolBandpass", False)
         self.set_archive_event("yPolBandpass", False)
@@ -256,6 +257,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("beamformerRegions", True, True)
         self.set_archive_event("beamformerDaisyChainValid", True, True)
         self.set_archive_event("finalTileBeamformerFlaggedCountOk", True, True)
+        self.set_archive_event("pointingDelays", True, True)
 
         # pylint: disable=attribute-defined-outside-init
         self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)

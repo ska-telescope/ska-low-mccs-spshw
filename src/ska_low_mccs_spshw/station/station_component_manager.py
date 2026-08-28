@@ -4730,11 +4730,14 @@ class SpsStationComponentManager(
                     ]
 
             results = [_run_while_handling_errors(proxy) for proxy in connected_proxies]
+            dev_names = [proxy.dev_name() for proxy in connected_proxies]
         else:
             arg = command_args[0] if command_args else None
             replies = group_command(self._tile_group, command_name, arg)
             results = []
+            dev_names = []
             for reply in replies:
+                dev_names.append(reply.dev_name())
                 if reply.has_failed():
                     results.append(
                         (
@@ -4745,10 +4748,16 @@ class SpsStationComponentManager(
                 else:
                     results.append(reply.get_data())
 
-        result_codes, _ = zip(*results)
-        self.logger.debug(f"Tiles response from {command_name}: {str(results)}")
-        if all(result[0] == ResultCode.OK for result in result_codes):
+        labelled = [f"{name}: {result}" for name, result in zip(dev_names, results)]
+        self.logger.debug(f"Tiles response from {command_name}: {'; '.join(labelled)}")
+        failures = [
+            f"{name}: {result}"
+            for name, result in zip(dev_names, results)
+            if result[0][0] != ResultCode.OK
+        ]
+        if not failures:
             return [ResultCode.OK], [f"{command_name} finished OK."]
         return [ResultCode.FAILED], [
-            f"{command_name} didn't finish OK. Results: {str(results)}"
+            f"{command_name} didn't finish OK on {len(failures)} of "
+            f"{len(results)} tiles. Failures: {'; '.join(failures)}"
         ]

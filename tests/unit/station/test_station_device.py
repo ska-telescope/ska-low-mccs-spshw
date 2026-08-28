@@ -55,6 +55,7 @@ gc.disable()
 
 TARGET = "ska_low_mccs_common.component.command_proxy.invoke_lrc"
 
+HEALTH_PROPERTY_VALUE = "{ 'fred': [42,42,42], 'jim': [53,53,53], 'sheila': [8,8,8] }"
 
 @pytest.fixture(autouse=True)
 def invoke_lrc_patch(
@@ -172,6 +173,7 @@ def test_context_fixture(
         bandpass_daq_trl=get_bandpass_daq_name(),
         wren_trl="",  # This is a causing intermittent test failure.
         device_class=patched_sps_station_device_class,
+        health_thresholds=HEALTH_PROPERTY_VALUE
     )
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
@@ -2013,6 +2015,63 @@ def test_healthParams(
     new_params_json = json.dumps(new_params)
     station_device.healthModelParams = new_params_json  # type: ignore[assignment]
     assert station_device.healthModelParams == new_params_json
+
+
+@pytest.mark.parametrize(
+    ("expected_init_params", "new_params"),
+    [
+        pytest.param(
+            {
+                "subrack_degraded": 0.05,
+                "subrack_failed": 0.2,
+                "tile_degraded": 0.05,
+                "tile_failed": 0.2,
+                "wren_degraded": 1.0,
+                "wren_failed": 1.0,
+                "pps_delta_degraded": 4,
+                "pps_delta_failed": 9,
+                "subracks": [1, 1, 1],  # Expect these to be overwritten
+                "tiles": [1, 1, 2],  # Expect these to be overwritten
+                "wren": [1, 1, 1],
+            },
+            {
+                "subrack_degraded": 0.1,
+                "subrack_failed": 0.3,
+                "tile_degraded": 0.07,
+                "tile_failed": 0.2,
+                "wren_degraded": 0.5,
+                "wren_failed": 0.5,
+                "pps_delta_degraded": 6,
+                "pps_delta_failed": 10,
+            },
+            id="Check correct initial values, write new and "
+            "verify new values have been written",
+        )
+    ],
+)
+def test_health_params_with_property_override(
+    station_device: SpsStation,
+    expected_init_params: dict[str, float],
+    new_params: dict[str, float],
+) -> None:
+    """
+    Test for healthParams attributes.
+
+    :param station_device: the SPS station Tango device under test.
+    :param expected_init_params: the initial values which the health
+        model is expected to have initially
+    :param new_params: the new health rule params to pass to the health model
+    """
+    assert station_device.healthModelParams == json.dumps(expected_init_params)
+    new_params_json = json.dumps(new_params)
+    station_device.healthModelParams = new_params_json  # type: ignore[assignment]
+    assert station_device.healthModelParams == new_params_json
+
+
+def test_health_property_set(station_device: SpsStation):
+    result = station_device.get_property("HealthThresholds")
+    assert result is not None
+    assert result.get("HealthThresholds") == HEALTH_PROPERTY_VALUE
 
 
 def test_csp_set_reset(

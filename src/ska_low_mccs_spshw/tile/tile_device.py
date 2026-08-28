@@ -342,6 +342,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     dspHealth_signal: AttrSignal[HealthState] = AttrSignal[HealthState]()
     healthReport_signal: AttrSignal[str] = AttrSignal[str](stored=True)
     stationBeamFlagEnabled_signal: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    timing_sync_time_signal: AttrSignal[int] = AttrSignal[int]()
 
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
@@ -480,6 +481,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
         "ppsPresent": "ppsPresent_signal",
+        "timing_sync_time": "timing_sync_time_signal",
     }
 
     _INTERMEDIATE_HEALTH_SIGNAL_MAP: dict[str, str] = {
@@ -1381,7 +1383,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             elif group == "currents":
                 self.firmwareCurrentThresholds_signal = attr_value
 
-    # pylint: disable=too-many-branches
     def _check_database_match(self: MccsTile) -> bool:
         """
         Compare firmware thresholds from the database against read values.
@@ -3070,6 +3071,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if raw_value[1] is None:
             return None
         return int(raw_value[1])
+
+    @attribute_from_signal(
+        timing_sync_time_signal,
+        min_alarm=0,
+        abs_change=1,
+        archive_abs_change=1,
+        label="Timing Sync Time",
+        doc="Return the sync time status. "
+        "Expected: `1` if the sync time health is good. `0` "
+        "if the sync time counters have rolled over.",
+    )
+    def timing_sync_time(self: MccsTile, raw_value: int) -> int:
+        """
+        Return the sync time status.
+
+        Expected: `1` if the sync time health is good. `0`
+        if the sync time counters have rolled over.
+
+        :example:
+           >>> tile.timing_sync_time
+           '1'
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the sync time health status.
+        """
+        return raw_value
 
     @attribute_from_signal(
         tile_info_signal,

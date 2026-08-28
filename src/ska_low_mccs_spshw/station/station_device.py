@@ -167,7 +167,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._data_received_result: tuple[str, str] = ("", "")
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
-        self._hw_pointing_delays: np.ndarray = np.full((8, 512), np.nan)
+        self._hw_pointing_delays: np.ndarray = np.full((48, 512), np.nan)
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
@@ -2989,7 +2989,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.logger.error("Insufficient parameters")
             raise ValueError("Insufficient parameters")
         beam_index = int(argin[0])
-        if beam_index < 0 or beam_index > 7:
+        if beam_index < 0 or beam_index > 47:
             self.component_manager.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
 

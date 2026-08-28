@@ -2019,8 +2019,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=512,  # Channels
-        max_dim_y=8,  # Antennas
+        max_dim_x=512,  # 16 tiles * 32 (delay, delay rate per antenna)
+        max_dim_y=48,  # Beams
         label="Pointing Delays",
         doc="Read the last pointing delays received from hardware.",
     )

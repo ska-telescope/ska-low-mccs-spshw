@@ -1210,9 +1210,8 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(
             DevState.ON, lookahead=2, consume_nonmatches=True
         )
-        # Looking ahead because we can get a None pushed on reconnect.
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=2, consume_nonmatches=True
+            "Initialised"
         )
         time.sleep(3)
         self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)

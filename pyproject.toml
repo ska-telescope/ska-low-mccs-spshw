@@ -169,5 +169,39 @@ omit=[
     "*/tile_1_2.py",
 ]
 
+[tool.ruff]
+exclude = [
+  "test_*.*",
+  "conftest.py",
+]
+
 [tool.coverage.report]
 show_missing = false
+
+[tool.ruff.lint]
+ignore = [
+  "UP009", # Coding: utf-8 line uneccessary
+  "ISC004", # Unparenthesized implicit string concatenation in collection
+  "PLC0206", # Extracting value from dictionary without calling `.items()`
+  "RUF059", # Unpacked variable `message` is never used
+  "DTZ006", # `datetime.datetime.fromtimestamp()` called without a `tz` argument
+  "DTZ005", # `datetime.datetime.now()` called without a `tz` argument
+  "DTZ007", # Naive datetime constructed using `datetime.datetime.strptime()` without %z
+  "SIM118", # Use `key in dict` instead of `key in dict.keys()`
+  "TRY201", # Use `raise` without specifying exception name
+  "SIM103", # Return the condition `value <= max_settable` directly
+  "TRY002", # Create your own exception
+  "C419", # Unnecessary list comprehension
+  "RUF012", # Mutable default value for class attribute
+  "SIM102", # Use a single `if` statement instead of nested `if` statements
+  "BLE001", # Do not catch blind exception: `Exception`
+  "PERF102", # When using only the values of a dict use the `values()` method
+  "TRY004", # Prefer `TypeError` exception for invalid type
+  "C400", # Unnecessary generator (rewrite as a list comprehension)
+  "TRY203", # Remove exception handler; error is immediately re-raised
+  "LOG015", # `info()` call on root logger
+  "LOG014", # `exc_info=` outside exception handlers
+  "C410", # Unnecessary list literal passed to `list()` (remove the outer call to `list()`)
+  "DTZ011", # `datetime.date.today()` used
+  "C401", # Unnecessary generator (rewrite as a set comprehension)
+]

@@ -10,7 +10,7 @@ include .make/base.mk
 ########################################################################
 # DOCS
 ########################################################################
-include .make-uv/make/docs-uv.mk
+include .make/docs.mk
 
 DOCS_SPHINXOPTS = -W --keep-going
 
@@ -22,7 +22,7 @@ docs-pre-build:
 ########################################################################
 # PYTHON
 ########################################################################
-include .make-uv/make/python-uv.mk
+include .make/python-uv.mk
 
 # TODO: Not supported by ska-python-uv yet
 # PYTHON_LINE_LENGTH = 88

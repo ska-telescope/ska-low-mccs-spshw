@@ -34,7 +34,7 @@ Feature: Test station
         Then we do not get any failures
 
 
-    Scenario: SpsStation attributes report Off tile attributes
+    Scenario: Reading SpsStation attributes when tile is Off
         Given an SPS deployment against HW
         And the SpsStation is ON
         When we turn off a single tile

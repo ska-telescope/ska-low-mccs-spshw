@@ -10,7 +10,6 @@
 # pylint: disable=too-many-arguments
 from __future__ import annotations
 
-import functools
 import importlib  # allow forward references in type hints
 import json
 import os.path
@@ -53,7 +52,6 @@ from .attribute_converters import (
     serialise_object,
     udp_error_count_to_list,
 )
-from .attribute_managers import AttributeManager
 from .firmware_threshold_interface import (
     CURRENT_KEYS,
     TEMPERATURE_KEYS,
@@ -839,26 +837,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         super().delete_device()
 
-        # ============================================================
-        # Temporary workaround for THORN-466
-        #
-        # A segmentation fault was observed after upgrading PyTango.
-        # Until the root cause is fixed, we explicitly mark attributes
-        # as INVALID when they have a value. This prevents the crash
-        # and allows SPSHW releases to proceed.
-        #
-        # Track progress and removal of this workaround in THORN-466.
-        # ============================================================
-
-        device_attrs = self.get_device_attr()
-
-        for attr_name, attr_state in self._attribute_state.items():
-            if attr_state.read() is None:
-                continue
-
-            device_attrs.get_attr_by_name(attr_name).set_quality(
-                tango.AttrQuality.ATTR_INVALID
-            )
         for t in threading.enumerate():
             self.logger.info(
                 f"Threads open at end of DELETE DEVICE "
@@ -873,23 +851,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             sig._absolute_name_for(self): tango_attr_name
             for sig, tango_attr_name in MccsTile._ALARM_SIGNAL_ATTRIBUTES.items()
         }
-        # Map from name used by TileComponentManager to the
-        # name of the Tango Attribute.
-        # Contains only those non-signal backed attributes that still remain.
-        self.attr_map = {
-            "antenna_buffer_mode": "antennaBufferMode",
-            "data_transmission_mode": "dataTransmissionMode",
-            "integrated_data_transmission_mode": "integratedDataTransmissionMode",
-        }
-
-        # A dictionary mapping the Tango Attribute name to its AttributeManager.
-        self._attribute_state: dict[str, AttributeManager] = {}
-
-        # generic attributes
-        for attr_name in self.attr_map.values():
-            self._attribute_state[attr_name] = AttributeManager(
-                functools.partial(self.post_change_event, attr_name),
-            )
         # Mapping of alarm name to alarm_signal
         self.__alarm_attribute_map: dict[str, str] = {
             "I2C_access_alm": "I2C_access_alm_signal",
@@ -1194,19 +1155,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
-        for attr_name in self._attribute_state:
-            # VerifyEvents now applies to archive events only. Change events are
-            # always pushed.
-            self.set_change_event(attr_name, True, False)
-            self.set_archive_event(attr_name, True, self.VerifyEvents)
-
-        # Not sure if we *should* need this but without doing it explicitly
-        # we don't get the UNKNOWN event as the tests expect.
-        # Do the tests need refactoring or ..?
-        # self._update_attribute_callback(
-        #     programming_state=TpmStatus.UNKNOWN.pretty_name()
-        # )
-
         # Re-seed stored signals that are read before being written elsewhere
         # (e.g. faultReport_signal is read-then-merged in _evaluate_fault).
         # On a later Init command, init_device runs standalone and __init__
@@ -1272,22 +1220,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self._stopping:
             return
         if self.UseAttributesForHealth:
-            if attribute_name in self._attribute_state:
-                value_cache = self._attribute_state[attribute_name].read()
-                if value_cache is not None:
-                    self.push_change_event(attribute_name, value_cache[0])
-                    self.push_archive_event(attribute_name, value_cache[0])
-            else:
-                # Signal-backed attributes store their last value in the SignalBusMixin
-                # cache. Re-pushing without explicit quality lets Tango recompute it
-                # against the newly configured thresholds.
-                signal_cache = self._SignalBusMixin__attr_values.get(attribute_name)
-                if (
-                    signal_cache is not None
-                    and signal_cache.quality != tango.AttrQuality.ATTR_INVALID
-                ):
-                    self.push_change_event(attribute_name, signal_cache.value)
-                    self.push_archive_event(attribute_name, signal_cache.value)
+            # Signal-backed attributes store their last value in the SignalBusMixin
+            # cache. Re-pushing without explicit quality lets Tango recompute it
+            # against the newly configured thresholds.
+            signal_cache = self._SignalBusMixin__attr_values.get(attribute_name)
+            if (
+                signal_cache is not None
+                and signal_cache.quality != tango.AttrQuality.ATTR_INVALID
+            ):
+                self.push_change_event(attribute_name, signal_cache.value)
+                self.push_archive_event(attribute_name, signal_cache.value)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -1297,13 +1239,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.set_archive_event("healthState", True, self.VerifyEvents)
 
         if self.UseAttributesForHealth:
-            healthful_attrs = set(self._attribute_state.keys())
-            # Add signal-backed attributes that are not in _attribute_state.
-            healthful_attrs |= set(MccsTile._HEALTH_SIGNAL_MAP.keys())
-            # Add signal-backed alarm attributes that are no longer in _attribute_state
+            # Add signal-backed attributes
+            healthful_attrs = set(MccsTile._HEALTH_SIGNAL_MAP.keys())
+            # Add signal-backed alarm attributes
             healthful_attrs |= self.__alarm_attribute_map.keys()
             # The remaining attributes below were previously AttributeManager backed
-            # pre-refactor (and so included via self._attribute_state above)
+            # pre-refactor (and so included via self._attribute_state which is removed)
             # now that they are signal backed they must be added explicitly.
             healthful_attrs |= {
                 "voltageDraw",
@@ -1519,19 +1460,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     None if mark_invalid else attribute_value,
                 )
             else:
-                try:
-                    tango_name = self.attr_map[attribute_name]
-                    if mark_invalid:
-                        self._attribute_state[tango_name].mark_stale()
-                    else:
-                        self._attribute_state[tango_name].update(attribute_value)
-
-                except KeyError as e:
-                    self.logger.error(f"Key Error {repr(e)}")
-                except Exception as e:  # pylint: disable=broad-except
-                    self.logger.error(
-                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
-                    )
+                self.logger.warning("Attribute name '%s' unrecognised.", attribute_name)
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ
@@ -1567,16 +1496,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         match power:
             case PowerState.OFF | PowerState.UNKNOWN:
-                for attr in self._attribute_state.values():
-                    try:
-                        attr.mark_stale()
-                    except Exception as exc:  # pylint: disable=broad-except
-                        self.logger.warning(
-                            "Failed to mark %r as stale: %s",
-                            attr,
-                            exc,
-                            exc_info=True,
-                        )
                 for signal in self._HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
                 for signal in self._GENERIC_SIGNAL_MAP.values():
@@ -1712,9 +1631,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
             if mark_invalid:
-                if attribute_name in self._attribute_state:
-                    self._attribute_state[attribute_name].mark_stale()
-                elif attribute_name in self._HEALTH_SIGNAL_MAP:
+                if attribute_name in self._HEALTH_SIGNAL_MAP:
                     setattr(self, self._HEALTH_SIGNAL_MAP[attribute_name], None)
                 elif attribute_name in self._GENERIC_SIGNAL_MAP:
                     setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
@@ -1734,9 +1651,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 attribute_value = None
 
             try:
-                if attribute_name in self._attribute_state:
-                    self._attribute_state[attribute_name].update(attribute_value)
-                elif attribute_name in self._HEALTH_SIGNAL_MAP:
+                if attribute_name in self._HEALTH_SIGNAL_MAP:
                     emit_value = attribute_value
                     if (
                         attribute_name.lower() == "ppspresent"
@@ -1796,11 +1711,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if not self._stopping:
             try:
                 attr = self.get_device_attr().get_attr_by_name(attr_name)
-                attr_mgr = self._attribute_state.get(attr_name)
-                attr_value = attr_mgr.read() if attr_mgr is not None else "N/A"
                 if attr.is_max_alarm():
                     self.logger.warning(
-                        f"Attribute {attr_name} changed to {attr_value}, "
+                        f"Attribute {attr_name} changed to {getattr(self, attr_name)}, "
                         "this is above maximum alarm, Shutting down TPM."
                     )
                     self.execute_Off()

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values.
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
 * [THORN-671] Bump tpm firmware version used when bios version > 1.0.0 from 11.0.0 -> 12.0.0.
 This comes with some 48 beam support. Removing 8 beam limitations and adding visibility of all 48 beams pointingDelays.
 * [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).

@@ -3711,7 +3711,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=12
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=11
         )
         return dynamic_tile_component_manager
 

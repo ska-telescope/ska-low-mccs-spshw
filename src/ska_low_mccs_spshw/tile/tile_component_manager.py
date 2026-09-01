@@ -13,8 +13,9 @@ import logging
 import re
 import threading
 import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Any, Callable, Final, Iterator, List, Optional, cast
+from typing import Any, Final, cast
 
 import numpy as np
 import semver
@@ -221,8 +222,8 @@ class TileComponentManager(
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
-        _tile: Optional[TileSimulator] = None,
-        event_serialiser: Optional[EventSerialiser] = None,
+        _tile: TileSimulator | None = None,
+        event_serialiser: EventSerialiser | None = None,
         default_lock_timeout: float = 0.4,
         poll_timeout: float = 6.0,
         power_callback_timeout: float = 6.0,
@@ -280,9 +281,9 @@ class TileComponentManager(
         self._power_state_lock = threading.RLock()
         self._update_attribute_callback = update_attribute_callback
         # Faulty until we are not
-        self.fault_state: Optional[bool] = True
+        self.fault_state: bool | None = True
         self._preadu_present: list[bool] = preadu_present
-        self._subrack_proxy: Optional[MccsDeviceProxy] = None
+        self._subrack_proxy: MccsDeviceProxy | None = None
 
         self._simulation_mode = simulation_mode
         self._default_lock_timeout = default_lock_timeout
@@ -302,7 +303,7 @@ class TileComponentManager(
         self._initialise_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
         self.active_request: TileRequest | TileLRCRequest | None = None
-        self._request_provider: Optional[TileRequestProvider] = None
+        self._request_provider: TileRequestProvider | None = None
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
         self._pps_delay_correction: int = 0
@@ -313,7 +314,7 @@ class TileComponentManager(
         self._pending_data_requests = False
         self._tile_time = TileTime(0)
         self._nof_blocks: int = 0
-        self._firmware_list: List[dict[str, Any]] = []
+        self._firmware_list: list[dict[str, Any]] = []
         self._station_id = station_id
         self._tile_id = tile_id
         self._tpm_status = TpmStatus.UNKNOWN
@@ -396,7 +397,7 @@ class TileComponentManager(
         self: TileComponentManager,
         command_name: str,
         command_object: Callable,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
         **kwargs: Any,
     ) -> tuple[list[ResultCode], list[str]]:
         """
@@ -426,7 +427,7 @@ class TileComponentManager(
 
     def get_request(  # type: ignore[override]
         self: TileComponentManager,
-    ) -> Optional[TileRequest | TileLRCRequest]:
+    ) -> TileRequest | TileLRCRequest | None:
         """
         Return the action/s to be taken in the next poll.
 
@@ -652,7 +653,7 @@ class TileComponentManager(
                     publish=True,
                 )
             case _:
-                message = f"Unrecognised poll request {repr(request_spec)}"
+                message = f"Unrecognised poll request {request_spec!r}"
                 self.logger.error(message)
                 return None
         return request
@@ -712,10 +713,10 @@ class TileComponentManager(
             case LibraryError():
                 self.logger.error(f"LibraryError raised from poll: {exception}")
             case BoardError():
-                self.logger.error(f"BoardError: {repr(exception)}")
+                self.logger.error(f"BoardError: {exception!r}")
             case _:
                 self.logger.error(
-                    f"Unexpected error found: {repr(exception)}", exc_info=True
+                    f"Unexpected error found: {exception!r}", exc_info=True
                 )
 
         # We do not evaluate error codes. Connect if not already!
@@ -724,7 +725,7 @@ class TileComponentManager(
 
         # Update command tracker if defined in request.
         if isinstance(self.active_request, TileLRCRequest):
-            self.active_request.notify_failed(f"Exception: {repr(exception)}")
+            self.active_request.notify_failed(f"Exception: {exception!r}")
         elif isinstance(self.active_request, TileRequest):
             if self.active_request.publish:
                 self._update_attribute_callback(
@@ -747,7 +748,7 @@ class TileComponentManager(
     def update_fault_state(
         self: TileComponentManager,
         poll_success: bool,
-        exception_code: Optional[Any] = None,
+        exception_code: Any | None = None,
     ) -> None:
         """
         Update fault state.
@@ -980,8 +981,8 @@ class TileComponentManager(
 
     def do_off(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm off.
@@ -1012,8 +1013,8 @@ class TileComponentManager(
 
     def do_on(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Tell the upstream power supply proxy to turn the tpm on.
@@ -1121,7 +1122,7 @@ class TileComponentManager(
             raise_exception=raise_exception,
         ):
             try:
-                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+                self.tile[0x30000000]  # pylint: disable=expression-not-assigned
                 return True
             except Exception:  # pylint: disable=broad-except
                 return False
@@ -1480,7 +1481,7 @@ class TileComponentManager(
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+            self.tile[0x30000000]  # pylint: disable=expression-not-assigned
             self.__update_tpm_status()
 
     def _check_initialised(self: TileComponentManager) -> bool:
@@ -1519,7 +1520,7 @@ class TileComponentManager(
     @check_communicating
     def initialise(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
         force_reprogramming: bool = True,
     ) -> tuple[list[ResultCode], list[str]]:
         """
@@ -1573,107 +1574,106 @@ class TileComponentManager(
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
-        with self._initialising():
-            with acquire_timeout(
+        with (
+            self._initialising(),
+            acquire_timeout(
                 self._hardware_lock, self._default_lock_timeout, raise_exception=True
-            ):
-                if force_reprogramming:
-                    self.logger.info("Forcing erasing of FPGA.")
-                    self.tile.erase_fpgas()
-                    self._tpm_status = TpmStatus.UNPROGRAMMED
-                    self._update_attribute_callback(
-                        programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
-                    )
+            ),
+        ):
+            if force_reprogramming:
+                self.logger.info("Forcing erasing of FPGA.")
+                self.tile.erase_fpgas()
+                self._tpm_status = TpmStatus.UNPROGRAMMED
+                self._update_attribute_callback(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
+                )
 
-                prog_status = False
-                tile_info = self.tile.info
-                bios = tile_info.get("hardware", {}).get("bios", "")
-                self._firmware_name = _select_firmware_name(bios)
+            prog_status = False
+            tile_info = self.tile.info
+            bios = tile_info.get("hardware", {}).get("bios", "")
+            self._firmware_name = _select_firmware_name(bios)
 
-                if self.tile.is_programmed() is False:
-                    self.logger.info(
-                        f"Programming tile with firmware {self._firmware_name}"
-                    )
+            if self.tile.is_programmed() is False:
+                self.logger.info(
+                    f"Programming tile with firmware {self._firmware_name}"
+                )
 
-                    self.tile.program_fpgas(self._firmware_name)
-                prog_status = self.tile.is_programmed()
+                self.tile.program_fpgas(self._firmware_name)
+            prog_status = self.tile.is_programmed()
 
+            #
+            # Initialisation after programming the FPGA
+            #
+            if prog_status:
+                self._tpm_status = TpmStatus.PROGRAMMED
+                self._update_attribute_callback(
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name()
+                )
                 #
-                # Initialisation after programming the FPGA
+                # Base initialisation
                 #
-                if prog_status:
-                    self._tpm_status = TpmStatus.PROGRAMMED
-                    self._update_attribute_callback(
-                        programming_state=TpmStatus.PROGRAMMED.pretty_name()
-                    )
-                    #
-                    # Base initialisation
-                    #
+                self.logger.info(
+                    "initialising tile with: \n"
+                    f"* tile ID of {self._tile_id} \n"
+                    f"* pps correction of {pps_delay_correction} \n"
+                    f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
+                    f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
+                    f"* staticTimeDelays of {self._static_time_delays} \n"
+                    f"* PreAduLevels of {self._preadu_levels} \n"
+                )
+                self.tile.initialise(
+                    station_id=self._station_id,
+                    tile_id=self._tile_id,
+                    pps_delay=pps_delay_correction,
+                    active_40g_ports_setting="port1-only",
+                    src_ip_fpga1=self.src_ip_40g_fpga1,
+                    src_ip_fpga2=self.src_ip_40g_fpga2,
+                    time_delays=self._static_time_delays,
+                )
+                #
+                # extra steps required to have it working
+                #
+                self.logger.info(
+                    "TileComponentManager: reset_and_initialise_beamformer"
+                )
+                self.tile.initialise_beamformer(128, 8)
+
+                self.tile.set_first_last_tile(False, False)
+
+                # self.tile.post_synchronisation()
+
+                if self._preadu_levels.size != 0:
                     self.logger.info(
-                        "initialising tile with: \n"
-                        f"* tile ID of {self._tile_id} \n"
-                        f"* pps correction of {pps_delay_correction} \n"
-                        f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
-                        f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
-                        f"* staticTimeDelays of {self._static_time_delays} \n"
-                        f"* PreAduLevels of {self._preadu_levels} \n"
+                        "TileComponentManager: setting PreADU attenuation..."
                     )
-                    self.tile.initialise(
-                        station_id=self._station_id,
-                        tile_id=self._tile_id,
-                        pps_delay=pps_delay_correction,
-                        active_40g_ports_setting="port1-only",
-                        src_ip_fpga1=self.src_ip_40g_fpga1,
-                        src_ip_fpga2=self.src_ip_40g_fpga2,
-                        time_delays=self._static_time_delays,
-                    )
-                    #
-                    # extra steps required to have it working
-                    #
+                    self.tile.set_preadu_levels(self._preadu_levels)
+                    if self.tile.get_preadu_levels() != self._preadu_levels.tolist():
+                        self.logger.warning(
+                            "TileComponentManager: set PreADU attenuation failed"
+                        )
+
+                self.logger.info("TileComponentManager: initialisation completed")
+
+                # Update configuration before we transition to INITIALISED.
+                self.__update_configuration_from_tile()
+
+                self._tpm_status = TpmStatus.INITIALISED
+                self._update_attribute_callback(
+                    programming_state=TpmStatus.INITIALISED.pretty_name()
+                )
+                # The initial pps_delay must be reset after initialisation.
+                self._initial_pps_delay = None
+                if self._global_reference_time:
                     self.logger.info(
-                        "TileComponentManager: reset_and_initialise_beamformer"
+                        "Global reference time specifed, starting acquisition"
                     )
-                    self.tile.initialise_beamformer(128, 8)
-
-                    self.tile.set_first_last_tile(False, False)
-
-                    # self.tile.post_synchronisation()
-
-                    if self._preadu_levels.size != 0:
-                        self.logger.info(
-                            "TileComponentManager: setting PreADU attenuation..."
-                        )
-                        self.tile.set_preadu_levels(self._preadu_levels)
-                        if (
-                            self.tile.get_preadu_levels()
-                            != self._preadu_levels.tolist()
-                        ):
-                            self.logger.warning(
-                                "TileComponentManager: set PreADU attenuation failed"
-                            )
-
-                    self.logger.info("TileComponentManager: initialisation completed")
-
-                    # Update configuration before we transition to INITIALISED.
-                    self.__update_configuration_from_tile()
-
-                    self._tpm_status = TpmStatus.INITIALISED
-                    self._update_attribute_callback(
-                        programming_state=TpmStatus.INITIALISED.pretty_name()
-                    )
-                    # The initial pps_delay must be reset after initialisation.
-                    self._initial_pps_delay = None
-                    if self._global_reference_time:
-                        self.logger.info(
-                            "Global reference time specifed, starting acquisition"
-                        )
-                        self._start_acquisition()
-                self.__update_tpm_status()
+                    self._start_acquisition()
+            self.__update_tpm_status()
 
     @abort_task_on_exception
     @check_communicating
     def download_firmware(
-        self: TileComponentManager, argin: str, task_callback: Optional[Callable]
+        self: TileComponentManager, argin: str, task_callback: Callable | None
     ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit the download_firmware slow task.
@@ -1727,10 +1727,10 @@ class TileComponentManager(
     @check_communicating
     def start_acquisition(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        start_time: Optional[str] = None,
+        task_callback: Callable | None = None,
+        start_time: str | None = None,
         delay: int = 2,
-        global_reference_time: Optional[str] = None,
+        global_reference_time: str | None = None,
     ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit the start_acquisition slow task.
@@ -1775,8 +1775,8 @@ class TileComponentManager(
     @check_communicating
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[int] = None,
-        global_reference_time: Optional[int] = None,
+        start_time: int | None = None,
+        global_reference_time: int | None = None,
         delay: int = 2,
     ) -> None:
         """
@@ -1835,8 +1835,8 @@ class TileComponentManager(
     def __wait_for_synchronised(
         self: TileComponentManager,
         deadline: int,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Wait for synchronisation until deadline.
@@ -1863,9 +1863,9 @@ class TileComponentManager(
         def _wait_for_condition(
             condition: Callable[[], bool],
             timeout: float,
-            abort_event: Optional[threading.Event],
+            abort_event: threading.Event | None,
             interval: float = 0.2,
-        ) -> Optional[bool]:
+        ) -> bool | None:
             end_time = time.time() + timeout
 
             while time.time() < end_time:
@@ -2049,7 +2049,7 @@ class TileComponentManager(
             )
         if self._tile_id != tile_id:
             raise HardwareVerificationError(expected=tile_id, actual=self._tile_id)
-        self.logger.info(f"set station_id : {station_id}, " f"tile_id : {tile_id}")
+        self.logger.info(f"set station_id : {station_id}, tile_id : {tile_id}")
 
     def set_tile_id(self: TileComponentManager, value: int) -> None:
         """
@@ -2116,7 +2116,7 @@ class TileComponentManager(
     @check_communicating
     def firmware_available(
         self: TileComponentManager,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Return the list of the firmware loaded in the system.
 
@@ -2303,10 +2303,8 @@ class TileComponentManager(
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()
                     self.logger.debug(
-                        (
-                            "fpga_current_frame: read timestamp: "
-                            f"{self._fpga_current_frame}"
-                        )
+                        "fpga_current_frame: read timestamp: "
+                        f"{self._fpga_current_frame}"
                     )
 
                 # pylint: disable=broad-except
@@ -2352,7 +2350,7 @@ class TileComponentManager(
 
     @property
     @check_communicating
-    def pps_delay(self: TileComponentManager) -> Optional[int]:
+    def pps_delay(self: TileComponentManager) -> int | None:
         """
         Return the pps delay from the TPM.
 
@@ -2418,7 +2416,7 @@ class TileComponentManager(
         self: TileComponentManager,
         mode: str,
         ddr_start_byte_address: int,
-        max_ddr_byte_size: Optional[int],
+        max_ddr_byte_size: int | None,
     ) -> bool:
         """Set up the antenna buffer.
 
@@ -2456,7 +2454,7 @@ class TileComponentManager(
         start_time: int = -1,
         timestamp_capture_duration: int = 75,
         continuous_mode: bool = False,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> tuple[list[ResultCode], list[str]]:
         """Submit the start antenna buffer method.
 
@@ -2500,8 +2498,8 @@ class TileComponentManager(
         start_time: int,
         timestamp_capture_duration: int,
         continuous_mode: bool,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """Start recording to the antenna buffer.
 
@@ -2556,7 +2554,7 @@ class TileComponentManager(
 
     def read_antenna_buffer(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> tuple[list[ResultCode], list[str]]:
         """Read from the antenna buffer.
 
@@ -2581,8 +2579,8 @@ class TileComponentManager(
     @check_communicating
     def _read_antenna_buffer(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """Read from the antenna buffer.
 
@@ -2651,7 +2649,7 @@ class TileComponentManager(
                     self.logger.debug("Connecting to TPM")
                     self.tile.connect()
                     self.tile[  # pylint: disable=expression-not-assigned
-                        int(0x30000000)
+                        0x30000000
                     ]
                     # After connection lets check the configuration.
                     assert self._request_provider is not None
@@ -2794,7 +2792,7 @@ class TileComponentManager(
     def send_data_samples(  # pylint: disable=too-many-branches
         self: TileComponentManager,
         data_type: str = "",
-        start_time: Optional[str] = None,
+        start_time: str | None = None,
         seconds: float = 0.2,
         n_samples: int = 1024,
         sync: bool = False,
@@ -2850,7 +2848,7 @@ class TileComponentManager(
             seconds = 0.0
 
         current_frame = self.fpga_current_frame
-        tstamp: Optional[int] = timestamp or None
+        tstamp: int | None = timestamp or None
         if current_frame == 0:
             self.logger.error("Cannot send data before StartAcquisition")
             raise ValueError("Cannot send data before StartAcquisition")
@@ -2885,7 +2883,7 @@ class TileComponentManager(
     def _send_raw_data(
         self: TileComponentManager,
         sync: bool = False,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -2908,7 +2906,7 @@ class TileComponentManager(
         number_of_samples: int = 1024,
         first_channel: int = 0,
         last_channel: int = 511,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -2939,7 +2937,7 @@ class TileComponentManager(
         channel_id: int,
         number_of_samples: int = 1024,
         wait_seconds: int = 0,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -2973,7 +2971,7 @@ class TileComponentManager(
         round_bits: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -3005,7 +3003,7 @@ class TileComponentManager(
 
     def _send_beam_data(
         self: TileComponentManager,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -3164,8 +3162,8 @@ class TileComponentManager(
 
     def stop_beamformer(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        channel_groups: Optional[list[int]] = None,
+        task_callback: Callable | None = None,
+        channel_groups: list[int] | None = None,
     ) -> tuple[list[ResultCode], list[str]]:
         """
         Stop the beamformer.
@@ -3191,10 +3189,10 @@ class TileComponentManager(
     @check_communicating
     def start_beamformer(
         self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        start_time: Optional[str] = None,
+        task_callback: Callable | None = None,
+        start_time: str | None = None,
         duration: int = -1,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
         scan_id: int = 0,
     ) -> tuple[list[ResultCode], list[str]]:
         """
@@ -3636,7 +3634,7 @@ class TileComponentManager(
 
     @property
     @check_communicating
-    def channeliser_truncation(self: TileComponentManager) -> Optional[list[int]]:
+    def channeliser_truncation(self: TileComponentManager) -> list[int] | None:
         """
         Read the value for the channeliser truncation.
 
@@ -3696,8 +3694,8 @@ class TileComponentManager(
         mode: str,
         payload_length: int = 1024,
         dst_ip: str = "10.0.10.1",
-        src_port: Optional[int] = 0xF0D0,
-        dst_port: Optional[int] = 4660,
+        src_port: int | None = 0xF0D0,
+        dst_port: int | None = 4660,
         netmask_40g: str | None = None,
         gateway_40g: str | None = None,
     ) -> tuple[list[ResultCode], list[str]]:
@@ -3788,14 +3786,14 @@ class TileComponentManager(
         self: TileComponentManager,
         core_id: int = 0,
         arp_table_entry: int = 0,
-        source_mac: Optional[int] = None,
-        source_ip: Optional[str] = None,
-        source_port: Optional[int] = None,
-        destination_ip: Optional[str] = None,
-        destination_port: Optional[int] = None,
-        rx_port_filter: Optional[int] = None,
-        netmask: Optional[str] = None,
-        gateway_ip: Optional[str] = None,
+        source_mac: int | None = None,
+        source_ip: str | None = None,
+        source_port: int | None = None,
+        destination_ip: str | None = None,
+        destination_port: int | None = None,
+        rx_port_filter: int | None = None,
+        netmask: str | None = None,
+        gateway_ip: str | None = None,
     ) -> tuple[list[ResultCode], list[str]]:
         """
         Configure the 40G code.
@@ -4004,7 +4002,7 @@ class TileComponentManager(
 
         return values
 
-    def _get_pps_delay_correction(self: TileComponentManager) -> Optional[int]:
+    def _get_pps_delay_correction(self: TileComponentManager) -> int | None:
         """
         Return last measured ppsdelay correction.
 
@@ -4080,7 +4078,7 @@ class TileComponentManager(
 
     @property
     @check_communicating
-    def is_beamformer_running(self: TileComponentManager) -> Optional[bool]:
+    def is_beamformer_running(self: TileComponentManager) -> bool | None:
         """
         Check if the beamformer is running.
 
@@ -4133,7 +4131,7 @@ class TileComponentManager(
 
     @property
     @check_communicating
-    def arp_table(self: TileComponentManager) -> Optional[dict[int, list[int]]]:
+    def arp_table(self: TileComponentManager) -> dict[int, list[int]] | None:
         """
         Check that ARP table has been populated in for all used cores 40G interfaces.
 
@@ -4152,7 +4150,7 @@ class TileComponentManager(
 
     @property
     @check_communicating
-    def pending_data_requests(self: TileComponentManager) -> Optional[bool]:
+    def pending_data_requests(self: TileComponentManager) -> bool | None:
         """
         Check for pending data requests.
 
@@ -4231,7 +4229,7 @@ class TileComponentManager(
         pulse_code: int,
         amplitude_pulse: float,
         delays: list[float] | None = None,
-        load_time: Optional[str] = None,
+        load_time: str | None = None,
     ) -> None:
         """
         Test generator setting.

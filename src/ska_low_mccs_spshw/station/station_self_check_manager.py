@@ -6,11 +6,12 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of self check procedures for a station."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from .tests import (
     BaseDaqTest,
@@ -121,7 +122,7 @@ class SpsStationSelfCheckManager:
         start_time = time.time()
         for test_no, tpm_test in enumerate(self._tpm_tests.values()):
             test_results[test_no], test_log = tpm_test.run_test()
-            self._test_logs += f"\n{'#'*5} {tpm_test.__class__.__name__} {'#'*5}\n"
+            self._test_logs += f"\n{'#' * 5} {tpm_test.__class__.__name__} {'#' * 5}\n"
             self._test_logs += test_log
             self._update_report(
                 test_result=test_results[test_no],
@@ -148,7 +149,7 @@ class SpsStationSelfCheckManager:
         tpm_test = self._tpm_tests[test_name]
         for test_run in range(count):
             test_results[test_run], test_log = tpm_test.run_test()
-            self._test_logs += f"\n{'#'*5} {test_name} {'#'*5}\n"
+            self._test_logs += f"\n{'#' * 5} {test_name} {'#' * 5}\n"
             self._test_logs += test_log
             self._update_report(
                 test_result=test_results[test_run],
@@ -161,7 +162,7 @@ class SpsStationSelfCheckManager:
     def _generate_report(
         self: SpsStationSelfCheckManager,
         test_results: list[TestResult],
-        duration: Optional[float] = None,
+        duration: float | None = None,
     ) -> None:
         """
         Generate test report.
@@ -198,7 +199,7 @@ class SpsStationSelfCheckManager:
     def _update_report(
         self: SpsStationSelfCheckManager, test_result: TestResult, test_name: str
     ) -> None:
-        self._test_report += f"Test: {test_name}," f" Result: {test_result.name}\n"
+        self._test_report += f"Test: {test_name}, Result: {test_result.name}\n"
 
     @property
     def keep_test_data(self) -> bool:

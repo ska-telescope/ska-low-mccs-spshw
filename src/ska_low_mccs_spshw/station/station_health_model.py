@@ -6,9 +6,10 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of a health model for a station."""
+
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
@@ -28,7 +29,7 @@ class SpsStationHealthModel(BaseHealthModel):
         tile_fqdns: Sequence[str],
         wren_fqdn: str,
         health_changed_callback: HealthChangedCallbackProtocol,
-        thresholds: Optional[dict[str, float]] = None,
+        thresholds: dict[str, float] | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -41,13 +42,13 @@ class SpsStationHealthModel(BaseHealthModel):
             health state.
         :param thresholds: the threshold parameters for the health rules
         """
-        self._tile_health: dict[str, Optional[HealthState]] = {
+        self._tile_health: dict[str, HealthState | None] = {
             tile_fqdn: HealthState.UNKNOWN for tile_fqdn in tile_fqdns
         }
-        self._subrack_health: dict[str, Optional[HealthState]] = {
+        self._subrack_health: dict[str, HealthState | None] = {
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
-        self._wren_health: dict[str, Optional[HealthState]] = (
+        self._wren_health: dict[str, HealthState | None] = (
             {wren_fqdn: HealthState.UNKNOWN} if wren_fqdn else {}
         )
 
@@ -58,7 +59,7 @@ class SpsStationHealthModel(BaseHealthModel):
     def subrack_health_changed(
         self: SpsStationHealthModel,
         subrack_fqdn: str,
-        subrack_health: Optional[HealthState],
+        subrack_health: HealthState | None,
     ) -> None:
         """
         Handle a change in subrack health.
@@ -75,7 +76,7 @@ class SpsStationHealthModel(BaseHealthModel):
     def tile_health_changed(
         self: SpsStationHealthModel,
         tile_fqdn: str,
-        tile_health: Optional[HealthState],
+        tile_health: HealthState | None,
     ) -> None:
         """
         Handle a change in tile health.
@@ -92,7 +93,7 @@ class SpsStationHealthModel(BaseHealthModel):
     def wren_health_changed(
         self,
         wren_fqdn: str,
-        wren_health: Optional[HealthState],
+        wren_health: HealthState | None,
     ) -> None:
         """
         Handle a change in WREN health.

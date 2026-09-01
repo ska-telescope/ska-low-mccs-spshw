@@ -7,10 +7,11 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for power marshallers."""
+
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager

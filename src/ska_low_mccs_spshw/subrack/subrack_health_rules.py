@@ -7,9 +7,10 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """A file to store health transition rules for subrack."""
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from ska_control_model import HealthState, PowerState
@@ -72,7 +73,7 @@ class SubrackHealthRules(HealthRules):
         self: SubrackHealthRules,
         fan_speeds: list[float],
         scaled_fan_speeds: list[float],
-        desired_fan_speeds: Optional[list[float]],
+        desired_fan_speeds: list[float] | None,
         rule_str: str,
     ) -> tuple[bool, str]:
         """

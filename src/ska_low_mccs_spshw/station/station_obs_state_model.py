@@ -6,10 +6,11 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of an observation state model for a station."""
+
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from ska_control_model import ObsState
 
@@ -65,7 +66,7 @@ class SpsStationObsStateModel:
 
     def _evaluate_obs_state(
         self: SpsStationObsStateModel,
-    ) -> Optional[ObsState]:
+    ) -> ObsState | None:
         """
         Return the evaluated observation state of the station.
 

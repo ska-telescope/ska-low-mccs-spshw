@@ -6,9 +6,10 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module provides a HTTP server that acts as front end to a subrack."""
+
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
@@ -27,7 +28,7 @@ class SubrackProtocol(Protocol):
     """
 
     def execute_command(
-        self: SubrackProtocol, name: str, argument: Optional[JsonSerializable]
+        self: SubrackProtocol, name: str, argument: JsonSerializable | None
     ) -> JsonSerializable:
         """
         Execute a command on the subrack hardware/simulator.

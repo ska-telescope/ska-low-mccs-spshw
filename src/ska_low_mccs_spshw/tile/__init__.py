@@ -12,24 +12,23 @@ It includes an operational Tango device, a demonstrator Tango device,
 modules for driving and simulating TPM hardware, and a CLI.
 """
 
-
 __all__ = [
-    "TileData",
-    "TileTime",
-    "MccsTile",
-    "TileComponentManager",
-    "TileHealthModel",
     "DemoTile",
-    "DynamicValuesUpdater",
-    "DynamicValuesGenerator",
-    "TileSimulator",
     "DynamicTileSimulator",
-    "TpmStatus",
-    "demo_tile_device",
-    "MockTpm",
-    "TileRequestProvider",
+    "DynamicValuesGenerator",
+    "DynamicValuesUpdater",
     "FirmwareThresholds",
     "FirmwareThresholdsDbAdapter",
+    "MccsTile",
+    "MockTpm",
+    "TileComponentManager",
+    "TileData",
+    "TileHealthModel",
+    "TileRequestProvider",
+    "TileSimulator",
+    "TileTime",
+    "TpmStatus",
+    "demo_tile_device",
     # "plugins",
 ]
 

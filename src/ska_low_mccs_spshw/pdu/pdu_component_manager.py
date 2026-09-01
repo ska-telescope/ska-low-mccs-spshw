@@ -6,11 +6,12 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for PDUs."""
+
 from __future__ import annotations
 
 import json
 import logging
-from typing import Callable, Optional, Sequence
+from collections.abc import Callable, Sequence
 
 from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import DeviceComponentManager
@@ -93,7 +94,7 @@ class PduComponentManager(SNMPComponentManager):
         component_state_callback: Callable[..., None],
         attributes: Sequence[SNMPAttrInfo],
         poll_rate: float,
-        power_marshaller_trl: Optional[str],
+        power_marshaller_trl: str | None,
     ) -> None:
         """
         Initialise a new instance.

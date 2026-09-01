@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements data handlers for the test data received."""
+
 from __future__ import annotations
 
 import abc
@@ -14,7 +15,7 @@ import os
 import threading
 import time
 import traceback
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 from ska_low_mccs_daq.pydaq.persisters import (  # type: ignore
@@ -82,7 +83,7 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
                 self._data_created_callback(data=self.data)
                 self.reset()
             except Exception as e:  # pylint: disable=broad-exception-caught
-                self._logger.error(f"Got error in callback: {repr(e)}, {e}")
+                self._logger.error(f"Got error in callback: {e!r}, {e}")
                 self._logger.error(traceback.format_exc())
 
     def reset(self: BaseDataReceivedHandler) -> None:

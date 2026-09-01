@@ -6,8 +6,9 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements a class for recording intermediate healths for MccsTile."""
+
+from collections.abc import Callable
 from logging import Logger
-from typing import Callable
 
 from ska_control_model import HealthState
 from ska_low_mccs_common import HealthRecorder

@@ -10,7 +10,8 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import sys
-from typing import Any, Callable, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState
@@ -64,7 +65,7 @@ class PowerMarshaller(MccsBaseDevice):
         try:
             super().init_device()
             self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-            device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+            device_name = f"{str(self.__class__).rsplit('.', maxsplit=1)[-1][0:-2]}"
             version = f"{device_name} Software Version: {self._version_id}"
             properties = f"Initialised {device_name}"
             version_info = f"{self.__class__.__name__}, {self._build_state}"

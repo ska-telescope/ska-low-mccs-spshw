@@ -10,12 +10,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import tango
 from tango import DevFailed
 
-__all__ = ["raise_for_group_failures", "group_write_attribute", "group_command"]
+__all__ = ["group_command", "group_write_attribute", "raise_for_group_failures"]
 
 
 def raise_for_group_failures(
@@ -104,7 +104,7 @@ def group_write_attribute(
 def _prepare_group_command(
     arg: Any,
     multi: bool = False,
-    arg_type: Optional[tango.CmdArgType] = None,
+    arg_type: tango.CmdArgType | None = None,
 ) -> Any:
     """Prepare a command argument for ``Group.command_inout``.
 
@@ -144,7 +144,7 @@ def group_command(
     arg: Any = None,
     *,
     multi: bool = False,
-    arg_type: Optional[tango.CmdArgType] = None,
+    arg_type: tango.CmdArgType | None = None,
 ) -> list[Any]:
     """
     Run a command on every device in ``group``, in parallel.

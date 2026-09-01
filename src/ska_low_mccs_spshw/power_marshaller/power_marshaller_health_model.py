@@ -5,9 +5,10 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE.txt for more info.
 """An implementation of a health model for the power marshaller."""
+
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from ska_low_mccs_common.health import BaseHealthModel
 

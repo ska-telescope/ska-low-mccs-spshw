@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """This module provides a flexible test harness for testing Tango devices."""
+
 from __future__ import annotations
 
 import time
 import unittest.mock
+from collections.abc import Callable, Iterable
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Any
 
 import tango
 from ska_control_model import LoggingLevel, SimulationMode, TestMode
@@ -226,7 +228,7 @@ class SpsTangoTestHarnessContext:
             except tango.DevFailed as dev_failed:
                 print(
                     f"Device {device_name} raised DevFailed on state() call:\n"
-                    f"{repr(dev_failed)}."
+                    f"{dev_failed!r}."
                 )
         raise RuntimeError(f"Device {device_name} failed readiness.")
 

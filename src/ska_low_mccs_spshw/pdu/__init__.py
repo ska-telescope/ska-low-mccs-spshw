@@ -7,9 +7,9 @@
 """This subpackage implements pdu functionality for MCCS."""
 
 __all__ = [
-    "PduHealthModel",
     "MccsPdu",
     "PduComponentManager",
+    "PduHealthModel",
 ]  # , "PduSimulator"]
 
 

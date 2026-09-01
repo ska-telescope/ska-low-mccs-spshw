@@ -7,7 +7,6 @@
 # See LICENSE for more info.
 """This file contains a script for checking if the calendar is booked."""
 
-
 import argparse
 import sys
 

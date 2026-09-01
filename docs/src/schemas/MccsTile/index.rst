@@ -16,6 +16,7 @@ These schemas are for use with MccsTile commands
   MccsTile_ConfigureStationBeamformer
   MccsTile_ConfigureTestGenerator
   MccsTile_Get40gCoreConfiguration
+  MccsTile_LoadScanId
   MccsTile_SendDataSamples
   MccsTile_SetCspDownload
   MccsTile_SetCurrentWarningThresholds

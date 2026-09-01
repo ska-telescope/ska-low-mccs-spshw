@@ -1,8 +1,8 @@
-======================================
-MccsTile ConfigureTestGenerator schema
-======================================
+=========================================
+MccsTile ConfigurePatternGenerator schema
+=========================================
 
-Schema for MccsTile's ConfigureTestGenerator command
+Schema for MccsTile's ConfigurePatternGenerator command
 
 **********
 Properties

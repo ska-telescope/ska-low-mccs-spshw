@@ -22,11 +22,11 @@ __version_info__ = str(
 ).replace("'", "")
 
 __all__ = [
+    "MccsPdu",
     "MccsSubrack",
     "MccsTile",
-    "SpsStation",
-    "MccsPdu",
     "PowerMarshaller",
+    "SpsStation",
     "version",
 ]
 

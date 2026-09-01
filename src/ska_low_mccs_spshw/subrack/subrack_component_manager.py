@@ -6,13 +6,15 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for subracks."""
+
 from __future__ import annotations
 
 import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Optional, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.communication_manager import CommunicationManager
@@ -245,7 +247,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         command_update_rate: float = 20.0,
         max_fan_errors: int = 5,
         max_fan_delta: float = 25,
-        _driver: Optional[SubrackDriver] = None,
+        _driver: SubrackDriver | None = None,
         _initial_power_state: PowerState = PowerState.ON,
         _initial_fail: bool = False,
     ) -> None:
@@ -422,7 +424,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def _pdu_state_changed(
         self: SubrackComponentManager,
         fqdn: str,
-        power: Optional[PowerState] = None,
+        power: PowerState | None = None,
         **state_change: Any,
     ) -> None:
         """
@@ -442,7 +444,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def turn_off_tpm(
         self: SubrackComponentManager,
         tpm_number: int,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a TPM off.
@@ -458,7 +460,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def turn_on_tpm(
         self: SubrackComponentManager,
         tpm_number: int,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a TPM on.
@@ -472,7 +474,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
     def turn_off_tpms(
-        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager, task_callback: Callable | None = None
     ) -> None:
         """
         Turn all TPMs off.
@@ -485,7 +487,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
     def turn_on_tpms(
-        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager, task_callback: Callable | None = None
     ) -> None:
         """
         Turn all TPMs on.
@@ -498,7 +500,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         )
 
     def get_health_status(
-        self: SubrackComponentManager, task_callback: Optional[Callable] = None
+        self: SubrackComponentManager, task_callback: Callable | None = None
     ) -> None:
         """
         Read all the monitoring points available in health status.
@@ -523,7 +525,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_health_state(
         self: SubrackComponentManager,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get PDU health.
 
@@ -536,7 +538,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_model(
         self: SubrackComponentManager,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get PDU model type.
 
@@ -549,7 +551,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_number_of_ports(
         self: SubrackComponentManager,
-    ) -> Optional[int]:
+    ) -> int | None:
         """
         Get number of pdu ports .
 
@@ -563,8 +565,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def power_pdu_port_on(
         self: SubrackComponentManager,
         port_number: int,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Turn a pdu port on.
@@ -585,8 +587,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     def power_pdu_port_off(
         self: SubrackComponentManager,
         port_number: int,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Turn a pdu port off.
@@ -606,7 +608,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_port_currents(
         self: SubrackComponentManager,
-    ) -> Optional[list[float]]:
+    ) -> list[float] | None:
         """
         Get the currents for a pdu port.
 
@@ -623,7 +625,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_port_voltages(
         self: SubrackComponentManager,
-    ) -> Optional[list[float]]:
+    ) -> list[float] | None:
         """
         Get the voltages for a pdu port.
 
@@ -640,7 +642,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_port_states(
         self: SubrackComponentManager,
-    ) -> Optional[list[int]]:
+    ) -> list[int] | None:
         """
         Get the states for a pdu port.
 
@@ -656,8 +658,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def schedule_on(
         self: SubrackComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Schedule self on.
@@ -681,8 +683,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def schedule_off(
         self: SubrackComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Turn self off.
@@ -708,7 +710,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         fan_number: int,
         speed: float,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Set the target speed of a subrack fan.
@@ -726,7 +728,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         fan_number: int,
         mode: FanMode,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Set the target speed mode of a subrack fan.
@@ -744,7 +746,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self: SubrackComponentManager,
         fan_number: int,
         speed: float,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Set the target speed of a power supply fan.

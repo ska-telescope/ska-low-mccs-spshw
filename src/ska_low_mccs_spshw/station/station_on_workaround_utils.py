@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This file contains temporary helper utilities for station on workaround."""
+
 # Unfortunately incompatibility in dependencies means we can't import
 # from aiv utils so we're making this code smell until the workaround is
 # no longer needed.
@@ -18,9 +19,10 @@ import queue
 import re
 import time
 from collections import Counter, defaultdict
+from collections.abc import Generator, Iterator
 from functools import partial
 from inspect import getfullargspec
-from typing import Any, Generator
+from typing import Any
 
 import backoff
 import numpy as np
@@ -112,7 +114,7 @@ def _yield_attr_values(
 
 # pylint: disable=too-many-branches,no-value-for-parameter,too-many-statements
 # pylint: disable=too-many-arguments,too-many-locals
-def wait_for(  # noqa: C901
+def wait_for(
     devs: DeviceProxy | list[DeviceProxy],
     attr: str,
     desired_value: Any,
@@ -237,7 +239,7 @@ def wait_for(  # noqa: C901
             exc = ValueError(
                 f"After {timeout}s, attribute {attr} " + ", and ".join(errs)
             )
-            setattr(exc, "failed_devices", devs_left.union(devs_failed))
+            exc.failed_devices = devs_left.union(devs_failed)  # type: ignore[attr-defined]
             raise exc from None  # the queue.Empty is not useful information, drop it
 
 
@@ -306,7 +308,7 @@ def restart_devices(devs: list[DeviceProxy], force_restartserver: bool = False) 
                 dev_trl_map[trl].Init()
 
 
-class group(Group):  # noqa: N801 pylint: disable=invalid-name
+class group(Group):
     """Like a tango.Group, but iterable, and sets source and timeout."""
 
     def get_device(self, name_or_index: Any) -> DeviceProxy:
@@ -315,7 +317,7 @@ class group(Group):  # noqa: N801 pylint: disable=invalid-name
         proxy.set_source(DevSource.DEV)
         return proxy
 
-    def __iter__(self) -> Generator[DeviceProxy, None, None]:
+    def __iter__(self) -> Iterator[DeviceProxy]:
         # pylint: disable=no-member
         return (self.get_device(trl) for trl in self.get_device_list())
 
@@ -327,8 +329,8 @@ def ensure_tpms_on(tpms: list[DeviceProxy]) -> None:
 
     :param tpms: list of TPM DeviceProxies
     """
-    INIT_STATES = {"Initialised", "Synchronised"}  # noqa: N806
-    ON_STATES = {DevState.ON, DevState.ALARM}  # noqa: N806
+    INIT_STATES = {"Initialised", "Synchronised"}
+    ON_STATES = {DevState.ON, DevState.ALARM}
 
     def power_via_subrack(tpm: DeviceProxy, on: bool) -> None:
         subrack_trl = single_prop(tpm, "SubrackFQDN")

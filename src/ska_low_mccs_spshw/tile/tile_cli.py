@@ -12,7 +12,8 @@ from __future__ import annotations  # allow forward references in type hints
 import functools
 import json
 import types
-from typing import Any, Callable, Optional, Type
+from collections.abc import Callable
+from typing import Any
 
 import tango
 from fire import Fire
@@ -30,7 +31,7 @@ class CliMeta(type):
     # pylint wants this to be "mcs" but the flake8 pep8-naming plugin disagrees.
     # pylint: disable-next=bad-mcs-classmethod-argument
     def __new__(
-        cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
+        cls: type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
     ) -> CliMeta:
         """
         Class constructor.
@@ -44,11 +45,11 @@ class CliMeta(type):
         for attr_name, attr_value in attrs.items():
             if isinstance(attr_value, types.FunctionType):
                 attrs[attr_name] = cls.fire_except(attr_value)
-        return super(CliMeta, cls).__new__(cls, name, bases, attrs)
+        return super().__new__(cls, name, bases, attrs)
 
     # pylint wants this to be "mcs" but the flake8 pep8-naming plugin disagrees.
     @classmethod  # pylint: disable-next=bad-mcs-classmethod-argument
-    def fire_except(cls: Type[CliMeta], method: Callable) -> Callable:
+    def fire_except(cls: type[CliMeta], method: Callable) -> Callable:
         """
         Wrap the method to handle exceptions.
 
@@ -148,7 +149,7 @@ class MccsTileCli(metaclass=CliMeta):
         """
         return self._dp.subarrayId
 
-    def logginglevel(self: MccsTileCli, level: Optional[str] = None) -> str:
+    def logginglevel(self: MccsTileCli, level: str | None = None) -> str:
         """
         Get and/or set the logging level of the device.
 
@@ -165,7 +166,7 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def SendBeamData(
         self: MccsTileCli,
-        timestamp: Optional[str] = None,
+        timestamp: str | None = None,
         seconds: float = 0.2,
     ) -> tuple[ResultCode, str]:
         """
@@ -189,10 +190,10 @@ class MccsTileCli(metaclass=CliMeta):
     @command_result_as_string
     def SendChannelisedDataContinuous(
         self: MccsTileCli,
-        channel_id: Optional[int] = None,
+        channel_id: int | None = None,
         num_samples: int = 128,
         wait_seconds: int = 0,
-        timestamp: Optional[str] = None,
+        timestamp: str | None = None,
         seconds: float = 0.2,
     ) -> tuple[ResultCode, str]:
         """
@@ -232,7 +233,7 @@ class MccsTileCli(metaclass=CliMeta):
         num_samples: int = 128,
         first_channel: int = 0,
         last_channel: int = 511,
-        timestamp: Optional[str] = None,
+        timestamp: str | None = None,
         seconds: float = 0.2,
     ) -> tuple[ResultCode, str]:
         """
@@ -262,7 +263,7 @@ class MccsTileCli(metaclass=CliMeta):
     def SendRawData(
         self: MccsTileCli,
         sync: bool = False,
-        timestamp: Optional[str] = None,
+        timestamp: str | None = None,
         seconds: float = 0.2,
     ) -> tuple[ResultCode, str]:
         """

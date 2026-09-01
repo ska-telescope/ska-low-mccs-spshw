@@ -13,7 +13,8 @@ from __future__ import annotations
 import logging
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Final, Optional
+from collections.abc import Callable
+from typing import Any, Final
 
 from fastapi import HTTPException
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -106,8 +107,8 @@ class SubrackDriver(
         # Whether the board is busy running a command. Let's be
         # extremely conservative here and assume that it is until we
         # know that it isn't.
-        self._board_is_busy: Optional[bool] = True
-        self._active_callback: Optional[Callable] = None
+        self._board_is_busy: bool | None = True
+        self._active_callback: Callable | None = None
 
         # Currently, because of inertia, fan rpm and pwm values aren't synced.
         # this means the values will be off for about 5-10 seconds until the
@@ -120,7 +121,7 @@ class SubrackDriver(
         self._write_lock = threading.Lock()
 
         self._commands_to_execute: OrderedDict[
-            str, tuple[str, str, Optional[Callable]]
+            str, tuple[str, str, Callable | None]
         ] = OrderedDict()
 
         self._attributes_to_write: dict[str, Any] = {}
@@ -193,7 +194,7 @@ class SubrackDriver(
                 self._push_communication_state_update(communication_state)
 
     def off(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
@@ -207,7 +208,7 @@ class SubrackDriver(
         raise NotImplementedError("The device cannot be turned off or on.")
 
     def standby(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
@@ -221,7 +222,7 @@ class SubrackDriver(
         raise NotImplementedError("The device cannot be put into standby mode.")
 
     def on(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
@@ -235,7 +236,7 @@ class SubrackDriver(
         raise NotImplementedError("The device cannot be turned off or on.")
 
     def reset(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
@@ -251,7 +252,7 @@ class SubrackDriver(
     def power_pdu_port_on(
         self: SubrackDriver,
         port_number: int,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a pdu port on.
@@ -265,7 +266,7 @@ class SubrackDriver(
     def power_pdu_port_off(
         self: SubrackDriver,
         port_number: int,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a pdu port off.
@@ -280,7 +281,7 @@ class SubrackDriver(
         self: SubrackDriver,
         pdu_port_number: int,
         is_turn_on: bool,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a pdu port off or on.
@@ -322,7 +323,7 @@ class SubrackDriver(
     def turn_off_tpm(
         self: SubrackDriver,
         tpm_number: int,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a TPM off.
@@ -336,7 +337,7 @@ class SubrackDriver(
     def turn_on_tpm(
         self: SubrackDriver,
         tpm_number: int,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a TPM on.
@@ -348,7 +349,7 @@ class SubrackDriver(
         self._turn_off_on_tpm(tpm_number, True, task_callback)
 
     def turn_off_tpms(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> None:
         """
         Turn all TPMs off.
@@ -359,7 +360,7 @@ class SubrackDriver(
         self._turn_off_on_tpm(0, False, task_callback)
 
     def turn_on_tpms(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> None:
         """
         Turn all TPMs on.
@@ -373,7 +374,7 @@ class SubrackDriver(
         self: SubrackDriver,
         tpm_number: int,
         is_turn_on: bool,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Turn a TPM off or on.
@@ -420,7 +421,7 @@ class SubrackDriver(
             )
 
     def get_health_status(
-        self: SubrackDriver, task_callback: Optional[Callable] = None
+        self: SubrackDriver, task_callback: Callable | None = None
     ) -> None:
         """
         Read all the monitoring points available in health status.
@@ -432,8 +433,8 @@ class SubrackDriver(
 
     def _get_health_status(
         self: SubrackDriver,
-        monitoring_points: Optional[str] = None,
-        task_callback: Optional[Callable] = None,
+        monitoring_points: str | None = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Read a group of monitoring points.
@@ -467,7 +468,7 @@ class SubrackDriver(
         self: SubrackDriver,
         fan_number: int,
         speed: float,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Set the target speed of a subrack fan.
@@ -499,7 +500,7 @@ class SubrackDriver(
         self: SubrackDriver,
         fan_number: int,
         mode: FanMode,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Set the target speed mode of a subrack fan.
@@ -531,7 +532,7 @@ class SubrackDriver(
         self: SubrackDriver,
         fan_number: int,
         speed: float,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> None:
         """
         Set the target speed of a power supply fan.
@@ -649,10 +650,13 @@ class SubrackDriver(
                 return poll_request
 
             if self._commands_to_execute:
-                _, (
-                    name,
-                    args,
-                    self._active_callback,
+                (
+                    _,
+                    (
+                        name,
+                        args,
+                        self._active_callback,
+                    ),
                 ) = self._commands_to_execute.popitem(last=False)
 
                 self.logger.debug(f"Adding command: {name}({args}).")

@@ -10,7 +10,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Any, Optional
+from typing import Any
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
@@ -37,7 +37,7 @@ class TileHealthModel(BaseHealthModel):
         hw_version: str,
         bios_version: str,
         preadu_presence: list[bool],
-        thresholds: Optional[dict[str, Any]] = None,
+        thresholds: dict[str, Any] | None = None,
     ) -> None:
         """
         Initialise a new instance.

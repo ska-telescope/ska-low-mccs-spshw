@@ -7,9 +7,9 @@
 """This subpackage implements power marshaller functionality for MCCS."""
 
 __all__ = [
-    "PowerMarshallerHealthModel",
     "PowerMarshaller",
     "PowerMarshallerComponentManager",
+    "PowerMarshallerHealthModel",
 ]
 
 from .power_marshaller_component_manager import PowerMarshallerComponentManager

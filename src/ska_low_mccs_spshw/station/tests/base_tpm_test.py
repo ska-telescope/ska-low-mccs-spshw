@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of self check procedures for a station."""
+
 from __future__ import annotations
 
 import abc
@@ -165,7 +166,7 @@ class TpmSelfCheckTest(abc.ABC):
             result = TestResult.PASSED
         except Exception as e:  # pylint: disable=broad-except
             error_traceback = traceback.format_exc()
-            self.test_logger.error(f"{repr(e)} : {error_traceback}")
+            self.test_logger.error(f"{e!r} : {error_traceback}")
             if isinstance(e, AssertionError):
                 result = TestResult.FAILED
             else:

@@ -19,11 +19,12 @@ import sys
 import threading
 import warnings
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
-from typing import Any, Callable, Final, NoReturn, Optional, cast
+from typing import Any, Final, NoReturn, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -1166,7 +1167,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        device_name = f"{str(self.__class__).rsplit('.', maxsplit=1)[-1][0:-2]}"
         version = f"{device_name} Software Version: {self._version_id}"
         properties = (
             f"Initialised {device_name} device with properties:\n"
@@ -1235,9 +1236,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if self.UseAttributesForHealth:
             if self._intermediate_healths[group] != health:
-                self.logger.info(
-                    "Intermediate Health changed ==> " f"{group=} {health=}"
-                )
+                self.logger.info(f"Intermediate Health changed ==> {group=} {health=}")
                 self._intermediate_healths[group] = health
 
     def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
@@ -1481,10 +1480,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                         self._attribute_state[tango_name].update(attribute_value)
 
                 except KeyError as e:
-                    self.logger.error(f"Key Error {repr(e)}")
+                    self.logger.error(f"Key Error {e!r}")
                 except Exception as e:  # pylint: disable=broad-except
                     self.logger.error(
-                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                        f"Caught unexpected exception {attribute_name=}: {e!r}"
                     )
 
     # TODO: Upstream this interface change to SKABaseDevice
@@ -1571,9 +1570,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
-            self.status_information[
-                "firmware_configuration_status"
-            ] = self.db_configuration_fault[1]
+            self.status_information["firmware_configuration_status"] = (
+                self.db_configuration_fault[1]
+            )
 
         # Extract current effective flags
         cm_fault = self.component_manager_fault
@@ -1681,7 +1680,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # These converters added in skb-520 can be implemented
                 # now that skb-609 is fixed.
                 self.logger.error(
-                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                    f"Caught unexpected exception {attribute_name=}: {e!r}"
                 )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
@@ -1722,7 +1721,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.execute_Off()
             except Exception as e:  # pylint: disable=broad-except
                 self.logger.error(
-                    f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
+                    f"Unable to read shutdown attribute ALARM status : {e!r}, "
                     "Shutting down TPM."
                 )
                 self.execute_Off()
@@ -1829,7 +1828,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    boardTemperature = attribute_from_signal(  # noqa: N815
+    boardTemperature = attribute_from_signal(
         board_temperature_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -3161,7 +3160,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.UseAttributesForHealth
 
-    temperatureADC0 = attribute_from_signal(  # noqa: N815
+    temperatureADC0 = attribute_from_signal(
         temperature_adc0_signal,
         dtype="DevFloat",
         label="ADC 0",
@@ -3173,7 +3172,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 0 temperature in degrees Celsius.",
     )
 
-    temperatureADC1 = attribute_from_signal(  # noqa: N815
+    temperatureADC1 = attribute_from_signal(
         temperature_adc1_signal,
         dtype="DevFloat",
         label="ADC 1",
@@ -3185,7 +3184,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 1 temperature in degrees Celsius.",
     )
 
-    temperatureADC2 = attribute_from_signal(  # noqa: N815
+    temperatureADC2 = attribute_from_signal(
         temperature_adc2_signal,
         dtype="DevFloat",
         label="ADC 2",
@@ -3197,7 +3196,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 2 temperature in degrees Celsius.",
     )
 
-    temperatureADC3 = attribute_from_signal(  # noqa: N815
+    temperatureADC3 = attribute_from_signal(
         temperature_adc3_signal,
         dtype="DevFloat",
         label="ADC 3",
@@ -3209,7 +3208,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 3 temperature in degrees Celsius.",
     )
 
-    temperatureADC4 = attribute_from_signal(  # noqa: N815
+    temperatureADC4 = attribute_from_signal(
         temperature_adc4_signal,
         dtype="DevFloat",
         label="ADC 4",
@@ -3221,7 +3220,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 4 temperature in degrees Celsius.",
     )
 
-    temperatureADC5 = attribute_from_signal(  # noqa: N815
+    temperatureADC5 = attribute_from_signal(
         temperature_adc5_signal,
         dtype="DevFloat",
         label="ADC 5",
@@ -3233,7 +3232,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 5 temperature in degrees Celsius.",
     )
 
-    temperatureADC6 = attribute_from_signal(  # noqa: N815
+    temperatureADC6 = attribute_from_signal(
         temperature_adc6_signal,
         dtype="DevFloat",
         label="ADC 6",
@@ -3245,7 +3244,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 6 temperature in degrees Celsius.",
     )
 
-    temperatureADC7 = attribute_from_signal(  # noqa: N815
+    temperatureADC7 = attribute_from_signal(
         temperature_adc7_signal,
         dtype="DevFloat",
         label="ADC 7",
@@ -3257,7 +3256,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 7 temperature in degrees Celsius.",
     )
 
-    temperatureADC8 = attribute_from_signal(  # noqa: N815
+    temperatureADC8 = attribute_from_signal(
         temperature_adc8_signal,
         dtype="DevFloat",
         label="ADC 8",
@@ -3269,7 +3268,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 8 temperature in degrees Celsius.",
     )
 
-    temperatureADC9 = attribute_from_signal(  # noqa: N815
+    temperatureADC9 = attribute_from_signal(
         temperature_adc9_signal,
         dtype="DevFloat",
         label="ADC 9",
@@ -3281,7 +3280,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 9 temperature in degrees Celsius.",
     )
 
-    temperatureADC10 = attribute_from_signal(  # noqa: N815
+    temperatureADC10 = attribute_from_signal(
         temperature_adc10_signal,
         dtype="DevFloat",
         label="ADC 10",
@@ -3293,7 +3292,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 10 temperature in degrees Celsius.",
     )
 
-    temperatureADC11 = attribute_from_signal(  # noqa: N815
+    temperatureADC11 = attribute_from_signal(
         temperature_adc11_signal,
         dtype="DevFloat",
         label="ADC 11",
@@ -3305,7 +3304,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 11 temperature in degrees Celsius.",
     )
 
-    temperatureADC12 = attribute_from_signal(  # noqa: N815
+    temperatureADC12 = attribute_from_signal(
         temperature_adc12_signal,
         dtype="DevFloat",
         label="ADC 12",
@@ -3317,7 +3316,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 12 temperature in degrees Celsius.",
     )
 
-    temperatureADC13 = attribute_from_signal(  # noqa: N815
+    temperatureADC13 = attribute_from_signal(
         temperature_adc13_signal,
         dtype="DevFloat",
         label="ADC 13",
@@ -3329,7 +3328,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 13 temperature in degrees Celsius.",
     )
 
-    temperatureADC14 = attribute_from_signal(  # noqa: N815
+    temperatureADC14 = attribute_from_signal(
         temperature_adc14_signal,
         dtype="DevFloat",
         label="ADC 14",
@@ -3341,7 +3340,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 14 temperature in degrees Celsius.",
     )
 
-    temperatureADC15 = attribute_from_signal(  # noqa: N815
+    temperatureADC15 = attribute_from_signal(
         temperature_adc15_signal,
         dtype="DevFloat",
         label="ADC 15",
@@ -3975,7 +3974,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["firmwareVersion"].read()
 
-    isProgrammed = attribute_from_signal(  # noqa: N815
+    isProgrammed = attribute_from_signal(
         is_programmed_signal,
         dtype="DevBoolean",
         doc="whether or not the board is programmed",
@@ -4111,7 +4110,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    fpga1Temperature = attribute_from_signal(  # noqa: N815
+    fpga1Temperature = attribute_from_signal(
         fpga1_temperature_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -4121,7 +4120,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Temperature of FPGA 1 in degrees Celsius.",
     )
 
-    fpga2Temperature = attribute_from_signal(  # noqa: N815
+    fpga2Temperature = attribute_from_signal(
         fpga2_temperature_signal,
         dtype="DevFloat",
         abs_change=0.2,
@@ -4131,7 +4130,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Temperature of FPGA 2 in degrees Celsius.",
     )
 
-    fpgasUnixTime = attribute_from_signal(  # noqa: N815
+    fpgasUnixTime = attribute_from_signal(
         fpgas_time_signal,
         dtype=("DevLong",),
         max_dim_x=2,
@@ -4141,19 +4140,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="the time for FPGAs",
     )
 
-    fpgaTime = attribute_from_signal(  # noqa: N815
+    fpgaTime = attribute_from_signal(
         fpga_time_signal,
         dtype="DevString",
         doc="the FPGA internal time, in UTC format",
     )
 
-    fpgaReferenceTime = attribute_from_signal(  # noqa: N815
+    fpgaReferenceTime = attribute_from_signal(
         fpga_reference_time_signal,
         dtype="DevString",
         doc="the FPGA synchronization timestamp, in UTC format",
     )
 
-    fpgaFrameTime = attribute_from_signal(  # noqa: N815
+    fpgaFrameTime = attribute_from_signal(
         fpga_frame_time_signal,
         dtype="DevString",
         doc="the FPGA synchronization timestamp, in UTC format",
@@ -4183,14 +4182,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self._antenna_ids = list(antenna_ids)
 
-    fortyGbDestinationIps = attribute_from_signal(  # noqa: N815
+    fortyGbDestinationIps = attribute_from_signal(
         forty_gb_destination_ips_signal,
         dtype=("DevString",),
         max_dim_x=16,
         doc="the destination IPs for all 40Gb ports on the tile",
     )
 
-    fortyGbDestinationPorts = attribute_from_signal(  # noqa: N815
+    fortyGbDestinationPorts = attribute_from_signal(
         forty_gb_destination_ports_signal,
         dtype=("DevLong",),
         max_dim_x=16,
@@ -4212,7 +4211,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["adcPower"].read()
 
-    currentTileBeamformerFrame = attribute_from_signal(  # noqa: N815
+    currentTileBeamformerFrame = attribute_from_signal(
         current_tile_beamformer_frame_signal,
         dtype="DevLong64",
         abs_change=1,
@@ -4241,7 +4240,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["coreCommunicationStatus"].read()
 
-    currentFrame = attribute_from_signal(  # noqa: N815
+    currentFrame = attribute_from_signal(
         fpga_current_frame_signal,
         dtype="DevLong",
         abs_change=1,
@@ -4252,13 +4251,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
     )
 
-    pendingDataRequests = attribute_from_signal(  # noqa: N815
+    pendingDataRequests = attribute_from_signal(
         pending_data_requests_signal,
         dtype="DevBoolean",
         doc="whether there are data requests pending",
     )
 
-    isBeamformerRunning = attribute_from_signal(  # noqa: N815
+    isBeamformerRunning = attribute_from_signal(
         is_beamformer_running_signal,
         dtype="DevBoolean",
         doc="whether the beamformer is running",
@@ -4287,7 +4286,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_phase_terminal_count(value)
 
-    ppsDelay = attribute_from_signal(  # noqa: N815
+    ppsDelay = attribute_from_signal(
         pps_delay_signal,
         dtype="DevLong",
         abs_change=1,
@@ -4923,7 +4922,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.integrated_data_transmission_mode
 
-    currentFE0 = attribute_from_signal(  # noqa: N815
+    currentFE0 = attribute_from_signal(
         current_fe0_signal,
         dtype="DevFloat",
         label="FE0 current",
@@ -4935,7 +4934,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE0 current in Amps.",
     )
 
-    currentFE1 = attribute_from_signal(  # noqa: N815
+    currentFE1 = attribute_from_signal(
         current_fe1_signal,
         dtype="DevFloat",
         label="FE1 current",
@@ -4947,7 +4946,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE1 current in Amps.",
     )
 
-    voltageAVDD3 = attribute_from_signal(  # noqa: N815
+    voltageAVDD3 = attribute_from_signal(
         voltage_avdd3_signal,
         dtype="DevFloat",
         label="Analog 2.5 V",
@@ -4961,7 +4960,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Analog 2.5 V voltage in Volts.",
     )
 
-    voltageVrefDDR0 = attribute_from_signal(  # noqa: N815
+    voltageVrefDDR0 = attribute_from_signal(
         voltage_vref_ddr0_signal,
         dtype="DevFloat",
         label="Vref voltage for DDR0",
@@ -4973,7 +4972,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Vref voltage for DDR0 in Volts.",
     )
 
-    voltageVrefDDR1 = attribute_from_signal(  # noqa: N815
+    voltageVrefDDR1 = attribute_from_signal(
         voltage_vref_ddr1_signal,
         dtype="DevFloat",
         label="Vref voltage for DDR1",
@@ -4995,7 +4994,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     """
     #     return self._attribute_state["voltageVref2V5"].read()
 
-    voltageMan1V2 = attribute_from_signal(  # noqa: N815
+    voltageMan1V2 = attribute_from_signal(
         voltage_man1v2_signal,
         dtype="DevFloat",
         label="Management 1.2V",
@@ -5007,7 +5006,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 1.2V voltage in Volts.",
     )
 
-    voltageMGT_AVCC = attribute_from_signal(  # noqa: N815
+    voltageMGT_AVCC = attribute_from_signal(
         voltage_mgt_avcc_signal,
         dtype="DevFloat",
         label="FPGA MGT AV",
@@ -5019,7 +5018,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT AV voltage in Volts.",
     )
 
-    voltageMGT_AVTT = attribute_from_signal(  # noqa: N815
+    voltageMGT_AVTT = attribute_from_signal(
         voltage_mgt_avtt_signal,
         dtype="DevFloat",
         label="FPGA MGT AVTT",
@@ -5031,7 +5030,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT AVTT voltage in Volts.",
     )
 
-    voltageMon5V0 = attribute_from_signal(  # noqa: N815
+    voltageMon5V0 = attribute_from_signal(
         voltage_mon5v0_signal,
         dtype="DevFloat",
         label="Management 5V0",
@@ -5043,7 +5042,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 5V supply of the TPM in Volts.",
     )
 
-    voltageMon3V3 = attribute_from_signal(  # noqa: N815
+    voltageMon3V3 = attribute_from_signal(
         voltage_mon3v3_signal,
         dtype="DevFloat",
         label="Management 3V3",
@@ -5055,7 +5054,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 3.3 V supply of the TPM in Volts.",
     )
 
-    voltageMon1V8 = attribute_from_signal(  # noqa: N815
+    voltageMon1V8 = attribute_from_signal(
         voltage_mon1v8_signal,
         dtype="DevFloat",
         label="Management 1V8",
@@ -5067,7 +5066,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 1.8 V supply of the TPM in Volts.",
     )
 
-    voltageSW_AVDD1 = attribute_from_signal(  # noqa: N815
+    voltageSW_AVDD1 = attribute_from_signal(
         voltage_sw_avdd1_signal,
         dtype="DevFloat",
         label="SW Analog 1.1 V",
@@ -5079,7 +5078,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW Analog 1.1 V voltage in Volts.",
     )
 
-    voltageSW_AVDD2 = attribute_from_signal(  # noqa: N815
+    voltageSW_AVDD2 = attribute_from_signal(
         voltage_sw_avdd2_signal,
         dtype="DevFloat",
         label="SW Analog 2.3 V",
@@ -5091,7 +5090,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW Analog 2.3 V voltage in Volts.",
     )
 
-    voltageVIN = attribute_from_signal(  # noqa: N815
+    voltageVIN = attribute_from_signal(
         voltage_vin_signal,
         dtype="DevFloat",
         label="input supply",
@@ -5103,7 +5102,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Input supply voltage in Volts.",
     )
 
-    voltageVM_AGP0 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP0 = attribute_from_signal(
         voltage_vm_agp0_signal,
         dtype="DevFloat",
         label="AD AGP group 0",
@@ -5115,7 +5114,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 0 voltage in Volts.",
     )
 
-    voltageVM_AGP1 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP1 = attribute_from_signal(
         voltage_vm_agp1_signal,
         dtype="DevFloat",
         label="AD AGP group 1",
@@ -5127,7 +5126,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 1 voltage in Volts.",
     )
 
-    voltageVM_AGP2 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP2 = attribute_from_signal(
         voltage_vm_agp2_signal,
         dtype="DevFloat",
         label="AD AGP group 2",
@@ -5139,7 +5138,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 2 voltage in Volts.",
     )
 
-    voltageVM_AGP3 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP3 = attribute_from_signal(
         voltage_vm_agp3_signal,
         dtype="DevFloat",
         label="AD AGP group 3",
@@ -5151,7 +5150,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 3 voltage in Volts.",
     )
 
-    voltageVM_AGP4 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP4 = attribute_from_signal(
         voltage_vm_agp4_signal,
         dtype="DevFloat",
         label="AD AGP group 4",
@@ -5163,7 +5162,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 4 voltage in Volts.",
     )
 
-    voltageVM_AGP5 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP5 = attribute_from_signal(
         voltage_vm_agp5_signal,
         dtype="DevFloat",
         label="AD AGP group 5",
@@ -5175,7 +5174,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 5 voltage in Volts.",
     )
 
-    voltageVM_AGP6 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP6 = attribute_from_signal(
         voltage_vm_agp6_signal,
         dtype="DevFloat",
         label="AD AGP group 6",
@@ -5187,7 +5186,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 6 voltage in Volts.",
     )
 
-    voltageVM_AGP7 = attribute_from_signal(  # noqa: N815
+    voltageVM_AGP7 = attribute_from_signal(
         voltage_vm_agp7_signal,
         dtype="DevFloat",
         label="AD AGP group 7",
@@ -5199,7 +5198,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 7 voltage in Volts.",
     )
 
-    voltageVM_CLK0B = attribute_from_signal(  # noqa: N815
+    voltageVM_CLK0B = attribute_from_signal(
         voltage_vm_clk0b_signal,
         dtype="DevFloat",
         label="Clock Buffer0 3.3V",
@@ -5211,7 +5210,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Clock Buffer0 3.3V voltage in Volts.",
     )
 
-    voltageVM_CLK1B = attribute_from_signal(  # noqa: N815
+    voltageVM_CLK1B = attribute_from_signal(
         voltage_vm_clk1b_signal,
         dtype="DevFloat",
         label="Clock Buffer1 3.3V",
@@ -5223,7 +5222,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Clock Buffer1 3.3V voltage in Volts.",
     )
 
-    voltageVM_DDR0_VTT = attribute_from_signal(  # noqa: N815
+    voltageVM_DDR0_VTT = attribute_from_signal(
         voltage_vm_ddr0_vtt_signal,
         dtype="DevFloat",
         label="DDR FPGA0 Vtt",
@@ -5235,7 +5234,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR FPGA0 Vtt voltage in Volts.",
     )
 
-    voltageVM_DDR1_VDD = attribute_from_signal(  # noqa: N815
+    voltageVM_DDR1_VDD = attribute_from_signal(
         voltage_vm_ddr1_vdd_signal,
         dtype="DevFloat",
         label="DDR4",
@@ -5247,7 +5246,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR4 voltage in Volts.",
     )
 
-    voltageVM_DDR1_VTT = attribute_from_signal(  # noqa: N815
+    voltageVM_DDR1_VTT = attribute_from_signal(
         voltage_vm_ddr1_vtt_signal,
         dtype="DevFloat",
         label="DDR FPGA1 Vtt",
@@ -5259,7 +5258,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR FPGA1 Vtt voltage in Volts.",
     )
 
-    voltageVM_DRVDD = attribute_from_signal(  # noqa: N815
+    voltageVM_DRVDD = attribute_from_signal(
         voltage_vm_drvdd_signal,
         dtype="DevFloat",
         label="SW DRVDD 1.8V",
@@ -5271,7 +5270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW DRVDD 1.8V voltage in Volts.",
     )
 
-    voltageVM_DVDD = attribute_from_signal(  # noqa: N815
+    voltageVM_DVDD = attribute_from_signal(
         voltage_vm_dvdd_signal,
         dtype="DevFloat",
         label="AD DVDD",
@@ -5283,7 +5282,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD DVDD voltage in Volts.",
     )
 
-    voltageVM_FE0 = attribute_from_signal(  # noqa: N815
+    voltageVM_FE0 = attribute_from_signal(
         voltage_vm_fe0_signal,
         dtype="DevFloat",
         label="FE0",
@@ -5295,7 +5294,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE0 voltage in Volts. PreADU must be on.",
     )
 
-    voltageVM_FE1 = attribute_from_signal(  # noqa: N815
+    voltageVM_FE1 = attribute_from_signal(
         voltage_vm_fe1_signal,
         dtype="DevFloat",
         label="FE1",
@@ -5307,7 +5306,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE1 voltage in Volts. PreADU must be on.",
     )
 
-    voltageVM_MGT0_AUX = attribute_from_signal(  # noqa: N815
+    voltageVM_MGT0_AUX = attribute_from_signal(
         voltage_vm_mgt0_aux_signal,
         dtype="DevFloat",
         label="FPGA MGT0 AUX",
@@ -5319,7 +5318,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT0 AUX voltage in Volts.",
     )
 
-    voltageVM_MGT1_AUX = attribute_from_signal(  # noqa: N815
+    voltageVM_MGT1_AUX = attribute_from_signal(
         voltage_vm_mgt1_aux_signal,
         dtype="DevFloat",
         label="FPGA MGT1 AUX",
@@ -5331,7 +5330,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT1 AUX voltage in Volts.",
     )
 
-    voltageVM_PLL = attribute_from_signal(  # noqa: N815
+    voltageVM_PLL = attribute_from_signal(
         voltage_vm_pll_signal,
         dtype="DevFloat",
         label="ANALOG PLL",
@@ -5343,7 +5342,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ANALOG PLL voltage in Volts.",
     )
 
-    voltageVM_SW_AMP = attribute_from_signal(  # noqa: N815
+    voltageVM_SW_AMP = attribute_from_signal(
         voltage_vm_sw_amp_signal,
         dtype="DevFloat",
         label="VGA DC-DC",
@@ -5512,8 +5511,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @stb.validators.validate_json_args
     def Configure(
         self: MccsTile,
-        antenna_ids: Optional[list[int]] = None,
-        fixed_delays: Optional[list[float]] = None,
+        antenna_ids: list[int] | None = None,
+        fixed_delays: list[float] | None = None,
     ) -> None:
         """
         Configure the tile device attributes.
@@ -5793,14 +5792,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
         core_id: int = 0,
         arp_table_entry: int = 0,
-        source_mac: Optional[int] = None,
-        source_ip: Optional[str] = None,
-        source_port: Optional[int] = None,
-        destination_ip: Optional[str] = None,
-        destination_port: Optional[int] = None,
-        rx_port_filter: Optional[int] = None,
-        netmask: Optional[str] = None,
-        gateway_ip: Optional[str] = None,
+        source_mac: int | None = None,
+        source_ip: str | None = None,
+        source_port: int | None = None,
+        destination_ip: str | None = None,
+        destination_port: int | None = None,
+        rx_port_filter: int | None = None,
+        netmask: str | None = None,
+        gateway_ip: str | None = None,
     ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Configure 40g core_id with specified parameters.
@@ -5918,8 +5917,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         mode: str,
         payload_length: int = 1024,
         destination_ip: str = "10.0.10.1",
-        source_port: Optional[int] = 0xF0D0,
-        destination_port: Optional[int] = 4660,
+        source_port: int | None = 0xF0D0,
+        destination_port: int | None = 4660,
         netmask_40g: str | None = None,
         gateway_40g: str | None = None,
     ) -> stb.type_hints.DevVarLongStringArrayType:
@@ -6128,7 +6127,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.logger.info(information_message)
             except Exception as e:  # pylint: disable=broad-except
                 self.logger.error(
-                    f"Failed to update thresholds for {attribute_name} " f"{repr(e)}"
+                    f"Failed to update thresholds for {attribute_name} {e!r}"
                 )
                 message += f"Attribute {attribute_name} failed to update {e}"
 
@@ -6265,7 +6264,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         regions = []
         total_chan = 0
         for i in range(0, len(argin), 8):
-            region = argin[i : i + 8]  # noqa: E203
+            region = argin[i : i + 8]
             start_channel = region[0]
             if start_channel % 2 != 0:
                 self.logger.error("Start channel in region must be even")
@@ -6594,9 +6593,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @stb.validators.validate_json_args(schema=StartBeamformer_SCHEMA)
     def StartBeamformer(
         self: MccsTile,
-        start_time: Optional[str] = None,
+        start_time: str | None = None,
         duration: int = -1,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
         scan_id: int = 0,
     ) -> stb.type_hints.TaskFunctionType:
         """
@@ -6638,7 +6637,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @stb.long_running_commands.long_running_command
     @stb.validators.validate_json_args(schema=StopBeamformer_SCHEMA)
     def StopBeamformer(
-        self: MccsTile, channel_groups: Optional[list[int]] = None
+        self: MccsTile, channel_groups: list[int] | None = None
     ) -> stb.type_hints.TaskFunctionType:
         """
         Stop the beamformer.
@@ -6824,7 +6823,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @stb.validators.validate_json_args(schema=SendDataSamples_SCHEMA)
     def SendDataSamples(
         self: MccsTile,
-        **kwargs: Optional[Any],
+        **kwargs: Any | None,
     ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Transmit a snapshot containing raw antenna data.
@@ -6916,9 +6915,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @stb.validators.validate_json_args(schema=StartAcquisition_SCHEMA)
     def StartAcquisition(
         self: MccsTile,
-        start_time: Optional[str] = None,
-        global_reference_time: Optional[str] = None,
-        delay: Optional[int] = 2,
+        start_time: str | None = None,
+        global_reference_time: str | None = None,
+        delay: int | None = 2,
     ) -> stb.type_hints.TaskFunctionType:
         """
         Start data acquisition.
@@ -6970,16 +6969,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @stb.validators.validate_json_args(schema=ConfigureTestGenerator_SCHEMA)
     def ConfigureTestGenerator(
         self: MccsTile,
-        set_time: Optional[str] = None,
-        tone_frequency: Optional[float] = None,
-        tone_amplitude: Optional[float] = None,
-        tone_2_frequency: Optional[float] = None,
-        tone_2_amplitude: Optional[float] = None,
-        noise_amplitude: Optional[float] = None,
-        pulse_frequency: Optional[int] = None,
-        pulse_amplitude: Optional[float] = None,
-        adc_channels: Optional[list[int]] = None,
-        **kwargs: Optional[Any],
+        set_time: str | None = None,
+        tone_frequency: float | None = None,
+        tone_amplitude: float | None = None,
+        tone_2_frequency: float | None = None,
+        tone_2_amplitude: float | None = None,
+        noise_amplitude: float | None = None,
+        pulse_frequency: int | None = None,
+        pulse_amplitude: float | None = None,
+        adc_channels: list[int] | None = None,
+        **kwargs: Any | None,
     ) -> stb.type_hints.DevVarLongStringArrayType:
         """
         Set the test signal generator.
@@ -7304,8 +7303,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"
-            f"{'_'*90} \n"
-            f"{' '*29}| \n"
+            f"{'_' * 90} \n"
+            f"{' ' * 29}| \n"
             f"Classification               | "
             f"{info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
             f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
@@ -7314,8 +7313,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"Board External Label         | {info['hardware']['EXT_LABEL']} \n"
             f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
             f"GB per FPGA \n"
-            f"{'_'*29}|{'_'*60} \n"
-            f"{' '*29}| \n"
+            f"{'_' * 29}|{'_' * 60} \n"
+            f"{' ' * 29}| \n"
             f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
             f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
             f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
@@ -7325,31 +7324,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
             f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
             f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
-            f"{'_'*29}|{'_'*60} \n"
-            f"{' '*29}| \n"
-            f"1G (MGMT) IP Address         | {str(info['network']['1g_ip_address'])} \n"
+            f"{'_' * 29}|{'_' * 60} \n"
+            f"{' ' * 29}| \n"
+            f"1G (MGMT) IP Address         | {info['network']['1g_ip_address']!s} \n"
             f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
-            f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
-            f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
-            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])}"
+            f"1G (MGMT) Netmask            | {info['network']['1g_netmask']!s} \n"
+            f"1G (MGMT) Gateway IP         | {info['network']['1g_gateway']!s} \n"
+            f"EEP IP Address               | {info['hardware']['ip_address_eep']!s}"
             f" \n"
-            f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
-            f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
+            f"EEP Netmask                  | {info['hardware']['netmask_eep']!s} \n"
+            f"EEP Gateway IP               | {info['hardware']['gateway_eep']!s} \n"
             f"40G Port 1 IP Address        | "
-            f"{str(info['network']['40g_ip_address_p1'])} \n"
+            f"{info['network']['40g_ip_address_p1']!s} \n"
             f"40G Port 1 MAC Address       | "
-            f"{str(info['network']['40g_mac_address_p1'])} \n"
-            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
+            f"{info['network']['40g_mac_address_p1']!s} \n"
+            f"40G Port 1 Netmask           | {info['network']['40g_netmask_p1']!s}"
             f" \n"
-            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
+            f"40G Port 1 Gateway IP        | {info['network']['40g_gateway_p1']!s}"
             f" \n"
             f"40G Port 2 IP Address        | "
-            f"{str(info['network']['40g_ip_address_p2'])} \n"
+            f"{info['network']['40g_ip_address_p2']!s} \n"
             f"40G Port 2 MAC Address       | "
-            f"{str(info['network']['40g_mac_address_p2'])} \n"
-            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
+            f"{info['network']['40g_mac_address_p2']!s} \n"
+            f"40G Port 2 Netmask           | {info['network']['40g_netmask_p2']!s}"
             f" \n"
-            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
+            f"40G Port 2 Gateway IP        | {info['network']['40g_gateway_p2']!s}"
             f" \n"
         )
 
@@ -7491,8 +7490,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_model._ignore_power_state = True
 
         def _off_task(
-            task_callback: Optional[Callable] = None,
-            task_abort_event: Optional[threading.Event] = None,
+            task_callback: Callable | None = None,
+            task_abort_event: threading.Event | None = None,
         ) -> None:
             self.component_manager.do_off(task_callback, task_abort_event)
 
@@ -7514,8 +7513,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._health_model._ignore_power_state = False
 
         def _on_task(
-            task_callback: Optional[Callable] = None,
-            task_abort_event: Optional[threading.Event] = None,
+            task_callback: Callable | None = None,
+            task_abort_event: threading.Event | None = None,
         ) -> None:
             self.component_manager.do_on(task_callback, task_abort_event)
 

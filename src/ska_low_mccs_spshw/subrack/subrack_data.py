@@ -7,12 +7,11 @@
 # See LICENSE for more info.
 """This module contains base data/facts about a subrack."""
 
-
 from __future__ import annotations  # allow forward references in type hints
 
 import enum
 
-__all__ = ["SubrackData", "FanMode"]
+__all__ = ["FanMode", "SubrackData"]
 
 
 class SubrackData:  # pylint: disable=too-few-public-methods

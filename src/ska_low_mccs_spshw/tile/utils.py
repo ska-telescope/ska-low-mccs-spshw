@@ -14,20 +14,21 @@ import sys
 import threading
 import time
 from collections import namedtuple
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from itertools import dropwhile, islice
 from logging import Logger
 from types import FrameType, TracebackType
-from typing import Any, Callable, Iterator, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import yaml
 from ska_control_model import ResultCode, TaskStatus
 from yaml.nodes import SequenceNode
 
 __all__ = [
-    "acquire_timeout",
-    "abort_task_on_exception",
     "HealthConfigLoader",
+    "abort_task_on_exception",
+    "acquire_timeout",
 ]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 

@@ -7,13 +7,12 @@
 # See LICENSE for more info.
 """This subpackage implements station functionality for MCCS."""
 
-
 __all__ = [
+    "SpsStation",
     "SpsStationComponentManager",
     "SpsStationHealthModel",
     "SpsStationHealthRules",
     "SpsStationObsStateModel",
-    "SpsStation",
     "SpsStationSelfCheckManager",
 ]
 

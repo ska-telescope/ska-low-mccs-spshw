@@ -14,7 +14,7 @@ import importlib
 import json
 import sys
 import threading
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 import numpy as np
 import ska_tango_base as stb
@@ -229,7 +229,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         self._hardware_attributes: dict[str, Any] = {}
 
-        self._desired_fan_speeds: Optional[list[float]] = None
+        self._desired_fan_speeds: list[float] | None = None
         self.clock_presence: list[str] = []
         self._update_health_data()
 
@@ -268,7 +268,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        device_name = f"{str(self.__class__).rsplit('.', maxsplit=1)[-1][0:-2]}"
         version = f"{device_name} Software Version: {self._version_id}"
         properties = (
             f"Initialised {device_name} device with properties:\n"
@@ -1299,7 +1299,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             # Float attributes should always return a numeric value.
             return float("nan")
 
-    internalVoltages1V1 = attribute_from_signal(  # noqa: N815
+    internalVoltages1V1 = attribute_from_signal(
         internal_voltages_1v1_signal,
         dtype="DevDouble",
         label="V_1V1",
@@ -1309,7 +1309,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 1V1 supply voltage in Volts.",
     )
 
-    internalVoltages1V5 = attribute_from_signal(  # noqa: N815
+    internalVoltages1V5 = attribute_from_signal(
         internal_voltages_1v5_signal,
         dtype="DevDouble",
         label="V_1V5",
@@ -1319,7 +1319,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 1V5 supply voltage in Volts.",
     )
 
-    internalVoltages2V5 = attribute_from_signal(  # noqa: N815
+    internalVoltages2V5 = attribute_from_signal(
         internal_voltages_2v5_signal,
         dtype="DevDouble",
         label="V_2V5",
@@ -1329,7 +1329,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 2V5 supply voltage in Volts.",
     )
 
-    internalVoltages2V8 = attribute_from_signal(  # noqa: N815
+    internalVoltages2V8 = attribute_from_signal(
         internal_voltages_2v8_signal,
         dtype="DevDouble",
         label="V_2V8",
@@ -1339,7 +1339,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 2V8 supply voltage in Volts.",
     )
 
-    internalVoltages3V = attribute_from_signal(  # noqa: N815
+    internalVoltages3V = attribute_from_signal(
         internal_voltages_3v_signal,
         dtype="DevDouble",
         label="V_3V",
@@ -1349,7 +1349,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 3V supply voltage in Volts.",
     )
 
-    internalVoltages3V3 = attribute_from_signal(  # noqa: N815
+    internalVoltages3V3 = attribute_from_signal(
         internal_voltages_3v3_signal,
         dtype="DevDouble",
         label="V_3V3",
@@ -1359,7 +1359,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 3V3 supply voltage in Volts.",
     )
 
-    internalVoltages5V = attribute_from_signal(  # noqa: N815
+    internalVoltages5V = attribute_from_signal(
         internal_voltages_5v_signal,
         dtype="DevDouble",
         label="V_5V",
@@ -1369,7 +1369,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal 5V supply voltage in Volts.",
     )
 
-    internalVoltagesARM = attribute_from_signal(  # noqa: N815
+    internalVoltagesARM = attribute_from_signal(
         internal_voltages_arm_signal,
         dtype="DevDouble",
         label="V_ARM",
@@ -1379,7 +1379,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal ARM supply voltage in Volts.",
     )
 
-    internalVoltagesCORE = attribute_from_signal(  # noqa: N815
+    internalVoltagesCORE = attribute_from_signal(
         internal_voltages_core_signal,
         dtype="DevDouble",
         label="V_CORE",
@@ -1389,7 +1389,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal CORE supply voltage in Volts.",
     )
 
-    internalVoltagesDDR = attribute_from_signal(  # noqa: N815
+    internalVoltagesDDR = attribute_from_signal(
         internal_voltages_ddr_signal,
         dtype="DevDouble",
         label="V_DDR",
@@ -1399,7 +1399,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal DDR supply voltage in Volts.",
     )
 
-    internalVoltagesPOWERIN = attribute_from_signal(  # noqa: N815
+    internalVoltagesPOWERIN = attribute_from_signal(
         internal_voltages_powerin_signal,
         dtype="DevDouble",
         label="V_POWERIN",
@@ -1409,7 +1409,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack power input voltage in Volts.",
     )
 
-    internalVoltagesSOC = attribute_from_signal(  # noqa: N815
+    internalVoltagesSOC = attribute_from_signal(
         internal_voltages_soc_signal,
         dtype="DevDouble",
         label="V_SOC",
@@ -1419,21 +1419,21 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="Subrack internal SOC supply voltage in Volts.",
     )
 
-    psu1Present = attribute_from_signal(  # noqa: N815
+    psu1Present = attribute_from_signal(
         psu1_present_signal,
         dtype=bool,
         label="Psu1 Present",
         doc="Presence of PSU1.",
     )
 
-    psu2Present = attribute_from_signal(  # noqa: N815
+    psu2Present = attribute_from_signal(
         psu2_present_signal,
         dtype=bool,
         label="Psu2 Present",
         doc="Presence of PSU2.",
     )
 
-    psu1PowerIn = attribute_from_signal(  # noqa: N815
+    psu1PowerIn = attribute_from_signal(
         psu1_power_in_signal,
         dtype="DevDouble",
         label="PSU1 Input Power",
@@ -1445,7 +1445,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU1 input power in Watts.",
     )
 
-    psu2PowerIn = attribute_from_signal(  # noqa: N815
+    psu2PowerIn = attribute_from_signal(
         psu2_power_in_signal,
         dtype="DevDouble",
         label="PSU2 Input Power",
@@ -1457,7 +1457,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU2 input power in Watts.",
     )
 
-    psu1PowerOut = attribute_from_signal(  # noqa: N815
+    psu1PowerOut = attribute_from_signal(
         psu1_power_out_signal,
         dtype="DevDouble",
         label="PSU1 Output Power",
@@ -1469,7 +1469,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU1 output power in Watts.",
     )
 
-    psu2PowerOut = attribute_from_signal(  # noqa: N815
+    psu2PowerOut = attribute_from_signal(
         psu2_power_out_signal,
         dtype="DevDouble",
         label="PSU2 Output Power",
@@ -1481,7 +1481,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU2 output power in Watts.",
     )
 
-    psu1VoltageIn = attribute_from_signal(  # noqa: N815
+    psu1VoltageIn = attribute_from_signal(
         psu1_voltage_in_signal,
         dtype="DevDouble",
         label="PSU1 Input Voltage",
@@ -1495,7 +1495,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU1 input voltage in Volts.",
     )
 
-    psu2VoltageIn = attribute_from_signal(  # noqa: N815
+    psu2VoltageIn = attribute_from_signal(
         psu2_voltage_in_signal,
         dtype="DevDouble",
         label="PSU2 Input Voltage",
@@ -1509,7 +1509,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU2 input voltage in Volts.",
     )
 
-    psu1VoltageOut = attribute_from_signal(  # noqa: N815
+    psu1VoltageOut = attribute_from_signal(
         psu1_voltage_out_signal,
         dtype="DevDouble",
         label="PSU1 Output Voltage",
@@ -1523,7 +1523,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU1 output voltage in Volts.",
     )
 
-    psu2VoltageOut = attribute_from_signal(  # noqa: N815
+    psu2VoltageOut = attribute_from_signal(
         psu2_voltage_out_signal,
         dtype="DevDouble",
         label="PSU2 Output Voltage",
@@ -1537,7 +1537,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         doc="PSU2 output voltage in Volts.",
     )
 
-    psuDeadCount = attribute_from_signal(  # noqa: N815
+    psuDeadCount = attribute_from_signal(
         psu_dead_count_signal,
         dtype="DevShort",
         label="Dead PSU Count",
@@ -1786,11 +1786,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     # pylint: disable=too-many-arguments, too-many-branches, too-many-locals
     def _component_state_changed(
         self: MccsSubrack,
-        fault: Optional[bool] = None,
-        power: Optional[PowerState] = None,
+        fault: bool | None = None,
+        power: PowerState | None = None,
         health: HealthState | int | None = None,
-        pdu: Optional[HealthState] = None,
-        health_status: Optional[dict] = None,
+        pdu: HealthState | None = None,
+        health_status: dict | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -1965,9 +1965,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         return dead_count
 
-    def _update_tpm_present(
-        self: MccsSubrack, tpm_present: Optional[list[bool]]
-    ) -> None:
+    def _update_tpm_present(self: MccsSubrack, tpm_present: list[bool] | None) -> None:
         if tpm_present is None:
             tpm_present = []
         if self._tpm_present == tpm_present:
@@ -1982,7 +1980,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self.push_change_event("tpmCount", tpm_count)
         self._update_health_data()
 
-    def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: Optional[list[bool]]) -> None:
+    def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: list[bool] | None) -> None:
         if tpm_on_off is None:
             power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         else:
@@ -1999,7 +1997,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             if self._tpm_power_states[index] != power_state:
                 changed = True
                 self._tpm_power_states[index] = power_state
-                self.push_change_event(f"tpm{index+1}PowerState", power_state)
+                self.push_change_event(f"tpm{index + 1}PowerState", power_state)
         if changed:
             self._update_health_data()
 

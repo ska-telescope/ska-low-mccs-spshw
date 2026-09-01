@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """A simple subrack simulator."""
+
 from __future__ import annotations
 
 import copy
@@ -15,8 +16,8 @@ import json
 import random
 import threading
 import time
-from collections.abc import Iterator
-from typing import Any, Callable, Final, Optional, TypedDict, cast
+from collections.abc import Callable, Iterator
+from typing import Any, Final, TypedDict, cast
 
 from .subrack_api import SubrackProtocol
 from .subrack_data import FanMode, SubrackData
@@ -75,7 +76,7 @@ class SubrackSimulator(SubrackProtocol):
     class AttributeMetadataType(TypedDict):
         """Type for attribute metadata dictionary."""
 
-        length: Optional[int]
+        length: int | None
         default: JsonSerializable
         writable: bool
 
@@ -371,7 +372,7 @@ class SubrackSimulator(SubrackProtocol):
 
     @apply_jitter
     def execute_command(
-        self: SubrackSimulator, name: str, argument: Optional[JsonSerializable]
+        self: SubrackSimulator, name: str, argument: JsonSerializable | None
     ) -> JsonSerializable:
         """
         Execute a command on the subrack hardware/simulator.
@@ -447,7 +448,7 @@ class SubrackSimulator(SubrackProtocol):
         ]
         return self._attribute_values["subrack_fan_speeds"]
 
-    def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
+    def _command_completed(self: SubrackSimulator, _not_used: str | None) -> bool:
         """
         Check if no command is currently running.
 
@@ -457,7 +458,7 @@ class SubrackSimulator(SubrackProtocol):
         assert not _not_used
         return not self._command_is_running
 
-    def _abort_command(self: SubrackSimulator, _not_used: Optional[str]) -> None:
+    def _abort_command(self: SubrackSimulator, _not_used: str | None) -> None:
         """
         Abort any currently running command.
 
@@ -517,7 +518,7 @@ class SubrackSimulator(SubrackProtocol):
         tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
         cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True
 
-    def _async_turn_off_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
+    def _async_turn_off_tpms(self: SubrackSimulator, _not_used: str | None) -> None:
         """
         Turn off all TPMs.
 
@@ -525,7 +526,7 @@ class SubrackSimulator(SubrackProtocol):
         """
         self._attribute_values["tpm_on_off"] = [False] * SubrackData.TPM_BAY_COUNT
 
-    def _async_turn_on_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
+    def _async_turn_on_tpms(self: SubrackSimulator, _not_used: str | None) -> None:
         """
         Turn on all TPM.
 

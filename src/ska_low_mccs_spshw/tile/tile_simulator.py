@@ -18,8 +18,9 @@ import random
 import re
 import threading
 import time
+from collections.abc import Callable, Generator
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
+from typing import Any, Final, TypeVar, cast
 
 import numpy as np
 from ska_low_sps_tpm_api.base.definitions import (
@@ -35,10 +36,10 @@ from .tile_data import TileData
 
 __all__ = [
     "DynamicTileSimulator",
-    "TileSimulator",
     "MockTpm",
     "PreAdu",
     "StationBeamformer",
+    "TileSimulator",
 ]
 
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
@@ -337,7 +338,7 @@ class StationBeamformer:
 
     def start(
         self: StationBeamformer,
-        channel_groups: Optional[list[int]],
+        channel_groups: list[int] | None,
     ) -> None:
         """
         Start.
@@ -352,7 +353,7 @@ class StationBeamformer:
 
     def stop(
         self: StationBeamformer,
-        channel_groups: Optional[list[int]],
+        channel_groups: list[int] | None,
     ) -> None:
         """
         Stop.
@@ -368,7 +369,7 @@ class StationBeamformer:
 
     def is_running(
         self: StationBeamformer,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
     ) -> bool:
         """
         Check if the beamformer is running for the specified channels.
@@ -669,7 +670,7 @@ class MockTpm:
         string: str,
         display: bool | None = False,
         info: bool | None = False,
-    ) -> List[RegisterInfo | None]:
+    ) -> list[RegisterInfo | None]:
         """
         Find a item in a dictionary.
 
@@ -704,7 +705,7 @@ class MockTpm:
         return matches
 
     @property
-    def station_beamf(self: MockTpm) -> List[StationBeamformer]:
+    def station_beamf(self: MockTpm) -> list[StationBeamformer]:
         """
         Station beamf.
 
@@ -713,7 +714,7 @@ class MockTpm:
         return self._station_beamf
 
     @property
-    def tpm_preadu(self: MockTpm) -> List[PreAdu]:
+    def tpm_preadu(self: MockTpm) -> list[PreAdu]:
         """
         Tpm pre adu.
 
@@ -746,18 +747,18 @@ class MockTpm:
         info["fpga_firmware"] = {}
         info["fpga_firmware"]["design"] = self.tpm_firmware_information.get_design()
         info["fpga_firmware"]["build"] = self.tpm_firmware_information.get_build()
-        info["fpga_firmware"][
-            "version"
-        ] = self.tpm_firmware_information.get_firmware_version()
+        info["fpga_firmware"]["version"] = (
+            self.tpm_firmware_information.get_firmware_version()
+        )
         info["fpga_firmware"]["compile_time"] = self.tpm_firmware_information.get_time()
         info["fpga_firmware"]["compile_user"] = self.tpm_firmware_information.get_user()
         info["fpga_firmware"]["compile_host"] = self.tpm_firmware_information.get_host()
-        info["fpga_firmware"][
-            "git_branch"
-        ] = self.tpm_firmware_information.get_git_branch()
-        info["fpga_firmware"][
-            "git_commit"
-        ] = self.tpm_firmware_information.get_git_commit()
+        info["fpga_firmware"]["git_branch"] = (
+            self.tpm_firmware_information.get_git_branch()
+        )
+        info["fpga_firmware"]["git_commit"] = (
+            self.tpm_firmware_information.get_git_commit()
+        )
         # Dictionary manipulation, move 1G network information
         info["network"] = {}
         info["network"]["1g_ip_address"] = IPv4Address(info["hardware"]["ip_address"])
@@ -921,7 +922,6 @@ class PreAdu:
     def write_configuration(self: PreAdu) -> None:
         """Write configuration to preadu."""
         self.logger.info("Not yet implemented.")
-        return
 
     def select_low_passband(self: PreAdu) -> None:
         """Select low pass band."""
@@ -930,7 +930,6 @@ class PreAdu:
     def read_configuration(self: PreAdu) -> None:
         """Read configuration."""
         self.logger.info("Not yet implemented.")
-        return
 
 
 class TileSimulator:
@@ -1168,7 +1167,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
+    def get_firmware_list(self: TileSimulator) -> list[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
 
@@ -1256,7 +1255,6 @@ class TileSimulator:
             raise ValueError("cannot be negative")
         if nof_channels > 384:
             raise ValueError("too many channels")
-        pass
 
     @check_mocked_overheating
     def program_fpgas(self: TileSimulator, bitfile: str) -> None:
@@ -1324,7 +1322,7 @@ class TileSimulator:
         enable_ada: bool = False,
         use_internal_pps: bool = False,
         pps_delay: int = 0,
-        time_delays: float | int | list = 0,
+        time_delays: float | list = 0,
         pps_period: int = 1,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
@@ -1648,7 +1646,7 @@ class TileSimulator:
         self: TileSimulator,
         mode: str = "SDN",
         ddr_start_byte_address: int = 512 * 1024**2,
-        max_ddr_byte_size: Optional[int] = None,
+        max_ddr_byte_size: int | None = None,
     ) -> None:
         """Mock set_up_antenna_buffer.
 
@@ -1675,9 +1673,9 @@ class TileSimulator:
         )
         # save values to buffer attributes
         self._antenna_buffer_tile_attribute["mode"] = mode
-        self._antenna_buffer_tile_attribute[
-            "DDR_start_address"
-        ] = ddr_start_byte_address
+        self._antenna_buffer_tile_attribute["DDR_start_address"] = (
+            ddr_start_byte_address
+        )
         self._antenna_buffer_tile_attribute["max_DDR_byte_size"] = max_ddr_byte_size
         self._antenna_buffer_tile_attribute["set_up_complete"] = True
 
@@ -1742,7 +1740,7 @@ class TileSimulator:
             if antennas[fpga_id]:
                 # log which antennas and fpgas are used
                 self.logger.info(
-                    f"AntennaBuffer will be using FPGA {fpga_id+1},"
+                    f"AntennaBuffer will be using FPGA {fpga_id + 1},"
                     + f" antennas = {antennas[fpga_id]}"
                 )
                 self._antenna_buffer_tile_attribute["used_fpga_id"].append(fpga_id)
@@ -1767,9 +1765,9 @@ class TileSimulator:
 
         # Save values to buffer attributes for testing
         self._antenna_buffer_tile_attribute["start_time"] = start_time
-        self._antenna_buffer_tile_attribute[
-            "timestamp_capture_duration"
-        ] = timestamp_capture_duration
+        self._antenna_buffer_tile_attribute["timestamp_capture_duration"] = (
+            timestamp_capture_duration
+        )
         self._antenna_buffer_tile_attribute["continuous_mode"] = continuous_mode
         self._antenna_buffer_tile_attribute["read_antenna_buffer"] = False
         self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = False
@@ -1794,7 +1792,6 @@ class TileSimulator:
         # Save values to buffer attributes for testing
         self._antenna_buffer_tile_attribute["read_antenna_buffer"] = True
         self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = True
-        return
 
     @connected
     @antenna_buffer_implemented
@@ -1807,7 +1804,7 @@ class TileSimulator:
 
     @connected
     def enable_station_beam_flagging(
-        self: TileSimulator, fpga_id: Optional[int] = None
+        self: TileSimulator, fpga_id: int | None = None
     ) -> None:
         """
         Enable station beam flagging.
@@ -1825,7 +1822,7 @@ class TileSimulator:
 
     @connected
     def disable_station_beam_flagging(
-        self: TileSimulator, fpga_id: Optional[int] = None
+        self: TileSimulator, fpga_id: int | None = None
     ) -> None:
         """
         Disable station beam flagging.
@@ -1843,7 +1840,7 @@ class TileSimulator:
 
     @connected
     def is_station_beam_flagging_enabled(
-        self: TileSimulator, fpga_id: Optional[int] = None
+        self: TileSimulator, fpga_id: int | None = None
     ) -> list:
         """
         Get the station beam flag state.
@@ -1998,7 +1995,6 @@ class TileSimulator:
     def reset_eth_errors(self: TileSimulator) -> None:
         """Reset Ethernet errors."""
         self.logger.info("This is not implemented")
-        return
 
     def connect(
         self: TileSimulator,
@@ -2091,7 +2087,7 @@ class TileSimulator:
         :raises BoardError: if you are trying to attempt communication with
             a FPGA that is OFF.
         """
-        cpld_registers = [int(0x30000000)]
+        cpld_registers = [0x30000000]
         if self.tpm_mocked_overheating:
             # We can still access the (CPLD version) when FPGAs are shutdown.
             if (
@@ -2139,7 +2135,6 @@ class TileSimulator:
         """
         self._channeliser_truncation = trunc
         # self.logger.info("Not implemented, return without error to allow poll.")
-        return
 
     @connected
     def get_channeliser_truncation(self: TileSimulator) -> list[int]:
@@ -2152,7 +2147,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_time_delays(self: TileSimulator, delays: int | float | list[float]) -> bool:
+    def set_time_delays(self: TileSimulator, delays: float | list[float]) -> bool:
         """
         Set coarse zenith delay for input ADC streams.
 
@@ -2166,7 +2161,7 @@ class TileSimulator:
             delays = [delays] * 32
         if len(delays) != 32:
             self.logger.error(
-                "Invalid delays specfied (must be a " "list of numbers of length 32)"
+                "Invalid delays specfied (must be a list of numbers of length 32)"
             )
             return False
         for i in range(16):
@@ -2373,9 +2368,9 @@ class TileSimulator:
         for i, channel_coeffs in enumerate(calibration_coefficients):
             channel_idx = first_channel + i
             for antenna, antenna_coeffs in enumerate(channel_coeffs):
-                self._staged_calibration_coefficients[channel_idx][
-                    antenna
-                ] = antenna_coeffs
+                self._staged_calibration_coefficients[channel_idx][antenna] = (
+                    antenna_coeffs
+                )
 
         self.logger.debug(
             f"Simulator received calibration coefficients for channels "
@@ -2442,9 +2437,9 @@ class TileSimulator:
 
         # Assign calibration coefficients for this antenna across all channels
         for channel in range(len(calibration_coefficients)):
-            self._staged_calibration_coefficients[channel][
-                antenna
-            ] = calibration_coefficients[channel]
+            self._staged_calibration_coefficients[channel][antenna] = (
+                calibration_coefficients[channel]
+            )
 
         self.logger.debug(
             f"Simulator received calibration coefficients for antenna {antenna}"
@@ -3017,11 +3012,9 @@ class TileSimulator:
             time_utc = time.time()
             _fpgatime = int(time_utc)
             self.logger.debug(
-                (
-                    f"TimedThread: fpgaTime: {_fpgatime},"
-                    f" sync time: {self.sync_time},"
-                    f" time_utc: {time_utc}"
-                )
+                f"TimedThread: fpgaTime: {_fpgatime},"
+                f" sync time: {self.sync_time},"
+                f" time_utc: {time_utc}"
             )
             if self.sync_time > 0 and self.sync_time < time_utc:
                 self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
@@ -3129,27 +3122,27 @@ class TileSimulator:
 
         if max_board_alarm_threshold is not None:
             if _is_less_than_50(max_board_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "board_alarm_threshold"
-                ] = max_board_alarm_threshold
+                self._tpm_temperature_thresholds["board_alarm_threshold"] = (
+                    max_board_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_board_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga1_alarm_threshold is not None:
             if _is_less_than_50(max_fpga1_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga1_alarm_threshold"
-                ] = max_fpga1_alarm_threshold
+                self._tpm_temperature_thresholds["fpga1_alarm_threshold"] = (
+                    max_fpga1_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga1_alarm_threshold=} not larger than 50. Doing nothing"
                 )
         if max_fpga2_alarm_threshold is not None:
             if _is_less_than_50(max_fpga2_alarm_threshold):
-                self._tpm_temperature_thresholds[
-                    "fpga2_alarm_threshold"
-                ] = max_fpga2_alarm_threshold
+                self._tpm_temperature_thresholds["fpga2_alarm_threshold"] = (
+                    max_fpga2_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{max_fpga2_alarm_threshold=} not larger than 50. Doing nothing"
@@ -3413,8 +3406,8 @@ class TileSimulator:
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"
-            f"{'_'*90} \n"
-            f"{' '*29}| \n"
+            f"{'_' * 90} \n"
+            f"{' ' * 29}| \n"
             f"Classification               | "
             f"{info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
             f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
@@ -3423,8 +3416,8 @@ class TileSimulator:
             f"Board External Label         | {info['hardware']['EXT_LABEL']} \n"
             f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
             f"GB per FPGA \n"
-            f"{'_'*29}|{'_'*60} \n"
-            f"{' '*29}| \n"
+            f"{'_' * 29}|{'_' * 60} \n"
+            f"{' ' * 29}| \n"
             f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
             f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
             f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
@@ -3434,16 +3427,16 @@ class TileSimulator:
             f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
             f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
             f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
-            f"{'_'*29}|{'_'*60} \n"
-            f"{' '*29}| \n"
-            f"1G (MGMT) IP Address         | {str(info['network']['1g_ip_address'])} \n"
+            f"{'_' * 29}|{'_' * 60} \n"
+            f"{' ' * 29}| \n"
+            f"1G (MGMT) IP Address         | {info['network']['1g_ip_address']!s} \n"
             f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
-            f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
-            f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
-            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])}"
+            f"1G (MGMT) Netmask            | {info['network']['1g_netmask']!s} \n"
+            f"1G (MGMT) Gateway IP         | {info['network']['1g_gateway']!s} \n"
+            f"EEP IP Address               | {info['hardware']['ip_address_eep']!s}"
             f" \n"
-            f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
-            f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
+            f"EEP Netmask                  | {info['hardware']['netmask_eep']!s} \n"
+            f"EEP Gateway IP               | {info['hardware']['gateway_eep']!s} \n"
         )
 
 

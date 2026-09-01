@@ -80,7 +80,7 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
             super().init_device()
             self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
             self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-            device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+            device_name = f"{str(self.__class__).rsplit('.', maxsplit=1)[-1][0:-2]}"
             version = f"{device_name} Software Version: {self._version_id}"
             properties = (
                 f"Initialised {device_name} device with properties:\n"

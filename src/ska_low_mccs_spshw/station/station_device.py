@@ -18,9 +18,10 @@ import json
 import sys
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Final, Optional, cast
+from typing import Any, Final, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -46,7 +47,7 @@ from .station_component_manager import SpsStationComponentManager
 from .station_health_model import SpsStationHealthModel
 from .station_obs_state_model import SpsStationObsStateModel
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[str | None]]
 
 __all__ = ["SpsStation", "main"]
 
@@ -163,7 +164,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
-        self._adc_power: Optional[list[float]] = None
+        self._adc_power: list[float] | None = None
         self._data_received_result: tuple[str, str] = ("", "")
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
@@ -187,7 +188,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._is_calibrated = False
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        device_name = f"{str(self.__class__).rsplit('.', maxsplit=1)[-1][0:-2]}"
         version = f"{device_name} Software Version: {self._version_id}"
         properties = (
             f"Initialised {device_name} device with properties:\n"
@@ -541,12 +542,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         ]
 
     # TODO: Upstream this interface change to SKABaseDevice
-    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements, too-many-locals # noqa
-    def _component_state_changed(  # type: ignore[override] # noqa: C901
+    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements, too-many-locals
+    def _component_state_changed(  # type: ignore[override]
         self: SpsStation,
         *,
-        fault: Optional[bool] = None,
-        power: Optional[PowerState] = None,
+        fault: bool | None = None,
+        power: PowerState | None = None,
         health: HealthState | int | None = None,
         **state_change: Any,
     ) -> None:
@@ -879,7 +880,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.component_manager._lmc_daq_trl = value
 
     @attribute(dtype=bool)
-    def OnWorkaround(self: SpsStation) -> bool:  # noqa: F811
+    def OnWorkaround(self: SpsStation) -> bool:
         """
         Report the status of the OnWorkaroundFlag.
 
@@ -1343,7 +1344,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 self._frame_wrap_timer = None
 
     time_to_frame_counter_wrap = AttrSignal[float]()
-    timeToFrameCounterWrap = attribute_from_signal(  # noqa: N815
+    timeToFrameCounterWrap = attribute_from_signal(
         time_to_frame_counter_wrap,
         abs_change=1,
         doc="Number of seconds until the station's frame counter wraps around.",
@@ -1897,7 +1898,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
-        """  # noqa: E501, D202
+        """
 
         def task(
             task_callback: stb.type_hints.TaskCallbackType,
@@ -1913,8 +1914,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @stb.validators.validate_json_args
     def ReInitialise(
         self: SpsStation,
-        start_bandpasses: Optional[bool] = None,
-        global_reference_time: Optional[str] = None,
+        start_bandpasses: bool | None = None,
+        global_reference_time: str | None = None,
     ) -> stb.type_hints.TaskFunctionType:
         """
         Reinitialise the station with overridable defaults.
@@ -1936,7 +1937,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
-        """  # noqa: E501, D202
+        """
 
         def task(
             task_callback: stb.type_hints.TaskCallbackType,
@@ -1988,7 +1989,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @stb.long_running_commands.long_running_command
     @stb.validators.validate_json_args
     def StartAcquisition(
-        self: SpsStation, start_time: Optional[str] = None, delay: Optional[int] = None
+        self: SpsStation, start_time: str | None = None, delay: int | None = None
     ) -> stb.type_hints.TaskFunctionType:
         """
         Start the acquisition synchronously for all tiles, checks for synchronisation.
@@ -2464,7 +2465,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             raise ValueError("Incomplete specification of channel group")
         beamformer_table: list[list[int]] = []
         for i in range(0, len(argin), 7):
-            group = argin[i : i + 7]  # noqa: E203
+            group = argin[i : i + 7]
             start_channel = group[0]
             if start_channel % 2 != 0:
                 self.logger.error("Start channel in group must be even")
@@ -2527,7 +2528,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         beamformer_table: list[list[int]] = []
         total_chan = 0
         for i in range(0, len(argin), 8):
-            region = list(argin[i : i + 8])  # noqa: E203
+            region = list(argin[i : i + 8])
             start_channel = region[0]
             if start_channel % 2 != 0:
                 self.logger.error("Start channel in region must be even")
@@ -2775,9 +2776,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @stb.validators.validate_json_args
     def StartBeamformer(
         self: SpsStation,
-        start_time: Optional[str] = None,
+        start_time: str | None = None,
         duration: int = -1,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
         scan_id: int = 0,
     ) -> stb.type_hints.TaskFunctionType:
         """
@@ -2857,7 +2858,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @stb.validators.validate_json_args
     def StopBeamformerForChannels(
         self: SpsStation,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
     ) -> stb.type_hints.TaskFunctionType:
         """
         Stop the beamformer for given channel groups.

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of a basic test for a station."""
+
 from __future__ import annotations
 
 import itertools
@@ -15,9 +16,10 @@ import random
 import shutil
 import string
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from threading import Event
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
@@ -157,7 +159,7 @@ class BaseDaqTest(TpmSelfCheckTest):
     ) -> None:
         self.test_logger.debug("Configuring and starting pattern generator")
         if pattern is None:
-            pattern = [random.randrange(0, 255) for _ in range(int(1024))]
+            pattern = [random.randrange(0, 255) for _ in range(1024)]
         if adders is None:
             adders = list(range(TileData.ANTENNA_COUNT * TileData.POLS_PER_ANTENNA))
         pattern_config: dict[str, Any] = {

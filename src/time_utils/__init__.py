@@ -13,7 +13,6 @@ and tests to ensure consistent conversion between time
 formats.
 """
 
-
 __all__ = [
     "float_epoch_from_str_utc_time",
     "str_from_float_epoch_utc_time",

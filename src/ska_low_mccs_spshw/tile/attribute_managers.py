@@ -5,11 +5,13 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """A collection of AttributeManagers to serve the TANGO attribute."""
+
 from __future__ import annotations
 
 import math
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import tango

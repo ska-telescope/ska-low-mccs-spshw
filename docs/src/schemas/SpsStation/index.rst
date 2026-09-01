@@ -10,5 +10,6 @@ These schemas are for use with SpsStation commands
 
   SpsStation_BeamformerRunningForChannels
   SpsStation_Initialise
+  SpsStation_LoadScanId
   SpsStation_StartBeamformer
   SpsStation_StopBeamformerForChannels

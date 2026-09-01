@@ -9,19 +9,19 @@
 
 __all__ = [
     "BaseDaqTest",
-    "TestResult",
-    "TpmSelfCheckTest",
+    "BasicTangoTest",
+    "InitialiseStation",
+    "TestAntennaBuffer",
     "TestBeam",
-    "TestTileBeamformer",
     "TestChannel",
-    "TestTilePointing",
     "TestIntegratedBeam",
     "TestIntegratedChannel",
     "TestRaw",
-    "TestAntennaBuffer",
-    "InitialiseStation",
-    "BasicTangoTest",
+    "TestResult",
     "TestStationBeamDataRate",
+    "TestTileBeamformer",
+    "TestTilePointing",
+    "TpmSelfCheckTest",
 ]
 
 

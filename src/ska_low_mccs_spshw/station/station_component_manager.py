@@ -19,10 +19,11 @@ import json
 import logging
 import threading
 import time
+from collections.abc import Callable, Sequence
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
-from typing import Any, Callable, Optional, Sequence, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import tango
@@ -87,7 +88,7 @@ class _TileProxy(DeviceComponentManager):
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         attribute_changed_callback: Callable,
-        event_serialiser: Optional[EventSerialiser] = None,
+        event_serialiser: EventSerialiser | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -200,7 +201,7 @@ class _LMCDaqProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        event_serialiser: Optional[EventSerialiser] = None,
+        event_serialiser: EventSerialiser | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -312,7 +313,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        event_serialiser: Optional[EventSerialiser] = None,
+        event_serialiser: EventSerialiser | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -407,7 +408,7 @@ class _WrenProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
-        event_serialiser: Optional[EventSerialiser] = None,
+        event_serialiser: EventSerialiser | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -505,7 +506,7 @@ class SpsStationComponentManager(
         csp_ingest_ip: ipaddress.IPv4Address | None,
         channeliser_rounding: list[int] | None,
         csp_rounding: int,
-        antenna_config_uri: Optional[list[str]],
+        antenna_config_uri: list[str] | None,
         start_bandpasses_in_initialise: bool,
         bandpass_integration_time: float,
         wren_health_check_fail_on_timeout: bool,
@@ -513,12 +514,12 @@ class SpsStationComponentManager(
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
-        tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        wren_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        tile_health_changed_callback: Callable[[str, HealthState | None], None],
+        subrack_health_changed_callback: Callable[[str, HealthState | None], None],
+        wren_health_changed_callback: Callable[[str, HealthState | None], None],
         tile_group: tango.Group,
         on_workaround_flag: bool = False,
-        event_serialiser: Optional[EventSerialiser] = None,
+        event_serialiser: EventSerialiser | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -575,9 +576,9 @@ class SpsStationComponentManager(
         """
         self._on_workaround_flag = on_workaround_flag
         self._event_serialiser = event_serialiser
-        self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
-        self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
-        self._wren_proxy: Optional[_WrenProxy] = None
+        self._lmc_daq_proxy: _LMCDaqProxy | None = None
+        self._bandpass_daq_proxy: _BandpassDaqProxy | None = None
+        self._wren_proxy: _WrenProxy | None = None
         self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
@@ -599,16 +600,16 @@ class SpsStationComponentManager(
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
         self._number_of_tiles = len(tile_fqdns)
-        self._adc_power: dict[int, Optional[list[float]]] = {}
-        self._static_delays: dict[int, Optional[list[float]]] = {}
-        self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        self._adc_power: dict[int, list[float] | None] = {}
+        self._static_delays: dict[int, list[float] | None] = {}
+        self._preadu_levels: dict[int, list[float] | None] = {}
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
         self._pointing_delays_received: set[int] = set()
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
-        self._beamformer_daisy_chain_valid: Optional[bool] = None
+        self._beamformer_daisy_chain_valid: bool | None = None
         self._final_tile_fpga0_flagged_count: int = 0
         self._final_tile_fpga1_flagged_count: int = 0
-        self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
+        self._final_tile_beamformer_flagged_count_ok: bool | None = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
@@ -753,7 +754,7 @@ class SpsStationComponentManager(
         self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 
-        self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
+        self._antenna_info: dict[int, dict[str, int | dict[str, float]]] = {}
 
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
@@ -851,8 +852,8 @@ class SpsStationComponentManager(
         func: Callable,
         args: Any = None,
         kwargs: Any = None,
-        is_cmd_allowed: Optional[Callable[[], bool]] = None,
-        task_callback: Optional[Callable] = None,
+        is_cmd_allowed: Callable[[], bool] | None = None,
+        task_callback: Callable | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit a task to the calibration lane of the task executor.
@@ -948,7 +949,7 @@ class SpsStationComponentManager(
         """
         if self._bandpass_daq_proxy is None or self._bandpass_daq_proxy._proxy is None:
             self.logger.info(
-                "Bandpass DAQ proxy not ready during " f"{log_context}. Retrying."
+                f"Bandpass DAQ proxy not ready during {log_context}. Retrying."
             )
             raise _BandpassDaqReadRetryError("Bandpass DAQ proxy not ready")
         try:
@@ -1014,7 +1015,7 @@ class SpsStationComponentManager(
         except Exception as e:  # pylint: disable=broad-exception-caught
             self.logger.error(
                 "Caught exception in "
-                f"SpsStationComponentManager._port_to_antenna_order: {repr(e)}"
+                f"SpsStationComponentManager._port_to_antenna_order: {e!r}"
             )
         if skipped_antennas:
             self.logger.warning(
@@ -1152,12 +1153,12 @@ class SpsStationComponentManager(
                     "Skipping this antenna."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config.get("delay_x", antenna_config["delay"])
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config.get("delay_y", antenna_config["delay"])
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config.get("delay_x", antenna_config["delay"])
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config.get("delay_y", antenna_config["delay"])
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1338,16 +1339,14 @@ class SpsStationComponentManager(
                 ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
                 self._tile_dst_ips[logical_tile_id] = (str(attribute_value), ip2)
                 self.logger.debug(
-                    f"Tile {logical_tile_id} updated dstip40gfpga1 to "
-                    f"{attribute_value}"
+                    f"Tile {logical_tile_id} updated dstip40gfpga1 to {attribute_value}"
                 )
                 self._validate_beamformer_daisy_chain()
             case "dstip40gfpga2":
                 ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
                 self._tile_dst_ips[logical_tile_id] = (ip1, str(attribute_value))
                 self.logger.debug(
-                    f"Tile {logical_tile_id} updated dstip40gfpga2 to "
-                    f"{attribute_value}"
+                    f"Tile {logical_tile_id} updated dstip40gfpga2 to {attribute_value}"
                 )
                 self._validate_beamformer_daisy_chain()
             case "fpga0_station_beamformer_flagged_count":
@@ -1439,9 +1438,9 @@ class SpsStationComponentManager(
     def _tile_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power: Optional[PowerState] = None,
-        health: Optional[HealthState] = None,
-        fault: Optional[bool] = None,
+        power: PowerState | None = None,
+        health: HealthState | None = None,
+        fault: bool | None = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:
@@ -1462,9 +1461,9 @@ class SpsStationComponentManager(
     def _subrack_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power: Optional[PowerState] = None,
-        health: Optional[HealthState] = None,
-        fault: Optional[bool] = None,
+        power: PowerState | None = None,
+        health: HealthState | None = None,
+        fault: bool | None = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:
@@ -1484,7 +1483,7 @@ class SpsStationComponentManager(
     def _lmc_daq_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power: Optional[PowerState] = None,
+        power: PowerState | None = None,
         **state_change: Any,
     ) -> None:
         if power is not None:
@@ -1509,7 +1508,7 @@ class SpsStationComponentManager(
     def _bandpass_daq_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power: Optional[PowerState] = None,
+        power: PowerState | None = None,
         **state_change: Any,
     ) -> None:
         if power is not None:
@@ -1529,9 +1528,9 @@ class SpsStationComponentManager(
     def _wren_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power: Optional[PowerState] = None,
-        health: Optional[HealthState] = None,
-        fault: Optional[bool] = None,
+        power: PowerState | None = None,
+        health: HealthState | None = None,
+        fault: bool | None = None,
     ) -> None:
         """
         Handle the WREN state changed.
@@ -1627,14 +1626,14 @@ class SpsStationComponentManager(
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
                 f"\tWREN: {self._wren_power_state.values()}\n"
-                f"\tresult: {str(evaluated_power_state)}"
+                f"\tresult: {evaluated_power_state!s}"
             )
             self._update_component_state(power=evaluated_power_state)
 
     def set_power_state(
         self: SpsStationComponentManager,
         power_state: PowerState,
-        fqdn: Optional[str] = None,
+        fqdn: str | None = None,
     ) -> None:
         """
         Set the power_state of the component.
@@ -1667,7 +1666,7 @@ class SpsStationComponentManager(
 
     def off(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _off method.
@@ -1685,8 +1684,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _off(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Turn off this station.
@@ -1733,7 +1732,7 @@ class SpsStationComponentManager(
     @check_communicating
     def standby(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _standby method.
@@ -1751,8 +1750,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _standby(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Put the station in standby: subracks on, tiles off.
@@ -1827,7 +1826,7 @@ class SpsStationComponentManager(
 
     def on(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _on method.
@@ -1845,8 +1844,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _on(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Turn on this station.
@@ -1987,12 +1986,12 @@ class SpsStationComponentManager(
 
     @check_communicating
     # pylint: disable=too-many-branches
-    def initialise(  # noqa: C901
+    def initialise(
         self: SpsStationComponentManager,
-        start_bandpasses: Optional[bool] = None,
-        global_reference_time: Optional[str] = None,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        start_bandpasses: bool | None = None,
+        global_reference_time: str | None = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Initialise this station.
@@ -2130,8 +2129,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _turn_on_subracks(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Turn on subracks if not already on.
@@ -2177,8 +2176,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _turn_on_tiles(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Turn on tiles if not already on.
@@ -2250,8 +2249,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _set_tile_source_ips(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Set source IPs on tiles before initialising.
@@ -2288,7 +2287,7 @@ class SpsStationComponentManager(
 
     @check_communicating
     def _set_global_reference_time(
-        self: SpsStationComponentManager, global_reference_time: Optional[str] = None
+        self: SpsStationComponentManager, global_reference_time: str | None = None
     ) -> ResultCode:
         if self.csp_spead_format != "SKA":
             self.logger.info("Not setting global reference time for non-SKA format")
@@ -2314,8 +2313,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _wait_for_arp_table(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Wait for ARP tables on tiles before continuing.
@@ -2353,8 +2352,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _reinitialise_tiles(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
         progress_start: int = 0,
         progress_end: int = 100,
     ) -> tuple[ResultCode, str]:
@@ -2425,8 +2424,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _wait_for_wren(
         self,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
         timeout: float = 120,
         poll_interval: float = 0.1,
         fail_on_timeout: bool = False,
@@ -2483,8 +2482,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _initialise_tile_parameters(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Initialise tile parameters.
@@ -2583,8 +2582,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Initialise complete station.
@@ -2644,8 +2643,8 @@ class SpsStationComponentManager(
     @check_communicating
     def _check_station_synchronisation(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Check tile synchronization.
@@ -2704,9 +2703,9 @@ class SpsStationComponentManager(
 
     def _route_data(
         self: SpsStationComponentManager,
-        start_bandpasses: Optional[bool] = None,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        start_bandpasses: bool | None = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> tuple[ResultCode, str]:
         """
         Route data streams to relevant DAQs.
@@ -2797,8 +2796,8 @@ class SpsStationComponentManager(
 
     def self_check(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Run all self check tests.
@@ -2834,8 +2833,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         count: int,
         test_name: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Run a specific self check test.
@@ -2924,7 +2923,7 @@ class SpsStationComponentManager(
     @property
     def beamformer_daisy_chain_valid(
         self: SpsStationComponentManager,
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         Return whether the station beamformer daisy chain is correctly configured.
 
@@ -2937,7 +2936,7 @@ class SpsStationComponentManager(
     @property
     def final_tile_beamformer_flagged_count_ok(
         self: SpsStationComponentManager,
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         Return whether the final tile's station beamformer flagged count is zero.
 
@@ -3066,7 +3065,7 @@ class SpsStationComponentManager(
             except ValueError as e:
                 self.logger.error(
                     f"unable to update array with {proxy._name} "
-                    f"channeliserRounding attribute: {repr(e)}"
+                    f"channeliserRounding attribute: {e!r}"
                 )
         return channeliser_roundings
 
@@ -3466,7 +3465,7 @@ class SpsStationComponentManager(
         return self.self_check_manager._tpm_test_names
 
     @property
-    def keep_test_data(self: "SpsStationComponentManager") -> bool:
+    def keep_test_data(self: SpsStationComponentManager) -> bool:
         """
         Get whether test data will be kept from the self_check_manager.
 
@@ -3475,7 +3474,7 @@ class SpsStationComponentManager(
         return self.self_check_manager.keep_test_data
 
     @keep_test_data.setter
-    def keep_test_data(self: "SpsStationComponentManager", value: bool) -> None:
+    def keep_test_data(self: SpsStationComponentManager, value: bool) -> None:
         """
         Set whether test data will be kept from the self_check_manager.
 
@@ -3493,7 +3492,7 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Configure link and size of LMC channel.
 
@@ -3529,7 +3528,7 @@ class SpsStationComponentManager(
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
         lock_mode: bool = True,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Configure link and size of integrated LMC channel.
 
@@ -3577,7 +3576,7 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int,
         dst_port: int,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Configure last tile link for CSP ingest channel.
 
@@ -3612,7 +3611,7 @@ class SpsStationComponentManager(
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Set the frequency regions to be beamformed into each beam.
 
@@ -3644,7 +3643,7 @@ class SpsStationComponentManager(
 
     def _set_beamformer_table(
         self: SpsStationComponentManager,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Set the frequency regions to be beamformed into a single beam.
 
@@ -3703,8 +3702,8 @@ class SpsStationComponentManager(
     def load_calibration_coefficients_for_channels(
         self: SpsStationComponentManager,
         calibration_coefficients: list[float],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Load calibration coefficients for all antennas and specific channels.
@@ -3759,7 +3758,7 @@ class SpsStationComponentManager(
 
     def apply_calibration(
         self: SpsStationComponentManager, switch_time: str
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Switch the calibration bank.
 
@@ -3777,7 +3776,7 @@ class SpsStationComponentManager(
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -3821,14 +3820,13 @@ class SpsStationComponentManager(
 
         if skipped_tiles:
             return [ResultCode.FAILED], [
-                "Failed to set pointing delays for 1 or more Tiles: "
-                f"{skipped_tiles}."
+                f"Failed to set pointing delays for 1 or more Tiles: {skipped_tiles}."
             ]
         return [ResultCode.OK], ["LoadPointingDelays command completed OK"]
 
     def apply_pointing_delays(
         self: SpsStationComponentManager, load_time: str
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Load the pointing delay at a specified time.
 
@@ -3842,12 +3840,12 @@ class SpsStationComponentManager(
 
     def start_beamformer(
         self: SpsStationComponentManager,
-        start_time: Optional[str] = None,
+        start_time: str | None = None,
         duration: int = -1,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
         scan_id: int = 0,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Start the beamformer at the specified time.
@@ -3897,10 +3895,10 @@ class SpsStationComponentManager(
 
     def stop_beamformer_for_channels(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
         *,
-        channel_groups: Optional[list[int]] = None,
+        channel_groups: list[int] | None = None,
     ) -> None:
         """
         Run the stop_beamformer method.
@@ -3918,9 +3916,9 @@ class SpsStationComponentManager(
 
     def stop_beamformer(
         self: SpsStationComponentManager,
-        channel_groups: Optional[list[int]],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        channel_groups: list[int] | None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Stop the beamformer.
@@ -3956,7 +3954,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         scan_id: int,
         channel_groups: list[int],
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Load or change the scan ID to a set of channel groups.
 
@@ -3997,7 +3995,7 @@ class SpsStationComponentManager(
         integration_time: float,
         first_channel: int,
         last_channel: int,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -4028,7 +4026,7 @@ class SpsStationComponentManager(
         integration_time: float,
         first_channel: int,
         last_channel: int,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -4056,7 +4054,7 @@ class SpsStationComponentManager(
 
     def stop_integrated_data(
         self: SpsStationComponentManager,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Stop the integrated data.
 
@@ -4068,7 +4066,7 @@ class SpsStationComponentManager(
 
     def send_data_samples(
         self: SpsStationComponentManager, argin: str, force: bool = False
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Front end for send_xxx_data methods.
 
@@ -4098,7 +4096,7 @@ class SpsStationComponentManager(
 
     def stop_data_transmission(
         self: SpsStationComponentManager,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Stop data transmission for send_channelised_data_continuous.
 
@@ -4110,7 +4108,7 @@ class SpsStationComponentManager(
 
     def configure_test_generator(
         self: SpsStationComponentManager, argin: str
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Distribute to tiles command configure_test_generator.
 
@@ -4125,10 +4123,10 @@ class SpsStationComponentManager(
     @check_communicating
     def start_acquisition(
         self: SpsStationComponentManager,
-        start_time: Optional[str] = None,
-        delay: Optional[int] = 2,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        start_time: str | None = None,
+        delay: int | None = 2,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Start acquisition using slow command.
@@ -4186,8 +4184,8 @@ class SpsStationComponentManager(
         start_time: str | None = None,
         daq_mode: str = "TCC",
         nof_samples: int = 1835008,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Acquire data for calibration.
@@ -4360,8 +4358,8 @@ class SpsStationComponentManager(
     @check_communicating
     def configure_station_for_calibration(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
         **daq_config: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -4410,8 +4408,7 @@ class SpsStationComponentManager(
             self._stop_daq()
         except ValueError as stop_error:
             return _fail(
-                "Failed to stop DAQ before configuring for calibration: "
-                f"{stop_error}"
+                f"Failed to stop DAQ before configuring for calibration: {stop_error}"
             )
         if _check_aborted():
             return ResultCode.ABORTED, "Task aborted"
@@ -4522,8 +4519,8 @@ class SpsStationComponentManager(
     def set_channeliser_rounding(
         self: SpsStationComponentManager,
         channeliser_rounding: np.ndarray | list[int],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Set the channeliserRounding in all Tiles.
@@ -4561,8 +4558,8 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         target_adc: float = 17.0,
         bias: float = 0.0,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
+        task_callback: Callable | None = None,
+        task_abort_event: threading.Event | None = None,
     ) -> None:
         """
         Equalise adc using slow command.
@@ -4630,7 +4627,7 @@ class SpsStationComponentManager(
 
     def start_adcs(
         self: SpsStationComponentManager,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Start ADCs on all tiles.
 
@@ -4642,7 +4639,7 @@ class SpsStationComponentManager(
 
     def stop_adcs(
         self: SpsStationComponentManager,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Stop ADCs on all tiles.
 
@@ -4669,8 +4666,8 @@ class SpsStationComponentManager(
     def _execute_async_on_tiles(
         self: SpsStationComponentManager,
         command_name: str,
-        command_args: Optional[Any] = None,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        command_args: Any | None = None,
+    ) -> tuple[list[ResultCode], list[str | None]]:
         """
         Execute a given command on all tile proxies, in parallel.
 
@@ -4715,7 +4712,7 @@ class SpsStationComponentManager(
             # user.
             def _run_while_handling_errors(
                 proxy: MccsDeviceProxy,
-            ) -> tuple[list[ResultCode], list[Optional[str]]]:
+            ) -> tuple[list[ResultCode], list[str | None]]:
                 try:
                     return proxy.command_inout(
                         command_name,
@@ -4726,7 +4723,7 @@ class SpsStationComponentManager(
                         f"Error running {command_name} on {proxy.dev_name()}: {e}"
                     )
                     return [ResultCode.FAILED], [
-                        f"Command raised {str(type(e))}, check logs."
+                        f"Command raised {type(e)!s}, check logs."
                     ]
 
             results = [_run_while_handling_errors(proxy) for proxy in connected_proxies]

@@ -24,20 +24,14 @@ docs-pre-build:
 ########################################################################
 include .make/python-uv.mk
 
-# TODO: Not supported by ska-python-uv yet
-# PYTHON_LINE_LENGTH = 88
-# PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
-# PYTHON_VARS_AFTER_PYTEST = --forked
-# PYTHON_VARS_AFTER_PYTEST += "-n 16"
-# PYTHON_TEST_FILE = tests
-# PYTHON_VARS_BEFORE_PYTEST = timeout --foreground -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
-# PYTHON_VARS_BEFORE_K8S_PYTEST = timeout --foreground -k 120 -s INT 4800
-
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/
 
-python-lint: mypy
+.PHONY: mypy
 
-.PHONY: python-post-lint
+mypy:
+	uv run mypy $(PYTHON_LINT_TARGET)
+
+python-post-lint: mypy
 
 
 ########################################################################

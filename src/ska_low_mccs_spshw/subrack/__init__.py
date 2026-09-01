@@ -8,14 +8,13 @@
 """This subpackage implements subrack functionality for the MCCS."""
 
 __all__ = [
+    "FanMode",
     "MccsSubrack",
+    "SubrackComponentManager",
     "SubrackData",
-    "SubrackSimulator",
-    "SubrackComponentManager",
-    "SubrackComponentManager",
     "SubrackDriver",
     "SubrackHealthModel",
-    "FanMode",
+    "SubrackSimulator",
 ]
 
 from .subrack_component_manager import SubrackComponentManager

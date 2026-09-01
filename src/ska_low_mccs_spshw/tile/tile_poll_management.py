@@ -10,21 +10,22 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from itertools import count
 from queue import Empty, PriorityQueue
-from typing import Any, Callable, Optional
+from typing import Any
 
 from ska_control_model import ResultCode, TaskStatus
 
 from .tpm_status import TpmStatus
 
 __all__ = [
-    "TileRequestProvider",
+    "RequestIterator",
     "TileLRCRequest",
     "TileRequest",
+    "TileRequestProvider",
     "TileResponse",
-    "RequestIterator",
 ]
 
 
@@ -78,7 +79,7 @@ class TileLRCRequest(TileRequest):
         command_object: Any,
         *args: Any,
         publish: bool = False,
-        task_callback: Optional[Callable] = None,
+        task_callback: Callable | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -388,7 +389,7 @@ class TileRequestProvider:
         self,
         request: TileLRCRequest,
         priority: int = 999,
-        wipe_time: Optional[float] = None,
+        wipe_time: float | None = None,
     ) -> None:
         """
         Register a request to be executed on the Tile.

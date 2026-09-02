@@ -765,7 +765,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_lock_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),
-            "timing_sync_time": lambda val: (int(val) if val is not None else None),
+            "timing_sync_time": lambda val: int(val) if val is not None else None,
             "fpga0_qpll_status": lambda val: (
                 int(val[0]) if val[0] is not None else None
             ),

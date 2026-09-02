@@ -166,8 +166,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: list[float] | None = None
         self._data_received_result: tuple[str, str] = ("", "")
-        self._beamformer_table: Optional[list[int]] = None
-        self._beamformer_regions: Optional[list[int]] = None
+        self._beamformer_table: list[int] | None = None
+        self._beamformer_regions: list[int] | None = None
         self._hw_pointing_delays: np.ndarray = np.full((48, 512), np.nan)
 
     def init_device(self: SpsStation) -> None:

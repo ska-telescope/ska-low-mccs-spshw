@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+* [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
+* [SKB-767] Update the minimum integration_time for Integrated LMC Data
+
 ## 15.0.0
 
 * [SPRTS-1067] Don't reset tile ref time on subrack events, reset on actual TPM connection.

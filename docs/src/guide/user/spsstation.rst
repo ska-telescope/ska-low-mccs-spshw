@@ -44,35 +44,31 @@ trace them back to the underlying inputs causing the issue.
 Example ``healthReport``
 -------------------------
 
-For a station configured with 2 subracks and 4 tiles, with everything healthy, ``healthReport`` looks like:
+The report only contains the entries that are not OK, and it reports each health state by name. For a station
+configured with 2 subracks and 4 tiles, with everything healthy, ``healthReport`` is therefore empty:
+
+.. code-block:: json
+
+   {}
+
+If ``low-mccs/tile/s8-1-tpm02`` alone reported ``DEGRADED``, ``healthReport`` would look like:
 
 .. code-block:: json
 
    {
-     "self": 0,
-     "tile_programming_state": 0,
-     "beamformer_daisy_chain": 0,
-     "beamformer_flagged_count": 0,
-     "subracks": {
-       "low-mccs/subrack/s8-1-1": 0,
-       "low-mccs/subrack/s8-1-2": 0
-     },
      "tiles": {
-       "low-mccs/tile/s8-1-tpm01": 0,
-       "low-mccs/tile/s8-1-tpm02": 0,
-       "low-mccs/tile/s8-1-tpm03": 0,
-       "low-mccs/tile/s8-1-tpm04": 0
+       "low-mccs/tile/s8-1-tpm02": "DEGRADED"
      }
    }
 
-Each value is a ``HealthState``: ``OK`` = 0, ``DEGRADED`` = 1, ``FAILED`` = 2, ``UNKNOWN`` = 3. There is one entry
-per named rollup member; ``subracks`` and ``tiles`` are themselves dictionaries with one entry per configured
-device, matching the ``k-of-n voting gate`` boxes in the diagrams above.
+There is one entry per named rollup member that is not OK. ``subracks`` and ``tiles`` are themselves
+dictionaries with one entry per unhealthy device, matching the ``k-of-n voting gate`` boxes in the diagrams
+above. A member is omitted if its health is OK, and a group such as ``tiles`` is omitted if every one of its
+devices is OK.
 
-For example, if ``low-mccs/tile/s8-1-tpm02`` alone reported ``DEGRADED``, its entry would become ``1``, but the
-overall ``healthState`` would still be ``OK``: per the ``tiles`` threshold of ``(1, 1, 2)`` shown in the diagrams
-above, a single degraded tile is not enough to degrade the whole station — a second degraded tile is needed for
-that.
+In that example the overall ``healthState`` would still be ``OK``, because the ``tiles`` threshold of
+``(1, 1, 2)`` shown in the diagrams above means a single degraded tile is not enough to degrade the whole
+station. A second degraded tile is needed for that.
 
 Drilling down
 -------------

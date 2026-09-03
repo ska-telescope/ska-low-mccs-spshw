@@ -68,6 +68,9 @@ url = "https://artefact.skao.int/repository/pypi-internal/simple"
 name = "PyPI-public"
 url = "https://pypi.org/simple"
 
+[tool.uv.sources]
+ska-control-model = { git = "https://gitlab.com/ska-telescope/ska-control-model.git", branch = "thorn-711" }
+
 
 [dependency-groups]
 dev = [

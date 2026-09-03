@@ -376,8 +376,10 @@ def main(checking: bool) -> int:
                     )
                     return 1
                 with open(rst_file_path, "r", encoding="utf-8") as file:
-                    if "".join(trimmed_rest) != "".join(file.readlines()):
-                        print(f"{rst_file} is out of date!")
+                    calculated = "".join(trimmed_rest)
+                    fileversion = "".join(file.readlines())
+                    if calculated != fileversion:
+                        print(f"{rst_file} is out of date!\n{calculated}\n---\n{fileversion}\n---\n")
                         return 1
             else:
                 os.makedirs(rst_file_folder, exist_ok=True)

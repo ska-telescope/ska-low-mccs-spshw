@@ -33,7 +33,7 @@ from ska_control_model import (
     PowerState,
     ResultCode,
 )
-from ska_control_model.health_rollup import HealthRollup, HealthSummary
+from ska_control_model.health_rollup import HealthRollup, HealthSummary, health_report
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.faults import CmdNotAllowedError
 from ska_tango_base.long_running_commands import LRCReqType
@@ -154,7 +154,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         super().__init__(*args, **kwargs)
 
         self._health_state: HealthState = HealthState.UNKNOWN
-        self._health_report: str = ""
+        self._health_summary: HealthSummary = {}
         # Need to dynamically define the health rollup members based on deployment.
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
@@ -473,7 +473,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Redefine the health rollup members and thresholds.
 
         Redefines the health rollup following a change in subdevice thresholds.
-        This pulls the old/current healths from the health report, instantiates
+        This pulls the old/current healths from the health summary, instantiates
         a new health_rollup instance and restores those healthstates.
         """
 
@@ -502,14 +502,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             return _flatten(d)
 
         # Pull out the old healthstates.
-        old_report = json.loads(self._health_report)
-        old_subdevice_healths = _flatten_dict(old_report)
+        old_subdevice_healths = _flatten_dict(self._health_summary)
         old_online = self._health_rollup.online
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
         # Restore old healthstates.
         for subdevice, health in old_subdevice_healths.items():
-            self._health_rollup.health_changed(subdevice, cast(HealthState, health))
+            self._health_rollup.health_changed(subdevice, health)
 
     # ----------
     # Callbacks
@@ -789,13 +788,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Handle change in this device's health summary.
 
         This is a callback hook, called whenever this device's
-        evaluated health summary changes. It is responsible for updating
-        the tango side of things i.e. making sure the attribute is up to
-        date, and events are pushed.
+        evaluated health summary changes.
+
+        The summary is the full record of subdevice health.
+        The healthReport attribute reduces it
+        to the subdevices that are not OK.
 
         :param health_summary: the new health summary
         """
-        self._health_report = json.dumps(health_summary)
+        self._health_summary = health_summary
 
     # ----------
     # Attributes
@@ -1609,10 +1610,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Get the health report.
 
+        The report only contains the subdevices that are not OK,
+        and it reports each health state by name.
+
         :return: the health report.
         """
         if self._use_new_health_model:
-            return self._health_report
+            return json.dumps(health_report(self._health_summary))
         return self._health_model.health_report
 
     @attribute(

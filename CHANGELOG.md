@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* ``healthReport`` now only contains the subdevices that are not OK, and reports each health state by name, such as ``FAILED``, instead of by its integer value. A subdevice group is omitted if all of its members are OK, so an empty report means that all subdevices are OK. The device keeps the full health summary internally, so a threshold change still restores the health of every subdevice.
+
 ## 15.0.0
 
 * [SPRTS-1067] Don't reset tile ref time on subrack events, reset on actual TPM connection.

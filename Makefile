@@ -10,7 +10,9 @@ include .make/base.mk
 ########################################################################
 # DOCS
 ########################################################################
-include .make/docs.mk
+
+# Don't need to include the .make/docs.mk here again as it's
+# already included in the .make/base.mk file
 
 DOCS_SPHINXOPTS = -W --keep-going
 

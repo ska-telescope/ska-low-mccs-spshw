@@ -215,6 +215,12 @@ helmfile-lint: telmodel-deps
 .PHONY: helmfile-lint telmodel-deps
 
 
+python-pre-build:
+	cat pyproject.toml
+
+python-post-build:
+	cat pyproject.toml
+
 
 ########################################################################
 # PRIVATE OVERRIDES

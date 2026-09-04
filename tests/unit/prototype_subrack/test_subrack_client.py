@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable=too-many-lines
 """
 Tests of the prototype subrack client.
 
@@ -32,6 +33,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
     SubrackPollModel,
     SubrackPollRequest,
     SubrackPollResponse,
+    subrack_client,
 )
 from ska_low_mccs_spshw.prototype_subrack.constants import (
     BATCH_ATTRIBUTES,
@@ -643,6 +645,140 @@ class TestErrorBranches:
         )
 
         assert status == BoardCommandStatus.ABORTED
+
+    def test_aborting_tells_the_board_to_abort(
+        self: TestErrorBranches,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        Aborting must send ``abort_command`` to the board.
+
+        The board is the only thing that can stop the operation. Reporting the
+        command aborted without telling the board leaves the operation running,
+        so it still takes effect, and the board stays busy and rejects the next
+        command until it finishes.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        """
+        fake_client.set_command_responses(
+            "turn_on_tpms",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "turn_on_tpms",
+                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+            },
+        )
+        abort_event = threading.Event()
+        abort_event.set()
+
+        faked_subrack.run_board_command("turn_on_tpms", "", abort_event)
+
+        assert "abort_command" in [name for (name, _) in fake_client.command_calls]
+
+    def test_a_busy_board_is_waited_for(
+        self: TestErrorBranches,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        A board that reports busy while completing must still be waited for.
+
+        This is the one status worth waiting on, so it must not be swept up
+        with the errors that end the wait.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        """
+        fake_client.set_command_responses(
+            "turn_on_tpms",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "turn_on_tpms",
+                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+            },
+        )
+        busy = {
+            "status": HardwareClientResponseStatusCodes.BUSY.name,
+            "info": "",
+            "command": "command_completed",
+            "retvalue": "",
+        }
+        done = {
+            "status": HardwareClientResponseStatusCodes.OK.name,
+            "info": "",
+            "command": "command_completed",
+            "retvalue": True,
+        }
+        fake_client.set_command_responses("command_completed", busy, busy, done)
+
+        (result, message, _) = faked_subrack.run_board_command("turn_on_tpms", "")
+
+        assert result == BoardCommandStatus.COMPLETED, message
+        completions = [
+            c for c in fake_client.command_calls if c[0] == "command_completed"
+        ]
+        assert len(completions) == 3, "it should have waited through both busy replies"
+
+    @pytest.mark.parametrize(
+        ("status", "info"),
+        [
+            (HardwareClientResponseStatusCodes.ERROR.name, "board fault"),
+            (HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name, "bad json"),
+            ("NOT_A_REAL_STATUS", "who knows"),
+        ],
+    )
+    # pylint: disable-next=too-many-arguments
+    def test_an_error_while_awaiting_completion_fails_with_its_details(
+        self: TestErrorBranches,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+        monkeypatch: pytest.MonkeyPatch,
+        status: str,
+        info: str,
+    ) -> None:
+        """
+        An error from ``command_completed`` must fail with what the board said.
+
+        Only a busy board is worth waiting for. Treating a reported error as
+        busy discards the reason, waits out the whole timeout, and then blames
+        a timeout for something that was never going to finish.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        :param monkeypatch: the pytest monkeypatch fixture.
+        :param status: the status the board reports while completing.
+        :param info: the detail the board reports with it.
+        """
+        # Short, so a regression fails quickly instead of waiting out 30 s.
+        monkeypatch.setattr(subrack_client, "COMMAND_TIMEOUT", 2.0)
+        fake_client.set_command_responses(
+            "turn_on_tpms",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "turn_on_tpms",
+                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+            },
+        )
+        fake_client.set_command_responses(
+            "command_completed",
+            {
+                "status": status,
+                "info": info,
+                "command": "command_completed",
+                "retvalue": "",
+            },
+        )
+
+        (result, message, _) = faked_subrack.run_board_command("turn_on_tpms", "")
+
+        assert result == BoardCommandStatus.FAILED
+        assert info in message, message
+        assert "Timed out" not in message, message
 
     def test_command_rejected_by_the_board(
         self: TestErrorBranches,

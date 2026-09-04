@@ -511,7 +511,7 @@ class Subrack:
             if status == _OK:
                 retvalue = response["retvalue"]
                 if retvalue == _STARTED:
-                    return self._await_command_completion(abort_event)
+                    return self._await_command_completion(name, abort_event)
                 if retvalue == "FAILED":
                     return (
                         BoardCommandStatus.FAILED,
@@ -524,7 +524,7 @@ class Subrack:
                     retvalue,
                 )
             if status == _STARTED:
-                return self._await_command_completion(abort_event)
+                return self._await_command_completion(name, abort_event)
             if status == _BUSY:
                 return (
                     BoardCommandStatus.FAILED,
@@ -538,14 +538,37 @@ class Subrack:
                 None,
             )
 
+    def _abort_board_command(self: Subrack) -> None:
+        """
+        Ask the board to abort the command it is running.
+
+        The board is the only thing that can stop the operation, so an abort
+        that is not passed on leaves it running. It would still take effect,
+        and the board would stay busy and reject the next command until it
+        finished.
+
+        A failure to abort is logged rather than raised, because the caller has
+        already asked to stop and has no better option to offer.
+
+        The caller must hold ``self._client_lock``.
+        """
+        response = self._client.execute_command("abort_command")
+        if response["status"] != _OK:
+            self._logger.error(
+                "The board did not accept abort_command. Status '%s'. %s",
+                response["status"],
+                response.get("info", "No details."),
+            )
+
     def _await_command_completion(
-        self: Subrack, abort_event: Optional[threading.Event]
+        self: Subrack, name: str, abort_event: Optional[threading.Event]
     ) -> tuple[BoardCommandStatus, str, Any]:
         """
         Probe ``command_completed`` until the board command finishes.
 
         The caller must hold ``self._client_lock``.
 
+        :param name: the name of the command being awaited, for the message.
         :param abort_event: an event that requests an abort when set.
 
         :return: the status, a message, and the returned value.
@@ -553,6 +576,7 @@ class Subrack:
         deadline = time.monotonic() + COMMAND_TIMEOUT
         while True:
             if abort_event is not None and abort_event.is_set():
+                self._abort_board_command()
                 return (BoardCommandStatus.ABORTED, "The command was aborted.", None)
             if time.monotonic() > deadline:
                 return (
@@ -579,4 +603,15 @@ class Subrack:
                     str(response["info"]),
                     None,
                 )
-            # The board is busy, so keep waiting.
+            if status in _BOARD_BUSY:
+                # The board is still working on it, so keep waiting.
+                continue
+            # Anything else is the board reporting a problem, or a status the
+            # client does not know. Waiting would discard the reason and blame
+            # the timeout for something that is never going to finish.
+            return (
+                BoardCommandStatus.FAILED,
+                f"Command '{name}' failed while completing, with status "
+                f"'{status}'. {response.get('info', 'No details.')}",
+                None,
+            )

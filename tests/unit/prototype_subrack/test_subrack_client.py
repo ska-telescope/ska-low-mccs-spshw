@@ -9,9 +9,9 @@
 """
 Tests of the prototype subrack client.
 
-The good path and the asynchronous command handshake run against a real
-simulator server over HTTP. The error branches run against a fake hardware
-client, because a simulator cannot report a transport level failure on demand.
+Most tests drive an injected fake hardware client. Two run against a real
+simulator server over HTTP, and three assert that the fake answers in the same
+shape as the real client.
 """
 
 from __future__ import annotations
@@ -114,8 +114,7 @@ class TestAgainstSimulator:
     Tests of the client against a simulator server over HTTP.
 
     These use the real
-    :py:class:`~ska_low_mccs_common.component.WebHardwareClient` over a socket,
-    and run a command while the poll loop is running.
+    :py:class:`~ska_low_mccs_common.component.WebHardwareClient` over a socket.
     """
 
     def test_poll_reads_every_batched_attribute(
@@ -234,12 +233,12 @@ class TestWhatTheClientAsksTheBoard:
         fake_client.execute_command.assert_any_call("set_subrack_fan_speed", "2,55")
 
 
-class TestHealthCadence:
+class TestHealthBiosGate:
     """
-    Tests of when the health status is read.
+    Tests of the BIOS gate on the health status read.
 
-    The health read is the one thing on a slower cadence than the attribute
-    sweep, and it is gated on the SMB BIOS version.
+    The health read is the only board command a poll issues, and the client
+    reads it only once the SMB BIOS is known to support it.
     """
 
     @staticmethod
@@ -254,7 +253,7 @@ class TestHealthCadence:
         return {"SMM": {"bios": version}}
 
     def _subrack_with_bios(
-        self: TestHealthCadence,
+        self: TestHealthBiosGate,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
         version: str | None,
@@ -290,7 +289,7 @@ class TestHealthCadence:
         return _make_subrack(fake_client, logger, **kwargs)
 
     def test_old_bios_disables_the_health_read(
-        self: TestHealthCadence,
+        self: TestHealthBiosGate,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
     ) -> None:
@@ -307,7 +306,7 @@ class TestHealthCadence:
         assert not [c for c in fake_client.command_calls if c[0] == "get_health_status"]
 
     def test_unreadable_board_info_disables_the_health_read(
-        self: TestHealthCadence,
+        self: TestHealthBiosGate,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
     ) -> None:
@@ -328,7 +327,7 @@ class TestHealthCadence:
 
 
 class TestErrorBranches:
-    """Tests of the branches a simulator cannot reach."""
+    """Tests of the failure paths of a poll and of a board command."""
 
     def test_request_exception_raises_request_error(
         self: TestErrorBranches,
@@ -612,7 +611,8 @@ class TestErrorBranches:
         """
         A board that reports busy while completing must still be waited for.
 
-        ``BUSY`` and ``STARTED`` continue the wait. Every other status ends it.
+        ``BUSY`` and ``STARTED`` continue the wait, as does ``OK`` with no
+        returned value. Every other status ends it.
 
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.

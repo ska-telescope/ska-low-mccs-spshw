@@ -542,13 +542,7 @@ class Subrack:
         """
         Ask the board to abort the command it is running.
 
-        The board is the only thing that can stop the operation, so an abort
-        that is not passed on leaves it running. It would still take effect,
-        and the board would stay busy and reject the next command until it
-        finished.
-
-        A failure to abort is logged rather than raised, because the caller has
-        already asked to stop and has no better option to offer.
+        A board that does not accept the abort is logged and not raised.
 
         The caller must hold ``self._client_lock``.
         """

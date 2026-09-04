@@ -9,8 +9,7 @@
 Tests of the subrack values that are computed rather than read.
 
 ``DerivedValues`` needs no hardware client, so every test here builds one with
-nothing but a logger. ``TestDerivedValuesWiring``, in the client tests, covers
-whether the client applies them.
+nothing but a logger.
 """
 
 from __future__ import annotations
@@ -221,7 +220,7 @@ class TestDerivedValues:
         """
         An unknown value must clear the sample window and stay unknown.
 
-        Otherwise a fresh reading averages against samples from before it.
+        A reading after the gap is averaged only against readings after it.
 
         :param logger: a logger.
         """

@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import queue
 from typing import Any, Iterator
+from unittest import mock
 
 import pytest
 from ska_low_mccs_common.component import (
@@ -28,19 +29,51 @@ from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
 
 class FakeHardwareClient:
     """
-    A hardware client that returns responses given to it by a test.
+    A hardware client that returns the responses a test gives it.
 
-    The real simulator cannot be made to report a transport level failure on
-    demand, so the error branches of the client need this instead.
+    A response can be set per attribute name, or as a default for every
+    attribute. Command responses are set per command name, as a sequence that
+    is returned in order, with the last one repeating.
     """
 
     def __init__(self: FakeHardwareClient) -> None:
-        """Initialise a new instance."""
+        """
+        Initialise a new instance.
+
+        ``get_attribute`` and ``execute_command`` are mocks whose side effect
+        is the dispatch below, so both the calls and the responses are
+        available.
+        """
         self.attribute_responses: dict[str, Any] = {}
         self.default_attribute_response: Any = None
         self.command_responses: dict[str, list[Any]] = {}
-        self.attribute_calls: list[str] = []
-        self.command_calls: list[tuple[str, str]] = []
+        self.get_attribute = mock.Mock(
+            name="get_attribute", side_effect=self._get_attribute
+        )
+        self.execute_command = mock.Mock(
+            name="execute_command", side_effect=self._execute_command
+        )
+
+    @property
+    def attribute_calls(self: FakeHardwareClient) -> list[str]:
+        """
+        Return the attribute names read, in order.
+
+        :return: the attribute names read.
+        """
+        return [call.args[0] for call in self.get_attribute.call_args_list]
+
+    @property
+    def command_calls(self: FakeHardwareClient) -> list[tuple[str, str]]:
+        """
+        Return the commands run, in order, as name and argument pairs.
+
+        :return: the commands run.
+        """
+        return [
+            (call.args[0], call.args[1] if len(call.args) > 1 else "")
+            for call in self.execute_command.call_args_list
+        ]
 
     def set_attribute_response(self: FakeHardwareClient, **kwargs: Any) -> Any:
         """
@@ -73,7 +106,7 @@ class FakeHardwareClient:
         """
         self.command_responses[command] = list(responses)
 
-    def get_attribute(self: FakeHardwareClient, attribute: str) -> Any:
+    def _get_attribute(self: FakeHardwareClient, attribute: str) -> Any:
         """
         Return the recorded response for an attribute read.
 
@@ -81,7 +114,6 @@ class FakeHardwareClient:
 
         :return: the recorded response.
         """
-        self.attribute_calls.append(attribute)
         if attribute in self.attribute_responses:
             return self.attribute_responses[attribute]
         if self.default_attribute_response is not None:
@@ -93,7 +125,7 @@ class FakeHardwareClient:
             "value": None,
         }
 
-    def execute_command(
+    def _execute_command(
         self: FakeHardwareClient, command: str, parameters: str = ""
     ) -> Any:
         """
@@ -104,7 +136,6 @@ class FakeHardwareClient:
 
         :return: the recorded response.
         """
-        self.command_calls.append((command, parameters))
         responses = self.command_responses.get(command)
         if not responses:
             return {

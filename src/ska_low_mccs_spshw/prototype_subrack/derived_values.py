@@ -116,9 +116,7 @@ class DerivedValues:
         ``SubrackData.MAX_SUBRACK_FAN_SPEED`` is replaced with that maximum, for
         at most ``max_fan_errors`` consecutive calls per fan.
 
-        The replacement value is the maximum fan speed, so a comparison against
-        that constant cannot tell a correct estimate from a replaced one.
-        ``max_fan_errors=0`` switches replacement off.
+        ``max_fan_errors=0`` switches the replacement off.
 
         :param fan_speeds: the fan speeds in rpm, as read from the board.
         :param fan_speeds_percent: the pwm duty cycle, as read from the board.

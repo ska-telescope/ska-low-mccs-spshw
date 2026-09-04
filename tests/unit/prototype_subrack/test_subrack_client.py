@@ -21,9 +21,13 @@ import logging
 import queue
 import threading
 from typing import Any, Iterator
+from unittest import mock
 
 import pytest
-from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
+from ska_low_mccs_common.component import (
+    HardwareClientResponseStatusCodes,
+    WebHardwareClient,
+)
 
 from ska_low_mccs_spshw.prototype_subrack import (
     BoardCommandStatus,
@@ -39,7 +43,6 @@ from ska_low_mccs_spshw.prototype_subrack.constants import (
     BATCH_ATTRIBUTES,
     LOCK_TIMEOUT,
 )
-from ska_low_mccs_spshw.subrack.subrack_data import SubrackData
 from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
 
 from .conftest import FakeHardwareClient
@@ -154,7 +157,13 @@ class TestPollRequest:
 
 
 class TestAgainstSimulator:
-    """Tests that run against a real simulator server over HTTP."""
+    """
+    Tests of the client against a simulator server over HTTP.
+
+    These use the real
+    :py:class:`~ska_low_mccs_common.component.WebHardwareClient` over a socket,
+    and run a command while the poll loop is running.
+    """
 
     def test_poll_reads_every_batched_attribute(
         self: TestAgainstSimulator,
@@ -182,83 +191,6 @@ class TestAgainstSimulator:
         )
         assert response.timestamp > 0.0
 
-    def test_poll_adds_the_derived_fan_speeds(
-        self: TestAgainstSimulator,
-        simulated_subrack: Subrack,
-        responses: queue.SimpleQueue,
-    ) -> None:
-        """
-        The derived fan speeds must arrive alongside the raw reads.
-
-        Presence and shape only. The simulator's fans scale to exactly the
-        maximum fan speed, which is also what the replacement rule substitutes,
-        so a value assertion here would hold either way. ``TestDerivedValues``
-        covers the value.
-
-        :param simulated_subrack: the client under test.
-        :param responses: the queue that the callbacks feed.
-        """
-        simulated_subrack.start_polling()
-        response = _next_poll(responses)
-
-        estimates = response.values["subrack_max_fan_speeds"]
-        assert estimates is not None
-        assert len(estimates) == SubrackData.FAN_COUNT
-
-    def test_health_status_arrives_on_the_first_poll(
-        self: TestAgainstSimulator,
-        simulated_subrack: Subrack,
-        responses: queue.SimpleQueue,
-    ) -> None:
-        """
-        The health status must arrive on the first poll.
-
-        ``board_info`` is in the same batch as everything else, so the BIOS gate
-        opens before the health read of that same poll.
-
-        :param simulated_subrack: the client under test.
-        :param responses: the queue that the callbacks feed.
-        """
-        simulated_subrack.start_polling()
-
-        health_status = _next_poll(responses).health_status
-
-        assert health_status is not None
-        assert "temperatures" in health_status
-        assert "psus" in health_status
-
-    def test_synchronous_board_command(
-        self: TestAgainstSimulator,
-        simulated_subrack: Subrack,
-    ) -> None:
-        """
-        A synchronous board command must complete and return its value.
-
-        :param simulated_subrack: the client under test.
-        """
-        (status, _, retvalue) = simulated_subrack.run_board_command(
-            "get_health_status", ""
-        )
-
-        assert status == BoardCommandStatus.COMPLETED
-        assert isinstance(retvalue, dict)
-
-    def test_asynchronous_board_command_handshake(
-        self: TestAgainstSimulator,
-        simulated_subrack: Subrack,
-    ) -> None:
-        """
-        An asynchronous board command must be awaited to completion.
-
-        The simulator answers ``turn_on_tpm`` with ``STARTED``, so this
-        exercises the ``command_completed`` probe loop.
-
-        :param simulated_subrack: the client under test.
-        """
-        (status, message, _) = simulated_subrack.run_board_command("turn_on_tpm", "2")
-
-        assert status == BoardCommandStatus.COMPLETED, message
-
     def test_board_command_runs_while_polling(
         self: TestAgainstSimulator,
         simulated_subrack: Subrack,
@@ -267,7 +199,8 @@ class TestAgainstSimulator:
         """
         A board command must not wait for a poll slot.
 
-        This is the behaviour that lets the design drop the command queue.
+        The command and the poll loop share one lock, and the command takes it
+        on the thread that calls it.
 
         :param simulated_subrack: the client under test.
         :param responses: the queue that the callbacks feed.
@@ -280,6 +213,71 @@ class TestAgainstSimulator:
 
         # Polling must survive the command.
         assert _next_poll(responses).values["tpm_present"] is not None
+
+
+class TestWhatTheClientAsksTheBoard:
+    """
+    Tests of the calls the client makes to the board.
+
+    The fake records through mocks, so the sequence of calls can be asserted
+    as well as the response the client builds from them.
+    """
+
+    def test_a_poll_reads_every_batched_attribute_once_in_order(
+        self: TestWhatTheClientAsksTheBoard,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        One poll must read each batched attribute exactly once, in order.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        """
+        fake_client.set_attribute_response(value=None)
+        model = _make_model(fake_client, logger)
+
+        model.poll(model.get_request())
+
+        assert fake_client.get_attribute.call_args_list == [
+            mock.call(key) for key in BATCH_ATTRIBUTES
+        ]
+
+    def test_a_poll_runs_no_command_but_the_health_read(
+        self: TestWhatTheClientAsksTheBoard,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        A poll must not run board commands of its own.
+
+        Commands go through ``run_board_command`` on the caller's thread. The
+        only command a poll issues is the health status read.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        """
+        fake_client.set_attribute_response(value=None)
+        model = _make_model(fake_client, logger, command_update_rate=1000.0)
+
+        model.poll(model.get_request())
+
+        assert fake_client.execute_command.call_args_list == []
+
+    def test_a_command_is_passed_through_verbatim(
+        self: TestWhatTheClientAsksTheBoard,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        A command and its argument must reach the board unchanged.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        """
+        faked_subrack.run_board_command("set_subrack_fan_speed", "2,55")
+
+        fake_client.execute_command.assert_any_call("set_subrack_fan_speed", "2,55")
 
 
 class TestHealthCadence:
@@ -586,8 +584,8 @@ class TestErrorBranches:
         """
         A transport failure during a command must be reported, not raised.
 
-        A command runs on the caller's thread, so an exception here would
-        escape into a long running command rather than into ``poll_failed``.
+        A command runs on the caller's thread, so the failure comes back in the
+        returned status rather than as an exception.
 
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
@@ -686,8 +684,7 @@ class TestErrorBranches:
         """
         A board that reports busy while completing must still be waited for.
 
-        This is the one status worth waiting on, so it must not be swept up
-        with the errors that end the wait.
+        ``BUSY`` and ``STARTED`` continue the wait. Every other status ends it.
 
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
@@ -743,9 +740,8 @@ class TestErrorBranches:
         """
         An error from ``command_completed`` must fail with what the board said.
 
-        Only a busy board is worth waiting for. Treating a reported error as
-        busy discards the reason, waits out the whole timeout, and then blames
-        a timeout for something that was never going to finish.
+        The status and the detail the board reported both reach the caller, and
+        the wait ends at once rather than running to the timeout.
 
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
@@ -753,7 +749,7 @@ class TestErrorBranches:
         :param status: the status the board reports while completing.
         :param info: the detail the board reports with it.
         """
-        # Short, so a regression fails quickly instead of waiting out 30 s.
+        # Short, so the test does not sit through the whole timeout.
         monkeypatch.setattr(subrack_client, "COMMAND_TIMEOUT", 2.0)
         fake_client.set_command_responses(
             "turn_on_tpms",
@@ -808,11 +804,7 @@ class TestErrorBranches:
 
 
 class TestDerivedValuesWiring:
-    """
-    Tests that a poll response carries the derived values.
-
-    ``TestDerivedValues`` covers the computation itself.
-    """
+    """Tests that a poll response carries the derived values."""
 
     def test_the_derived_fan_speeds_reach_the_poll_response(
         self: TestDerivedValuesWiring,
@@ -887,9 +879,8 @@ class TestLockContention:
         """
         Hold the lock on another thread for the duration of the block.
 
-        A second thread is needed because the lock is reentrant, so the calling
-        thread would simply acquire it again. The handshake uses events, so the
-        test does not wait on a clock.
+        The lock is reentrant, so a second thread is needed to hold it against
+        the caller. Events carry the handshake in both directions.
 
         :param lock: the lock to hold.
 
@@ -1006,13 +997,9 @@ class TestLockContention:
 # pylint: disable-next=too-few-public-methods
 class TestPollingThread:
     """
-    Tests that the client disposes of its polling thread.
+    Tests of the polling thread's lifetime.
 
-    ``cleanup`` is one line, delegating to the poller. This covers that line,
-    and in doing so pins a contract of ``ska-tango-base`` that the design
-    depends on, which is that stopping polling leaves the thread alive and only
-    ``kill_polling_thread`` ends it. An upgrade that changed either would fail
-    here.
+    Stopping polling leaves the thread alive, and only ``cleanup`` ends it.
     """
 
     @staticmethod
@@ -1050,3 +1037,69 @@ class TestPollingThread:
 
         assert not thread.is_alive()
         assert self._polling_threads() == before
+
+
+class TestTheFakeMatchesTheRealClient:
+    """
+    Tests that the fake answers in the same shape as the real client.
+
+    The fields of a fake response match those of
+    :py:class:`~ska_low_mccs_common.component.WebHardwareClient`, and every
+    status name the client branches on is a member of
+    :py:class:`~ska_low_mccs_common.component.HardwareClientResponseStatusCodes`.
+    """
+
+    def test_the_attribute_response_shape_matches(
+        self: TestTheFakeMatchesTheRealClient,
+        simulator_address: tuple[str, int],
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        An attribute read must come back with the same fields either way.
+
+        :param simulator_address: the host and port of the simulator server.
+        :param fake_client: the fake hardware client.
+        """
+        (host, port) = simulator_address
+        real = WebHardwareClient(host, port).get_attribute("board_current")
+
+        fake = fake_client.get_attribute("board_current")
+
+        assert sorted(fake) == sorted(real)
+
+    def test_the_command_response_shape_matches(
+        self: TestTheFakeMatchesTheRealClient,
+        simulator_address: tuple[str, int],
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        A command must come back with the same fields either way.
+
+        :param simulator_address: the host and port of the simulator server.
+        :param fake_client: the fake hardware client.
+        """
+        (host, port) = simulator_address
+        real = WebHardwareClient(host, port).execute_command("command_completed", "")
+
+        fake = fake_client.execute_command("command_completed", "")
+
+        assert sorted(fake) == sorted(real)
+
+    def test_the_status_codes_the_client_branches_on_all_exist(
+        self: TestTheFakeMatchesTheRealClient,
+    ) -> None:
+        """
+        Every status the client branches on must be a real status code.
+
+        The client compares against the names of the shared enumeration's
+        members.
+        """
+        names = {member.name for member in HardwareClientResponseStatusCodes}
+
+        for group in (
+            subrack_client._TRANSPORT_ERRORS,
+            subrack_client._IN_BAND_ERRORS,
+            subrack_client._BOARD_BUSY,
+        ):
+            assert set(group) <= names, group
+        assert subrack_client._OK in names

@@ -34,15 +34,11 @@ from ska_low_mccs_spshw.prototype_subrack import (
     HttpError,
     RequestError,
     Subrack,
-    SubrackPollModel,
     SubrackPollRequest,
     SubrackPollResponse,
     subrack_client,
 )
-from ska_low_mccs_spshw.prototype_subrack.constants import (
-    BATCH_ATTRIBUTES,
-    LOCK_TIMEOUT,
-)
+from ska_low_mccs_spshw.prototype_subrack.constants import BATCH_ATTRIBUTES
 from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
 
 from .conftest import FakeHardwareClient
@@ -83,54 +79,25 @@ def _next_poll(
     return result
 
 
-def _make_model(
+def _make_subrack(
     client: FakeHardwareClient,
     logger: logging.Logger,
     lock: LogLock | None = None,
     **kwargs: Any,
-) -> SubrackPollModel:
+) -> Subrack:
     """
-    Return a poll model wired to a fake client, with no poller attached.
+    Return a subrack wired to a fake hardware client, with polling stopped.
 
     :param client: the fake hardware client.
     :param logger: a logger.
     :param lock: the client lock, defaulting to a fresh one.
-    :param kwargs: overrides passed to the model.
-
-    :return: a poll model.
-    """
-    options: dict[str, Any] = {
-        "command_update_rate": 1000.0,
-        "lock_timeout": LOCK_TIMEOUT,
-        "data_callback": lambda _: None,
-        "error_callback": None,
-    }
-    options.update(kwargs)
-    return SubrackPollModel(
-        client,  # type: ignore[arg-type]
-        lock or LogLock("test", logger),
-        logger,
-        **options,
-    )
-
-
-def _make_subrack(
-    client: FakeHardwareClient,
-    logger: logging.Logger,
-    **kwargs: Any,
-) -> Subrack:
-    """
-    Return a client wired to a fake hardware client, with polling stopped.
-
-    :param client: the fake hardware client.
-    :param logger: a logger.
-    :param kwargs: overrides passed to the client.
+    :param kwargs: overrides passed to the subrack.
 
     :return: a subrack client.
     """
     options: dict[str, Any] = {
         "poll_rate": 60.0,
-        "command_update_rate": 60.0,
+        "command_update_rate": 1000.0,
         "data_callback": lambda _: None,
     }
     options.update(kwargs)
@@ -139,6 +106,7 @@ def _make_subrack(
         0,
         logger,
         _client=client,  # type: ignore[arg-type]
+        _lock=lock,
         **options,
     )
 
@@ -235,9 +203,9 @@ class TestWhatTheClientAsksTheBoard:
         :param logger: a logger.
         """
         fake_client.set_attribute_response(value=None)
-        model = _make_model(fake_client, logger)
+        subrack = _make_subrack(fake_client, logger)
 
-        model.poll(model.get_request())
+        subrack.poll(subrack.get_request())
 
         assert fake_client.get_attribute.call_args_list == [
             mock.call(key) for key in BATCH_ATTRIBUTES
@@ -258,9 +226,9 @@ class TestWhatTheClientAsksTheBoard:
         :param logger: a logger.
         """
         fake_client.set_attribute_response(value=None)
-        model = _make_model(fake_client, logger, command_update_rate=1000.0)
+        subrack = _make_subrack(fake_client, logger, command_update_rate=1000.0)
 
-        model.poll(model.get_request())
+        subrack.poll(subrack.get_request())
 
         assert fake_client.execute_command.call_args_list == []
 
@@ -299,22 +267,22 @@ class TestHealthCadence:
         """
         return {"SMM": {"bios": version}}
 
-    def _model_with_bios(
+    def _subrack_with_bios(
         self: TestHealthCadence,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
         version: str | None,
         **kwargs: Any,
-    ) -> SubrackPollModel:
+    ) -> Subrack:
         """
-        Return a poll model whose fake board reports the given BIOS version.
+        Return a subrack whose fake board reports the given BIOS version.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         :param version: the BIOS version string, or ``None`` for no board info.
-        :param kwargs: overrides passed to the model.
+        :param kwargs: overrides passed to the subrack.
 
-        :return: a poll model.
+        :return: a poll subrack.
         """
         fake_client.set_attribute_response(value=None)
         if version is not None:
@@ -333,7 +301,7 @@ class TestHealthCadence:
                 "retvalue": {"psus": {}},
             },
         )
-        return _make_model(fake_client, logger, **kwargs)
+        return _make_subrack(fake_client, logger, **kwargs)
 
     def test_health_is_read_once_per_cadence(
         self: TestHealthCadence,
@@ -349,12 +317,12 @@ class TestHealthCadence:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        model = self._model_with_bios(
+        subrack = self._subrack_with_bios(
             fake_client, logger, "v1.6.0", command_update_rate=1000.0
         )
 
-        assert model.poll(model.get_request()).health_status is not None
-        assert model.poll(model.get_request()).health_status is None
+        assert subrack.poll(subrack.get_request()).health_status is not None
+        assert subrack.poll(subrack.get_request()).health_status is None
 
         health_calls = [
             c for c in fake_client.command_calls if c[0] == "get_health_status"
@@ -372,9 +340,9 @@ class TestHealthCadence:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        model = self._model_with_bios(fake_client, logger, "v1.5.0")
+        subrack = self._subrack_with_bios(fake_client, logger, "v1.5.0")
 
-        assert model.poll(model.get_request()).health_status is None
+        assert subrack.poll(subrack.get_request()).health_status is None
 
         assert not [c for c in fake_client.command_calls if c[0] == "get_health_status"]
 
@@ -392,9 +360,9 @@ class TestHealthCadence:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        model = self._model_with_bios(fake_client, logger, "not-a-version")
+        subrack = self._subrack_with_bios(fake_client, logger, "not-a-version")
 
-        assert model.poll(model.get_request()).health_status is None
+        assert subrack.poll(subrack.get_request()).health_status is None
 
         assert not [c for c in fake_client.command_calls if c[0] == "get_health_status"]
 
@@ -417,10 +385,10 @@ class TestErrorBranches:
             status=HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
             info="Connection refused",
         )
-        model = _make_model(fake_client, logger)
+        subrack = _make_subrack(fake_client, logger)
 
         with pytest.raises(RequestError, match="Connection refused"):
-            model.poll(model.get_request())
+            subrack.poll(subrack.get_request())
 
     def test_http_error_raises_http_error(
         self: TestErrorBranches,
@@ -440,10 +408,10 @@ class TestErrorBranches:
             status=HardwareClientResponseStatusCodes.HTTP_ERROR.name,
             info="HTML status 500",
         )
-        model = _make_model(fake_client, logger)
+        subrack = _make_subrack(fake_client, logger)
 
         with pytest.raises(HttpError, match="500"):
-            model.poll(model.get_request())
+            subrack.poll(subrack.get_request())
 
     def test_in_band_error_gives_a_none_value(
         self: TestErrorBranches,
@@ -463,9 +431,9 @@ class TestErrorBranches:
             status=HardwareClientResponseStatusCodes.ERROR.name,
             info="No such attribute",
         )
-        model = _make_model(fake_client, logger)
+        subrack = _make_subrack(fake_client, logger)
 
-        response = model.poll(model.get_request())
+        response = subrack.poll(subrack.get_request())
 
         for key in BATCH_ATTRIBUTES:
             assert response.values[key] is None
@@ -485,9 +453,9 @@ class TestErrorBranches:
             status=HardwareClientResponseStatusCodes.BUSY.name,
             info="Board busy",
         )
-        model = _make_model(fake_client, logger)
+        subrack = _make_subrack(fake_client, logger)
 
-        response = model.poll(model.get_request())
+        response = subrack.poll(subrack.get_request())
 
         assert response.values["board_current"] is None
 
@@ -503,10 +471,10 @@ class TestErrorBranches:
         :param logger: a logger.
         """
         fake_client.set_attribute_response(status="NOT_A_REAL_STATUS")
-        model = _make_model(fake_client, logger)
+        subrack = _make_subrack(fake_client, logger)
 
         with pytest.raises(ValueError, match="NOT_A_REAL_STATUS"):
-            model.poll(model.get_request())
+            subrack.poll(subrack.get_request())
 
     def test_poll_failure_clears_the_caches(
         self: TestErrorBranches,
@@ -522,14 +490,14 @@ class TestErrorBranches:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        model = _make_model(fake_client, logger, max_fan_errors=1)
+        subrack = _make_subrack(fake_client, logger, max_fan_errors=1)
 
         # Use up the single allowed replacement.
-        model.derived.estimate_max_fan_rpm([0.0] * 4, [100.0] * 4)
-        assert model.derived.fan_error_counts == [1, 1, 1, 1]
+        subrack.derived.estimate_max_fan_rpm([0.0] * 4, [100.0] * 4)
+        assert subrack.derived.fan_error_counts == [1, 1, 1, 1]
 
-        model.poll_failed(RequestError("gone"))
-        assert model.derived.fan_error_counts == [0, 0, 0, 0]
+        subrack.poll_failed(RequestError("gone"))
+        assert subrack.derived.fan_error_counts == [0, 0, 0, 0]
 
     def test_error_callback_receives_the_exception(
         self: TestErrorBranches,
@@ -543,10 +511,10 @@ class TestErrorBranches:
         :param logger: a logger.
         """
         seen: list[Exception] = []
-        model = _make_model(fake_client, logger, error_callback=seen.append)
+        subrack = _make_subrack(fake_client, logger, error_callback=seen.append)
         exception = HttpError("boom")
 
-        model.poll_failed(exception)
+        subrack.poll_failed(exception)
 
         assert seen == [exception]
 
@@ -830,9 +798,9 @@ class TestDerivedValuesWiring:
                 "attribute": key,
                 "value": value,
             }
-        model = _make_model(fake_client, logger, max_fan_errors=0)
+        subrack = _make_subrack(fake_client, logger, max_fan_errors=0)
 
-        response = model.poll(model.get_request())
+        response = subrack.poll(subrack.get_request())
 
         assert response.values["subrack_max_fan_speeds"] == pytest.approx([5200.0] * 4)
 
@@ -849,7 +817,7 @@ class TestDerivedValuesWiring:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        model = _make_model(
+        subrack = _make_subrack(
             fake_client,
             logger,
             attribute_filter_type="mean",
@@ -857,9 +825,9 @@ class TestDerivedValuesWiring:
         )
 
         fake_client.set_attribute_response(value=[0.0, 10.0])
-        model.poll(model.get_request())
+        subrack.poll(subrack.get_request())
         fake_client.set_attribute_response(value=[10.0, 20.0])
-        response = model.poll(model.get_request())
+        response = subrack.poll(subrack.get_request())
 
         assert response.values["tpm_currents"] == pytest.approx([5.0, 15.0])
 
@@ -918,11 +886,11 @@ class TestLockContention:
         :param logger: a logger.
         """
         lock = LogLock("busy", logger)
-        model = _make_model(fake_client, logger, lock=lock, lock_timeout=0.01)
+        subrack = _make_subrack(fake_client, logger, lock=lock, lock_timeout=0.01)
 
         with self._held(lock):
             with pytest.raises(RequestError, match="still holds the client"):
-                model.poll(model.get_request())
+                subrack.poll(subrack.get_request())
 
     def test_a_command_that_cannot_get_the_lock_fails(
         self: TestLockContention,
@@ -962,11 +930,11 @@ class TestLockContention:
         :param caplog: the pytest log capture fixture.
         """
         lock = LogLock("slow", logger, timeout_warning=0.0)
-        model = _make_model(fake_client, logger, lock=lock)
+        subrack = _make_subrack(fake_client, logger, lock=lock)
         fake_client.set_attribute_response(value=None)
 
         with caplog.at_level(logging.WARNING, logger=logger.name):
-            model.poll(model.get_request())
+            subrack.poll(subrack.get_request())
 
         assert "lock slow held for" in caplog.text
         assert "poll sweep" in caplog.text

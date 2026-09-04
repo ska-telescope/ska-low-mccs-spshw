@@ -8,10 +8,11 @@
 """
 A polling client for an SPS subrack management board. Holds no Tango code.
 
-:py:class:`Subrack` owns a
-:py:class:`~ska_low_mccs_common.component.WebHardwareClient`, a lock that
-serialises every access to it, a :py:class:`SubrackPollModel` and a
-:py:class:`ska_tango_base.poller.Poller`.
+:py:class:`Subrack` is the poll model that
+:py:class:`ska_tango_base.poller.Poller` drives, and it also runs board
+commands. It owns a
+:py:class:`~ska_low_mccs_common.component.WebHardwareClient` and a lock that
+serialises every access to it.
 
 One lock covers both polls and board commands. A board command takes it on the
 thread that calls it, so it does not wait for a poll slot.
@@ -48,7 +49,6 @@ from .derived_values import DerivedValues
 __all__ = [
     "BoardCommandStatus",
     "Subrack",
-    "SubrackPollModel",
     "SubrackPollRequest",
     "SubrackPollResponse",
 ]
@@ -114,62 +114,86 @@ class SubrackPollResponse:
 
 
 # pylint: disable-next=too-many-instance-attributes
-class SubrackPollModel(PollModel[SubrackPollRequest, SubrackPollResponse]):
+class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
     """
-    The polling model for a subrack management board.
+    A polling client for an SPS subrack management board.
+
+    A Tango device holds one of these. It runs a background poll loop that
+    gives each result to the callbacks supplied at construction. It also runs
+    board commands, serialised against the poll loop on a shared lock.
 
     Each poll reads a batch of attributes over HTTP. On a slower cadence it also
-    reads the health status. Every access to the client happens under a shared
-    lock, so a poll never overlaps a board command.
-
-    A transport failure is raised as :py:class:`RequestError` or
-    :py:class:`HttpError`, so the poller routes it to :py:meth:`poll_failed`. An
-    error that the board itself reports gives a value of ``None`` instead, which
-    the device turns into invalid attribute quality.
+    reads the health status. A transport failure is raised as
+    :py:class:`RequestError` or :py:class:`HttpError`, so the poller routes it
+    to :py:meth:`poll_failed`. An error that the board itself reports gives a
+    value of ``None`` instead, which the device turns into invalid attribute
+    quality.
 
     :py:class:`~.derived_values.DerivedValues` supplies the computed values.
+
+    The callbacks fire only while polling is active. A caller must ignore a late
+    callback that arrives after :py:meth:`stop_polling`, because that method
+    does not block.
     """
 
     def __init__(  # pylint: disable=too-many-arguments
-        self: SubrackPollModel,
-        client: WebHardwareClient,
-        client_lock: LogLock,
+        self: Subrack,
+        host: str,
+        port: int,
         logger: logging.Logger,
+        poll_rate: float,
         command_update_rate: float,
-        lock_timeout: float,
         data_callback: Callable[[SubrackPollResponse], None],
         error_callback: Callable[[Exception], None] | None = None,
         max_fan_errors: int = 5,
         max_fan_rpm_delta: float = 25.0,
         attribute_filter_type: str | None = None,
         attribute_filter_max_samples: int = 5,
+        lock_timeout: float = LOCK_TIMEOUT,
+        lock_warning: float = LOCK_WARNING,
+        _client: WebHardwareClient | None = None,
+        _lock: LogLock | None = None,
     ) -> None:
         """
         Initialise a new instance.
 
-        :param client: the HTTP hardware client.
-        :param client_lock: the lock that serialises access to ``client``.
-        :param lock_timeout: how long, in seconds, to wait for the lock.
-        :param logger: a logger for this model to use.
+        :param host: the host name or IP address of the management board.
+        :param port: the HTTP port of the management board.
+        :param logger: a logger for this client to use.
+        :param poll_rate: how long, in seconds, to wait after a poll before
+            polling again.
         :param command_update_rate: the shortest interval, in seconds, between
             health status reads.
         :param data_callback: called with each successful poll response.
         :param error_callback: called with the exception from a failed poll.
         :param max_fan_errors: how many consecutive bad fan rpm estimates to
-            replace, per fan, before the estimate is reported as read.
+            replace, per fan.
         :param max_fan_rpm_delta: the tolerance, as a percentage of the maximum
             fan speed, outside which a fan rpm estimate counts as bad.
         :param attribute_filter_type: the noise filter to apply to the TPM
             current, power and voltage readings.
         :param attribute_filter_max_samples: the filter sample window.
+        :param lock_timeout: how long, in seconds, to wait for the client lock
+            before giving up. This bounds how long a stalled board can block a
+            poll or a command.
+        :param lock_warning: how long, in seconds, a lock hold must exceed
+            before it is logged.
+        :param _client: an alternative hardware client, for testing only.
+        :param _lock: an alternative client lock, for testing only.
         """
-        self._client = client
-        self._client_lock = client_lock
         self._logger = logger
+        self._client = _client or WebHardwareClient(host, port)
         self._command_update_rate = command_update_rate
         self._lock_timeout = lock_timeout
         self._data_callback = data_callback
         self._error_callback = error_callback
+
+        # The board fails every request while a command is active, so all access
+        # to the client is serialised. A LogLock reports a long hold and names
+        # the holder, so a stalled board is visible in the log.
+        self._client_lock = _lock or LogLock(
+            f"subrack-{host}", logger, timeout_warning=lock_warning
+        )
 
         # Health status bookkeeping. Touched on the poll thread only.
         self._last_health_fetch = 0.0
@@ -186,10 +210,12 @@ class SubrackPollModel(PollModel[SubrackPollRequest, SubrackPollResponse]):
             attribute_filter_max_samples=attribute_filter_max_samples,
         )
 
+        self._poller = Poller(self, poll_rate, logger)
+
     # ----------------
     # PollModel hooks
     # ----------------
-    def get_request(self: SubrackPollModel) -> SubrackPollRequest:
+    def get_request(self: Subrack) -> SubrackPollRequest:
         """
         Return what the next poll should do.
 
@@ -202,9 +228,7 @@ class SubrackPollModel(PollModel[SubrackPollRequest, SubrackPollResponse]):
             fetch_health=elapsed >= self._command_update_rate,
         )
 
-    def poll(
-        self: SubrackPollModel, poll_request: SubrackPollRequest
-    ) -> SubrackPollResponse:
+    def poll(self: Subrack, poll_request: SubrackPollRequest) -> SubrackPollResponse:
         """
         Perform one poll of the subrack over HTTP.
 
@@ -232,9 +256,7 @@ class SubrackPollModel(PollModel[SubrackPollRequest, SubrackPollResponse]):
             values=values, health_status=health_status, timestamp=time.time()
         )
 
-    def poll_succeeded(
-        self: SubrackPollModel, poll_response: SubrackPollResponse
-    ) -> None:
+    def poll_succeeded(self: Subrack, poll_response: SubrackPollResponse) -> None:
         """
         Give a successful poll response to the data callback.
 
@@ -242,7 +264,7 @@ class SubrackPollModel(PollModel[SubrackPollRequest, SubrackPollResponse]):
         """
         self._data_callback(poll_response)
 
-    def poll_failed(self: SubrackPollModel, exception: Exception) -> None:
+    def poll_failed(self: Subrack, exception: Exception) -> None:
         """
         Give a poll failure to the error callback.
 
@@ -256,223 +278,8 @@ class SubrackPollModel(PollModel[SubrackPollRequest, SubrackPollResponse]):
             self._error_callback(exception)
 
     # ----------------
-    # Reads
+    # Board commands
     # ----------------
-    @staticmethod
-    def _raise_for_transport_error(response: Any) -> None:
-        """
-        Raise the exception that matches a transport level failure.
-
-        :param response: a client response whose status is a transport error.
-
-        :raises HttpError: if the board answered with an HTTP error.
-        :raises RequestError: if the request never reached the board.
-        """
-        if response["status"] == _HTTP_ERROR:
-            raise HttpError(str(response["info"]))
-        raise RequestError(str(response["info"]))
-
-    def _fetch_attributes(
-        self: SubrackPollModel, keys: tuple[str, ...]
-    ) -> dict[str, Any]:
-        """
-        Read the given hardware attributes from the subrack over HTTP.
-
-        Every requested key is present in the result. A key whose value the
-        board could not supply maps to ``None``.
-
-        :param keys: the hardware read keys to fetch.
-
-        :raises ValueError: if the client returns an unknown status code.
-
-        :return: a mapping of hardware read key to value.
-        """
-        values: dict[str, Any] = dict.fromkeys(keys)
-        for key in keys:
-            response = self._client.get_attribute(key)
-            status = response["status"]
-            if status == _OK:
-                values[key] = response["value"]
-            elif status in _IN_BAND_ERRORS:
-                self._logger.warning(
-                    "get_attribute '%s' returned status '%s'. %s",
-                    key,
-                    status,
-                    response.get("info", "No details."),
-                )
-            elif status in _TRANSPORT_ERRORS:
-                # Raised so that the poller routes it to poll_failed, which the
-                # device turns into an operational state change.
-                self._raise_for_transport_error(response)
-            elif status in _BOARD_BUSY:
-                # The board is busy. Leave this key unknown for this poll.
-                pass
-            else:
-                raise ValueError(
-                    f"Unknown status code '{status}' from get_attribute. "
-                    "Check the hardware client."
-                )
-        return values
-
-    def _update_bios_gate(self: SubrackPollModel, board_info: Any) -> None:
-        """
-        Enable health status reads once the SMB BIOS is known to support them.
-
-        :param board_info: the board info from this poll, or ``None``.
-        """
-        if self._checked_bios or not board_info:
-            return
-        try:
-            bios_version = board_info["SMM"]["bios"]
-            parsed = tuple(int(part) for part in bios_version.lstrip("v").split("."))
-            self._health_supported = parsed >= MIN_HEALTH_BIOS_VERSION
-        except (AttributeError, KeyError, TypeError, ValueError):
-            self._logger.warning(
-                "Could not read the BIOS version from the board info. "
-                "Health status reads stay disabled."
-            )
-        self._checked_bios = True
-
-    def _maybe_fetch_health(
-        self: SubrackPollModel, fetch_health: bool
-    ) -> Optional[dict]:
-        """
-        Read the SMB health status, if it is due and the BIOS supports it.
-
-        The caller must hold ``self._client_lock``.
-
-        :param fetch_health: whether the health cadence has elapsed.
-
-        :raises ValueError: if the client returns an unknown status code.
-
-        :return: the health status, or ``None`` if it was not read this poll.
-        """
-        if not fetch_health:
-            return None
-
-        now = time.monotonic()
-        if not self._health_supported:
-            self._last_health_fetch = now
-            return None
-
-        response = self._client.execute_command("get_health_status", "")
-        status = response["status"]
-        if status == _OK:
-            self._last_health_fetch = now
-            # The client types retvalue as str, but get_health_status returns a
-            # nested dictionary.
-            return cast(Optional[dict], response["retvalue"])
-        if status in _BOARD_BUSY:
-            # The board is busy. Retry next poll without advancing the timer.
-            return None
-        if status in _TRANSPORT_ERRORS:
-            self._raise_for_transport_error(response)
-        if status in _IN_BAND_ERRORS:
-            self._logger.error(
-                "get_health_status returned status '%s'. %s",
-                status,
-                response.get("info", "No details."),
-            )
-            self._last_health_fetch = now
-            return None
-        raise ValueError(
-            f"Unknown status code '{status}' from execute_command. "
-            "Check the hardware client."
-        )
-
-
-class Subrack:
-    """
-    A polling client for an SPS subrack management board.
-
-    A Tango device holds one of these. It runs a background poll loop that
-    gives each result to the callbacks supplied at construction. It also runs
-    board commands, serialised against the poll loop on a shared lock.
-
-    The callbacks fire only while polling is active. A caller must ignore a late
-    callback that arrives after :py:meth:`stop_polling`, because that method
-    does not block.
-    """
-
-    def __init__(  # pylint: disable=too-many-arguments
-        self: Subrack,
-        host: str,
-        port: int,
-        logger: logging.Logger,
-        poll_rate: float,
-        command_update_rate: float,
-        data_callback: Callable[[SubrackPollResponse], None],
-        error_callback: Callable[[Exception], None] | None = None,
-        max_fan_errors: int = 5,
-        max_fan_rpm_delta: float = 25.0,
-        attribute_filter_type: str | None = None,
-        attribute_filter_max_samples: int = 5,
-        lock_timeout: float = LOCK_TIMEOUT,
-        lock_warning: float = LOCK_WARNING,
-        _client: WebHardwareClient | None = None,
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param host: the host name or IP address of the management board.
-        :param port: the HTTP port of the management board.
-        :param logger: a logger for this client to use.
-        :param poll_rate: how long, in seconds, to wait after a poll before
-            polling again.
-        :param command_update_rate: the shortest interval, in seconds, between
-            health status reads.
-        :param data_callback: called with each successful poll response.
-        :param error_callback: called with the exception from a failed poll.
-        :param max_fan_errors: how many consecutive bad fan rpm estimates to
-            replace, per fan.
-        :param max_fan_rpm_delta: the tolerance, as a percentage of the maximum
-            fan speed, outside which a fan rpm estimate counts as bad.
-        :param attribute_filter_type: the noise filter to apply to the TPM
-            current, power and voltage readings.
-        :param attribute_filter_max_samples: the filter sample window.
-        :param lock_timeout: how long, in seconds, to wait for the client lock
-            before giving up. This bounds how long a stalled board can block a
-            poll or a command.
-        :param lock_warning: how long, in seconds, a lock hold must exceed
-            before it is logged.
-        :param _client: an alternative hardware client, for testing only.
-        """
-        self._logger = logger
-        self._client = _client or WebHardwareClient(host, port)
-        self._lock_timeout = lock_timeout
-        # The board fails every request while a command is active, so all access
-        # to the client is serialised. A LogLock reports a long hold and names
-        # the holder, so a stalled board is visible in the log.
-        self._client_lock = LogLock(
-            f"subrack-{host}", logger, timeout_warning=lock_warning
-        )
-        self._poll_model = SubrackPollModel(
-            self._client,
-            self._client_lock,
-            logger,
-            command_update_rate,
-            lock_timeout,
-            data_callback,
-            error_callback,
-            max_fan_errors=max_fan_errors,
-            max_fan_rpm_delta=max_fan_rpm_delta,
-            attribute_filter_type=attribute_filter_type,
-            attribute_filter_max_samples=attribute_filter_max_samples,
-        )
-        self._poller = Poller(self._poll_model, poll_rate, logger)
-
-    def start_polling(self: Subrack) -> None:
-        """Start polling the subrack."""
-        self._poller.start_polling()
-
-    def stop_polling(self: Subrack) -> None:
-        """Stop polling the subrack."""
-        self._poller.stop_polling()
-
-    def cleanup(self: Subrack) -> None:
-        """Kill the polling thread. Do not use the instance afterwards."""
-        self._poller.kill_polling_thread()
-
     # pylint: disable-next=too-many-return-statements
     def run_board_command(
         self: Subrack,
@@ -538,6 +345,145 @@ class Subrack:
                 None,
             )
 
+    # ----------------
+    # Lifecycle
+    # ----------------
+    def start_polling(self: Subrack) -> None:
+        """Start polling the subrack."""
+        self._poller.start_polling()
+
+    def stop_polling(self: Subrack) -> None:
+        """Stop polling the subrack."""
+        self._poller.stop_polling()
+
+    def cleanup(self: Subrack) -> None:
+        """Kill the polling thread. Do not use the instance afterwards."""
+        self._poller.kill_polling_thread()
+
+    # ----------------
+    # Reads
+    # ----------------
+    @staticmethod
+    def _raise_for_transport_error(response: Any) -> None:
+        """
+        Raise the exception that matches a transport level failure.
+
+        :param response: a client response whose status is a transport error.
+
+        :raises HttpError: if the board answered with an HTTP error.
+        :raises RequestError: if the request never reached the board.
+        """
+        if response["status"] == _HTTP_ERROR:
+            raise HttpError(str(response["info"]))
+        raise RequestError(str(response["info"]))
+
+    def _fetch_attributes(self: Subrack, keys: tuple[str, ...]) -> dict[str, Any]:
+        """
+        Read the given hardware attributes from the subrack over HTTP.
+
+        Every requested key is present in the result. A key whose value the
+        board could not supply maps to ``None``.
+
+        :param keys: the hardware read keys to fetch.
+
+        :raises ValueError: if the client returns an unknown status code.
+
+        :return: a mapping of hardware read key to value.
+        """
+        values: dict[str, Any] = dict.fromkeys(keys)
+        for key in keys:
+            response = self._client.get_attribute(key)
+            status = response["status"]
+            if status == _OK:
+                values[key] = response["value"]
+            elif status in _IN_BAND_ERRORS:
+                self._logger.warning(
+                    "get_attribute '%s' returned status '%s'. %s",
+                    key,
+                    status,
+                    response.get("info", "No details."),
+                )
+            elif status in _TRANSPORT_ERRORS:
+                # Raised so that the poller routes it to poll_failed, which the
+                # device turns into an operational state change.
+                self._raise_for_transport_error(response)
+            elif status in _BOARD_BUSY:
+                # The board is busy. Leave this key unknown for this poll.
+                pass
+            else:
+                raise ValueError(
+                    f"Unknown status code '{status}' from get_attribute. "
+                    "Check the hardware client."
+                )
+        return values
+
+    def _update_bios_gate(self: Subrack, board_info: Any) -> None:
+        """
+        Enable health status reads once the SMB BIOS is known to support them.
+
+        :param board_info: the board info from this poll, or ``None``.
+        """
+        if self._checked_bios or not board_info:
+            return
+        try:
+            bios_version = board_info["SMM"]["bios"]
+            parsed = tuple(int(part) for part in bios_version.lstrip("v").split("."))
+            self._health_supported = parsed >= MIN_HEALTH_BIOS_VERSION
+        except (AttributeError, KeyError, TypeError, ValueError):
+            self._logger.warning(
+                "Could not read the BIOS version from the board info. "
+                "Health status reads stay disabled."
+            )
+        self._checked_bios = True
+
+    def _maybe_fetch_health(self: Subrack, fetch_health: bool) -> Optional[dict]:
+        """
+        Read the SMB health status, if it is due and the BIOS supports it.
+
+        The caller must hold ``self._client_lock``.
+
+        :param fetch_health: whether the health cadence has elapsed.
+
+        :raises ValueError: if the client returns an unknown status code.
+
+        :return: the health status, or ``None`` if it was not read this poll.
+        """
+        if not fetch_health:
+            return None
+
+        now = time.monotonic()
+        if not self._health_supported:
+            self._last_health_fetch = now
+            return None
+
+        response = self._client.execute_command("get_health_status", "")
+        status = response["status"]
+        if status == _OK:
+            self._last_health_fetch = now
+            # The client types retvalue as str, but get_health_status returns a
+            # nested dictionary.
+            return cast(Optional[dict], response["retvalue"])
+        if status in _BOARD_BUSY:
+            # The board is busy. Retry next poll without advancing the timer.
+            return None
+        if status in _TRANSPORT_ERRORS:
+            self._raise_for_transport_error(response)
+        if status in _IN_BAND_ERRORS:
+            self._logger.error(
+                "get_health_status returned status '%s'. %s",
+                status,
+                response.get("info", "No details."),
+            )
+            self._last_health_fetch = now
+            return None
+        raise ValueError(
+            f"Unknown status code '{status}' from execute_command. "
+            "Check the hardware client."
+        )
+
+    # ----------------
+    # Command handshake
+    # ----------------
     def _abort_board_command(self: Subrack) -> None:
         """
         Ask the board to abort the command it is running.

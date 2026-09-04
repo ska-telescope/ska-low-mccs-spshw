@@ -161,12 +161,7 @@ subrack = Subrack(
 subrack.start_polling()
 _quieten()
 
-# The session is run from here rather than with ``python -i`` so that this
-# finally always runs. The client's polling thread is not a daemon, and Python
-# joins non-daemon threads before any atexit handler, so without disposing of
-# it the interpreter would hang on exit() and on Ctrl-D alike.
-# ``code.interact`` has no completion or history of its own, and without
-# completion a mistyped name just raises NameError.
+# Tab completion and history over the session namespace.
 try:
     import readline
     import rlcompleter
@@ -190,6 +185,8 @@ subrack client polling {HOST}:{PORT}
 
 Tab completes."""
 
+# The client's polling thread is not a daemon, so it is disposed of here on
+# every way out of the session, which is exit(), quit() and Ctrl-D.
 try:
     code.interact(banner=_BANNER, local=globals(), exitmsg="")
 finally:

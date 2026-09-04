@@ -49,7 +49,6 @@ from .derived_values import DerivedValues
 __all__ = [
     "BoardCommandStatus",
     "Subrack",
-    "SubrackPollRequest",
     "SubrackPollResponse",
 ]
 
@@ -75,27 +74,6 @@ class BoardCommandStatus(Enum):
 
 
 @dataclass
-class SubrackPollRequest:
-    """What a single subrack poll should do."""
-
-    attribute_keys: tuple[str, ...]
-    """The hardware read keys to fetch this poll."""
-
-    fetch_health: bool
-    """Whether this poll should also read the SMB health status."""
-
-    def __bool__(self: SubrackPollRequest) -> bool:
-        """
-        Report whether this request asks for anything.
-
-        The poller skips a poll when the request is falsy.
-
-        :return: whether this request asks for anything.
-        """
-        return bool(self.attribute_keys) or self.fetch_health
-
-
-@dataclass
 class SubrackPollResponse:
     """The result of a single subrack poll."""
 
@@ -114,7 +92,7 @@ class SubrackPollResponse:
 
 
 # pylint: disable-next=too-many-instance-attributes
-class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
+class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     """
     A polling client for an SPS subrack management board.
 
@@ -142,7 +120,6 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
         port: int,
         logger: logging.Logger,
         poll_rate: float,
-        command_update_rate: float,
         data_callback: Callable[[SubrackPollResponse], None],
         error_callback: Callable[[Exception], None] | None = None,
         max_fan_errors: int = 5,
@@ -162,8 +139,6 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
         :param logger: a logger for this client to use.
         :param poll_rate: how long, in seconds, to wait after a poll before
             polling again.
-        :param command_update_rate: the shortest interval, in seconds, between
-            health status reads.
         :param data_callback: called with each successful poll response.
         :param error_callback: called with the exception from a failed poll.
         :param max_fan_errors: how many consecutive bad fan rpm estimates to
@@ -183,7 +158,6 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
         """
         self._logger = logger
         self._client = _client or WebHardwareClient(host, port)
-        self._command_update_rate = command_update_rate
         self._lock_timeout = lock_timeout
         self._data_callback = data_callback
         self._error_callback = error_callback
@@ -195,8 +169,7 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
             f"subrack-{host}", logger, timeout_warning=lock_warning
         )
 
-        # Health status bookkeeping. Touched on the poll thread only.
-        self._last_health_fetch = 0.0
+        # The BIOS gate. Touched on the poll thread only.
         self._checked_bios = False
         self._health_supported = False
 
@@ -215,24 +188,21 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
     # ----------------
     # PollModel hooks
     # ----------------
-    def get_request(self: Subrack) -> SubrackPollRequest:
+    def get_request(self: Subrack) -> tuple[str, ...]:
         """
-        Return what the next poll should do.
+        Return the hardware read keys that the next poll should fetch.
 
-        :return: every batched attribute, and a health status read when the
-            health cadence has elapsed.
+        :return: every batched attribute.
         """
-        elapsed = time.monotonic() - self._last_health_fetch
-        return SubrackPollRequest(
-            attribute_keys=BATCH_ATTRIBUTES,
-            fetch_health=elapsed >= self._command_update_rate,
-        )
+        return BATCH_ATTRIBUTES
 
-    def poll(self: Subrack, poll_request: SubrackPollRequest) -> SubrackPollResponse:
+    def poll(self: Subrack, poll_request: tuple[str, ...]) -> SubrackPollResponse:
         """
         Perform one poll of the subrack over HTTP.
 
-        :param poll_request: what to read this poll.
+        Every poll also reads the health status.
+
+        :param poll_request: the hardware read keys to fetch.
 
         :raises RequestError: if the client lock is not free in time.
 
@@ -246,9 +216,9 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
                     f"Could not reach the board within {self._lock_timeout}s. "
                     "Another operation still holds the client."
                 )
-            values = self._fetch_attributes(poll_request.attribute_keys)
+            values = self._fetch_attributes(poll_request)
             self._update_bios_gate(values.get("board_info"))
-            health_status = self._maybe_fetch_health(poll_request.fetch_health)
+            health_status = self._fetch_health()
 
         self.derived.apply(values)
 
@@ -280,7 +250,6 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
     # ----------------
     # Board commands
     # ----------------
-    # pylint: disable-next=too-many-return-statements
     def run_board_command(
         self: Subrack,
         name: str,
@@ -314,29 +283,23 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
                 )
             response = self._client.execute_command(name, args)
             status = response["status"]
+            # The board reports both of these either as a status or, when the
+            # status is OK, as the returned value.
+            retvalue = response["retvalue"] if status == _OK else None
 
-            if status == _OK:
-                retvalue = response["retvalue"]
-                if retvalue == _STARTED:
-                    return self._await_command_completion(name, abort_event)
-                if retvalue == "FAILED":
-                    return (
-                        BoardCommandStatus.FAILED,
-                        f"The board did not accept command '{name}'. It is busy.",
-                        None,
-                    )
-                return (
-                    BoardCommandStatus.COMPLETED,
-                    "The command completed.",
-                    retvalue,
-                )
-            if status == _STARTED:
+            if _STARTED in (status, retvalue):
                 return self._await_command_completion(name, abort_event)
-            if status == _BUSY:
+            if status == _BUSY or retvalue == "FAILED":
                 return (
                     BoardCommandStatus.FAILED,
                     f"The board did not accept command '{name}'. It is busy.",
                     None,
+                )
+            if status == _OK:
+                return (
+                    BoardCommandStatus.COMPLETED,
+                    "The command completed.",
+                    retvalue,
                 )
             return (
                 BoardCommandStatus.FAILED,
@@ -436,35 +399,27 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
             )
         self._checked_bios = True
 
-    def _maybe_fetch_health(self: Subrack, fetch_health: bool) -> Optional[dict]:
+    def _fetch_health(self: Subrack) -> Optional[dict]:
         """
-        Read the SMB health status, if it is due and the BIOS supports it.
+        Read the SMB health status, if the BIOS supports it.
 
         The caller must hold ``self._client_lock``.
 
-        :param fetch_health: whether the health cadence has elapsed.
-
         :raises ValueError: if the client returns an unknown status code.
 
-        :return: the health status, or ``None`` if it was not read this poll.
+        :return: the health status, or ``None`` when the board did not give one.
         """
-        if not fetch_health:
-            return None
-
-        now = time.monotonic()
         if not self._health_supported:
-            self._last_health_fetch = now
             return None
 
         response = self._client.execute_command("get_health_status", "")
         status = response["status"]
         if status == _OK:
-            self._last_health_fetch = now
             # The client types retvalue as str, but get_health_status returns a
             # nested dictionary.
             return cast(Optional[dict], response["retvalue"])
         if status in _BOARD_BUSY:
-            # The board is busy. Retry next poll without advancing the timer.
+            # The board is busy. Retry next poll.
             return None
         if status in _TRANSPORT_ERRORS:
             self._raise_for_transport_error(response)
@@ -474,7 +429,6 @@ class Subrack(PollModel[SubrackPollRequest, SubrackPollResponse]):
                 status,
                 response.get("info", "No details."),
             )
-            self._last_health_fetch = now
             return None
         raise ValueError(
             f"Unknown status code '{status}' from execute_command. "

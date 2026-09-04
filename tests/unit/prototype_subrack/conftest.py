@@ -251,7 +251,6 @@ def simulated_subrack_fixture(
         port,
         logger,
         poll_rate=0.1,
-        command_update_rate=0.1,
         data_callback=data_callback,
         error_callback=error_callback,
         _client=WebHardwareClient(host, port),
@@ -281,7 +280,6 @@ def faked_subrack_fixture(
         0,
         logger,
         poll_rate=0.05,
-        command_update_rate=0.05,
         data_callback=data_callback,
         error_callback=error_callback,
         _client=fake_client,  # type: ignore[arg-type]

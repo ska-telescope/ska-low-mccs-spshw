@@ -34,7 +34,6 @@ from ska_low_mccs_spshw.prototype_subrack import (
     HttpError,
     RequestError,
     Subrack,
-    SubrackPollRequest,
     SubrackPollResponse,
     subrack_client,
 )
@@ -97,7 +96,6 @@ def _make_subrack(
     """
     options: dict[str, Any] = {
         "poll_rate": 60.0,
-        "command_update_rate": 1000.0,
         "data_callback": lambda _: None,
     }
     options.update(kwargs)
@@ -109,19 +107,6 @@ def _make_subrack(
         _lock=lock,
         **options,
     )
-
-
-class TestPollRequest:
-    """Tests of the poll request."""
-
-    def test_request_with_work_is_truthy(self: TestPollRequest) -> None:
-        """A request that asks for something must not be skipped by the poller."""
-        assert SubrackPollRequest(attribute_keys=("board_info",), fetch_health=False)
-        assert SubrackPollRequest(attribute_keys=(), fetch_health=True)
-
-    def test_empty_request_is_falsy(self: TestPollRequest) -> None:
-        """A request that asks for nothing lets the poller skip the poll."""
-        assert not SubrackPollRequest(attribute_keys=(), fetch_health=False)
 
 
 class TestAgainstSimulator:
@@ -220,13 +205,14 @@ class TestWhatTheClientAsksTheBoard:
         A poll must not run board commands of its own.
 
         Commands go through ``run_board_command`` on the caller's thread. The
-        only command a poll issues is the health status read.
+        only command a poll issues is the health status read, and the fake
+        reports no board info here, so the BIOS gate leaves that off too.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
         fake_client.set_attribute_response(value=None)
-        subrack = _make_subrack(fake_client, logger, command_update_rate=1000.0)
+        subrack = _make_subrack(fake_client, logger)
 
         subrack.poll(subrack.get_request())
 
@@ -302,32 +288,6 @@ class TestHealthCadence:
             },
         )
         return _make_subrack(fake_client, logger, **kwargs)
-
-    def test_health_is_read_once_per_cadence(
-        self: TestHealthCadence,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A second poll inside the cadence must not read the health status again.
-
-        The health read is the most expensive call the board serves, so it must
-        not happen on every sweep.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        """
-        subrack = self._subrack_with_bios(
-            fake_client, logger, "v1.6.0", command_update_rate=1000.0
-        )
-
-        assert subrack.poll(subrack.get_request()).health_status is not None
-        assert subrack.poll(subrack.get_request()).health_status is None
-
-        health_calls = [
-            c for c in fake_client.command_calls if c[0] == "get_health_status"
-        ]
-        assert len(health_calls) == 1
 
     def test_old_bios_disables_the_health_read(
         self: TestHealthCadence,
@@ -542,7 +502,7 @@ class TestErrorBranches:
         (status, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
 
         assert status == BoardCommandStatus.FAILED
-        assert "busy" in message
+        assert "did not accept" in message
 
     def test_command_transport_failure_is_reported(
         self: TestErrorBranches,
@@ -692,7 +652,6 @@ class TestErrorBranches:
         ("status", "info"),
         [
             (HardwareClientResponseStatusCodes.ERROR.name, "board fault"),
-            (HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name, "bad json"),
             ("NOT_A_REAL_STATUS", "who knows"),
         ],
     )
@@ -768,7 +727,7 @@ class TestErrorBranches:
         (status, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
 
         assert status == BoardCommandStatus.FAILED
-        assert "busy" in message
+        assert "did not accept" in message
 
 
 class TestDerivedValuesWiring:

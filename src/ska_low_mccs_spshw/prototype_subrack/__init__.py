@@ -14,15 +14,9 @@ __all__ = [
     "HttpError",
     "RequestError",
     "Subrack",
-    "SubrackPollRequest",
     "SubrackPollResponse",
 ]
 
 from .constants import HttpError, RequestError
 from .derived_values import DerivedValues
-from .subrack_client import (
-    BoardCommandStatus,
-    Subrack,
-    SubrackPollRequest,
-    SubrackPollResponse,
-)
+from .subrack_client import BoardCommandStatus, Subrack, SubrackPollResponse

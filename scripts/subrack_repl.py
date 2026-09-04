@@ -173,7 +173,6 @@ subrack = Subrack(
     PORT,
     LOGGER,
     poll_rate=2.0,
-    command_update_rate=5.0,
     data_callback=_on_data,
     error_callback=_on_error,
 )

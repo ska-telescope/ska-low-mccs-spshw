@@ -449,7 +449,9 @@ if __name__ == "__main__":
 
     if result == 0:
         print("Docs script executed successfuly")
+        print(f"Python version: {sys.version}") 
         sys.exit(0)
     if result == 1:
         print("Current docs schemas out of date, run make python-format")
+        print(f"Python version: {sys.version}") 
         sys.exit(1)

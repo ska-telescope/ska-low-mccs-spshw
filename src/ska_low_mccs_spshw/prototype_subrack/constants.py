@@ -19,7 +19,6 @@ __all__ = [
     "HttpError",
     "LOCK_TIMEOUT",
     "LOCK_WARNING",
-    "MIN_HEALTH_BIOS_VERSION",
     "MIN_PWM_DUTY_FRACTION",
     "RequestError",
 ]
@@ -85,9 +84,6 @@ board on a normal network, and far shorter than a stall.
 
 COMMAND_POLL_INTERVAL: Final = 0.1
 """How long, in seconds, between ``command_completed`` probes."""
-
-MIN_HEALTH_BIOS_VERSION: Final = (1, 6, 0)
-"""The lowest SMB BIOS version that supports ``get_health_status``."""
 
 MIN_PWM_DUTY_FRACTION: Final = 0.1
 """The floor applied to pwm duty when the fan rpm estimate scales up.

@@ -40,7 +40,6 @@ from .constants import (
     COMMAND_TIMEOUT,
     LOCK_TIMEOUT,
     LOCK_WARNING,
-    MIN_HEALTH_BIOS_VERSION,
     HttpError,
     RequestError,
 )
@@ -100,12 +99,11 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     gives each result to the callbacks supplied at construction. It also runs
     board commands, serialised against the poll loop on a shared lock.
 
-    Each poll reads a batch of attributes over HTTP. On a slower cadence it also
-    reads the health status. A transport failure is raised as
-    :py:class:`RequestError` or :py:class:`HttpError`, so the poller routes it
-    to :py:meth:`poll_failed`. An error that the board itself reports gives a
-    value of ``None`` instead, which the device turns into invalid attribute
-    quality.
+    Each poll reads a batch of attributes over HTTP, then the health status. A
+    transport failure is raised as :py:class:`RequestError` or
+    :py:class:`HttpError`, so the poller routes it to :py:meth:`poll_failed`.
+    An error that the board itself reports gives a value of ``None`` instead,
+    which the device turns into invalid attribute quality.
 
     :py:class:`~.derived_values.DerivedValues` supplies the computed values.
 
@@ -169,12 +167,8 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             f"subrack-{host}", logger, timeout_warning=lock_warning
         )
 
-        # The BIOS gate. Touched on the poll thread only.
-        self._checked_bios = False
-        self._health_supported = False
-
         # The values that are computed rather than read. This object owns all
-        # state that spans polls, other than the health status bookkeeping.
+        # state that spans polls.
         self.derived = DerivedValues(
             logger,
             max_fan_errors=max_fan_errors,
@@ -217,7 +211,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                     "Another operation still holds the client."
                 )
             values = self._fetch_attributes(poll_request)
-            self._update_bios_gate(values.get("board_info"))
             health_status = self._fetch_health()
 
         self.derived.apply(values)
@@ -380,28 +373,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 )
         return values
 
-    def _update_bios_gate(self: Subrack, board_info: Any) -> None:
-        """
-        Enable health status reads once the SMB BIOS is known to support them.
-
-        :param board_info: the board info from this poll, or ``None``.
-        """
-        if self._checked_bios or not board_info:
-            return
-        try:
-            bios_version = board_info["SMM"]["bios"]
-            parsed = tuple(int(part) for part in bios_version.lstrip("v").split("."))
-            self._health_supported = parsed >= MIN_HEALTH_BIOS_VERSION
-        except (AttributeError, KeyError, TypeError, ValueError):
-            self._logger.warning(
-                "Could not read the BIOS version from the board info. "
-                "Health status reads stay disabled."
-            )
-        self._checked_bios = True
-
     def _fetch_health(self: Subrack) -> Optional[dict]:
         """
-        Read the SMB health status, if the BIOS supports it.
+        Read the SMB health status.
 
         The caller must hold ``self._client_lock``.
 
@@ -409,9 +383,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         :return: the health status, or ``None`` when the board did not give one.
         """
-        if not self._health_supported:
-            return None
-
         response = self._client.execute_command("get_health_status", "")
         status = response["status"]
         if status == _OK:

@@ -204,8 +204,7 @@ class TestWhatTheClientAsksTheBoard:
         A poll must not run board commands of its own.
 
         Commands go through ``run_board_command`` on the caller's thread. The
-        only command a poll issues is the health status read, and the fake
-        reports no board info here, so the BIOS gate leaves that off too.
+        only command a poll issues is the health status read.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
@@ -215,7 +214,7 @@ class TestWhatTheClientAsksTheBoard:
 
         subrack.poll(subrack.get_request())
 
-        assert fake_client.execute_command.call_args_list == []
+        assert fake_client.command_calls == [("get_health_status", "")]
 
     def test_a_command_is_passed_through_verbatim(
         self: TestWhatTheClientAsksTheBoard,
@@ -233,50 +232,30 @@ class TestWhatTheClientAsksTheBoard:
         fake_client.execute_command.assert_any_call("set_subrack_fan_speed", "2,55")
 
 
-class TestHealthBiosGate:
+class TestHealthRead:
     """
-    Tests of the BIOS gate on the health status read.
+    Tests of the health status read.
 
-    The health read is the only board command a poll issues, and the client
-    reads it only once the SMB BIOS is known to support it.
+    The health read is the only board command a poll issues, and every poll
+    issues it.
     """
 
     @staticmethod
-    def _board_info(version: str) -> dict[str, Any]:
-        """
-        Return a board info response body reporting the given BIOS version.
-
-        :param version: the BIOS version string.
-
-        :return: a board info value.
-        """
-        return {"SMM": {"bios": version}}
-
-    def _subrack_with_bios(
-        self: TestHealthBiosGate,
+    def _subrack_with_health(
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
-        version: str | None,
         **kwargs: Any,
     ) -> Subrack:
         """
-        Return a subrack whose fake board reports the given BIOS version.
+        Return a subrack whose fake board answers the health status read.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
-        :param version: the BIOS version string, or ``None`` for no board info.
         :param kwargs: overrides passed to the subrack.
 
         :return: a poll subrack.
         """
         fake_client.set_attribute_response(value=None)
-        if version is not None:
-            fake_client.attribute_responses["board_info"] = {
-                "status": HardwareClientResponseStatusCodes.OK.name,
-                "info": "",
-                "attribute": "board_info",
-                "value": self._board_info(version),
-            }
         fake_client.set_command_responses(
             "get_health_status",
             {
@@ -288,42 +267,101 @@ class TestHealthBiosGate:
         )
         return _make_subrack(fake_client, logger, **kwargs)
 
-    def test_old_bios_disables_the_health_read(
-        self: TestHealthBiosGate,
+    def test_every_poll_reads_the_health_status(
+        self: TestHealthRead,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
     ) -> None:
         """
-        A board whose BIOS is too old must never be asked for health status.
+        Each poll must read the health status and carry what the board gave.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        subrack = self._subrack_with_bios(fake_client, logger, "v1.5.0")
+        subrack = self._subrack_with_health(fake_client, logger)
 
-        assert subrack.poll(subrack.get_request()).health_status is None
+        assert subrack.poll(subrack.get_request()).health_status == {"psus": {}}
+        assert subrack.poll(subrack.get_request()).health_status == {"psus": {}}
 
-        assert not [c for c in fake_client.command_calls if c[0] == "get_health_status"]
+        health_reads = [
+            c for c in fake_client.command_calls if c[0] == "get_health_status"
+        ]
+        assert len(health_reads) == 2
 
-    def test_unreadable_board_info_disables_the_health_read(
-        self: TestHealthBiosGate,
+    def test_a_busy_board_gives_no_health_status(
+        self: TestHealthRead,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
     ) -> None:
         """
-        A board info value we cannot parse must disable the health read.
+        A board that reports busy must give ``None`` and not raise.
 
-        The gate is checked once, so an unparseable value must not leave the
-        client retrying the version check on every poll.
+        The read is retried on the next poll.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        subrack = self._subrack_with_bios(fake_client, logger, "not-a-version")
+        subrack = self._subrack_with_health(fake_client, logger)
+        fake_client.set_command_responses(
+            "get_health_status",
+            {
+                "status": HardwareClientResponseStatusCodes.BUSY.name,
+                "info": "Board busy",
+                "command": "get_health_status",
+                "retvalue": "",
+            },
+        )
 
         assert subrack.poll(subrack.get_request()).health_status is None
 
-        assert not [c for c in fake_client.command_calls if c[0] == "get_health_status"]
+    def test_an_in_band_error_gives_no_health_status(
+        self: TestHealthRead,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        An error the board reports must give ``None`` and not raise.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        """
+        subrack = self._subrack_with_health(fake_client, logger)
+        fake_client.set_command_responses(
+            "get_health_status",
+            {
+                "status": HardwareClientResponseStatusCodes.ERROR.name,
+                "info": "No such command",
+                "command": "get_health_status",
+                "retvalue": "",
+            },
+        )
+
+        assert subrack.poll(subrack.get_request()).health_status is None
+
+    def test_an_unknown_status_raises_value_error(
+        self: TestHealthRead,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        An unrecognised status from the health read must raise.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        """
+        subrack = self._subrack_with_health(fake_client, logger)
+        fake_client.set_command_responses(
+            "get_health_status",
+            {
+                "status": "NOT_A_REAL_STATUS",
+                "info": "who knows",
+                "command": "get_health_status",
+                "retvalue": "",
+            },
+        )
+
+        with pytest.raises(ValueError, match="NOT_A_REAL_STATUS"):
+            subrack.poll(subrack.get_request())
 
 
 class TestErrorBranches:

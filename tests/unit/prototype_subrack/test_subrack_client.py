@@ -288,25 +288,36 @@ class TestHealthRead:
         ]
         assert len(health_reads) == 2
 
-    def test_a_busy_board_gives_no_health_status(
+    @pytest.mark.parametrize(
+        "status",
+        [
+            HardwareClientResponseStatusCodes.ERROR.name,
+            HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name,
+            HardwareClientResponseStatusCodes.BUSY.name,
+            HardwareClientResponseStatusCodes.STARTED.name,
+        ],
+    )
+    def test_a_health_status_the_board_cannot_supply_is_unknown(
         self: TestHealthRead,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        status: str,
     ) -> None:
         """
-        A board that reports busy must give ``None`` and not raise.
+        A board that answers but supplies no health status must give ``None``.
 
-        The read is retried on the next poll.
+        The poll still succeeds, so the read is retried on the next poll.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param status: the status the board reports for the health read.
         """
         subrack = self._subrack_with_health(fake_client, logger)
         fake_client.set_command_responses(
             "get_health_status",
             {
-                "status": HardwareClientResponseStatusCodes.BUSY.name,
-                "info": "Board busy",
+                "status": status,
+                "info": "No health status",
                 "command": "get_health_status",
                 "retvalue": "",
             },
@@ -314,29 +325,56 @@ class TestHealthRead:
 
         assert subrack.poll(subrack.get_request()).health_status is None
 
-    def test_an_in_band_error_gives_no_health_status(
+    @pytest.mark.parametrize(
+        ("status", "info", "expected"),
+        [
+            (
+                HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
+                "Connection refused",
+                RequestError,
+            ),
+            (
+                HardwareClientResponseStatusCodes.HTTP_ERROR.name,
+                "HTML status 500",
+                HttpError,
+            ),
+        ],
+    )
+    # pylint: disable-next=too-many-arguments
+    def test_a_transport_failure_fails_the_whole_poll(
         self: TestHealthRead,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        status: str,
+        info: str,
+        expected: type[Exception],
     ) -> None:
         """
-        An error the board reports must give ``None`` and not raise.
+        A transport failure on the health read must fail the poll.
+
+        The attribute sweep succeeded, but a board we can no longer reach is
+        not a board with a partial answer, so the poller must route this to
+        ``poll_failed`` rather than report a poll with no health status.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param status: the transport status the client reports.
+        :param info: the detail the client reports with it.
+        :param expected: the exception the poll must raise.
         """
         subrack = self._subrack_with_health(fake_client, logger)
         fake_client.set_command_responses(
             "get_health_status",
             {
-                "status": HardwareClientResponseStatusCodes.ERROR.name,
-                "info": "No such command",
+                "status": status,
+                "info": info,
                 "command": "get_health_status",
                 "retvalue": "",
             },
         )
 
-        assert subrack.poll(subrack.get_request()).health_status is None
+        with pytest.raises(expected, match=info):
+            subrack.poll(subrack.get_request())
 
     def test_an_unknown_status_raises_value_error(
         self: TestHealthRead,
@@ -367,94 +405,83 @@ class TestHealthRead:
 class TestErrorBranches:
     """Tests of the failure paths of a poll and of a board command."""
 
-    def test_request_exception_raises_request_error(
+    @pytest.mark.parametrize(
+        ("status", "info", "expected"),
+        [
+            (
+                HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
+                "Connection refused",
+                RequestError,
+            ),
+            (
+                HardwareClientResponseStatusCodes.HTTP_ERROR.name,
+                "HTML status 500",
+                HttpError,
+            ),
+        ],
+    )
+    # pylint: disable-next=too-many-arguments
+    def test_a_transport_failure_raises_the_matching_exception(
         self: TestErrorBranches,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        status: str,
+        info: str,
+        expected: type[Exception],
     ) -> None:
         """
-        A request that never reaches the board must raise ``RequestError``.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        """
-        fake_client.set_attribute_response(
-            status=HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
-            info="Connection refused",
-        )
-        subrack = _make_subrack(fake_client, logger)
-
-        with pytest.raises(RequestError, match="Connection refused"):
-            subrack.poll(subrack.get_request())
-
-    def test_http_error_raises_http_error(
-        self: TestErrorBranches,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        An HTTP error status must raise ``HttpError``.
+        A transport failure must raise, and carry what the client reported.
 
         The two exceptions stay distinct because the device maps them to
-        different operational states.
+        different operational states. A request that never reached the board
+        gives ``RequestError``, and a board that answered with an HTTP error
+        gives ``HttpError``.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param status: the transport status the client reports.
+        :param info: the detail the client reports with it.
+        :param expected: the exception the poll must raise.
         """
-        fake_client.set_attribute_response(
-            status=HardwareClientResponseStatusCodes.HTTP_ERROR.name,
-            info="HTML status 500",
-        )
+        fake_client.set_attribute_response(status=status, info=info)
         subrack = _make_subrack(fake_client, logger)
 
-        with pytest.raises(HttpError, match="500"):
+        with pytest.raises(expected, match=info):
             subrack.poll(subrack.get_request())
 
-    def test_in_band_error_gives_a_none_value(
+    @pytest.mark.parametrize(
+        "status",
+        [
+            HardwareClientResponseStatusCodes.ERROR.name,
+            HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name,
+            HardwareClientResponseStatusCodes.BUSY.name,
+            HardwareClientResponseStatusCodes.STARTED.name,
+        ],
+    )
+    def test_a_value_the_board_cannot_supply_is_unknown(
         self: TestErrorBranches,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        status: str,
     ) -> None:
         """
-        An error the board reports must give ``None`` and not raise.
+        A board that answers but supplies no value must give ``None``.
 
         The device turns ``None`` into invalid attribute quality, which is the
-        correct outcome for a board that answered but could not supply a value.
+        correct outcome whether the board reported an error or was busy. Only
+        a transport failure raises.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param status: the status the board reports for every attribute.
         """
-        fake_client.set_attribute_response(
-            status=HardwareClientResponseStatusCodes.ERROR.name,
-            info="No such attribute",
-        )
+        fake_client.set_attribute_response(status=status, info="No value")
         subrack = _make_subrack(fake_client, logger)
 
         response = subrack.poll(subrack.get_request())
 
         for key in BATCH_ATTRIBUTES:
             assert response.values[key] is None
-
-    def test_busy_board_leaves_values_unknown(
-        self: TestErrorBranches,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A busy board must give ``None`` and not raise.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        """
-        fake_client.set_attribute_response(
-            status=HardwareClientResponseStatusCodes.BUSY.name,
-            info="Board busy",
-        )
-        subrack = _make_subrack(fake_client, logger)
-
-        response = subrack.poll(subrack.get_request())
-
-        assert response.values["board_current"] is None
 
     def test_unknown_status_raises_value_error(
         self: TestErrorBranches,
@@ -515,30 +542,44 @@ class TestErrorBranches:
 
         assert seen == [exception]
 
-    def test_command_on_a_busy_board_fails(
+    @pytest.mark.parametrize(
+        ("status", "retvalue"),
+        [
+            (HardwareClientResponseStatusCodes.BUSY.name, ""),
+            (HardwareClientResponseStatusCodes.OK.name, "FAILED"),
+        ],
+    )
+    def test_a_command_the_board_refuses_fails(
         self: TestErrorBranches,
         faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
+        status: str,
+        retvalue: str,
     ) -> None:
         """
-        A board that reports busy must fail the command and not hang.
+        A command the board refuses must fail, and not hang.
+
+        The board refuses either by reporting busy or by answering ``FAILED``,
+        and both mean the command never started.
 
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
+        :param status: the status the board reports.
+        :param retvalue: the value the board returns with it.
         """
         fake_client.set_command_responses(
             "turn_on_tpm",
             {
-                "status": HardwareClientResponseStatusCodes.BUSY.name,
+                "status": status,
                 "info": "Board busy",
                 "command": "turn_on_tpm",
-                "retvalue": "",
+                "retvalue": retvalue,
             },
         )
 
-        (status, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
+        (status_out, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
 
-        assert status == BoardCommandStatus.FAILED
+        assert status_out == BoardCommandStatus.FAILED
         assert "did not accept" in message
 
     def test_command_transport_failure_is_reported(
@@ -740,32 +781,6 @@ class TestErrorBranches:
         assert result == BoardCommandStatus.FAILED
         assert info in message, message
         assert "Timed out" not in message, message
-
-    def test_command_rejected_by_the_board(
-        self: TestErrorBranches,
-        faked_subrack: Subrack,
-        fake_client: FakeHardwareClient,
-    ) -> None:
-        """
-        A board that answers ``FAILED`` must fail the command.
-
-        :param faked_subrack: the client under test.
-        :param fake_client: the fake hardware client.
-        """
-        fake_client.set_command_responses(
-            "turn_on_tpm",
-            {
-                "status": HardwareClientResponseStatusCodes.OK.name,
-                "info": "",
-                "command": "turn_on_tpm",
-                "retvalue": "FAILED",
-            },
-        )
-
-        (status, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
-
-        assert status == BoardCommandStatus.FAILED
-        assert "did not accept" in message
 
 
 class TestDerivedValuesWiring:

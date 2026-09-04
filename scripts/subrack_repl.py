@@ -17,6 +17,7 @@ import code
 import logging
 import sys
 import threading
+import time
 
 from ska_low_mccs_spshw.prototype_subrack import BoardCommandStatus, Subrack
 
@@ -122,6 +123,43 @@ def commands() -> list[str]:
     return sorted(found)
 
 
+def slow(milliseconds: int = 400) -> None:
+    """
+    Make the simulator delay every request.
+
+    The delay applies to each attribute read and each command, so a poll sweep
+    of nineteen reads takes nineteen times this. A command issued during a
+    sweep waits for the lock, and the lock logs a warning naming its holder
+    once a hold exceeds the warning threshold. Zero turns the delay off.
+
+    Only available when running against the simulator.
+
+    :param milliseconds: how long to delay each request.
+
+    :raises RuntimeError: if running against a real board.
+    """
+    if _server is None:
+        raise RuntimeError("there is no simulator, this is a real board")
+    if milliseconds:
+        simulator.network_jitter_limits = (milliseconds, milliseconds + 1)
+    else:
+        simulator.network_jitter_limits = (0, 0)
+    print(f"simulator delaying every request by {milliseconds} ms")
+
+
+def contend() -> None:
+    """
+    Run a command while a poll sweep holds the lock, and report the wait.
+
+    Reports how long the command waited, which is the remainder of the sweep
+    that was in flight.
+    """
+    started = time.monotonic()
+    status, message, _ = subrack.run_board_command("turn_on_tpm", "2")
+    waited = time.monotonic() - started
+    print(f"command waited {waited:.1f}s for the lock -> {status.name} {message}")
+
+
 def bye() -> None:
     """Stop the client and the simulator. Safe to call twice."""
     try:
@@ -174,14 +212,17 @@ except ImportError:  # pragma: no cover
 _BANNER = f"""\
 subrack client polling {HOST}:{PORT}
 
-  subrack   the client itself, e.g. subrack.run_board_command("turn_on_tpm", "3")
-  show(*k)  print values from the last poll, all of them if given no names
-  last()    the last poll response
-  wait()    block until the next poll arrives\n  commands() list the commands the board accepts
-  polls     every response so far
-  errors    every failed poll so far
-  simulator the simulator backend, when running without an address
-  bye()     stop early; exit() and Ctrl-D also shut down cleanly
+  subrack    the client itself, e.g. subrack.run_board_command("turn_on_tpm", "3")
+  show(*k)   print values from the last poll, all of them if given no names
+  last()     the last poll response
+  wait()     block until the next poll arrives
+  commands() list the commands the board accepts
+  slow(ms)   make the simulator delay every request
+  contend()  run a command while a sweep holds the lock
+  polls      every response so far
+  errors     every failed poll so far
+  simulator  the simulator backend, when running without an address
+  bye()      stop early; exit() and Ctrl-D also shut down cleanly
 
 Tab completes."""
 

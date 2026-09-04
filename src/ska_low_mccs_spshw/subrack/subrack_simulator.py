@@ -217,6 +217,20 @@ class SubrackSimulator(SubrackProtocol):
         },
     }
 
+    COMMANDS: Final = (
+        "abort_command",
+        "command_completed",
+        "get_health_status",
+        "list_commands",
+        "set_fan_mode",
+        "set_power_supply_fan_speed",
+        "set_subrack_fan_speed",
+        "turn_off_tpm",
+        "turn_off_tpms",
+        "turn_on_tpm",
+        "turn_on_tpms",
+    )
+
     def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:
         """
         Initialise a new instance.
@@ -446,6 +460,17 @@ class SubrackSimulator(SubrackProtocol):
             for percent in self._attribute_values["subrack_fan_speeds_percent"]
         ]
         return self._attribute_values["subrack_fan_speeds"]
+
+    def _list_commands(self: SubrackSimulator, _not_used: Optional[str]) -> list[str]:
+        """
+        List the commands that the simulator accepts.
+
+        :param _not_used: not used, should always be empty e.g. ""
+
+        :return: the command names.
+        """
+        assert not _not_used
+        return list(self.COMMANDS)
 
     def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
         """

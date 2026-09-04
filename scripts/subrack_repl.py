@@ -95,32 +95,13 @@ def commands() -> list[str]:
     """
     List the commands the board accepts.
 
-    ``list_commands`` is part of the shared hardware client contract, so a real
-    board answers it. The bundled simulator does not implement it, so when
-    running against the simulator this falls back to introspecting it, which
-    reports what the simulator supports rather than what a board would.
-
     :return: the command names.
     """
     status, message, retvalue = subrack.run_board_command("list_commands", "")
-    if status is BoardCommandStatus.COMPLETED and retvalue:
-        return sorted(retvalue) if isinstance(retvalue, list) else [str(retvalue)]
-
-    print(f"the board would not list its commands ({message})")
-    if _server is None:
+    if status is not BoardCommandStatus.COMPLETED:
+        print(f"the board would not list its commands ({message})")
         return []
-    print("falling back to what the simulator implements:")
-    found = set()
-    for name in dir(simulator):
-        if name.startswith("_async_"):
-            found.add(name[len("_async_") :])
-        elif name.startswith("_") and not name.startswith("__"):
-            bare = name[1:]
-            if callable(getattr(simulator, name)) and not bare.startswith(
-                ("get_attribute", "set_attribute", "get_health", "attribute")
-            ):
-                found.add(bare)
-    return sorted(found)
+    return sorted(retvalue or [])
 
 
 def slow(milliseconds: int = 400) -> None:

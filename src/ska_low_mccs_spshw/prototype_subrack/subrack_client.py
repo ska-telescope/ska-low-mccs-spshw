@@ -467,18 +467,13 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         :return: the status, a message, and the returned value.
         """
+        abort = abort_event or threading.Event()
         deadline = time.monotonic() + COMMAND_TIMEOUT
-        while True:
-            if abort_event is not None and abort_event.is_set():
+        while time.monotonic() < deadline:
+            # Wait between probes, waking at once if an abort is requested.
+            if abort.wait(COMMAND_POLL_INTERVAL):
                 self._abort_board_command()
                 return (BoardCommandStatus.ABORTED, "The command was aborted.", None)
-            if time.monotonic() > deadline:
-                return (
-                    BoardCommandStatus.FAILED,
-                    "Timed out waiting for the command to complete.",
-                    None,
-                )
-            time.sleep(COMMAND_POLL_INTERVAL)
 
             response = self._client.execute_command("command_completed")
             status = response["status"]
@@ -489,23 +484,21 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                         "The command completed.",
                         None,
                     )
-                # The command is still running.
-                continue
-            if status in _TRANSPORT_ERRORS:
+            elif status in _TRANSPORT_ERRORS:
+                return (BoardCommandStatus.FAILED, str(response["info"]), None)
+            elif status not in _BOARD_BUSY:
+                # Anything else is the board reporting a problem, or a status
+                # the client does not know. Waiting would discard the reason
+                # and blame the timeout for something that will never finish.
                 return (
                     BoardCommandStatus.FAILED,
-                    str(response["info"]),
+                    f"Command '{name}' failed while completing, with status "
+                    f"'{status}'. {response.get('info', 'No details.')}",
                     None,
                 )
-            if status in _BOARD_BUSY:
-                # The board is still working on it, so keep waiting.
-                continue
-            # Anything else is the board reporting a problem, or a status the
-            # client does not know. Waiting would discard the reason and blame
-            # the timeout for something that is never going to finish.
-            return (
-                BoardCommandStatus.FAILED,
-                f"Command '{name}' failed while completing, with status "
-                f"'{status}'. {response.get('info', 'No details.')}",
-                None,
-            )
+
+        return (
+            BoardCommandStatus.FAILED,
+            "Timed out waiting for the command to complete.",
+            None,
+        )

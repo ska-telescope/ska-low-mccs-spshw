@@ -376,10 +376,10 @@ def main(checking: bool) -> int:
                     )
                     return 1
                 with open(rst_file_path, "r", encoding="utf-8") as file:
-                    calculated = "".join(trimmed_rest)
-                    fileversion = "".join(file.readlines())
-                    if calculated != fileversion:
-                        print(f"{rst_file} is out of date!\n{calculated}\n---\n{fileversion}\n---\n")
+                    generated = "".join(trimmed_rest)
+                    current_file = "".join(file.readlines())
+                    if generated != current_file:
+                        print(f"{rst_file} is out of date!\n{generated}\n---\n{current_file}\n---\n")
                         return 1
             else:
                 os.makedirs(rst_file_folder, exist_ok=True)
@@ -449,9 +449,7 @@ if __name__ == "__main__":
 
     if result == 0:
         print("Docs script executed successfuly")
-        print(f"Python version: {sys.version}") 
         sys.exit(0)
     if result == 1:
         print("Current docs schemas out of date, run make python-format")
-        print(f"Python version: {sys.version}") 
         sys.exit(1)

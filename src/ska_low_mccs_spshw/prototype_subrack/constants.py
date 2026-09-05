@@ -9,17 +9,21 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Final
 
 __all__ = [
     "BATCH_ATTRIBUTES",
     "COMMAND_POLL_INTERVAL",
     "COMMAND_TIMEOUT",
+    "ClientCommand",
+    "DerivedKey",
     "FILTERED_ATTRIBUTES",
     "HttpError",
     "LOCK_TIMEOUT",
     "LOCK_WARNING",
     "MIN_PWM_DUTY_FRACTION",
+    "ReadKey",
     "RequestError",
 ]
 
@@ -32,36 +36,62 @@ class RequestError(Exception):
     """The request never reached the board."""
 
 
-BATCH_ATTRIBUTES: Final[tuple[str, ...]] = (
-    "tpm_present",
-    "tpm_on_off",
-    "backplane_temperatures",
-    "board_temperatures",
-    "board_current",
-    "cpld_pll_locked",
-    "power_supply_currents",
-    "power_supply_fan_speeds",
-    "power_supply_powers",
-    "power_supply_voltages",
-    "subrack_fan_speeds",
-    "subrack_fan_speeds_percent",
-    "subrack_fan_mode",
-    "subrack_pll_locked",
-    "subrack_timestamp",
-    "tpm_currents",
-    "tpm_powers",
-    "tpm_voltages",
-    "board_info",
-)
-"""The hardware read keys fetched on every poll.
+class ReadKey(str, Enum):
+    """
+    The hardware read keys the SMB understands, in the order they are polled.
 
-``tpm_temperatures`` is absent because the SMB does not implement it.
-"""
+    A member is a ``str``, so it indexes a poll response and reaches the board
+    unchanged. ``tpm_temperatures`` is absent because the SMB does not
+    implement it.
+    """
+
+    TPM_PRESENT = "tpm_present"
+    TPM_ON_OFF = "tpm_on_off"
+    BACKPLANE_TEMPERATURES = "backplane_temperatures"
+    BOARD_TEMPERATURES = "board_temperatures"
+    BOARD_CURRENT = "board_current"
+    CPLD_PLL_LOCKED = "cpld_pll_locked"
+    POWER_SUPPLY_CURRENTS = "power_supply_currents"
+    POWER_SUPPLY_FAN_SPEEDS = "power_supply_fan_speeds"
+    POWER_SUPPLY_POWERS = "power_supply_powers"
+    POWER_SUPPLY_VOLTAGES = "power_supply_voltages"
+    SUBRACK_FAN_SPEEDS = "subrack_fan_speeds"
+    SUBRACK_FAN_SPEEDS_PERCENT = "subrack_fan_speeds_percent"
+    SUBRACK_FAN_MODE = "subrack_fan_mode"
+    SUBRACK_PLL_LOCKED = "subrack_pll_locked"
+    SUBRACK_TIMESTAMP = "subrack_timestamp"
+    TPM_CURRENTS = "tpm_currents"
+    TPM_POWERS = "tpm_powers"
+    TPM_VOLTAGES = "tpm_voltages"
+    BOARD_INFO = "board_info"
+
+
+class DerivedKey(str, Enum):
+    """The keys computed from a poll rather than read from the board."""
+
+    SUBRACK_MAX_FAN_SPEEDS = "subrack_max_fan_speeds"
+
+
+class ClientCommand(str, Enum):
+    """
+    The board commands this client issues on its own behalf.
+
+    A device passes any other command straight through, so this is not the
+    full set the board accepts.
+    """
+
+    GET_HEALTH_STATUS = "get_health_status"
+    COMMAND_COMPLETED = "command_completed"
+    ABORT_COMMAND = "abort_command"
+
+
+BATCH_ATTRIBUTES: Final[tuple[str, ...]] = tuple(key.value for key in ReadKey)
+"""The hardware read keys fetched on every poll."""
 
 FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
-    "tpm_currents",
-    "tpm_powers",
-    "tpm_voltages",
+    ReadKey.TPM_CURRENTS.value,
+    ReadKey.TPM_POWERS.value,
+    ReadKey.TPM_VOLTAGES.value,
 )
 """The read keys that pass through the noise filter."""
 

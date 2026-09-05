@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
-from .constants import FILTERED_ATTRIBUTES, MIN_PWM_DUTY_FRACTION
+from .constants import FILTERED_ATTRIBUTES, MIN_PWM_DUTY_FRACTION, DerivedKey, ReadKey
 
 __all__ = ["DerivedValues"]
 
@@ -87,9 +87,9 @@ class DerivedValues:
 
         :param values: the poll values, modified in place.
         """
-        values["subrack_max_fan_speeds"] = self.estimate_max_fan_rpm(
-            values.get("subrack_fan_speeds"),
-            values.get("subrack_fan_speeds_percent"),
+        values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
+            values.get(ReadKey.SUBRACK_FAN_SPEEDS.value),
+            values.get(ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value),
         )
         for key, attribute_filter in self._filters.items():
             # An unknown value is passed in too, because that clears the

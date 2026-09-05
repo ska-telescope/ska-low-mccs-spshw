@@ -41,6 +41,7 @@ from .constants import (
     COMMAND_TIMEOUT,
     LOCK_TIMEOUT,
     LOCK_WARNING,
+    ClientCommand,
     HttpError,
     RequestError,
 )
@@ -64,6 +65,17 @@ _REQUEST_EXCEPTION = HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name
 _TRANSPORT_ERRORS = (_HTTP_ERROR, _REQUEST_EXCEPTION)
 _IN_BAND_ERRORS = (_ERROR, _JSON_DECODE_ERROR)
 _BOARD_BUSY = (_BUSY, _STARTED)
+
+
+def _details(response: Any) -> str:
+    """
+    Return what the board said about a failure.
+
+    :param response: a client response.
+
+    :return: the detail the board gave, or a stand-in when it gave none.
+    """
+    return str(response.get("info", "No details."))
 
 
 class BoardCommandStatus(Enum):
@@ -304,7 +316,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             return (
                 BoardCommandStatus.FAILED,
                 f"Command '{name}' failed with status '{status}'. "
-                f"{response.get('info', 'No details.')}",
+                f"{_details(response)}",
                 None,
             )
 
@@ -349,7 +361,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                     "get_attribute '%s' returned status '%s'. %s",
                     key,
                     status,
-                    response.get("info", "No details."),
+                    _details(response),
                 )
             elif status in _TRANSPORT_ERRORS:
                 # Raised so that the poller routes it to poll_failed, which the
@@ -375,7 +387,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         :return: the health status, or ``None`` when the board did not give one.
         """
-        response = self._client.execute_command("get_health_status", "")
+        response = self._client.execute_command(
+            ClientCommand.GET_HEALTH_STATUS.value, ""
+        )
         status = response["status"]
         if status == _OK:
             # The client types retvalue as str, but get_health_status returns a
@@ -390,7 +404,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             self._logger.error(
                 "get_health_status returned status '%s'. %s",
                 status,
-                response.get("info", "No details."),
+                _details(response),
             )
             return None
         raise ValueError(
@@ -409,12 +423,12 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         The caller must hold ``self._client_lock``.
         """
-        response = self._client.execute_command("abort_command")
+        response = self._client.execute_command(ClientCommand.ABORT_COMMAND.value)
         if response["status"] != _OK:
             self._logger.error(
                 "The board did not accept abort_command. Status '%s'. %s",
                 response["status"],
-                response.get("info", "No details."),
+                _details(response),
             )
 
     def _await_command_completion(
@@ -438,7 +452,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 self._abort_board_command()
                 return (BoardCommandStatus.ABORTED, "The command was aborted.", None)
 
-            response = self._client.execute_command("command_completed")
+            response = self._client.execute_command(
+                ClientCommand.COMMAND_COMPLETED.value
+            )
             status = response["status"]
             if status == _OK:
                 if response.get("retvalue"):
@@ -456,7 +472,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 return (
                     BoardCommandStatus.FAILED,
                     f"Command '{name}' failed while completing, with status "
-                    f"'{status}'. {response.get('info', 'No details.')}",
+                    f"'{status}'. {_details(response)}",
                     None,
                 )
 

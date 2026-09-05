@@ -29,6 +29,7 @@ from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
     SubrackServerContextManager,
 )
+from ska_low_mccs_spshw.tile.utils import LogLock
 
 
 class FakeHardwareClient:
@@ -233,6 +234,39 @@ def callbacks_fixture(
     return (data_callback, error_callback)
 
 
+def make_subrack(
+    client: Any,
+    logger: logging.Logger,
+    *,
+    name: str = "no-such-host",
+    lock: LogLock | None = None,
+    poller: Any = None,
+    **kwargs: Any,
+) -> Subrack:
+    """
+    Build a subrack. This is the only place that calls its constructor.
+
+    The poller is a mock unless the caller supplies one, because a real poller
+    starts a thread as soon as it is built and almost no test polls. A test
+    that wants a real one passes its own ``poller_factory``.
+
+    :param client: the hardware client, real or fake.
+    :param logger: a logger.
+    :param name: what the subrack calls itself in the log.
+    :param lock: the client lock, defaulting to a fresh one.
+    :param poller: the poller to give the subrack, defaulting to a fresh mock.
+    :param kwargs: overrides passed to the subrack.
+
+    :return: a subrack client.
+    """
+    options: dict[str, Any] = {
+        "poller_factory": lambda _: poller or mock.Mock(spec=SubrackPoller),
+        "data_callback": lambda _: None,
+    }
+    options.update(kwargs)
+    return Subrack(client, name, logger, _lock=lock, **options)
+
+
 @pytest.fixture(name="simulated_subrack")
 def simulated_subrack_fixture(
     simulator_address: tuple[str, int],
@@ -250,10 +284,10 @@ def simulated_subrack_fixture(
     """
     (host, port) = simulator_address
     (data_callback, error_callback) = callbacks
-    subrack = Subrack(
+    subrack = make_subrack(
         WebHardwareClient(host, port),
-        host,
         logger,
+        name=host,
         poller_factory=lambda model: SubrackPoller(model, 0.1, logger),
         data_callback=data_callback,
         error_callback=error_callback,
@@ -262,29 +296,63 @@ def simulated_subrack_fixture(
     subrack.cleanup()
 
 
+@pytest.fixture(name="healthy_faked_subrack")
+def healthy_faked_subrack_fixture(
+    faked_subrack: Subrack,
+    fake_client: FakeHardwareClient,
+) -> Subrack:
+    """
+    Return a subrack whose fake board answers the health status read.
+
+    A test that wants the board to fail the read uses ``faked_subrack`` and
+    records its own response, rather than overwriting this one.
+
+    :param faked_subrack: the subrack whose board is configured.
+    :param fake_client: the fake hardware client.
+
+    :return: a subrack client.
+    """
+    fake_client.set_command_responses(
+        "get_health_status",
+        {
+            "status": HardwareClientResponseStatusCodes.OK.name,
+            "info": "",
+            "command": "get_health_status",
+            "retvalue": {"psus": {}},
+        },
+    )
+    return faked_subrack
+
+
+@pytest.fixture(name="mock_poller")
+def mock_poller_fixture() -> mock.Mock:
+    """
+    Return the poller that ``faked_subrack`` is given.
+
+    A test that asserts against the poller asks for this alongside the
+    subrack, and gets the very poller that subrack holds.
+
+    :return: a mock poller.
+    """
+    return mock.Mock(spec=SubrackPoller)
+
+
 @pytest.fixture(name="faked_subrack")
 def faked_subrack_fixture(
     fake_client: FakeHardwareClient,
     logger: logging.Logger,
-    callbacks: tuple[Any, Any],
-) -> Iterator[Subrack]:
+    mock_poller: mock.Mock,
+) -> Subrack:
     """
-    Return a client whose hardware client is a test controlled fake.
+    Return a subrack with nothing configured, for a test that needs no setup.
+
+    A test that has to configure the subrack calls :py:func:`make_subrack`
+    itself instead.
 
     :param fake_client: the fake hardware client.
     :param logger: a logger.
-    :param callbacks: the data callback and the error callback.
+    :param mock_poller: the poller to give it.
 
-    :yields: a subrack client.
+    :return: a subrack client.
     """
-    (data_callback, error_callback) = callbacks
-    subrack = Subrack(
-        fake_client,  # type: ignore[arg-type]
-        "no-such-host",
-        logger,
-        poller_factory=lambda model: SubrackPoller(model, 0.05, logger),
-        data_callback=data_callback,
-        error_callback=error_callback,
-    )
-    yield subrack
-    subrack.cleanup()
+    return make_subrack(fake_client, logger, poller=mock_poller)

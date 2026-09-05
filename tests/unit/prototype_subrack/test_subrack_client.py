@@ -41,7 +41,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
 from ska_low_mccs_spshw.prototype_subrack.constants import BATCH_ATTRIBUTES
 from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
 
-from .conftest import FakeHardwareClient
+from .conftest import FakeHardwareClient, make_subrack
 
 
 def _next_response(
@@ -77,37 +77,6 @@ def _next_poll(
     result = _next_response(responses, timeout)
     assert isinstance(result, SubrackPollResponse), f"Expected a response, got {result}"
     return result
-
-
-def _make_subrack(
-    client: FakeHardwareClient,
-    logger: logging.Logger,
-    lock: LogLock | None = None,
-    **kwargs: Any,
-) -> Subrack:
-    """
-    Return a subrack wired to a fake hardware client, with polling stopped.
-
-    :param client: the fake hardware client.
-    :param logger: a logger.
-    :param lock: the client lock, defaulting to a fresh one.
-    :param kwargs: overrides passed to the subrack.
-
-    :return: a subrack client.
-    """
-    options: dict[str, Any] = {
-        # Slow, so a test that does not start polling never polls by itself.
-        "poller_factory": lambda model: SubrackPoller(model, 60.0, logger),
-        "data_callback": lambda _: None,
-    }
-    options.update(kwargs)
-    return Subrack(
-        client,  # type: ignore[arg-type]
-        "no-such-host",
-        logger,
-        _lock=lock,
-        **options,
-    )
 
 
 class TestAgainstSimulator:
@@ -178,19 +147,18 @@ class TestWhatTheClientAsksTheBoard:
 
     def test_a_poll_reads_every_batched_attribute_once_in_order(
         self: TestWhatTheClientAsksTheBoard,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
     ) -> None:
         """
         One poll must read each batched attribute exactly once, in order.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         """
         fake_client.set_attribute_response(value=None)
-        subrack = _make_subrack(fake_client, logger)
 
-        subrack.poll(subrack.get_request())
+        faked_subrack.poll(faked_subrack.get_request())
 
         assert fake_client.get_attribute.call_args_list == [
             mock.call(key) for key in BATCH_ATTRIBUTES
@@ -198,8 +166,8 @@ class TestWhatTheClientAsksTheBoard:
 
     def test_a_poll_runs_no_command_but_the_health_read(
         self: TestWhatTheClientAsksTheBoard,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
     ) -> None:
         """
         A poll must not run board commands of its own.
@@ -207,13 +175,12 @@ class TestWhatTheClientAsksTheBoard:
         Commands go through ``run_board_command`` on the caller's thread. The
         only command a poll issues is the health status read.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         """
         fake_client.set_attribute_response(value=None)
-        subrack = _make_subrack(fake_client, logger)
 
-        subrack.poll(subrack.get_request())
+        faked_subrack.poll(faked_subrack.get_request())
 
         assert fake_client.command_calls == [("get_health_status", "")]
 
@@ -241,48 +208,22 @@ class TestHealthRead:
     issues it.
     """
 
-    @staticmethod
-    def _subrack_with_health(
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        **kwargs: Any,
-    ) -> Subrack:
-        """
-        Return a subrack whose fake board answers the health status read.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param kwargs: overrides passed to the subrack.
-
-        :return: a poll subrack.
-        """
-        fake_client.set_attribute_response(value=None)
-        fake_client.set_command_responses(
-            "get_health_status",
-            {
-                "status": HardwareClientResponseStatusCodes.OK.name,
-                "info": "",
-                "command": "get_health_status",
-                "retvalue": {"psus": {}},
-            },
-        )
-        return _make_subrack(fake_client, logger, **kwargs)
-
     def test_every_poll_reads_the_health_status(
         self: TestHealthRead,
+        healthy_faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
     ) -> None:
         """
         Each poll must read the health status and carry what the board gave.
 
+        :param healthy_faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         """
-        subrack = self._subrack_with_health(fake_client, logger)
+        request = healthy_faked_subrack.get_request()
 
-        assert subrack.poll(subrack.get_request()).health_status == {"psus": {}}
-        assert subrack.poll(subrack.get_request()).health_status == {"psus": {}}
+        for _ in range(2):
+            response = healthy_faked_subrack.poll(request)
+            assert response.health_status == {"psus": {}}
 
         health_reads = [
             c for c in fake_client.command_calls if c[0] == "get_health_status"
@@ -300,8 +241,8 @@ class TestHealthRead:
     )
     def test_a_health_status_the_board_cannot_supply_is_unknown(
         self: TestHealthRead,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
         status: str,
     ) -> None:
         """
@@ -309,11 +250,10 @@ class TestHealthRead:
 
         The poll still succeeds, so the read is retried on the next poll.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         :param status: the status the board reports for the health read.
         """
-        subrack = self._subrack_with_health(fake_client, logger)
         fake_client.set_command_responses(
             "get_health_status",
             {
@@ -324,7 +264,7 @@ class TestHealthRead:
             },
         )
 
-        assert subrack.poll(subrack.get_request()).health_status is None
+        assert faked_subrack.poll(faked_subrack.get_request()).health_status is None
 
     @pytest.mark.parametrize(
         ("status", "info", "expected"),
@@ -344,8 +284,8 @@ class TestHealthRead:
     # pylint: disable-next=too-many-arguments
     def test_a_transport_failure_fails_the_whole_poll(
         self: TestHealthRead,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
         status: str,
         info: str,
         expected: type[Exception],
@@ -357,13 +297,12 @@ class TestHealthRead:
         not a board with a partial answer, so the poller must route this to
         ``poll_failed`` rather than report a poll with no health status.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         :param status: the transport status the client reports.
         :param info: the detail the client reports with it.
         :param expected: the exception the poll must raise.
         """
-        subrack = self._subrack_with_health(fake_client, logger)
         fake_client.set_command_responses(
             "get_health_status",
             {
@@ -375,20 +314,19 @@ class TestHealthRead:
         )
 
         with pytest.raises(expected, match=info):
-            subrack.poll(subrack.get_request())
+            faked_subrack.poll(faked_subrack.get_request())
 
     def test_an_unknown_status_raises_value_error(
         self: TestHealthRead,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
     ) -> None:
         """
         An unrecognised status from the health read must raise.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         """
-        subrack = self._subrack_with_health(fake_client, logger)
         fake_client.set_command_responses(
             "get_health_status",
             {
@@ -400,7 +338,7 @@ class TestHealthRead:
         )
 
         with pytest.raises(ValueError, match="NOT_A_REAL_STATUS"):
-            subrack.poll(subrack.get_request())
+            faked_subrack.poll(faked_subrack.get_request())
 
 
 class TestErrorBranches:
@@ -424,8 +362,8 @@ class TestErrorBranches:
     # pylint: disable-next=too-many-arguments
     def test_a_transport_failure_raises_the_matching_exception(
         self: TestErrorBranches,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
         status: str,
         info: str,
         expected: type[Exception],
@@ -438,17 +376,16 @@ class TestErrorBranches:
         gives ``RequestError``, and a board that answered with an HTTP error
         gives ``HttpError``.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         :param status: the transport status the client reports.
         :param info: the detail the client reports with it.
         :param expected: the exception the poll must raise.
         """
         fake_client.set_attribute_response(status=status, info=info)
-        subrack = _make_subrack(fake_client, logger)
 
         with pytest.raises(expected, match=info):
-            subrack.poll(subrack.get_request())
+            faked_subrack.poll(faked_subrack.get_request())
 
     @pytest.mark.parametrize(
         "status",
@@ -461,8 +398,8 @@ class TestErrorBranches:
     )
     def test_a_value_the_board_cannot_supply_is_unknown(
         self: TestErrorBranches,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
         status: str,
     ) -> None:
         """
@@ -472,34 +409,32 @@ class TestErrorBranches:
         correct outcome whether the board reported an error or was busy. Only
         a transport failure raises.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         :param status: the status the board reports for every attribute.
         """
         fake_client.set_attribute_response(status=status, info="No value")
-        subrack = _make_subrack(fake_client, logger)
 
-        response = subrack.poll(subrack.get_request())
+        response = faked_subrack.poll(faked_subrack.get_request())
 
         for key in BATCH_ATTRIBUTES:
             assert response.values[key] is None
 
     def test_unknown_status_raises_value_error(
         self: TestErrorBranches,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
     ) -> None:
         """
         An unrecognised status code must raise.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
         """
         fake_client.set_attribute_response(status="NOT_A_REAL_STATUS")
-        subrack = _make_subrack(fake_client, logger)
 
         with pytest.raises(ValueError, match="NOT_A_REAL_STATUS"):
-            subrack.poll(subrack.get_request())
+            faked_subrack.poll(faked_subrack.get_request())
 
     def test_poll_failure_clears_the_caches(
         self: TestErrorBranches,
@@ -515,7 +450,7 @@ class TestErrorBranches:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        subrack = _make_subrack(fake_client, logger, max_fan_errors=1)
+        subrack = make_subrack(fake_client, logger, max_fan_errors=1)
 
         # Use up the single allowed replacement.
         subrack.derived.estimate_max_fan_rpm([0.0] * 4, [100.0] * 4)
@@ -536,7 +471,7 @@ class TestErrorBranches:
         :param logger: a logger.
         """
         seen: list[Exception] = []
-        subrack = _make_subrack(fake_client, logger, error_callback=seen.append)
+        subrack = make_subrack(fake_client, logger, error_callback=seen.append)
         exception = HttpError("boom")
 
         subrack.poll_failed(exception)
@@ -811,7 +746,7 @@ class TestDerivedValuesWiring:
                 "attribute": key,
                 "value": value,
             }
-        subrack = _make_subrack(fake_client, logger, max_fan_errors=0)
+        subrack = make_subrack(fake_client, logger, max_fan_errors=0)
 
         response = subrack.poll(subrack.get_request())
 
@@ -830,7 +765,7 @@ class TestDerivedValuesWiring:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        subrack = _make_subrack(
+        subrack = make_subrack(
             fake_client,
             logger,
             attribute_filter_type="mean",
@@ -899,7 +834,7 @@ class TestLockContention:
         :param logger: a logger.
         """
         lock = LogLock("busy", logger)
-        subrack = _make_subrack(fake_client, logger, lock=lock, lock_timeout=0.01)
+        subrack = make_subrack(fake_client, logger, lock=lock, lock_timeout=0.01)
 
         with self._held(lock):
             with pytest.raises(RequestError, match="still holds the client"):
@@ -916,14 +851,13 @@ class TestLockContention:
         :param fake_client: the fake hardware client.
         :param logger: a logger.
         """
-        subrack = _make_subrack(fake_client, logger, lock_timeout=0.01)
+        subrack = make_subrack(fake_client, logger, lock_timeout=0.01)
 
         with self._held(subrack._client_lock):
             (status, message, _) = subrack.run_board_command("turn_on_tpm", "1")
 
         assert status == BoardCommandStatus.FAILED
         assert "busy with another operation" in message
-        subrack.cleanup()
 
     def test_a_poll_reports_how_long_it_held_the_lock(
         self: TestLockContention,
@@ -943,7 +877,7 @@ class TestLockContention:
         :param caplog: the pytest log capture fixture.
         """
         lock = LogLock("slow", logger, timeout_warning=0.0)
-        subrack = _make_subrack(fake_client, logger, lock=lock)
+        subrack = make_subrack(fake_client, logger, lock=lock)
         fake_client.set_attribute_response(value=None)
 
         with caplog.at_level(logging.WARNING, logger=logger.name):
@@ -965,23 +899,76 @@ class TestLockContention:
         :param logger: a logger.
         :param caplog: the pytest log capture fixture.
         """
-        subrack = _make_subrack(fake_client, logger, lock_warning=0.0)
+        subrack = make_subrack(fake_client, logger, lock_warning=0.0)
 
         with caplog.at_level(logging.WARNING, logger=logger.name):
             subrack.run_board_command("turn_on_tpm", "1")
 
         assert "held for" in caplog.text
         assert "command turn_on_tpm" in caplog.text
-        subrack.cleanup()
 
 
-# pylint: disable-next=too-few-public-methods
-class TestPollingThread:
+class TestThePoller:
     """
-    Tests of the polling thread's lifetime.
+    Tests of the poller that drives the subrack.
 
-    Stopping polling leaves the thread alive, and only ``cleanup`` ends it.
+    The caller builds the poller, and stopping polling leaves its thread
+    alive, so only ``cleanup`` ends it.
     """
+
+    def test_the_poller_is_built_with_this_subrack(
+        self: TestThePoller,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        The subrack must pass itself to the factory, and keep what it returns.
+
+        A poller built on any other poll model would poll something else, and
+        this subrack would then never be polled at all.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        """
+        built: list[Any] = []
+
+        def factory(model: Any) -> Any:
+            built.append(model)
+            return mock.Mock(spec=SubrackPoller)
+
+        subrack = make_subrack(fake_client, logger, poller_factory=factory)
+
+        assert built == [subrack]
+
+    @pytest.mark.parametrize(
+        ("method", "delegate"),
+        [
+            ("start_polling", "start_polling"),
+            ("stop_polling", "stop_polling"),
+            ("cleanup", "kill_polling_thread"),
+        ],
+    )
+    def test_the_lifecycle_methods_delegate_to_the_poller(
+        self: TestThePoller,
+        faked_subrack: Subrack,
+        mock_poller: mock.Mock,
+        method: str,
+        delegate: str,
+    ) -> None:
+        """
+        Each lifecycle method must call its own method on the poller.
+
+        ``cleanup`` is the one that does not share its name, because it ends
+        the thread rather than merely stopping the polling.
+
+        :param faked_subrack: the client under test.
+        :param mock_poller: the poller that subrack was given.
+        :param method: the method called on the subrack.
+        :param delegate: the method it must call on the poller.
+        """
+        getattr(faked_subrack, method)()
+
+        getattr(mock_poller, delegate).assert_called_once_with()
 
     @staticmethod
     def _polling_threads() -> set[threading.Thread]:
@@ -993,7 +980,7 @@ class TestPollingThread:
         return {t for t in threading.enumerate() if "Polling" in t.name}
 
     def test_cleanup_ends_the_thread(
-        self: TestPollingThread,
+        self: TestThePoller,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
     ) -> None:
@@ -1008,7 +995,11 @@ class TestPollingThread:
         :param logger: a logger.
         """
         before = self._polling_threads()
-        subrack = _make_subrack(fake_client, logger)
+        subrack = make_subrack(
+            fake_client,
+            logger,
+            poller_factory=lambda model: SubrackPoller(model, 60.0, logger),
+        )
         (thread,) = self._polling_threads() - before
         subrack.start_polling()
         subrack.stop_polling()

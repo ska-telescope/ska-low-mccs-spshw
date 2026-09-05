@@ -34,6 +34,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
     HttpError,
     RequestError,
     Subrack,
+    SubrackPoller,
     SubrackPollResponse,
     subrack_client,
 )
@@ -95,7 +96,8 @@ def _make_subrack(
     :return: a subrack client.
     """
     options: dict[str, Any] = {
-        "poll_rate": 60.0,
+        # Slow, so a test that does not start polling never polls by itself.
+        "poller_factory": lambda model: SubrackPoller(model, 60.0, logger),
         "data_callback": lambda _: None,
     }
     options.update(kwargs)

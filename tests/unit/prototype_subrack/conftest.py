@@ -20,7 +20,11 @@ from ska_low_mccs_common.component import (
     WebHardwareClient,
 )
 
-from ska_low_mccs_spshw.prototype_subrack import Subrack, SubrackPollResponse
+from ska_low_mccs_spshw.prototype_subrack import (
+    Subrack,
+    SubrackPoller,
+    SubrackPollResponse,
+)
 from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
     SubrackServerContextManager,
@@ -250,7 +254,7 @@ def simulated_subrack_fixture(
         WebHardwareClient(host, port),
         host,
         logger,
-        poll_rate=0.1,
+        poller_factory=lambda model: SubrackPoller(model, 0.1, logger),
         data_callback=data_callback,
         error_callback=error_callback,
     )
@@ -278,7 +282,7 @@ def faked_subrack_fixture(
         fake_client,  # type: ignore[arg-type]
         "no-such-host",
         logger,
-        poll_rate=0.05,
+        poller_factory=lambda model: SubrackPoller(model, 0.05, logger),
         data_callback=data_callback,
         error_callback=error_callback,
     )

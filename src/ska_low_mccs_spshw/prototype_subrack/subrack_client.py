@@ -48,6 +48,8 @@ from .derived_values import DerivedValues
 __all__ = [
     "BoardCommandStatus",
     "Subrack",
+    "SubrackPoller",
+    "SubrackPollerFactory",
     "SubrackPollResponse",
 ]
 
@@ -90,6 +92,21 @@ class SubrackPollResponse:
     """The wall clock time at which the poll completed."""
 
 
+SubrackPoller = Poller[tuple[str, ...], SubrackPollResponse]
+"""The poller that drives a :py:class:`Subrack`."""
+
+SubrackPollerFactory = Callable[
+    [PollModel[tuple[str, ...], SubrackPollResponse]], SubrackPoller
+]
+"""Builds the poller for a subrack.
+
+A poller needs the poll model it drives, and a subrack is that poll model, so
+neither can be built before the other. The caller supplies this instead of a
+poller, and the subrack calls it with itself. The caller therefore still
+chooses the poll rate and the poller type.
+"""
+
+
 # pylint: disable-next=too-many-instance-attributes
 class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     """
@@ -117,7 +134,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         client: WebHardwareClient,
         name: str,
         logger: logging.Logger,
-        poll_rate: float,
+        poller_factory: SubrackPollerFactory,
         data_callback: Callable[[SubrackPollResponse], None],
         error_callback: Callable[[Exception], None] | None = None,
         max_fan_errors: int = 5,
@@ -138,8 +155,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             name. A lock hold is reported against this name, so it must tell
             one subrack from another.
         :param logger: a logger for this client to use.
-        :param poll_rate: how long, in seconds, to wait after a poll before
-            polling again.
+        :param poller_factory: called with this subrack, and returns the poller
+            that drives it. The caller chooses the poll rate, so this class
+            never builds a poller of its own.
         :param data_callback: called with each successful poll response.
         :param error_callback: called with the exception from a failed poll.
         :param max_fan_errors: how many consecutive bad fan rpm estimates to
@@ -179,7 +197,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             attribute_filter_max_samples=attribute_filter_max_samples,
         )
 
-        self._poller = Poller(self, poll_rate, logger)
+        self._poller = poller_factory(self)
 
     # ----------------
     # PollModel hooks

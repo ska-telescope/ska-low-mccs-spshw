@@ -1,11 +1,15 @@
 """
-Drop into a REPL with a live subrack client.
+Drop into a REPL with a live subrack client. Holds no board of its own.
 
-Against the bundled simulator::
+Start a simulator in another terminal first::
+
+    PYTHONPATH=src python scripts/subrack_simulator.py
+
+Then, against that simulator on 127.0.0.1:8081::
 
     PYTHONPATH=src python scripts/subrack_repl.py
 
-Against a real board::
+Against a real board, or a simulator elsewhere::
 
     PYTHONPATH=src python scripts/subrack_repl.py 10.0.10.80 8081
 
@@ -19,7 +23,17 @@ import sys
 import threading
 import time
 
-from ska_low_mccs_spshw.prototype_subrack import BoardCommandStatus, Subrack
+from ska_low_mccs_common.component import WebHardwareClient
+
+from ska_low_mccs_spshw.prototype_subrack import (
+    BoardCommandStatus,
+    Subrack,
+    SubrackPoller,
+)
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8081
+POLL_RATE = 2.0
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 LOGGER = logging.getLogger("repl")
@@ -27,19 +41,6 @@ LOGGER = logging.getLogger("repl")
 polls: list = []
 errors: list = []
 _arrived = threading.Event()
-
-
-def _quieten() -> None:
-    """
-    Silence the servers that log a line per request.
-
-    uvicorn reapplies its own logging configuration when the server starts, so
-    this has to run afterwards to have any effect.
-    """
-    for name in ("urllib3", "uvicorn", "uvicorn.access", "uvicorn.error"):
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.WARNING)
-        logger.propagate = False
 
 
 def _on_data(response: object) -> None:
@@ -104,36 +105,13 @@ def commands() -> list[str]:
     return sorted(retvalue or [])
 
 
-def slow(milliseconds: int = 400) -> None:
-    """
-    Make the simulator delay every request.
-
-    The delay applies to each attribute read and each command, so a poll sweep
-    of nineteen reads takes nineteen times this. A command issued during a
-    sweep waits for the lock, and the lock logs a warning naming its holder
-    once a hold exceeds the warning threshold. Zero turns the delay off.
-
-    Only available when running against the simulator.
-
-    :param milliseconds: how long to delay each request.
-
-    :raises RuntimeError: if running against a real board.
-    """
-    if _server is None:
-        raise RuntimeError("there is no simulator, this is a real board")
-    if milliseconds:
-        simulator.network_jitter_limits = (milliseconds, milliseconds + 1)
-    else:
-        simulator.network_jitter_limits = (0, 0)
-    print(f"simulator delaying every request by {milliseconds} ms")
-
-
 def contend() -> None:
     """
     Run a command while a poll sweep holds the lock, and report the wait.
 
     Reports how long the command waited, which is the remainder of the sweep
-    that was in flight.
+    that was in flight. Start the simulator with ``--jitter 400`` to make each
+    sweep slow enough for the wait to be worth measuring.
     """
     started = time.monotonic()
     status, message, _ = subrack.run_board_command("turn_on_tpm", "2")
@@ -142,42 +120,38 @@ def contend() -> None:
 
 
 def bye() -> None:
-    """Stop the client and the simulator. Safe to call twice."""
+    """Stop the client. Safe to call twice."""
     try:
         subrack.cleanup()
     except Exception:  # noqa: BLE001
         pass
-    if _server is not None:
-        _server.__exit__(None, None, None)
     LOGGER.info("stopped")
 
 
-if len(sys.argv) > 1:
-    HOST = sys.argv[1]
-    PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8081
-    _server = None
-else:
-    from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
-    from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
-        SubrackServerContextManager,
+HOST = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_HOST
+PORT = int(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_PORT
+
+# The client logs a line per request, which a poll sweep makes nineteen of.
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+client = WebHardwareClient(HOST, PORT)
+if client.get_attribute("board_current")["status"] not in ("OK", "ERROR"):
+    LOGGER.warning(
+        "Nothing is answering on %s:%s. If you meant the simulator, start it "
+        "with: PYTHONPATH=src python scripts/subrack_simulator.py",
+        HOST,
+        PORT,
     )
 
-    simulator = SubrackSimulator()
-    _server = SubrackServerContextManager(simulator)
-    HOST, PORT = _server.__enter__()
-    _quieten()
-    LOGGER.info("simulator on %s:%s (name: simulator)", HOST, PORT)
-
 subrack = Subrack(
+    client,
     HOST,
-    PORT,
     LOGGER,
-    poll_rate=2.0,
+    poller_factory=lambda model: SubrackPoller(model, POLL_RATE, LOGGER),
     data_callback=_on_data,
     error_callback=_on_error,
 )
 subrack.start_polling()
-_quieten()
 
 # Tab completion and history over the session namespace.
 try:
@@ -197,12 +171,13 @@ subrack client polling {HOST}:{PORT}
   last()     the last poll response
   wait()     block until the next poll arrives
   commands() list the commands the board accepts
-  slow(ms)   make the simulator delay every request
   contend()  run a command while a sweep holds the lock
   polls      every response so far
   errors     every failed poll so far
-  simulator  the simulator backend, when running without an address
   bye()      stop early; exit() and Ctrl-D also shut down cleanly
+
+The board runs in its own process. To delay its every request, restart it with
+scripts/subrack_simulator.py --jitter 400
 
 Tab completes."""
 

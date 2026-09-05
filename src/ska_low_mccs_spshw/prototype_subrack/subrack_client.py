@@ -11,8 +11,9 @@ A polling client for an SPS subrack management board. Holds no Tango code.
 :py:class:`Subrack` is the poll model that
 :py:class:`ska_tango_base.poller.Poller` drives, and it also runs board
 commands. The caller supplies the
-:py:class:`~ska_low_mccs_common.component.WebHardwareClient`, and this module
-owns the lock that serialises every access to it.
+:py:class:`~ska_low_mccs_common.component.WebHardwareClient` and builds the
+poller, so this module constructs neither. It owns the lock that serialises
+every access to the client.
 
 One lock covers both polls and board commands. A board command takes it on the
 thread that calls it, so it does not wait for a poll slot.
@@ -49,7 +50,6 @@ __all__ = [
     "BoardCommandStatus",
     "Subrack",
     "SubrackPoller",
-    "SubrackPollerFactory",
     "SubrackPollResponse",
 ]
 
@@ -93,28 +93,21 @@ class SubrackPollResponse:
 
 
 SubrackPoller = Poller[tuple[str, ...], SubrackPollResponse]
-"""The poller that drives a :py:class:`Subrack`."""
+"""The poller that drives a :py:class:`Subrack`.
 
-SubrackPollerFactory = Callable[
-    [PollModel[tuple[str, ...], SubrackPollResponse]], SubrackPoller
-]
-"""Builds the poller for a subrack.
-
-A poller needs the poll model it drives, and a subrack is that poll model, so
-neither can be built before the other. The caller supplies this instead of a
-poller, and the subrack calls it with itself. The caller therefore still
-chooses the poll rate and the poller type.
+The caller builds one of these around a subrack, and owns it. A subrack holds
+no poller of its own, so the two are built in order rather than at once.
 """
 
 
-# pylint: disable-next=too-many-instance-attributes
 class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     """
     A polling client for an SPS subrack management board.
 
-    A Tango device holds one of these. It runs a background poll loop that
-    gives each result to the callbacks supplied at construction. It also runs
-    board commands, serialised against the poll loop on a shared lock.
+    A Tango device holds one of these, and a ``SubrackPoller`` built
+    around it. The poller owns the thread and its lifetime, and this class
+    supplies the work: it answers each poll, and it runs board commands,
+    serialised against the polling on a shared lock.
 
     Each poll reads a batch of attributes over HTTP, then the health status. A
     transport failure is raised as :py:class:`RequestError` or
@@ -124,9 +117,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
     :py:class:`~.derived_values.DerivedValues` supplies the computed values.
 
-    The callbacks fire only while polling is active. A caller must ignore a late
-    callback that arrives after :py:meth:`stop_polling`, because that method
-    does not block.
+    The callbacks fire only while the poller is polling. A caller must ignore a
+    late callback that arrives after it stops the poller, because stopping does
+    not block.
     """
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -134,7 +127,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         client: WebHardwareClient,
         name: str,
         logger: logging.Logger,
-        poller_factory: SubrackPollerFactory,
         data_callback: Callable[[SubrackPollResponse], None],
         error_callback: Callable[[Exception], None] | None = None,
         max_fan_errors: int = 5,
@@ -155,9 +147,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             name. A lock hold is reported against this name, so it must tell
             one subrack from another.
         :param logger: a logger for this client to use.
-        :param poller_factory: called with this subrack, and returns the poller
-            that drives it. The caller chooses the poll rate, so this class
-            never builds a poller of its own.
         :param data_callback: called with each successful poll response.
         :param error_callback: called with the exception from a failed poll.
         :param max_fan_errors: how many consecutive bad fan rpm estimates to
@@ -196,8 +185,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             attribute_filter_type=attribute_filter_type,
             attribute_filter_max_samples=attribute_filter_max_samples,
         )
-
-        self._poller = poller_factory(self)
 
     # ----------------
     # PollModel hooks
@@ -320,21 +307,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 f"{response.get('info', 'No details.')}",
                 None,
             )
-
-    # ----------------
-    # Lifecycle
-    # ----------------
-    def start_polling(self: Subrack) -> None:
-        """Start polling the subrack."""
-        self._poller.start_polling()
-
-    def stop_polling(self: Subrack) -> None:
-        """Stop polling the subrack."""
-        self._poller.stop_polling()
-
-    def cleanup(self: Subrack) -> None:
-        """Kill the polling thread. Do not use the instance afterwards."""
-        self._poller.kill_polling_thread()
 
     # ----------------
     # Reads

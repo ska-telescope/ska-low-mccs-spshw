@@ -240,29 +240,24 @@ def make_subrack(
     *,
     name: str = "no-such-host",
     lock: LogLock | None = None,
-    poller: Any = None,
     **kwargs: Any,
 ) -> Subrack:
     """
     Build a subrack. This is the only place that calls its constructor.
 
-    The poller is a mock unless the caller supplies one, because a real poller
-    starts a thread as soon as it is built and almost no test polls. A test
-    that wants a real one passes its own ``poller_factory``.
+    A subrack does not poll itself, so nothing here starts a thread. A test
+    that wants polling builds a ``SubrackPoller`` around the result and
+    is responsible for ending it.
 
     :param client: the hardware client, real or fake.
     :param logger: a logger.
     :param name: what the subrack calls itself in the log.
     :param lock: the client lock, defaulting to a fresh one.
-    :param poller: the poller to give the subrack, defaulting to a fresh mock.
     :param kwargs: overrides passed to the subrack.
 
     :return: a subrack client.
     """
-    options: dict[str, Any] = {
-        "poller_factory": lambda _: poller or mock.Mock(spec=SubrackPoller),
-        "data_callback": lambda _: None,
-    }
+    options: dict[str, Any] = {"data_callback": lambda _: None}
     options.update(kwargs)
     return Subrack(client, name, logger, _lock=lock, **options)
 
@@ -288,12 +283,13 @@ def simulated_subrack_fixture(
         WebHardwareClient(host, port),
         logger,
         name=host,
-        poller_factory=lambda model: SubrackPoller(model, 0.1, logger),
         data_callback=data_callback,
         error_callback=error_callback,
     )
+    poller = SubrackPoller(subrack, 0.1, logger)
+    poller.start_polling()
     yield subrack
-    subrack.cleanup()
+    poller.kill_polling_thread()
 
 
 @pytest.fixture(name="healthy_faked_subrack")
@@ -324,24 +320,10 @@ def healthy_faked_subrack_fixture(
     return faked_subrack
 
 
-@pytest.fixture(name="mock_poller")
-def mock_poller_fixture() -> mock.Mock:
-    """
-    Return the poller that ``faked_subrack`` is given.
-
-    A test that asserts against the poller asks for this alongside the
-    subrack, and gets the very poller that subrack holds.
-
-    :return: a mock poller.
-    """
-    return mock.Mock(spec=SubrackPoller)
-
-
 @pytest.fixture(name="faked_subrack")
 def faked_subrack_fixture(
     fake_client: FakeHardwareClient,
     logger: logging.Logger,
-    mock_poller: mock.Mock,
 ) -> Subrack:
     """
     Return a subrack with nothing configured, for a test that needs no setup.
@@ -351,8 +333,7 @@ def faked_subrack_fixture(
 
     :param fake_client: the fake hardware client.
     :param logger: a logger.
-    :param mock_poller: the poller to give it.
 
     :return: a subrack client.
     """
-    return make_subrack(fake_client, logger, poller=mock_poller)
+    return make_subrack(fake_client, logger)

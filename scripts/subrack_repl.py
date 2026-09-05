@@ -120,9 +120,9 @@ def contend() -> None:
 
 
 def bye() -> None:
-    """Stop the client. Safe to call twice."""
+    """Stop polling. Safe to call twice."""
     try:
-        subrack.cleanup()
+        poller.kill_polling_thread()
     except Exception:  # noqa: BLE001
         pass
     LOGGER.info("stopped")
@@ -147,11 +147,12 @@ subrack = Subrack(
     client,
     HOST,
     LOGGER,
-    poller_factory=lambda model: SubrackPoller(model, POLL_RATE, LOGGER),
     data_callback=_on_data,
     error_callback=_on_error,
 )
-subrack.start_polling()
+# The subrack answers polls but does not run them. This owns the thread.
+poller = SubrackPoller(subrack, POLL_RATE, LOGGER)
+poller.start_polling()
 
 # Tab completion and history over the session namespace.
 try:
@@ -167,6 +168,7 @@ _BANNER = f"""\
 subrack client polling {HOST}:{PORT}
 
   subrack    the client itself, e.g. subrack.run_board_command("turn_on_tpm", "3")
+  poller     the poll loop driving it, e.g. poller.stop_polling()
   show(*k)   print values from the last poll, all of them if given no names
   last()     the last poll response
   wait()     block until the next poll arrives
@@ -181,8 +183,8 @@ scripts/subrack_simulator.py --jitter 400
 
 Tab completes."""
 
-# The client's polling thread is not a daemon, so it is disposed of here on
-# every way out of the session, which is exit(), quit() and Ctrl-D.
+# The poller's thread is not a daemon, so it is disposed of here on every way
+# out of the session, which is exit(), quit() and Ctrl-D.
 try:
     code.interact(banner=_BANNER, local=globals(), exitmsg="")
 finally:

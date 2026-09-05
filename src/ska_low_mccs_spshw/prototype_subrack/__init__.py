@@ -15,7 +15,6 @@ __all__ = [
     "RequestError",
     "Subrack",
     "SubrackPoller",
-    "SubrackPollerFactory",
     "SubrackPollResponse",
 ]
 
@@ -25,6 +24,5 @@ from .subrack_client import (
     BoardCommandStatus,
     Subrack,
     SubrackPoller,
-    SubrackPollerFactory,
     SubrackPollResponse,
 )

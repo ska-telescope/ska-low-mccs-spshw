@@ -34,7 +34,6 @@ from ska_low_mccs_spshw.prototype_subrack import (
     HttpError,
     RequestError,
     Subrack,
-    SubrackPoller,
     SubrackPollResponse,
     subrack_client,
 )
@@ -100,7 +99,6 @@ class TestAgainstSimulator:
         :param responses: the queue that the callbacks feed.
         :param subrack_simulator_config: the simulator configuration.
         """
-        simulated_subrack.start_polling()
         response = _next_poll(responses)
 
         for key in BATCH_ATTRIBUTES:
@@ -127,7 +125,6 @@ class TestAgainstSimulator:
         :param simulated_subrack: the client under test.
         :param responses: the queue that the callbacks feed.
         """
-        simulated_subrack.start_polling()
         _next_poll(responses)
 
         (status, message, _) = simulated_subrack.run_board_command("turn_on_tpm", "5")
@@ -906,109 +903,6 @@ class TestLockContention:
 
         assert "held for" in caplog.text
         assert "command turn_on_tpm" in caplog.text
-
-
-class TestThePoller:
-    """
-    Tests of the poller that drives the subrack.
-
-    The caller builds the poller, and stopping polling leaves its thread
-    alive, so only ``cleanup`` ends it.
-    """
-
-    def test_the_poller_is_built_with_this_subrack(
-        self: TestThePoller,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        The subrack must pass itself to the factory, and keep what it returns.
-
-        A poller built on any other poll model would poll something else, and
-        this subrack would then never be polled at all.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        """
-        built: list[Any] = []
-
-        def factory(model: Any) -> Any:
-            built.append(model)
-            return mock.Mock(spec=SubrackPoller)
-
-        subrack = make_subrack(fake_client, logger, poller_factory=factory)
-
-        assert built == [subrack]
-
-    @pytest.mark.parametrize(
-        ("method", "delegate"),
-        [
-            ("start_polling", "start_polling"),
-            ("stop_polling", "stop_polling"),
-            ("cleanup", "kill_polling_thread"),
-        ],
-    )
-    def test_the_lifecycle_methods_delegate_to_the_poller(
-        self: TestThePoller,
-        faked_subrack: Subrack,
-        mock_poller: mock.Mock,
-        method: str,
-        delegate: str,
-    ) -> None:
-        """
-        Each lifecycle method must call its own method on the poller.
-
-        ``cleanup`` is the one that does not share its name, because it ends
-        the thread rather than merely stopping the polling.
-
-        :param faked_subrack: the client under test.
-        :param mock_poller: the poller that subrack was given.
-        :param method: the method called on the subrack.
-        :param delegate: the method it must call on the poller.
-        """
-        getattr(faked_subrack, method)()
-
-        getattr(mock_poller, delegate).assert_called_once_with()
-
-    @staticmethod
-    def _polling_threads() -> set[threading.Thread]:
-        """
-        Return the live polling threads.
-
-        :return: the live polling threads.
-        """
-        return {t for t in threading.enumerate() if "Polling" in t.name}
-
-    def test_cleanup_ends_the_thread(
-        self: TestThePoller,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        ``cleanup`` must end the thread, not merely stop polling.
-
-        Stopping polling leaves the thread waiting to be asked again, so a
-        client that is finished with has to be cleaned up or its thread
-        outlives it. That is what the device teardown relies on.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        """
-        before = self._polling_threads()
-        subrack = make_subrack(
-            fake_client,
-            logger,
-            poller_factory=lambda model: SubrackPoller(model, 60.0, logger),
-        )
-        (thread,) = self._polling_threads() - before
-        subrack.start_polling()
-        subrack.stop_polling()
-        assert thread.is_alive(), "stopping polling must not end the thread"
-
-        subrack.cleanup()
-
-        assert not thread.is_alive()
-        assert self._polling_threads() == before
 
 
 class TestTheFakeMatchesTheRealClient:

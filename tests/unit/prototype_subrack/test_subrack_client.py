@@ -100,10 +100,9 @@ def _make_subrack(
     }
     options.update(kwargs)
     return Subrack(
+        client,  # type: ignore[arg-type]
         "no-such-host",
-        0,
         logger,
-        _client=client,  # type: ignore[arg-type]
         _lock=lock,
         **options,
     )

@@ -10,9 +10,9 @@ A polling client for an SPS subrack management board. Holds no Tango code.
 
 :py:class:`Subrack` is the poll model that
 :py:class:`ska_tango_base.poller.Poller` drives, and it also runs board
-commands. It owns a
-:py:class:`~ska_low_mccs_common.component.WebHardwareClient` and a lock that
-serialises every access to it.
+commands. The caller supplies the
+:py:class:`~ska_low_mccs_common.component.WebHardwareClient`, and this module
+owns the lock that serialises every access to it.
 
 One lock covers both polls and board commands. A board command takes it on the
 thread that calls it, so it does not wait for a poll slot.
@@ -114,8 +114,8 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
     def __init__(  # pylint: disable=too-many-arguments
         self: Subrack,
-        host: str,
-        port: int,
+        client: WebHardwareClient,
+        name: str,
         logger: logging.Logger,
         poll_rate: float,
         data_callback: Callable[[SubrackPollResponse], None],
@@ -126,14 +126,17 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         attribute_filter_max_samples: int = 5,
         lock_timeout: float = LOCK_TIMEOUT,
         lock_warning: float = LOCK_WARNING,
-        _client: WebHardwareClient | None = None,
         _lock: LogLock | None = None,
     ) -> None:
         """
         Initialise a new instance.
 
-        :param host: the host name or IP address of the management board.
-        :param port: the HTTP port of the management board.
+        :param client: the hardware client to reach the management board
+            with. The caller builds it and chooses its address, so this class
+            never opens a connection of its own.
+        :param name: what to call this subrack in the log, such as its host
+            name. A lock hold is reported against this name, so it must tell
+            one subrack from another.
         :param logger: a logger for this client to use.
         :param poll_rate: how long, in seconds, to wait after a poll before
             polling again.
@@ -151,11 +154,10 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             poll or a command.
         :param lock_warning: how long, in seconds, a lock hold must exceed
             before it is logged.
-        :param _client: an alternative hardware client, for testing only.
         :param _lock: an alternative client lock, for testing only.
         """
         self._logger = logger
-        self._client = _client or WebHardwareClient(host, port)
+        self._client = client
         self._lock_timeout = lock_timeout
         self._data_callback = data_callback
         self._error_callback = error_callback
@@ -164,7 +166,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         # to the client is serialised. A LogLock reports a long hold and names
         # the holder, so a stalled board is visible in the log.
         self._client_lock = _lock or LogLock(
-            f"subrack-{host}", logger, timeout_warning=lock_warning
+            f"subrack-{name}", logger, timeout_warning=lock_warning
         )
 
         # The values that are computed rather than read. This object owns all

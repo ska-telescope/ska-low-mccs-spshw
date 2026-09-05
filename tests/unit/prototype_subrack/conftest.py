@@ -247,13 +247,12 @@ def simulated_subrack_fixture(
     (host, port) = simulator_address
     (data_callback, error_callback) = callbacks
     subrack = Subrack(
+        WebHardwareClient(host, port),
         host,
-        port,
         logger,
         poll_rate=0.1,
         data_callback=data_callback,
         error_callback=error_callback,
-        _client=WebHardwareClient(host, port),
     )
     yield subrack
     subrack.cleanup()
@@ -276,13 +275,12 @@ def faked_subrack_fixture(
     """
     (data_callback, error_callback) = callbacks
     subrack = Subrack(
+        fake_client,  # type: ignore[arg-type]
         "no-such-host",
-        0,
         logger,
         poll_rate=0.05,
         data_callback=data_callback,
         error_callback=error_callback,
-        _client=fake_client,  # type: ignore[arg-type]
     )
     yield subrack
     subrack.cleanup()

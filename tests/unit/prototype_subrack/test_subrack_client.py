@@ -5,7 +5,6 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-# pylint: disable=too-many-lines
 """
 Tests of the prototype subrack client.
 
@@ -86,16 +85,17 @@ class TestAgainstSimulator:
     :py:class:`~ska_low_mccs_common.component.WebHardwareClient` over a socket.
     """
 
+    @pytest.mark.usefixtures("simulated_subrack")
     def test_poll_reads_every_batched_attribute(
         self: TestAgainstSimulator,
-        simulated_subrack: Subrack,
         responses: queue.SimpleQueue,
         subrack_simulator_config: dict[str, Any],
     ) -> None:
         """
         Every batched attribute must arrive, with the configured values.
 
-        :param simulated_subrack: the client under test.
+        The subrack is already polling, so this only waits for a response.
+
         :param responses: the queue that the callbacks feed.
         :param subrack_simulator_config: the simulator configuration.
         """

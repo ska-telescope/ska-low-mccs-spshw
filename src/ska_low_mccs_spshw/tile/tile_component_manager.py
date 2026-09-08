@@ -1339,16 +1339,17 @@ class TileComponentManager(
         """Re-read tile_info from hardware and publish the new value."""
         self._update_attribute_callback(tile_info=self.tile_info())
 
-    def _read_40g_destination_ips(
-        self: TileComponentManager,
+    def _derive_40g_views(
+        self: TileComponentManager, forty_gb_cores: list[dict]
     ) -> tuple[list[str], list[int], str, str]:
         """
-        Read all 40G destination IPs/ports, and the per-FPGA IP.
+        Derive the flattened destination IP/port views from raw core configs.
+
+        :param forty_gb_cores: the raw per-core config dicts.
 
         :return: all destination IPs, all destination ports, and the
             FPGA1/FPGA2 destination IP.
         """
-        forty_gb_cores = self.get_40g_configuration()
         destination_ips = [core["dst_ip"] for core in forty_gb_cores]
         destination_ports = [core["dst_port"] for core in forty_gb_cores]
         dst_ip_40g_fpga1 = next(
@@ -1360,21 +1361,6 @@ class TileComponentManager(
             "",
         )
         return destination_ips, destination_ports, dst_ip_40g_fpga1, dst_ip_40g_fpga2
-
-    def refresh_40g_configuration(self: TileComponentManager) -> None:
-        """Re-read 40G core configuration from hardware and publish it."""
-        (
-            destination_ips,
-            destination_ports,
-            dst_ip_40g_fpga1,
-            dst_ip_40g_fpga2,
-        ) = self._read_40g_destination_ips()
-        self._update_attribute_callback(
-            forty_gb_destination_ips=destination_ips,
-            forty_gb_destination_ports=destination_ports,
-            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
-            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
-        )
 
     @property
     def global_reference_time(self: TileComponentManager) -> str | None:
@@ -1977,12 +1963,13 @@ class TileComponentManager(
             )
             pps_delay_correction = self._get_pps_delay_correction()
             is_station_beam_flagging_enabled = self.is_station_beam_flagging_enabled
+            forty_gb_cores = self.get_40g_configuration(-1, 0)
             (
                 forty_gb_destination_ips,
                 forty_gb_destination_ports,
                 dst_ip_40g_fpga1,
                 dst_ip_40g_fpga2,
-            ) = self._read_40g_destination_ips()
+            ) = self._derive_40g_views(forty_gb_cores)
             preadu_levels = self._with_hardware_lock(self.tile.get_preadu_levels)
 
         self._update_attribute_callback(
@@ -2005,6 +1992,7 @@ class TileComponentManager(
             dst_ip_40g_fpga2=dst_ip_40g_fpga2,
             forty_gb_destination_ips=forty_gb_destination_ips,
             forty_gb_destination_ports=forty_gb_destination_ports,
+            forty_gb_core_configurations=forty_gb_cores,
             preadu_levels=preadu_levels,
         )
 
@@ -3146,19 +3134,27 @@ class TileComponentManager(
                     netmask,
                     gateway,
                 )
-                core0 = self.tile.get_40g_core_configuration(0, 0) or {}
-                core1 = self.tile.get_40g_core_configuration(1, 0) or {}
-            # pylint: disable=broad-except
-            except Exception as e:
+                # Readback the 40G configuration.
+                forty_gb_cores = self.get_40g_configuration(-1, 0)
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
-                    [f"TileComponentManager: Tile access failed {e}"],
+                    ["TileComponentManager: Tile access failed"],
                 )
-
+        (
+            forty_gb_cores,
+            destination_ips,
+            destination_ports,
+            dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2,
+        ) = (forty_gb_cores, *self._derive_40g_views(forty_gb_cores))
         self._update_attribute_callback(
-            dst_ip_40g_fpga1=core0.get("dst_ip", ""),
-            dst_ip_40g_fpga2=core1.get("dst_ip", ""),
+            forty_gb_destination_ips=destination_ips,
+            forty_gb_destination_ports=destination_ports,
+            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
+            forty_gb_core_configurations=forty_gb_cores,
         )
         return ([ResultCode.OK], ["set csp download completed OK"])
 
@@ -3720,7 +3716,8 @@ class TileComponentManager(
         """
         self.logger.debug("TileComponentManager: set_lmc_download")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
         ) as acquired:
             if acquired:
                 try:
@@ -3734,8 +3731,9 @@ class TileComponentManager(
                         gateway_ip_40g=gateway_40g,
                     )
                     self.data_transmission_mode = mode
-                # pylint: disable=broad-except
-                except Exception as e:
+                    # Readback the 40G configuration.
+                    forty_gb_cores = self.get_40g_configuration(-1, 0)
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -3746,6 +3744,21 @@ class TileComponentManager(
             else:
                 self.logger.warning("Failed to acquire hardware lock")
                 return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
+
+        (
+            forty_gb_cores,
+            destination_ips,
+            destination_ports,
+            dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2,
+        ) = (forty_gb_cores, *self._derive_40g_views(forty_gb_cores))
+        self._update_attribute_callback(
+            forty_gb_destination_ips=destination_ips,
+            forty_gb_destination_ports=destination_ports,
+            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
+            forty_gb_core_configurations=forty_gb_cores,
+        )
 
         return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
@@ -3762,9 +3775,6 @@ class TileComponentManager(
 
         :return: core configuration or list of core configurations
         """
-        self.logger.debug(
-            f"get_40g_configuration: core:{core_id} entry:{arp_table_entry}"
-        )
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
@@ -3818,7 +3828,8 @@ class TileComponentManager(
         """
         self.logger.debug("TileComponentManager: configure_40g_core")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
         ) as acquired:
             if acquired:
                 try:
@@ -3834,6 +3845,8 @@ class TileComponentManager(
                         netmask,
                         gateway_ip,
                     )
+                    # Readback the 40G configuration.
+                    forty_gb_cores = self.get_40g_configuration(-1, 0)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -3846,6 +3859,21 @@ class TileComponentManager(
             else:
                 self.logger.warning("Failed to acquire hardware lock")
                 return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
+
+        (
+            forty_gb_cores,
+            destination_ips,
+            destination_ports,
+            dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2,
+        ) = (forty_gb_cores, *self._derive_40g_views(forty_gb_cores))
+        self._update_attribute_callback(
+            forty_gb_destination_ips=destination_ips,
+            forty_gb_destination_ports=destination_ports,
+            dst_ip_40g_fpga1=dst_ip_40g_fpga1,
+            dst_ip_40g_fpga2=dst_ip_40g_fpga2,
+            forty_gb_core_configurations=forty_gb_cores,
+        )
 
         return ([ResultCode.OK], ["Configure40GCore command completed OK"])
 

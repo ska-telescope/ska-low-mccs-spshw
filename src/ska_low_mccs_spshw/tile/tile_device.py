@@ -217,7 +217,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     tile_info_signal: AttrSignal[dict] = AttrSignal[dict]()
     forty_gb_destination_ips_signal: AttrSignal[list] = AttrSignal[list]()
     forty_gb_destination_ports_signal: AttrSignal[list] = AttrSignal[list]()
-
+    forty_gb_core_configurations_signal: AttrSignal[list] = AttrSignal[list]()
     adc_pll_lock_status_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
     adc_power_signal: AttrSignal[list[float]] = AttrSignal[list[float]]()
     tile_beamformer_status_signal: AttrSignal[bool] = AttrSignal[bool]()
@@ -512,6 +512,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "tile_info": "tile_info_signal",
         "forty_gb_destination_ips": "forty_gb_destination_ips_signal",
         "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
+        "forty_gb_core_configurations": "forty_gb_core_configurations_signal",
         "adc_rms": "adc_power_signal",
         "ddr_write_size": "ddr_write_size_signal",
         "I2C_access_alm": "I2C_access_alm_signal",
@@ -3127,11 +3128,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "version": "6.3.0"},
             "network": {"1g_ip_address": "10.132.0.46",
             "1g_mac_address": "fc:0f:e7:e6:43:6c", "1g_netmask": "255.255.255.0",
-            "1g_gateway": "10.132.0.254", "40g_ip_address_p1": "10.130.0.108",
-            "40g_mac_address_p1": "62:00:0A:82:00:6C", "40g_gateway_p1": "10.130.0.126",
-            "40g_netmask_p1": "255.255.255.128", "40g_ip_address_p2": "0.0.0.0",
-            "40g_mac_address_p2": "02:00:00:00:00:00",
-            "40g_gateway_p2": "10.130.0.126", "40g_netmask_p2": "255.255.255.128"}}'
+            "1g_gateway": "10.132.0.254"}}'
 
         :param nested_dict: the raw tile info emitted on the signal, or ``None``
             when the value is being invalidated.
@@ -4467,6 +4464,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="40Gn Destination Ports",
         doc="The destination ports for all 40Gb ports on the tile",
     )
+
+    @attribute_from_signal(
+        forty_gb_core_configurations_signal,
+        dtype="DevString",
+        label="fortyGbCoreConfigurations",
+    )
+    def fortyGbCoreConfigurations(  # noqa: N802
+        self: MccsTile, core_configs: list[dict] | None
+    ) -> str | None:
+        """
+        Return the full 40G core configuration for every configured core.
+
+        Unlike fortyGbDestinationIps/fortyGbDestinationPorts (which only carry
+        the flattened destination IP/port across all cores), this carries the
+        complete per-core record, correlated by core_id/arp_table_entry. It is
+        refreshed from hardware whenever fortyGbDestinationIps/Ports are (i.e.
+        after Configure40GCore/SetLmcDownload/SetCspDownload), and supersedes
+        calling Get40GCoreConfiguration with core_id=-1 to reconstruct the full
+        picture on demand.
+
+        :example:
+            >>> tile.fortyGbCoreConfigurations
+            '[{"core_id": 0, "arp_table_entry": 0, "source_mac": 18687084464728,
+               "source_ip": "10.0.99.3", "source_port": 4000,
+               "destination_ip": "10.0.98.3", "destination_port": 5000,
+               "netmask": "255.255.255.0", "gateway_ip": null}]'
+
+        :param core_configs: the raw per-core config dicts emitted on the
+            signal (driver field names), or ``None`` when the value is being
+            invalidated.
+        :return: JSON-encoded list of core configs with friendly field names,
+            or ``None`` to invalidate the attribute.
+        """
+        if core_configs is None:
+            return None
+        return json.dumps([self._format_40g_core_config(c) for c in core_configs])
 
     adcPower = attribute_from_signal(
         adc_power_signal,
@@ -6062,14 +6095,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask,
             gateway_ip,
         )
-        if result_codes[0] == ResultCode.OK:
-            self.component_manager.refresh_40g_configuration()
-            # tile_info currently mixes static device configuration with some
-            # non-static hardware-derived fields (including 40G network config),
-            # due to be removed in 4.0.0. Until then, re-evaluate it here so it
-            # stays consistent with the 40G configuration just written.
-            self.component_manager.refresh_tile_info()
         return (result_codes, messages)
+
+    @staticmethod
+    def _format_40g_core_config(item: dict[str, Any]) -> dict[str, Any]:
+        """
+        Map a raw 40G core config dict (driver field names) to friendly names.
+
+        :param item: a raw per-core config dict as returned by
+            ``TileComponentManager.get_40g_configuration``.
+
+        :return: the same config, with keys renamed for the Tango API
+            (e.g. ``src_mac`` -> ``source_mac``).
+        """
+        return {
+            "core_id": item.get("core_id", None),
+            "arp_table_entry": item.get("arp_table_entry", None),
+            "source_mac": item.get("src_mac", None),
+            "source_ip": item.get("src_ip", None),
+            "source_port": item.get("src_port", None),
+            "destination_ip": item.get("dst_ip", None),
+            "destination_port": item.get("dst_port", None),
+            "netmask": item.get("netmask", None),
+            "gateway_ip": item.get("gateway_ip", None),
+        }
 
     @command(dtype_in="DevString", dtype_out="DevString")
     @stb.validators.validate_json_args(schema=Get40GCoreConfiguration_SCHEMA)
@@ -6105,21 +6154,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         item_list = self.component_manager.get_40g_configuration(
             core_id=core_id, arp_table_entry=arp_table_entry
         )
-        item_new = []
-        for item in item_list:
-            item_new.append(
-                {
-                    "core_id": item.get("core_id", None),
-                    "arp_table_entry": item.get("arp_table_entry", None),
-                    "source_mac": item.get("src_mac", None),
-                    "source_ip": item.get("src_ip", None),
-                    "source_port": item.get("src_port", None),
-                    "destination_ip": item.get("dst_ip", None),
-                    "destination_port": item.get("dst_port", None),
-                    "netmask": item.get("netmask", None),
-                    "gateway_ip": item.get("gateway_ip", None),
-                }
-            )
+        item_new = [self._format_40g_core_config(item) for item in item_list]
         if len(item_new) == 0:
             raise ValueError("Invalid core id or arp table id specified")
         if len(item_new) == 1:
@@ -6175,13 +6210,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask_40g=netmask_40g,
             gateway_40g=gateway_40g,
         )
-        if result_codes[0] == ResultCode.OK:
-            self.component_manager.refresh_40g_configuration()
-            # tile_info currently mixes static device configuration with some
-            # non-static hardware-derived fields (including 40G network config),
-            # due to be removed in 4.0.0. Until then, re-evaluate it here so it
-            # stays consistent with the 40G configuration just written.
-            self.component_manager.refresh_tile_info()
         return (result_codes, messages)
 
     @command(
@@ -6288,13 +6316,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask,
             gateway,
         )
-        if result_codes[0] == ResultCode.OK:
-            self.component_manager.refresh_40g_configuration()
-            # tile_info currently mixes static device configuration with some
-            # non-static hardware-derived fields (including 40G network config),
-            # due to be removed in 4.0.0. Until then, re-evaluate it here so it
-            # stays consistent with the 40G configuration just written.
-            self.component_manager.refresh_tile_info()
         return (result_codes, messages)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")

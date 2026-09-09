@@ -8,7 +8,7 @@
         "integration_time": {
             "description": "Integration time in seconds",
             "type": "number",
-            "minimum": 0.0
+            "minimum": 0.0528
         },
         "first_channel": {
             "description": "First channel",

@@ -1461,7 +1461,7 @@ class TileComponentManager(
                     status = TpmStatus.UNPROGRAMMED
                 elif self._check_initialised() is False:
                     status = TpmStatus.PROGRAMMED
-                elif self._check_channeliser_started() is False:
+                elif self._is_acquisition_started() is False:
                     status = TpmStatus.INITIALISED
                 else:
                     status = TpmStatus.SYNCHRONISED
@@ -1501,19 +1501,16 @@ class TileComponentManager(
             ]
             return (_fpgas_time[0] != 0) and (_fpgas_time[1] != 0)
 
-    def _check_channeliser_started(self: TileComponentManager) -> bool:
+    def _is_acquisition_started(self: TileComponentManager) -> bool:
         """
-        Check that the channeliser is correctly generating samples.
+        Check that an acquisition has been started on the TPMs.
 
-        :return: channelised stream data valid flag
+        :return: tile acquisition_started flag
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return (
-                self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
-                and self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
-            )
+            return bool(self.tile.acquisition_started)
 
     # ----------------------
     # Long running commands.
@@ -1849,7 +1846,7 @@ class TileComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
 
-        def _channeliser_started() -> bool:
+        def _acquisition_started() -> bool:
             started = False
             try:
                 with acquire_timeout(
@@ -1857,7 +1854,7 @@ class TileComponentManager(
                     self._default_lock_timeout,
                     raise_exception=True,
                 ):
-                    started = self._check_channeliser_started()
+                    started = self._is_acquisition_started()
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
@@ -1887,7 +1884,7 @@ class TileComponentManager(
             return False
 
         result = _wait_for_condition(
-            condition=_channeliser_started,
+            condition=_acquisition_started,
             timeout=(deadline + 1) - time.time(),
             abort_event=task_abort_event,
         )

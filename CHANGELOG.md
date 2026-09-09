@@ -1,8 +1,13 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
+* [SKB-767] Update the minimum integration_time for Integrated LMC Data
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
+
 ## 15.0.0
 
-* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
 * [SPRTS-1067] Don't reset tile ref time on subrack events, reset on actual TPM connection.
 * [THORN-671] Bump tpm firmware version used when bios version > 1.0.0 from 11.0.0 -> 12.0.0.
 This comes with some 48 beam support. Removing 8 beam limitations and adding visibility of all 48 beams pointingDelays.

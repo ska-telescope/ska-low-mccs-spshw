@@ -1359,7 +1359,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check that exceptions are handled.
         # Shorthand for linter line length
         tcm = tile_component_manager
-        tcm._check_channeliser_started = (  # type: ignore[assignment]
+        tcm._is_acquisition_started = (  # type: ignore[assignment]
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
         tile_component_manager.start_acquisition(

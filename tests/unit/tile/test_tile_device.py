@@ -1211,7 +1211,7 @@ class TestMccsTile:
             DevState.ON, lookahead=2, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised"
+            "Initialised", lookahead=2, consume_nonmatches=True
         )
         time.sleep(3)
         self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)

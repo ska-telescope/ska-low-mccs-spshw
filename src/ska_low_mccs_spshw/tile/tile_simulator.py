@@ -1410,6 +1410,19 @@ class TileSimulator:
         time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.")
 
+    @property
+    @connected
+    def acquisition_started(self) -> bool:
+        """
+        Returns if an acquisition has been started on the TPM.
+
+        :return: Returns if an acquisition has been started
+        :rtype: bool
+        """
+        return bool(self["fpga1.dsp_regfile.stream_status.channelizer_vld"]) and bool(
+            self["fpga2.dsp_regfile.stream_status.channelizer_vld"]
+        )
+
     @connected
     def find_register(
         self: TileSimulator,

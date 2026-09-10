@@ -231,7 +231,7 @@ tpm_monitoring_points:
     pps:
       status: True
     pll: !!python/tuple [True, 0]
-    pll_40g: !!python/tuple [True, null]
+    pll_40g: !!python/tuple [True, 0]
     sync_time: True
   info:
     hardware:

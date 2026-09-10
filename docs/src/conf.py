@@ -33,6 +33,12 @@ from sphinx.ext.autodoc.mock import _MockObject
 class _TangoAttrStub(property):
     pass
 
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def write(self, fset: object) -> _TangoAttrStub:
+        return self  # mimic pytango attribute.write, which re-registers the same descriptor
+
 
 # Mapping from Tango DevType strings to Python types, used to populate the
 # PropertyDocumenter's ":type:" field via fget.__annotations__['return'].
@@ -159,7 +165,7 @@ with open(release_filename) as fd:
 
 author = "MCCS team"
 project = "MCCS LMC Prototype"
-copyright = "2020, SKA MCCS Team"
+copyright = "2026, SKA MCCS Team"
 
 # -- General configuration ------------------------------------------------
 nitpicky = True
@@ -197,6 +203,7 @@ nitpick_ignore = [
     ("py:class", "Database"),
     ("py:class", "ska_tango_base.type_hints.DevVarLongStringArrayType"),
     ("py:class", "ska_tango_base.type_hints.TaskFunctionType"),
+    # ("py:class", "ska_tango_base.type_hints.TaskFunctionType"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

@@ -325,7 +325,7 @@ class TileComponentManager(
         self.integrated_data_transmission_mode: str = "Not transmitting"
         self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str = self.FIRMWARE_NAME
+        self._firmware_name: str | None = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -2081,11 +2081,11 @@ class TileComponentManager(
     @property
     def firmware_name(self: TileComponentManager) -> str:
         """
-        Return the name of the firmware that this TPM simulator is running.
+        Return the name of the firmware that this TPM is running.
 
         :return: firmware name
         """
-        return self._firmware_name
+        return self._firmware_name or self.FIRMWARE_NAME
 
     @property
     @check_communicating
@@ -3558,7 +3558,7 @@ class TileComponentManager(
     @check_communicating
     def set_csp_rounding(
         self: TileComponentManager, rounding: np.ndarray | list[int] | int
-    ) -> None:
+    ) -> bool:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
@@ -3566,6 +3566,8 @@ class TileComponentManager(
         grab the first.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+
+        :return: Whether `set_csp_rounding` succeeded.
         """
         if isinstance(rounding, int):
             value = rounding
@@ -3579,7 +3581,7 @@ class TileComponentManager(
         ):
             if not self.tile.set_csp_rounding(value):
                 self.logger.warning("Setting the cspRounding failed.")
-                return
+                return False
             try:
                 hw_value = self.tile.get_csp_rounding()
             except Exception as e:  # pylint: disable=broad-except
@@ -3588,6 +3590,7 @@ class TileComponentManager(
         self._update_attribute_callback(
             csp_rounding=[hw_value] * 384 if hw_value is not None else None
         )
+        return True
 
     @check_communicating
     def get_static_delays(self: TileComponentManager) -> list[float]:

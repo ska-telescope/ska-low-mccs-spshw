@@ -3140,7 +3140,7 @@ class TileComponentManager(
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
-                    ["TileComponentManager: Tile access failed"],
+                    [f"TileComponentManager: Tile access failed {e}"],
                 )
         (
             forty_gb_cores,

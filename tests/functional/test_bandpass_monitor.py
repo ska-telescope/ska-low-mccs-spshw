@@ -481,11 +481,16 @@ def daq_bandpass_monitor_running(
     verify_bandpass_state(daq_device, True)
 
     yield
-
+    # Please note THORN-736, this was really affecting pipeline reliability.
+    # This noisy attribute dataReceivedResult was holding the monitor lock
+    # blocking other commands (in the bug we say a 3 second delay leading to
+    # client timeout)
+    daq_device.set_timeout_millis(10_000)  # 10s
     # Cleanup: Turn off bandpass monitor here if it's still on.
     if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] is True:
         daq_device.StopBandpassMonitor()
         verify_bandpass_state(daq_device, False)
+    daq_device.set_timeout_millis(3_000)  # default 3s
 
 
 @when("the DAQ is commanded to stop monitoring bandpasses")

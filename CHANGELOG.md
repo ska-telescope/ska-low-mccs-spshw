@@ -1,8 +1,10 @@
 # Version History
 
 ## Unreleased
+
 * [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
 * [SKB-767] Update the minimum integration_time for Integrated LMC Data
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
 
 ## 15.0.0
 

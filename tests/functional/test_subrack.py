@@ -175,9 +175,11 @@ def check_subrack_is_online_and_on(
             tango.DevState.ON,
         )
 
-    assert subrack_device.state() == tango.DevState.ON
+    # DevState.ALARM counts as an actively powered state
+    # which is the intent of this step.
+    assert subrack_device.state() in [tango.DevState.ON, tango.DevState.ALARM]
     subrack_device.unsubscribe_event(sub_id)
-    print("Subrack device is in ON state.")
+    print(f"Subrack device is in {subrack_device.state()} state.")
 
 
 @given("two subrack fan pairs", target_fixture="fan_number")

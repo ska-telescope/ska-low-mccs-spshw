@@ -34,6 +34,7 @@ from ska_low_sps_tpm_api.base.definitions import (
     BoardError,
     Device,
     LibraryError,
+    PluginError,
     RegisterInfo,
 )
 from ska_low_sps_tpm_api.tile import Tile
@@ -56,17 +57,18 @@ from .tile_poll_management import (
     TileResponse,
 )
 from .tile_simulator import DynamicTileSimulator, TileSimulator
-from .time_util import TileTime
+from .tile_time import TileTime
 from .tpm_status import TpmStatus
 from .utils import LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
 
-FIRMWARE_NAME_V10 = "tpm_firmware_10.0.0.bit"
-FIRMWARE_NAME_V11 = "tpm_firmware_11.0.0.bit"
+FIRMWARE_NAME_OLD = "tpm_firmware_10.0.0.bit"
+FIRMWARE_NAME_NEW = "tpm_firmware_12.0.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
-_MIN_V11_BIOS_VERSION = semver.Version.parse("1.0.0")
+_MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
+_MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -79,10 +81,10 @@ def _select_firmware_name(bios: str) -> str:
     """
     match = _BIOS_VERSION_PATTERN.search(bios)
     if match is None:
-        return FIRMWARE_NAME_V10
+        return FIRMWARE_NAME_OLD
 
     version = semver.Version.parse(match.group(1))
-    return FIRMWARE_NAME_V11 if version >= _MIN_V11_BIOS_VERSION else FIRMWARE_NAME_V10
+    return FIRMWARE_NAME_NEW if version >= _MIN_NEW_BIOS_VERSION else FIRMWARE_NAME_OLD
 
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
@@ -196,9 +198,9 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
-    FIRMWARE_NAME_V10: str = FIRMWARE_NAME_V10
-    FIRMWARE_NAME_V11: str = FIRMWARE_NAME_V11
-    FIRMWARE_NAME: str = FIRMWARE_NAME_V10
+    FIRMWARE_NAME_OLD: str = FIRMWARE_NAME_OLD
+    FIRMWARE_NAME_NEW: str = FIRMWARE_NAME_NEW
+    FIRMWARE_NAME: str = FIRMWARE_NAME_OLD
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
@@ -323,7 +325,7 @@ class TileComponentManager(
         self.integrated_data_transmission_mode: str = "Not transmitting"
         self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str = self.FIRMWARE_NAME
+        self._firmware_name: str | None = self.FIRMWARE_NAME
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -732,6 +734,9 @@ class TileComponentManager(
 
         self.power_state = self._subrack_says_tpm_power
         self.update_fault_state(poll_success=False)
+
+        if self._subrack_says_tpm_power != PowerState.ON:
+            self._tile_time.set_reference_time(0)
 
         self._update_component_state(
             power=self._subrack_says_tpm_power, fault=self.fault_state
@@ -1209,9 +1214,6 @@ class TileComponentManager(
 
                         self._request_provider.enqueue_lrc(request, priority=0)
 
-        else:
-            self._tile_time.set_reference_time(0)
-
     def _subrack_says_state_changed(
         self: TileComponentManager,
         event_name: str,
@@ -1328,7 +1330,9 @@ class TileComponentManager(
 
         :return: information relevant to tile.
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             return self.tile.info
 
     def refresh_tile_info(self: TileComponentManager) -> None:
@@ -1457,7 +1461,7 @@ class TileComponentManager(
                     status = TpmStatus.UNPROGRAMMED
                 elif self._check_initialised() is False:
                     status = TpmStatus.PROGRAMMED
-                elif self._check_channeliser_started() is False:
+                elif self._is_acquisition_started() is False:
                     status = TpmStatus.INITIALISED
                 else:
                     status = TpmStatus.SYNCHRONISED
@@ -1497,19 +1501,16 @@ class TileComponentManager(
             ]
             return (_fpgas_time[0] != 0) and (_fpgas_time[1] != 0)
 
-    def _check_channeliser_started(self: TileComponentManager) -> bool:
+    def _is_acquisition_started(self: TileComponentManager) -> bool:
         """
-        Check that the channeliser is correctly generating samples.
+        Check that an acquisition has been started on the TPMs.
 
-        :return: channelised stream data valid flag
+        :return: tile acquisition_started flag
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return (
-                self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
-                and self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
-            )
+            return bool(self.tile.acquisition_started)
 
     # ----------------------
     # Long running commands.
@@ -1845,7 +1846,7 @@ class TileComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
 
-        def _channeliser_started() -> bool:
+        def _acquisition_started() -> bool:
             started = False
             try:
                 with acquire_timeout(
@@ -1853,7 +1854,7 @@ class TileComponentManager(
                     self._default_lock_timeout,
                     raise_exception=True,
                 ):
-                    started = self._check_channeliser_started()
+                    started = self._is_acquisition_started()
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
@@ -1883,7 +1884,7 @@ class TileComponentManager(
             return False
 
         result = _wait_for_condition(
-            condition=_channeliser_started,
+            condition=_acquisition_started,
             timeout=(deadline + 1) - time.time(),
             abort_event=task_abort_event,
         )
@@ -1942,6 +1943,7 @@ class TileComponentManager(
         static_delays = None
         beamformer_table = None
         beamformer_regions = None
+        beamformer_running = None
         pfb_version = None
         rfi_blanking_enabled_antennas = None
         broadband_rfi_factor = None
@@ -1962,6 +1964,9 @@ class TileComponentManager(
             beamformer_table = self._with_hardware_lock(self.tile.get_beamformer_table)
             beamformer_regions = self._with_hardware_lock(
                 self.tile.get_beamformer_regions
+            )
+            beamformer_running = self._with_hardware_lock(
+                self.tile.beamformer_is_running
             )
             pfb_version = self._with_hardware_lock(self.tile.read_polyfilter_name)
             rfi_blanking_enabled_antennas = self._with_hardware_lock(
@@ -1988,6 +1993,7 @@ class TileComponentManager(
             channeliser_rounding=channeliser_rounding,
             beamformer_table=beamformer_table,
             beamformer_regions=beamformer_regions,
+            beamformer_running=beamformer_running,
             pfb_version=pfb_version,
             firmware_thresholds=firmware_thresholds,
             firmware_version=firmware_version,
@@ -2075,11 +2081,11 @@ class TileComponentManager(
     @property
     def firmware_name(self: TileComponentManager) -> str:
         """
-        Return the name of the firmware that this TPM simulator is running.
+        Return the name of the firmware that this TPM is running.
 
         :return: firmware name
         """
-        return self._firmware_name
+        return self._firmware_name or self.FIRMWARE_NAME
 
     @property
     @check_communicating
@@ -2296,6 +2302,13 @@ class TileComponentManager(
             if acquired:
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()
+                    self.logger.debug(
+                        (
+                            "fpga_current_frame: read timestamp: "
+                            f"{self._fpga_current_frame}"
+                        )
+                    )
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -3545,7 +3558,7 @@ class TileComponentManager(
     @check_communicating
     def set_csp_rounding(
         self: TileComponentManager, rounding: np.ndarray | list[int] | int
-    ) -> None:
+    ) -> bool:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
@@ -3553,6 +3566,8 @@ class TileComponentManager(
         grab the first.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+
+        :return: Whether `set_csp_rounding` succeeded.
         """
         if isinstance(rounding, int):
             value = rounding
@@ -3566,7 +3581,7 @@ class TileComponentManager(
         ):
             if not self.tile.set_csp_rounding(value):
                 self.logger.warning("Setting the cspRounding failed.")
-                return
+                return False
             try:
                 hw_value = self.tile.get_csp_rounding()
             except Exception as e:  # pylint: disable=broad-except
@@ -3575,6 +3590,7 @@ class TileComponentManager(
         self._update_attribute_callback(
             csp_rounding=[hw_value] * 384 if hw_value is not None else None
         )
+        return True
 
     @check_communicating
     def get_static_delays(self: TileComponentManager) -> list[float]:
@@ -4688,14 +4704,26 @@ class TileComponentManager(
         """
         Read pointing delays from the TPM for all beams.
 
-        :return: pointing delays for all beams as (8, 32) ndarray.
+        Older firmware/BIOS only supports 8 beams (see
+        ``BeamfFD.max_beams`` in ska-low-sps-tpm-api), and raises a
+        ``PluginError`` for beam indices beyond what it supports. Rows for
+        beams unsupported by the connected TPM are left as NaN, so the
+        shape is always (48, 32) regardless of firmware.
+
+        :return: pointing delays for all beams as (48, 32) ndarray.
         """
-        delays = []
+        delays = np.full((_MAX_BEAMS, 32), np.nan)
 
-        for beam in range(8):
-            delays.append(np.array(self.tile.get_pointing_delay(beam)).reshape(-1))
+        for beam in range(_MAX_BEAMS):
+            try:
+                delays[beam] = np.array(self.tile.get_pointing_delay(beam)).reshape(-1)
+            except PluginError:
+                self.logger.debug(
+                    f"Beam {beam} not supported by this TPM's firmware/BIOS"
+                )
+                break
 
-        return np.array(delays)
+        return delays
 
     def load_scan_id(
         self: TileComponentManager,

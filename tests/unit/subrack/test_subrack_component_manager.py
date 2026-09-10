@@ -241,7 +241,7 @@ class TestOff:
             result=(ResultCode.OK, "Command completed"),
         )
         callbacks["task"].assert_not_called()
-        callbacks["component_state"].assert_call(power=PowerState.OFF, lookahead=2)
+        callbacks["component_state"].assert_call(power=PowerState.OFF)
         callbacks["component_state"].assert_call(
             fault=None,
             **{
@@ -254,7 +254,7 @@ class TestOff:
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.stop_communicating()
-        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
         callbacks["component_state"].assert_not_called()
 
 
@@ -435,7 +435,10 @@ class TestOn:
                 attribute_name: None
                 for attribute_name in subrack_simulator_attribute_values
             },
-            subrack_max_fan_speeds=None,
+            **{
+                attribute_name: None
+                for attribute_name in subrack_driver_derived_attribute_values
+            },
         )
         callbacks["component_state"].assert_not_called()
 

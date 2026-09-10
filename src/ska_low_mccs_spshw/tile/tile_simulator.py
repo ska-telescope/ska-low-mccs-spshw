@@ -1410,6 +1410,19 @@ class TileSimulator:
         time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.")
 
+    @property
+    @connected
+    def acquisition_started(self) -> bool:
+        """
+        Returns if an acquisition has been started on the TPM.
+
+        :return: Returns if an acquisition has been started
+        :rtype: bool
+        """
+        return bool(self["fpga1.dsp_regfile.stream_status.channelizer_vld"]) and bool(
+            self["fpga2.dsp_regfile.stream_status.channelizer_vld"]
+        )
+
     @connected
     def find_register(
         self: TileSimulator,
@@ -3003,8 +3016,18 @@ class TileSimulator:
                 break
             time_utc = time.time()
             _fpgatime = int(time_utc)
+            self.logger.debug(
+                (
+                    f"TimedThread: fpgaTime: {_fpgatime},"
+                    f" sync time: {self.sync_time},"
+                    f" time_utc: {time_utc}"
+                )
+            )
             if self.sync_time > 0 and self.sync_time < time_utc:
                 self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
+                self.logger.debug(
+                    f"TimedThread: updating timestamp to: {self._timestamp}"
+                )
                 reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
                 reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
                 if self.tpm:

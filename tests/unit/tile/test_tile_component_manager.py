@@ -28,7 +28,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
-from ska_low_sps_tpm_api.base.definitions import LibraryError
+from ska_low_sps_tpm_api.base.definitions import LibraryError, PluginError
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
@@ -41,6 +41,7 @@ from ska_low_mccs_spshw.tile import (
     TpmStatus,
 )
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
+from time_utils import str_from_float_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -64,7 +65,7 @@ class TestTileComponentManager:
             ),
             (
                 ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
-                "tpm_firmware_11.0.0.bit",
+                "tpm_firmware_12.0.0.bit",
             ),
             ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
             ("TileSimulatorBios", "tpm_firmware_10.0.0.bit"),
@@ -142,7 +143,7 @@ class TestTileComponentManager:
                 # OFF, NO_SUPPLY, STANDBY
                 callbacks["component_state"].assert_call(power=power_state, fault=False)
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=5
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=8
                 )
 
         callbacks["communication_status"].assert_not_called()
@@ -198,21 +199,21 @@ class TestTileComponentManager:
             case PowerState.ON:
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=5,
+                    lookahead=8,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-                    lookahead=5,
+                    lookahead=8,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.PROGRAMMED.pretty_name(),
-                    lookahead=5,
+                    lookahead=8,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.INITIALISED.pretty_name(),
-                    lookahead=5,
+                    lookahead=8,
                     consume_nonmatches=True,
                 )
                 # A try except block in a test is unusual.
@@ -247,13 +248,13 @@ class TestTileComponentManager:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
+                    lookahead=7,
                 )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=7
                 )
 
             case _:
@@ -261,13 +262,13 @@ class TestTileComponentManager:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
+                    lookahead=7,
                 )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=7
                 )
 
         tile_component_manager.stop_communicating()
@@ -456,7 +457,7 @@ class TestTileComponentManager:
         )
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
-            lookahead=5,  # Unknown for number of polls until subrack callback.
+            lookahead=8,  # Unknown for number of polls until subrack callback.
             consume_nonmatches=True,
         )
 
@@ -1333,13 +1334,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Call start_acquisition and check fpga_timestamp is moving
         # ---------------------------------------------------------
         future_time = 4.0
-        start_time = datetime.datetime.strftime(
-            datetime.datetime.fromtimestamp(int(time.time()) + future_time), RFC_FORMAT
-        )
+        start_time_str = str_from_float_epoch_utc_time(time.time() + future_time)
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(
-            start_time=start_time, delay=1, task_callback=callbacks["task"]
+            start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
         time.sleep(future_time)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS, lookahead=5)
@@ -1360,17 +1359,17 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check that exceptions are handled.
         # Shorthand for linter line length
         tcm = tile_component_manager
-        tcm._check_channeliser_started = (  # type: ignore[assignment]
+        tcm._is_acquisition_started = (  # type: ignore[assignment]
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
         tile_component_manager.start_acquisition(
-            start_time=start_time, delay=1, task_callback=callbacks["task"]
+            start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
         tile_simulator.start_acquisition = (  # type: ignore[assignment]
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
         tile_component_manager.start_acquisition(
-            start_time=start_time, delay=1, task_callback=callbacks["task"]
+            start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
 
     def test_communication_when_connection_failed(
@@ -1964,6 +1963,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
+        # Clear the firmware name and replace the BIOS version of the simulator.
+        # This is necessary as the simulator default BIOS is 0.6.0 and the
+        # `_firmware_name` will be chosen during the startup initialise accordingly.
+        # This means that the call to initialise below will be required to
+        # again automatically detect the BIOS version.
+        # An alternative is to create a separate TileSimulator with the
+        # BIOS set to ^1.0.0
+        tile_component_manager._firmware_name = None
         tile_simulator.tpm._bios_version = (
             "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
         )
@@ -1978,7 +1985,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
-        assert tile_component_manager.firmware_name == "tpm_firmware_11.0.0.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_12.0.0.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,
@@ -2296,6 +2303,52 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check that thrown exception are caught when thrown.
         tile_simulator.load_pointing_delay.side_effect = Exception("mocked exception")
         tile_component_manager.apply_pointing_delays(start_time)
+
+    def test_get_all_pointing_delays(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the _get_all_pointing_delays function.
+
+        Covers both a TPM whose firmware/BIOS supports all 48 beams, and
+        an older TPM whose firmware only supports 8 beams and raises a
+        PluginError for higher beam indices.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        def _delay_for_beam(beam_index: int) -> list[list[list[float]]]:
+            return [[[float(beam_index), float(beam_index)]] * 8] * 2
+
+        # New firmware/BIOS: all 48 beams are readable.
+        mock = unittest.mock.Mock(side_effect=_delay_for_beam)
+        tile_simulator.get_pointing_delay = mock  # type: ignore[assignment]
+        delays = tile_component_manager._get_all_pointing_delays()
+        assert delays.shape == (48, 32)
+        assert not np.isnan(delays).any()
+        tile_simulator.get_pointing_delay.assert_any_call(47)
+        assert tile_simulator.get_pointing_delay.call_count == 48
+
+        # Old firmware/BIOS: only beams 0-7 are supported.
+        def _old_firmware_delay_for_beam(
+            beam_index: int,
+        ) -> list[list[list[float]]]:
+            if beam_index >= 8:
+                raise PluginError("Invalid Beam Index")
+            return _delay_for_beam(beam_index)
+
+        old_delay = unittest.mock.Mock(side_effect=_old_firmware_delay_for_beam)
+        tile_simulator.get_pointing_delay = old_delay  # type: ignore[assignment]
+        delays = tile_component_manager._get_all_pointing_delays()
+        assert delays.shape == (48, 32)
+        assert not np.isnan(delays[:8]).any()
+        assert np.isnan(delays[8:]).all()
+        # Should stop at the first unsupported beam, not probe all the way to 48.
+        assert tile_simulator.get_pointing_delay.call_count == 9
 
     def test_start_beamformer(
         self: TestStaticSimulator,
@@ -3658,7 +3711,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=9
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=11
         )
         return dynamic_tile_component_manager
 

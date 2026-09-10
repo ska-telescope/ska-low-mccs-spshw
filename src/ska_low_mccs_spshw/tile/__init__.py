@@ -45,5 +45,5 @@ from .tile_device import MccsTile
 from .tile_health_model import TileHealthModel
 from .tile_poll_management import TileRequestProvider
 from .tile_simulator import DynamicTileSimulator, MockTpm, TileSimulator
-from .time_util import TileTime
+from .tile_time import TileTime
 from .tpm_status import TpmStatus

@@ -4,9 +4,9 @@ dependencies:
   version: 9.0.0
 - name: ska-tango-devices
   repository: https://artefact.skao.int/repository/helm-internal
-  version: 0.16.1
+  version: 0.16.2
 - name: ska-sat-lmc
-  repository: https://gitlab.com/api/v4/projects/29510002/packages/helm/dev
-  version: 1.0.0-dev.c6f2efe26
-digest: sha256:08a892141f0df43f02ff367d03b8cb1e9349b6fa74b5c9c9dee804833b74c997
-generated: "2026-08-26T10:22:15.382332471+01:00"
+  repository: https://artefact.skao.int/repository/helm-internal
+  version: 1.1.0
+digest: sha256:8f1030c3d792ad99cc63d6f99bf8ac44567b2344840d412dfeff02b90fc0d3c2
+generated: "2026-09-10T09:25:05.535234651+01:00"

@@ -214,28 +214,10 @@ def subrack_device_fixture(
     yield test_context.get_subrack_device(subrack_id)
 
 
-@pytest.mark.parametrize(
-    "inter_command_sleep",
-    [
-        pytest.param(0.1, id="pretty_fast"),
-        pytest.param(
-            None,
-            id="fast",
-            marks=pytest.mark.xfail(
-                reason=(
-                    "Bug THORN-647: device sticks in UNKNOWN when adminMode "
-                    "is cycled without delay between commands"
-                ),
-                strict=True,
-            ),
-        ),
-    ],
-)
 def test_fast_adminMode_switch(
-    subrack_device: MccsSubrack,
+    subrack_device: DeviceProxy,
     subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
-    inter_command_sleep: float | None,
 ) -> None:
     """
     Test our ability to deal with a quick succession of communication commands.
@@ -244,8 +226,6 @@ def test_fast_adminMode_switch(
     :param subrack_simulator: the simulator for the backend
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
-    :param inter_command_sleep: seconds to sleep between adminMode commands,
-        or None for no sleep (exposes a known bug).
     """
     subrack_device.loggingLevel = 4  # type: ignore[assignment]
     subrack_device.subscribe_event(
@@ -264,16 +244,19 @@ def test_fast_adminMode_switch(
         # run test using a variable network jitter.
         max_jitter: int = (i * 100) % 600  # milliseconds
         subrack_simulator.network_jitter_limits = (0, max_jitter)
+
+        # We can't deterministically wait for events as there's no guarantee
+        # whether or not we'll see some of them so we only assert that we reach
+        # the correct state in a timely manner.
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
         subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
 
         subrack_device.adminmode = AdminMode.OFFLINE
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
 
         subrack_device.adminmode = AdminMode.ONLINE
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
 
         number_of_communication_cycles: int = 4
 
@@ -284,33 +267,21 @@ def test_fast_adminMode_switch(
 
         for _ in range(number_of_communication_cycles):
             subrack_device.adminmode = AdminMode.OFFLINE
-            if inter_command_sleep is not None:
-                time.sleep(inter_command_sleep)
             subrack_device.adminmode = AdminMode.ONLINE
-            if inter_command_sleep is not None:
-                time.sleep(inter_command_sleep)
 
         # When cycling adminmode ONLINE n times we expect up to n
-        # transitions to DevState.ON. The important point is that is end
+        # transitions to DevState.ON. The important point is that we end
         # up in a steady ON state.
         for _ in range(number_of_communication_cycles):
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
             change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
-            try:
-                # lookahead of 6 since we allow UNKNOWN and DISABLE as
-                # transient states.
-                change_event_callbacks["state"].assert_change_event(
-                    DevState.ON, lookahead=6, consume_nonmatches=True
-                )
-            except AssertionError:
-                print("Transition state ON allowed to not occur.")
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.ON)
 
-        change_event_callbacks["state"].assert_not_called()
         assert subrack_device.adminMode == AdminMode.ONLINE
         assert subrack_device.state() == DevState.ON
 
         subrack_device.adminmode = AdminMode.OFFLINE
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert wait_for_condition(lambda: subrack_device.state() == DevState.DISABLE)
         print(f"Iteration {i}")
 
 

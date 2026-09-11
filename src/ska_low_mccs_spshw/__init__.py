@@ -35,7 +35,7 @@ import tango.server
 
 from .pdu import MccsPdu
 from .power_marshaller import PowerMarshaller
-from .prototype_subrack import MccsPrototypeSubrack
+from .prototype_subrack.prototype_subrack_device import subrack_factory
 from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile
@@ -57,7 +57,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
         classes=(
             MccsPdu,
             PowerMarshaller,
-            MccsPrototypeSubrack,
+            subrack_factory(),
             MccsSubrack,
             MccsTile,
             SpsStation,

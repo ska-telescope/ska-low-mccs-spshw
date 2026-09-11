@@ -198,8 +198,10 @@ class MccsPrototypeSubrack(BaseInterface):
         :py:meth:`disassemble` reclaims the running poller before this builds
         its replacement.
         """
-        self._client = WebHardwareClient(self.SubrackIp, self.SubrackPort)
-        self._subrack = Subrack(
+        self._client = self._web_hardware_client_factory(
+            self.SubrackIp, self.SubrackPort
+        )
+        self._subrack = self._subrack_factory(
             self._client,
             name=self.get_name(),
             logger=self.logger,
@@ -212,7 +214,9 @@ class MccsPrototypeSubrack(BaseInterface):
         )
         # The poller's thread outlives stop_polling, so one poller serves until
         # the device is re-initialised or deleted.
-        self._poller = SubrackPoller(self._subrack, self.UpdateRate, self.logger)
+        self._poller = self._subrack_poller_factory(
+            self._subrack, self.UpdateRate, self.logger
+        )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -936,6 +940,22 @@ class MccsPrototypeSubrack(BaseInterface):
 # ----------
 # Run server
 # ----------
+
+
+def subrack_factory(
+    web_hardware_client=WebHardwareClient, subrack=Subrack, subrack_poller=SubrackPoller
+):
+    return type(
+        "MccsPrototypeSubrack",
+        (MccsPrototypeSubrack,),
+        {
+            "_web_hardware_client_factory": web_hardware_client,
+            "_subrack_factory": subrack,
+            "_subrack_poller_factory": subrack_poller,
+        },
+    )
+
+
 def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
     """
     Entry point for module.
@@ -945,7 +965,10 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
 
     :return: exit code.
     """
-    return cast(int, MccsPrototypeSubrack.run_server(args=args or None, **kwargs))
+    return cast(
+        int,
+        subrack_factory().run_server(args=args or None, **kwargs),
+    )
 
 
 if __name__ == "__main__":

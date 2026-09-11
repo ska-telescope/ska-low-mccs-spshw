@@ -431,6 +431,8 @@ class SpsTangoTestHarness:
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsPrototypeSubrack",
         filter_type: str = "none",
         filter_max_samples: int = 5,
+        max_fan_errors: int = 5,
+        max_fan_rpm_delta: int = 25,
     ) -> None:
         """
         Add a prototype subrack Tango device to the test harness.
@@ -447,6 +449,10 @@ class SpsTangoTestHarness:
             for example with a patched subclass.
         :param filter_type: The type of filter to use for TPM attributes.
         :param filter_max_samples: Maximum number of samples in filter buffer.
+        :param max_fan_errors: How many consecutive bad fan rpm estimates to
+            replace, per fan.
+        :param max_fan_rpm_delta: The tolerance, as a percentage of the maximum
+            fan speed, outside which a fan rpm estimate counts as bad.
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -470,6 +476,8 @@ class SpsTangoTestHarness:
             LoggingLevelDefault=logging_level,
             AttributeFilterType=filter_type,
             AttributeFilterMaxSamples=filter_max_samples,
+            MaxFanErrors=max_fan_errors,
+            MaxFanRpmDelta=max_fan_rpm_delta,
         )
 
     def add_power_marshaller_device(self: SpsTangoTestHarness) -> None:

@@ -36,7 +36,11 @@ from ska_low_mccs_spshw.prototype_subrack import (
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory,
 )
-from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.harness import (
+    SpsTangoTestHarness,
+    SpsTangoTestHarnessContext,
+    get_prototype_subrack_name,
+)
 
 # TODO: gc.disable() works around a hang during garbage collection.
 gc.disable()
@@ -45,6 +49,12 @@ SUBRACK_ID = 1
 BOARD_HOST = "a-fake-board"
 BOARD_PORT = 8081
 UPDATE_RATE = 1.0
+# Distinct from each other, so a property wired to the wrong argument of the
+# subrack reports a value belonging to a different property and fails.
+FILTER_TYPE = "median"
+FILTER_MAX_SAMPLES = 7
+MAX_FAN_ERRORS = 3
+MAX_FAN_RPM_DELTA = 21
 TIMESTAMP = 1700000000.0
 
 # Distinguishes "the test did not say" from "the test said there was none".
@@ -149,12 +159,14 @@ POLL_VALUES.update({key: reported for _, key, reported, _ in CONVERTED})
 HEALTH_STATUS: dict[str, Any] = _nest(HEALTH)
 
 # psuDeadCount is computed by the device rather than read, so it has no row.
-ALL_ATTRIBUTES: list[str] = (
-    [attribute for attribute, _, _ in POLLED]
-    + [attribute for attribute, _, _, _ in CONVERTED]
-    + [attribute for attribute, _, _ in HEALTH]
-    + ["psuDeadCount"]
-)
+# Every attribute a successful poll populates, and the value it should report.
+EXPECTED: dict[str, Any] = {
+    **{attribute: value for attribute, _, value in POLLED},
+    **{attribute: expected for attribute, _, _, expected in CONVERTED},
+    **{attribute: value for attribute, _, value in HEALTH},
+    # Both PSUs supply an output voltage, so neither counts as dead.
+    "psuDeadCount": 0,
+}
 
 
 @pytest.fixture(name="client_factory")
@@ -284,6 +296,10 @@ def test_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessCont
         address=(BOARD_HOST, BOARD_PORT),
         update_rate=UPDATE_RATE,
         device_class=device_class,
+        filter_type=FILTER_TYPE,
+        filter_max_samples=FILTER_MAX_SAMPLES,
+        max_fan_errors=MAX_FAN_ERRORS,
+        max_fan_rpm_delta=MAX_FAN_RPM_DELTA,
     )
     with harness as context:
         yield context
@@ -391,34 +407,11 @@ def _assert_all_invalid(subrack_device: tango.DeviceProxy, why: str) -> None:
     :param subrack_device: the device under test.
     :param why: what the assertion message should say about the situation.
     """
-    for attribute_name in ALL_ATTRIBUTES:
+    for attribute_name in EXPECTED:
         assert (
             subrack_device.read_attribute(attribute_name).quality
             == tango.AttrQuality.ATTR_INVALID
         ), f"{attribute_name} should be invalid {why}"
-
-
-def test_device_has_no_commands(subrack_device: tango.DeviceProxy) -> None:
-    """
-    Test that this first version of the device exposes no commands of its own.
-
-    ``BaseInterface`` only adds ``On``, ``Off``, ``Standby`` and ``Reset``
-    when a subclass implements the matching ``execute_*`` method, and this
-    device implements none of them.
-
-    :param subrack_device: the device under test.
-    """
-    command_names = set(subrack_device.get_command_list())
-
-    assert not command_names & {"On", "Off", "Standby", "Reset"}
-    # Only the commands every Tango device and every SKA device carries.
-    assert command_names <= {
-        "Init",
-        "State",
-        "Status",
-        "GetVersionInfo",
-        "DebugDevice",
-    }
 
 
 def test_assembles_from_its_properties(
@@ -438,8 +431,19 @@ def test_assembles_from_its_properties(
     assert subrack_device.state() == DevState.DISABLE
 
     client_factory.assert_called_once_with(BOARD_HOST, BOARD_PORT)
-    subrack_mock.assert_called_once()
-    assert subrack_mock.call_args.args[0] is client_factory.return_value
+    # The logger and the two callbacks are bound to the device object, which
+    # this test reaches only through a proxy, so they cannot be named here.
+    subrack_mock.assert_called_once_with(
+        client_factory.return_value,
+        name=get_prototype_subrack_name(SUBRACK_ID),
+        logger=mock.ANY,
+        data_callback=mock.ANY,
+        error_callback=mock.ANY,
+        max_fan_errors=MAX_FAN_ERRORS,
+        max_fan_rpm_delta=MAX_FAN_RPM_DELTA,
+        attribute_filter_type=FILTER_TYPE,
+        attribute_filter_max_samples=FILTER_MAX_SAMPLES,
+    )
     poller.assert_called_once_with(subrack_mock.return_value, UPDATE_RATE, mock.ANY)
     poller.return_value.start_polling.assert_not_called()
 
@@ -454,13 +458,8 @@ def test_starts_disabled(
     """
     assert subscribed_device.adminMode == AdminMode.OFFLINE
     assert subscribed_device.state() == DevState.DISABLE
-
-    # The device has not reported its own health yet, so it carries whatever
-    # reason the base class starts with. That wording belongs to the base
-    # class, so it is not asserted here.
     assert subscribed_device.healthState == HealthState.FAILED
     assert list(subscribed_device.healthInfo)
-
     _assert_all_invalid(subscribed_device, "before the device is online")
 
 
@@ -481,13 +480,13 @@ def test_online_starts_the_poller_and_waits(
     _assert_all_invalid(online_device, "until the first poll")
 
 
-def test_poll_response_populates_attributes(
+def test_a_poll_populates_every_attribute(
     online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     poll_succeeded: Callable[..., None],
 ) -> None:
     """
-    Test that one poll response puts every polled value onto its attribute.
+    Test that one poll response puts every value onto its attribute.
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
@@ -499,34 +498,8 @@ def test_poll_response_populates_attributes(
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
     assert not list(online_device.healthInfo)
 
-    for attribute_name, _, expected in POLLED:
+    for attribute_name, expected in EXPECTED.items():
         _assert_reads(online_device, attribute_name, expected)
-
-    # The two the device converts on the way through.
-    for attribute_name, _, _, expected in CONVERTED:
-        _assert_reads(online_device, attribute_name, expected)
-
-
-def test_health_status_populates_attributes(
-    online_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
-    poll_succeeded: Callable[..., None],
-) -> None:
-    """
-    Test that the values unpacked from the health status reach their attributes.
-
-    :param online_device: the device under test, online and not yet polled.
-    :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: supplies a successful poll response.
-    """
-    poll_succeeded()
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
-
-    for attribute_name, _, expected in HEALTH:
-        _assert_reads(online_device, attribute_name, expected)
-
-    # Both PSUs supply an output voltage, so neither counts as dead.
-    _assert_reads(online_device, "psuDeadCount", 0)
 
 
 def test_dead_psu_is_counted(

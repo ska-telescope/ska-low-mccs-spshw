@@ -3143,12 +3143,11 @@ class TileComponentManager(
                     [f"TileComponentManager: Tile access failed {e}"],
                 )
         (
-            forty_gb_cores,
             destination_ips,
             destination_ports,
             dst_ip_40g_fpga1,
             dst_ip_40g_fpga2,
-        ) = (forty_gb_cores, *self._derive_40g_views(forty_gb_cores))
+        ) = self._derive_40g_views(forty_gb_cores)
         self._update_attribute_callback(
             forty_gb_destination_ips=destination_ips,
             forty_gb_destination_ports=destination_ports,
@@ -3746,12 +3745,11 @@ class TileComponentManager(
                 return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
         (
-            forty_gb_cores,
             destination_ips,
             destination_ports,
             dst_ip_40g_fpga1,
             dst_ip_40g_fpga2,
-        ) = (forty_gb_cores, *self._derive_40g_views(forty_gb_cores))
+        ) = self._derive_40g_views(forty_gb_cores)
         self._update_attribute_callback(
             forty_gb_destination_ips=destination_ips,
             forty_gb_destination_ports=destination_ports,
@@ -3861,12 +3859,11 @@ class TileComponentManager(
                 return ([ResultCode.FAILED], ["Failed to acquire hardware lock"])
 
         (
-            forty_gb_cores,
             destination_ips,
             destination_ports,
             dst_ip_40g_fpga1,
             dst_ip_40g_fpga2,
-        ) = (forty_gb_cores, *self._derive_40g_views(forty_gb_cores))
+        ) = self._derive_40g_views(forty_gb_cores)
         self._update_attribute_callback(
             forty_gb_destination_ips=destination_ips,
             forty_gb_destination_ports=destination_ports,

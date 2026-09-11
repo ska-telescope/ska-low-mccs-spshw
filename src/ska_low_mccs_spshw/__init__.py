@@ -35,6 +35,7 @@ import tango.server
 
 from .pdu import MccsPdu
 from .power_marshaller import PowerMarshaller
+from .prototype_subrack import MccsPrototypeSubrack
 from .prototype_subrack.prototype_subrack_device import subrack_factory
 from .station import SpsStation
 from .subrack import MccsSubrack

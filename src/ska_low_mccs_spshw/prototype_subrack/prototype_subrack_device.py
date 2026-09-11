@@ -28,7 +28,7 @@ from ska_low_mccs_common.component import WebHardwareClient
 from ska_tango_base import BaseInterface
 from ska_tango_base.base import ControlLevel
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
-from tango import AttrQuality
+from tango import AttrQuality, DevState
 from tango.server import device_property
 
 from ..subrack.subrack_data import SubrackData
@@ -330,7 +330,8 @@ class MccsPrototypeSubrack(BaseInterface):
         :param exception: the exception raised by the poll.
         """
         self._invalidate_all()
-        if isinstance(exception, RequestError):
+        # TODO: Jank to be removed when we upgrade ska-tango-base.
+        if isinstance(exception, RequestError) or self.get_state() == DevState.UNKNOWN:
             self.component_unknown()
         else:
             self.component_fault()
@@ -943,8 +944,22 @@ class MccsPrototypeSubrack(BaseInterface):
 
 
 def subrack_factory(
-    web_hardware_client=WebHardwareClient, subrack=Subrack, subrack_poller=SubrackPoller
-):
+    web_hardware_client: Any = WebHardwareClient,
+    subrack: Any = Subrack,
+    subrack_poller: Any = SubrackPoller,
+) -> type[MccsPrototypeSubrack]:
+    """
+    Build the device class, choosing what :py:meth:`~.assemble` builds with.
+
+    :param web_hardware_client: builds the hardware client, from a host and a
+        port.
+    :param subrack: builds the poll model, from a client and the device's
+        settings.
+    :param subrack_poller: builds the poller, from a poll model, a poll rate
+        and a logger.
+
+    :return: the device class to serve.
+    """
     return type(
         "MccsPrototypeSubrack",
         (MccsPrototypeSubrack,),

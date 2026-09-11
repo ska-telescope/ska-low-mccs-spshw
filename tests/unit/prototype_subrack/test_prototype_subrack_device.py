@@ -703,6 +703,7 @@ def test_init_rebuilds_everything(
     online_device: tango.DeviceProxy,
     poll_succeeded: Callable[..., None],
     client_factory: mock.Mock,
+    subrack_mock: mock.Mock,
     poller: mock.Mock,
 ) -> None:
     """
@@ -715,16 +716,78 @@ def test_init_rebuilds_everything(
     :param online_device: the device under test, online and not yet polled.
     :param poll_succeeded: hands the device a successful poll response.
     :param client_factory: the injected hardware client factory.
+    :param subrack_mock: the injected subrack factory.
     :param poller: the injected poller factory.
     """
     online_device.Init()
 
     poller.return_value.kill_polling_thread.assert_called_once_with()
-    assert poller.call_count == 2, "Init did not build a second poller"
+    # Assembly builds all three, so re-initialising must build all three again.
     assert client_factory.call_count == 2, "Init did not build a second client"
+    assert subrack_mock.call_count == 2, "Init did not build a second subrack"
+    assert poller.call_count == 2, "Init did not build a second poller"
+    assert subrack_mock.call_args.args[0] is client_factory.return_value
+    assert poller.call_args.args[0] is subrack_mock.return_value
 
     # adminMode is memorized, so the device comes back online by itself, and the
     # new poller feeds the attributes.
     assert poller.return_value.start_polling.call_count == 2
     poll_succeeded()
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
+
+
+def test_board_error_before_any_poll_stays_unknown(
+    online_device: tango.DeviceProxy,
+    poll_failed: Callable[[Exception], None],
+) -> None:
+    """
+    Test that a board error before the first successful poll stays UNKNOWN.
+
+    Nothing has been read to say the subrack is there at all, so it cannot be
+    reported as faulty. The operational state model has no transition from
+    UNKNOWN into FAULT either, so reporting one would raise.
+
+    The device is already FAILED from going online, so this pushes no
+    healthState event. Only the reason it gives changes.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_failed: hands the device a failed poll.
+    """
+    poll_failed(HttpError("500 Server Error"))
+
+    assert online_device.state() == DevState.UNKNOWN
+    assert online_device.healthState == HealthState.FAILED
+    assert list(online_device.healthInfo)[0].startswith("Poll failed with HttpError")
+
+
+def test_recovers_from_a_fault(
+    online_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    poll_succeeded: Callable[..., None],
+    poll_failed: Callable[[Exception], None],
+) -> None:
+    """
+    Test that the device leaves FAULT once a poll succeeds again.
+
+    ``component_on`` alone does not clear a fault, because the operational
+    state model routes FAULT_ON back to FAULT_ON on it.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param change_event_callbacks: the callbacks subscribed to the device.
+    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_failed: hands the device a failed poll.
+    """
+    poll_succeeded()
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+
+    poll_failed(HttpError("500 Server Error"))
+    change_event_callbacks["state"].assert_change_event(DevState.FAULT)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+
+    poll_succeeded()
+
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+    assert online_device.state() == DevState.ON
+    _assert_reads(online_device, "boardTemperatures", [40.5, 41.5])

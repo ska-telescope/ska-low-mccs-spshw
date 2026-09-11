@@ -10,7 +10,7 @@ Tests of the prototype subrack Tango device, against a mocked subrack.
 
 The hardware client, the subrack and the poller are all injected through
 :py:func:`subrack_factory`, and all three are mocks. So no board is reached, no
-thread is started, and nothing is waited for. A test hands the device a
+thread is started, and nothing is waited for. A test supplies the device with a
 :py:class:`SubrackPollResponse` and asserts what the device does with it, which
 leaves only the device's own code under test.
 """
@@ -50,7 +50,7 @@ TIMESTAMP = 1700000000.0
 # Distinguishes "the test did not say" from "the test said there was none".
 _UNSET: Any = object()
 
-# One row per attribute that a poll reports straight through: the Tango
+# One row per attribute that a poll reports unchanged, giving the Tango
 # attribute, the key the subrack reports it under, and the value. Stating the
 # pairing once is what tests it. Every value is distinct, so an attribute wired
 # to the wrong key reports a value belonging to some other attribute and fails,
@@ -96,8 +96,8 @@ CONVERTED: list[tuple[str, str, Any, Any]] = [
     ),
 ]
 
-# One row per attribute the device unpacks from the health status: the Tango
-# attribute, its path into the health status, and the value at that path.
+# One row per attribute the device unpacks from the health status, giving the
+# Tango attribute, its path into the health status, and the value at that path.
 HEALTH: list[tuple[str, tuple[str, ...], Any]] = [
     ("internalVoltages1V1", ("internal_voltages", "V_1V1"), 1.1),
     ("internalVoltages1V5", ("internal_voltages", "V_1V5"), 1.5),
@@ -162,7 +162,7 @@ def client_factory_fixture() -> mock.Mock:
     """
     Return the hardware client factory to inject into the device.
 
-    Nothing calls the client it hands out, because the subrack is mocked too.
+    Nothing calls the client it returns, because the subrack is mocked too.
     It is injected so that no real client is ever built, and so that the
     address the device asked for is recorded.
 
@@ -190,7 +190,7 @@ def poller_fixture() -> mock.Mock:
     """
     Return the poller factory to inject into the device.
 
-    The poller it hands out starts no thread, so nothing polls on its own. It
+    The poller it returns starts no thread, so nothing polls on its own. It
     records ``start_polling``, ``stop_polling`` and ``kill_polling_thread``.
 
     :return: the factory.
@@ -225,10 +225,10 @@ def device_class_fixture(
 @pytest.fixture(name="poll_succeeded")
 def poll_succeeded_fixture(subrack_mock: mock.Mock) -> Callable[..., None]:
     """
-    Return a callable that hands the device one successful poll response.
+    Return a callable that supplies the device with one successful poll response.
 
     The omni thread is needed because the device pushes Tango events in
-    response, just as the real poller wraps its polling loop in one.
+    response, as the real poller wraps its polling loop in one.
 
     :param subrack_mock: the injected subrack factory, which carries the
         device's data callback.
@@ -254,7 +254,7 @@ def poll_succeeded_fixture(subrack_mock: mock.Mock) -> Callable[..., None]:
 @pytest.fixture(name="poll_failed")
 def poll_failed_fixture(subrack_mock: mock.Mock) -> Callable[[Exception], None]:
     """
-    Return a callable that hands the device one failed poll.
+    Return a callable that supplies the device with one failed poll.
 
     :param subrack_mock: the injected subrack factory, which carries the
         device's error callback.
@@ -453,7 +453,14 @@ def test_starts_disabled(
     :param subscribed_device: the device under test, subscribed to.
     """
     assert subscribed_device.adminMode == AdminMode.OFFLINE
-    assert list(subscribed_device.healthInfo) == ["adminMode is OFFLINE."]
+    assert subscribed_device.state() == DevState.DISABLE
+
+    # The device has not reported its own health yet, so it carries whatever
+    # reason the base class starts with. That wording belongs to the base
+    # class, so it is not asserted here.
+    assert subscribed_device.healthState == HealthState.FAILED
+    assert list(subscribed_device.healthInfo)
+
     _assert_all_invalid(subscribed_device, "before the device is online")
 
 
@@ -484,7 +491,7 @@ def test_poll_response_populates_attributes(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     """
     poll_succeeded()
 
@@ -510,7 +517,7 @@ def test_health_status_populates_attributes(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     """
     poll_succeeded()
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
@@ -530,7 +537,7 @@ def test_dead_psu_is_counted(
     Test that a PSU which is present and fed but supplying nothing is counted.
 
     :param online_device: the device under test, online and not yet polled.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     """
     health_status = json.loads(json.dumps(HEALTH_STATUS))
     health_status["psus"]["voltage_out"]["PSU2"] = 0.0
@@ -552,7 +559,7 @@ def test_unknown_value_is_invalid_but_the_poll_still_counts(
     poll, so every other attribute takes its value and the device stays healthy.
 
     :param online_device: the device under test, online and not yet polled.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     """
     values = dict(POLL_VALUES, board_temperatures=None)
 
@@ -575,7 +582,7 @@ def test_missing_health_status_invalidates_only_its_attributes(
     Test that a poll which read no health status keeps the other attributes.
 
     :param online_device: the device under test, online and not yet polled.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     """
     poll_succeeded(health_status=None)
 
@@ -602,23 +609,19 @@ def test_going_offline_stops_polling_and_invalidates(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     :param poller: the injected poller factory.
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
-    # Initialisation settles the device in DISABLE, which stops the poller it
-    # has just built, so count the transition rather than the calls.
-    stops_before = poller.return_value.stop_polling.call_count
-
     online_device.adminMode = AdminMode.OFFLINE
 
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     assert list(online_device.healthInfo) == ["adminMode is OFFLINE."]
-    assert poller.return_value.stop_polling.call_count == stops_before + 1
+    poller.return_value.stop_polling.assert_called_once_with()
     _assert_all_invalid(online_device, "once the device is offline")
 
 
@@ -633,8 +636,8 @@ def test_unreachable_subrack_reports_unknown(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
-    :param poll_failed: hands the device a failed poll.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
@@ -661,8 +664,8 @@ def test_board_error_reports_fault(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
-    :param poll_failed: hands the device a failed poll.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
@@ -686,8 +689,8 @@ def test_recovers_after_a_failed_poll(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
-    :param poll_failed: hands the device a failed poll.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
     """
     poll_failed(RequestError("Connection refused"))
     assert online_device.healthState == HealthState.FAILED
@@ -714,7 +717,7 @@ def test_init_rebuilds_everything(
     the second.
 
     :param online_device: the device under test, online and not yet polled.
-    :param poll_succeeded: hands the device a successful poll response.
+    :param poll_succeeded: supplies a successful poll response.
     :param client_factory: the injected hardware client factory.
     :param subrack_mock: the injected subrack factory.
     :param poller: the injected poller factory.
@@ -751,7 +754,7 @@ def test_board_error_before_any_poll_stays_unknown(
     healthState event. Only the reason it gives changes.
 
     :param online_device: the device under test, online and not yet polled.
-    :param poll_failed: hands the device a failed poll.
+    :param poll_failed: supplies a failed poll.
     """
     poll_failed(HttpError("500 Server Error"))
 
@@ -774,8 +777,8 @@ def test_recovers_from_a_fault(
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
-    :param poll_succeeded: hands the device a successful poll response.
-    :param poll_failed: hands the device a failed poll.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)

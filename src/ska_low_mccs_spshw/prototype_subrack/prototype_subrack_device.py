@@ -97,24 +97,13 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
     # --------------
     # Initialisation
     # --------------
-    # `_poller` carries a class level default so that `disassemble` is safe
-    # even if `assemble` never ran, for instance when `init_device` raised. An
-    # `__init__` cannot supply it, because `tango.server.Device.__init__` calls
-    # `init_device` from inside its own `super().__init__()`, so anything
-    # assigned after that call arrives too late for `init_device` to see.
     _client: WebHardwareClient
     _subrack: Subrack
-
-    _poller: Optional[SubrackPoller] = None
-    """The poller, once :py:meth:`assemble` has built it."""
+    _poller: SubrackPoller
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
         Build the hardware client, the poll model and the poller.
-
-        This is the only place that decides how the device reaches its board,
-        so a subclass or a test can replace that decision by overriding this
-        one method, rather than repeating the rest of initialisation.
 
         Paired with :py:meth:`disassemble`. ``Init()`` runs
         :py:meth:`delete_device` before :py:meth:`init_device`, so
@@ -135,22 +124,14 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             attribute_filter_type=self.AttributeFilterType,
             attribute_filter_max_samples=self.AttributeFilterMaxSamples,
         )
-        # The poller's thread outlives stop_polling, so one poller serves until
-        # the device is re-initialised or deleted.
         self._poller = self._subrack_poller_factory(
             self._subrack, self.UpdateRate, self.logger
         )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
-        """
-        Stop the poller and reclaim its thread, if there is one.
-
-        Safe to call when nothing has been assembled, and safe to call twice.
-        """
-        if self._poller is not None:
-            self._poller.stop_polling()
-            self._poller.kill_polling_thread()
-            self._poller = None
+        """Stop the poller and reclaim its thread."""
+        self._poller.stop_polling()
+        self._poller.kill_polling_thread()
 
     def init_device(self: MccsPrototypeSubrack) -> None:
         """Initialise the device, building the client and the poller."""
@@ -160,10 +141,6 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
 
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
-
-        # Settle in DISABLE. Tango applies a memorized adminMode only once
-        # init_device has returned, so it takes the device online after this.
-        self.change_control_level(ControlLevel.NO_CONTACT)
 
         self.logger.info(
             "Initialised %s for subrack %s:%s at an update rate of %ss.",
@@ -196,18 +173,9 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :param control_level: how the device should now interact with the
             subrack.
 
-        :raises RuntimeError: if there is no poller to start or stop.
         """
-        poller = self._poller
-        if poller is None:
-            raise RuntimeError(
-                "change_control_level was called before assemble() built a "
-                "poller. init_device assembles before Tango can write "
-                "adminMode, so this should be unreachable."
-            )
-
         if control_level == ControlLevel.NO_CONTACT:
-            poller.stop_polling()
+            self._poller.stop_polling()
             self._invalidate_all()
             self.report_health(HealthState.FAILED, ["adminMode is OFFLINE."])
             self.component_disconnected()
@@ -219,7 +187,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
                 HealthState.FAILED,
                 ["Establishing communication with the subrack."],
             )
-            poller.start_polling()
+            self._poller.start_polling()
 
     # ----------------
     # Poll callbacks

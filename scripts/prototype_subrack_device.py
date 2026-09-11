@@ -22,7 +22,7 @@ device online by default::
     print(device.boardTemperatures, device.subrackFanSpeeds)
 
 Pass ``--offline`` to start in adminMode OFFLINE instead, so that the move into
-monitoring can be driven by hand. Stop the server with Ctrl-C.
+monitoring can be driven manually. Stop the server with Ctrl-C.
 """
 
 import argparse

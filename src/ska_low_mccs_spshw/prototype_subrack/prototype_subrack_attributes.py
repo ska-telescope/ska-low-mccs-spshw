@@ -85,7 +85,8 @@ HEALTH_PATH_TO_SIGNAL: Final[dict[str, tuple[str, ...]]] = {
     "_psu2_voltage_out": ("psus", "voltage_out", "PSU2"),
 }
 
-# Every signal this device emits, so that a lost board can invalidate the lot.
+# Every signal this device emits, so that a lost board can invalidate all
+# of them.
 ALL_SIGNALS: Final[tuple[str, ...]] = (
     tuple(READ_KEY_TO_SIGNAL.values())
     + tuple(HEALTH_PATH_TO_SIGNAL)

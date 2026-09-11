@@ -4468,7 +4468,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         forty_gb_core_configurations_signal,
         dtype="DevString",
-        label="fortyGbCoreConfigurations",
+        label="Forty GB Core Configurations",
     )
     def fortyGbCoreConfigurations(  # noqa: N802
         self: MccsTile, core_configs: list[dict] | None
@@ -4486,10 +4486,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.fortyGbCoreConfigurations
-            '[{"core_id": 0, "arp_table_entry": 0, "source_mac": 18687084464728,
-               "source_ip": "10.0.99.3", "source_port": 4000,
-               "destination_ip": "10.0.98.3", "destination_port": 5000,
-               "netmask": "255.255.255.0", "gateway_ip": null}]'
+            '[{"core_id": 0, "arp_table_entry": 0, "source_mac": REDACTED,
+               "source_ip": "REDACTED", "source_port": REDACTED,
+               "destination_ip": "REDACTED", "destination_port": REDACTED,
+               "netmask": "REDACTED", "gateway_ip": null}]'
 
         :param core_configs: the raw per-core config dicts emitted on the
             signal (driver field names), or ``None`` when the value is being

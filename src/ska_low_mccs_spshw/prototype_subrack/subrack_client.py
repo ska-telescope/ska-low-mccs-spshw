@@ -232,7 +232,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             values = self._fetch_attributes(poll_request)
             health_status = self._fetch_health()
 
-        self.derived.apply(values)
+        self.derived.apply(values, health_status)
 
         return SubrackPollResponse(
             values=values, health_status=health_status, timestamp=time.time()

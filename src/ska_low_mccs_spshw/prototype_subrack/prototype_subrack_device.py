@@ -20,7 +20,7 @@ through this interface.
 from __future__ import annotations
 
 import sys
-from typing import Any, Final, Optional, cast
+from typing import Any, Optional, cast
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.component import WebHardwareClient
@@ -40,12 +40,6 @@ from .prototype_subrack_attributes import (
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
 
 __all__ = ["MccsPrototypeSubrack", "main"]
-
-
-_PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
-
-_PSU_DEAD_VOLTAGE_THRESHOLD: Final[float] = 1.0
-"""A PSU below this output voltage, in Volts, is supplying nothing."""
 
 
 def _walk(health_status: Optional[dict], path: tuple[str, ...]) -> Any:
@@ -273,37 +267,11 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         """
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
             self._emit(signal_name, _walk(health_status, path), timestamp)
-        self._emit("_psu_dead_count", self._count_dead_psus(health_status), timestamp)
 
     def _invalidate_all(self: MccsPrototypeSubrack) -> None:
         """Mark every attribute invalid, so no stale value is readable."""
         for signal_name in ALL_SIGNALS:
             setattr(self, signal_name, None)
-
-    @staticmethod
-    def _count_dead_psus(health_status: Optional[dict]) -> Optional[int]:
-        """
-        Count the PSUs that are present and fed but supplying nothing.
-
-        :param health_status: the polled health status, or ``None`` when this
-            poll did not read it.
-
-        :return: the number of dead PSUs, or ``None`` when the health status
-            does not say enough to tell.
-        """
-        if health_status is None:
-            return None
-
-        dead_count = 0
-        for psu in _PSU_NAMES:
-            present = _walk(health_status, ("psus", "present", psu))
-            voltage_in = _walk(health_status, ("psus", "voltage_in", psu))
-            voltage_out = _walk(health_status, ("psus", "voltage_out", psu))
-            if voltage_in is None or voltage_out is None:
-                continue
-            if present and voltage_out < _PSU_DEAD_VOLTAGE_THRESHOLD < voltage_in:
-                dead_count += 1
-        return dead_count
 
 
 # ----------

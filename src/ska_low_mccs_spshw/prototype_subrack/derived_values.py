@@ -8,9 +8,10 @@
 """
 The subrack values that are computed rather than read from the board.
 
-``subrack_max_fan_speeds`` estimates fan rpm at 100% pwm duty.
+``subrack_max_fan_speeds`` estimates fan rpm at 100% pwm duty, and
 ``tpm_currents``, ``tpm_powers`` and ``tpm_voltages`` pass through a noise
-filter. Both keep state between polls.
+filter. Both keep state between polls. ``psu_dead_count`` counts the power
+supplies that are fed but supplying nothing, and keeps no state.
 
 This module holds no HTTP code and reads no status codes. It works on a
 dictionary of poll values.
@@ -22,7 +23,14 @@ from typing import Any, Optional
 
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
-from .constants import FILTERED_ATTRIBUTES, MIN_PWM_DUTY_FRACTION, DerivedKey, ReadKey
+from .constants import (
+    FILTERED_ATTRIBUTES,
+    MIN_PWM_DUTY_FRACTION,
+    PSU_DEAD_VOLTAGE_THRESHOLD,
+    PSU_NAMES,
+    DerivedKey,
+    ReadKey,
+)
 
 __all__ = ["DerivedValues"]
 
@@ -81,16 +89,23 @@ class DerivedValues:
         """
         return list(self._fan_error_counts)
 
-    def apply(self: DerivedValues, values: dict[str, Any]) -> None:
+    def apply(
+        self: DerivedValues,
+        values: dict[str, Any],
+        health_status: Optional[dict] = None,
+    ) -> None:
         """
         Add the derived values, and filter the noisy ones, in place.
 
         :param values: the poll values, modified in place.
+        :param health_status: the polled health status, or ``None`` when this
+            poll did not read it.
         """
         values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
             values.get(ReadKey.SUBRACK_FAN_SPEEDS.value),
             values.get(ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value),
         )
+        values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(health_status)
         for key, attribute_filter in self._filters.items():
             # An unknown value is passed in too, because that clears the
             # sample buffer.
@@ -101,6 +116,52 @@ class DerivedValues:
         self._fan_error_counts = [0] * SubrackData.FAN_COUNT
         for attribute_filter in self._filters.values():
             attribute_filter.clear()
+
+    @staticmethod
+    def count_dead_psus(health_status: Optional[dict]) -> Optional[int]:
+        """
+        Count the power supplies that are present and fed but supplying nothing.
+
+        A supply counts as dead when it is fitted, its input voltage is above
+        the threshold, and its output voltage is below it.
+
+        :param health_status: the polled health status, or ``None`` when this
+            poll did not read it.
+
+        :return: the number of dead power supplies, or ``None`` when the health
+            status does not say enough to tell.
+        """
+        # The board does not always answer with a mapping. A failed read gives
+        # a string, so the type alone cannot be relied on.
+        if not isinstance(health_status, dict):
+            return None
+
+        psus = health_status.get("psus")
+        if not isinstance(psus, dict):
+            return None
+
+        def field(name: str, psu: str) -> Any:
+            """
+            Read one field of one power supply.
+
+            :param name: the health status field to read.
+            :param psu: the power supply to read it for.
+
+            :return: the value, or ``None`` when it is not reported.
+            """
+            values = psus.get(name)
+            return values.get(psu) if isinstance(values, dict) else None
+
+        dead_count = 0
+        for psu in PSU_NAMES:
+            present = field("present", psu)
+            voltage_in = field("voltage_in", psu)
+            voltage_out = field("voltage_out", psu)
+            if voltage_in is None or voltage_out is None:
+                continue
+            if present and voltage_out < PSU_DEAD_VOLTAGE_THRESHOLD < voltage_in:
+                dead_count += 1
+        return dead_count
 
     def estimate_max_fan_rpm(
         self: DerivedValues,

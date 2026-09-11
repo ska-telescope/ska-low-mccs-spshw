@@ -57,6 +57,7 @@ READ_KEY_TO_SIGNAL: Final[dict[str, str]] = {
     ReadKey.TPM_VOLTAGES.value: "_tpm_voltages",
     ReadKey.BOARD_INFO.value: "_subrack_board_info",
     DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value: "_subrack_max_fan_speeds",
+    DerivedKey.PSU_DEAD_COUNT.value: "_psu_dead_count",
 }
 
 # Signal name to its path inside the polled health status dictionary.
@@ -87,10 +88,8 @@ HEALTH_PATH_TO_SIGNAL: Final[dict[str, tuple[str, ...]]] = {
 
 # Every signal this device emits, so that a lost board can invalidate all
 # of them.
-ALL_SIGNALS: Final[tuple[str, ...]] = (
-    tuple(READ_KEY_TO_SIGNAL.values())
-    + tuple(HEALTH_PATH_TO_SIGNAL)
-    + ("_psu_dead_count",)
+ALL_SIGNALS: Final[tuple[str, ...]] = tuple(READ_KEY_TO_SIGNAL.values()) + tuple(
+    HEALTH_PATH_TO_SIGNAL
 )
 
 

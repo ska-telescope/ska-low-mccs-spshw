@@ -18,7 +18,6 @@ leaves only the device's own code under test.
 from __future__ import annotations
 
 import gc
-import json
 from typing import Any, Callable, Iterator
 from unittest import mock
 
@@ -88,8 +87,10 @@ POLLED: list[tuple[str, str, Any]] = [
     ("tpmCurrents", "tpm_currents", [0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48]),
     ("tpmPowers", "tpm_powers", [4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6]),
     ("tpmVoltages", "tpm_voltages", [12.0, 12.1, 12.2, 12.3, 11.9, 11.8, 11.7, 11.6]),
-    # The subrack computes this one and reports it alongside the raw reads.
+    # The subrack computes these two and reports them alongside the raw reads.
     ("subrackMaxFanSpeeds", "subrack_max_fan_speeds", [6500.0] * 4),
+    # Zero, because anything higher warns or alarms on this attribute.
+    ("psuDeadCount", "psu_dead_count", 0),
 ]
 
 # The two attributes the device converts on the way through, so what it reports
@@ -158,14 +159,11 @@ POLL_VALUES.update({key: reported for _, key, reported, _ in CONVERTED})
 
 HEALTH_STATUS: dict[str, Any] = _nest(HEALTH)
 
-# psuDeadCount is computed by the device rather than read, so it has no row.
 # Every attribute a successful poll populates, and the value it should report.
 EXPECTED: dict[str, Any] = {
     **{attribute: value for attribute, _, value in POLLED},
     **{attribute: expected for attribute, _, _, expected in CONVERTED},
     **{attribute: value for attribute, _, value in HEALTH},
-    # Both PSUs supply an output voltage, so neither counts as dead.
-    "psuDeadCount": 0,
 }
 
 
@@ -500,25 +498,6 @@ def test_a_poll_populates_every_attribute(
 
     for attribute_name, expected in EXPECTED.items():
         _assert_reads(online_device, attribute_name, expected)
-
-
-def test_dead_psu_is_counted(
-    online_device: tango.DeviceProxy,
-    poll_succeeded: Callable[..., None],
-) -> None:
-    """
-    Test that a PSU which is present and fed but supplying nothing is counted.
-
-    :param online_device: the device under test, online and not yet polled.
-    :param poll_succeeded: supplies a successful poll response.
-    """
-    health_status = json.loads(json.dumps(HEALTH_STATUS))
-    health_status["psus"]["voltage_out"]["PSU2"] = 0.0
-
-    poll_succeeded(health_status=health_status)
-
-    assert online_device.psuDeadCount == 1
-    assert online_device.psu1VoltageOut == pytest.approx(12.2)
 
 
 def test_unknown_value_is_invalid_but_the_poll_still_counts(

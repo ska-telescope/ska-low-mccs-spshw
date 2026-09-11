@@ -15,7 +15,7 @@ nothing but a logger.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 
@@ -23,6 +23,26 @@ from ska_low_mccs_spshw.prototype_subrack import DerivedValues
 from ska_low_mccs_spshw.subrack.subrack_data import SubrackData
 
 MAX_SPEED = SubrackData.MAX_SUBRACK_FAN_SPEED
+
+
+def health(**overrides: Any) -> dict[str, Any]:
+    """
+    Return a health status with both power supplies fitted and supplying.
+
+    :param overrides: fields to replace, named as the health status field and
+        the power supply, such as ``voltage_out_psu2``.
+
+    :return: a health status.
+    """
+    psus: dict[str, Any] = {
+        "present": {"PSU1": True, "PSU2": True},
+        "voltage_in": {"PSU1": 230.0, "PSU2": 230.0},
+        "voltage_out": {"PSU1": 12.0, "PSU2": 12.0},
+    }
+    for name, value in overrides.items():
+        field, psu = name.rsplit("_", 1)
+        psus[field][psu.upper()] = value
+    return {"psus": psus}
 
 
 class TestDerivedValues:
@@ -265,3 +285,98 @@ class TestDerivedValues:
         fresh: dict[str, Any] = {"tpm_currents": [20.0]}
         derived.apply(fresh)
         assert fresh["tpm_currents"] == pytest.approx([20.0])
+
+    # ----------------
+    # The dead power supply count
+    # ----------------
+    @pytest.mark.parametrize(
+        ("health_status", "expected"),
+        [
+            pytest.param(health(), 0, id="both supplying"),
+            pytest.param(health(voltage_out_psu2=0.0), 1, id="one not supplying"),
+            pytest.param(
+                health(voltage_out_psu1=0.0, voltage_out_psu2=0.0),
+                2,
+                id="neither supplying",
+            ),
+            pytest.param(
+                health(present_psu2=False, voltage_out_psu2=0.0),
+                0,
+                id="one not fitted",
+            ),
+            pytest.param(
+                health(voltage_in_psu2=0.0, voltage_out_psu2=0.0),
+                0,
+                id="one not fed",
+            ),
+        ],
+    )
+    def test_counting_dead_supplies(
+        self: TestDerivedValues,
+        logger: logging.Logger,
+        health_status: dict[str, Any],
+        expected: int,
+    ) -> None:
+        """
+        A supply counts as dead only when it is fitted, fed and not supplying.
+
+        :param logger: a logger.
+        :param health_status: the health status to count from.
+        :param expected: the count it should give.
+        """
+        assert self._derived(logger).count_dead_psus(health_status) == expected
+
+    @pytest.mark.parametrize(
+        ("health_status", "expected"),
+        [
+            pytest.param(None, None, id="no health status"),
+            pytest.param("", None, id="a string"),
+            pytest.param({}, None, id="no supplies"),
+            pytest.param({"psus": ""}, None, id="supplies not a mapping"),
+            pytest.param({"psus": {}}, 0, id="no fields"),
+            pytest.param({"psus": {"present": {"PSU1": True}}}, 0, id="no voltages"),
+        ],
+    )
+    def test_a_health_status_that_does_not_say(
+        self: TestDerivedValues,
+        logger: logging.Logger,
+        health_status: Any,
+        expected: Optional[int],
+    ) -> None:
+        """
+        A health status that does not say enough must not report a supply dead.
+
+        The board does not always answer with a mapping, so a string has to be
+        tolerated as well as a missing one.
+
+        :param logger: a logger.
+        :param health_status: the health status to count from.
+        :param expected: the count it should give.
+        """
+        assert self._derived(logger).count_dead_psus(health_status) == expected
+
+    @pytest.mark.parametrize(
+        ("health_status", "expected"),
+        [
+            pytest.param(health(voltage_out_psu1=0.0), 1, id="one not supplying"),
+            pytest.param(None, None, id="no health status"),
+        ],
+    )
+    def test_apply_reports_the_count(
+        self: TestDerivedValues,
+        logger: logging.Logger,
+        health_status: Any,
+        expected: Optional[int],
+    ) -> None:
+        """
+        The count must reach the poll values, as the other computed value does.
+
+        :param logger: a logger.
+        :param health_status: the health status to count from.
+        :param expected: the count it should report.
+        """
+        values: dict[str, Any] = {}
+
+        self._derived(logger).apply(values, health_status)
+
+        assert values["psu_dead_count"] == expected

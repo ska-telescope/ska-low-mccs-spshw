@@ -123,8 +123,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
-        """Stop the poller and reclaim its thread."""
-        self._poller.stop_polling()
+        """Reclaim the poller's thread."""
         self._poller.kill_polling_thread()
 
     def init_device(self: MccsPrototypeSubrack) -> None:

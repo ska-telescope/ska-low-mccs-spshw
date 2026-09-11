@@ -915,7 +915,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=subrack._name,
             health=HealthState.OK,
-            lookahead=25,
+            lookahead=60,
         )
 
     for tile in station_component_manager._tile_proxies.values():
@@ -924,15 +924,15 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             health=HealthState.OK,
-            lookahead=25,
+            lookahead=60,
         )
         # Need to wait for this event to come through before we turn a tile OFF.
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             power=PowerState.ON,
-            lookahead=25,
+            lookahead=60,
         )
-    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=25)
+    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=60)
     assert station_component_manager._component_state["power"] == PowerState.ON
 
     tile_names = list(station_component_manager._tile_proxies.keys())
@@ -1133,7 +1133,7 @@ def test_beamformer_table(
     # Component state callback is getting called by many many sources.
     callbacks["component_state"].assert_call(
         beamformerTable=tile_initial_beamformer_table,
-        lookahead=50,
+        lookahead=70,
         consume_nonmatches=True,
     )
     callbacks["component_state"].assert_call(
@@ -1312,7 +1312,7 @@ def test_pointing_delays(
     # Large lookahead as this is only done once we got data for all TPMs
     callbacks["component_state"].assert_call(
         pointingdelays=expected_call,
-        lookahead=50,
+        lookahead=65,
     )
 
 

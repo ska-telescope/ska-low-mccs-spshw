@@ -63,6 +63,22 @@ def get_subrack_name(subrack_id: int, station_label: str | None = None) -> str:
     return f"low-mccs/subrack/{station_label or DEFAULT_STATION_LABEL}-sr{subrack_id}"
 
 
+def get_prototype_subrack_name(
+    subrack_id: int, station_label: str | None = None
+) -> str:
+    """
+    Construct the prototype subrack Tango device name from its ID number.
+
+    :param subrack_id: the ID number of the subrack in the station.
+    :param station_label: name of the station under test.
+        Defaults to None, in which case the module default is used.
+
+    :return: the prototype subrack Tango device name
+    """
+    label = station_label or DEFAULT_STATION_LABEL
+    return f"low-mccs/prototypesubrack/{label}-sr{subrack_id}"
+
+
 def get_pdu_name() -> str:
     """
     Construct the pdu Tango device name .
@@ -159,6 +175,20 @@ class SpsTangoTestHarnessContext:
         """
         return self._tango_context.get_device(
             get_subrack_name(subrack_id, station_label=self._station_label)
+        )
+
+    def get_prototype_subrack_device(
+        self: SpsTangoTestHarnessContext, subrack_id: int
+    ) -> tango.DeviceProxy:
+        """
+        Get a prototype subrack Tango device by its ID number.
+
+        :param subrack_id: the ID number of the subrack.
+
+        :returns: a proxy to the prototype subrack Tango device.
+        """
+        return self._tango_context.get_device(
+            get_prototype_subrack_name(subrack_id, station_label=self._station_label)
         )
 
     def get_subrack_address(
@@ -390,6 +420,56 @@ class SpsTangoTestHarness:
             PduTrl=get_pdu_name(),
             PowerMarshallerTrl="low-mccs/powermarshaller/powermarshaller",
             **optional_properties,
+        )
+
+    def add_prototype_subrack_device(  # pylint: disable=too-many-arguments
+        self: SpsTangoTestHarness,
+        subrack_id: int,
+        address: tuple[str, int] | None = None,
+        update_rate: float = 1.0,
+        logging_level: int = int(LoggingLevel.DEBUG),
+        device_class: type[Device] | str = "ska_low_mccs_spshw.MccsPrototypeSubrack",
+        filter_type: str = "none",
+        filter_max_samples: int = 5,
+    ) -> None:
+        """
+        Add a prototype subrack Tango device to the test harness.
+
+        :param subrack_id: An ID number for the subrack.
+        :param address: address of the subrack to be monitored by this Tango
+            device. It is a tuple of hostname or IP address, and port. Defaults
+            to None, in which case the address of the subrack simulator added
+            under the same ID number is used.
+        :param update_rate: How often to poll the subrack, in seconds.
+        :param logging_level: the Tango device's default logging level.
+        :param device_class: The device class to use.
+            This may be used to override the usual device class,
+            for example with a patched subclass.
+        :param filter_type: The type of filter to use for TPM attributes.
+        :param filter_max_samples: Maximum number of samples in filter buffer.
+        """
+        port: Callable[[dict[str, Any]], int] | int  # for the type checker
+
+        if address is None:
+            server_id = f"subrack_{subrack_id}"
+
+            host = "localhost"
+
+            def port(context: dict[str, Any]) -> int:
+                return context[server_id][1]
+
+        else:
+            (host, port) = address
+
+        self._tango_test_harness.add_device(
+            get_prototype_subrack_name(subrack_id, station_label=self._station_label),
+            device_class,
+            SubrackIp=host,
+            SubrackPort=port,
+            UpdateRate=update_rate,
+            LoggingLevelDefault=logging_level,
+            AttributeFilterType=filter_type,
+            AttributeFilterMaxSamples=filter_max_samples,
         )
 
     def add_power_marshaller_device(self: SpsTangoTestHarness) -> None:

@@ -29,6 +29,8 @@ from ska_tango_base.base import ControlLevel
 from tango import AttrQuality, DevState
 from tango.server import device_property
 
+from utils import walk
+
 from .constants import RequestError
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
@@ -40,25 +42,6 @@ from .prototype_subrack_attributes import (
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
 
 __all__ = ["MccsPrototypeSubrack", "main"]
-
-
-def _walk(health_status: Optional[dict], path: tuple[str, ...]) -> Any:
-    """
-    Follow a path into the health status dictionary.
-
-    :param health_status: the polled health status, or ``None`` when the board
-        did not give one.
-    :param path: the keys to follow, outermost first.
-
-    :return: the value at the end of the path, or ``None`` when any level of
-        the path is missing.
-    """
-    value: Any = health_status
-    for key in path:
-        if not isinstance(value, dict):
-            return None
-        value = value.get(key)
-    return value
 
 
 # pylint: disable=too-many-ancestors
@@ -265,7 +248,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :param timestamp: the wall clock time the health status was read at.
         """
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
-            self._emit(signal_name, _walk(health_status, path), timestamp)
+            self._emit(signal_name, walk(health_status, path), timestamp)
 
     def _invalidate_all(self: MccsPrototypeSubrack) -> None:
         """Mark every attribute invalid, so no stale value is readable."""

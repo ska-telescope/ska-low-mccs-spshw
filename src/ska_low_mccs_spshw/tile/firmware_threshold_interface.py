@@ -45,22 +45,6 @@ CURRENT_KEYS: Final[list[str]] = ["FE0_mVA", "FE1_mVA"]
 DB_UNDEFINED: Final[str] = "Undefined"
 
 
-def _is_running_without_database() -> bool:
-    """
-    Return true if a real tango db is not available.
-
-    This stops the device from trying to connect to a DB if it is run
-    in no-db mode (for auto documentation purposes)
-
-    :returns: True if server is in file db mode
-    """
-    try:
-        util = tango.Util.instance(False)
-    except tango.DevFailed:
-        return False
-    return bool(util._FileDb)
-
-
 class FirmwareThresholdsDbAdapter:
     """Tango DB interface for reading/writing FirmwareThresholds."""
 
@@ -68,7 +52,7 @@ class FirmwareThresholdsDbAdapter:
         self: FirmwareThresholdsDbAdapter,
         device_name: str,
         thresholds: FirmwareThresholds,
-        db_connection: Database | None = None,
+        db_connection: Database | None,
         logger: logging.Logger | None = None,
     ) -> None:
         """
@@ -76,8 +60,7 @@ class FirmwareThresholdsDbAdapter:
 
         :param device_name: the trl of the device these thresholds belong to.
         :param thresholds: A class containing the FirmwareThresholds.
-        :param db_connection: An optional database connection to inject for
-            testing.
+        :param db_connection: A connection to the Tango database
         :param logger: an optional logger for information.
         """
         self._device_name = device_name
@@ -86,42 +69,20 @@ class FirmwareThresholdsDbAdapter:
         self._logger = logger
         self._sync_class_cache_with_db()
 
-    def _get_db_connection(self: FirmwareThresholdsDbAdapter) -> Database:
-        """
-        Return a connection to the Tango database, connecting if needed.
-
-        :returns: a connection to the Tango database.
-        """
-        if self._db_connection is None:
-            self._db_connection = Database()
-        return self._db_connection
-
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
-        """
-        Update threshold cache from database.
-
-        :raises tango.DevFailed: if the database cannot be reached and this
-            is not a deliberate no-db server.
-        """
-        try:
-            firmware_thresholds = (
-                self._get_db_connection().get_device_attribute_property(
-                    self._device_name, self._thresholds.to_device_property_keys_only()
-                )
-            )
-        except tango.DevFailed:
-            if not _is_running_without_database():
-                raise
+        """Update threshold cache from database."""
+        if self._db_connection is None:
             if self._logger:
                 self._logger.info(
-                    "Device server has no real Tango database (started in "
-                    "file-based/no-db mode); skipping firmware threshold "
-                    "database sync."
+                    "Device server has no real Tango database; skipping "
+                    "firmware threshold database sync."
                 )
             return
-
         if self._logger:
             self._logger.debug("Syncing class cache with DB...")
+        firmware_thresholds = self._db_connection.get_device_attribute_property(
+            self._device_name, self._thresholds.to_device_property_keys_only()
+        )
         self._thresholds.update_from_dict(
             firmware_thresholds["temperatures"], self._logger
         )
@@ -131,24 +92,17 @@ class FirmwareThresholdsDbAdapter:
             self._logger.debug("Thresholds synced with DB.")
 
     def write_threshold_to_db(self: FirmwareThresholdsDbAdapter) -> None:
-        """
-        Put thresholds into database.
-
-        :raises tango.DevFailed: if the database cannot be reached and this
-            is not a deliberate no-db server.
-        """
-        try:
-            self._get_db_connection().put_device_attribute_property(
-                self._device_name, self._thresholds.to_device_property_dict()
-            )
-        except tango.DevFailed:
-            if not _is_running_without_database():
-                raise
+        """Put thresholds into database."""
+        if self._db_connection is None:
             if self._logger:
                 self._logger.info(
                     "Device server has no real Tango database; not persisting "
                     "firmware alarm thresholds."
                 )
+            return
+        self._db_connection.put_device_attribute_property(
+            self._device_name, self._thresholds.to_device_property_dict()
+        )
 
     def resync_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Resync class with db values."""

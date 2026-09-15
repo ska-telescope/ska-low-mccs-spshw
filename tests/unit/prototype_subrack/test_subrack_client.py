@@ -451,27 +451,6 @@ class TestErrorBranches:
 
         derived.clear.assert_called_once_with()
 
-    def test_error_callback_receives_the_exception(
-        self: TestErrorBranches,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-    ) -> None:
-        """
-        The error callback must receive the exception from a failed poll.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        """
-        seen: list[Exception] = []
-        subrack = make_subrack(fake_client, logger, derived, error_callback=seen.append)
-        exception = HttpError("boom")
-
-        subrack.poll_failed(exception)
-
-        assert seen == [exception]
-
     @pytest.mark.parametrize(
         ("status", "retvalue"),
         [
@@ -724,6 +703,81 @@ class TestErrorBranches:
         assert result == BoardCommandStatus.FAILED
         assert info in message, message
         assert abort.wait.call_count == 1, "the wait should end on the first probe"
+
+
+class TestTheCallbacks:
+    """
+    Tests that every poll outcome reaches the callback the caller supplied.
+
+    The poller calls these hooks, and the device does its work in the
+    callbacks, so a hook that drops one leaves the device with no way to know
+    what happened. All three are required arguments, so none can be missing.
+    """
+
+    def test_a_successful_poll_reaches_the_data_callback(
+        self: TestTheCallbacks,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+        derived: mock.Mock,
+    ) -> None:
+        """
+        The data callback must receive the response from a successful poll.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
+        """
+        seen: list[SubrackPollResponse] = []
+        subrack = make_subrack(fake_client, logger, derived, data_callback=seen.append)
+        response = SubrackPollResponse()
+
+        subrack.poll_succeeded(response)
+
+        assert seen == [response]
+
+    def test_a_failed_poll_reaches_the_error_callback(
+        self: TestTheCallbacks,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+        derived: mock.Mock,
+    ) -> None:
+        """
+        The error callback must receive the exception from a failed poll.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
+        """
+        seen: list[Exception] = []
+        subrack = make_subrack(fake_client, logger, derived, error_callback=seen.append)
+        exception = HttpError("boom")
+
+        subrack.poll_failed(exception)
+
+        assert seen == [exception]
+
+    def test_the_end_of_polling_reaches_the_stopped_callback(
+        self: TestTheCallbacks,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+        derived: mock.Mock,
+    ) -> None:
+        """
+        The stopped callback must be told once polling has ended.
+
+        This is how a caller settles its own state after the last poll has
+        reported back, so a hook that drops it leaves the device waiting.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
+        """
+        stopped = mock.Mock()
+        subrack = make_subrack(fake_client, logger, derived, stopped_callback=stopped)
+
+        subrack.polling_stopped()
+
+        stopped.assert_called_once_with()
 
 
 # One test, because there is one thing to say about the wiring.

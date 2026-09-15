@@ -139,15 +139,12 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     def __init__(  # pylint: disable=too-many-arguments
         self: Subrack,
         client: WebHardwareClient,
+        derived: DerivedValues,
         name: str,
         logger: logging.Logger,
         data_callback: Callable[[SubrackPollResponse], None],
         error_callback: Callable[[Exception], None] | None = None,
         stopped_callback: Callable[[], None] | None = None,
-        max_fan_errors: int = 5,
-        max_fan_rpm_delta: float = 25.0,
-        attribute_filter_type: str | None = None,
-        attribute_filter_max_samples: int = 5,
         lock_timeout: float = LOCK_TIMEOUT,
         lock_warning: float = LOCK_WARNING,
         _lock: LogLock | None = None,
@@ -158,6 +155,8 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         :param client: the hardware client to reach the management board
             with. The caller builds it and chooses its address, so this class
             never opens a connection of its own.
+        :param derived: the values that are computed rather than read. It owns
+            all state that spans polls, and every poll hands it the new values.
         :param name: what to call this subrack in the log, such as its host
             name. A lock hold is reported against this name, so it must tell
             one subrack from another.
@@ -166,13 +165,6 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         :param error_callback: called with the exception from a failed poll.
         :param stopped_callback: called once polling has stopped, after the
             last poll has reported back.
-        :param max_fan_errors: how many consecutive bad fan rpm estimates to
-            replace, per fan.
-        :param max_fan_rpm_delta: the tolerance, as a percentage of the maximum
-            fan speed, outside which a fan rpm estimate counts as bad.
-        :param attribute_filter_type: the noise filter to apply to the TPM
-            current, power and voltage readings.
-        :param attribute_filter_max_samples: the filter sample window.
         :param lock_timeout: how long, in seconds, to wait for the client lock
             before giving up. This bounds how long a stalled board can block a
             poll or a command.
@@ -194,15 +186,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             f"subrack-{name}", logger, timeout_warning=lock_warning
         )
 
-        # The values that are computed rather than read. This object owns all
-        # state that spans polls.
-        self.derived = DerivedValues(
-            logger,
-            max_fan_errors=max_fan_errors,
-            max_fan_rpm_delta=max_fan_rpm_delta,
-            attribute_filter_type=attribute_filter_type,
-            attribute_filter_max_samples=attribute_filter_max_samples,
-        )
+        # The values that are computed rather than read. It owns all state
+        # that spans polls.
+        self._derived = derived
 
     # ----------------
     # PollModel hooks
@@ -238,7 +224,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             values = self._fetch_attributes(poll_request)
             health_status = self._fetch_health()
 
-        self.derived.apply(values, health_status)
+        self._derived.apply(values, health_status)
 
         return SubrackPollResponse(
             values=values, health_status=health_status, timestamp=time.time()
@@ -271,7 +257,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         :param exception: the exception raised by the poll.
         """
-        self.derived.clear()
+        self._derived.clear()
         if self._error_callback is not None:
             self._error_callback(exception)
 

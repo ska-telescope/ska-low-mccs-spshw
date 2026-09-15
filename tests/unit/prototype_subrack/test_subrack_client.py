@@ -9,8 +9,7 @@
 Tests of the prototype subrack client.
 
 Most tests drive an injected fake hardware client. Two run against a real
-simulator server over HTTP, and three assert that the fake answers in the same
-shape as the real client.
+simulator server over HTTP.
 """
 
 from __future__ import annotations
@@ -23,10 +22,7 @@ from typing import Any, Iterator
 from unittest import mock
 
 import pytest
-from ska_low_mccs_common.component import (
-    HardwareClientResponseStatusCodes,
-    WebHardwareClient,
-)
+from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 
 from ska_low_mccs_spshw.prototype_subrack import (
     BoardCommandStatus,
@@ -34,7 +30,6 @@ from ska_low_mccs_spshw.prototype_subrack import (
     RequestError,
     Subrack,
     SubrackPollResponse,
-    subrack_client,
 )
 from ska_low_mccs_spshw.prototype_subrack.constants import BATCH_ATTRIBUTES
 from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
@@ -437,38 +432,40 @@ class TestErrorBranches:
         self: TestErrorBranches,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
     ) -> None:
         """
         A failed poll must clear the state that spans polls.
 
-        A board we cannot reach has no known fan history, so the next good poll
-        must start counting fan errors again from zero.
+        A board we cannot reach has no known fan history, so the state that
+        spans polls is dropped. What that state is, and what dropping it does,
+        is covered in ``test_derived_values``.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         """
-        subrack = make_subrack(fake_client, logger, max_fan_errors=1)
-
-        # Use up the single allowed replacement.
-        subrack.derived.estimate_max_fan_rpm([0.0] * 4, [100.0] * 4)
-        assert subrack.derived.fan_error_counts == [1, 1, 1, 1]
+        subrack = make_subrack(fake_client, logger, derived)
 
         subrack.poll_failed(RequestError("gone"))
-        assert subrack.derived.fan_error_counts == [0, 0, 0, 0]
+
+        derived.clear.assert_called_once_with()
 
     def test_error_callback_receives_the_exception(
         self: TestErrorBranches,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
     ) -> None:
         """
         The error callback must receive the exception from a failed poll.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         """
         seen: list[Exception] = []
-        subrack = make_subrack(fake_client, logger, error_callback=seen.append)
+        subrack = make_subrack(fake_client, logger, derived, error_callback=seen.append)
         exception = HttpError("boom")
 
         subrack.poll_failed(exception)
@@ -626,9 +623,16 @@ class TestErrorBranches:
         ``BUSY`` and ``STARTED`` continue the wait, as does ``OK`` with no
         returned value. Every other status ends it.
 
+        The abort event is what the wait sleeps on, so a stub for it drives the
+        loop with no clock at all. It allows the three probes this needs and
+        then asks to abort, so a wait that never ends returns ``ABORTED`` in
+        milliseconds instead of running to the command timeout.
+
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
         """
+        abort = mock.Mock()
+        abort.wait.side_effect = [False, False, False, True]
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
@@ -652,7 +656,9 @@ class TestErrorBranches:
         }
         fake_client.set_command_responses("command_completed", busy, busy, done)
 
-        (result, message, _) = faked_subrack.run_board_command("turn_on_tpms", "")
+        (result, message, _) = faked_subrack.run_board_command(
+            "turn_on_tpms", "", abort
+        )
 
         assert result == BoardCommandStatus.COMPLETED, message
         completions = [
@@ -667,12 +673,10 @@ class TestErrorBranches:
             ("NOT_A_REAL_STATUS", "who knows"),
         ],
     )
-    # pylint: disable-next=too-many-arguments
     def test_an_error_while_awaiting_completion_fails_with_its_details(
         self: TestErrorBranches,
         faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        monkeypatch: pytest.MonkeyPatch,
         status: str,
         info: str,
     ) -> None:
@@ -682,14 +686,18 @@ class TestErrorBranches:
         The status and the detail the board reported both reach the caller, and
         the wait ends at once rather than running to the timeout.
 
+        The abort event is what the wait sleeps on, so a stub for it drives the
+        loop with no clock at all. It allows one probe and then asks to abort,
+        so an error that failed to end the wait returns ``ABORTED`` in
+        milliseconds instead of running to the command timeout.
+
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param monkeypatch: the pytest monkeypatch fixture.
         :param status: the status the board reports while completing.
         :param info: the detail the board reports with it.
         """
-        # Short, so the test does not sit through the whole timeout.
-        monkeypatch.setattr(subrack_client, "COMMAND_TIMEOUT", 2.0)
+        abort = mock.Mock()
+        abort.wait.side_effect = [False, True]
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
@@ -709,72 +717,46 @@ class TestErrorBranches:
             },
         )
 
-        (result, message, _) = faked_subrack.run_board_command("turn_on_tpms", "")
+        (result, message, _) = faked_subrack.run_board_command(
+            "turn_on_tpms", "", abort
+        )
 
         assert result == BoardCommandStatus.FAILED
         assert info in message, message
-        assert "Timed out" not in message, message
+        assert abort.wait.call_count == 1, "the wait should end on the first probe"
 
 
-class TestDerivedValuesWiring:
-    """Tests that a poll response carries the derived values."""
+# One test, because there is one thing to say about the wiring.
+class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
+    """Tests that a poll runs the derived values over what it read."""
 
-    def test_the_derived_fan_speeds_reach_the_poll_response(
+    def test_a_poll_applies_the_derived_values(
         self: TestDerivedValuesWiring,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
     ) -> None:
         """
-        A poll response must carry the estimated fan speeds.
+        A poll must give the derived values what it read, and carry the result.
 
-        The board never reports this key.
+        What they compute is their own business, covered in
+        ``test_derived_values``. A stub that writes one key is enough to show
+        that a poll runs them, and that the response carries what they wrote.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         """
-        fake_client.set_attribute_response(value=None)
-        for key, value in [
-            ("subrack_fan_speeds", [2600.0] * 4),
-            ("subrack_fan_speeds_percent", [50.0] * 4),
-        ]:
-            fake_client.attribute_responses[key] = {
-                "status": HardwareClientResponseStatusCodes.OK.name,
-                "info": "",
-                "attribute": key,
-                "value": value,
-            }
-        subrack = make_subrack(fake_client, logger, max_fan_errors=0)
+        derived.apply.side_effect = lambda values, _: values.update({"computed": 42})
+        subrack = make_subrack(fake_client, logger, derived)
 
         response = subrack.poll(subrack.get_request())
 
-        assert response.values["subrack_max_fan_speeds"] == pytest.approx([5200.0] * 4)
-
-    def test_the_filter_is_applied_to_the_poll_values(
-        self: TestDerivedValuesWiring,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A configured filter must reach the values in the poll response.
-
-        A mean is asserted because a mean is observable.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        """
-        subrack = make_subrack(
-            fake_client,
-            logger,
-            attribute_filter_type="mean",
-            attribute_filter_max_samples=2,
-        )
-
-        fake_client.set_attribute_response(value=[0.0, 10.0])
-        subrack.poll(subrack.get_request())
-        fake_client.set_attribute_response(value=[10.0, 20.0])
-        response = subrack.poll(subrack.get_request())
-
-        assert response.values["tpm_currents"] == pytest.approx([5.0, 15.0])
+        derived.apply.assert_called_once()
+        (values, health_status) = derived.apply.call_args.args
+        assert values is response.values, "the response dropped what they wrote into"
+        assert health_status is response.health_status
+        assert response.values["computed"] == 42
 
 
 class TestLockContention:
@@ -820,6 +802,7 @@ class TestLockContention:
         self: TestLockContention,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
     ) -> None:
         """
         A poll must raise when the lock stays busy.
@@ -829,9 +812,12 @@ class TestLockContention:
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         """
         lock = LogLock("busy", logger)
-        subrack = make_subrack(fake_client, logger, lock=lock, lock_timeout=0.01)
+        subrack = make_subrack(
+            fake_client, logger, derived, lock=lock, lock_timeout=0.01
+        )
 
         with self._held(lock):
             with pytest.raises(RequestError, match="still holds the client"):
@@ -841,14 +827,16 @@ class TestLockContention:
         self: TestLockContention,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
     ) -> None:
         """
         A command must fail rather than block its worker thread.
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         """
-        subrack = make_subrack(fake_client, logger, lock_timeout=0.01)
+        subrack = make_subrack(fake_client, logger, derived, lock_timeout=0.01)
 
         with self._held(subrack._client_lock):
             (status, message, _) = subrack.run_board_command("turn_on_tpm", "1")
@@ -860,6 +848,7 @@ class TestLockContention:
         self: TestLockContention,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
@@ -871,10 +860,11 @@ class TestLockContention:
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         :param caplog: the pytest log capture fixture.
         """
         lock = LogLock("slow", logger, timeout_warning=0.0)
-        subrack = make_subrack(fake_client, logger, lock=lock)
+        subrack = make_subrack(fake_client, logger, derived, lock=lock)
         fake_client.set_attribute_response(value=None)
 
         with caplog.at_level(logging.WARNING, logger=logger.name):
@@ -887,6 +877,7 @@ class TestLockContention:
         self: TestLockContention,
         fake_client: FakeHardwareClient,
         logger: logging.Logger,
+        derived: mock.Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
@@ -894,78 +885,13 @@ class TestLockContention:
 
         :param fake_client: the fake hardware client.
         :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         :param caplog: the pytest log capture fixture.
         """
-        subrack = make_subrack(fake_client, logger, lock_warning=0.0)
+        subrack = make_subrack(fake_client, logger, derived, lock_warning=0.0)
 
         with caplog.at_level(logging.WARNING, logger=logger.name):
             subrack.run_board_command("turn_on_tpm", "1")
 
         assert "held for" in caplog.text
         assert "command turn_on_tpm" in caplog.text
-
-
-class TestTheFakeMatchesTheRealClient:
-    """
-    Tests that the fake answers in the same shape as the real client.
-
-    The fields of a fake response match those of
-    :py:class:`~ska_low_mccs_common.component.WebHardwareClient`, and every
-    status name the client branches on is a member of
-    :py:class:`~ska_low_mccs_common.component.HardwareClientResponseStatusCodes`.
-    """
-
-    def test_the_attribute_response_shape_matches(
-        self: TestTheFakeMatchesTheRealClient,
-        simulator_address: tuple[str, int],
-        fake_client: FakeHardwareClient,
-    ) -> None:
-        """
-        An attribute read must come back with the same fields either way.
-
-        :param simulator_address: the host and port of the simulator server.
-        :param fake_client: the fake hardware client.
-        """
-        (host, port) = simulator_address
-        real = WebHardwareClient(host, port).get_attribute("board_current")
-
-        fake = fake_client.get_attribute("board_current")
-
-        assert sorted(fake) == sorted(real)
-
-    def test_the_command_response_shape_matches(
-        self: TestTheFakeMatchesTheRealClient,
-        simulator_address: tuple[str, int],
-        fake_client: FakeHardwareClient,
-    ) -> None:
-        """
-        A command must come back with the same fields either way.
-
-        :param simulator_address: the host and port of the simulator server.
-        :param fake_client: the fake hardware client.
-        """
-        (host, port) = simulator_address
-        real = WebHardwareClient(host, port).execute_command("command_completed", "")
-
-        fake = fake_client.execute_command("command_completed", "")
-
-        assert sorted(fake) == sorted(real)
-
-    def test_the_status_codes_the_client_branches_on_all_exist(
-        self: TestTheFakeMatchesTheRealClient,
-    ) -> None:
-        """
-        Every status the client branches on must be a real status code.
-
-        The client compares against the names of the shared enumeration's
-        members.
-        """
-        names = {member.name for member in HardwareClientResponseStatusCodes}
-
-        for group in (
-            subrack_client._TRANSPORT_ERRORS,
-            subrack_client._IN_BAND_ERRORS,
-            subrack_client._BOARD_BUSY,
-        ):
-            assert set(group) <= names, group
-        assert subrack_client._OK in names

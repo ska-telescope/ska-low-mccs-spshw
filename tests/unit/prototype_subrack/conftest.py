@@ -164,6 +164,20 @@ def logger_fixture() -> logging.Logger:
     return logging.getLogger("test-prototype-subrack")
 
 
+@pytest.fixture(name="derived")
+def derived_fixture() -> mock.Mock:
+    """
+    Return a stand-in for the values that are computed rather than read.
+
+    A subrack hands it each poll's values and takes whatever it wrote back, so
+    a mock keeps real computation out of tests that assert nothing about it.
+    What it computes is covered in ``test_derived_values``.
+
+    :return: a mock of the computed values.
+    """
+    return mock.Mock(name="derived_values")
+
+
 @pytest.fixture(name="fake_client")
 def fake_client_fixture() -> FakeHardwareClient:
     """
@@ -237,6 +251,7 @@ def callbacks_fixture(
 def make_subrack(
     client: Any,
     logger: logging.Logger,
+    derived: Any,
     *,
     name: str = "no-such-host",
     lock: LogLock | None = None,
@@ -251,6 +266,9 @@ def make_subrack(
 
     :param client: the hardware client, real or fake.
     :param logger: a logger.
+    :param derived: the computed values. A test that asserts nothing about
+        them passes the ``derived`` fixture, so that no real computation runs
+        behind the test. One that does passes a real ``DerivedValues``.
     :param name: what the subrack calls itself in the log.
     :param lock: the client lock, defaulting to a fresh one.
     :param kwargs: overrides passed to the subrack.
@@ -259,13 +277,14 @@ def make_subrack(
     """
     options: dict[str, Any] = {"data_callback": lambda _: None}
     options.update(kwargs)
-    return Subrack(client, name, logger, _lock=lock, **options)
+    return Subrack(client, derived, name, logger, _lock=lock, **options)
 
 
 @pytest.fixture(name="simulated_subrack")
 def simulated_subrack_fixture(
     simulator_address: tuple[str, int],
     logger: logging.Logger,
+    derived: mock.Mock,
     callbacks: tuple[Any, Any],
 ) -> Iterator[Subrack]:
     """
@@ -273,6 +292,7 @@ def simulated_subrack_fixture(
 
     :param simulator_address: the host and port of the simulator server.
     :param logger: a logger.
+    :param derived: a stand-in for the computed values.
     :param callbacks: the data callback and the error callback.
 
     :yields: a subrack client.
@@ -282,6 +302,7 @@ def simulated_subrack_fixture(
     subrack = make_subrack(
         WebHardwareClient(host, port),
         logger,
+        derived,
         name=host,
         data_callback=data_callback,
         error_callback=error_callback,
@@ -324,6 +345,7 @@ def healthy_faked_subrack_fixture(
 def faked_subrack_fixture(
     fake_client: FakeHardwareClient,
     logger: logging.Logger,
+    derived: mock.Mock,
 ) -> Subrack:
     """
     Return a subrack with nothing configured, for a test that needs no setup.
@@ -333,7 +355,8 @@ def faked_subrack_fixture(
 
     :param fake_client: the fake hardware client.
     :param logger: a logger.
+    :param derived: a stand-in for the computed values.
 
     :return: a subrack client.
     """
-    return make_subrack(fake_client, logger)
+    return make_subrack(fake_client, logger, derived)

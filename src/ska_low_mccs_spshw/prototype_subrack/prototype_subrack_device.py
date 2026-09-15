@@ -8,10 +8,9 @@
 """
 A Tango device for an SPS subrack, built on the prototype subrack client.
 
-The device holds one :py:class:`~.subrack_client.Subrack` and one
-:py:class:`~.subrack_client.SubrackPoller` built around it. There is no
-component manager, no driver and no health model between the device and the
-board.
+The device holds one :py:class:`~.subrack_client.SubrackPoller`, which holds the
+:py:class:`~.subrack_client.Subrack` it drives. There is no component manager,
+no driver and no health model between the device and the board.
 
 The device monitors only. It defines no commands, so the board commands that
 :py:meth:`~.subrack_client.Subrack.run_board_command` supports are not reachable
@@ -32,6 +31,7 @@ from tango.server import device_property
 from utils import walk
 
 from .constants import RequestError
+from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
     HEALTH_PATH_TO_SIGNAL,
@@ -49,9 +49,10 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
     """
     A Tango device that monitors an SPS subrack management board.
 
-    The device owns a :py:class:`~.subrack_client.Subrack` and the
-    :py:class:`~.subrack_client.SubrackPoller` that drives it. Polling starts
-    and stops with ``adminMode``, through
+    The device owns the :py:class:`~.subrack_client.SubrackPoller`, and through
+    it the :py:class:`~.subrack_client.Subrack` that answers each poll. The
+    poller is the only piece the device has to reclaim, so it is the only one
+    it keeps. Polling starts and stops with ``adminMode``, through
     :py:meth:`change_control_level`. Each poll response is emitted onto the
     signal bus, which pushes the change and archive events for every attribute.
 
@@ -74,8 +75,6 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
     # --------------
     # Initialisation
     # --------------
-    _client: WebHardwareClient
-    _subrack: Subrack
     _poller: Optional[SubrackPoller] = None
 
     def assemble(self: MccsPrototypeSubrack) -> None:
@@ -93,23 +92,25 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         """
         self._poller = None
 
-        self._client = self._web_hardware_client_factory(
-            self.SubrackIp, self.SubrackPort
-        )
-        self._subrack = self._subrack_factory(
-            self._client,
-            name=self.get_name(),
-            logger=self.logger,
-            data_callback=self._poll_succeeded,
-            error_callback=self._poll_failed,
-            stopped_callback=self._polling_stopped,
+        client = self._web_hardware_client_factory(self.SubrackIp, self.SubrackPort)
+        derived = self._derived_values_factory(
+            self.logger,
             max_fan_errors=self.MaxFanErrors,
             max_fan_rpm_delta=self.MaxFanRpmDelta,
             attribute_filter_type=self.AttributeFilterType,
             attribute_filter_max_samples=self.AttributeFilterMaxSamples,
         )
+        subrack = self._subrack_factory(
+            client,
+            derived=derived,
+            name=self.get_name(),
+            logger=self.logger,
+            data_callback=self._poll_succeeded,
+            error_callback=self._poll_failed,
+            stopped_callback=self._polling_stopped,
+        )
         self._poller = self._subrack_poller_factory(
-            self._subrack, self.UpdateRate, self.logger
+            subrack, self.UpdateRate, self.logger
         )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
@@ -291,6 +292,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
 
 def subrack_factory(
     web_hardware_client: Any = WebHardwareClient,
+    derived_values: Any = DerivedValues,
     subrack: Any = Subrack,
     subrack_poller: Any = SubrackPoller,
 ) -> type[MccsPrototypeSubrack]:
@@ -299,8 +301,10 @@ def subrack_factory(
 
     :param web_hardware_client: builds the hardware client, from a host and a
         port.
-    :param subrack: builds the poll model, from a client and the device's
-        settings.
+    :param derived_values: builds the computed values, from a logger and the
+        device's fan and filter settings.
+    :param subrack: builds the poll model, from a client, the computed values
+        and the device's settings.
     :param subrack_poller: builds the poller, from a poll model, a poll rate
         and a logger.
 
@@ -311,6 +315,7 @@ def subrack_factory(
         (MccsPrototypeSubrack,),
         {
             "_web_hardware_client_factory": web_hardware_client,
+            "_derived_values_factory": derived_values,
             "_subrack_factory": subrack,
             "_subrack_poller_factory": subrack_poller,
         },

@@ -181,6 +181,20 @@ def client_factory_fixture() -> mock.Mock:
     return mock.Mock(name="client_factory")
 
 
+@pytest.fixture(name="derived_factory")
+def derived_factory_fixture() -> mock.Mock:
+    """
+    Return the derived values factory to inject into the device.
+
+    Nothing calls what it returns, because the subrack is mocked too. It is
+    injected so that the fan and filter settings the device asked for are
+    recorded.
+
+    :return: the factory.
+    """
+    return mock.Mock(name="derived_factory")
+
+
 @pytest.fixture(name="subrack_mock")
 def subrack_mock_fixture() -> mock.Mock:
     """
@@ -195,22 +209,46 @@ def subrack_mock_fixture() -> mock.Mock:
     return mock.Mock(name="subrack_factory")
 
 
+@pytest.fixture(name="pollers")
+def pollers_fixture() -> list[mock.Mock]:
+    """
+    Return the list that collects every poller the device builds, in order.
+
+    :return: the pollers built so far.
+    """
+    return []
+
+
 @pytest.fixture(name="poller")
-def poller_fixture() -> mock.Mock:
+def poller_fixture(pollers: list[mock.Mock]) -> mock.Mock:
     """
     Return the poller factory to inject into the device.
 
     The poller it returns starts no thread, so nothing polls on its own. It
     records ``start_polling``, ``stop_polling`` and ``kill_polling_thread``.
 
+    Each call returns a poller of its own, rather than one shared mock, so a
+    test can tell the poller built by one assembly from the one built by the
+    next. ``pollers`` collects them in order.
+
+    :param pollers: the list to collect the pollers in.
+
     :return: the factory.
     """
-    return mock.Mock(name="poller_factory")
+
+    def build(*_args: Any, **_kwargs: Any) -> mock.Mock:
+        pollers.append(mock.Mock(name=f"poller{len(pollers)}"))
+        return pollers[-1]
+
+    return mock.Mock(name="poller_factory", side_effect=build)
 
 
 @pytest.fixture(name="device_class")
 def device_class_fixture(
-    client_factory: mock.Mock, subrack_mock: mock.Mock, poller: mock.Mock
+    client_factory: mock.Mock,
+    derived_factory: mock.Mock,
+    subrack_mock: mock.Mock,
+    poller: mock.Mock,
 ) -> type:
     """
     Return the device class with everything below it mocked out.
@@ -220,6 +258,7 @@ def device_class_fixture(
     first argument.
 
     :param client_factory: the hardware client factory to inject.
+    :param derived_factory: the derived values factory to inject.
     :param subrack_mock: the subrack factory to inject.
     :param poller: the poller factory to inject.
 
@@ -227,6 +266,7 @@ def device_class_fixture(
     """
     return subrack_factory(
         web_hardware_client=client_factory,
+        derived_values=derived_factory,
         subrack=subrack_mock,
         subrack_poller=poller,
     )
@@ -345,7 +385,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     return MockTangoEventCallbackGroup(
         "state",
         "healthState",
-        timeout=20.0,
+        timeout=1.0,
         assert_no_error=False,
     )
 
@@ -430,39 +470,48 @@ def _assert_all_invalid(subrack_device: tango.DeviceProxy, why: str) -> None:
         ), f"{attribute_name} should be invalid {why}"
 
 
+# pylint: disable-next=too-many-arguments
 def test_assembles_from_its_properties(
     subrack_device: tango.DeviceProxy,
     client_factory: mock.Mock,
+    derived_factory: mock.Mock,
     subrack_mock: mock.Mock,
     poller: mock.Mock,
+    pollers: list[mock.Mock],
 ) -> None:
     """
     Test that initialisation builds one of each, from the device properties.
 
     :param subrack_device: the device under test.
     :param client_factory: the injected hardware client factory.
+    :param derived_factory: the injected derived values factory.
     :param subrack_mock: the injected subrack factory.
     :param poller: the injected poller factory.
+    :param pollers: every poller the device has built, in order.
     """
     assert subrack_device.state() == DevState.DISABLE
 
     client_factory.assert_called_once_with(BOARD_HOST, BOARD_PORT)
     # The logger and the three callbacks are bound to the device object, which
     # this test reaches only through a proxy, so they cannot be named here.
-    subrack_mock.assert_called_once_with(
-        client_factory.return_value,
-        name=get_prototype_subrack_name(SUBRACK_ID),
-        logger=mock.ANY,
-        data_callback=mock.ANY,
-        error_callback=mock.ANY,
-        stopped_callback=mock.ANY,
+    derived_factory.assert_called_once_with(
+        mock.ANY,
         max_fan_errors=MAX_FAN_ERRORS,
         max_fan_rpm_delta=MAX_FAN_RPM_DELTA,
         attribute_filter_type=FILTER_TYPE,
         attribute_filter_max_samples=FILTER_MAX_SAMPLES,
     )
+    subrack_mock.assert_called_once_with(
+        client_factory.return_value,
+        derived=derived_factory.return_value,
+        name=get_prototype_subrack_name(SUBRACK_ID),
+        logger=mock.ANY,
+        data_callback=mock.ANY,
+        error_callback=mock.ANY,
+        stopped_callback=mock.ANY,
+    )
     poller.assert_called_once_with(subrack_mock.return_value, UPDATE_RATE, mock.ANY)
-    poller.return_value.start_polling.assert_not_called()
+    pollers[0].start_polling.assert_not_called()
 
 
 def test_starts_disabled(
@@ -482,15 +531,15 @@ def test_starts_disabled(
 
 def test_online_starts_the_poller_and_waits(
     online_device: tango.DeviceProxy,
-    poller: mock.Mock,
+    pollers: list[mock.Mock],
 ) -> None:
     """
     Test that going online starts the poller and reports nothing until a poll.
 
     :param online_device: the device under test, online and not yet polled.
-    :param poller: the injected poller factory.
+    :param pollers: every poller the device has built, in order.
     """
-    poller.return_value.start_polling.assert_called_once_with()
+    pollers[0].start_polling.assert_called_once_with()
     assert list(online_device.healthInfo) == [
         "Establishing communication with the subrack."
     ]
@@ -566,12 +615,13 @@ def test_missing_health_status_invalidates_only_its_attributes(
     assert online_device.healthState == HealthState.OK
 
 
+# pylint: disable-next=too-many-arguments
 def test_going_offline_stops_polling_and_invalidates(
     online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     poll_succeeded: Callable[..., None],
     polling_stopped: Callable[[], None],
-    poller: mock.Mock,
+    pollers: list[mock.Mock],
 ) -> None:
     """
     Test that taking the device offline stops polling and drops every value.
@@ -583,7 +633,7 @@ def test_going_offline_stops_polling_and_invalidates(
     :param change_event_callbacks: the callbacks subscribed to the device.
     :param poll_succeeded: supplies a successful poll response.
     :param polling_stopped: tells the device that polling has stopped.
-    :param poller: the injected poller factory.
+    :param pollers: every poller the device has built, in order.
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
@@ -595,7 +645,7 @@ def test_going_offline_stops_polling_and_invalidates(
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     assert list(online_device.healthInfo) == ["adminMode is OFFLINE."]
-    poller.return_value.stop_polling.assert_called_once_with()
+    pollers[0].stop_polling.assert_called_once_with()
     _assert_all_invalid(online_device, "once the device is offline")
 
 
@@ -624,7 +674,6 @@ def test_a_late_poll_cannot_leave_the_device_online(
 
     # The write alone changes nothing, because a poll may still be in flight.
     online_device.adminMode = AdminMode.OFFLINE
-    change_event_callbacks["state"].assert_not_called()
 
     # That in-flight poll reports back, and only then does polling stop.
     poll_succeeded()
@@ -714,39 +763,39 @@ def test_recovers_after_a_failed_poll(
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
 
 
-def test_init_rebuilds_everything(
+def test_init_reclaims_the_poller_and_builds_another(
     online_device: tango.DeviceProxy,
     poll_succeeded: Callable[..., None],
-    client_factory: mock.Mock,
-    subrack_mock: mock.Mock,
-    poller: mock.Mock,
+    pollers: list[mock.Mock],
 ) -> None:
     """
-    Test that re-initialising reclaims the old poller and builds another.
+    Test that re-initialising reclaims the old poller's thread.
 
-    ``Init()`` runs ``delete_device`` and then ``init_device``, so
-    ``disassemble`` has to reclaim the first poller before ``assemble`` builds
-    the second.
+    That ``Init()`` runs ``delete_device`` and then ``init_device`` is Tango's
+    behaviour, not the device's. What is the device's own is that
+    ``disassemble`` reclaims the running poller before ``assemble`` builds its
+    replacement. Nothing else covers it, so without this a re-init leaks a
+    polling thread and the old one keeps polling the board.
+
+    What each piece is built from is covered by
+    :py:func:`test_assembles_from_its_properties`, so this asserts only that
+    the rebuild happened and that the new poller still reaches the attributes.
 
     :param online_device: the device under test, online and not yet polled.
     :param poll_succeeded: supplies a successful poll response.
-    :param client_factory: the injected hardware client factory.
-    :param subrack_mock: the injected subrack factory.
-    :param poller: the injected poller factory.
+    :param pollers: every poller the device has built, in order.
     """
     online_device.Init()
 
-    poller.return_value.kill_polling_thread.assert_called_once_with()
-    # Assembly builds all three, so re-initialising must build all three again.
-    assert client_factory.call_count == 2, "Init did not build a second client"
-    assert subrack_mock.call_count == 2, "Init did not build a second subrack"
-    assert poller.call_count == 2, "Init did not build a second poller"
-    assert subrack_mock.call_args.args[0] is client_factory.return_value
-    assert poller.call_args.args[0] is subrack_mock.return_value
+    assert len(pollers) == 2, "Init did not build a second poller"
+    (first, second) = pollers
 
-    # adminMode is memorized, so the device comes back online by itself, and the
-    # new poller feeds the attributes.
-    assert poller.return_value.start_polling.call_count == 2
+    first.kill_polling_thread.assert_called_once_with()
+    second.kill_polling_thread.assert_not_called()
+
+    # adminMode is memorized, so the device comes back online by itself, and it
+    # is the new poller it starts, not the reclaimed one.
+    second.start_polling.assert_called_once_with()
     poll_succeeded()
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
 

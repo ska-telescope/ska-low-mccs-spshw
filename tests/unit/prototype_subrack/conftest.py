@@ -24,6 +24,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
     Subrack,
     SubrackPoller,
     SubrackPollResponse,
+    WebHardwareClientWrapper,
 )
 from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
@@ -248,13 +249,32 @@ def callbacks_fixture(
     return (data_callback, error_callback)
 
 
-def make_subrack(
+def make_client_wrapper(
     client: Any,
     logger: logging.Logger,
-    derived: Any,
     *,
     name: str = "no-such-host",
     lock: LogLock | None = None,
+    **kwargs: Any,
+) -> WebHardwareClientWrapper:
+    """
+    Build a client wrapper. This is the only place that calls its constructor.
+
+    :param client: the hardware client, real or fake.
+    :param logger: a logger.
+    :param name: what the wrapper calls the board in the log.
+    :param lock: the client lock, defaulting to a fresh one.
+    :param kwargs: overrides passed to the wrapper.
+
+    :return: a client wrapper.
+    """
+    return WebHardwareClientWrapper(client, name, logger, _lock=lock, **kwargs)
+
+
+def make_subrack(
+    board: WebHardwareClientWrapper,
+    logger: logging.Logger,
+    derived: Any,
     **kwargs: Any,
 ) -> Subrack:
     """
@@ -264,13 +284,11 @@ def make_subrack(
     that wants polling builds a ``SubrackPoller`` around the result and
     is responsible for ending it.
 
-    :param client: the hardware client, real or fake.
+    :param board: the client wrapper the subrack reads through.
     :param logger: a logger.
     :param derived: the computed values. A test that asserts nothing about
         them passes the ``derived`` fixture, so that no real computation runs
         behind the test. One that does passes a real ``DerivedValues``.
-    :param name: what the subrack calls itself in the log.
-    :param lock: the client lock, defaulting to a fresh one.
     :param kwargs: overrides passed to the subrack.
 
     :return: a subrack client.
@@ -281,33 +299,48 @@ def make_subrack(
         "stopped_callback": lambda: None,
     }
     options.update(kwargs)
-    return Subrack(client, derived, name, logger, _lock=lock, **options)
+    return Subrack(board, derived, logger, **options)
+
+
+@pytest.fixture(name="simulated_board")
+def simulated_board_fixture(
+    simulator_address: tuple[str, int],
+    logger: logging.Logger,
+) -> WebHardwareClientWrapper:
+    """
+    Return a client wrapper that talks to a real simulator server over HTTP.
+
+    :param simulator_address: the host and port of the simulator server.
+    :param logger: a logger.
+
+    :return: a client wrapper.
+    """
+    (host, port) = simulator_address
+    return make_client_wrapper(WebHardwareClient(host, port), logger, name=host)
 
 
 @pytest.fixture(name="simulated_subrack")
 def simulated_subrack_fixture(
-    simulator_address: tuple[str, int],
+    simulated_board: WebHardwareClientWrapper,
     logger: logging.Logger,
     derived: mock.Mock,
     callbacks: tuple[Any, Any],
 ) -> Iterator[Subrack]:
     """
-    Return a client that talks to a real simulator server over HTTP.
+    Return a subrack polling a real simulator server over HTTP.
 
-    :param simulator_address: the host and port of the simulator server.
+    :param simulated_board: the board it polls.
     :param logger: a logger.
     :param derived: a stand-in for the computed values.
     :param callbacks: the data callback and the error callback.
 
     :yields: a subrack client.
     """
-    (host, port) = simulator_address
     (data_callback, error_callback) = callbacks
     subrack = make_subrack(
-        WebHardwareClient(host, port),
+        simulated_board,
         logger,
         derived,
-        name=host,
         data_callback=data_callback,
         error_callback=error_callback,
     )
@@ -347,7 +380,7 @@ def healthy_faked_subrack_fixture(
 
 @pytest.fixture(name="faked_subrack")
 def faked_subrack_fixture(
-    fake_client: FakeHardwareClient,
+    faked_board: WebHardwareClientWrapper,
     logger: logging.Logger,
     derived: mock.Mock,
 ) -> Subrack:
@@ -357,10 +390,26 @@ def faked_subrack_fixture(
     A test that has to configure the subrack calls :py:func:`make_subrack`
     itself instead.
 
-    :param fake_client: the fake hardware client.
+    :param faked_board: the board it reads.
     :param logger: a logger.
     :param derived: a stand-in for the computed values.
 
     :return: a subrack client.
     """
-    return make_subrack(fake_client, logger, derived)
+    return make_subrack(faked_board, logger, derived)
+
+
+@pytest.fixture(name="faked_board")
+def faked_board_fixture(
+    fake_client: FakeHardwareClient,
+    logger: logging.Logger,
+) -> WebHardwareClientWrapper:
+    """
+    Return a client wrapper with nothing configured, for a test that runs commands.
+
+    :param fake_client: the fake hardware client.
+    :param logger: a logger.
+
+    :return: a client wrapper.
+    """
+    return make_client_wrapper(fake_client, logger)

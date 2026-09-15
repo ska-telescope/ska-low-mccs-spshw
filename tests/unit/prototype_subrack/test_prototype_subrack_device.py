@@ -8,12 +8,12 @@
 """
 Tests of the prototype subrack Tango device, against a mocked subrack.
 
-The hardware client, the computed values, the subrack and the poller are all
-injected through the device module's :py:func:`subrack_factory`, and all four
-are mocks. So no board
-is reached, no thread is started, and nothing is waited for. A test supplies the
-device with a :py:class:`SubrackPollResponse` and asserts what the device does
-with it, which leaves only the device's own code under test.
+The hardware client, its wrapper, the computed values, the subrack and the
+poller are all injected through the device module's :py:func:`subrack_factory`,
+and all five are mocks. So no board is reached, no lock is taken, no thread is
+started, and nothing is waited for. A test supplies the device with a
+:py:class:`SubrackPollResponse` and asserts what the device does with it, which
+leaves only the device's own code under test.
 
 Two fixtures cover the poller, because a mock with a ``side_effect`` bypasses
 its ``return_value`` and so cannot report what it handed back. ``poller_factory``
@@ -30,6 +30,7 @@ from unittest import mock
 import pytest
 import tango
 from ska_control_model import AdminMode, HealthState
+from ska_tango_base.base import ControlLevel
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
@@ -187,6 +188,20 @@ def client_factory_fixture() -> mock.Mock:
     return mock.Mock(name="client_factory")
 
 
+@pytest.fixture(name="wrapper_factory")
+def wrapper_factory_fixture() -> mock.Mock:
+    """
+    Return the client wrapper factory to inject into the device.
+
+    Nothing calls the wrapper it returns, because the subrack is mocked too.
+    It is injected so that no real lock is ever taken, and so that the client
+    the device wrapped is recorded.
+
+    :return: the factory.
+    """
+    return mock.Mock(name="wrapper_factory")
+
+
 @pytest.fixture(name="derived_factory")
 def derived_factory_fixture() -> mock.Mock:
     """
@@ -252,6 +267,7 @@ def poller_factory_fixture(pollers: list[mock.Mock]) -> mock.Mock:
 @pytest.fixture(name="device_class")
 def device_class_fixture(
     client_factory: mock.Mock,
+    wrapper_factory: mock.Mock,
     derived_factory: mock.Mock,
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
@@ -264,6 +280,7 @@ def device_class_fixture(
     first argument.
 
     :param client_factory: the hardware client factory to inject.
+    :param wrapper_factory: the client wrapper factory to inject.
     :param derived_factory: the derived values factory to inject.
     :param subrack_factory: the subrack factory to inject.
     :param poller_factory: the poller factory to inject.
@@ -272,6 +289,7 @@ def device_class_fixture(
     """
     return device_class_factory(
         web_hardware_client=client_factory,
+        client_wrapper=wrapper_factory,
         derived_values=derived_factory,
         subrack=subrack_factory,
         subrack_poller=poller_factory,
@@ -480,6 +498,7 @@ def _assert_all_invalid(subrack_device: tango.DeviceProxy, why: str) -> None:
 def test_assembles_from_its_properties(
     subrack_device: tango.DeviceProxy,
     client_factory: mock.Mock,
+    wrapper_factory: mock.Mock,
     derived_factory: mock.Mock,
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
@@ -490,6 +509,7 @@ def test_assembles_from_its_properties(
 
     :param subrack_device: the device under test.
     :param client_factory: the injected hardware client factory.
+    :param wrapper_factory: the injected client wrapper factory.
     :param derived_factory: the injected derived values factory.
     :param subrack_factory: the injected subrack factory.
     :param poller_factory: the injected poller factory.
@@ -498,8 +518,13 @@ def test_assembles_from_its_properties(
     assert subrack_device.state() == DevState.DISABLE
 
     client_factory.assert_called_once_with(BOARD_HOST, BOARD_PORT)
-    # The logger and the three callbacks are bound to the device object, which
-    # this test reaches only through a proxy, so they cannot be named here.
+    # The wrapper names its lock after the device, so a lock hold in the log is
+    # attributable to one subrack.
+    wrapper_factory.assert_called_once_with(
+        client_factory.return_value,
+        name=get_prototype_subrack_name(SUBRACK_ID),
+        logger=mock.ANY,
+    )
     derived_factory.assert_called_once_with(
         mock.ANY,
         max_fan_errors=MAX_FAN_ERRORS,
@@ -507,10 +532,11 @@ def test_assembles_from_its_properties(
         attribute_filter_type=FILTER_TYPE,
         attribute_filter_max_samples=FILTER_MAX_SAMPLES,
     )
+    # The logger and the three callbacks are bound to the device object, which
+    # this test reaches only through a proxy, so they cannot be named here.
     subrack_factory.assert_called_once_with(
-        client_factory.return_value,
-        derived=derived_factory.return_value,
-        name=get_prototype_subrack_name(SUBRACK_ID),
+        wrapper_factory.return_value,
+        derived_factory.return_value,
         logger=mock.ANY,
         data_callback=mock.ANY,
         error_callback=mock.ANY,
@@ -520,6 +546,29 @@ def test_assembles_from_its_properties(
         subrack_factory.return_value, UPDATE_RATE, mock.ANY
     )
     pollers[0].start_polling.assert_not_called()
+
+
+def test_a_failed_assembly_leaves_the_device_usable(device_class: type) -> None:
+    """
+    Test that a device which never assembled can still be torn down.
+
+    ``assemble`` builds the poller last, so a failure in the client or the
+    subrack leaves the device without one. Tango still calls ``delete_device``
+    before a retried ``Init()``, and an exception there would hide the error
+    that stopped the assembly. Writing ``adminMode`` must not raise either.
+
+    The calls are made against a stand-in, because a device whose
+    ``init_device`` raised cannot be reached through a proxy.
+
+    :param device_class: the device class to test the methods of.
+    """
+    never_assembled = mock.Mock(spec=["_poller", "logger"], _poller=None)
+
+    device_class.disassemble(never_assembled)
+    device_class.change_control_level(never_assembled, ControlLevel.FULL_CONTROL)
+    device_class.change_control_level(never_assembled, ControlLevel.NO_CONTACT)
+
+    never_assembled.logger.error.assert_called()
 
 
 def test_starts_disabled(
@@ -693,31 +742,41 @@ def test_a_late_poll_cannot_leave_the_device_online(
     _assert_all_invalid(online_device, "once the device is offline")
 
 
+@pytest.mark.parametrize(
+    "exception",
+    [
+        RequestError("Connection refused"),
+        # The client wrapper could not get the board, so nothing was read.
+        TimeoutError("lock not acquired in 60.000s"),
+    ],
+)
 def test_unreachable_subrack_reports_unknown(
     online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     poll_succeeded: Callable[..., None],
     poll_failed: Callable[[Exception], None],
+    exception: Exception,
 ) -> None:
     """
-    Test that a request which never reached the board leaves the state UNKNOWN.
+    Test that a poll which never read the board leaves the state UNKNOWN.
 
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
     :param poll_succeeded: supplies a successful poll response.
     :param poll_failed: supplies a failed poll.
+    :param exception: the failure the poll reports.
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
-    poll_failed(RequestError("Connection refused"))
+    poll_failed(exception)
 
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     health_info = list(online_device.healthInfo)
-    assert health_info[0].startswith("Poll failed with RequestError")
-    assert "Connection refused" in health_info[0]
+    assert health_info[0].startswith(f"Poll failed with {type(exception).__name__}")
+    assert str(exception) in health_info[0]
     _assert_all_invalid(online_device, "when the subrack is unreachable")
 
 

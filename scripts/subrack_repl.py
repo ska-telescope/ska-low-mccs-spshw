@@ -30,6 +30,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
     DerivedValues,
     Subrack,
     SubrackPoller,
+    WebHardwareClientWrapper,
 )
 
 DEFAULT_HOST = "127.0.0.1"
@@ -144,10 +145,10 @@ if client.get_attribute("board_current")["status"] not in ("OK", "ERROR"):
         PORT,
     )
 
+# The wrapper owns the lock that serialises every request to the board.
 subrack = Subrack(
-    client,
+    WebHardwareClientWrapper(client, HOST, LOGGER),
     DerivedValues(LOGGER),
-    HOST,
     LOGGER,
     data_callback=_on_data,
     error_callback=_on_error,

@@ -30,6 +30,7 @@ from tango.server import device_property
 
 from utils import walk
 
+from .client_wrapper import WebHardwareClientWrapper
 from .constants import RequestError
 from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
@@ -79,7 +80,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
-        Build the hardware client, the poll model and the poller.
+        Build everything below the device, in the order they depend on.
 
         Paired with :py:meth:`disassemble`. ``Init()`` runs
         :py:meth:`delete_device` before :py:meth:`init_device`, so
@@ -93,6 +94,9 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         self._poller = None
 
         client = self._web_hardware_client_factory(self.SubrackIp, self.SubrackPort)
+        board = self._client_wrapper_factory(
+            client, name=self.get_name(), logger=self.logger
+        )
         derived = self._derived_values_factory(
             self.logger,
             max_fan_errors=self.MaxFanErrors,
@@ -101,9 +105,8 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             attribute_filter_max_samples=self.AttributeFilterMaxSamples,
         )
         subrack = self._subrack_factory(
-            client,
-            derived=derived,
-            name=self.get_name(),
+            board,
+            derived,
             logger=self.logger,
             data_callback=self._poll_succeeded,
             error_callback=self._poll_failed,
@@ -217,7 +220,12 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         """
         self._invalidate_all()
         # TODO: Jank to be removed when we upgrade ska-tango-base.
-        if isinstance(exception, RequestError) or self.get_state() == DevState.UNKNOWN:
+        # A TimeoutError is the client wrapper failing to get the board, which
+        # also means nothing was read.
+        if (
+            isinstance(exception, (RequestError, TimeoutError))
+            or self.get_state() == DevState.UNKNOWN
+        ):
             self.component_unknown()
         else:
             self.component_fault()
@@ -292,6 +300,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
 
 def subrack_factory(
     web_hardware_client: Any = WebHardwareClient,
+    client_wrapper: Any = WebHardwareClientWrapper,
     derived_values: Any = DerivedValues,
     subrack: Any = Subrack,
     subrack_poller: Any = SubrackPoller,
@@ -301,10 +310,12 @@ def subrack_factory(
 
     :param web_hardware_client: builds the hardware client, from a host and a
         port.
+    :param client_wrapper: builds the serialising wrapper, from a hardware
+        client, the device's name and a logger.
     :param derived_values: builds the computed values, from a logger and the
         device's fan and filter settings.
-    :param subrack: builds the poll model, from a client, the computed values
-        and the device's settings.
+    :param subrack: builds the poll model, from a client wrapper, the computed
+        values and the device's callbacks.
     :param subrack_poller: builds the poller, from a poll model, a poll rate
         and a logger.
 
@@ -315,6 +326,7 @@ def subrack_factory(
         (MccsPrototypeSubrack,),
         {
             "_web_hardware_client_factory": web_hardware_client,
+            "_client_wrapper_factory": client_wrapper,
             "_derived_values_factory": derived_values,
             "_subrack_factory": subrack,
             "_subrack_poller_factory": subrack_poller,

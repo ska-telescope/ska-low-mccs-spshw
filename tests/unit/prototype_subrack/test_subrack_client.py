@@ -14,11 +14,10 @@ simulator server over HTTP.
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import queue
 import threading
-from typing import Any, Iterator
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -30,11 +29,25 @@ from ska_low_mccs_spshw.prototype_subrack import (
     RequestError,
     Subrack,
     SubrackPollResponse,
+    WebHardwareClientWrapper,
 )
 from ska_low_mccs_spshw.prototype_subrack.constants import BATCH_ATTRIBUTES
-from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
 
 from .conftest import FakeHardwareClient, make_subrack
+
+
+def _ok_response() -> dict[str, Any]:
+    """
+    Return a client response that succeeded and carries no value.
+
+    :return: the response.
+    """
+    return {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "",
+        "command": "",
+        "retvalue": None,
+    }
 
 
 def _next_response(
@@ -114,8 +127,8 @@ class TestAgainstSimulator:
         """
         A board command must not wait for a poll slot.
 
-        The command and the poll loop share one lock, and the command takes it
-        on the thread that calls it.
+        The command runs on the thread that calls it, so polling carries on
+        around it.
 
         :param simulated_subrack: the client under test.
         :param responses: the queue that the callbacks feed.
@@ -176,20 +189,27 @@ class TestWhatTheClientAsksTheBoard:
 
         assert fake_client.command_calls == [("get_health_status", "")]
 
-    def test_a_command_is_passed_through_verbatim(
+    def test_a_poll_says_what_it_is_doing(
         self: TestWhatTheClientAsksTheBoard,
-        faked_subrack: Subrack,
-        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+        derived: mock.Mock,
     ) -> None:
         """
-        A command and its argument must reach the board unchanged.
+        A poll must tell the board what the read is for.
 
-        :param faked_subrack: the client under test.
-        :param fake_client: the fake hardware client.
+        The board reports a slow read against this, which is what makes a stall
+        attributable to the poll rather than to a command.
+
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
         """
-        faked_subrack.run_board_command("set_subrack_fan_speed", "2,55")
+        board = mock.Mock()
+        board.read.return_value = ({}, {"get_health_status": _ok_response()})
+        subrack = make_subrack(board, logger, derived)
 
-        fake_client.execute_command.assert_any_call("set_subrack_fan_speed", "2,55")
+        subrack.poll(())
+
+        assert board.read.call_args.kwargs["context"] == "poll sweep"
 
 
 class TestHealthRead:
@@ -430,7 +450,7 @@ class TestErrorBranches:
 
     def test_poll_failure_clears_the_caches(
         self: TestErrorBranches,
-        fake_client: FakeHardwareClient,
+        faked_board: WebHardwareClientWrapper,
         logger: logging.Logger,
         derived: mock.Mock,
     ) -> None:
@@ -441,11 +461,11 @@ class TestErrorBranches:
         spans polls is dropped. What that state is, and what dropping it does,
         is covered in ``test_derived_values``.
 
-        :param fake_client: the fake hardware client.
+        :param faked_board: the board it reads.
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
-        subrack = make_subrack(fake_client, logger, derived)
+        subrack = make_subrack(faked_board, logger, derived)
 
         subrack.poll_failed(RequestError("gone"))
 
@@ -716,19 +736,19 @@ class TestTheCallbacks:
 
     def test_a_successful_poll_reaches_the_data_callback(
         self: TestTheCallbacks,
-        fake_client: FakeHardwareClient,
+        faked_board: WebHardwareClientWrapper,
         logger: logging.Logger,
         derived: mock.Mock,
     ) -> None:
         """
         The data callback must receive the response from a successful poll.
 
-        :param fake_client: the fake hardware client.
+        :param faked_board: the board it reads.
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
         seen: list[SubrackPollResponse] = []
-        subrack = make_subrack(fake_client, logger, derived, data_callback=seen.append)
+        subrack = make_subrack(faked_board, logger, derived, data_callback=seen.append)
         response = SubrackPollResponse()
 
         subrack.poll_succeeded(response)
@@ -737,19 +757,19 @@ class TestTheCallbacks:
 
     def test_a_failed_poll_reaches_the_error_callback(
         self: TestTheCallbacks,
-        fake_client: FakeHardwareClient,
+        faked_board: WebHardwareClientWrapper,
         logger: logging.Logger,
         derived: mock.Mock,
     ) -> None:
         """
         The error callback must receive the exception from a failed poll.
 
-        :param fake_client: the fake hardware client.
+        :param faked_board: the board it reads.
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
         seen: list[Exception] = []
-        subrack = make_subrack(fake_client, logger, derived, error_callback=seen.append)
+        subrack = make_subrack(faked_board, logger, derived, error_callback=seen.append)
         exception = HttpError("boom")
 
         subrack.poll_failed(exception)
@@ -758,7 +778,7 @@ class TestTheCallbacks:
 
     def test_the_end_of_polling_reaches_the_stopped_callback(
         self: TestTheCallbacks,
-        fake_client: FakeHardwareClient,
+        faked_board: WebHardwareClientWrapper,
         logger: logging.Logger,
         derived: mock.Mock,
     ) -> None:
@@ -768,12 +788,12 @@ class TestTheCallbacks:
         This is how a caller settles its own state after the last poll has
         reported back, so a hook that drops it leaves the device waiting.
 
-        :param fake_client: the fake hardware client.
+        :param faked_board: the board it reads.
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
         stopped = mock.Mock()
-        subrack = make_subrack(fake_client, logger, derived, stopped_callback=stopped)
+        subrack = make_subrack(faked_board, logger, derived, stopped_callback=stopped)
 
         subrack.polling_stopped()
 
@@ -786,7 +806,7 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
 
     def test_a_poll_applies_the_derived_values(
         self: TestDerivedValuesWiring,
-        fake_client: FakeHardwareClient,
+        faked_board: WebHardwareClientWrapper,
         logger: logging.Logger,
         derived: mock.Mock,
     ) -> None:
@@ -797,12 +817,12 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
         ``test_derived_values``. A stub that writes one key is enough to show
         that a poll runs them, and that the response carries what they wrote.
 
-        :param fake_client: the fake hardware client.
+        :param faked_board: the board it reads.
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
         derived.apply.side_effect = lambda values, _: values.update({"computed": 42})
-        subrack = make_subrack(fake_client, logger, derived)
+        subrack = make_subrack(faked_board, logger, derived)
 
         response = subrack.poll(subrack.get_request())
 
@@ -811,141 +831,3 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
         assert values is response.values, "the response dropped what they wrote into"
         assert health_status is response.health_status
         assert response.values["computed"] == 42
-
-
-class TestLockContention:
-    """
-    Tests of what happens when the client lock is not free.
-
-    The board fails every request while a command is active, so polls and
-    commands share one lock. These tests cover a lock that another operation
-    still holds.
-    """
-
-    @staticmethod
-    @contextlib.contextmanager
-    def _held(lock: LogLock) -> Iterator[None]:
-        """
-        Hold the lock on another thread for the duration of the block.
-
-        The lock is reentrant, so a second thread is needed to hold it against
-        the caller. Events carry the handshake in both directions.
-
-        :param lock: the lock to hold.
-
-        :yields: once the other thread holds the lock.
-        """
-        holding = threading.Event()
-        release = threading.Event()
-
-        def hold() -> None:
-            with acquire_timeout(lock, 5.0, context="stalled operation"):
-                holding.set()
-                release.wait(5.0)
-
-        thread = threading.Thread(target=hold, daemon=True)
-        thread.start()
-        assert holding.wait(5.0), "the holder thread never acquired the lock"
-        try:
-            yield
-        finally:
-            release.set()
-            thread.join(5.0)
-
-    def test_a_poll_that_cannot_get_the_lock_raises(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-    ) -> None:
-        """
-        A poll must raise when the lock stays busy.
-
-        The poller routes the exception to ``poll_failed``, which the device
-        turns into ``UNKNOWN``.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        """
-        lock = LogLock("busy", logger)
-        subrack = make_subrack(
-            fake_client, logger, derived, lock=lock, lock_timeout=0.01
-        )
-
-        with self._held(lock):
-            with pytest.raises(RequestError, match="still holds the client"):
-                subrack.poll(subrack.get_request())
-
-    def test_a_command_that_cannot_get_the_lock_fails(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-    ) -> None:
-        """
-        A command must fail rather than block its worker thread.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        """
-        subrack = make_subrack(fake_client, logger, derived, lock_timeout=0.01)
-
-        with self._held(subrack._client_lock):
-            (status, message, _) = subrack.run_board_command("turn_on_tpm", "1")
-
-        assert status == BoardCommandStatus.FAILED
-        assert "busy with another operation" in message
-
-    def test_a_poll_reports_how_long_it_held_the_lock(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """
-        A poll must report its lock hold, naming itself as the holder.
-
-        The name is what makes a stalled board attributable to the poll rather
-        than to a command. A threshold of zero reports every hold, so the test
-        needs no delay.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        :param caplog: the pytest log capture fixture.
-        """
-        lock = LogLock("slow", logger, timeout_warning=0.0)
-        subrack = make_subrack(fake_client, logger, derived, lock=lock)
-        fake_client.set_attribute_response(value=None)
-
-        with caplog.at_level(logging.WARNING, logger=logger.name):
-            subrack.poll(subrack.get_request())
-
-        assert "lock slow held for" in caplog.text
-        assert "poll sweep" in caplog.text
-
-    def test_a_command_reports_how_long_it_held_the_lock(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """
-        A command must report its lock hold, naming the command.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        :param caplog: the pytest log capture fixture.
-        """
-        subrack = make_subrack(fake_client, logger, derived, lock_warning=0.0)
-
-        with caplog.at_level(logging.WARNING, logger=logger.name):
-            subrack.run_board_command("turn_on_tpm", "1")
-
-        assert "held for" in caplog.text
-        assert "command turn_on_tpm" in caplog.text

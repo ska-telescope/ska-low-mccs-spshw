@@ -17,8 +17,10 @@ __all__ = [
     "Subrack",
     "SubrackPoller",
     "SubrackPollResponse",
+    "WebHardwareClientWrapper",
 ]
 
+from .client_wrapper import WebHardwareClientWrapper
 from .constants import HttpError, RequestError
 from .derived_values import DerivedValues
 from .prototype_subrack_device import MccsPrototypeSubrack

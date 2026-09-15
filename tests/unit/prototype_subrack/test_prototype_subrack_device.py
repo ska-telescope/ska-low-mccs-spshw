@@ -279,6 +279,24 @@ def poll_failed_fixture(subrack_mock: mock.Mock) -> Callable[[Exception], None]:
     return report
 
 
+@pytest.fixture(name="polling_stopped")
+def polling_stopped_fixture(subrack_mock: mock.Mock) -> Callable[[], None]:
+    """
+    Return a callable that tells the device that polling has stopped.
+
+    :param subrack_mock: the injected subrack factory, which carries the
+        device's stopped callback.
+
+    :return: a callable taking no arguments.
+    """
+
+    def report() -> None:
+        with tango.EnsureOmniThread():
+            subrack_mock.call_args.kwargs["stopped_callback"]()
+
+    return report
+
+
 @pytest.fixture(name="test_context")
 def test_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessContext]:
     """
@@ -429,7 +447,7 @@ def test_assembles_from_its_properties(
     assert subrack_device.state() == DevState.DISABLE
 
     client_factory.assert_called_once_with(BOARD_HOST, BOARD_PORT)
-    # The logger and the two callbacks are bound to the device object, which
+    # The logger and the three callbacks are bound to the device object, which
     # this test reaches only through a proxy, so they cannot be named here.
     subrack_mock.assert_called_once_with(
         client_factory.return_value,
@@ -437,6 +455,7 @@ def test_assembles_from_its_properties(
         logger=mock.ANY,
         data_callback=mock.ANY,
         error_callback=mock.ANY,
+        stopped_callback=mock.ANY,
         max_fan_errors=MAX_FAN_ERRORS,
         max_fan_rpm_delta=MAX_FAN_RPM_DELTA,
         attribute_filter_type=FILTER_TYPE,
@@ -551,6 +570,7 @@ def test_going_offline_stops_polling_and_invalidates(
     online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     poll_succeeded: Callable[..., None],
+    polling_stopped: Callable[[], None],
     poller: mock.Mock,
 ) -> None:
     """
@@ -562,6 +582,7 @@ def test_going_offline_stops_polling_and_invalidates(
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
     :param poll_succeeded: supplies a successful poll response.
+    :param polling_stopped: tells the device that polling has stopped.
     :param poller: the injected poller factory.
     """
     poll_succeeded()
@@ -569,11 +590,50 @@ def test_going_offline_stops_polling_and_invalidates(
     change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
     online_device.adminMode = AdminMode.OFFLINE
+    polling_stopped()
 
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     assert list(online_device.healthInfo) == ["adminMode is OFFLINE."]
     poller.return_value.stop_polling.assert_called_once_with()
+    _assert_all_invalid(online_device, "once the device is offline")
+
+
+def test_a_late_poll_cannot_leave_the_device_online(
+    online_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    poll_succeeded: Callable[..., None],
+    polling_stopped: Callable[[], None],
+) -> None:
+    """
+    Test that a poll which reports back after going offline does not survive.
+
+    ``stop_polling`` does not block, so a poll already in flight still reaches
+    the callbacks and republishes every attribute. The device therefore waits
+    for the poller to say that polling has stopped, which the poller does only
+    after that last report, and goes offline then.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param change_event_callbacks: the callbacks subscribed to the device.
+    :param poll_succeeded: supplies a successful poll response.
+    :param polling_stopped: tells the device that polling has stopped.
+    """
+    poll_succeeded()
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
+
+    # The write alone changes nothing, because a poll may still be in flight.
+    online_device.adminMode = AdminMode.OFFLINE
+    change_event_callbacks["state"].assert_not_called()
+
+    # That in-flight poll reports back, and only then does polling stop.
+    poll_succeeded()
+    polling_stopped()
+
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+    assert online_device.state() == DevState.DISABLE
+    assert list(online_device.healthInfo) == ["adminMode is OFFLINE."]
     _assert_all_invalid(online_device, "once the device is offline")
 
 

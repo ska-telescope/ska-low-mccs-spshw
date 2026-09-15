@@ -333,8 +333,33 @@ class TestDerivedValues:
             pytest.param("", None, id="a string"),
             pytest.param({}, None, id="no supplies"),
             pytest.param({"psus": ""}, None, id="supplies not a mapping"),
-            pytest.param({"psus": {}}, 0, id="no fields"),
-            pytest.param({"psus": {"present": {"PSU1": True}}}, 0, id="no voltages"),
+            pytest.param({"psus": {}}, None, id="no fields"),
+            pytest.param(
+                {"psus": {"present": {"PSU1": True, "PSU2": True}}},
+                None,
+                id="no voltages",
+            ),
+            pytest.param(
+                {
+                    "psus": {
+                        "present": {"PSU1": True, "PSU2": True},
+                        "voltage_in": {"PSU1": 230.0, "PSU2": 230.0},
+                        "voltage_out": {"PSU1": 12.0},
+                    }
+                },
+                None,
+                id="one supply short of a reading",
+            ),
+            pytest.param(
+                {
+                    "psus": {
+                        "voltage_in": {"PSU1": 230.0, "PSU2": 230.0},
+                        "voltage_out": {"PSU1": 0.0, "PSU2": 0.0},
+                    }
+                },
+                None,
+                id="fitted not reported",
+            ),
         ],
     )
     def test_a_health_status_that_does_not_say(

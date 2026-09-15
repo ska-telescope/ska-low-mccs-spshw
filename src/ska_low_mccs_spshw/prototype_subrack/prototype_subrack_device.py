@@ -76,7 +76,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
     # --------------
     _client: WebHardwareClient
     _subrack: Subrack
-    _poller: SubrackPoller
+    _poller: Optional[SubrackPoller] = None
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -86,7 +86,13 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :py:meth:`delete_device` before :py:meth:`init_device`, so
         :py:meth:`disassemble` reclaims the running poller before this builds
         its replacement.
+
+        The poller is dropped before anything is built, so a failure part way
+        through leaves ``_poller`` as ``None`` rather than the reclaimed
+        poller, which would accept ``start_polling`` and then never poll.
         """
+        self._poller = None
+
         self._client = self._web_hardware_client_factory(
             self.SubrackIp, self.SubrackPort
         )
@@ -96,6 +102,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             logger=self.logger,
             data_callback=self._poll_succeeded,
             error_callback=self._poll_failed,
+            stopped_callback=self._polling_stopped,
             max_fan_errors=self.MaxFanErrors,
             max_fan_rpm_delta=self.MaxFanRpmDelta,
             attribute_filter_type=self.AttributeFilterType,
@@ -106,8 +113,9 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
-        """Reclaim the poller's thread."""
-        self._poller.kill_polling_thread()
+        """Reclaim the poller's thread, if there is one to reclaim."""
+        if self._poller is not None:
+            self._poller.kill_polling_thread()
 
     def init_device(self: MccsPrototypeSubrack) -> None:
         """Initialise the device, building the client and the poller."""
@@ -150,11 +158,18 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             subrack.
 
         """
+        if self._poller is None:
+            self.logger.error(
+                "Cannot change control level, because the device did not "
+                "finish initialising. Fix the cause and run Init()."
+            )
+            return
+
         if control_level == ControlLevel.NO_CONTACT:
+            # Stopping does not block, so a poll already in flight still
+            # reports back. The device goes offline in :py:meth:`_polling_stopped`,
+            # which the poller calls after that last report.
             self._poller.stop_polling()
-            self._invalidate_all()
-            self.report_health(HealthState.FAILED, ["adminMode is OFFLINE."])
-            self.component_disconnected()
         else:
             # UNKNOWN until a poll succeeds, because nothing has been read from
             # the board yet.
@@ -210,6 +225,19 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             HealthState.FAILED,
             [f"Poll failed with {type(exception).__name__}. {exception}"],
         )
+
+    def _polling_stopped(self: MccsPrototypeSubrack) -> None:
+        """
+        Take the device offline once polling has really stopped.
+
+        Called on the polling thread after the last poll has reported back, so
+        this always runs after :py:meth:`_poll_succeeded` and
+        :py:meth:`_poll_failed` rather than racing them. That ordering is what
+        stops a late poll from leaving the device ON after it went offline.
+        """
+        self._invalidate_all()
+        self.report_health(HealthState.FAILED, ["adminMode is OFFLINE."])
+        self.component_disconnected()
 
     # ----------------
     # Emission helpers

@@ -157,8 +157,8 @@ class DerivedValues:
             present = field("present", psu)
             voltage_in = field("voltage_in", psu)
             voltage_out = field("voltage_out", psu)
-            if voltage_in is None or voltage_out is None:
-                continue
+            if present is None or voltage_in is None or voltage_out is None:
+                return None
             if present and voltage_out < PSU_DEAD_VOLTAGE_THRESHOLD < voltage_in:
                 dead_count += 1
         return dead_count

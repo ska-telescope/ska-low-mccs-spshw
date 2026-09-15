@@ -112,6 +112,7 @@ no poller of its own, so the two are built in order rather than at once.
 """
 
 
+# pylint: disable=too-many-instance-attributes
 class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     """
     A polling client for an SPS subrack management board.
@@ -129,9 +130,10 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
     :py:class:`~.derived_values.DerivedValues` supplies the computed values.
 
-    The callbacks fire only while the poller is polling. A caller must ignore a
-    late callback that arrives after it stops the poller, because stopping does
-    not block.
+    Every callback runs on the one polling thread, so they never overlap.
+    Stopping the poller does not block, so a poll already in flight still
+    reports back. ``stopped_callback`` runs after that last report, which is
+    how a caller settles its own state once polling has really ended.
     """
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -141,6 +143,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         logger: logging.Logger,
         data_callback: Callable[[SubrackPollResponse], None],
         error_callback: Callable[[Exception], None] | None = None,
+        stopped_callback: Callable[[], None] | None = None,
         max_fan_errors: int = 5,
         max_fan_rpm_delta: float = 25.0,
         attribute_filter_type: str | None = None,
@@ -161,6 +164,8 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         :param logger: a logger for this client to use.
         :param data_callback: called with each successful poll response.
         :param error_callback: called with the exception from a failed poll.
+        :param stopped_callback: called once polling has stopped, after the
+            last poll has reported back.
         :param max_fan_errors: how many consecutive bad fan rpm estimates to
             replace, per fan.
         :param max_fan_rpm_delta: the tolerance, as a percentage of the maximum
@@ -180,6 +185,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         self._lock_timeout = lock_timeout
         self._data_callback = data_callback
         self._error_callback = error_callback
+        self._stopped_callback = stopped_callback
 
         # The board fails every request while a command is active, so all access
         # to the client is serialised. A LogLock reports a long hold and names
@@ -237,6 +243,16 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         return SubrackPollResponse(
             values=values, health_status=health_status, timestamp=time.time()
         )
+
+    def polling_stopped(self: Subrack) -> None:
+        """
+        Tell the stopped callback that polling has ended.
+
+        The poller calls this on the polling thread once the polling loop has
+        exited, which is after the last poll has reported back.
+        """
+        if self._stopped_callback is not None:
+            self._stopped_callback()
 
     def poll_succeeded(self: Subrack, poll_response: SubrackPollResponse) -> None:
         """

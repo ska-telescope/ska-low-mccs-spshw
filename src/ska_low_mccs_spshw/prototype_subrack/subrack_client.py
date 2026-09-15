@@ -143,8 +143,8 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         name: str,
         logger: logging.Logger,
         data_callback: Callable[[SubrackPollResponse], None],
-        error_callback: Callable[[Exception], None] | None = None,
-        stopped_callback: Callable[[], None] | None = None,
+        error_callback: Callable[[Exception], None],
+        stopped_callback: Callable[[], None],
         lock_timeout: float = LOCK_TIMEOUT,
         lock_warning: float = LOCK_WARNING,
         _lock: LogLock | None = None,
@@ -237,8 +237,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         The poller calls this on the polling thread once the polling loop has
         exited, which is after the last poll has reported back.
         """
-        if self._stopped_callback is not None:
-            self._stopped_callback()
+        self._stopped_callback()
 
     def poll_succeeded(self: Subrack, poll_response: SubrackPollResponse) -> None:
         """
@@ -258,8 +257,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         :param exception: the exception raised by the poll.
         """
         self._derived.clear()
-        if self._error_callback is not None:
-            self._error_callback(exception)
+        self._error_callback(exception)
 
     # ----------------
     # Board commands

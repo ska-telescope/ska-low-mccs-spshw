@@ -275,7 +275,11 @@ def make_subrack(
 
     :return: a subrack client.
     """
-    options: dict[str, Any] = {"data_callback": lambda _: None}
+    options: dict[str, Any] = {
+        "data_callback": lambda _: None,
+        "error_callback": lambda _: None,
+        "stopped_callback": lambda: None,
+    }
     options.update(kwargs)
     return Subrack(client, derived, name, logger, _lock=lock, **options)
 

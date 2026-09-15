@@ -8,11 +8,17 @@
 """
 Tests of the prototype subrack Tango device, against a mocked subrack.
 
-The hardware client, the subrack and the poller are all injected through
-:py:func:`subrack_factory`, and all three are mocks. So no board is reached, no
-thread is started, and nothing is waited for. A test supplies the device with a
-:py:class:`SubrackPollResponse` and asserts what the device does with it, which
-leaves only the device's own code under test.
+The hardware client, the computed values, the subrack and the poller are all
+injected through the device module's :py:func:`subrack_factory`, and all four
+are mocks. So no board
+is reached, no thread is started, and nothing is waited for. A test supplies the
+device with a :py:class:`SubrackPollResponse` and asserts what the device does
+with it, which leaves only the device's own code under test.
+
+Two fixtures cover the poller, because a mock with a ``side_effect`` bypasses
+its ``return_value`` and so cannot report what it handed back. ``poller_factory``
+is the factory, for asserting how a poller was built. ``pollers`` is what it
+built, in order, for asserting what became of each one.
 """
 
 from __future__ import annotations
@@ -33,7 +39,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
     SubrackPollResponse,
 )
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
-    subrack_factory,
+    subrack_factory as device_class_factory,
 )
 from tests.harness import (
     SpsTangoTestHarness,
@@ -195,8 +201,8 @@ def derived_factory_fixture() -> mock.Mock:
     return mock.Mock(name="derived_factory")
 
 
-@pytest.fixture(name="subrack_mock")
-def subrack_mock_fixture() -> mock.Mock:
+@pytest.fixture(name="subrack_factory")
+def subrack_factory_fixture() -> mock.Mock:
     """
     Return the subrack factory to inject into the device.
 
@@ -219,8 +225,8 @@ def pollers_fixture() -> list[mock.Mock]:
     return []
 
 
-@pytest.fixture(name="poller")
-def poller_fixture(pollers: list[mock.Mock]) -> mock.Mock:
+@pytest.fixture(name="poller_factory")
+def poller_factory_fixture(pollers: list[mock.Mock]) -> mock.Mock:
     """
     Return the poller factory to inject into the device.
 
@@ -247,8 +253,8 @@ def poller_fixture(pollers: list[mock.Mock]) -> mock.Mock:
 def device_class_fixture(
     client_factory: mock.Mock,
     derived_factory: mock.Mock,
-    subrack_mock: mock.Mock,
-    poller: mock.Mock,
+    subrack_factory: mock.Mock,
+    poller_factory: mock.Mock,
 ) -> type:
     """
     Return the device class with everything below it mocked out.
@@ -259,28 +265,28 @@ def device_class_fixture(
 
     :param client_factory: the hardware client factory to inject.
     :param derived_factory: the derived values factory to inject.
-    :param subrack_mock: the subrack factory to inject.
-    :param poller: the poller factory to inject.
+    :param subrack_factory: the subrack factory to inject.
+    :param poller_factory: the poller factory to inject.
 
     :return: the device class to serve.
     """
-    return subrack_factory(
+    return device_class_factory(
         web_hardware_client=client_factory,
         derived_values=derived_factory,
-        subrack=subrack_mock,
-        subrack_poller=poller,
+        subrack=subrack_factory,
+        subrack_poller=poller_factory,
     )
 
 
 @pytest.fixture(name="poll_succeeded")
-def poll_succeeded_fixture(subrack_mock: mock.Mock) -> Callable[..., None]:
+def poll_succeeded_fixture(subrack_factory: mock.Mock) -> Callable[..., None]:
     """
     Return a callable that supplies the device with one successful poll response.
 
     The omni thread is needed because the device pushes Tango events in
     response, as the real poller wraps its polling loop in one.
 
-    :param subrack_mock: the injected subrack factory, which carries the
+    :param subrack_factory: the injected subrack factory, which carries the
         device's data callback.
 
     :return: a callable taking the values and health status to report.
@@ -296,17 +302,17 @@ def poll_succeeded_fixture(subrack_mock: mock.Mock) -> Callable[..., None]:
             timestamp=TIMESTAMP,
         )
         with tango.EnsureOmniThread():
-            subrack_mock.call_args.kwargs["data_callback"](response)
+            subrack_factory.call_args.kwargs["data_callback"](response)
 
     return report
 
 
 @pytest.fixture(name="poll_failed")
-def poll_failed_fixture(subrack_mock: mock.Mock) -> Callable[[Exception], None]:
+def poll_failed_fixture(subrack_factory: mock.Mock) -> Callable[[Exception], None]:
     """
     Return a callable that supplies the device with one failed poll.
 
-    :param subrack_mock: the injected subrack factory, which carries the
+    :param subrack_factory: the injected subrack factory, which carries the
         device's error callback.
 
     :return: a callable taking the exception to report.
@@ -314,17 +320,17 @@ def poll_failed_fixture(subrack_mock: mock.Mock) -> Callable[[Exception], None]:
 
     def report(exception: Exception) -> None:
         with tango.EnsureOmniThread():
-            subrack_mock.call_args.kwargs["error_callback"](exception)
+            subrack_factory.call_args.kwargs["error_callback"](exception)
 
     return report
 
 
 @pytest.fixture(name="polling_stopped")
-def polling_stopped_fixture(subrack_mock: mock.Mock) -> Callable[[], None]:
+def polling_stopped_fixture(subrack_factory: mock.Mock) -> Callable[[], None]:
     """
     Return a callable that tells the device that polling has stopped.
 
-    :param subrack_mock: the injected subrack factory, which carries the
+    :param subrack_factory: the injected subrack factory, which carries the
         device's stopped callback.
 
     :return: a callable taking no arguments.
@@ -332,7 +338,7 @@ def polling_stopped_fixture(subrack_mock: mock.Mock) -> Callable[[], None]:
 
     def report() -> None:
         with tango.EnsureOmniThread():
-            subrack_mock.call_args.kwargs["stopped_callback"]()
+            subrack_factory.call_args.kwargs["stopped_callback"]()
 
     return report
 
@@ -475,8 +481,8 @@ def test_assembles_from_its_properties(
     subrack_device: tango.DeviceProxy,
     client_factory: mock.Mock,
     derived_factory: mock.Mock,
-    subrack_mock: mock.Mock,
-    poller: mock.Mock,
+    subrack_factory: mock.Mock,
+    poller_factory: mock.Mock,
     pollers: list[mock.Mock],
 ) -> None:
     """
@@ -485,8 +491,8 @@ def test_assembles_from_its_properties(
     :param subrack_device: the device under test.
     :param client_factory: the injected hardware client factory.
     :param derived_factory: the injected derived values factory.
-    :param subrack_mock: the injected subrack factory.
-    :param poller: the injected poller factory.
+    :param subrack_factory: the injected subrack factory.
+    :param poller_factory: the injected poller factory.
     :param pollers: every poller the device has built, in order.
     """
     assert subrack_device.state() == DevState.DISABLE
@@ -501,7 +507,7 @@ def test_assembles_from_its_properties(
         attribute_filter_type=FILTER_TYPE,
         attribute_filter_max_samples=FILTER_MAX_SAMPLES,
     )
-    subrack_mock.assert_called_once_with(
+    subrack_factory.assert_called_once_with(
         client_factory.return_value,
         derived=derived_factory.return_value,
         name=get_prototype_subrack_name(SUBRACK_ID),
@@ -510,7 +516,9 @@ def test_assembles_from_its_properties(
         error_callback=mock.ANY,
         stopped_callback=mock.ANY,
     )
-    poller.assert_called_once_with(subrack_mock.return_value, UPDATE_RATE, mock.ANY)
+    poller_factory.assert_called_once_with(
+        subrack_factory.return_value, UPDATE_RATE, mock.ANY
+    )
     pollers[0].start_polling.assert_not_called()
 
 

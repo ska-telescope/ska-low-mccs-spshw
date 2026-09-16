@@ -105,6 +105,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     LMCDaqTRL = device_property(dtype=str, default_value="")
     BandpassDaqTRL = device_property(dtype=str, default_value="")
+    CalibrationDaqTRL = device_property(dtype=str, default_value="")
     WRENTRL = device_property(dtype=str, default_value="")
 
     AntennaConfigURI = device_property(
@@ -195,6 +196,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
             f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
+            f"\tCalibrationDaqTRL: {self.CalibrationDaqTRL}\n"
             f"\tWRENTRL: '{self.WRENTRL}'\n"
             f"\tWRENHealthCheckFailOnTimeout: {self.WRENHealthCheckFailOnTimeout}\n"
             f"\tWRENHealthCheckTimeout: {self.WRENHealthCheckTimeout}\n"
@@ -298,6 +300,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # It appears the test context inputs a space into empty strings.
             self.LMCDaqTRL if self.LMCDaqTRL != " " else "",
             self.BandpassDaqTRL if self.BandpassDaqTRL != " " else "",
+            self.CalibrationDaqTRL if self.CalibrationDaqTRL != " " else "",
             self.WRENTRL if self.WRENTRL != " " else "",
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,

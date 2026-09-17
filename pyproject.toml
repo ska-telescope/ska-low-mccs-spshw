@@ -123,6 +123,7 @@ docs = [
 spshw = "ska_low_mccs_spshw:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
+MccsPrototypeSubrack = "ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device:main"
 SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
 MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"

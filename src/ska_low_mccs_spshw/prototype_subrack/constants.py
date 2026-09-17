@@ -23,6 +23,8 @@ __all__ = [
     "LOCK_TIMEOUT",
     "LOCK_WARNING",
     "MIN_PWM_DUTY_FRACTION",
+    "PSU_DEAD_VOLTAGE_THRESHOLD",
+    "PSU_NAMES",
     "ReadKey",
     "RequestError",
 ]
@@ -70,6 +72,7 @@ class DerivedKey(str, Enum):
     """The keys computed from a poll rather than read from the board."""
 
     SUBRACK_MAX_FAN_SPEEDS = "subrack_max_fan_speeds"
+    PSU_DEAD_COUNT = "psu_dead_count"
 
 
 class ClientCommand(str, Enum):
@@ -114,6 +117,12 @@ board on a normal network, and far shorter than a stall.
 
 COMMAND_POLL_INTERVAL: Final = 0.1
 """How long, in seconds, between ``command_completed`` probes."""
+
+PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
+"""The power supplies the health status reports on."""
+
+PSU_DEAD_VOLTAGE_THRESHOLD: Final = 1.0
+"""A PSU below this output voltage, in Volts, is supplying nothing."""
 
 MIN_PWM_DUTY_FRACTION: Final = 0.1
 """The floor applied to pwm duty when the fan rpm estimate scales up.

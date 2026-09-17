@@ -27,6 +27,7 @@ from ska_low_mccs_common.component import WebHardwareClient
 
 from ska_low_mccs_spshw.prototype_subrack import (
     BoardCommandStatus,
+    DerivedValues,
     Subrack,
     SubrackPoller,
 )
@@ -145,10 +146,13 @@ if client.get_attribute("board_current")["status"] not in ("OK", "ERROR"):
 
 subrack = Subrack(
     client,
+    DerivedValues(LOGGER),
     HOST,
     LOGGER,
     data_callback=_on_data,
     error_callback=_on_error,
+    # The REPL has no state to settle when polling ends. bye() says so instead.
+    stopped_callback=lambda: None,
 )
 # The subrack answers polls but does not run them. This owns the thread.
 poller = SubrackPoller(subrack, POLL_RATE, LOGGER)

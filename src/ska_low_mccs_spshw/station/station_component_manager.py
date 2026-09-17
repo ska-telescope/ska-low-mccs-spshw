@@ -840,6 +840,10 @@ class SpsStationComponentManager(
 
         self.acquiring_data_for_calibration = threading.Event()
         self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
+        # TRL of the DAQ actually targeted by the in-progress calibration
+        # acquisition (LMC and Calibration DAQ may both be configured and
+        # both live -- only events from this one should feed the queue).
+        self._active_calibration_daq_trl = ""
 
         if antenna_config_uri:
             logger.debug("Retrieving antenna mapping.")
@@ -1521,15 +1525,7 @@ class SpsStationComponentManager(
             data_received_result: tuple[str, str] = state_change.get(
                 "dataReceivedResult", ("", "")
             )
-            if (
-                data_received_result[0] in ("correlator", "tc_correlator")
-                and self.acquiring_data_for_calibration.is_set()
-            ):
-                self.calibration_data_received_queue.put(
-                    json.loads(data_received_result[1])["file_name"]
-                )
-            if self._component_state_callback is not None:
-                self._component_state_callback(dataReceivedResult=data_received_result)
+            self._handle_daq_data_received(fqdn, data_received_result)
 
     @threadsafe
     def _calibration_daq_state_changed(
@@ -1546,15 +1542,37 @@ class SpsStationComponentManager(
             data_received_result: tuple[str, str] = state_change.get(
                 "dataReceivedResult", ("", "")
             )
-            if (
-                data_received_result[0] in ("correlator", "tc_correlator")
-                and self.acquiring_data_for_calibration.is_set()
-            ):
-                self.calibration_data_received_queue.put(
-                    json.loads(data_received_result[1])["file_name"]
-                )
-            if self._component_state_callback is not None:
-                self._component_state_callback(dataReceivedResult=data_received_result)
+            self._handle_daq_data_received(fqdn, data_received_result)
+
+    def _handle_daq_data_received(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        data_received_result: tuple[str, str],
+    ) -> None:
+        """
+        Handle a ``dataReceivedResult`` event raised by an LMC or Calibration DAQ.
+
+        The LMC and Calibration DAQ proxies can both be configured and both
+        live at once, but only one of them is actually targeted by any given
+        calibration acquisition. A correlator result is only fed into the
+        calibration queue if it came from the DAQ currently selected for
+        that acquisition, so an unrelated/stale result from the other DAQ
+        can't be mistaken for the one being waited on.
+
+        :param fqdn: TRL of the DAQ that raised the event.
+        :param data_received_result: the event payload: a (mode, JSON
+            metadata) tuple.
+        """
+        if (
+            fqdn == self._active_calibration_daq_trl
+            and data_received_result[0] in ("correlator", "tc_correlator")
+            and self.acquiring_data_for_calibration.is_set()
+        ):
+            self.calibration_data_received_queue.put(
+                json.loads(data_received_result[1])["file_name"]
+            )
+        if self._component_state_callback is not None:
+            self._component_state_callback(dataReceivedResult=data_received_result)
 
     def _get_calibration_daq(
         self: SpsStationComponentManager,
@@ -2782,7 +2800,7 @@ class SpsStationComponentManager(
         Route data streams to relevant DAQs.
 
         Route integrated data (for bandpasses) over the 1G to bandpass DAQ, route
-        everything else over the 10G to the LMC DAQ.
+        everything else over the 10G to the Calibration DAQ (if available).
 
         :param start_bandpasses: whether to start sending
             integrated data, defaults to deployed default.
@@ -4249,7 +4267,9 @@ class SpsStationComponentManager(
         # Stop any consumers left by a previous run so Start begins from idle.
         self._stop_daq()
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        _, calibration_daq_trl = self._get_calibration_daq()
+        calibration_daq_trl = (
+            self._active_calibration_daq_trl or self._get_calibration_daq()[1]
+        )
         on_command = MccsCommandProxy(calibration_daq_trl, "Start", self.logger)
         result, message = on_command(json.dumps({"modes_to_start": daq_mode}))
         if result != ResultCode.OK:
@@ -4257,7 +4277,9 @@ class SpsStationComponentManager(
 
     def _stop_daq(self: SpsStationComponentManager) -> None:
         self.logger.info("Stopping DAQ")
-        _, calibration_daq_trl = self._get_calibration_daq()
+        calibration_daq_trl = (
+            self._active_calibration_daq_trl or self._get_calibration_daq()[1]
+        )
         off_command = MccsCommandProxy(calibration_daq_trl, "Stop", self.logger)
         result, message = off_command()
         if result != ResultCode.OK:
@@ -4423,6 +4445,7 @@ class SpsStationComponentManager(
                 self._stop_daq()
             except Exception:  # pylint: disable=broad-except
                 self.logger.exception("Failed to stop DAQ on teardown")
+            self._active_calibration_daq_trl = ""
 
         if task_callback:
             if success:
@@ -4461,6 +4484,7 @@ class SpsStationComponentManager(
         """
         calibration_daq_proxy, calibration_daq_trl = self._get_calibration_daq()
         assert calibration_daq_proxy is not None
+        self._active_calibration_daq_trl = calibration_daq_trl
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 

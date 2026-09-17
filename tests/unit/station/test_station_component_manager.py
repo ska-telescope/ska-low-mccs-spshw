@@ -768,6 +768,40 @@ def test_get_calibration_daq_returns_none_when_neither_configured(
     assert trl == ""
 
 
+def test_daq_data_received_ignored_from_non_active_daq(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that a correlator result from the non-active DAQ is ignored.
+
+    LMC and Calibration DAQ proxies can both be configured and both live
+    at once, but only the DAQ actually selected for the current
+    calibration run should feed the calibration queue -- a stray result
+    from the other DAQ must not be mistaken for the one being waited on.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    lmc_trl = "low-mccs/daqreceiver/lmc"
+    calibration_trl = "low-mccs/daqreceiver/calibration"
+    station_component_manager._active_calibration_daq_trl = calibration_trl
+    station_component_manager.acquiring_data_for_calibration.set()
+
+    payload = json.dumps({"file_name": "correlation_burst_0_20240101_1.hdf5"})
+
+    station_component_manager._lmc_daq_state_changed(
+        lmc_trl, dataReceivedResult=("correlator", payload)
+    )
+    assert station_component_manager.calibration_data_received_queue.empty()
+
+    station_component_manager._calibration_daq_state_changed(
+        calibration_trl, dataReceivedResult=("correlator", payload)
+    )
+    assert (
+        station_component_manager.calibration_data_received_queue.get_nowait()
+        == "correlation_burst_0_20240101_1.hdf5"
+    )
+
+
 def test_route_data_routes_channelised_data_to_calibration_daq_when_available(
     station_component_manager: SpsStationComponentManager,
     monkeypatch: pytest.MonkeyPatch,

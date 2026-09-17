@@ -66,11 +66,16 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/sonar-scan.gitlab-ci.yml'
   
-  - project: ska-telescope/ska-python-uv
-    file:
-    - gitlab-ci/python.yml
-    - gitlab-ci/docs-build.yml
+  #- project: ska-telescope/ska-python-uv
+  #  file:
+  #  - gitlab-ci/python.yml
+  #  - gitlab-ci/docs-build.yml
 
+  # Python packages build, lint, test and publish
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/python.gitlab-ci.yml'
+
+  
 docs-build:
   before_script:
   - apt-get update && apt-get install -y --no-install-recommends plantuml

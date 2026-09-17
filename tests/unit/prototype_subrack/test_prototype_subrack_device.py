@@ -623,7 +623,6 @@ def test_missing_health_status_invalidates_only_its_attributes(
     assert online_device.healthState == HealthState.OK
 
 
-# pylint: disable-next=too-many-arguments
 def test_going_offline_stops_polling_and_invalidates(
     online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,

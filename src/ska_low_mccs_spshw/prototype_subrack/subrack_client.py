@@ -14,9 +14,9 @@ commands. The caller supplies the
 :py:class:`~.client_wrapper.WebHardwareClientWrapper` and builds the poller, so
 this module constructs neither.
 
-The wrapper serialises the requests. This module decides what to ask for and
-what the answers mean, so it holds no lock. A board command runs on the thread
-that calls it, so it does not wait for a poll slot.
+The wrapper serialises access to the board. This module decides what to ask
+for and what the answers mean, so it names no lock. A board command runs on the
+thread that calls it, so it does not wait for a poll slot.
 """
 from __future__ import annotations
 
@@ -28,7 +28,10 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Optional, cast
 
-from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
+from ska_low_mccs_common.component import (
+    HardwareClient,
+    HardwareClientResponseStatusCodes,
+)
 from ska_tango_base.poller import Poller, PollModel
 
 from .client_wrapper import WebHardwareClientWrapper
@@ -280,8 +283,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         An SMB command that reports ``STARTED`` is asynchronous. This then
         probes ``command_completed`` until the command finishes, times out, or
-        is aborted. The board is free between those probes, so a poll can run
-        in the gaps and read a board that is busy.
+        is aborted. The board is held for the whole of that, because the SMB
+        fails every request while a command is active. A poll that lands in the
+        middle would read nothing and report the board as busy.
 
         The command runs on the calling thread, so it does not wait for a poll
         slot.
@@ -293,7 +297,10 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         :return: the status, a message, and the returned value.
         """
         try:
-            return self._run_board_command(name, args, abort_event)
+            return self._client.run_exclusively(
+                f"command {name}",
+                lambda board: self._run_board_command(board, name, args, abort_event),
+            )
         except TimeoutError as busy:
             return (
                 BoardCommandStatus.FAILED,
@@ -303,6 +310,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
     def _run_board_command(
         self: Subrack,
+        board: HardwareClient,
         name: str,
         args: str,
         abort_event: Optional[threading.Event],
@@ -310,20 +318,21 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         """
         Run one SMB board command, letting a busy board raise.
 
+        :param board: the held client, which reaches the board directly.
         :param name: the SMB command name.
         :param args: the SMB command argument string.
         :param abort_event: an event that requests an abort when set.
 
         :return: the status, a message, and the returned value.
         """
-        response = self._client.execute_command(name, args)
+        response = board.execute_command(name, args)
         status = response["status"]
         # The board reports both of these either as a status or, when the status
         # is OK, as the returned value.
         retvalue = response["retvalue"] if status == _OK else None
 
         if _STARTED in (status, retvalue):
-            return self._await_command_completion(name, abort_event)
+            return self._await_command_completion(board, name, abort_event)
         if status == _BUSY or retvalue == "FAILED":
             return (
                 BoardCommandStatus.FAILED,
@@ -338,13 +347,15 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             None,
         )
 
-    def _abort_board_command(self: Subrack) -> None:
+    def _abort_board_command(self: Subrack, board: HardwareClient) -> None:
         """
         Ask the board to abort the command it is running.
 
         A board that does not accept the abort is logged and not raised.
+
+        :param board: the held client, which reaches the board directly.
         """
-        response = self._client.execute_command(ClientCommand.ABORT_COMMAND.value)
+        response = board.execute_command(ClientCommand.ABORT_COMMAND.value)
         if response["status"] != _OK:
             self._logger.error(
                 "The board did not accept abort_command. Status '%s'. %s",
@@ -353,11 +364,18 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             )
 
     def _await_command_completion(
-        self: Subrack, name: str, abort_event: Optional[threading.Event]
+        self: Subrack,
+        board: HardwareClient,
+        name: str,
+        abort_event: Optional[threading.Event],
     ) -> tuple[BoardCommandStatus, str, Any]:
         """
         Probe ``command_completed`` until the board command finishes.
 
+        The wrapper holds the board for this whole operation, so nothing else
+        reaches it between probes.
+
+        :param board: the held client, which reaches the board directly.
         :param name: the name of the command being awaited, for the message.
         :param abort_event: an event that requests an abort when set.
 
@@ -368,12 +386,10 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         while time.monotonic() < deadline:
             # Wait between probes, waking at once if an abort is requested.
             if abort.wait(COMMAND_POLL_INTERVAL):
-                self._abort_board_command()
+                self._abort_board_command(board)
                 return (BoardCommandStatus.ABORTED, "The command was aborted.", None)
 
-            response = self._client.execute_command(
-                ClientCommand.COMMAND_COMPLETED.value
-            )
+            response = board.execute_command(ClientCommand.COMMAND_COMPLETED.value)
             status = response["status"]
             if status == _OK:
                 if response.get("retvalue"):

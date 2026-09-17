@@ -302,3 +302,68 @@ class TestSerialisesAccess:
 
         assert isinstance(outcome[0], TimeoutError)
         client.execute_command.assert_not_called()
+
+    def test_a_hold_covers_every_request_in_it(
+        self: TestSerialisesAccess,
+        client: mock.Mock,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        An operation must take the lock once, however many requests it makes.
+
+        Taking it per request would free the board between them, which is what
+        an asynchronous command must not allow.
+
+        :param client: the mock hardware client.
+        :param logger: a logger.
+        """
+        lock = LogLock("handshake", logger)
+        # Counts acquires while still taking the real lock. The bound method is
+        # read before the attribute shadows it, so the side effect is the
+        # original.
+        acquire = mock.Mock(side_effect=lock.acquire)
+        lock.acquire = acquire  # type: ignore[method-assign]
+        wrapper = make_client_wrapper(client, logger, lock=lock)
+
+        def handshake(board: mock.Mock) -> None:
+            board.execute_command("turn_on_tpms", "")
+            board.execute_command("command_completed", "")
+
+        wrapper.run_exclusively("command turn_on_tpms", handshake)
+
+        assert acquire.call_count == 1
+        assert acquire.call_args.kwargs["context"] == "command turn_on_tpms"
+
+    def test_a_poll_cannot_reach_the_board_during_a_hold(
+        self: TestSerialisesAccess,
+        client: mock.Mock,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        A poll on another thread must be refused for the whole of a hold.
+
+        The handshake that follows an asynchronous command rests on this. A
+        poll that got through would read a board that is busy and report every
+        value as unknown.
+
+        :param client: the mock hardware client.
+        :param logger: a logger.
+        """
+        wrapper = make_client_wrapper(client, logger, lock_timeout=0.01)
+        outcome: list[Any] = []
+
+        def poll_from_another_thread() -> None:
+            try:
+                outcome.append(wrapper.read(("tpm_present",), (), "poll sweep"))
+            except TimeoutError as busy:
+                outcome.append(busy)
+
+        def poll_while_the_board_is_held(_: Any) -> None:
+            thread = threading.Thread(target=poll_from_another_thread, daemon=True)
+            thread.start()
+            thread.join(5.0)
+
+        wrapper.run_exclusively("command turn_on_tpms", poll_while_the_board_is_held)
+
+        assert isinstance(outcome[0], TimeoutError)
+        client.get_attribute.assert_not_called()

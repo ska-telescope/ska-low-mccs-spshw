@@ -13,9 +13,15 @@ overlap. :py:class:`WebHardwareClientWrapper` owns the lock that enforces that,
 and passes each call through to a
 :py:class:`~ska_low_mccs_common.component.WebHardwareClient`.
 
-The lock is private, so a caller never takes it. A caller that needs several
-reads to reach the board together asks for them in one
-:py:meth:`~WebHardwareClientWrapper.read`, rather than holding anything.
+The lock is private, so a caller never names it or releases it. A caller that
+needs several reads to reach the board together asks for them in one
+:py:meth:`~WebHardwareClientWrapper.read`. A caller whose operation spans
+several requests, such as the handshake that follows an asynchronous command,
+hands it to :py:meth:`~WebHardwareClientWrapper.run_exclusively`, which holds
+the board for the whole of it.
+
+No caller ever acquires or releases anything. Every hold begins and ends inside
+this class, so no other layer has to get the concurrency right.
 
 Nothing here reads a response. Every method hands back what the client gave, so
 what a status means is the caller's business.
@@ -23,7 +29,8 @@ what a status means is the caller's business.
 from __future__ import annotations
 
 import logging
-from typing import Optional, Sequence
+from collections.abc import Callable, Sequence
+from typing import Optional, TypeVar
 
 from ska_low_mccs_common.component import HardwareClient
 from ska_low_mccs_common.component.hardware_client import (
@@ -36,6 +43,8 @@ from .constants import LOCK_TIMEOUT, LOCK_WARNING
 
 __all__ = ["WebHardwareClientWrapper"]
 
+T = TypeVar("T")
+
 
 class WebHardwareClientWrapper:
     """
@@ -44,6 +53,8 @@ class WebHardwareClientWrapper:
     Each method takes the lock for the whole of itself, so a caller has nothing
     to hold and nothing to release. :py:meth:`read` covers a batch, which is
     what keeps a command from landing part way through a poll sweep.
+    :py:meth:`run_exclusively` covers an operation that no single request
+    completes, so a poll cannot land part way through that either.
 
     A lock that does not come free in time raises ``TimeoutError``, because the
     request never reached the board. The poller routes that to ``poll_failed``,
@@ -118,10 +129,12 @@ class WebHardwareClientWrapper:
         self: WebHardwareClientWrapper, command: str, parameters: str = ""
     ) -> CommandResponseType:
         """
-        Run one command on the board.
+        Run one command on the board, holding it for that one request.
 
-        This covers one request. A command that the board runs asynchronously
-        takes several, and the board is free between them.
+        This is for a command the board completes within the request. A command
+        the board runs asynchronously is not finished when this returns, and the
+        board is free the moment it does, so hand that to
+        :py:meth:`run_exclusively` instead.
 
         :param command: the name of the command to run.
         :param parameters: the command's argument string.
@@ -135,3 +148,34 @@ class WebHardwareClientWrapper:
             context=f"command {command}",
         ):
             return self._client.execute_command(command, parameters)
+
+    def run_exclusively(
+        self: WebHardwareClientWrapper,
+        context: str,
+        operation: Callable[[HardwareClient], T],
+    ) -> T:
+        """
+        Run one operation with the board held for the whole of it.
+
+        The SMB fails every request while a command is active, so an
+        asynchronous command owns the board until its handshake ends, not just
+        for the request that started it. The operation is called with the
+        client this wrapper holds, so every request it makes is covered by the
+        one hold.
+
+        The caller hands over the work rather than the other way about, so it
+        never acquires or releases anything, and it cannot keep the board past
+        the end of the operation. The board is freed however the operation
+        ended.
+
+        :param context: what the caller is doing, reported alongside the holder
+            when the hold is long enough to be logged.
+        :param operation: what to do while the board is held. It is called with
+            the hardware client, and whatever it returns is returned.
+
+        :return: whatever the operation returned.
+        """
+        with acquire_timeout(
+            self._lock, self._lock_timeout, raise_exception=True, context=context
+        ):
+            return operation(self._client)

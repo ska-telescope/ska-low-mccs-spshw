@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+from collections.abc import Callable
 from typing import Any
 from unittest import mock
 
@@ -831,3 +832,98 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
         assert values is response.values, "the response dropped what they wrote into"
         assert health_status is response.health_status
         assert response.values["computed"] == 42
+
+
+# One test, because there is one thing to say about the hold.
+class TestACommandHoldsTheBoard:  # pylint: disable=too-few-public-methods
+    """Tests that an asynchronous command owns the board until it ends."""
+
+    def test_the_board_is_held_across_the_whole_handshake(
+        self: TestACommandHoldsTheBoard,
+        logger: logging.Logger,
+        derived: mock.Mock,
+    ) -> None:
+        """
+        An asynchronous command must hold the board until its handshake ends.
+
+        The SMB fails every request while a command is active, so the board is
+        not free between the ``command_completed`` probes. A hold taken per
+        request would let a poll in, and that poll would read nothing and still
+        report the subrack as healthy.
+
+        The wrapper is a stand-in, because which requests the wrapper runs
+        under one hold is what this asserts, and that is the whole of what the
+        subrack asks of it. How the hold is enforced is the wrapper's own
+        business, covered in ``test_client_wrapper``. Recording the hold and
+        the requests in one list puts the property in the order of the events
+        themselves.
+
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
+        """
+        events: list[str] = []
+        replies = {
+            "turn_on_tpms": [
+                {
+                    "status": HardwareClientResponseStatusCodes.OK.name,
+                    "info": "",
+                    "command": "turn_on_tpms",
+                    "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                }
+            ],
+            "command_completed": [
+                {
+                    "status": HardwareClientResponseStatusCodes.BUSY.name,
+                    "info": "",
+                    "command": "command_completed",
+                    "retvalue": "",
+                },
+                {
+                    "status": HardwareClientResponseStatusCodes.BUSY.name,
+                    "info": "",
+                    "command": "command_completed",
+                    "retvalue": "",
+                },
+                {
+                    "status": HardwareClientResponseStatusCodes.OK.name,
+                    "info": "",
+                    "command": "command_completed",
+                    "retvalue": True,
+                },
+            ],
+        }
+        board = mock.Mock(name="held_board")
+        board.execute_command.side_effect = lambda name, *_: (
+            events.append(f"request {name}") or replies[name].pop(0)
+        )
+
+        def hold(context: str, operation: Callable[[mock.Mock], Any]) -> Any:
+            events.append(f"held for {context}")
+            try:
+                return operation(board)
+            finally:
+                events.append("released")
+
+        board_wrapper = mock.Mock(name="wrapper")
+        board_wrapper.run_exclusively.side_effect = hold
+        # A command sent as a request of its own is the regression this guards
+        # against, so it fails here rather than further down.
+        board_wrapper.execute_command.side_effect = AssertionError(
+            "a command must run inside a hold, not as a request of its own"
+        )
+        subrack = make_subrack(board_wrapper, logger, derived)
+        # Mock the abort event so we don't wait for a real timeout.
+        abort = mock.Mock()
+        abort.wait.return_value = False
+
+        (result, message, _) = subrack.run_board_command("turn_on_tpms", "", abort)
+
+        assert result == BoardCommandStatus.COMPLETED, message
+        assert events == [
+            "held for command turn_on_tpms",
+            "request turn_on_tpms",
+            "request command_completed",
+            "request command_completed",
+            "request command_completed",
+            "released",
+        ]

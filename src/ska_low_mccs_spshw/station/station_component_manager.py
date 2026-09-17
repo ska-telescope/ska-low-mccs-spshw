@@ -759,6 +759,9 @@ class SpsStationComponentManager(
         self._lmc_port = self._destination_port
         self._lmc_payload_length = 8192
 
+        self._calibration_ip = "0.0.0.0"
+        self._calibration_port = self._destination_port
+
         self._desired_beamformer_table = np.zeros(shape=(48, 7), dtype=int)
         self._desired_beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._beamformer_table = np.zeros(shape=(48, 7), dtype=int)
@@ -2800,7 +2803,8 @@ class SpsStationComponentManager(
         Route data streams to relevant DAQs.
 
         Route integrated data (for bandpasses) over the 1G to bandpass DAQ, route
-        everything else over the 10G to the Calibration DAQ (if available).
+        channelised data (for calibration) over the 10G to the calibration DAQ
+        (if available) and everything else over the 10G to the LMC DAQ.
 
         :param start_bandpasses: whether to start sending
             integrated data, defaults to deployed default.
@@ -2808,19 +2812,21 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        channelised_daq_proxy, channelised_daq_trl = self._get_calibration_daq()
+        if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
+            lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
+            self._lmc_ip = lmc_daq_status["Receiver IP"][0]
+            self._lmc_port = lmc_daq_status["Receiver Ports"][0]
+
         if (
-            channelised_daq_proxy is not None
-            and channelised_daq_proxy._proxy is not None
+            self._calibration_daq_proxy is not None
+            and self._calibration_daq_proxy._proxy is not None
         ):
-            self.logger.info(
-                f"Routing channelised data to DAQ at {channelised_daq_trl}"
+            calibration_daq_status = json.loads(
+                self._calibration_daq_proxy._proxy.DaqStatus()
             )
-            channelised_daq_status = json.loads(
-                channelised_daq_proxy._proxy.DaqStatus()
-            )
-            self._lmc_ip = channelised_daq_status["Receiver IP"][0]
-            self._lmc_port = channelised_daq_status["Receiver Ports"][0]
+            self._calibration_ip = calibration_daq_status["Receiver IP"][0]
+            self._calibration_port = calibration_daq_status["Receiver Ports"][0]
+
         if (
             self._bandpass_daq_proxy is not None
             and self._bandpass_daq_proxy._proxy is not None
@@ -2868,6 +2874,29 @@ class SpsStationComponentManager(
             msg = f"Failed to configure LMC download: {lmc_message[0]}"
             self.logger.error(msg)
             return ResultCode.FAILED, msg
+
+        if (
+            self._calibration_daq_proxy is not None
+            and self._calibration_daq_proxy._proxy is not None
+        ):
+            self.logger.info(
+                "Sending channelised data to Calibration Daq: "
+                f"{self._calibration_ip}:{self._calibration_port}"
+            )
+            calibration_result_code, calibration_message = self.set_lmc_download(
+                mode=self._lmc_mode,
+                data_type="channelised",
+                dst_ip=self._calibration_ip,
+                dst_port=self._calibration_port,
+                payload_length=self._lmc_payload_length,
+            )
+            if calibration_result_code[0] != ResultCode.OK:
+                msg = (
+                    "Failed to configure sending channelised data to "
+                    f"calibration daq: {calibration_message[0]}"
+                )
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
 
         if (
             start_bandpasses
@@ -3592,6 +3621,7 @@ class SpsStationComponentManager(
         mode: str,
         payload_length: int,
         dst_ip: str,
+        data_type: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
@@ -3601,6 +3631,7 @@ class SpsStationComponentManager(
         :param mode: '1G' or '10G'
         :param payload_length: SPEAD payload length for LMC packets
         :param dst_ip: Destination IP, defaults to None
+        :param data_type: Data type to configure or `None` for all.
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
 
@@ -3611,6 +3642,7 @@ class SpsStationComponentManager(
         json_param = json.dumps(
             {
                 "mode": mode,
+                "data_type": data_type,
                 "payload_length": payload_length,
                 "destination_ip": dst_ip,
                 "destination_port": int(dst_port),

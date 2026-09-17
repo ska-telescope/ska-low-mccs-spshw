@@ -3697,6 +3697,7 @@ class TileComponentManager(
     def set_lmc_download(
         self: TileComponentManager,
         mode: str,
+        data_type: str | None = None,
         payload_length: int = 1024,
         dst_ip: str = "10.0.10.1",
         src_port: Optional[int] = 0xF0D0,
@@ -3708,6 +3709,7 @@ class TileComponentManager(
         Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param mode: "1G" or "10G"
+        :param data_type: Which data type to configure or `None` for all.
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination IP, defaults to "10.0.10.1"
@@ -3726,6 +3728,7 @@ class TileComponentManager(
                 try:
                     self.tile.set_lmc_download(
                         mode,
+                        data_type=data_type,
                         payload_length=payload_length,
                         dst_ip=dst_ip,
                         src_port=src_port,

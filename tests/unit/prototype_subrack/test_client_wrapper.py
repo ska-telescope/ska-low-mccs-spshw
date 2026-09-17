@@ -19,23 +19,42 @@ The command handshake is covered through
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import threading
-from typing import Any, Iterator
+from typing import Any
 from unittest import mock
 
 import pytest
 
-from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
+from ska_low_mccs_spshw.tile.utils import LogLock
 
 from .conftest import make_client_wrapper
 
 
+@pytest.fixture(name="events")
+def events_fixture() -> list[str]:
+    """
+    Return the list that records what reached the board, and when.
+
+    The lock and the client write to the one list, so a test can assert that
+    every request falls between the hold being taken and freed. That is the
+    property these tests are about, and in this form it is the order of the
+    list itself.
+
+    :return: the events so far.
+    """
+    return []
+
+
 @pytest.fixture(name="client")
-def client_fixture() -> mock.Mock:
+def client_fixture(events: list[str]) -> mock.Mock:
     """
     Return the hardware client that the wrapper passes calls to.
+
+    Each call is recorded and then answered as normal, because the side
+    effects return ``mock.DEFAULT``.
+
+    :param events: the list to record the requests in.
 
     :return: a mock hardware client.
     """
@@ -46,37 +65,45 @@ def client_fixture() -> mock.Mock:
         "command": "",
         "retvalue": "",
     }
+
+    def record_read(name: str) -> Any:
+        events.append(f"read {name}")
+        return mock.DEFAULT
+
+    def record_command(name: str, parameters: str = "") -> Any:
+        events.append(f"command {name}")
+        return mock.DEFAULT
+
+    client.get_attribute.side_effect = record_read
+    client.execute_command.side_effect = record_command
     return client
 
 
-@contextlib.contextmanager
-def held(lock: LogLock) -> Iterator[None]:
+@pytest.fixture(name="lock")
+def lock_fixture(events: list[str]) -> mock.Mock:
     """
-    Hold the lock on another thread for the duration of the block.
+    Return a stand-in for the client lock, which records when it is held.
 
-    The lock is reentrant, so a second thread is needed to hold it against the
-    caller. Events carry the handshake in both directions.
+    A stand-in rather than a real lock, because what these tests assert is
+    that the wrapper takes the hold once and frees it, not that a
+    :py:class:`~ska_low_mccs_spshw.tile.utils.LogLock` excludes anybody. That
+    is the lock's own business. It is specced, so
+    :py:func:`~ska_low_mccs_spshw.tile.utils.acquire_timeout` still treats it
+    as the real class.
 
-    :param lock: the lock to hold.
+    :param events: the list to record the hold in.
 
-    :yields: once the other thread holds the lock.
+    :return: a mock lock, which grants every acquire.
     """
-    holding = threading.Event()
-    release = threading.Event()
+    lock = mock.Mock(spec=LogLock)
 
-    def hold() -> None:
-        with acquire_timeout(lock, 5.0, context="stalled operation"):
-            holding.set()
-            release.wait(5.0)
+    def take(timeout: float, context: str) -> bool:
+        events.append(f"held for {context}")
+        return True
 
-    thread = threading.Thread(target=hold, daemon=True)
-    thread.start()
-    assert holding.wait(5.0), "the holder thread never acquired the lock"
-    try:
-        yield
-    finally:
-        release.set()
-        thread.join(5.0)
+    lock.acquire.side_effect = take
+    lock.release.side_effect = lambda: events.append("freed")
+    return lock
 
 
 class TestPassesCallsThrough:
@@ -190,139 +217,64 @@ class TestSerialisesAccess:
     """
     Tests that only one operation reaches the board at a time.
 
-    Every operation the wrapper offers takes the lock for the whole of itself.
-    A caller has nothing to hold, so these drive each operation against a lock
-    that another thread already holds.
+    Every operation the wrapper offers takes the lock for the whole of itself,
+    so a caller has nothing to hold. Most of these drive a stand-in lock and
+    assert the order of what it recorded, which needs no thread and no clock.
+    The last one runs a real lock against a second thread, because a stand-in
+    can show that the wrapper asked for the hold but not that the hold works.
     """
 
-    def test_a_batch_read_takes_the_lock(
+    def test_a_batch_read_is_one_hold_around_every_request(
         self: TestSerialisesAccess,
         client: mock.Mock,
+        lock: mock.Mock,
         logger: logging.Logger,
+        events: list[str],
     ) -> None:
         """
-        A batch read must take the lock, so no command lands part way through.
+        A batch must take the hold once, around every request it makes.
+
+        Taking it per name would free the board between the reads, and would
+        overwrite the holder the batch recorded, so the log would name the last
+        read rather than the sweep that stalled.
 
         :param client: the mock hardware client.
+        :param lock: the stand-in client lock.
         :param logger: a logger.
+        :param events: what reached the board, in order.
         """
-        lock = LogLock("busy", logger)
-        wrapper = make_client_wrapper(client, logger, lock=lock, lock_timeout=0.01)
-
-        with held(lock):
-            with pytest.raises(TimeoutError):
-                wrapper.read(("tpm_present",), (), "poll sweep")
-
-        client.get_attribute.assert_not_called()
-
-    def test_the_lock_is_taken_once_for_a_whole_batch(
-        self: TestSerialisesAccess,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A batch must take the lock once, not once per name.
-
-        Taking it again would overwrite the holder that the batch recorded, so
-        the log would name the last read rather than the sweep that stalled.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        lock = LogLock("sweep", logger)
-        # Counts acquires while still taking the real lock. The bound method is
-        # read before the attribute shadows it, so the side effect is the
-        # original.
-        acquire = mock.Mock(side_effect=lock.acquire)
-        lock.acquire = acquire  # type: ignore[method-assign]
         wrapper = make_client_wrapper(client, logger, lock=lock)
 
         wrapper.read(
             ("tpm_present", "board_current"), ("get_health_status",), "poll sweep"
         )
 
-        assert acquire.call_count == 1
-        assert acquire.call_args.kwargs["context"] == "poll sweep"
+        assert events == [
+            "held for poll sweep",
+            "read tpm_present",
+            "read board_current",
+            "command get_health_status",
+            "freed",
+        ]
 
-    def test_the_lock_is_freed_when_a_read_raises(
+    def test_an_operation_is_one_hold_around_every_request(
         self: TestSerialisesAccess,
         client: mock.Mock,
+        lock: mock.Mock,
         logger: logging.Logger,
+        events: list[str],
     ) -> None:
         """
-        A batch must free the lock even when a read raises.
-
-        A client that raises must not strand the lock, or every later poll
-        would time out against a board that is perfectly healthy.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger, lock_timeout=0.01)
-        client.get_attribute.side_effect = ValueError("the client gave up")
-
-        with pytest.raises(ValueError):
-            wrapper.read(("tpm_present",), (), "poll sweep")
-
-        client.get_attribute.side_effect = None
-        assert wrapper.read(("tpm_present",), (), "poll sweep")[0]
-
-    def test_another_thread_waits_for_a_batch_read(
-        self: TestSerialisesAccess,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A command on another thread must be refused while a batch read runs.
-
-        The batch is held over the calls the client makes, so the wait is
-        driven from inside the client rather than around the wrapper.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger, lock_timeout=0.01)
-        outcome: list[Any] = []
-
-        def run_a_command_from_another_thread(_: str) -> Any:
-            def call_it() -> None:
-                try:
-                    outcome.append(wrapper.execute_command("turn_on_tpm", "1"))
-                except TimeoutError as busy:
-                    outcome.append(busy)
-
-            thread = threading.Thread(target=call_it, daemon=True)
-            thread.start()
-            thread.join(5.0)
-            return mock.DEFAULT
-
-        client.get_attribute.side_effect = run_a_command_from_another_thread
-
-        wrapper.read(("tpm_present",), (), "poll sweep")
-
-        assert isinstance(outcome[0], TimeoutError)
-        client.execute_command.assert_not_called()
-
-    def test_a_hold_covers_every_request_in_it(
-        self: TestSerialisesAccess,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        An operation must take the lock once, however many requests it makes.
+        An operation must take the hold once, however many requests it makes.
 
         Taking it per request would free the board between them, which is what
-        an asynchronous command must not allow.
+        the handshake after an asynchronous command must not allow.
 
         :param client: the mock hardware client.
+        :param lock: the stand-in client lock.
         :param logger: a logger.
+        :param events: what reached the board, in order.
         """
-        lock = LogLock("handshake", logger)
-        # Counts acquires while still taking the real lock. The bound method is
-        # read before the attribute shadows it, so the side effect is the
-        # original.
-        acquire = mock.Mock(side_effect=lock.acquire)
-        lock.acquire = acquire  # type: ignore[method-assign]
         wrapper = make_client_wrapper(client, logger, lock=lock)
 
         def handshake(board: mock.Mock) -> None:
@@ -331,20 +283,81 @@ class TestSerialisesAccess:
 
         wrapper.run_exclusively("command turn_on_tpms", handshake)
 
-        assert acquire.call_count == 1
-        assert acquire.call_args.kwargs["context"] == "command turn_on_tpms"
+        assert events == [
+            "held for command turn_on_tpms",
+            "command turn_on_tpms",
+            "command command_completed",
+            "freed",
+        ]
 
-    def test_a_poll_cannot_reach_the_board_during_a_hold(
+    def test_a_board_that_is_not_free_is_never_reached(
+        self: TestSerialisesAccess,
+        client: mock.Mock,
+        lock: mock.Mock,
+        logger: logging.Logger,
+        events: list[str],
+    ) -> None:
+        """
+        A hold that does not come free must raise, having made no request.
+
+        The poller routes the exception to ``poll_failed``, which the device
+        turns into ``UNKNOWN``. A request that went ahead anyway would report a
+        value the board never gave.
+
+        :param client: the mock hardware client.
+        :param lock: the stand-in client lock.
+        :param logger: a logger.
+        :param events: what reached the board, in order.
+        """
+        # A lock that never comes free, without anything having to hold it.
+        lock.acquire.side_effect = None
+        lock.acquire.return_value = False
+        wrapper = make_client_wrapper(client, logger, lock=lock)
+
+        with pytest.raises(TimeoutError):
+            wrapper.read(("tpm_present",), (), "poll sweep")
+
+        assert events == []
+        lock.release.assert_not_called()
+
+    def test_the_board_is_freed_when_an_operation_raises(
+        self: TestSerialisesAccess,
+        client: mock.Mock,
+        lock: mock.Mock,
+        logger: logging.Logger,
+        events: list[str],
+    ) -> None:
+        """
+        An operation must free the board even when it raises.
+
+        A client that raises must not strand the hold, or every later poll
+        would time out against a board that is perfectly healthy.
+
+        :param client: the mock hardware client.
+        :param lock: the stand-in client lock.
+        :param logger: a logger.
+        :param events: what reached the board, in order.
+        """
+        client.get_attribute.side_effect = ValueError("the client gave up")
+        wrapper = make_client_wrapper(client, logger, lock=lock)
+
+        with pytest.raises(ValueError):
+            wrapper.read(("tpm_present",), (), "poll sweep")
+
+        assert events == ["held for poll sweep", "freed"]
+
+    def test_another_thread_really_is_shut_out(
         self: TestSerialisesAccess,
         client: mock.Mock,
         logger: logging.Logger,
     ) -> None:
         """
-        A poll on another thread must be refused for the whole of a hold.
+        A second thread must be refused for the whole of a hold.
 
-        The handshake that follows an asynchronous command rests on this. A
-        poll that got through would read a board that is busy and report every
-        value as unknown.
+        This one uses the real lock, because the others prove only that the
+        wrapper asks for a hold. Whether the hold shuts anybody out is what
+        this asserts, and nothing but a second thread can show it. The wait is
+        driven from inside the operation, so it happens while the hold is on.
 
         :param client: the mock hardware client.
         :param logger: a logger.
@@ -358,12 +371,14 @@ class TestSerialisesAccess:
             except TimeoutError as busy:
                 outcome.append(busy)
 
-        def poll_while_the_board_is_held(_: Any) -> None:
+        def wait_for_it_while_the_board_is_held(_: Any) -> None:
             thread = threading.Thread(target=poll_from_another_thread, daemon=True)
             thread.start()
             thread.join(5.0)
 
-        wrapper.run_exclusively("command turn_on_tpms", poll_while_the_board_is_held)
+        wrapper.run_exclusively(
+            "command turn_on_tpms", wait_for_it_while_the_board_is_held
+        )
 
         assert isinstance(outcome[0], TimeoutError)
         client.get_attribute.assert_not_called()

@@ -7,11 +7,11 @@ removes.
 
 Start a subrack simulator in another terminal first::
 
-    PYTHONPATH=src python scripts/prototype_subrack_device.py
+    PYTHONPATH=src python scripts/run_prototype_subrack_device_server.py
 
 Against a real board, or a simulator elsewhere::
 
-    PYTHONPATH=src python scripts/prototype_subrack_device.py 10.0.10.80 8081
+    PYTHONPATH=src python scripts/run_prototype_subrack_device_server.py 10.0.10.80 8081
 
 The script prints the TRL to connect with. From another process, with the
 device online by default::

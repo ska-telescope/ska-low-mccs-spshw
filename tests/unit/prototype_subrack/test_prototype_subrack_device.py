@@ -36,6 +36,7 @@ from tango import DevState
 
 from ska_low_mccs_spshw.prototype_subrack import (
     HttpError,
+    MccsPrototypeSubrack,
     RequestError,
     SubrackPollResponse,
 )
@@ -271,7 +272,7 @@ def device_class_fixture(
     derived_factory: mock.Mock,
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
-) -> type:
+) -> type[MccsPrototypeSubrack]:
     """
     Return the device class with everything below it mocked out.
 
@@ -548,7 +549,9 @@ def test_assembles_from_its_properties(
     pollers[0].start_polling.assert_not_called()
 
 
-def test_a_failed_assembly_leaves_the_device_usable(device_class: type) -> None:
+def test_a_failed_assembly_leaves_the_device_usable(
+    device_class: type[MccsPrototypeSubrack],
+) -> None:
     """
     Test that a device which never assembled can still be torn down.
 

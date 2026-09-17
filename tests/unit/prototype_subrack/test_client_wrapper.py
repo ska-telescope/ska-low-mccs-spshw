@@ -25,6 +25,7 @@ from typing import Any
 from unittest import mock
 
 import pytest
+from ska_low_mccs_common.component import HardwareClient
 
 from ska_low_mccs_spshw.tile.utils import LogLock
 
@@ -277,7 +278,7 @@ class TestSerialisesAccess:
         """
         wrapper = make_client_wrapper(client, logger, lock=lock)
 
-        def handshake(board: mock.Mock) -> None:
+        def handshake(board: HardwareClient) -> None:
             board.execute_command("turn_on_tpms", "")
             board.execute_command("command_completed", "")
 

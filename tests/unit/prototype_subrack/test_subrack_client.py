@@ -862,7 +862,7 @@ class TestACommandHoldsTheBoard:  # pylint: disable=too-few-public-methods
         :param derived: a stand-in for the computed values.
         """
         events: list[str] = []
-        replies = {
+        replies: dict[str, list[dict[str, Any]]] = {
             "turn_on_tpms": [
                 {
                     "status": HardwareClientResponseStatusCodes.OK.name,
@@ -893,9 +893,12 @@ class TestACommandHoldsTheBoard:  # pylint: disable=too-few-public-methods
             ],
         }
         board = mock.Mock(name="held_board")
-        board.execute_command.side_effect = lambda name, *_: (
-            events.append(f"request {name}") or replies[name].pop(0)
-        )
+
+        def answer(name: str, *_: Any) -> Any:
+            events.append(f"request {name}")
+            return replies[name].pop(0)
+
+        board.execute_command.side_effect = answer
 
         def hold(context: str, operation: Callable[[mock.Mock], Any]) -> Any:
             events.append(f"held for {context}")

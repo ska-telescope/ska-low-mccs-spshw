@@ -203,6 +203,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         self.component_on()
         self.component_no_fault()
         self.report_health(HealthState.OK, [])
+        self.logger.debug("Poll succeeded")
 
     def _poll_failed(self: MccsPrototypeSubrack, exception: Exception) -> None:
         """

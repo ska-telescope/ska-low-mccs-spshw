@@ -15,6 +15,7 @@ nothing but a logger.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any, Optional
 
 import pytest
@@ -233,6 +234,70 @@ class TestDerivedValues:
         assert values["tpm_currents"] == pytest.approx([5.0])
         assert values["tpm_powers"] == pytest.approx([100.0])
         assert values["tpm_voltages"] == pytest.approx([12.0])
+
+    def test_a_bay_that_is_off_reads_as_nan(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        A bay the board reports as ``None`` must read as ``nan``.
+
+        The board reports ``None`` for a bay whose TPM is powered off. Tango
+        cannot push ``None`` inside a float spectrum, so the whole attribute
+        would fail to update and the bays that are on would be lost with it.
+
+        :param logger: a logger.
+        """
+        derived = self._derived(logger)
+        values: dict[str, Any] = {"tpm_voltages": [12.0, None, 11.9, None]}
+
+        derived.apply(values)
+
+        assert values["tpm_voltages"][0] == pytest.approx(12.0)
+        assert values["tpm_voltages"][2] == pytest.approx(11.9)
+        assert math.isnan(values["tpm_voltages"][1])
+        assert math.isnan(values["tpm_voltages"][3])
+
+    def test_a_subrack_with_nothing_on_reads_as_all_nan(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        A board that reports every bay as ``None`` must not fail the poll.
+
+        This is a subrack with no TPM powered on, which is an ordinary state
+        and not an error.
+
+        :param logger: a logger.
+        """
+        derived = self._derived(logger)
+        values: dict[str, Any] = {"tpm_voltages": [None] * 8}
+
+        derived.apply(values)
+
+        assert all(math.isnan(reading) for reading in values["tpm_voltages"])
+
+    @pytest.mark.parametrize("filter_type", ["mean", "median"])
+    def test_a_bay_that_is_off_is_left_out_of_the_filter(
+        self: TestDerivedValues, logger: logging.Logger, filter_type: str
+    ) -> None:
+        """
+        A bay that is off must not drag down the average of the bays that are on.
+
+        The filter skips ``nan``, so the bays that are on average against each
+        other alone. Passing the board's ``None`` straight in raises instead.
+
+        :param logger: a logger.
+        :param filter_type: the noise filter to apply.
+        """
+        derived = self._derived(
+            logger, attribute_filter_type=filter_type, attribute_filter_max_samples=5
+        )
+
+        derived.apply({"tpm_voltages": [12.0, None]})
+        values: dict[str, Any] = {"tpm_voltages": [11.0, None]}
+        derived.apply(values)
+
+        assert values["tpm_voltages"][0] == pytest.approx(11.5)
+        assert math.isnan(values["tpm_voltages"][1])
 
     def test_unknown_value_clears_the_filter(
         self: TestDerivedValues, logger: logging.Logger

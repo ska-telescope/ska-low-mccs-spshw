@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Optional, cast
@@ -104,8 +104,8 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     A polling client for an SPS subrack management board.
 
     A Tango device holds one of these, and a ``SubrackPoller`` built
-    around it. The poller owns the thread and its lifetime, and this class
-    supplies the work: it answers each poll, and it runs board commands.
+    around it. The poller owns the thread and its lifetime. This class
+    supplies the work. It answers each poll, and it runs board commands.
 
     Each poll reads a batch of attributes over HTTP, then the health status. A
     transport failure is raised as :py:class:`RequestError` or
@@ -175,8 +175,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         :return: the poll response.
         """
         health = ClientCommand.GET_HEALTH_STATUS.value
-        (attributes, commands) = self._client.read(
-            poll_request, (health,), context="poll sweep"
+        (attributes, commands) = self._client.run_exclusively(
+            "poll sweep",
+            lambda board: self._sweep(poll_request, (health,), board),
         )
 
         values = {
@@ -226,6 +227,72 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     # ----------------
     # Reads
     # ----------------
+    @staticmethod
+    def _raise_for_transport_error(response: Any) -> None:
+        """
+        Raise if the board could not be reached at all.
+
+        :py:meth:`_sweep` runs this against each response as it arrives, so
+        that a board which has stopped answering ends the sweep on its first
+        unanswered request rather than after every name has cost the client its
+        full timeout.
+
+        A board that answers, even to refuse, is reachable, so nothing raises
+        here and the sweep carries on. :py:meth:`_value_of` decides what such
+        an answer is worth.
+
+        :param response: the response the client gave.
+
+        :raises HttpError: if the board answered with an HTTP error.
+        :raises RequestError: if the request never reached the board.
+        """
+        status = response["status"]
+        if status == _HTTP_ERROR:
+            raise HttpError(str(response["info"]))
+        if status == _REQUEST_EXCEPTION:
+            raise RequestError(str(response["info"]))
+
+    def _sweep(
+        self: Subrack,
+        attributes: Sequence[str],
+        commands: Sequence[str],
+        board: HardwareClient,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """
+        Read a batch of attributes, then run a batch of read-only commands.
+
+        This runs with the board held for the whole of it, so nothing reaches
+        the board part way through and every value describes the one moment.
+
+        A board that has stopped answering ends the sweep at its first
+        unanswered request. Reading on would cost the client its full timeout
+        once per name, with the board held for all of it, which outlasts
+        ``LOCK_TIMEOUT`` and fails whatever command was waiting, and delays the
+        move to ``UNKNOWN`` by the same amount.
+
+        :param attributes: the attribute names to read.
+        :param commands: the names of the commands to run, each with no
+            arguments. These are for commands that only report, such as
+            ``get_health_status``.
+        :param board: the hardware client, held for the whole sweep.
+
+        :return: the attribute responses and the command responses, each keyed
+            by the name that was asked for.
+        """
+        attributes_read: dict[str, Any] = {}
+        for name in attributes:
+            attribute_response = board.get_attribute(name)
+            self._raise_for_transport_error(attribute_response)
+            attributes_read[name] = attribute_response
+
+        commands_run: dict[str, Any] = {}
+        for name in commands:
+            command_response = board.execute_command(name, "")
+            self._raise_for_transport_error(command_response)
+            commands_run[name] = command_response
+
+        return (attributes_read, commands_run)
+
     def _value_of(self: Subrack, name: str, response: Any, key: str) -> Any:
         """
         Return the value in one client response, or ``None`` if it has none.
@@ -233,15 +300,16 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         A board that answers but supplies nothing gives ``None``, which the
         device turns into invalid attribute quality. Only a failure to reach
         the board at all raises, so that the poller routes it to
-        :py:meth:`poll_failed` and the device changes operational state.
+        :py:meth:`poll_failed` and the device changes operational state. That
+        raise comes from :py:meth:`_raise_for_transport_error`, which a sweep
+        has already run against this response, so it fires here only for a
+        response that did not arrive through one.
 
         :param name: the attribute or command that was asked for, for the log.
         :param response: the response the client gave for it.
         :param key: which field of the response carries the value. An
             attribute read answers in ``value`` and a command in ``retvalue``.
 
-        :raises HttpError: if the board answered with an HTTP error.
-        :raises RequestError: if the request never reached the board.
         :raises ValueError: if the client returns an unknown status code.
 
         :return: the value, or ``None`` when the board did not supply one.
@@ -249,10 +317,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         status = response["status"]
         if status == _OK:
             return response[key]
-        if status == _HTTP_ERROR:
-            raise HttpError(str(response["info"]))
-        if status == _REQUEST_EXCEPTION:
-            raise RequestError(str(response["info"]))
+        self._raise_for_transport_error(response)
         if status in _IN_BAND_ERRORS:
             self._logger.warning(
                 "'%s' returned status '%s'. %s",

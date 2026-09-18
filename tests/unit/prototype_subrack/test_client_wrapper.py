@@ -32,6 +32,17 @@ from ska_low_mccs_spshw.tile.utils import LogLock
 from .conftest import make_client_wrapper
 
 
+def _read_one_attribute(board: HardwareClient) -> Any:
+    """
+    Read a single attribute, as something for a hold to be taken around.
+
+    :param board: the hardware client, held for the whole of this.
+
+    :return: whatever the client answered.
+    """
+    return board.get_attribute("tpm_present")
+
+
 @pytest.fixture(name="events")
 def events_fixture() -> list[str]:
     """
@@ -107,113 +118,6 @@ def lock_fixture(events: list[str]) -> mock.Mock:
     return lock
 
 
-class TestPassesCallsThrough:
-    """Tests that the wrapper gives the client every call unchanged."""
-
-    def test_a_command_reaches_the_client(
-        self: TestPassesCallsThrough,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A command must reach the client, arguments and all.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger)
-
-        wrapper.execute_command("turn_on_tpm", "1")
-
-        client.execute_command.assert_called_once_with("turn_on_tpm", "1")
-
-    def test_a_command_defaults_to_no_arguments(
-        self: TestPassesCallsThrough,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A command given no arguments must still reach the client with a string.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger)
-
-        wrapper.execute_command("command_completed")
-
-        client.execute_command.assert_called_once_with("command_completed", "")
-
-
-class TestReadsABatch:
-    """Tests of the batch read that a poll sweep is made of."""
-
-    def test_it_reads_every_name_in_order(
-        self: TestReadsABatch,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A batch must read every attribute, then run every command.
-
-        The order matters, because the board answers a command with the state
-        that the attribute reads have already reported.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger)
-
-        wrapper.read(("tpm_present", "board_current"), ("get_health_status",), "sweep")
-
-        assert client.get_attribute.call_args_list == [
-            mock.call("tpm_present"),
-            mock.call("board_current"),
-        ]
-        client.execute_command.assert_called_once_with("get_health_status", "")
-
-    def test_it_returns_a_response_for_every_name(
-        self: TestReadsABatch,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A batch must answer every name it was given, under that name.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger)
-
-        (attributes, commands) = wrapper.read(
-            ("tpm_present", "board_current"), ("get_health_status",), "sweep"
-        )
-
-        assert sorted(attributes) == ["board_current", "tpm_present"]
-        assert list(commands) == ["get_health_status"]
-        assert attributes["tpm_present"] is client.get_attribute.return_value
-
-    def test_an_empty_batch_reaches_the_board_for_nothing(
-        self: TestReadsABatch,
-        client: mock.Mock,
-        logger: logging.Logger,
-    ) -> None:
-        """
-        A batch of no names must make no request at all.
-
-        :param client: the mock hardware client.
-        :param logger: a logger.
-        """
-        wrapper = make_client_wrapper(client, logger)
-
-        (attributes, commands) = wrapper.read((), (), "sweep")
-
-        assert not attributes
-        assert not commands
-        client.get_attribute.assert_not_called()
-        client.execute_command.assert_not_called()
-
-
 class TestSerialisesAccess:
     """
     Tests that only one operation reaches the board at a time.
@@ -224,39 +128,6 @@ class TestSerialisesAccess:
     The last one runs a real lock against a second thread, because a stand-in
     can show that the wrapper asked for the hold but not that the hold works.
     """
-
-    def test_a_batch_read_is_one_hold_around_every_request(
-        self: TestSerialisesAccess,
-        client: mock.Mock,
-        lock: mock.Mock,
-        logger: logging.Logger,
-        events: list[str],
-    ) -> None:
-        """
-        A batch must take the hold once, around every request it makes.
-
-        Taking it per name would free the board between the reads, and would
-        overwrite the holder the batch recorded, so the log would name the last
-        read rather than the sweep that stalled.
-
-        :param client: the mock hardware client.
-        :param lock: the stand-in client lock.
-        :param logger: a logger.
-        :param events: what reached the board, in order.
-        """
-        wrapper = make_client_wrapper(client, logger, lock=lock)
-
-        wrapper.read(
-            ("tpm_present", "board_current"), ("get_health_status",), "poll sweep"
-        )
-
-        assert events == [
-            "held for poll sweep",
-            "read tpm_present",
-            "read board_current",
-            "command get_health_status",
-            "freed",
-        ]
 
     def test_an_operation_is_one_hold_around_every_request(
         self: TestSerialisesAccess,
@@ -316,7 +187,7 @@ class TestSerialisesAccess:
         wrapper = make_client_wrapper(client, logger, lock=lock)
 
         with pytest.raises(TimeoutError):
-            wrapper.read(("tpm_present",), (), "poll sweep")
+            wrapper.run_exclusively("poll sweep", _read_one_attribute)
 
         assert events == []
         lock.release.assert_not_called()
@@ -343,7 +214,7 @@ class TestSerialisesAccess:
         wrapper = make_client_wrapper(client, logger, lock=lock)
 
         with pytest.raises(ValueError):
-            wrapper.read(("tpm_present",), (), "poll sweep")
+            wrapper.run_exclusively("poll sweep", _read_one_attribute)
 
         assert events == ["held for poll sweep", "freed"]
 
@@ -368,7 +239,9 @@ class TestSerialisesAccess:
 
         def poll_from_another_thread() -> None:
             try:
-                outcome.append(wrapper.read(("tpm_present",), (), "poll sweep"))
+                outcome.append(
+                    wrapper.run_exclusively("poll sweep", _read_one_attribute)
+                )
             except TimeoutError as busy:
                 outcome.append(busy)
 

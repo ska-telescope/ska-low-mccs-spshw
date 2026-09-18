@@ -13,30 +13,27 @@ overlap. :py:class:`WebHardwareClientWrapper` owns the lock that enforces that,
 and passes each call through to a
 :py:class:`~ska_low_mccs_common.component.WebHardwareClient`.
 
-The lock is private, so a caller never names it or releases it. A caller that
-needs several reads to reach the board together asks for them in one
-:py:meth:`~WebHardwareClientWrapper.read`. A caller whose operation spans
-several requests, such as the handshake that follows an asynchronous command,
-hands it to :py:meth:`~WebHardwareClientWrapper.run_exclusively`, which holds
-the board for the whole of it.
+The lock is private, so a caller never names it or releases it. Anything that
+must reach the board without interruption, whether a poll sweep or the
+handshake that follows an asynchronous command, is handed to
+:py:meth:`~WebHardwareClientWrapper.run_exclusively`, which holds the board for
+the whole of it.
 
 No caller ever acquires or releases anything. Every hold begins and ends inside
 this class, so no other layer has to get the concurrency right.
 
-Nothing here reads a response. Every method hands back what the client gave, so
-what a status means is the caller's business.
+Nothing here reads a response, or decides how many requests an operation is
+worth making. The caller writes the operation, so what a status means, and when
+one makes carrying on pointless, stay with the code that already understands
+them.
 """
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import Optional, TypeVar
 
 from ska_low_mccs_common.component import HardwareClient
-from ska_low_mccs_common.component.hardware_client import (
-    AttributeResponseType,
-    CommandResponseType,
-)
 
 from ..tile.utils import LogLock, acquire_timeout
 from .constants import LOCK_TIMEOUT, LOCK_WARNING
@@ -46,15 +43,17 @@ __all__ = ["WebHardwareClientWrapper"]
 T = TypeVar("T")
 
 
-class WebHardwareClientWrapper:
+# One public method is the whole of it. This class owns the lock, and what to do
+# while the board is held belongs to the caller.
+class WebHardwareClientWrapper:  # pylint: disable=too-few-public-methods
     """
     A hardware client wrapper that serialises every access to one board.
 
-    Each method takes the lock for the whole of itself, so a caller has nothing
-    to hold and nothing to release. :py:meth:`read` covers a batch, which is
-    what keeps a command from landing part way through a poll sweep.
-    :py:meth:`run_exclusively` covers an operation that no single request
-    completes, so a poll cannot land part way through that either.
+    :py:meth:`run_exclusively` takes the lock for the whole of the operation it
+    is given, so a caller has nothing to hold and nothing to release. One
+    operation covers a whole poll sweep, which is what keeps a command from
+    landing part way through it, and equally covers a command that no single
+    request completes, so a poll cannot land part way through that either.
 
     A lock that does not come free in time raises ``TimeoutError``, because the
     request never reached the board. The poller routes that to ``poll_failed``,
@@ -94,60 +93,6 @@ class WebHardwareClientWrapper:
         self._lock = _lock or LogLock(
             f"subrack-{name}", logger, timeout_warning=lock_warning
         )
-
-    def read(
-        self: WebHardwareClientWrapper,
-        attributes: Sequence[str],
-        commands: Sequence[str],
-        context: str,
-    ) -> tuple[dict[str, AttributeResponseType], dict[str, CommandResponseType]]:
-        """
-        Read a batch of attributes, then run a batch of read-only commands.
-
-        The board is held for the whole batch, so nothing else reaches it part
-        way through. Every name asked for is answered, in the order given.
-
-        :param attributes: the attribute names to read.
-        :param commands: the names of the commands to run, each with no
-            arguments. These are for commands that only report, such as
-            ``get_health_status``.
-        :param context: what the caller is doing, reported alongside the holder
-            when the hold is long enough to be logged.
-
-        :return: the attribute responses and the command responses, each keyed
-            by the name that was asked for.
-        """
-        with acquire_timeout(
-            self._lock, self._lock_timeout, raise_exception=True, context=context
-        ):
-            return (
-                {name: self._client.get_attribute(name) for name in attributes},
-                {name: self._client.execute_command(name, "") for name in commands},
-            )
-
-    def execute_command(
-        self: WebHardwareClientWrapper, command: str, parameters: str = ""
-    ) -> CommandResponseType:
-        """
-        Run one command on the board, holding it for that one request.
-
-        This is for a command the board completes within the request. A command
-        the board runs asynchronously is not finished when this returns, and the
-        board is free the moment it does, so hand that to
-        :py:meth:`run_exclusively` instead.
-
-        :param command: the name of the command to run.
-        :param parameters: the command's argument string.
-
-        :return: the client's response.
-        """
-        with acquire_timeout(
-            self._lock,
-            self._lock_timeout,
-            raise_exception=True,
-            context=f"command {command}",
-        ):
-            return self._client.execute_command(command, parameters)
 
     def run_exclusively(
         self: WebHardwareClientWrapper,

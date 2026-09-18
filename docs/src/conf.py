@@ -6,7 +6,9 @@ Standard sphinx config file.
 """
 
 import os
+import re
 import sys
+from pathlib import Path
 
 # WORKAROUND: https://github.com/sphinx-doc/sphinx/issues/9243
 import sphinx.builders.html
@@ -100,8 +102,40 @@ def skip_member(app, what, name, obj, skip, options):
     return skip
 
 
+def _get_tpm_api_version() -> str:
+    """Read the pinned ska-low-sps-tpm-api version from pyproject.toml.
+
+    The dependency is pinned as a git ref, e.g.:
+        "ska-low-sps-tpm-api @ git+https://gitlab.com/.../ska-low-sps-tpm-api/@4.0.2"
+
+    Reading it here means links to the TPM API docs sync with the version this project
+    depends on.
+    """
+    # conf.py lives at <repo_root>/docs/src/conf.py, so parents[2] is the repo root.
+    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    text = pyproject_path.read_text()
+    match = re.search(
+        r"ska-low-sps-tpm-api @ git\+[^\"]*?/@(?P<version>[^\"]+)\"", text
+    )
+    if not match:
+        raise RuntimeError(
+            "Could not find pinned ska-low-sps-tpm-api version in "
+            f"{pyproject_path}"
+        )
+    return match.group("version")
+
+
+TPM_API_VERSION = _get_tpm_api_version()
+
+
+def _substitute_placeholders(app, docname, source):
+    """Replace |TPM-API-version| with the pinned version before RST parsing."""
+    source[0] = source[0].replace("|TPM-API-version|", TPM_API_VERSION)
+    
+
 def setup(app):
     app.connect("autodoc-skip-member", skip_member)
+    app.connect("source-read", _substitute_placeholders)
 
 
 def call_mock(self, *args, **kw):

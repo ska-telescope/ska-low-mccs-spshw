@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicat events from DAQ (usually from EventSystemDown errors)
+
 ## 15.2.0
 
 * [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.

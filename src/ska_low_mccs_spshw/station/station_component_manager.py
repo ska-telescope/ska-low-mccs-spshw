@@ -4317,7 +4317,17 @@ class SpsStationComponentManager(
                         success = False
                     break
                 channel = int(filename.split("_")[0])
-                dropped_channels.remove(channel)
+                if channel in dropped_channels:
+                    dropped_channels.remove(channel)
+                else:
+                    # DAQ can emit the same event more than once, and a stale
+                    # event can name a channel outside the requested range.
+                    # Either way the channel is not dropped, so just note it.
+                    self.logger.warning(
+                        f"Received unexpected data for channel {channel}. "
+                        "It is a duplicate, or outside the requested range of "
+                        f"{first_channel} to {last_channel}."
+                    )
                 if channel == last_channel:
                     self.logger.info(
                         f"Got data for {channel}, this is the last channel expected."

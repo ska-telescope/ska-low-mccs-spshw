@@ -45,7 +45,9 @@ from tests.harness import (
 from tests.test_tools import (
     FakeGroup,
     LRCManager,
+    assert_against_lrc_finished,
     execute_lrc_to_completion,
+    get_lrc_finished,
     wait_for_lrc_result,
 )
 
@@ -1635,7 +1637,7 @@ def test_stations_wren_health_check_timeout(station_device: SpsStation) -> None:
     assert station_device.WrenHealthCheckTimeout == new_value
 
 
-def test_AcquireDataForCalibration(
+def _prepare_station_for_calibration(
     station_device: SpsStation,
     daq_device: DeviceProxy,
     mock_tile_device_proxies: list[unittest.mock.Mock],
@@ -1643,7 +1645,7 @@ def test_AcquireDataForCalibration(
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Test the AcquireDaqtaForCalibration command.
+    Bring the station online with synchronised tiles and a running DAQ.
 
     :param station_device: The station device to use.
     :param daq_device: the DAQ device proxy that would receive the data
@@ -1653,9 +1655,6 @@ def test_AcquireDataForCalibration(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
-    first_channel = 106
-    last_channel = 106
-
     station_device.subscribe_event(
         "state",
         EventType.CHANGE_EVENT,
@@ -1684,6 +1683,58 @@ def test_AcquireDataForCalibration(
         )
 
     mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_started)
+
+
+def _mock_daq_stopped(mock_daq_device_proxy: unittest.mock.Mock) -> None:
+    """
+    Make the mocked DAQ report that it has no running consumers.
+
+    :param mock_daq_device_proxy: A fixture returning a mocked MccsDaqReceiver device.
+    """
+
+    def _mocked_daq_status_callable_stopped() -> str:
+        return json.dumps(
+            {
+                "Running Consumers": [],
+                "Receiver Interface": "eth0",
+                "Receiver Ports": [4660],
+                "Receiver IP": ["10.244.170.166"],
+                "Bandpass Monitor": False,
+                "Daq Health": ["OK", 0],
+            }
+        )
+
+    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_stopped)
+
+
+def test_AcquireDataForCalibration(
+    station_device: SpsStation,
+    daq_device: DeviceProxy,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_daq_device_proxy: unittest.mock.Mock,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the AcquireDaqtaForCalibration command.
+
+    :param station_device: The station device to use.
+    :param daq_device: the DAQ device proxy that would receive the data
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param mock_daq_device_proxy: A fixture returning a mocked MccsDaqReceiver device.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    first_channel = 106
+    last_channel = 106
+
+    _prepare_station_for_calibration(
+        station_device,
+        daq_device,
+        mock_tile_device_proxies,
+        mock_daq_device_proxy,
+        change_event_callbacks,
+    )
     start_time = datetime.datetime.strftime(
         datetime.datetime.fromtimestamp(time.time() + 5), "%Y-%m-%dT%H:%M:%S.%fZ"
     )
@@ -1715,34 +1766,69 @@ def test_AcquireDataForCalibration(
         json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
         == "CORRELATOR_DATA"
     )
-    station_device.MockCalibrationDataReceived()
+    station_device.MockCalibrationDataReceived(last_channel)
 
-    def _mocked_daq_status_callable_stopped() -> str:
-        return json.dumps(
+    _mock_daq_stopped(mock_daq_device_proxy)
+
+    assert_against_lrc_finished(station_device, command_id, "COMPLETED", timeout=20.0)
+
+
+def test_AcquireDataForCalibration_duplicate_events(
+    station_device: SpsStation,
+    daq_device: DeviceProxy,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_daq_device_proxy: unittest.mock.Mock,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that duplicate data received events do not break the acquisition.
+
+    DAQ can report the same channel more than once. The command must still
+    complete, and must not report a channel it received as dropped.
+
+    :param station_device: The station device to use.
+    :param daq_device: the DAQ device proxy that would receive the data
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param mock_daq_device_proxy: A fixture returning a mocked MccsDaqReceiver device.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    first_channel = 106
+    last_channel = 107
+
+    _prepare_station_for_calibration(
+        station_device,
+        daq_device,
+        mock_tile_device_proxies,
+        mock_daq_device_proxy,
+        change_event_callbacks,
+    )
+
+    [_], [command_id] = station_device.AcquireDataForCalibration(
+        json.dumps(
             {
-                "Running Consumers": [],
-                "Receiver Interface": "eth0",
-                "Receiver Ports": [4660],
-                "Receiver IP": ["10.244.170.166"],
-                "Bandpass Monitor": False,
-                "Daq Health": ["OK", 0],
+                "first_channel": first_channel,
+                "last_channel": last_channel,
             }
         )
+    )
+    tile_command_mock: MockCallable = getattr(
+        mock_tile_device_proxies[0], "SendDataSamples"
+    )
+    # Wait for the data to be requested, so we know the station is listening.
+    tile_command_mock.assert_next_call(unittest.mock.ANY)
 
-    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_stopped)
+    # DAQ reports the first channel twice, then the last channel.
+    station_device.MockCalibrationDataReceived(first_channel)
+    station_device.MockCalibrationDataReceived(first_channel)
+    station_device.MockCalibrationDataReceived(last_channel)
 
-    timeout = 20
-    current_time = 0
-    while current_time < timeout:
-        try:
-            assert (
-                station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
-            )
-            break
-        except AssertionError:
-            time.sleep(1)
-            current_time += 1
-    assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
+    _mock_daq_stopped(mock_daq_device_proxy)
+
+    assert_against_lrc_finished(station_device, command_id, "COMPLETED", timeout=20.0)
+    completed_task = get_lrc_finished(station_device, command_id)
+    assert completed_task["result"][1]["dropped_channels"] == []
 
 
 def test_TriggerAdcEqualisation(

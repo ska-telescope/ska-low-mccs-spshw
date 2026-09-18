@@ -11,6 +11,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import time
 import unittest.mock
 
 import numpy as np
@@ -381,15 +382,23 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             self._health_rollup.health_changed(source=device, health=health)
 
         @command()
-        def MockCalibrationDataReceived(self: PatchedSpsStationDevice) -> None:
+        def MockCalibrationDataReceived(
+            self: PatchedSpsStationDevice, argin: int
+        ) -> None:
             """
-            Mock calibration data received.
+            Mock calibration data received for a channel.
 
             Make the station device think it has received calibration data
-            after a send data samples.
+            after a send data samples. Each call uses a new file name, so
+            calling it twice for the same channel mocks DAQ reporting the
+            same channel twice.
+
+            :param argin: the channel the mocked data is for.
             """
             base_dir = "/product/eb-mvp01-20250314-00005/ska-low-mccs/5/correlator_data"
-            file_name = "/correlation_burst_106_20250314_58668_0.hdf5"
+            file_name = (
+                f"/correlation_burst_{argin}_20250314_58668_{time.time_ns()}.hdf5"
+            )
             self.component_manager._lmc_daq_state_changed(
                 "some/daq/fqdn",
                 dataReceivedResult=(

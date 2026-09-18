@@ -802,12 +802,16 @@ def test_daq_data_received_ignored_from_non_active_daq(
     )
 
 
-def test_route_data_routes_channelised_data_to_calibration_daq_when_available(
+def test_route_data_sends_channelised_data_to_calibration_daq_when_available(
     station_component_manager: SpsStationComponentManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Test that ``_route_data`` prefers the Calibration DAQ for channelised data.
+    Test that ``_route_data`` sends only channelised data to the Calibration DAQ.
+
+    Every other data type still goes to the LMC DAQ -- the Calibration DAQ
+    (when available) only overrides the destination for the channelised
+    data type, via a second ``set_lmc_download`` call.
 
     :param station_component_manager: the SPS station component manager under test.
     :param monkeypatch: pytest monkeypatch fixture.
@@ -845,19 +849,33 @@ def test_route_data_routes_channelised_data_to_calibration_daq_when_available(
     result_code, _ = station_component_manager._route_data()
 
     assert result_code == ResultCode.OK
-    assert station_component_manager._lmc_ip == "10.0.0.2"
-    assert station_component_manager._lmc_port == 5678
-    set_lmc_download.assert_called_once()
-    assert set_lmc_download.call_args.kwargs["dst_ip"] == "10.0.0.2"
-    assert set_lmc_download.call_args.kwargs["dst_port"] == 5678
+    assert station_component_manager._lmc_ip == "10.0.0.1"
+    assert station_component_manager._lmc_port == 1234
+    assert station_component_manager._calibration_ip == "10.0.0.2"
+    assert station_component_manager._calibration_port == 5678
+
+    assert set_lmc_download.call_count == 2
+    default_call, channelised_call = set_lmc_download.call_args_list
+
+    assert default_call.kwargs.get("data_type") is None
+    assert default_call.kwargs["dst_ip"] == "10.0.0.1"
+    assert default_call.kwargs["dst_port"] == 1234
+
+    assert channelised_call.kwargs["data_type"] == "channelised"
+    assert channelised_call.kwargs["dst_ip"] == "10.0.0.2"
+    assert channelised_call.kwargs["dst_port"] == 5678
 
 
-def test_route_data_falls_back_to_lmc_daq_when_calibration_daq_unavailable(
+def test_route_data_sends_only_default_data_to_lmc_daq_when_calibration_daq_unavailable(
     station_component_manager: SpsStationComponentManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Test that ``_route_data`` falls back to the LMC DAQ when no calibration DAQ.
+    Test that ``_route_data`` sends everything to the LMC DAQ with no Calibration DAQ.
+
+    With no Calibration DAQ configured, there is no separate override for
+    channelised data, so only the single default-destination
+    ``set_lmc_download`` call (covering all data types) is made.
 
     :param station_component_manager: the SPS station component manager under test.
     :param monkeypatch: pytest monkeypatch fixture.
@@ -889,6 +907,9 @@ def test_route_data_falls_back_to_lmc_daq_when_calibration_daq_unavailable(
     assert result_code == ResultCode.OK
     assert station_component_manager._lmc_ip == "10.0.0.1"
     assert station_component_manager._lmc_port == 1234
+
+    set_lmc_download.assert_called_once()
+    assert set_lmc_download.call_args.kwargs.get("data_type") is None
     assert set_lmc_download.call_args.kwargs["dst_ip"] == "10.0.0.1"
     assert set_lmc_download.call_args.kwargs["dst_port"] == 1234
 

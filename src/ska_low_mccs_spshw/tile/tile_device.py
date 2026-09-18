@@ -6135,6 +6135,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def SetLmcDownload(
         self: MccsTile,
         mode: str,
+        data_type: str | None = None,
         payload_length: int = 1024,
         destination_ip: str = "10.0.10.1",
         source_port: Optional[int] = 0xF0D0,
@@ -6148,6 +6149,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         A json dictionary with optional keywords:
 
         :param mode: (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
+        :param data_type: (string) Data type to configure. Omit for all.
         :param payload_length: (int) SPEAD payload length for channel data
         :param destination_ip: (string) Destination IP.
         :param source_port: (int) Source port for integrated data streams
@@ -6168,6 +6170,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         result_codes, messages = self.component_manager.set_lmc_download(
             mode=mode,
+            data_type=data_type,
             payload_length=payload_length,
             dst_ip=destination_ip,
             src_port=source_port,

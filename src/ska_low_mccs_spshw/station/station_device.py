@@ -2525,6 +2525,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :param argin: json dictionary with optional keywords:
 
             * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
+            * data_type - (string) Data type to configure (omit for all).
             * payload_length - (int) SPEAD payload length for channel data
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
@@ -2555,9 +2556,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dst_ip = params.get("destination_ip", None)
         src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
         dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
+        data_type = params.get("data_type", None)
 
         return self.component_manager.set_lmc_download(
-            mode, payload_length, dst_ip, src_port, dst_port
+            mode=mode,
+            data_type=data_type,
+            payload_length=payload_length,
+            dst_ip=dst_ip,
+            src_port=src_port,
+            dst_port=dst_port,
         )
 
     @command(

@@ -2943,6 +2943,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.set_lmc_download(**mocked_input_params)
         tile_simulator.set_lmc_download.assert_called_once_with(
             mocked_input_params["mode"],
+            data_type=None,
             payload_length=mocked_input_params["payload_length"],
             dst_ip=mocked_input_params["dst_ip"],
             src_port=mocked_input_params["src_port"],

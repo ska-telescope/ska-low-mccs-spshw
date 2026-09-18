@@ -391,7 +391,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             base_dir = "/product/eb-mvp01-20250314-00005/ska-low-mccs/5/correlator_data"
             file_name = "/correlation_burst_106_20250314_58668_0.hdf5"
             self.component_manager._lmc_daq_state_changed(
-                "some/daq/fqdn",
+                self.component_manager._active_calibration_daq_trl,
                 dataReceivedResult=(
                     "correlator",
                     json.dumps({"file_name": base_dir + file_name}),

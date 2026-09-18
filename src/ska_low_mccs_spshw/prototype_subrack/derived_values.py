@@ -19,6 +19,7 @@ dictionary of poll values.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any, Optional
 
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
@@ -109,13 +110,35 @@ class DerivedValues:
         for key, attribute_filter in self._filters.items():
             # An unknown value is passed in too, because that clears the
             # sample buffer.
-            values[key] = attribute_filter(values.get(key))
+            values[key] = attribute_filter(self.known_bays(values.get(key)))
 
     def clear(self: DerivedValues) -> None:
         """Drop the fan counters and the filter sample buffers."""
         self._fan_error_counts = [0] * SubrackData.FAN_COUNT
         for attribute_filter in self._filters.values():
             attribute_filter.clear()
+
+    @staticmethod
+    def known_bays(value: Any) -> Any:
+        """
+        Replace an unknown per bay reading with ``nan``.
+
+        The board reports ``None`` for a bay whose TPM is powered off, so a
+        subrack with nothing switched on reads every bay as ``None``. Tango
+        cannot push ``None`` inside a float spectrum, and the noise filter
+        cannot average it either, so each unknown bay becomes ``nan``.
+
+        ``nan`` is what the filter skips, so a bay that is off does not drag
+        down the average of the bays that are on. It is also what the subrack
+        device this one replaces reports for the same reading.
+
+        :param value: the reading as the board gave it.
+
+        :return: the reading, with each unknown bay as ``nan``.
+        """
+        if not isinstance(value, list):
+            return value
+        return [math.nan if reading is None else reading for reading in value]
 
     @staticmethod
     def count_dead_psus(health_status: Optional[dict]) -> Optional[int]:

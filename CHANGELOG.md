@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicat events from DAQ (usually from EventSystemDown errors)
 * [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
 * [SKB-767] Update the minimum integration_time for Integrated LMC Data
 * [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.

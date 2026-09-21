@@ -6,9 +6,9 @@ Standard sphinx config file.
 """
 
 import os
-import re
 import sys
 from pathlib import Path
+import tomli as tomllib
 
 # WORKAROUND: https://github.com/sphinx-doc/sphinx/issues/9243
 import sphinx.builders.html
@@ -101,7 +101,6 @@ def skip_member(app, what, name, obj, skip, options):
         return True  # Skip documenting these members
     return skip
 
-
 def _get_tpm_api_version() -> str:
     """Read the pinned ska-low-sps-tpm-api version from pyproject.toml.
 
@@ -113,16 +112,19 @@ def _get_tpm_api_version() -> str:
     """
     # conf.py lives at <repo_root>/docs/src/conf.py, so parents[2] is the repo root.
     pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
-    text = pyproject_path.read_text()
-    match = re.search(
-        r"ska-low-sps-tpm-api @ git\+[^\"]*?/@(?P<version>[^\"]+)\"", text
+    with pyproject_path.open("rb") as f:
+        pyproject = tomllib.load(f)
+
+    package = "ska-low-sps-tpm-api"
+    for spec in pyproject["project"]["dependencies"]:
+        name, sep, url = spec.partition("@")
+        if sep and name.strip() == package:
+            # The ref is whatever follows the last "@" in the URL.
+            return url.rsplit("@", 1)[-1].strip()
+
+    raise RuntimeError(
+        f"Could not find pinned {package} version in {pyproject_path}"
     )
-    if not match:
-        raise RuntimeError(
-            "Could not find pinned ska-low-sps-tpm-api version in "
-            f"{pyproject_path}"
-        )
-    return match.group("version")
 
 
 TPM_API_VERSION = _get_tpm_api_version()

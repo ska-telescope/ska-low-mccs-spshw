@@ -2921,12 +2921,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the set_lmc_download function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         tile_simulator.connect()
 
@@ -2940,7 +2942,27 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "src_port": 4660,
             "dst_port": 4660,
         }
-        tile_component_manager.set_lmc_download(**mocked_input_params)
+        core_configs = [
+            {
+                "core_id": 0,
+                "arp_table_entry": 0,
+                "dst_ip": "10.0.99.3",
+                "dst_port": 5000,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 0,
+                "dst_ip": "10.0.99.4",
+                "dst_port": 5001,
+            },
+        ]
+        with unittest.mock.patch.object(
+            tile_component_manager,
+            "get_40g_configuration",
+            return_value=core_configs,
+        ) as mock_get_40g_configuration:
+            tile_component_manager.set_lmc_download(**mocked_input_params)
+
         tile_simulator.set_lmc_download.assert_called_once_with(
             mocked_input_params["mode"],
             payload_length=mocked_input_params["payload_length"],
@@ -2950,21 +2972,38 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             netmask_40g=None,
             gateway_ip_40g=None,
         )
+        # A successful write reads back and publishes the 40G configuration.
+        mock_get_40g_configuration.assert_called_once_with(-1, 0)
+        callbacks["attribute_state"].assert_call(
+            forty_gb_destination_ips=["10.0.99.3", "10.0.99.4"],
+            forty_gb_destination_ports=[5000, 5001],
+            dst_ip_40g_fpga1="10.0.99.3",
+            dst_ip_40g_fpga2="10.0.99.4",
+            forty_gb_core_configurations=core_configs,
+            lookahead=30,
+            consume_nonmatches=True,
+        )
 
-        # Check that a raised exception is caught.
+        # Check that a raised exception is caught and reported as a failure.
         tile_simulator.set_lmc_download.side_effect = Exception("Mocked exception")
-        tile_component_manager.set_lmc_download(**mocked_input_params)
+        result_code, message = tile_component_manager.set_lmc_download(
+            **mocked_input_params
+        )
+        assert result_code == [ResultCode.FAILED]
+        assert "Mocked exception" in message[0]
 
     def test_set_csp_download(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the set_csp_download function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         # Arrange
         tile_simulator.connect()
@@ -2980,9 +3019,28 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "netmask": "255.255.255.0",
             "gateway": "10.0.10.254",
         }
+        core_configs = [
+            {
+                "core_id": 0,
+                "arp_table_entry": 0,
+                "dst_ip": "10.0.10.1",
+                "dst_port": 4660,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 0,
+                "dst_ip": "10.0.10.2",
+                "dst_port": 4660,
+            },
+        ]
 
         # Act
-        tile_component_manager.set_csp_download(**mocked_input_params)
+        with unittest.mock.patch.object(
+            tile_component_manager,
+            "get_40g_configuration",
+            return_value=core_configs,
+        ) as mock_get_40g_configuration:
+            tile_component_manager.set_csp_download(**mocked_input_params)
 
         # Assert
         tile_simulator.set_csp_download.assert_called_once_with(
@@ -2994,11 +3052,25 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             mocked_input_params["netmask"],
             mocked_input_params["gateway"],
         )
+        # A successful write reads back and publishes the 40G configuration.
+        mock_get_40g_configuration.assert_called_once_with(-1, 0)
+        callbacks["attribute_state"].assert_call(
+            forty_gb_destination_ips=["10.0.10.1", "10.0.10.2"],
+            forty_gb_destination_ports=[4660, 4660],
+            dst_ip_40g_fpga1="10.0.10.1",
+            dst_ip_40g_fpga2="10.0.10.2",
+            forty_gb_core_configurations=core_configs,
+            lookahead=30,
+            consume_nonmatches=True,
+        )
 
-        # Check that a raised exception is caught and returns FAILED.
+        # Check that a raised exception is caught and reported as a failure.
         tile_simulator.set_csp_download.side_effect = Exception("Mocked exception")
-        result = tile_component_manager.set_csp_download(**mocked_input_params)
-        assert result[0] == [ResultCode.FAILED]
+        result_code, message = tile_component_manager.set_csp_download(
+            **mocked_input_params
+        )
+        assert result_code == [ResultCode.FAILED]
+        assert "Tile access failed" in message[0]
 
     def test_arp_table(
         self: TestStaticSimulator,
@@ -3078,12 +3150,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the configure_40g_core function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         # mocked connection to the TPM simuator.
         tile_simulator.connect()
@@ -3104,8 +3178,28 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "netmask": None,
             "gateway_ip": None,
         }
+        core_configs = [
+            {
+                "core_id": 0,
+                "arp_table_entry": 1,
+                "dst_ip": "10.0.99.3",
+                "dst_port": 5000,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 0,
+                "dst_ip": "10.0.99.4",
+                "dst_port": 5001,
+            },
+        ]
 
-        tile_component_manager.configure_40g_core(**core_dict)
+        with unittest.mock.patch.object(
+            tile_component_manager,
+            "get_40g_configuration",
+            return_value=core_configs,
+        ) as mock_get_40g_configuration:
+            tile_component_manager.configure_40g_core(**core_dict)
+
         tile_simulator.configure_40g_core.assert_called_once_with(
             core_dict["core_id"],
             core_dict["arp_table_entry"],
@@ -3118,9 +3212,23 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             core_dict["netmask"],
             core_dict["gateway_ip"],
         )
-        # Check that exceptions raised are caught.
+        # A successful write reads back and publishes the 40G configuration.
+        mock_get_40g_configuration.assert_called_once_with(-1, 0)
+        callbacks["attribute_state"].assert_call(
+            forty_gb_destination_ips=["10.0.99.3", "10.0.99.4"],
+            forty_gb_destination_ports=[5000, 5001],
+            dst_ip_40g_fpga1="10.0.99.3",
+            dst_ip_40g_fpga2="10.0.99.4",
+            forty_gb_core_configurations=core_configs,
+            lookahead=30,
+            consume_nonmatches=True,
+        )
+
+        # Check that a raised exception is caught and reported as a failure.
         tile_simulator.configure_40g_core.side_effect = Exception("Mocked exception")
-        tile_component_manager.configure_40g_core(**core_dict)
+        result_code, message = tile_component_manager.configure_40g_core(**core_dict)
+        assert result_code == [ResultCode.FAILED]
+        assert "Mocked exception" in message[0]
 
     @pytest.mark.xfail(
         reason="A default dictionary is returned even when exception is thrown"

@@ -406,6 +406,7 @@ def wait_for_lrc_result(
                 raise ValueError(
                     f"Status for {uid} = {loaded_result['status']}. "
                     f"Expected {expected_status}!"
+                    f"\n{loaded_result}"
                 )
             actual_result = ResultCode(loaded_result["result"][0])
             if actual_result == expected_result:

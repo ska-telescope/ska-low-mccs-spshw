@@ -17,7 +17,10 @@
         },
         "data_type": {
             "description": "Data type to configure. Omit or use null for all.",
-            "type": "string",
+            "type": [
+                "string",
+                "null"
+            ],
             "enum": [
                 "raw",
                 "raw_synchronised",

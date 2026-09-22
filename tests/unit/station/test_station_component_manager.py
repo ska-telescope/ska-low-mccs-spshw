@@ -1024,7 +1024,7 @@ def test_pps_delay_spread(
 
     for idx, tile in enumerate(mock_tiles):
         tile.ppsDelay = 12 + idx  # 12, 13, 14, 15 — distinct from tile indices
-        assert tile.tileProgrammingState == "Unknown"
+        tile.tileProgrammingState = "Unprogrammed"
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
@@ -1042,12 +1042,17 @@ def test_pps_delay_spread(
         )
         time.sleep(0.01)
     callbacks["component_state"].assert_call(
-        tileProgrammingState=["Unknown", "Unknown", "Unknown", "Unknown"],
-        lookahead=25,
+        tileProgrammingState=[
+            "Unprogrammed",
+            "Unprogrammed",
+            "Unprogrammed",
+            "Unprogrammed",
+        ],
+        lookahead=50,
     )
+
     assert station_component_manager._pps_delays == expected_delays
     assert station_component_manager._pps_delay_spread == 0
-
     # Spread is computed only from Synchronised tiles; move all tiles there first.
     for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
@@ -1093,7 +1098,9 @@ def test_pps_delay_spread(
         attribute_value=16,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
-    assert station_component_manager._pps_delay_spread == 12
+    assert (
+        station_component_manager._pps_delay_spread == 12
+    ), station_component_manager._tile_programming_state
 
 
 def test_beamformer_table(

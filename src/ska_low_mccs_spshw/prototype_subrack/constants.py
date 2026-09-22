@@ -76,13 +76,26 @@ class DerivedKey(str, Enum):
 
 class ClientCommand(str, Enum):
     """
-    The board commands this client issues on its own behalf.
+    The board commands this client issues, whoever asked for them.
 
-    A device passes any other command straight through, so this is not the
-    full set the board accepts.
+    A member is a ``str``, so it reaches the board unchanged. The board draws
+    no distinction between them, so neither does this enum. A device passes
+    any other command straight through, so this is not the full set the board
+    accepts.
     """
 
     GET_HEALTH_STATUS = "get_health_status"
+    TURN_ON_TPM = "turn_on_tpm"
+    TURN_OFF_TPM = "turn_off_tpm"
+    TURN_ON_TPMS = "turn_on_tpms"
+    TURN_OFF_TPMS = "turn_off_tpms"
+    SET_SUBRACK_FAN_SPEED = "set_subrack_fan_speed"
+    SET_FAN_MODE = "set_fan_mode"
+    SET_POWER_SUPPLY_FAN_SPEED = "set_power_supply_fan_speed"
+
+    # The asynchronous handshake. A caller runs a command and waits for it
+    # through :py:meth:`~.subrack_client.Subrack.run_board_command`, which is
+    # the only thing that issues these two.
     COMMAND_COMPLETED = "command_completed"
     ABORT_COMMAND = "abort_command"
 

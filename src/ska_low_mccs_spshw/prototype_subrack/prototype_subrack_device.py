@@ -12,9 +12,9 @@ The device holds one :py:class:`~.subrack_client.SubrackPoller`, which holds the
 :py:class:`~.subrack_client.Subrack` it drives. There is no component manager,
 no driver and no health model between the device and the board.
 
-The device monitors only. It defines no commands, so the board commands that
-:py:meth:`~.subrack_client.Subrack.run_board_command` supports are not reachable
-through this interface.
+The board commands live in :py:class:`~.prototype_subrack_commands.SubrackCommands`,
+which the device mixes in. The device supplies the subrack that those commands
+run through, and the poller that reads it.
 """
 from __future__ import annotations
 
@@ -39,20 +39,22 @@ from .prototype_subrack_attributes import (
     VALUE_CONVERTERS,
     SubrackAttributes,
 )
+from .prototype_subrack_commands import SubrackCommands
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
 
 __all__ = ["MccsPrototypeSubrack", "main"]
 
 
 # pylint: disable=too-many-ancestors
-class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
+class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, BaseInterface):
     """
     A Tango device that monitors an SPS subrack management board.
 
     The device owns the :py:class:`~.subrack_client.SubrackPoller`, and through
     it the :py:class:`~.subrack_client.Subrack` that answers each poll. The
-    poller is the only piece the device has to reclaim, so it is the only one
-    it keeps. Polling starts and stops with ``adminMode``, through
+    poller is the only piece the device has to reclaim. It also keeps the
+    subrack, because the board commands run through it rather than through the
+    poll loop. Polling starts and stops with ``adminMode``, through
     :py:meth:`change_control_level`. Each poll response is emitted onto the
     signal bus, which pushes the change and archive events for every attribute.
 
@@ -76,6 +78,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
     # Initialisation
     # --------------
     _poller: Optional[SubrackPoller] = None
+    _subrack: Optional[Subrack] = None
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -86,11 +89,14 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :py:meth:`disassemble` reclaims the running poller before this builds
         its replacement.
 
-        The poller is dropped before anything is built, so a failure part way
-        through leaves ``_poller`` as ``None`` rather than the reclaimed
-        poller, which would accept ``start_polling`` and then never poll.
+        Both the poller and the subrack are dropped before anything is built,
+        so a failure part way through leaves each as ``None`` rather than the
+        reclaimed one. A reclaimed poller would accept ``start_polling`` and
+        then never poll, and a reclaimed subrack would accept a command and
+        reach a board the device no longer monitors.
         """
         self._poller = None
+        self._subrack = None
 
         client = self._web_hardware_client_factory(self.SubrackIp, self.SubrackPort)
         derived = self._derived_values_factory(
@@ -100,7 +106,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             attribute_filter_type=self.AttributeFilterType,
             attribute_filter_max_samples=self.AttributeFilterMaxSamples,
         )
-        subrack = self._subrack_factory(
+        self._subrack = self._subrack_factory(
             client,
             derived=derived,
             logger=self.logger,
@@ -109,7 +115,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             stopped_callback=self._polling_stopped,
         )
         self._poller = self._subrack_poller_factory(
-            subrack, self.UpdateRate, self.logger
+            self._subrack, self.UpdateRate, self.logger
         )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:

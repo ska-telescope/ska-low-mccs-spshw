@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -30,8 +31,10 @@ from ska_low_mccs_spshw.prototype_subrack import (
     Subrack,
     SubrackPollResponse,
 )
+from ska_low_mccs_spshw.prototype_subrack import subrack_client as subrack_client_module
 from ska_low_mccs_spshw.prototype_subrack.constants import (
     BATCH_ATTRIBUTES,
+    COMMAND_TIMEOUT,
     HEALTH_STATUS_KEY,
 )
 
@@ -649,6 +652,14 @@ class TestErrorBranches:
         [
             (HardwareClientResponseStatusCodes.ERROR.name, "board fault"),
             ("NOT_A_REAL_STATUS", "who knows"),
+            # These two are the board going unreachable part way through the
+            # handshake. They take their own branch of the wait, and must end
+            # it the same way as an error the board reported.
+            (HardwareClientResponseStatusCodes.HTTP_ERROR.name, "500 Server Error"),
+            (
+                HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
+                "connection refused",
+            ),
         ],
     )
     def test_an_error_while_awaiting_completion_fails_with_its_details(
@@ -891,3 +902,187 @@ class TestABusyBoard:
         response = faked_subrack.poll(faked_subrack.get_request())
 
         assert HEALTH_STATUS_KEY not in response.values
+
+
+class TestCommandsThatDoNotRunToPlan:
+    """
+    Tests of the ways a board command ends other than by simply finishing.
+
+    The SMB runs most commands asynchronously, so the client starts one and
+    then waits on a handshake it does not control. These cover what the client
+    does when the board answers straight away, refuses the abort, is slow to
+    finish, or never finishes at all.
+    """
+
+    def test_a_command_the_board_answers_at_once_completes(
+        self: TestCommandsThatDoNotRunToPlan,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        A command the board finishes in its reply must not be waited for.
+
+        Only a reply of ``STARTED`` begins the handshake. Anything else the
+        board answers ``OK`` with is the whole of the command, so probing
+        ``command_completed`` for it would ask about a command that has already
+        gone.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        """
+        fake_client.set_command_responses(
+            "set_fan_mode",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "set_fan_mode",
+                "retvalue": "1",
+            },
+        )
+
+        (result, message, value) = faked_subrack.run_board_command(
+            "set_fan_mode", "1,1"
+        )
+
+        assert result == BoardCommandStatus.COMPLETED, message
+        assert value == "1", "the caller should get what the board returned"
+        assert "command_completed" not in [
+            name for (name, _) in fake_client.command_calls
+        ]
+
+    def test_a_board_that_refuses_the_abort_is_logged(
+        self: TestCommandsThatDoNotRunToPlan,
+        fake_client: FakeHardwareClient,
+        derived: mock.Mock,
+    ) -> None:
+        """
+        A board that will not abort must say so in the log.
+
+        Nothing is raised, because the command is being abandoned either way.
+        The log is the only record that the operation may still be running on
+        the board, which is what explains the next command being refused.
+
+        :param fake_client: the fake hardware client.
+        :param derived: a stand-in for the computed values.
+        """
+        complaining = mock.Mock(name="logger", spec=logging.Logger)
+        subrack = make_subrack(fake_client, complaining, derived)
+        fake_client.set_command_responses(
+            "turn_on_tpms",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "turn_on_tpms",
+                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+            },
+        )
+        fake_client.set_command_responses(
+            "abort_command",
+            {
+                "status": HardwareClientResponseStatusCodes.ERROR.name,
+                "info": "the board is not listening",
+                "command": "abort_command",
+                "retvalue": "",
+            },
+        )
+        abort_event = threading.Event()
+        abort_event.set()
+
+        (result, _, _) = subrack.run_board_command("turn_on_tpms", "", abort_event)
+
+        assert result == BoardCommandStatus.ABORTED, "the command is abandoned anyway"
+        complaining.error.assert_called_once()
+        assert "the board is not listening" in str(complaining.error.call_args)
+
+    def test_a_command_not_finished_yet_is_waited_for(
+        self: TestCommandsThatDoNotRunToPlan,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+    ) -> None:
+        """
+        A board that answers ``OK`` but is not done must be waited for.
+
+        ``command_completed`` answers ``OK`` throughout. What says the command
+        has finished is the returned value, so an empty one has to continue the
+        wait. Reading it as finished would report a command complete while it
+        is still running.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        """
+        abort = mock.Mock()
+        abort.wait.side_effect = [False, False, True]
+        fake_client.set_command_responses(
+            "turn_on_tpms",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "turn_on_tpms",
+                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+            },
+        )
+        not_yet = {
+            "status": HardwareClientResponseStatusCodes.OK.name,
+            "info": "",
+            "command": "command_completed",
+            "retvalue": False,
+        }
+        done = dict(not_yet, retvalue=True)
+        fake_client.set_command_responses("command_completed", not_yet, done)
+
+        (result, message, _) = faked_subrack.run_board_command(
+            "turn_on_tpms", "", abort
+        )
+
+        assert result == BoardCommandStatus.COMPLETED, message
+        completions = [
+            c for c in fake_client.command_calls if c[0] == "command_completed"
+        ]
+        assert len(completions) == 2, "it should have waited through the empty reply"
+
+    def test_a_command_that_never_finishes_times_out(
+        self: TestCommandsThatDoNotRunToPlan,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """
+        A board that never reports the command finished must not wait for ever.
+
+        The clock is replaced rather than waited on, because the real wait is
+        ``COMMAND_TIMEOUT`` seconds. The deadline is taken from the first
+        reading, and every reading after it is past that deadline, so the wait
+        ends the way it would after the full timeout.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        :param monkeypatch: the fixture that replaces the clock.
+        """
+        fake_client.set_command_responses(
+            "turn_on_tpms",
+            {
+                "status": HardwareClientResponseStatusCodes.OK.name,
+                "info": "",
+                "command": "turn_on_tpms",
+                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+            },
+        )
+        readings = iter([0.0])
+        monkeypatch.setattr(
+            subrack_client_module.time,
+            "monotonic",
+            lambda: next(readings, COMMAND_TIMEOUT + 1.0),
+        )
+        # A finite abort stub, so a wait that ignored the deadline runs out of
+        # answers and fails the test rather than sleeping until CI gives up.
+        abort = mock.Mock()
+        abort.wait.side_effect = [False, False, False]
+
+        (result, message, _) = faked_subrack.run_board_command(
+            "turn_on_tpms", "", abort
+        )
+
+        assert result == BoardCommandStatus.FAILED
+        assert "Timed out" in message, message
+        # The deadline is checked before the first wait, so nothing slept.
+        abort.wait.assert_not_called()

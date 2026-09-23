@@ -1000,6 +1000,182 @@ def test_power_state_transitions(
     assert station_component_manager._component_state["power"] == PowerState.UNKNOWN
 
 
+def _patch_subrack_on_commands(
+    monkeypatch: pytest.MonkeyPatch,
+    result: tuple[ResultCode, str],
+) -> tuple[unittest.mock.Mock, unittest.mock.Mock]:
+    """
+    Patch MccsCommandProxy/MccsCompositeCommandProxy used by _turn_on_subracks.
+
+    :param monkeypatch: pytest monkeypatch fixture.
+    :param result: the (ResultCode, message) the composite command call
+        should return by default. Callers may overwrite
+        ``mock_composite.side_effect``/``return_value`` afterwards for
+        more specific behaviour.
+
+    :return: the mocked MccsCommandProxy class and the mocked
+        MccsCompositeCommandProxy instance (so callers can make
+        assertions or attach a side_effect).
+    """
+    mock_command_cls = unittest.mock.MagicMock(name="MccsCommandProxy")
+    mock_composite = unittest.mock.MagicMock(name="MccsCompositeCommandProxy instance")
+    mock_composite.__iadd__.return_value = mock_composite
+    mock_composite.return_value = result
+    mock_composite_cls = unittest.mock.MagicMock(
+        name="MccsCompositeCommandProxy", return_value=mock_composite
+    )
+    monkeypatch.setattr(station_cm, "MccsCommandProxy", mock_command_cls)
+    monkeypatch.setattr(station_cm, "MccsCompositeCommandProxy", mock_composite_cls)
+    return mock_command_cls, mock_composite
+
+
+def test_turn_on_subracks_only_commands_subracks_not_already_on(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test _turn_on_subracks only commands subracks that are not already ON.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    subrack_names = list(station_component_manager._subrack_proxies.keys())
+
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.ON
+    )
+    station_component_manager._subrack_state_changed(
+        subrack_names[1], power=PowerState.OFF
+    )
+
+    def _bring_subrack_1_on(*args: Any, **kwargs: Any) -> tuple[ResultCode, str]:
+        station_component_manager._subrack_state_changed(
+            subrack_names[1], power=PowerState.ON
+        )
+        return (ResultCode.OK, "")
+
+    mock_command_cls, mock_composite = _patch_subrack_on_commands(
+        monkeypatch, (ResultCode.OK, "")
+    )
+    mock_composite.side_effect = _bring_subrack_1_on
+
+    result_code, message = station_component_manager._turn_on_subracks()
+
+    mock_command_cls.assert_called_once_with(
+        subrack_names[1], "On", station_component_manager.logger
+    )
+    assert result_code == ResultCode.OK
+    assert message == ""
+
+
+def test_turn_on_subracks_skips_command_when_all_already_on(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test _turn_on_subracks doesn't command anything when all are already ON.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    for fqdn in station_component_manager._subrack_proxies:
+        station_component_manager._subrack_state_changed(fqdn, power=PowerState.ON)
+
+    mock_command_cls, mock_composite_cls = (
+        unittest.mock.MagicMock(name="MccsCommandProxy"),
+        unittest.mock.MagicMock(name="MccsCompositeCommandProxy"),
+    )
+    monkeypatch.setattr(station_cm, "MccsCommandProxy", mock_command_cls)
+    monkeypatch.setattr(station_cm, "MccsCompositeCommandProxy", mock_composite_cls)
+
+    result_code, message = station_component_manager._turn_on_subracks()
+
+    mock_command_cls.assert_not_called()
+    mock_composite_cls.assert_not_called()
+    assert result_code == ResultCode.OK
+
+
+def test_turn_on_subracks_fails_fast_on_rejected_command(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test _turn_on_subracks fails fast when a subrack's On() is rejected.
+
+    Reproduces THORN-690: previously a fire-and-forget On() call meant a
+    rejected/failed command (e.g. because a subrack is administratively
+    OFFLINE) was silently dropped, and _turn_on_subracks would blindly poll
+    for 180s waiting for a subrack that would never turn on. Now that the
+    command's real result is listened to via MccsCommandProxy, a rejection
+    must be reported immediately.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    for fqdn in station_component_manager._subrack_proxies:
+        station_component_manager._subrack_state_changed(fqdn, power=PowerState.OFF)
+
+    rejected_result = (
+        ResultCode.FAILED,
+        "LRC failed: Command On not allowed when the device is in DISABLE state",
+    )
+    _patch_subrack_on_commands(monkeypatch, rejected_result)
+
+    result_code, message = station_component_manager._turn_on_subracks()
+
+    assert result_code == ResultCode.FAILED
+    assert "LRC failed" in message
+
+
+def test_standby_fails_fast_when_subrack_command_rejected(
+    communicating_station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that Standby fails fast when a subrack's On() command is rejected.
+
+    Reproduces THORN-690 end-to-end: with one subrack ON and one whose
+    On() is rejected (e.g. because it is administratively OFFLINE),
+    Standby() must fail promptly, instead of hanging for 180s waiting for
+    a subrack that will never turn on.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    subrack_names = list(station_component_manager._subrack_proxies.keys())
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.ON
+    )
+    station_component_manager._subrack_state_changed(
+        subrack_names[1], power=PowerState.OFF
+    )
+
+    rejected_result = (
+        ResultCode.FAILED,
+        "LRC failed: Command On not allowed when the device is in DISABLE state",
+    )
+    _patch_subrack_on_commands(monkeypatch, rejected_result)
+
+    station_component_manager.standby(task_callback=callbacks["task"])
+    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+    callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+    callbacks["task"].assert_call(
+        status=TaskStatus.FAILED,
+        result=(ResultCode.FAILED, unittest.mock.ANY),
+        lookahead=5,
+    )
+
+
 def test_pps_delay_spread(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,

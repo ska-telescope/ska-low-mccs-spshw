@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* [THORN-690] Use MccsCommandProxy to listen for the real result of a
+subrack's On() command during SpsStation's power-on sequence, instead of
+firing it and forgetting the reply. A rejected/failed On() (e.g. because a
+subrack is administratively OFFLINE) now fails fast instead of causing a
+blind 180s timeout.
 * [THORN-651] Expose 40g information as an attribute `forty_gb_core_configurations`.
 This is semi-static, the configuration can be altered at runtime using SetLmcDownload, SetCspDownload and Configure40GCore commands.
 * [THORN-651] Avoid attempting to claim the lock multiple times in SetLmcDownload, SetCspDownload and Configure40GCore commands.

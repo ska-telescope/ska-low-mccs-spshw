@@ -2140,31 +2140,29 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
+        tick = 2
+        deadline = time.time() + 180
+
         with self._power_state_lock:
-            if not all(
-                power_state == PowerState.ON
-                for power_state in self._subrack_power_states.values()
-            ):
-                results = {}
-                for proxy in self._subrack_proxies.values():
-                    # BUG: This is fire and forget.
-                    # If the device is OFFLINE, we do not listen to the reply and
-                    # proceed to wait for 180 seconds. THORN-690
-                    results[proxy._name] = proxy.on()
-                failed = [
-                    name
-                    for name, (status, _) in results.items()
-                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
-                ]
-                if failed:
-                    msg = f"subracks failed to power on: {failed}"
+            subracks_to_turn_on = [
+                fqdn
+                for fqdn, power_state in self._subrack_power_states.items()
+                if power_state != PowerState.ON
+            ]
+            if subracks_to_turn_on:
+                on_commands = MccsCompositeCommandProxy(self.logger)
+                for fqdn in subracks_to_turn_on:
+                    on_commands += MccsCommandProxy(fqdn, "On", self.logger)
+                result_code, message = on_commands(
+                    command_evaluator=CompositeCommandResultEvaluator(), timeout=180
+                )
+                if result_code != ResultCode.OK:
+                    msg = f"subracks failed to power on: {message}"
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
+
         # wait for subracks to come up
-        timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
-        tick = 2
-        last_time = time.time() + timeout
-        while time.time() < last_time:
+        while time.time() < deadline:
             time.sleep(tick)
             if all(
                 power_state == PowerState.ON

@@ -376,7 +376,7 @@ intersphinx_mapping = {
         None,
     ),
     "ska-tango-base": (
-        "https://developer.skao.int/projects/ska-tango-base/en/0.19.1/",
+        "https://developer.skao.int/projects/ska-tango-base/en/1.6.1/",
         None,
     ),
     "ska-low-mccs-common": (

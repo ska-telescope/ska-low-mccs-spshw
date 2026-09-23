@@ -299,6 +299,11 @@ def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProx
         station_proxy.get_property("LMCDaqTRL")["LMCDaqTRL"][0],
         station_proxy.get_property("BandpassDaqTRL")["BandpassDaqTRL"][0],
     ]
+    calibration_daq_trl = station_proxy.get_property("CalibrationDaqTRL").get(
+        "CalibrationDaqTRL", []
+    )
+    if calibration_daq_trl and calibration_daq_trl[0]:
+        daqs_fqdns.append(calibration_daq_trl[0])
     return {
         "Tiles": [tango.DeviceProxy(tile_fqdn) for tile_fqdn in tiles_fqdns],
         "Subracks": [

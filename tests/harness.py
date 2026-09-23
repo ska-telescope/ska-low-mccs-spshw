@@ -109,6 +109,18 @@ def get_bandpass_daq_name(station_label: str | None = None) -> str:
     return f"low-mccs/daqreceiver/{station_label or DEFAULT_STATION_LABEL}-bandpass"
 
 
+def get_calibration_daq_name(station_label: str | None = None) -> str:
+    """
+    Construct the DAQ Tango device name from its ID number.
+
+    :param station_label: name of the station under test.
+        Defaults to None, in which case the module default is used.
+
+    :return: the DAQ Tango device name
+    """
+    return f"low-mccs/daqreceiver/{station_label or DEFAULT_STATION_LABEL}-calibration"
+
+
 def get_wren_name() -> str:
     """
     Construct the WREN Tango device name from its facility and cabinet.
@@ -252,6 +264,7 @@ class SpsTangoTestHarness:
         tile_ids: Iterable[int] = range(1, 17),
         lmc_daq_trl: str = "",
         bandpass_daq_trl: str = "",
+        calibration_daq_trl: str = "",
         wren_trl: str = "",
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.SpsStation",
@@ -268,6 +281,7 @@ class SpsTangoTestHarness:
         :param tile_ids: IDS of the tiles in this station.
         :param lmc_daq_trl: TRL of this Station's LMC DAQ.
         :param bandpass_daq_trl: TRL of this Station's Bandpass DAQ.
+        :param calibration_daq_trl: TRL of this Station's Calibration DAQ.
         :param wren_trl: TRL of this Station's WREN.
         :param logging_level: the Tango device's default logging level.
         :param device_class: The device class to use.
@@ -280,6 +294,7 @@ class SpsTangoTestHarness:
             StationId=1,
             LMCDaqTRL=lmc_daq_trl,
             BandpassDaqTRL=bandpass_daq_trl,
+            CalibrationDaqTRL=calibration_daq_trl,
             WRENTRL=wren_trl,
             TileFQDNs=[
                 get_tile_name(tile_id, station_label=self._station_label)
@@ -558,6 +573,19 @@ class SpsTangoTestHarness:
         """
         self._tango_test_harness.add_mock_device(
             get_bandpass_daq_name(self._station_label), mock
+        )
+
+    def add_mock_calibration_daq_device(
+        self: SpsTangoTestHarness,
+        mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Add a mock daq Tango device to this test harness.
+
+        :param mock: the mock to be used as a mock daq device.
+        """
+        self._tango_test_harness.add_mock_device(
+            get_calibration_daq_name(self._station_label), mock
         )
 
     def add_mock_wren_device(

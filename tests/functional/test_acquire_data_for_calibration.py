@@ -27,7 +27,11 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.functional.conftest import poll_until_state_change
-from tests.harness import get_lmc_daq_name, get_sps_station_name
+from tests.harness import (
+    get_calibration_daq_name,
+    get_lmc_daq_name,
+    get_sps_station_name,
+)
 from tests.test_tools import (
     AttributeWaiter,
     get_lrc_executing,
@@ -119,13 +123,29 @@ def station_fixture(station_name: str) -> tango.DeviceProxy:
 @given("the DAQ is available", target_fixture="daq_device")
 def daq_device_fixture(station_name: str) -> tango.DeviceProxy:
     """
-    Return a ``tango.DeviceProxy`` to the DAQ device under test.
+    Return a ``tango.DeviceProxy`` to the DAQ device that will receive the data.
+
+    ``AcquireDataForCalibration`` targets the Calibration DAQ when this station
+    has one deployed, falling back to the LMC DAQ otherwise -- mirroring
+    ``SpsStationComponentManager._get_calibration_daq()``. Determine the same
+    way here, so we subscribe to whichever DAQ will actually emit the events.
 
     :param station_name: the name of the station under test.
 
     :return: a ``tango.DeviceProxy`` to the DAQ device under test.
     """
-    daq_device = tango.DeviceProxy(get_lmc_daq_name(station_name))
+    station = tango.DeviceProxy(get_sps_station_name(station_name))
+    calibration_daq_trl = station.get_property("CalibrationDaqTRL").get(
+        "CalibrationDaqTRL", []
+    )
+    has_calibration_daq = bool(calibration_daq_trl and calibration_daq_trl[0])
+    daq_name = (
+        get_calibration_daq_name(station_name)
+        if has_calibration_daq
+        else get_lmc_daq_name(station_name)
+    )
+
+    daq_device = tango.DeviceProxy(daq_name)
     if daq_device.state() != tango.DevState.ON:
         retry_communication(daq_device)
         poll_until_state_change(daq_device, tango.DevState.ON, 5)
@@ -198,14 +218,16 @@ def acquire_data_for_calibration(
     command so that the correlator file events emitted during acquisition are
     captured for the assertion step.
 
-    An acquisition owns the LMC DAQ and keeps every TPM transmitting for as long
-    as it runs, so one left behind by a scenario that failed part way through
-    reconfigures the DAQ out from under whatever test runs next. This therefore
-    cleans up after itself rather than relying on the scenario's ``then`` steps
-    having waited for the acquisition to finish.
+    An acquisition owns the DAQ it targets (Calibration DAQ if deployed, else
+    LMC DAQ -- see ``daq_device_fixture``) and keeps every TPM transmitting
+    for as long as it runs, so one left behind by a scenario that failed part
+    way through reconfigures the DAQ out from under whatever test runs next.
+    This therefore cleans up after itself rather than relying on the
+    scenario's ``then`` steps having waited for the acquisition to finish.
 
     :param station: A 'tango.DeviceProxy' to the SpsStation device.
-    :param daq_device: A 'tango.DeviceProxy' to the DAQ device.
+    :param daq_device: A 'tango.DeviceProxy' to the DAQ device that will
+        actually receive the data (see ``daq_device_fixture``).
     :param first_channel: the first channel to acquire data for.
     :param last_channel: the last channel to acquire data for.
     :param change_event_callbacks: a dictionary of callables to be used as

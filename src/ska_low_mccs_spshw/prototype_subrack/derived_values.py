@@ -26,6 +26,7 @@ from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
 from .constants import (
     FILTERED_ATTRIBUTES,
+    HEALTH_STATUS_KEY,
     MIN_PWM_DUTY_FRACTION,
     PSU_DEAD_VOLTAGE_THRESHOLD,
     PSU_NAMES,
@@ -93,21 +94,30 @@ class DerivedValues:
     def apply(
         self: DerivedValues,
         values: dict[str, Any],
-        health_status: Optional[dict] = None,
     ) -> None:
         """
         Add the derived values, and filter the noisy ones, in place.
 
-        :param values: the poll values, modified in place.
-        :param health_status: the polled health status, or ``None`` when this
-            poll did not read it.
+        A key is absent from ``values`` when the board was too busy to read it.
+        A derived value that needs an absent key is left out too, and the state
+        that spans polls is kept, so a busy board changes nothing.
+
+        :param values: the poll values, modified in place. The health status
+            is under ``HEALTH_STATUS_KEY``.
         """
-        values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
-            values.get(ReadKey.SUBRACK_FAN_SPEEDS.value),
-            values.get(ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value),
-        )
-        values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(health_status)
+        fan_speeds = ReadKey.SUBRACK_FAN_SPEEDS.value
+        fan_speeds_percent = ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value
+        if fan_speeds in values and fan_speeds_percent in values:
+            values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
+                values[fan_speeds], values[fan_speeds_percent]
+            )
+        if HEALTH_STATUS_KEY in values:
+            values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(
+                values[HEALTH_STATUS_KEY]
+            )
         for key, attribute_filter in self._filters.items():
+            if key not in values:
+                continue
             # An unknown value is passed in too, because that clears the
             # sample buffer.
             values[key] = attribute_filter(self.known_bays(values.get(key)))

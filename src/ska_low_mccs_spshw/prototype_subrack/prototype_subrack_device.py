@@ -30,7 +30,7 @@ from tango.server import device_property
 
 from utils import walk
 
-from .constants import RequestError
+from .constants import HEALTH_STATUS_KEY, RequestError
 from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
@@ -103,7 +103,6 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         subrack = self._subrack_factory(
             client,
             derived=derived,
-            name=self.get_name(),
             logger=self.logger,
             data_callback=self._poll_succeeded,
             error_callback=self._poll_failed,
@@ -196,9 +195,14 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :param poll_response: the response to the poll.
         """
         timestamp = poll_response.timestamp
+        values = poll_response.values
+        # A key the board was too busy to read is absent, so its attribute keeps
+        # its last value.
         for key, signal_name in READ_KEY_TO_SIGNAL.items():
-            self._emit(signal_name, poll_response.values.get(key), timestamp)
-        self._emit_health_status(poll_response.health_status, timestamp)
+            if key in values:
+                self._emit(signal_name, values[key], timestamp)
+        if HEALTH_STATUS_KEY in values:
+            self._emit_health_status(values[HEALTH_STATUS_KEY], timestamp)
 
         self.component_on()
         self.component_no_fault()
@@ -305,7 +309,7 @@ def subrack_factory(
     :param derived_values: builds the computed values, from a logger and the
         device's fan and filter settings.
     :param subrack: builds the poll model, from a client, the computed values
-        and the device's settings.
+        and the device's callbacks.
     :param subrack_poller: builds the poller, from a poll model, a poll rate
         and a logger.
 

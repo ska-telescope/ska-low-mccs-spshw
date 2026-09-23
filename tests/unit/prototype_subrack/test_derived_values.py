@@ -21,6 +21,7 @@ from typing import Any, Optional
 import pytest
 
 from ska_low_mccs_spshw.prototype_subrack import DerivedValues
+from ska_low_mccs_spshw.prototype_subrack.constants import HEALTH_STATUS_KEY
 from ska_low_mccs_spshw.subrack.subrack_data import SubrackData
 
 MAX_SPEED = SubrackData.MAX_SUBRACK_FAN_SPEED
@@ -306,6 +307,74 @@ class TestDerivedValues:
 
         assert fresh["tpm_currents"] == pytest.approx([20.0])
 
+    @pytest.mark.parametrize(
+        "busy",
+        [
+            pytest.param({}, id="nothing read"),
+            pytest.param({"subrack_fan_speeds": [4000.0] * 4}, id="no duty"),
+            pytest.param({"subrack_fan_speeds_percent": [50.0] * 4}, id="no rpm"),
+        ],
+    )
+    def test_an_absent_value_keeps_the_state(
+        self: TestDerivedValues,
+        logger: logging.Logger,
+        busy: dict[str, Any],
+    ) -> None:
+        """
+        A key the board was too busy to read must change nothing.
+
+        Nothing is derived from an absent key, so the device keeps its last
+        value. The filter samples and the fan counters are kept, so the next
+        reading is still averaged against the one before the gap. The health
+        status is absent in every case, so no count is derived either.
+
+        :param logger: a logger.
+        :param busy: the poll values, missing what the board was too busy for.
+        """
+        derived = self._derived(
+            logger,
+            max_fan_errors=5,
+            attribute_filter_type="mean",
+            attribute_filter_max_samples=5,
+        )
+        derived.apply(
+            {
+                "tpm_currents": [10.0],
+                "subrack_fan_speeds": [1000.0] * 4,
+                "subrack_fan_speeds_percent": [100.0] * 4,
+            }
+        )
+        counts = derived.fan_error_counts
+        assert counts != [0, 0, 0, 0], "the setup should leave a count to keep"
+
+        values = dict(busy)
+        derived.apply(values)
+
+        assert values == busy, "nothing should be derived from an absent key"
+        assert derived.fan_error_counts == counts
+
+        after: dict[str, Any] = {"tpm_currents": [20.0]}
+        derived.apply(after)
+
+        assert after["tpm_currents"] == pytest.approx([15.0])
+
+    def test_apply_reports_the_estimate(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        The estimate must reach the poll values when both fan readings do.
+
+        :param logger: a logger.
+        """
+        values: dict[str, Any] = {
+            "subrack_fan_speeds": [2600.0] * 4,
+            "subrack_fan_speeds_percent": [50.0] * 4,
+        }
+
+        self._derived(logger, max_fan_errors=0).apply(values)
+
+        assert values["subrack_max_fan_speeds"] == pytest.approx([5200.0] * 4)
+
     def test_clear_forgets_everything(
         self: TestDerivedValues, logger: logging.Logger
     ) -> None:
@@ -447,8 +516,8 @@ class TestDerivedValues:
         :param health_status: the health status to count from.
         :param expected: the count it should report.
         """
-        values: dict[str, Any] = {}
+        values: dict[str, Any] = {HEALTH_STATUS_KEY: health_status}
 
-        self._derived(logger).apply(values, health_status)
+        self._derived(logger).apply(values)
 
         assert values["psu_dead_count"] == expected

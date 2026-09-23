@@ -1,5 +1,14 @@
 # Version History
 
+
+## Unreleased
+
+* [THORN-690] Use MccsCommandProxy to listen for the real result of a
+subrack's On() command during SpsStation's power-on sequence, instead of
+firing it and forgetting the reply. A rejected/failed On() (e.g. because a
+subrack is administratively OFFLINE) now fails fast instead of causing a
+blind 180s timeout.
+
 ## 15.2.1
 
 * [LOW-2103] Update ska-tango-devices to 0.17.0. This version fixes per-device-server labels, allowing us to label station-specific K8s resources with their station name.

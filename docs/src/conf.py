@@ -372,11 +372,11 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
     "ska-control-model": (
-        "https://developer.skao.int/projects/ska-control-model/en/latest/",
+        "https://developer.skao.int/projects/ska-control-model/en/stable/",
         None,
     ),
     "ska-tango-base": (
-        "https://developer.skao.int/projects/ska-tango-base/en/0.19.1/",
+        "https://developer.skao.int/projects/ska-tango-base/en/stable/",
         None,
     ),
     "ska-low-mccs-common": (

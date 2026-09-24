@@ -77,8 +77,6 @@ def show(*keys: str) -> None:
     width = max(len(k) for k in wanted)
     for key in wanted:
         print(f"  {key:<{width}} {response.values.get(key)!r}"[:110])
-    if response.health_status:
-        print(f"  {'health_status':<{width}} <{len(response.health_status)} sections>")
 
 
 def wait(timeout: float = 15.0) -> bool:
@@ -147,7 +145,6 @@ if client.get_attribute("board_current")["status"] not in ("OK", "ERROR"):
 subrack = Subrack(
     client,
     DerivedValues(LOGGER),
-    HOST,
     LOGGER,
     data_callback=_on_data,
     error_callback=_on_error,

@@ -19,12 +19,14 @@ dictionary of poll values.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any, Optional
 
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
 from .constants import (
     FILTERED_ATTRIBUTES,
+    HEALTH_STATUS_KEY,
     MIN_PWM_DUTY_FRACTION,
     PSU_DEAD_VOLTAGE_THRESHOLD,
     PSU_NAMES,
@@ -92,30 +94,61 @@ class DerivedValues:
     def apply(
         self: DerivedValues,
         values: dict[str, Any],
-        health_status: Optional[dict] = None,
     ) -> None:
         """
         Add the derived values, and filter the noisy ones, in place.
 
-        :param values: the poll values, modified in place.
-        :param health_status: the polled health status, or ``None`` when this
-            poll did not read it.
+        A key is absent from ``values`` when the board was too busy to read it.
+        A derived value that needs an absent key is left out too, and the state
+        that spans polls is kept, so a busy board changes nothing.
+
+        :param values: the poll values, modified in place. The health status
+            is under ``HEALTH_STATUS_KEY``.
         """
-        values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
-            values.get(ReadKey.SUBRACK_FAN_SPEEDS.value),
-            values.get(ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value),
-        )
-        values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(health_status)
+        fan_speeds = ReadKey.SUBRACK_FAN_SPEEDS.value
+        fan_speeds_percent = ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value
+        if fan_speeds in values and fan_speeds_percent in values:
+            values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
+                values[fan_speeds], values[fan_speeds_percent]
+            )
+        if HEALTH_STATUS_KEY in values:
+            values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(
+                values[HEALTH_STATUS_KEY]
+            )
         for key, attribute_filter in self._filters.items():
+            if key not in values:
+                continue
             # An unknown value is passed in too, because that clears the
             # sample buffer.
-            values[key] = attribute_filter(values.get(key))
+            values[key] = attribute_filter(self.known_bays(values.get(key)))
 
     def clear(self: DerivedValues) -> None:
         """Drop the fan counters and the filter sample buffers."""
         self._fan_error_counts = [0] * SubrackData.FAN_COUNT
         for attribute_filter in self._filters.values():
             attribute_filter.clear()
+
+    @staticmethod
+    def known_bays(value: Any) -> Any:
+        """
+        Replace an unknown per bay reading with ``nan``.
+
+        The board reports ``None`` for a bay whose TPM is powered off, so a
+        subrack with nothing switched on reads every bay as ``None``. Tango
+        cannot push ``None`` inside a float spectrum, and the noise filter
+        cannot average it either, so each unknown bay becomes ``nan``.
+
+        ``nan`` is what the filter skips, so a bay that is off does not drag
+        down the average of the bays that are on. It is also what the subrack
+        device this one replaces reports for the same reading.
+
+        :param value: the reading as the board gave it.
+
+        :return: the reading, with each unknown bay as ``nan``.
+        """
+        if not isinstance(value, list):
+            return value
+        return [math.nan if reading is None else reading for reading in value]
 
     @staticmethod
     def count_dead_psus(health_status: Optional[dict]) -> Optional[int]:

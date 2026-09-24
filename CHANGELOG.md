@@ -1,8 +1,15 @@
 # Version History
 
-## Unreleased
+## 15.1.0
+
+* [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.
+* [THORN-651] Expose 40g information as an attribute `forty_gb_core_configurations`.
+This is semi-static, the configuration can be altered at runtime using SetLmcDownload, SetCspDownload and Configure40GCore commands.
+* [THORN-651] Avoid attempting to claim the lock multiple times in SetLmcDownload, SetCspDownload and Configure40GCore commands.
 * [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
 * [SKB-767] Update the minimum integration_time for Integrated LMC Data
+* [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
 
 ## 15.0.0
 

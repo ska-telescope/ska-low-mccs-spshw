@@ -241,7 +241,9 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         if self._health_state != health:
             self._health_state = health
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString", label="Health Report", doc="Return the health report."
+    )
     def healthReport(self: MccsPdu) -> str:
         """
         Get the health report.

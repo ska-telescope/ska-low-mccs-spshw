@@ -32,9 +32,8 @@ import threading
 from typing import Final, Optional
 
 import ska_tango_base as stb
-from ska_control_model import ResultCode, TaskStatus
+from ska_control_model import AdminMode, ResultCode, TaskStatus
 from ska_tango_base.long_running_commands import LRCMixin, LRCReqType
-from tango import DevState
 
 from ..subrack.subrack_data import FanMode
 from .constants import ClientCommand
@@ -74,6 +73,9 @@ class SubrackCommands(LRCMixin):
     _subrack: Optional[Subrack]
     """The client the commands run through, or ``None`` before it is built."""
 
+    _admin_mode: AdminMode
+    """The admin mode, which ``BaseInterface`` stores as it is written."""
+
     # ----------------------------------
     # Command schemas
     # ----------------------------------
@@ -107,17 +109,27 @@ class SubrackCommands(LRCMixin):
         """
         Return whether a command that reaches the board may run now.
 
-        ``DISABLE`` is what this device reports once ``adminMode`` is
-        ``OFFLINE``, which asks it to make no contact with the subrack. A
-        command that reaches the board anyway would break that, so it is
-        refused instead.
+        Only ``ONLINE`` and ``ENGINEERING`` let the device contact the subrack.
+        Every other ``adminMode`` asks it to make no contact, so a command is
+        refused there.
+
+        ``adminMode`` is read rather than the state, because the device
+        reaches ``DISABLE`` only after the last poll reports back. A command
+        sent in that gap would otherwise start after the device went offline.
 
         :param request_type: whether the command is being queued or executed.
             Both are refused on the same grounds, so this is not read.
 
         :return: whether the command may run.
         """
-        return self.get_state() != DevState.DISABLE
+        return self._admin_mode in (AdminMode.ONLINE, AdminMode.ENGINEERING)
+
+    # ----------------------------------
+    # Stopping the board commands
+    # ----------------------------------
+    def abort_board_commands(self: SubrackCommands) -> None:
+        """Abort the running board command and every queued one."""
+        self.task_executor.abort()
 
     # ----------------------------------
     # TPM power commands

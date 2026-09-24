@@ -33,6 +33,7 @@ from unittest import mock
 import pytest
 import tango
 from ska_control_model import AdminMode, ResultCode
+from ska_tango_base.executor import TaskExecutor
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
@@ -403,6 +404,58 @@ def test_an_offline_device_reaches_no_board(
 
     with pytest.raises(tango.DevFailed):
         subrack_device.command_inout(command, argument)
+
+    subrack.run_board_command.assert_not_called()
+
+
+def test_going_offline_aborts_the_board_commands(
+    online_device: tango.DeviceProxy,
+) -> None:
+    """
+    Test that writing adminMode OFFLINE aborts the task executor.
+
+    A board command that kept running would keep probing the board after the
+    device was asked to make no contact with it. What the abort does to each
+    command belongs to ska-tango-base, so only the call is asserted here.
+
+    :param online_device: the device under test, online.
+    """
+    with mock.patch.object(TaskExecutor, "abort", autospec=True) as abort:
+        online_device.adminMode = AdminMode.OFFLINE
+
+    abort.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "admin_mode",
+    [AdminMode.OFFLINE, AdminMode.NOT_FITTED, AdminMode.RESERVED],
+    ids=["OFFLINE", "NOT_FITTED", "RESERVED"],
+)
+def test_a_no_contact_admin_mode_reaches_no_board(
+    online_device: tango.DeviceProxy,
+    subrack: mock.Mock,
+    admin_mode: AdminMode,
+) -> None:
+    """
+    Test that a command is refused in every admin mode that asks for no contact.
+
+    The device reaches ``DISABLE`` only after the last poll reports back. The
+    poller here is a mock that never reports, so the device never reaches it.
+    That proves the refusal comes from ``adminMode`` and not from the state.
+
+    ``NOT_FITTED`` and ``RESERVED`` are reached only through ``OFFLINE``, and
+    neither starts polling. So each asks for no contact, as ``OFFLINE`` does.
+
+    :param online_device: the device under test, online.
+    :param subrack: the mocked subrack client.
+    :param admin_mode: the admin mode to put the device in.
+    """
+    online_device.adminMode = AdminMode.OFFLINE
+    online_device.adminMode = admin_mode
+    assert online_device.state() != DevState.DISABLE
+
+    with pytest.raises(tango.DevFailed):
+        online_device.command_inout(OUTCOME_COMMAND)
 
     subrack.run_board_command.assert_not_called()
 

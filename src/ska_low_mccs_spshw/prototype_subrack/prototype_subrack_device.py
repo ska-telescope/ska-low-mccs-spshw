@@ -172,6 +172,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, BaseInterface):
             return
 
         if control_level == ControlLevel.NO_CONTACT:
+            self.abort_board_commands()
             # Stopping does not block, so a poll already in flight still
             # reports back. The device goes offline in :py:meth:`_polling_stopped`,
             # which the poller calls after that last report.

@@ -1,7 +1,8 @@
 # Version History
 
-## Unreleased
+## 15.1.0
 
+* [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.
 * [THORN-651] Expose 40g information as an attribute `forty_gb_core_configurations`.
 This is semi-static, the configuration can be altered at runtime using SetLmcDownload, SetCspDownload and Configure40GCore commands.
 * [THORN-651] Avoid attempting to claim the lock multiple times in SetLmcDownload, SetCspDownload and Configure40GCore commands.

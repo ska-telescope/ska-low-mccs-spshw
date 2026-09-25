@@ -69,6 +69,11 @@ _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
 # from executing, so it does not share the general lane with them.
 _CALIBRATION_LANE = "calibration"
 
+# Reported in a tile's channeliserRounding row when that tile's value is
+# INVALID. The attribute is DevLong so cannot carry NaN, and valid roundings
+# are 0-7, so -1 is unambiguous.
+INVALID_CHANNELISER_ROUNDING = -1
+
 
 class _BandpassDaqReadRetryError(RuntimeError):
     """Raised to trigger retry when reading bandpass DAQ integrated mode."""
@@ -789,7 +794,7 @@ class SpsStationComponentManager(
         self._clock_present: list[bool | None] = [None] * self._number_of_tiles
         self._test_generator_active: list[bool | None] = [None] * self._number_of_tiles
         self._is_beamformer_running: list[bool | None] = [None] * self._number_of_tiles
-        self._channeliser_roundings: np.ndarray = np.zeros([16, 512])
+        self._channeliser_roundings: np.ndarray = np.zeros([16, 512], dtype=np.int32)
         self._pps_delay_corrections_reported: set[int] = set()
         self._desired_static_delays: None | list[float] = None
         self._desired_preadu_levels: None | list[float] = None
@@ -1364,7 +1369,9 @@ class SpsStationComponentManager(
                             isBeamformerRunning=self.is_beamformer_running
                         )
                 case "channeliserrounding":
-                    self._channeliser_roundings[logical_tile_id, :] = np.nan
+                    self._channeliser_roundings[
+                        logical_tile_id, :
+                    ] = INVALID_CHANNELISER_ROUNDING
                     if self._component_state_callback:
                         self._component_state_callback(
                             channeliserRounding=self.channeliser_rounding
@@ -3242,7 +3249,8 @@ class SpsStationComponentManager(
 
         Number of LS bits dropped in each channeliser frequency channel.
         Valid values 0-7 Same value applies to all antennas and
-        polarizations
+        polarizations. A tile whose value is INVALID reports -1 for
+        every channel.
 
         :returns: list of 512 values for each Tile, one per channel.
         """

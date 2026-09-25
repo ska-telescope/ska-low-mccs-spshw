@@ -1,5 +1,9 @@
 # Version History
 
+## 15.2.0
+
+* [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
+
 ## 15.1.0
 
 * [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.
@@ -10,7 +14,6 @@ This is semi-static, the configuration can be altered at runtime using SetLmcDow
 * [SKB-767] Update the minimum integration_time for Integrated LMC Data
 * [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.
 * [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
-* [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
 
 ## 15.0.0
 

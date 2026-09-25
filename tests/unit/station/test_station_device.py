@@ -210,7 +210,7 @@ def on_station_device_fixture(
     """
     Fixture that returns the SPS station Tango device under test.
 
-    Makes sure the device is ONLINE and ON.
+    Makes sure the device is ONLINE and ON, and that every tile is ON.
 
     :param test_context: a Tango test context
         containing an SPS station and mock subservient devices.
@@ -230,6 +230,9 @@ def on_station_device_fixture(
         sps_station.adminMode = AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.ON)
+    # The station goes ON as soon as any tile reports ON, so the other
+    # tiles' state events may not have been delivered yet.
+    sps_station.MockTilesOn()
 
     return sps_station
 
@@ -1262,8 +1265,10 @@ def test_write_read_channeliser_rounding(
     channeliser_rounding_to_check: np.ndarray = np.concatenate(
         (np.array([channeliser_rounding_to_set] * 4), zero_results)
     )
-    assert np.array_equal(
-        station_device.channeliserRounding, channeliser_rounding_to_check
+    # Tiles still subscribing to channeliserRounding report it only once
+    # subscribed, so the station's cache may lag the write.
+    assert wait_for_attribute_value(
+        station_device, "channeliserRounding", channeliser_rounding_to_check
     )
 
 

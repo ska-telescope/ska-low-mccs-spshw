@@ -1,7 +1,21 @@
 # Version History
 
-## Unreleased
+## 15.1.0
 
+* [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.
+* [THORN-651] Expose 40g information as an attribute `forty_gb_core_configurations`.
+This is semi-static, the configuration can be altered at runtime using SetLmcDownload, SetCspDownload and Configure40GCore commands.
+* [THORN-651] Avoid attempting to claim the lock multiple times in SetLmcDownload, SetCspDownload and Configure40GCore commands.
+* [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
+* [SKB-767] Update the minimum integration_time for Integrated LMC Data
+* [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
+
+## 15.0.0
+
+* [SPRTS-1067] Don't reset tile ref time on subrack events, reset on actual TPM connection.
+* [THORN-671] Bump tpm firmware version used when bios version > 1.0.0 from 11.0.0 -> 12.0.0.
+This comes with some 48 beam support. Removing 8 beam limitations and adding visibility of all 48 beams pointingDelays.
 * [SKB-1328] Restrict the VerifyEvents property to archive events only. Change events are now always pushed (detect=False).
 * [LOW-2454] Improve error detection, handling and logging during SpsStation's initialise sequence. All MccsTile command failures should now cause initialisation to fail, some critical operations are retried, and initialisation steps are logged at INFO level rather than DEBUG.
 * [THORN-698] Fix AcquireDataForCalibration when DAQ is running.
@@ -11,7 +25,6 @@ checks in `SpsStationComponentManager` onto `MccsTile`'s own `fisallowed` checks
 `_is_synchronised` check. `LoadPointingDelays` and `ApplyPointingDelays` are now gated to require a
 Synchronised tile (previously ungated).
 * [THORN-530] Expose timestamp_cnt rollover in Tile health attributes
-
 
 ## 14.1.0
 

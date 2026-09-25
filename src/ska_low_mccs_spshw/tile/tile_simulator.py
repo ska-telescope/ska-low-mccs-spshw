@@ -1410,6 +1410,19 @@ class TileSimulator:
         time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.")
 
+    @property
+    @connected
+    def acquisition_started(self) -> bool:
+        """
+        Returns if an acquisition has been started on the TPM.
+
+        :return: Returns if an acquisition has been started
+        :rtype: bool
+        """
+        return bool(self["fpga1.dsp_regfile.stream_status.channelizer_vld"]) and bool(
+            self["fpga2.dsp_regfile.stream_status.channelizer_vld"]
+        )
+
     @connected
     def find_register(
         self: TileSimulator,
@@ -2699,8 +2712,10 @@ class TileSimulator:
         _dst_ip = self.dst_ip or _dst_ip
         _dst_port = self.dst_port or _dst_port
         self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
+        # The simulator sends integrated channel data in place of a burst, so
+        # number_of_samples does not apply.
         self.spead_data_simulator.send_channelised_data(
-            1, number_of_samples, first_channel, last_channel
+            1, first_channel=first_channel, last_channel=last_channel
         )
 
     @check_mocked_overheating

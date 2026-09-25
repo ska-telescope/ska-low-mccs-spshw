@@ -179,7 +179,9 @@ class PowerMarshaller(MccsBaseDevice):
         if self._health_state != health:
             self._health_state = health
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString", label="Health Report", doc="Return the health report."
+    )
     def healthReport(self: PowerMarshaller) -> str:
         """
         Get the health report.

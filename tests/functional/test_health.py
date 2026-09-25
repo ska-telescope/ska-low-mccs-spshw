@@ -15,6 +15,7 @@ import time
 from datetime import datetime
 from typing import Any, Callable, Generator
 
+import numpy as np
 import pytest
 import requests
 import tango
@@ -138,10 +139,10 @@ def set_tpm_attribute_in_simulator(
     host: str, port: int, attribute: str, values: list[float] | None
 ) -> None:
     """
-    Set the TPM attribute.
+    Set the TPM attribute in the subrack simulator.
 
-    :param host: The Tile simulator host.
-    :param port: The Tile simulator port.
+    :param host: The Subrack simulator host.
+    :param port: The Subrack simulator port.
     :param attribute: The attribute name to set.
     :param values: The values to set for the attribute.
 
@@ -168,10 +169,10 @@ def get_tpm_attribute_from_simulator(
     host: str, port: int, attribute: str
 ) -> list[float]:
     """
-    Get the TPM attribute from the simulator.
+    Get the TPM attribute from the subrack simulator.
 
-    :param host: The Tile simulator host.
-    :param port: The Tile simulator port.
+    :param host: The Subrack simulator host.
+    :param port: The Subrack simulator port.
     :param attribute: The attribute name to get.
 
     :returns: The attribute values or None if not found.
@@ -252,11 +253,11 @@ def station_name_fixture(true_context: bool) -> str:
 @pytest.fixture(name="simulator_host")
 def simulator_host_fixture(subrack_id: int) -> str:
     """
-    Get the simulator host name.
+    Get the subrack simulator host name.
 
     :param subrack_id: the ID number of the subrack in the station.
 
-    :returns: The simulator host name.
+    :returns: The subrack simulator host name.
 
     """
     label = os.getenv("STATION_LABEL") or "real-daq-1"
@@ -724,16 +725,28 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     Simulate tile subrack power thresholds being exceeded and reset on teardown.
 
     :param station_devices: dictionary of device proxies.
-    :param simulator_host: the simulator host name.
-    :param simulator_port: the simulator port number.
+    :param simulator_host: the subrack simulator host name.
+    :param simulator_port: the subrack simulator port number.
 
     :yields: control back to the test.
     """
+
+    def _wait_for_subrack_tpmvoltages_to_change(
+        subrack: tango.DeviceProxy, value: list[float]
+    ) -> None:
+        end_time = time.monotonic() + 20
+        while np.array_equal(subrack.tpmvoltages, value):
+            time.sleep(0.1)
+            if time.monotonic() > end_time:
+                print("Subrack.tpmVoltages did not change from initial value.")
+                break
+
+    subrack_device = station_devices["Subracks"][0]
     # The simulator service parameters
     host = simulator_host
     port = simulator_port
 
-    # Get current Tile simulator values
+    # Get current Subrack simulator values
     original_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
 
     # Get the highest alarm
@@ -750,6 +763,9 @@ def tile_subrack_power_thresholds_exceeded_fixture(
     # Set the new voltages
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", new_voltages)
 
+    # Wait for the subrack device to register the change.
+    _wait_for_subrack_tpmvoltages_to_change(subrack_device, original_voltages)
+
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")
     assert all([abs(a - b) < 1e-3 for a, b in zip(new_voltages, validate_voltages)])
@@ -761,6 +777,8 @@ def tile_subrack_power_thresholds_exceeded_fixture(
 
     # Reset the original voltages
     set_tpm_attribute_in_simulator(host, port, "tpm_voltages", original_voltages)
+    # Wait for the subrack device to register the change.
+    _wait_for_subrack_tpmvoltages_to_change(subrack_device, new_voltages)
 
     # Ensure the voltages are as expected
     validate_voltages = get_tpm_attribute_from_simulator(host, port, "tpm_voltages")

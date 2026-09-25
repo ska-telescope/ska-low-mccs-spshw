@@ -739,7 +739,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     @attribute(
         dtype="DevBoolean",
-        label="useAttributesForHealth",
+        label="Use Attributes For Health",
+        doc="Return if adr115 is in use. "
+        "True if attributes quality is being evaluated in health.",
     )
     def useAttributesForHealth(self: MccsSubrack) -> bool:
         """
@@ -750,7 +752,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.UseAttributesForHealth
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Attribute Filter Type",
+        doc="The type of attribute filter applied.",
+    )
     def attributeFilterType(self) -> str:
         """
         Get the attribute filter type.
@@ -763,6 +769,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype="DevString",
         format="%s",
+        label="Health Model Params",
+        doc="Get the health params from the health model.",
     )
     def healthModelParams(self: MccsSubrack) -> str:
         """
@@ -789,7 +797,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
-    @attribute(dtype="DevShort", label="TPM count", abs_change=1)
+    @attribute(
+        dtype="DevShort",
+        abs_change=1,
+        label="TPM Count",
+        doc="Read the TPM count of this Subrack.",
+    )
     def tpmCount(self: MccsSubrack) -> int:
         """
         Handle a Tango attribute read of TPM count.
@@ -800,7 +813,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_count
 
-    @attribute(dtype=(bool,), max_dim_x=8, label="TPM present")
+    @attribute(
+        dtype=(bool,),
+        max_dim_x=8,
+        label="TPM present",
+        doc="Read the presence of TPMs in each Subrack bay.",
+    )
     def tpmPresent(self: MccsSubrack) -> list[bool]:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of which TPMs are present in the subrack.
@@ -811,7 +829,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_present
 
-    @attribute(dtype=PowerState, label="TPM 1 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 1 Power State",
+        doc="The powerState of the TPM in bay 1.",
+    )
     def tpm1PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 1.
@@ -820,7 +842,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[0]
 
-    @attribute(dtype=PowerState, label="TPM 2 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 2 Power State",
+        doc="The powerState of the TPM in bay 2.",
+    )
     def tpm2PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 2.
@@ -829,7 +855,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[1]
 
-    @attribute(dtype=PowerState, label="TPM 3 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 3 Power State",
+        doc="The powerState of the TPM in bay 3.",
+    )
     def tpm3PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 3.
@@ -838,7 +868,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[2]
 
-    @attribute(dtype=PowerState, label="TPM 4 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 4 Power State",
+        doc="The powerState of the TPM in bay 4.",
+    )
     def tpm4PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 4.
@@ -847,7 +881,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[3]
 
-    @attribute(dtype=PowerState, label="TPM 5 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 5 Power State",
+        doc="The powerState of the TPM in bay 5.",
+    )
     def tpm5PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 5.
@@ -856,7 +894,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[4]
 
-    @attribute(dtype=PowerState, label="TPM 6 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 6 Power State",
+        doc="The powerState of the TPM in bay 6.",
+    )
     def tpm6PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 6.
@@ -865,7 +907,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[5]
 
-    @attribute(dtype=PowerState, label="TPM 7 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 7 Power State",
+        doc="The powerState of the TPM in bay 7.",
+    )
     def tpm7PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 7.
@@ -874,7 +920,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._tpm_power_states[6]
 
-    @attribute(dtype=PowerState, label="TPM 8 power state")
+    @attribute(
+        dtype=PowerState,
+        label="TPM 8 Power State",
+        doc="The powerState of the TPM in bay 8.",
+    )
     def tpm8PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 8.
@@ -886,9 +936,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=2,
-        label="Backplane temperatures",
-        unit="Celsius",
         abs_change=0.1,
+        label="Backplane Temperatures",
+        unit="Celsius",
+        doc="Read the backplane temperatures. "
+        "Two values are returned, respectively for the first (bays 1-4) "
+        "and second (bays 5-8) halves of the backplane.",
     )
     def backplaneTemperatures(self: MccsSubrack) -> list[float] | None:
         """
@@ -919,13 +972,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=2,
-        label="Subrack board temperatures",
-        unit="Celsius",
         abs_change=0.1,
+        label="Subrack Board Temperatures",
+        unit="Celsius",
+        doc="Read the Subrack board temperatures.",
     )
     def boardTemperatures(self: MccsSubrack) -> list[float] | None:
         """
-        Handle a Tango attribute read of the subrack board temperature.
+        Handle a Tango attribute read of the subrack board temperatures.
 
         Two values are returned.
 
@@ -949,9 +1003,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     @attribute(
         dtype=("DevFloat",),
-        label="Board current",
-        unit="Ampere",
         abs_change=0.1,
+        label="Board Current",
+        unit="Ampere",
+        doc="Read the total current provided by the two power supplies.",
     )
     def boardCurrent(self: MccsSubrack) -> list[float] | None:
         """
@@ -977,7 +1032,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("boardCurrent", None)
 
-    @attribute(dtype=bool, label="CPLD PLL locked")
+    @attribute(
+        dtype=bool, label="CPLD PLL Locked", doc="Read whether the CPLD PLL is locked."
+    )
     def cpldPllLocked(self: MccsSubrack) -> bool | None:
         """
         Handle a Tango attribute read of the subrack CPLD PLL locked attribute.
@@ -995,7 +1052,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("cpldPllLocked", None)
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=2, label="power supply currents", abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=2,
+        abs_change=0.1,
+        unit="Ampere",
+        label="Power Supply Currents",
+        doc="Read the currents of the power supplies.",
     )
     def powerSupplyCurrents(self: MccsSubrack) -> list[float] | None:
         """
@@ -1020,8 +1082,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=3,
-        label="power supply fan speeds",
         abs_change=0.1,
+        label="power supply fan speeds",
+        doc="Fan speeds of the power supply expressed as a percentage of maximum.",
     )
     def powerSupplyFanSpeeds(self: MccsSubrack) -> list[float] | None:
         """
@@ -1048,7 +1111,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("powerSupplyFanSpeeds", None)
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=2, label="power supply powers", abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=2,
+        abs_change=0.1,
+        label="Power Supply Powers",
+        unit="Watt",
+        doc="Output power of Subrack power supplies.",
     )
     def powerSupplyPowers(self: MccsSubrack) -> list[float] | None:
         """
@@ -1071,7 +1139,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("powerSupplyPowers", None)
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=2, label="power supply voltages", abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=2,
+        abs_change=0.1,
+        label="Power Supply Voltages",
+        unit="Volt",
+        doc="Output voltage of the Subrack power supplies.",
     )
     def powerSupplyVoltages(self: MccsSubrack) -> list[float] | None:
         """
@@ -1115,15 +1188,16 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=4,
+        abs_change=0.1,
         max_alarm=9750,  # 150%
         max_warning=8125,  # 125%
         min_alarm="Not specified",  # ignore faults on RAL
         min_warning="Not specified",  # ignore faults on RAL
         # min_alarm=1625,  # 25%
         # min_warning=4875,  # 75%
-        label="expected fan speeds at 100% pwm duty",
-        unit="rpm",
-        abs_change=0.1,
+        label="Estimated Max Fan Speed",
+        unit="RPM",
+        doc="Expected Fan Speeds at 100% pwm duty.",
     )
     def subrackMaxFanSpeeds(self: MccsSubrack) -> np.ndarray | None:
         """
@@ -1149,7 +1223,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackMaxFanSpeeds", None)
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds", abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=4,
+        abs_change=0.1,
+        label="Subrack Fan Speeds",
+        unit="RPM",
+        doc="Read the Subrack fan speeds.",
     )
     def subrackFanSpeeds(self: MccsSubrack) -> list[float] | None:
         """
@@ -1172,7 +1251,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackFanSpeeds", None)
 
     @attribute(
-        dtype=("DevFloat",), max_dim_x=4, label="subrack fan speeds (%)", abs_change=0.1
+        dtype=("DevFloat",),
+        max_dim_x=4,
+        abs_change=0.1,
+        label="Subrack Fan Speeds (%)",
+        doc="Subrack fan speeds expressed as a percentage of maximum.",
     )
     def subrackFanSpeedsPercent(self: MccsSubrack) -> list[float] | None:
         """
@@ -1203,7 +1286,13 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     # TODO: https://gitlab.com/tango-controls/pytango/-/issues/483
     # Once this is fixed, we can use dtype=(FanMode,).
-    @attribute(dtype=(int,), max_dim_x=4, label="subrack fan modes", abs_change=1)
+    @attribute(
+        dtype=(int,),
+        max_dim_x=4,
+        abs_change=1,
+        label="Subrack Fan Modes",
+        doc="Read the current Subrack fan modes.",
+    )
     def subrackFanModes(self: MccsSubrack) -> list[int] | None:
         """
         Handle a Tango attribute read of the subrack fan modes.
@@ -1214,7 +1303,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("subrackFanModes", None)
 
-    @attribute(dtype=bool, label="PLL locked")
+    @attribute(dtype=bool, label="PLL Locked", doc="Whether the PLL is locked.")
     def subrackPllLocked(self: MccsSubrack) -> bool | None:
         """
         Handle a Tango attribute read of the subrack PLL locked attribute.
@@ -1232,9 +1321,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackPllLocked", None)
 
     @attribute(
-        dtype="DevLong",
-        label="Timestamp",
-        abs_change=1,
+        dtype="DevLong", abs_change=1, label="Timestamp", doc="Subrack current time."
     )
     def subrackTimestamp(self: MccsSubrack) -> int | None:
         """
@@ -1252,7 +1339,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("subrackTimestamp", None)
 
-    @attribute(dtype=str, label="Health Status Dictionary")
+    @attribute(
+        dtype=str,
+        label="Health Status Dictionary",
+        doc="Read a dictionary of all Subrack monitoring points.",
+    )
     def healthStatus(self: MccsSubrack) -> str | None:
         """
         Handle a dictionary of all available monitoring points.
@@ -1261,7 +1352,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return json.dumps(self.component_manager.read_health_status())
 
-    @attribute(dtype=float, label="PSU 1 Load")
+    @attribute(
+        dtype=float,
+        label="PSU 1 Load",
+        doc="Read the load on PSU1 expressed as a fraction of the maximum.",
+    )
     def psu1Load(self: MccsSubrack) -> float | None:
         """
         Return the fractional loading on PSU 1.
@@ -1270,7 +1365,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._psu_load(0)
 
-    @attribute(dtype=float, label="PSU 2 Load")
+    @attribute(
+        dtype=float,
+        label="PSU 2 Load",
+        doc="Read the load on PSU2 expressed as a fraction of the maximum.",
+    )
     def psu2Load(self: MccsSubrack) -> float | None:
         """
         Return the fractional loading on PSU 2.
@@ -1305,120 +1404,120 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     internalVoltages1V1 = attribute_from_signal(  # noqa: N815
         internal_voltages_1v1_signal,
         dtype="DevDouble",
-        label="V_1V1",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_1V1 Voltage",
+        unit="Volt",
         doc="Subrack internal 1V1 supply voltage in Volts.",
     )
 
     internalVoltages1V5 = attribute_from_signal(  # noqa: N815
         internal_voltages_1v5_signal,
         dtype="DevDouble",
-        label="V_1V5",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_1V5 Voltage",
+        unit="Volt",
         doc="Subrack internal 1V5 supply voltage in Volts.",
     )
 
     internalVoltages2V5 = attribute_from_signal(  # noqa: N815
         internal_voltages_2v5_signal,
         dtype="DevDouble",
-        label="V_2V5",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_2V5 Voltage",
+        unit="Volt",
         doc="Subrack internal 2V5 supply voltage in Volts.",
     )
 
     internalVoltages2V8 = attribute_from_signal(  # noqa: N815
         internal_voltages_2v8_signal,
         dtype="DevDouble",
-        label="V_2V8",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_2V8 Voltage",
+        unit="Volt",
         doc="Subrack internal 2V8 supply voltage in Volts.",
     )
 
     internalVoltages3V = attribute_from_signal(  # noqa: N815
         internal_voltages_3v_signal,
         dtype="DevDouble",
-        label="V_3V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_3V Voltage",
+        unit="Volt",
         doc="Subrack internal 3V supply voltage in Volts.",
     )
 
     internalVoltages3V3 = attribute_from_signal(  # noqa: N815
         internal_voltages_3v3_signal,
         dtype="DevDouble",
-        label="V_3V3",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_3V3 Voltage",
+        unit="Volt",
         doc="Subrack internal 3V3 supply voltage in Volts.",
     )
 
     internalVoltages5V = attribute_from_signal(  # noqa: N815
         internal_voltages_5v_signal,
         dtype="DevDouble",
-        label="V_5V",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_5V Voltage",
+        unit="Volt",
         doc="Subrack internal 5V supply voltage in Volts.",
     )
 
     internalVoltagesARM = attribute_from_signal(  # noqa: N815
         internal_voltages_arm_signal,
         dtype="DevDouble",
-        label="V_ARM",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_ARM Voltage",
+        unit="Volt",
         doc="Subrack internal ARM supply voltage in Volts.",
     )
 
     internalVoltagesCORE = attribute_from_signal(  # noqa: N815
         internal_voltages_core_signal,
         dtype="DevDouble",
-        label="V_CORE",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_CORE Voltage",
+        unit="Volt",
         doc="Subrack internal CORE supply voltage in Volts.",
     )
 
     internalVoltagesDDR = attribute_from_signal(  # noqa: N815
         internal_voltages_ddr_signal,
         dtype="DevDouble",
-        label="V_DDR",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_DDR Voltage",
+        unit="Volt",
         doc="Subrack internal DDR supply voltage in Volts.",
     )
 
     internalVoltagesPOWERIN = attribute_from_signal(  # noqa: N815
         internal_voltages_powerin_signal,
         dtype="DevDouble",
-        label="V_POWERIN",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_POWERIN Voltage",
+        unit="Volt",
         doc="Subrack power input voltage in Volts.",
     )
 
     internalVoltagesSOC = attribute_from_signal(  # noqa: N815
         internal_voltages_soc_signal,
         dtype="DevDouble",
-        label="V_SOC",
-        unit="Volt",
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="V_SOC Voltage",
+        unit="Volt",
         doc="Subrack internal SOC supply voltage in Volts.",
     )
 
@@ -1439,115 +1538,115 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1PowerIn = attribute_from_signal(  # noqa: N815
         psu1_power_in_signal,
         dtype="DevDouble",
-        label="PSU1 Input Power",
-        unit="Watt",
         max_alarm=600.0,
         max_warning=575.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU1 Input Power",
+        unit="Watt",
         doc="PSU1 input power in Watts.",
     )
 
     psu2PowerIn = attribute_from_signal(  # noqa: N815
         psu2_power_in_signal,
         dtype="DevDouble",
-        label="PSU2 Input Power",
-        unit="Watt",
         max_alarm=600.0,
         max_warning=575.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU2 Input Power",
+        unit="Watt",
         doc="PSU2 input power in Watts.",
     )
 
     psu1PowerOut = attribute_from_signal(  # noqa: N815
         psu1_power_out_signal,
         dtype="DevDouble",
-        label="PSU1 Output Power",
-        unit="Watt",
         max_alarm=1140.0,
         max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU1 Output Power",
+        unit="Watt",
         doc="PSU1 output power in Watts.",
     )
 
     psu2PowerOut = attribute_from_signal(  # noqa: N815
         psu2_power_out_signal,
         dtype="DevDouble",
-        label="PSU2 Output Power",
-        unit="Watt",
         max_alarm=1140.0,
         max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU2 Output Power",
+        unit="Watt",
         doc="PSU2 output power in Watts.",
     )
 
     psu1VoltageIn = attribute_from_signal(  # noqa: N815
         psu1_voltage_in_signal,
         dtype="DevDouble",
-        label="PSU1 Input Voltage",
-        unit="Volt",
         max_alarm=253.00,
         max_warning=240.0,
         min_warning=215.0,
         min_alarm=207.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU1 Input Voltage",
+        unit="Volt",
         doc="PSU1 input voltage in Volts.",
     )
 
     psu2VoltageIn = attribute_from_signal(  # noqa: N815
         psu2_voltage_in_signal,
         dtype="DevDouble",
-        label="PSU2 Input Voltage",
-        unit="Volt",
         max_alarm=253.00,
         max_warning=240.0,
         min_warning=215.0,
         min_alarm=207.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU2 Input Voltage",
+        unit="Volt",
         doc="PSU2 input voltage in Volts.",
     )
 
     psu1VoltageOut = attribute_from_signal(  # noqa: N815
         psu1_voltage_out_signal,
         dtype="DevDouble",
-        label="PSU1 Output Voltage",
-        unit="Volt",
         max_alarm=14.0,
         max_warning=13.0,
         min_warning=11.0,
         min_alarm=10.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU1 Output Voltage",
+        unit="Volt",
         doc="PSU1 output voltage in Volts.",
     )
 
     psu2VoltageOut = attribute_from_signal(  # noqa: N815
         psu2_voltage_out_signal,
         dtype="DevDouble",
-        label="PSU2 Output Voltage",
-        unit="Volt",
         max_alarm=14.0,
         max_warning=13.0,
         min_warning=11.0,
         min_alarm=10.0,
         abs_change=0.1,
         archive_abs_change=0.1,
+        label="PSU2 Output Voltage",
+        unit="Volt",
         doc="PSU2 output voltage in Volts.",
     )
 
     psuDeadCount = attribute_from_signal(  # noqa: N815
         psu_dead_count_signal,
         dtype="DevShort",
-        label="Dead PSU Count",
         max_warning=1,
         max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
+        label="Dead PSU Count",
         doc=(
             "Count of PSUs that are present and receive input voltage but "
             "supply no output voltage."
@@ -1591,7 +1690,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
-    @attribute(dtype=str, label="pdu_health")
+    @attribute(dtype=str, label="PDU Health", doc="The current health of the PDU.")
     def pduHealth(self: MccsSubrack) -> str | None:
         """
         Handle a Tango attribute read of the pdu health.
@@ -1600,7 +1699,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_health_state()
 
-    @attribute(dtype=str, label="pdu_model")
+    @attribute(dtype=str, label="PDU Model", doc="The model of PDU in use.")
     def pduModel(self: MccsSubrack) -> str | None:
         """
         Handle a Tango attribute read of the pdu model type.
@@ -1617,16 +1716,20 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_model()
 
-    @attribute(dtype="DevShort", label="pdu number ports")
+    @attribute(
+        dtype="DevShort",
+        label="Number of PDU Ports",
+        doc="Read the number of PDU ports.",
+    )
     def pduNumberPorts(self: MccsSubrack) -> int | None:
         """
-        Handle a Tango attribute read of thenumber of pdu ports.
+        Handle a Tango attribute read of the number of pdu ports.
 
         :return: the number of pdu ports
         """
         return self.component_manager.pdu_number_of_ports()
 
-    @attribute(dtype=(int,), label="pdu port states")
+    @attribute(dtype=(int,), label="PDU Port States", doc="Read the PDU port states.")
     def pduPortStates(self: MccsSubrack) -> list[int] | None:
         """
         Handle a Tango attribute read of the state of pdu port.
@@ -1635,7 +1738,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_states()
 
-    @attribute(dtype=("DevFloat",), label="pdu port currents")
+    @attribute(
+        dtype=("DevFloat",),
+        label="PDU Port Currents",
+        unit="Ampere",
+        doc="Read the PDU port currents.",
+    )
     def pduPortCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the current of pdu port.
@@ -1644,7 +1752,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_currents()
 
-    @attribute(dtype=("DevFloat",), label="pdu port voltages")
+    @attribute(
+        dtype=("DevFloat",),
+        label="PDU Port Voltages",
+        unit="Volt",
+        doc="Read the PDU port voltages.",
+    )
     def pduPortVoltages(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the current of pdu port.
@@ -1653,7 +1766,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_voltages()
 
-    @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM currents", abs_change=0.1)
+    @attribute(
+        dtype=("DevFloat",),
+        max_dim_x=8,
+        abs_change=0.1,
+        label="TPM Currents",
+        unit="Ampere",
+        doc="Read the current of all TPMs.",
+    )
     def tpmCurrents(self: MccsSubrack) -> list[float] | None:
         """
         Handle a Tango attribute read of the TPM currents.
@@ -1677,9 +1797,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
-        label="TPM powers",
         max_alarm=120.0,
         abs_change=0.1,
+        label="TPM Powers",
+        unit="Watt",
+        doc="Read the powers of all TPMs.",
     )
     def tpmPowers(self: MccsSubrack) -> list[float] | None:
         """
@@ -1717,10 +1839,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
-        label="TPM voltages",
         min_alarm=11.4,
         max_alarm=12.6,
         abs_change=0.1,
+        label="TPM Voltages",
+        unit="Volt",
+        doc="Read the voltages of all TPMs.",
     )
     def tpmVoltages(self: MccsSubrack) -> list[float] | None:
         """
@@ -1738,7 +1862,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("tpmVoltages", None)
 
-    @attribute(dtype=str, label="Subrack Board Info")
+    @attribute(dtype=str, label="Subrack Board Info", doc="Read the Subrack board info")
     def subrackBoardInfo(self: MccsSubrack) -> str | None:
         """
         Handle a Tango attribute read of the Subrack board info.
@@ -1794,6 +1918,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         power: Optional[PowerState] = None,
         health: HealthState | int | None = None,
         pdu: Optional[HealthState] = None,
+        power_marshaller: Optional[HealthState] = None,
         health_status: Optional[dict] = None,
         **kwargs: Any,
     ) -> None:
@@ -1807,6 +1932,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param power: the power state of the component
         :param health: the health state of a subordinate component.
         :param pdu: any changes to the pdu device.
+        :param power_marshaller: any changes to the power_marshaller device.
         :param health_status: any changes to the health_status variables.
         :param kwargs: other state updates
         """
@@ -2081,7 +2207,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             bool(psu_present.get("PSU2", False)),
         ]
 
-    @attribute(dtype="DevString")
+    @attribute(
+        dtype="DevString",
+        label="Health Report",
+        doc="The current Subrack health state plus optional additional information.",
+    )
     def healthReport(self: MccsSubrack) -> str:
         """
         Get the health report.

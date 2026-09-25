@@ -403,7 +403,7 @@ class TestMccsTileTpmDriver:
         tile_lrc_manager.assert_command_in_progress()
 
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "NotProgrammed", lookahead=2, consume_nonmatches=True
+            "NotProgrammed", lookahead=10, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Programmed"

@@ -1137,7 +1137,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=512,  # Channels
         max_dim_y=16,  # Tiles
         label="Channeliser Rounding",
-        doc="Number of LS bits dropped in each channeliser freq channel.",
+        doc=(
+            "Number of LS bits dropped in each channeliser freq channel. "
+            "-1 for every channel of a tile whose value is invalid."
+        ),
     )
     def channeliserRounding(self: SpsStation) -> ndarray:
         """
@@ -1145,7 +1148,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         Number of LS bits dropped in each channeliser frequency channel.
         Valid values 0-7 Same value applies to all antennas and
-        polarizations
+        polarizations. A tile whose value is invalid reports -1 for
+        every channel.
 
         :returns: A list of 512 values for every tile, one per channel.
         """

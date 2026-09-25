@@ -1232,8 +1232,10 @@ def spsstation_attributes_present_off_tile(
         lookahead=10,
         consume_nonmatches=True,
     )
+    # channeliserRounding is DevLong so cannot carry NaN; SpsStation reports
+    # -1 for every channel of a tile whose value is INVALID.
     change_event_callbacks["station_channeliser_rounding"].assert_change_event(
-        _Predicate(_all_nan_in(off_tile_id, off_tile_id + 1)),
+        _Predicate(lambda v: bool(np.all(np.asarray(v)[off_tile_id] == -1))),
         lookahead=10,
         consume_nonmatches=True,
     )

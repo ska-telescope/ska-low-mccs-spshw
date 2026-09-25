@@ -38,14 +38,11 @@ from ska_low_mccs_spshw.prototype_subrack import (
     RequestError,
     SubrackPollResponse,
 )
+from ska_low_mccs_spshw.prototype_subrack.constants import HEALTH_STATUS_KEY
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
 )
-from tests.harness import (
-    SpsTangoTestHarness,
-    SpsTangoTestHarnessContext,
-    get_prototype_subrack_name,
-)
+from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 # TODO: gc.disable() works around a hang during garbage collection.
 gc.disable()
@@ -163,7 +160,7 @@ def _nest(rows: list[tuple[str, tuple[str, ...], Any]]) -> dict[str, Any]:
 POLL_VALUES: dict[str, Any] = {key: value for _, key, value in POLLED}
 POLL_VALUES.update({key: reported for _, key, reported, _ in CONVERTED})
 
-HEALTH_STATUS: dict[str, Any] = _nest(HEALTH)
+POLL_VALUES[HEALTH_STATUS_KEY] = _nest(HEALTH)
 
 # Every attribute a successful poll populates, and the value it should report.
 EXPECTED: dict[str, Any] = {
@@ -289,16 +286,12 @@ def poll_succeeded_fixture(subrack_factory: mock.Mock) -> Callable[..., None]:
     :param subrack_factory: the injected subrack factory, which carries the
         device's data callback.
 
-    :return: a callable taking the values and health status to report.
+    :return: a callable taking the values to report.
     """
 
-    def report(
-        values: Any = _UNSET,
-        health_status: Any = _UNSET,
-    ) -> None:
+    def report(values: Any = _UNSET) -> None:
         response = SubrackPollResponse(
             values=POLL_VALUES if values is _UNSET else values,
-            health_status=(HEALTH_STATUS if health_status is _UNSET else health_status),
             timestamp=TIMESTAMP,
         )
         with tango.EnsureOmniThread():
@@ -510,7 +503,6 @@ def test_assembles_from_its_properties(
     subrack_factory.assert_called_once_with(
         client_factory.return_value,
         derived=derived_factory.return_value,
-        name=get_prototype_subrack_name(SUBRACK_ID),
         logger=mock.ANY,
         data_callback=mock.ANY,
         error_callback=mock.ANY,
@@ -612,7 +604,7 @@ def test_missing_health_status_invalidates_only_its_attributes(
     :param online_device: the device under test, online and not yet polled.
     :param poll_succeeded: supplies a successful poll response.
     """
-    poll_succeeded(health_status=None)
+    poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: None})
 
     for attribute_name, _, _ in HEALTH:
         assert (
@@ -620,6 +612,34 @@ def test_missing_health_status_invalidates_only_its_attributes(
             == tango.AttrQuality.ATTR_INVALID
         ), attribute_name
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
+    assert online_device.healthState == HealthState.OK
+
+
+def test_a_busy_read_keeps_the_last_value(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that a key the board was too busy to read keeps its last value.
+
+    The subrack leaves a busy key out of the response. A read key and the
+    health status are emitted separately, so the test drops one of each. Every
+    attribute they feed must stay valid with the value from the poll before.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    poll_succeeded()
+    busy = ("board_temperatures", HEALTH_STATUS_KEY)
+
+    poll_succeeded(
+        values={key: value for key, value in POLL_VALUES.items() if key not in busy}
+    )
+
+    _assert_reads(online_device, "boardTemperatures", [40.5, 41.5])
+    for attribute_name, _, expected in HEALTH:
+        _assert_reads(online_device, attribute_name, expected)
+    assert online_device.state() == DevState.ON
     assert online_device.healthState == HealthState.OK
 
 

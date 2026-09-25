@@ -1937,6 +1937,7 @@ class TileComponentManager(
         dst_ip_40g_fpga2 = ""
         forty_gb_destination_ips: list[str] = []
         forty_gb_destination_ports: list[int] = []
+        forty_gb_cores: list[dict] = []
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.

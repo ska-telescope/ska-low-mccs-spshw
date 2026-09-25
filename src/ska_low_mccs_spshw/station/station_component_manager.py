@@ -4571,6 +4571,7 @@ class SpsStationComponentManager(
             mode="10g",
             payload_length=8192,  # Default for using 10g
             dst_ip=calibration_daq_proxy.receiverIP,
+            data_type="channelised",
             dst_port=calibration_daq_proxy.receiverPorts[0],
         )
         if download_result_code != ResultCode.OK:

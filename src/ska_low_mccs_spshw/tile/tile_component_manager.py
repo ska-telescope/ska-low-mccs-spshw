@@ -309,6 +309,7 @@ class TileComponentManager(
         self._fpga_reference_time = 0
         self._initial_pps_delay: int | None = None
         self._forty_gb_core_list: list = []
+        self._number_of_arp_table_entries: int | None = None
         self._fpgas_time: list[int] = []
         self._pending_data_requests = False
         self._tile_time = TileTime(0)
@@ -2642,6 +2643,10 @@ class TileComponentManager(
                     self.tile[  # pylint: disable=expression-not-assigned
                         int(0x30000000)
                     ]
+                    # A fresh connection may be to newly (re)programmed firmware,
+                    # so drop the cached ARP table entry count -- it will be
+                    # re-read from firmware the next time it's needed.
+                    self._number_of_arp_table_entries = None
                     # After connection lets check the configuration.
                     assert self._request_provider is not None
                     self._request_provider.desire_configuration_read()
@@ -3764,6 +3769,34 @@ class TileComponentManager(
 
         return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
+    def _get_number_of_arp_table_entries(self: TileComponentManager) -> int:
+        """
+        Return the number of ARP table entries supported by the connected firmware.
+
+        This is a firmware feature that cannot change without a reconnect (e.g.
+        after a power cycle or firmware reprogram), so it's read from hardware
+        once per connection and cached; ``connect()`` invalidates the cache
+        whenever it establishes a fresh connection.
+
+        :return: the number of ARP table entries supported by the firmware.
+        """
+        if self._number_of_arp_table_entries is None:
+            with acquire_timeout(
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                try:
+                    self._number_of_arp_table_entries = self.tile.tpm.tpm_10g_core[
+                        0
+                    ].get_number_of_arp_table_entries()
+                except AttributeError:
+                    # e.g. the tile simulator, which doesn't model
+                    # per-data-type ARP entries. 4 matches older firmware's
+                    # fixed ARP table size.
+                    self._number_of_arp_table_entries = 4
+        return self._number_of_arp_table_entries
+
     def get_40g_configuration(
         self: TileComponentManager, core_id: int = -1, arp_table_entry: int = 0
     ) -> list[dict]:
@@ -3783,10 +3816,11 @@ class TileComponentManager(
             raise_exception=True,
         ):
             if core_id == -1 or core_id is None:
+                number_of_arp_table_entries = self._get_number_of_arp_table_entries()
                 self._forty_gb_core_list = [
                     config
                     for icore in range(2)
-                    for arp_table_entry_id in range(4)
+                    for arp_table_entry_id in range(number_of_arp_table_entries)
                     if (
                         config := self.tile.get_40g_core_configuration(
                             icore, arp_table_entry_id

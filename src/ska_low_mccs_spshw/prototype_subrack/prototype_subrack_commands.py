@@ -29,7 +29,7 @@ from __future__ import annotations
 import importlib.resources
 import json
 import threading
-from typing import Final, Optional
+from typing import Any, Final, Optional
 
 import ska_tango_base as stb
 from ska_control_model import AdminMode, ResultCode, TaskStatus
@@ -52,13 +52,30 @@ _OUTCOMES: Final[dict[BoardCommandStatus, tuple[TaskStatus, ResultCode]]] = {
 }
 
 
+def _load_schema(command_name: str) -> dict[str, Any]:
+    """
+    Load the JSON schema for one command, from the file named after it.
+
+    :param command_name: the Tango command the schema validates.
+
+    :return: the schema.
+    """
+    return json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.subrack",
+            f"MccsSubrack_{command_name}.json",
+        )
+    )
+
+
 # pylint: disable=too-many-ancestors
 class SubrackCommands(LRCMixin):
     """
     The Tango commands of the prototype subrack device that reach the board.
 
-    Mixed into the device, which supplies the subrack below. The mixin holds
-    no state of its own, so a command reads the subrack the device assembled
+    Mixed into the device, which supplies the subrack below. The only state
+    the mixin holds is the command schemas, which it loads in
+    :py:meth:`init_device`. A command reads the subrack the device assembled
     rather than one it keeps.
 
     Every command runs one SMB command through
@@ -70,8 +87,16 @@ class SubrackCommands(LRCMixin):
     # ----------------------------------
     # What the device must supply
     # ----------------------------------
-    _subrack: Optional[Subrack]
-    """The client the commands run through, or ``None`` before it is built."""
+    @property
+    def subrack(self: SubrackCommands) -> Subrack:
+        """
+        Return the client the commands run through.
+
+        :raises NotImplementedError: always, because the device supplies it.
+        """
+        raise NotImplementedError(
+            f"'subrack' property must be implemented by '{type(self).__name__}'."
+        )
 
     _admin_mode: AdminMode
     """The admin mode, which ``BaseInterface`` stores as it is written."""
@@ -79,26 +104,22 @@ class SubrackCommands(LRCMixin):
     # ----------------------------------
     # Command schemas
     # ----------------------------------
-    SetSubrackFanSpeed_SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.subrack",
-            "MccsSubrack_SetSubrackFanSpeed.json",
-        )
-    )
+    SetSubrackFanSpeed_SCHEMA: dict[str, Any]
+    SetSubrackFanMode_SCHEMA: dict[str, Any]
+    SetPowerSupplyFanSpeed_SCHEMA: dict[str, Any]
 
-    SetSubrackFanMode_SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.subrack",
-            "MccsSubrack_SetSubrackFanMode.json",
-        )
-    )
+    def init_device(self: SubrackCommands) -> None:
+        """
+        Load the command schemas, then initialise the rest of the device.
 
-    SetPowerSupplyFanSpeed_SCHEMA: Final = json.loads(
-        importlib.resources.read_text(
-            "ska_low_mccs_spshw.schemas.subrack",
-            "MccsSubrack_SetPowerSupplyFanSpeed.json",
-        )
-    )
+        The schemas load here and not at import, so importing the module reads
+        no files. Each JSON command names its schema as a string, which the
+        validator resolves on the device at each call.
+        """
+        self.SetSubrackFanSpeed_SCHEMA = _load_schema("SetSubrackFanSpeed")
+        self.SetSubrackFanMode_SCHEMA = _load_schema("SetSubrackFanMode")
+        self.SetPowerSupplyFanSpeed_SCHEMA = _load_schema("SetPowerSupplyFanSpeed")
+        super().init_device()
 
     # ----------------------------------
     # Whether a command may run
@@ -196,7 +217,7 @@ class SubrackCommands(LRCMixin):
     @stb.long_running_commands.long_running_command(
         fisallowed="is_board_command_allowed"
     )
-    @stb.validators.validate_json_args(schema=SetSubrackFanSpeed_SCHEMA)
+    @stb.validators.validate_json_args(schema="SetSubrackFanSpeed_SCHEMA")
     def SetSubrackFanSpeed(
         self: SubrackCommands,
         subrack_fan_id: int,
@@ -220,7 +241,7 @@ class SubrackCommands(LRCMixin):
     @stb.long_running_commands.long_running_command(
         fisallowed="is_board_command_allowed"
     )
-    @stb.validators.validate_json_args(schema=SetSubrackFanMode_SCHEMA)
+    @stb.validators.validate_json_args(schema="SetSubrackFanMode_SCHEMA")
     def SetSubrackFanMode(
         self: SubrackCommands,
         fan_id: int,
@@ -244,7 +265,7 @@ class SubrackCommands(LRCMixin):
     @stb.long_running_commands.long_running_command(
         fisallowed="is_board_command_allowed"
     )
-    @stb.validators.validate_json_args(schema=SetPowerSupplyFanSpeed_SCHEMA)
+    @stb.validators.validate_json_args(schema="SetPowerSupplyFanSpeed_SCHEMA")
     def SetPowerSupplyFanSpeed(
         self: SubrackCommands,
         power_supply_fan_id: int,
@@ -303,37 +324,22 @@ class SubrackCommands(LRCMixin):
     # ----------------------------------
     # Running a board command
     # ----------------------------------
-    def _subrack_or_raise(self: SubrackCommands) -> Subrack:
-        """
-        Return the subrack client, or refuse the command if there is none.
-
-        Called by each task factory, which runs before the command is
-        submitted, so a device that did not finish initialising rejects the
-        command rather than accepting it and then failing it.
-
-        :raises ValueError: if the device did not finish initialising.
-
-        :return: the subrack client.
-        """
-        if self._subrack is None:
-            raise ValueError(
-                "The device did not finish initialising, so it has no subrack "
-                "to command. Fix the cause and run Init()."
-            )
-        return self._subrack
-
     def _board_command_task(
         self: SubrackCommands, name: ClientCommand, args: str = ""
     ) -> stb.type_hints.TaskFunctionType:
         """
         Build the task that runs one board command and reports its outcome.
 
+        The subrack is read here, in the task factory, which runs before the
+        command is submitted. So a device that has no subrack rejects the
+        command rather than accepting it and then failing it.
+
         :param name: the SMB command to run.
         :param args: the SMB command argument string.
 
         :return: the task that runs the board command.
         """
-        subrack = self._subrack_or_raise()
+        subrack = self.subrack
 
         def task(
             task_callback: stb.type_hints.TaskCallbackType,

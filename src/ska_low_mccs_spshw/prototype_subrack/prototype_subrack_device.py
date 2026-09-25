@@ -123,6 +123,21 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, BaseInterface):
         if self._poller is not None:
             self._poller.kill_polling_thread()
 
+    @property
+    def subrack(self: MccsPrototypeSubrack) -> Subrack:
+        """
+        Return the client the board commands run through.
+
+        :raises ValueError: if the device did not finish initialising.
+
+        :return: the subrack client.
+        """
+        if self._subrack is None:
+            raise ValueError(
+                "The device did not finish initialising, try running Init()."
+            )
+        return self._subrack
+
     def init_device(self: MccsPrototypeSubrack) -> None:
         """Initialise the device, building the client and the poller."""
         super().init_device()

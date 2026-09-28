@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-430] Added tangodiffdoc to the documentation pipeline
+
 ## 15.1.0
 
 * [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.
@@ -9,8 +13,8 @@ This is semi-static, the configuration can be altered at runtime using SetLmcDow
 * [SKB-1482] Update `tpm-api` from **4.0.1** to **4.0.2**.
 * [SKB-767] Update the minimum integration_time for Integrated LMC Data
 * [THORN-647] Fix Subrack fast adminmode switching test by removing sleeps. Update mccs-common for a new version of the CommunicationManager which emits a `NOT_ESTABLISHED` event when communications are attempting a transition from `DISABLED` to `ESTABLISHED` directly so that the OpStateMachine is properly driven.
-* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute values. Removes usage of AttributeManager in MccsTile.
-* [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [THORN-650] Convert tile attributes to be signal backed. Add test to read/write/readback attribute 
+values. Removes usage of AttributeManager in MccsTile.
 
 ## 15.0.0
 

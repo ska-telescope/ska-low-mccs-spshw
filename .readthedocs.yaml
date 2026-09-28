@@ -27,6 +27,7 @@ build:
 submodules:
   include:
     - .make
+    - .make-uv
   recursive: true
 
 # Build documentation in the docs/src/ directory with Sphinx

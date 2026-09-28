@@ -3787,9 +3787,10 @@ class TileComponentManager(
                 raise_exception=True,
             ):
                 try:
-                    self._number_of_arp_table_entries = self.tile.tpm.tpm_10g_core[
-                        0
-                    ].get_number_of_arp_table_entries()
+                    core = self.tile.tpm.tpm_10g_core[0]  # type: ignore[union-attr]
+                    self._number_of_arp_table_entries = (
+                        core.get_number_of_arp_table_entries()
+                    )
                 except AttributeError:
                     # e.g. the tile simulator, which doesn't model
                     # per-data-type ARP entries. 4 matches older firmware's

@@ -1583,6 +1583,9 @@ class TileComponentManager(
                     )
 
                     self.tile.program_fpgas(self._firmware_name)
+                    # Newly programmed firmware may support a different
+                    # number of ARP table entries than whatever was cached.
+                    self._number_of_arp_table_entries = None
                 prog_status = self.tile.is_programmed()
 
                 #
@@ -1709,6 +1712,9 @@ class TileComponentManager(
 
             if is_programmed:
                 self._firmware_name = bitfile
+                # Newly programmed firmware may support a different
+                # number of ARP table entries than whatever was cached.
+                self._number_of_arp_table_entries = None
 
     @abort_task_on_exception
     @check_communicating

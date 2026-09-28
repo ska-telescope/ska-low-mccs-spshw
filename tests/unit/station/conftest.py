@@ -109,14 +109,6 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
     cache, every subsequent write to a subscribed attribute must also
     trigger the callback, not just the first one.
 
-    Note that ``MockDeviceBuilder``'s one-shot bootstrap delivery runs the
-    callback on a background thread ("more realistic if fired
-    asynchronously"), with no ordering guarantee relative to a write made
-    immediately after subscribing. That race let a fresh value set right
-    after ``adminMode`` goes ONLINE be silently clobbered by the stale
-    bootstrap replay arriving late, so it is replaced below with the same
-    synchronous delivery used for subsequent writes.
-
     :param mock_device: the mock device to patch.
     """
     event_name_to_type = {

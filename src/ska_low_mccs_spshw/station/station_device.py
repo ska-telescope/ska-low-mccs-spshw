@@ -707,17 +707,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 self._health_rollup.health_changed("self", HealthState.OK)
 
-        daisy_chain_valid = state_change.get("beamformerDaisyChainValid")
-        if daisy_chain_valid is not None:
-            self.push_change_event(
-                "beamformerDaisyChainValid", cast(bool, daisy_chain_valid)
-            )
+        if "beamformerDaisyChainValid" in state_change:
+            # None means the chain can no longer be verified (e.g. a tile's
+            # destination IPs became unknown), so withdraw any earlier result.
+            daisy_chain_valid = state_change["beamformerDaisyChainValid"]
+            self.push_change_event("beamformerDaisyChainValid", bool(daisy_chain_valid))
             self.push_archive_event(
-                "beamformerDaisyChainValid", cast(bool, daisy_chain_valid)
+                "beamformerDaisyChainValid", bool(daisy_chain_valid)
             )
+            if daisy_chain_valid is None:
+                daisy_chain_health = HealthState.UNKNOWN
+            elif daisy_chain_valid:
+                daisy_chain_health = HealthState.OK
+            else:
+                daisy_chain_health = HealthState.FAILED
             self._health_rollup.health_changed(
-                "beamformer_daisy_chain",
-                HealthState.OK if daisy_chain_valid else HealthState.FAILED,
+                "beamformer_daisy_chain", daisy_chain_health
             )
 
         flagged_count_ok = state_change.get("finalTileBeamformerFlaggedCountOk")

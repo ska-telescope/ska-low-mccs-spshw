@@ -6120,7 +6120,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "gateway_ip": item.get("gateway_ip", None),
         }
 
-    @command(dtype_in="DevString", dtype_out="DevString")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevString",
+        fisallowed="_is_programmed",
+    )
     @stb.validators.validate_json_args(schema=Get40GCoreConfiguration_SCHEMA)
     def Get40GCoreConfiguration(
         self: MccsTile, core_id: int = -1, arp_table_entry: int = 0
@@ -6135,7 +6139,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param core_id: (int) core id
         :param arp_table_entry: (int) ARP table entry ID to use
 
-        :return: the configuration is a json string describilg a list (possibly empty)
+        :return: the configuration is a json string describing a list (possibly empty)
                  Each list entry comprising:
                  core_id, arp_table_entry, source_mac, source_ip, source_port,
                  destination_ip, destination_port, netmask, gateway_ip

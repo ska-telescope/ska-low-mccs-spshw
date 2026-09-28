@@ -3780,29 +3780,43 @@ class TileComponentManager(
         Return the number of ARP table entries supported by the connected firmware.
 
         This is a firmware feature that cannot change without a reconnect (e.g.
-        after a power cycle or firmware reprogram), so it's read from hardware
-        once per connection and cached; ``connect()`` invalidates the cache
-        whenever it establishes a fresh connection.
+        after a power cycle or firmware reprogram), so a successful read from
+        hardware is cached; ``connect()`` and firmware (re)programming both
+        invalidate the cache.
 
-        :return: the number of ARP table entries supported by the firmware.
+        A *failed* read is deliberately never cached: reading this (or any)
+        FPGA register raises ``LibraryError`` while the TPM is unprogrammed
+        (``ska_low_sps_tpm_api``'s ``FpgaBoard._checks()`` explicitly checks
+        programming state before every register access), which is a transient
+        condition, not a firmware capability. Caching a fallback value learned
+        while unprogrammed would wrongly stick once the TPM does become
+        programmed with firmware that supports more entries.
+
+        :return: the number of ARP table entries supported by the firmware,
+            or a conservative default of 4 if it can't be read right now.
         """
-        if self._number_of_arp_table_entries is None:
-            with acquire_timeout(
-                self._hardware_lock,
-                timeout=self._default_lock_timeout,
-                raise_exception=True,
-            ):
-                try:
-                    core = self.tile.tpm.tpm_10g_core[0]  # type: ignore[union-attr]
-                    self._number_of_arp_table_entries = (
-                        core.get_number_of_arp_table_entries()
-                    )
-                except AttributeError:
-                    # e.g. the tile simulator, which doesn't model
-                    # per-data-type ARP entries. 4 matches older firmware's
-                    # fixed ARP table size.
-                    self._number_of_arp_table_entries = 4
-        return self._number_of_arp_table_entries
+        if self._number_of_arp_table_entries is not None:
+            return self._number_of_arp_table_entries
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                core = self.tile.tpm.tpm_10g_core[0]  # type: ignore[union-attr]
+                number_of_arp_table_entries = core.get_number_of_arp_table_entries()
+            except Exception:  # pylint: disable=broad-except
+                # AttributeError: e.g. the tile simulator, which doesn't model
+                # per-data-type ARP entries -- will never succeed, but 4 is a
+                # safe assumption and cheap to keep re-deriving.
+                # LibraryError: most commonly "not programmed" -- transient,
+                # so must not be cached; this call site must also never take
+                # down the whole read-configuration poll, or every attribute
+                # it updates gets stuck at its initial value forever (the
+                # poll never reaches inform_configuration_read()).
+                return 4
+            self._number_of_arp_table_entries = number_of_arp_table_entries
+            return self._number_of_arp_table_entries
 
     def get_40g_configuration(
         self: TileComponentManager, core_id: int = -1, arp_table_entry: int = 0

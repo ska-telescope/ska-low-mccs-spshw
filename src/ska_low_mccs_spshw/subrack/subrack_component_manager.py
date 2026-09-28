@@ -429,8 +429,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         **kwargs: Any,
     ) -> None:
         self.logger.warning(
-            "RACE-DEBUG power-supply reports power=%s kwargs=%s thread=%s "
-            "time=%.6f",
+            "RACE-DEBUG power-supply reports power=%s kwargs=%s thread=%s time=%.6f",
             power,
             list(kwargs.keys()),
             threading.current_thread().name,

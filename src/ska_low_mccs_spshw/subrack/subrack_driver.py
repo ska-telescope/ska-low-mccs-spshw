@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
@@ -191,6 +192,24 @@ class SubrackDriver(
             if self._communication_state != communication_state:
                 self._communication_state = communication_state
                 self._push_communication_state_update(communication_state)
+
+    # ------------------------------------------------------------------
+    # TEMPORARY DIAGNOSTIC LOGGING for the test_off_on intermittent race.
+    # Logs when this driver is told to stop communicating (poller.stop_polling()
+    # is requested here) versus when the poller confirms it has actually
+    # stopped (polling_stopped, below), and when a poll starts/reports ON
+    # (see poll() / poll_succeeded()). Remove once root cause is
+    # confirmed/fixed.
+    # ------------------------------------------------------------------
+    def stop_communicating(self: SubrackDriver) -> None:
+        """Stop communicating with the subrack hardware."""
+        self.logger.warning(
+            "RACE-DEBUG SubrackDriver.stop_communicating() called "
+            "(stop_polling requested) thread=%s time=%.6f",
+            threading.current_thread().name,
+            time.time(),
+        )
+        super().stop_communicating()
 
     def off(
         self: SubrackDriver, task_callback: Optional[Callable] = None
@@ -727,6 +746,11 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
+        self.logger.warning(
+            "RACE-DEBUG SubrackDriver.poll() starting thread=%s time=%.6f",
+            threading.current_thread().name,
+            time.time(),
+        )
         self.logger.debug(
             f"Polling subrack: {len(poll_request.commands)} command(s), "
             f"{len(poll_request.getattributes)} read(s), "
@@ -939,6 +963,13 @@ class SubrackDriver(
             self._update_component_state(health_status=self.health_status)
 
         values = poll_response.query_responses
+        self.logger.warning(
+            "RACE-DEBUG SubrackDriver.poll_succeeded about to push power=ON "
+            "thread=%s time=%.6f communication_state=%s",
+            threading.current_thread().name,
+            time.time(),
+            self.communication_state,
+        )
         self._update_component_state(power=PowerState.ON, fault=fault)
         if any(
             key in values
@@ -961,6 +992,12 @@ class SubrackDriver(
 
         This is a hook called by the poller when it stops polling.
         """
+        self.logger.warning(
+            "RACE-DEBUG SubrackDriver.polling_stopped() (poller confirms "
+            "stopped) thread=%s time=%.6f",
+            threading.current_thread().name,
+            time.time(),
+        )
         self.logger.debug("Polling has stopped.")
 
         # Set to max here so that if/when polling restarts, an update is

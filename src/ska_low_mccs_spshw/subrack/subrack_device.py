@@ -14,6 +14,7 @@ import importlib
 import json
 import sys
 import threading
+import time
 from typing import Any, Final, Optional
 
 import numpy as np
@@ -1962,7 +1963,33 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         # Keep power and fault updates in a single callback so the underlying
         # state model evaluates them atomically.
         if power is not None or fault_to_propagate is not None:
+            # TEMPORARY DIAGNOSTIC LOGGING for the test_off_on intermittent
+            # race. Logs every power update that reaches the Tango device,
+            # and the device's op state/status immediately either side of
+            # the underlying state-model transition, so we can see whether
+            # a stale power update arrives after a correct one, and whether
+            # state/status desync within a single call or across calls.
+            # Remove once root cause is confirmed/fixed.
+            self.logger.warning(
+                "RACE-DEBUG MccsSubrack._component_state_changed power=%s "
+                "fault=%s thread=%s time=%.6f pre_state=%s pre_status=%r",
+                power,
+                fault_to_propagate,
+                threading.current_thread().name,
+                time.time(),
+                self.get_state(),
+                self.get_status(),
+            )
             super()._component_state_changed(power=power, fault=fault_to_propagate)
+            self.logger.warning(
+                "RACE-DEBUG MccsSubrack._component_state_changed done "
+                "power=%s thread=%s time=%.6f post_state=%s post_status=%r",
+                power,
+                threading.current_thread().name,
+                time.time(),
+                self.get_state(),
+                self.get_status(),
+            )
         # super()._component_state_changed(fault=fault, power=power)
 
         # Ensure the attribute filters are up to date with the tango device property

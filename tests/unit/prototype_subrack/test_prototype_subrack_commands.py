@@ -380,34 +380,6 @@ def test_every_outcome_ends_the_command(  # pylint: disable=too-many-arguments
     )
 
 
-@pytest.mark.parametrize(
-    ("command", "argument"), BOARD_COMMANDS, ids=[name for name, _ in BOARD_COMMANDS]
-)
-def test_an_offline_device_reaches_no_board(
-    subrack_device: tango.DeviceProxy,
-    subrack: mock.Mock,
-    command: str,
-    argument: Any,
-) -> None:
-    """
-    Test that a command is refused while adminMode is OFFLINE.
-
-    OFFLINE asks the device to make no contact with the subrack, so a command
-    that reached the board anyway would break that.
-
-    :param subrack_device: the device under test, still offline.
-    :param subrack: the mocked subrack client.
-    :param command: the name of the command to invoke.
-    :param argument: the argument to invoke it with.
-    """
-    assert subrack_device.state() == DevState.DISABLE
-
-    with pytest.raises(tango.DevFailed):
-        subrack_device.command_inout(command, argument)
-
-    subrack.run_board_command.assert_not_called()
-
-
 def test_going_offline_aborts_the_board_commands(
     online_device: tango.DeviceProxy,
 ) -> None:
@@ -431,13 +403,21 @@ def test_going_offline_aborts_the_board_commands(
     [AdminMode.OFFLINE, AdminMode.NOT_FITTED, AdminMode.RESERVED],
     ids=["OFFLINE", "NOT_FITTED", "RESERVED"],
 )
+@pytest.mark.parametrize(
+    ("command", "argument"), BOARD_COMMANDS, ids=[name for name, _ in BOARD_COMMANDS]
+)
 def test_a_no_contact_admin_mode_reaches_no_board(
     online_device: tango.DeviceProxy,
     subrack: mock.Mock,
+    command: str,
+    argument: Any,
     admin_mode: AdminMode,
 ) -> None:
     """
-    Test that a command is refused in every admin mode that asks for no contact.
+    Test that every command is refused in every admin mode that asks for no contact.
+
+    Each command names its own ``fisallowed`` guard, so each is checked. A
+    command left without the guard would reach the board anyway.
 
     The device reaches ``DISABLE`` only after the last poll reports back. The
     poller here is a mock that never reports, so the device never reaches it.
@@ -448,6 +428,8 @@ def test_a_no_contact_admin_mode_reaches_no_board(
 
     :param online_device: the device under test, online.
     :param subrack: the mocked subrack client.
+    :param command: the name of the command to invoke.
+    :param argument: the argument to invoke it with.
     :param admin_mode: the admin mode to put the device in.
     """
     online_device.adminMode = AdminMode.OFFLINE
@@ -455,7 +437,7 @@ def test_a_no_contact_admin_mode_reaches_no_board(
     assert online_device.state() != DevState.DISABLE
 
     with pytest.raises(tango.DevFailed):
-        online_device.command_inout(OUTCOME_COMMAND)
+        online_device.command_inout(command, argument)
 
     subrack.run_board_command.assert_not_called()
 

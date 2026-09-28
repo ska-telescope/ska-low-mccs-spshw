@@ -76,12 +76,10 @@ class DerivedKey(str, Enum):
 
 class ClientCommand(str, Enum):
     """
-    The board commands this client issues, whoever asked for them.
+    The board commands this client issues.
 
-    A member is a ``str``, so it reaches the board unchanged. The board draws
-    no distinction between them, so neither does this enum. A device passes
-    any other command straight through, so this is not the full set the board
-    accepts.
+    A member is a ``str``, so it reaches the board unchanged. The board accepts
+    more commands than these, so this is not the full set.
     """
 
     GET_HEALTH_STATUS = "get_health_status"

@@ -48,14 +48,13 @@ __all__ = ["MccsPrototypeSubrack", "main"]
 # pylint: disable=too-many-ancestors
 class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, BaseInterface):
     """
-    A Tango device that monitors an SPS subrack management board.
+    A Tango device that monitors and commands an SPS subrack management board.
 
     The device owns the :py:class:`~.subrack_client.SubrackPoller`, and through
     it the :py:class:`~.subrack_client.Subrack` that answers each poll. The
-    poller is the only piece the device has to reclaim. It also keeps the
-    subrack, because the board commands run through it rather than through the
-    poll loop. Polling starts and stops with ``adminMode``, through
-    :py:meth:`change_control_level`. Each poll response is emitted onto the
+    device keeps the subrack too, because the board commands run through it
+    rather than through the poll loop.Polling starts and stops with ``adminMode``,
+    through :py:meth:`change_control_level`. Each poll response is emitted onto the
     signal bus, which pushes the change and archive events for every attribute.
 
     A value the board could not supply is emitted as ``None``, so the
@@ -169,6 +168,9 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, BaseInterface):
     ) -> None:
         """
         Start or stop monitoring the subrack.
+
+        Stopping also aborts the running board command and every queued one,
+        so the device makes no further contact with the board.
 
         This is the hook ``BaseInterface`` calls when ``adminMode`` is written.
         ``OFFLINE`` arrives as :py:const:`ControlLevel.NO_CONTACT`, and both

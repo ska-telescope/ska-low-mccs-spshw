@@ -12,7 +12,6 @@ import functools
 import json
 import logging
 import threading
-import time
 from typing import Any, Callable, Optional, cast
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -404,53 +403,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def stop_communicating(self: SubrackComponentManager) -> None:
         """Break off communication with the subrack components."""
-        self.logger.warning(
-            "RACE-DEBUG SubrackComponentManager.stop_communicating() called "
-            "thread=%s time=%.6f",
-            threading.current_thread().name,
-            time.time(),
-        )
         super().stop_communicating()
         if self._communication_manager is not None:
             self._communication_manager.stop_communicating()
-
-    # ------------------------------------------------------------------
-    # TEMPORARY DIAGNOSTIC LOGGING for the test_off_on intermittent race.
-    # These two overrides log every power update seen at the boundary
-    # between the upstream power supply, the hardware component manager,
-    # and the outer component state that feeds the Tango device, so we can
-    # tell whether a stale hardware "ON" reading arrives after the power
-    # supply has already reported "OFF". Remove once root cause is
-    # confirmed/fixed.
-    # ------------------------------------------------------------------
-    def _power_supply_component_state_changed(
-        self: SubrackComponentManager,
-        power: Optional[PowerState] = None,
-        **kwargs: Any,
-    ) -> None:
-        self.logger.warning(
-            "RACE-DEBUG power-supply reports power=%s kwargs=%s thread=%s time=%.6f",
-            power,
-            list(kwargs.keys()),
-            threading.current_thread().name,
-            time.time(),
-        )
-        super()._power_supply_component_state_changed(power=power, **kwargs)
-
-    def _hardware_component_state_changed(
-        self: SubrackComponentManager,
-        **kwargs: Any,
-    ) -> None:
-        self.logger.warning(
-            "RACE-DEBUG hardware reports power=%s kwargs=%s thread=%s "
-            "time=%.6f power_supply_reported_power=%s",
-            kwargs.get("power"),
-            list(kwargs.keys()),
-            threading.current_thread().name,
-            time.time(),
-            self._power_supply_reported_power,
-        )
-        super()._hardware_component_state_changed(**kwargs)
 
     def _device_communication_state_changed(
         self: SubrackComponentManager,

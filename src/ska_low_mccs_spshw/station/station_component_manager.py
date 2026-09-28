@@ -74,6 +74,29 @@ _CALIBRATION_LANE = "calibration"
 # are 0-7, so -1 is unambiguous.
 INVALID_CHANNELISER_ROUNDING = -1
 
+# Tile attributes whose station-side caches are invalidated when
+# communication with that tile is lost. cspRounding is deliberately
+# excluded: its cache is also the configured value written back to tiles.
+_CACHED_TILE_ATTRIBUTES = (
+    "ppsDelay",
+    "ppsDelayCorrection",
+    "staticTimeDelays",
+    "adcPower",
+    "preaduLevels",
+    "pointingDelays",
+    "tileProgrammingState",
+    "dstip40gfpga1",
+    "dstip40gfpga2",
+    "boardTemperature",
+    "fpga1Temperature",
+    "fpga2Temperature",
+    "pllLocked",
+    "ppsPresent",
+    "testGeneratorActive",
+    "isBeamformerRunning",
+    "channeliserRounding",
+)
+
 
 class _BandpassDaqReadRetryError(RuntimeError):
     """Raised to trigger retry when reading bandpass DAQ integrated mode."""
@@ -143,10 +166,11 @@ class _TileProxy(DeviceComponentManager):
             "boardTemperature": self._on_attribute_change,
             "fpga1Temperature": self._on_attribute_change,
             "fpga2Temperature": self._on_attribute_change,
-            "sysrefPresent": self._on_attribute_change,
+            # sysrefPresent and clockPresent are not subscribed: they are not
+            # yet implemented in ska-low-sps-tpm-api, so the tile never pushes
+            # events for them and every subscription attempt logs a failure.
             "pllLocked": self._on_attribute_change,
             "ppsPresent": self._on_attribute_change,
-            "clockPresent": self._on_attribute_change,
             "testGeneratorActive": self._on_attribute_change,
             "isBeamformerRunning": self._on_attribute_change,
             "channeliserRounding": self._on_attribute_change,
@@ -788,10 +812,8 @@ class SpsStationComponentManager(
         # These caches only ever back a single scalar DevBoolean attribute
         # (via all()/any()), so there's no list-of-floats-with-a-hole for
         # cppTango to choke on -- None is fine here.
-        self._sysref_present: list[bool | None] = [None] * self._number_of_tiles
         self._pll_locked: list[bool | None] = [None] * self._number_of_tiles
         self._pps_present: list[bool | None] = [None] * self._number_of_tiles
-        self._clock_present: list[bool | None] = [None] * self._number_of_tiles
         self._test_generator_active: list[bool | None] = [None] * self._number_of_tiles
         self._is_beamformer_running: list[bool | None] = [None] * self._number_of_tiles
         self._channeliser_roundings: np.ndarray = np.zeros([16, 512], dtype=np.int32)
@@ -1278,9 +1300,34 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
+        tile_proxy = self._tile_proxies.get(fqdn)
+        if (
+            tile_proxy is not None
+            and communication_state != CommunicationStatus.ESTABLISHED
+        ):
+            self._invalidate_tile_caches(tile_proxy._logical_tile_id)
         self._communication_manager.update_communication_status(
             fqdn, communication_state
         )
+
+    def _invalidate_tile_caches(
+        self: SpsStationComponentManager, logical_tile_id: int
+    ) -> None:
+        """
+        Invalidate every cached reading for a tile we are no longer talking to.
+
+        A tile that loses communication pushes no ATTR_INVALID events, so
+        without this its last reported values would be exposed as current.
+
+        :param logical_tile_id: the logical id of the tile to invalidate.
+        """
+        for attribute_name in _CACHED_TILE_ATTRIBUTES:
+            self._on_tile_attribute_change(
+                logical_tile_id,
+                attribute_name,
+                None,
+                tango.AttrQuality.ATTR_INVALID,
+            )
 
     # pylint: disable=too-many-branches
     def _on_tile_attribute_change(
@@ -1344,8 +1391,6 @@ class SpsStationComponentManager(
                     self._fpga1_temperatures[logical_tile_id] = np.nan
                 case "fpga2temperature":
                     self._fpga2_temperatures[logical_tile_id] = np.nan
-                case "sysrefpresent":
-                    self._sysref_present[logical_tile_id] = None
                 case "plllocked":
                     self._pll_locked[logical_tile_id] = None
                     if self._component_state_callback:
@@ -1358,8 +1403,6 @@ class SpsStationComponentManager(
                         self._component_state_callback(
                             ppsPresentSummary=self.pps_present_summary()
                         )
-                case "clockpresent":
-                    self._clock_present[logical_tile_id] = None
                 case "testgeneratoractive":
                     self._test_generator_active[logical_tile_id] = None
                 case "isbeamformerrunning":
@@ -1376,12 +1419,13 @@ class SpsStationComponentManager(
                         self._component_state_callback(
                             channeliserRounding=self.channeliser_rounding
                         )
-            self.logger.debug(
-                f"Tile {logical_tile_id} attribute {attribute_name} "
-                f"has quality {attribute_quality}. "
-                "SpsStation is not yet capable of handling this. "
-                "Ignoring!"
-            )
+                case _:
+                    self.logger.debug(
+                        f"Tile {logical_tile_id} attribute {attribute_name} "
+                        f"has quality {attribute_quality}. "
+                        "SpsStation is not yet capable of handling this. "
+                        "Ignoring!"
+                    )
             return
         attribute_name = attribute_name.lower()
         match attribute_name:
@@ -1510,8 +1554,6 @@ class SpsStationComponentManager(
                 self._fpga1_temperatures[logical_tile_id] = attribute_value
             case "fpga2temperature":
                 self._fpga2_temperatures[logical_tile_id] = attribute_value
-            case "sysrefpresent":
-                self._sysref_present[logical_tile_id] = bool(attribute_value)
             case "plllocked":
                 self._pll_locked[logical_tile_id] = bool(attribute_value)
                 if self._component_state_callback:
@@ -1524,8 +1566,6 @@ class SpsStationComponentManager(
                     self._component_state_callback(
                         ppsPresentSummary=self.pps_present_summary()
                     )
-            case "clockpresent":
-                self._clock_present[logical_tile_id] = bool(attribute_value)
             case "testgeneratoractive":
                 self._test_generator_active[logical_tile_id] = bool(attribute_value)
             case "isbeamformerrunning":
@@ -3574,11 +3614,11 @@ class SpsStationComponentManager(
         """
         Get summary of SYSREF presence.
 
-        :return: TRUE if SYSREF is present in all tiles
+        :return: TRUE if SYSREF is present in all tiles. Always False for
+            now, as sysrefPresent is not yet implemented in
+            ska-low-sps-tpm-api and so is not subscribed to.
         """
-        # self._sysref_present is kept current by _on_tile_attribute_change's
-        # "sysrefpresent" case, so no live per-tile read is needed here.
-        return all(self._sysref_present)
+        return False
 
     def pll_locked_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -3604,11 +3644,11 @@ class SpsStationComponentManager(
         """
         Get summary of 10 MHz clock presence.
 
-        :return: TRUE if 10 MHz clock is present in all tiles
+        :return: TRUE if 10 MHz clock is present in all tiles. Always False
+            for now, as clockPresent is not yet implemented in
+            ska-low-sps-tpm-api and so is not subscribed to.
         """
-        # self._clock_present is kept current by _on_tile_attribute_change's
-        # "clockpresent" case, so no live per-tile read is needed here.
-        return all(self._clock_present)
+        return False
 
     def forty_gb_network_errors(self: SpsStationComponentManager) -> list[int]:
         """

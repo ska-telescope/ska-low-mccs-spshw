@@ -183,23 +183,6 @@ def test_lock_contention_not_observed(
 
 @scenario(
     "features/station.feature",
-    "Reading SpsStation attributes when tile is Off",
-)
-def test_spsstation_attributes_report_off_tile(
-    stations_devices_exported: list[tango.DeviceProxy],
-) -> None:
-    """
-    Run a test scenario that tests the station device.
-
-    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
-        for all exported sps devices.
-    """
-    for device in stations_devices_exported:
-        device.adminmode = AdminMode.ONLINE
-
-
-@scenario(
-    "features/station.feature",
     "Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)",
 )
 def test_standby_during_init(
@@ -221,6 +204,14 @@ def test_standby_during_init(
 )
 def test_fanout_attribute_writes_reach_correct_tile() -> None:
     """Run a test scenario that verifies fanout writes reach the correct tile."""
+
+
+@scenario(
+    "features/station.feature",
+    "Reading SpsStation attributes when tile is Off",
+)
+def test_spsstation_attributes_report_off_tile() -> None:
+    """Run a test scenario that tests the station device."""
 
 
 @given("an SPS deployment against HW")
@@ -1094,49 +1085,45 @@ def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
         )
 
 
-@pytest.fixture(name="powered_off_tile")
-def powered_off_tile_fixture() -> Iterator[dict[str, Any]]:
-    """
-    Record which tile is powered off during a test, and restore it after.
-
-    :yields: an empty dict for the "we turn off a single tile" step to
-        record the powered-off tile in.
-    """
-    info: dict[str, Any] = {}
-
-    yield info
-
-    tile = info.get("tile")
-    if tile is not None:
-        tile.On()
-        AttributeWaiter(timeout=60).wait_for_value(
-            tile, "tileProgrammingState", None, lookahead=5
-        )
-
-
-@when("we turn off a single tile")
+@when("we turn off a single tile", target_fixture="powered_off_tile")
 def turn_off_single_tile(
     station_tiles: list[tango.DeviceProxy],
-    powered_off_tile: dict[str, Any],
-) -> None:
+) -> Iterator[dict[str, Any]]:
     """
-    Power off a single tile in the station and wait for it to report Off.
+    Power off a single tile in the station, and restore it at teardown.
+
+    pytest-bdd runs steps as fixtures, so the code after ``yield`` runs
+    at test teardown, whether the scenario passes or fails.
 
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
-    :param powered_off_tile: a dict to record the powered-off tile in, so
-        that the Then step and teardown know which tile to check/restore.
+
+    :yields: a dict recording which tile was powered off, for the
+        Then steps to check.
     """
     assert station_tiles, "No station tiles were discovered"
     tile = station_tiles[0]
-    powered_off_tile["tile"] = tile
-    powered_off_tile["logical_tile_id"] = tile.logicalTileId
+    initial_programming_state = tile.tileProgrammingState
 
-    tile.Off()
+    try:
+        logical_tile_id = tile.logicalTileId
+        tile.Off()
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile, "tileProgrammingState", "Off", lookahead=5
+        )
 
-    AttributeWaiter(timeout=60).wait_for_value(
-        tile, "tileProgrammingState", "Off", lookahead=5
-    )
+        yield {"tile": tile, "logical_tile_id": logical_tile_id}
+    finally:
+        tile.On()
+        # Wait for the tile to return to its pre-test programming state,
+        # not just the first intermediate update (e.g. NotProgrammed),
+        # so that later tests on a shared deployment are unaffected.
+        AttributeWaiter(timeout=120).wait_for_value(
+            tile,
+            "tileProgrammingState",
+            initial_programming_state,
+            lookahead=10,
+        )
 
 
 # pylint: disable=too-few-public-methods

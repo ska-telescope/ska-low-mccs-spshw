@@ -1608,13 +1608,17 @@ class SpsStationComponentManager(
         For every tile except the last the expected destinations are the source
         IPs of the next tile.  The last tile's destination IPs are not validated
         (it is free to point wherever the operator configures).  If any checked
-        tile's IPs are empty or not yet known the check is deferred.
+        tile's IPs are empty or not yet known the check is deferred, and any
+        previous result is withdrawn (reported as None) since it can no
+        longer be verified.
         """
+        valid: Optional[bool]
         last = self._number_of_tiles - 1
         for tile_id in range(last):
             ip1, ip2 = self._tile_dst_ips.get(tile_id, ("", ""))
             if not ip1 or not ip2:
-                return
+                valid = None
+                break
             exp1 = str(self._sdn_first_address + 2 * tile_id + 2)
             exp2 = str(self._sdn_first_address + 2 * tile_id + 3)
             if ip1 != exp1 or ip2 != exp2:

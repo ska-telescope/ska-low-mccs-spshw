@@ -247,9 +247,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("staticTimeDelays", True, False)
         self.set_change_event("preaduLevels", True, False)
         self.set_change_event("channeliserRounding", True, False)
-        self.set_change_event("pllLockedSummary", True, True)
-        self.set_change_event("ppsPresentSummary", True, True)
-        self.set_change_event("isBeamformerRunning", True, True)
+        self.set_change_event("pllLockedSummary", True, False)
+        self.set_change_event("ppsPresentSummary", True, False)
+        self.set_change_event("isBeamformerRunning", True, False)
         self.set_change_event("pointingDelays", True, False)
 
         self.set_archive_event("xPolBandpass", False)
@@ -263,12 +263,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("beamformerRegions", True, True)
         self.set_archive_event("beamformerDaisyChainValid", True, True)
         self.set_archive_event("finalTileBeamformerFlaggedCountOk", True, True)
-        self.set_archive_event("staticTimeDelays", True, True)
-        self.set_archive_event("preaduLevels", True, True)
-        self.set_archive_event("channeliserRounding", True, True)
-        self.set_archive_event("pllLockedSummary", True, True)
-        self.set_archive_event("ppsPresentSummary", True, True)
-        self.set_archive_event("isBeamformerRunning", True, True)
+        self.set_archive_event("staticTimeDelays", False)
+        self.set_archive_event("preaduLevels", False)
+        self.set_archive_event("channeliserRounding", False)
+        self.set_archive_event("pllLockedSummary", False)
+        self.set_archive_event("ppsPresentSummary", False)
+        self.set_archive_event("isBeamformerRunning", False)
         self.set_archive_event("pointingDelays", True, True)
 
         # pylint: disable=attribute-defined-outside-init
@@ -741,32 +741,26 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         static_time_delays = state_change.get("staticTimeDelays")
         if static_time_delays is not None:
             self.push_change_event("staticTimeDelays", static_time_delays)
-            self.push_archive_event("staticTimeDelays", static_time_delays)
 
         preadu_levels = state_change.get("preaduLevels")
         if preadu_levels is not None:
             self.push_change_event("preaduLevels", preadu_levels)
-            self.push_archive_event("preaduLevels", preadu_levels)
 
         channeliser_rounding = state_change.get("channeliserRounding")
         if channeliser_rounding is not None:
             self.push_change_event("channeliserRounding", channeliser_rounding)
-            self.push_archive_event("channeliserRounding", channeliser_rounding)
 
         pll_locked_summary = state_change.get("pllLockedSummary")
         if pll_locked_summary is not None:
             self.push_change_event("pllLockedSummary", pll_locked_summary)
-            self.push_archive_event("pllLockedSummary", pll_locked_summary)
 
         pps_present_summary = state_change.get("ppsPresentSummary")
         if pps_present_summary is not None:
             self.push_change_event("ppsPresentSummary", pps_present_summary)
-            self.push_archive_event("ppsPresentSummary", pps_present_summary)
 
         is_beamformer_running = state_change.get("isBeamformerRunning")
         if is_beamformer_running is not None:
             self.push_change_event("isBeamformerRunning", is_beamformer_running)
-            self.push_archive_event("isBeamformerRunning", is_beamformer_running)
 
         tile_programming_state = state_change.get("tileProgrammingState")
         if tile_programming_state is not None:

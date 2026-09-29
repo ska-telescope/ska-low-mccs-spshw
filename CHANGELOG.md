@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-430] Added tangodiffdoc to the documentation pipeline
+
 ## 15.1.0
 
 * [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.

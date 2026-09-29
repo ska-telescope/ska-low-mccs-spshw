@@ -116,7 +116,8 @@ docs = [
     "uvicorn[standard] >= 0.23.2, <0.24.0",
     "ska-telmodel >= 1.4.1, <2.0.0",
     "ska-ser-snmp >= 0.6.1, <0.7.0",
-    "semver >= 3.0.4, <4.0.0"
+    "semver >= 3.0.4, <4.0.0",
+    "ska-tango-difdoc>=0.6.0",
 ]
 
 [project.scripts]
@@ -124,11 +125,11 @@ spshw = "ska_low_mccs_spshw:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 MccsPrototypeSubrack = "ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device:main"
-SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
+subrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
 MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"
 PowerMarshaller = "ska_low_mccs_spshw.power_marshaller.power_marshaller_device:main"
-Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
+mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
 is_calendar_booked = "utils.scripts.is_calendar_booked:main"
 
 [tool.pytest.ini_options]
@@ -172,3 +173,16 @@ omit=[
 
 [tool.coverage.report]
 show_missing = false
+
+[tool.tangodifdoc.MccsPdu.properties]
+Model = "ENLOGIC"
+Host = "127.0.0.1"
+V2Community = "public"
+
+[tool.tangodifdoc.SpsStation.properties]
+SdnFirstInterface = "10.130.0.1/25"
+
+[tool.tangodifdoc.MccsTile.properties]
+SubrackFQDN = "low-mccs/subrack/01"
+SubrackBay = 1
+UseAttributesForHealth = false

@@ -1583,9 +1583,7 @@ class TileComponentManager(
                     )
 
                     self.tile.program_fpgas(self._firmware_name)
-                    # Newly programmed firmware may support a different
-                    # number of ARP table entries than whatever was cached.
-                    self._number_of_arp_table_entries = None
+                    self._invalidate_firmware_dependent_caches()
                 prog_status = self.tile.is_programmed()
 
                 #
@@ -1712,9 +1710,7 @@ class TileComponentManager(
 
             if is_programmed:
                 self._firmware_name = bitfile
-                # Newly programmed firmware may support a different
-                # number of ARP table entries than whatever was cached.
-                self._number_of_arp_table_entries = None
+                self._invalidate_firmware_dependent_caches()
 
     @abort_task_on_exception
     @check_communicating
@@ -2007,14 +2003,7 @@ class TileComponentManager(
 
         self.logger.info("Configuration information read from TPM")
         assert self._request_provider is not None
-        if is_programmed:
-            # Only consume the request once it's actually read the
-            # programmed-dependent state (40G config, static delays,
-            # beamformer table, etc.) -- otherwise this poll never runs
-            # again for the rest of the connection, and those attributes
-            # are stuck at their unprogrammed defaults even once the TPM
-            # does get programmed.
-            self._request_provider.inform_configuration_read()
+        self._request_provider.inform_configuration_read()
 
     def __update_tpm_id(
         self: TileComponentManager, station_id: int, tile_id: int
@@ -2657,10 +2646,7 @@ class TileComponentManager(
                     self.tile[  # pylint: disable=expression-not-assigned
                         int(0x30000000)
                     ]
-                    # A fresh connection may be to newly (re)programmed firmware,
-                    # so drop the cached ARP table entry count -- it will be
-                    # re-read from firmware the next time it's needed.
-                    self._number_of_arp_table_entries = None
+                    self._invalidate_firmware_dependent_caches()
                     # After connection lets check the configuration.
                     assert self._request_provider is not None
                     self._request_provider.desire_configuration_read()
@@ -3783,14 +3769,24 @@ class TileComponentManager(
 
         return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
+    def _invalidate_firmware_dependent_caches(self: TileComponentManager) -> None:
+        """
+        Reset caches of values that are only valid for the currently-running firmware.
+
+        Call this whenever the tile (re)connects or (re)programs -- either may
+        mean a different firmware image is now running, so anything cached
+        from the previous one can no longer be trusted.
+        """
+        self._number_of_arp_table_entries = None
+
     def _get_number_of_arp_table_entries(self: TileComponentManager) -> int:
         """
         Return the number of ARP table entries supported by the connected firmware.
 
         This is a firmware feature that cannot change without a reconnect (e.g.
         after a power cycle or firmware reprogram), so a successful read from
-        hardware is cached; ``connect()`` and firmware (re)programming both
-        invalidate the cache.
+        hardware is cached; ``_invalidate_firmware_dependent_caches()`` drops
+        the cache on those occasions.
 
         A *failed* read is deliberately never cached: reading this (or any)
         FPGA register raises ``LibraryError`` while the TPM is unprogrammed
@@ -3813,7 +3809,7 @@ class TileComponentManager(
             try:
                 core = self.tile.tpm.tpm_10g_core[0]  # type: ignore[union-attr]
                 number_of_arp_table_entries = core.get_number_of_arp_table_entries()
-            except Exception:  # pylint: disable=broad-except
+            except Exception as exc:  # pylint: disable=broad-except
                 # AttributeError: e.g. the tile simulator, which doesn't model
                 # per-data-type ARP entries -- will never succeed, but 4 is a
                 # safe assumption and cheap to keep re-deriving.
@@ -3822,7 +3818,14 @@ class TileComponentManager(
                 # down the whole read-configuration poll, or every attribute
                 # it updates gets stuck at its initial value forever (the
                 # poll never reaches inform_configuration_read()).
+                self.logger.info(
+                    "Failed to read ARP table entry count from firmware "
+                    f"({exc!r}); assuming 4 for now."
+                )
                 return 4
+            self.logger.info(
+                f"Firmware reports {number_of_arp_table_entries} ARP table entries."
+            )
             self._number_of_arp_table_entries = number_of_arp_table_entries
             return self._number_of_arp_table_entries
 
@@ -3857,6 +3860,11 @@ class TileComponentManager(
                     )
                     is not None
                 ]
+                self.logger.info(
+                    f"40G configuration read back {len(self._forty_gb_core_list)} "
+                    f"entries from {2 * number_of_arp_table_entries} attempted "
+                    f"(2 cores x {number_of_arp_table_entries} ARP table entries)."
+                )
             else:
                 config = self.tile.get_40g_core_configuration(core_id, arp_table_entry)
                 self._forty_gb_core_list = [config] if config else []

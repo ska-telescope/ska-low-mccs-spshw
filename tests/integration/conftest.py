@@ -124,9 +124,10 @@ def integration_test_context_fixture(
     :yields: a test context.
     """
     with patch(
-        "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
-    ) as mock_tango_db:
-        mock_tango_db.return_value.get_device_attribute_property.return_value = {
+        "ska_low_mccs_spshw.tile.tile_device._get_firmware_threshold_db_connection"
+    ) as mock_get_db_connection:
+        mock_db = mock_get_db_connection.return_value
+        mock_db.get_device_attribute_property.return_value = {
             "temperatures": db_temperature_thresholds,
             "voltages": db_voltage_thresholds,
             "currents": db_current_thresholds,

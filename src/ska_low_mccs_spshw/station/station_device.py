@@ -1106,7 +1106,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         doc="Get the current static time delays. "
         "Array of one value per antenna/polarization (32 per tile), in range +/-124. "
         "Delay in nanoseconds (positive = increase the signal delay) to correct for "
-        "static delay mismatches, e.g. cable length.",
+        "static delay mismatches, e.g. cable length. "
+        "NaN for every channel of a tile whose value is invalid.",
     )
     def staticTimeDelays(self: SpsStation) -> list[float]:
         """
@@ -1114,7 +1115,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
         Delay in nanoseconds (positive = increase the signal delay) to correct for
-        static delay mismatches, e.g. cable length.
+        static delay mismatches, e.g. cable length. A tile whose value is
+        invalid reports NaN for every channel.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
@@ -1188,11 +1190,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("DevDouble",),
         max_dim_x=512,
         label="Pre-ADU Levels",
-        doc="Get attenuator level of preADU channels, one per input channel.",
+        doc="Get attenuator level of preADU channels, one per input channel. "
+        "NaN for every channel of a tile whose value is invalid.",
     )
     def preaduLevels(self: SpsStation) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
+
+        A tile whose value is invalid reports NaN for every channel.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
@@ -1551,7 +1556,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="Test Generator Active",
         doc="Get the state of the test generator across this station's tiles. "
-        "Returns ``True`` if the test generator is active in at least one tile.",
+        "Returns ``True`` if the test generator is active in at least one tile. "
+        "A tile whose value is invalid is treated as inactive.",
     )
     def testGeneratorActive(self: SpsStation) -> bool:
         """
@@ -1565,7 +1571,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="Is Beamformer Running",
         doc="Get the state of the beamformer across this station's tiles. "
-        "Returns ``True`` if the beamformer is active in all tiles.",
+        "Returns ``True`` if the beamformer is active in all tiles. "
+        "Returns ``False`` if any tile's value is invalid.",
     )
     def isBeamformerRunning(self: SpsStation) -> bool:
         """
@@ -1596,14 +1603,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         archive_period=5000,
         label="ADC Power",
         unit="ADC units",
-        doc="Get the ADC RMS input levels for all input signals.",
+        doc="Get the ADC RMS input levels for all input signals. "
+        "NaN for every channel of a tile whose value is invalid.",
     )
     def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.
 
         Returns an array of 2 values (X and Y polarizations) per antenna, 32
-        per tile, 512 per station
+        per tile, 512 per station. A tile whose value is invalid reports NaN
+        for every channel.
 
         :return: the ADC RMS input levels, in ADC units
         """
@@ -1614,7 +1623,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=3,
         label="Board Temperatures Summary",
         unit="Celsius",
-        doc="Get summary of board temperatures (minimum, average, maximum).",
+        doc="Get summary of board temperatures (minimum, average, maximum). "
+        "Tiles whose value is invalid are excluded.",
     )
     def boardTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
@@ -1629,7 +1639,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=3,
         label="FPGA Temperatures Summary",
         unit="Celsius",
-        doc="Get summary of FPGA temperatures (minimum, average, maximum).",
+        doc="Get summary of FPGA temperatures (minimum, average, maximum). "
+        "Tiles whose value is invalid are excluded.",
     )
     def fpgaTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
@@ -1672,7 +1683,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="PLL Locked Summary",
         doc="Get summary of PLL locked status for all tiles. "
-        "True if PLL is locked to reference in all tiles.",
+        "True if PLL is locked to reference in all tiles. "
+        "False if any tile's value is invalid.",
     )
     def pllLockedSummary(self: SpsStation) -> bool:
         """
@@ -1686,7 +1698,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="PPS Present Summary",
         doc="Get summary of PPS present status for all tiles. "
-        "True if PPS signal is present in all tiles.",
+        "True if PPS signal is present in all tiles. "
+        "False if any tile's value is invalid.",
     )
     def ppsPresentSummary(self: SpsStation) -> bool:
         """

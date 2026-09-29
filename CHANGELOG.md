@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+* [THORN-680] SpsStation aggregate attributes are now served from a cache kept up to date by change-event subscriptions on each MccsTile, rather than by reading every tile serially over the network on each read.
+* [THORN-680] Fix reporting of aggregate SpsStation attributes when a tile has no value. Previously, an aggregate attribute such as `staticTimeDelays` could return `[tile1, tile2, tile4]`, making it unclear which tile was missing. Tile positions are now preserved, e.g. `[tile1, tile2, nan, tile4]`.
+* [THORN-89] Report INVALID tile attributes in aggregate SpsStation attributes. An INVALID tile value is now shown as `nan` in per-tile float arrays (`staticTimeDelays`, `preaduLevels`, `adcPower`) and as `Unknown` in `tileProgrammingState`. It is left out of the temperature summaries, and it makes `isBeamformerRunning`, `pllLockedSummary` and `ppsPresentSummary` report `False`.
+  * `channeliserRounding` is a DevLong attribute and cannot carry `nan`, so an invalid tile reports `-1` for every channel (valid values are 0-7).
+* [THORN-680] SpsStation now pushes change events for `staticTimeDelays`, `preaduLevels`, `channeliserRounding`, `pllLockedSummary`, `ppsPresentSummary` and `isBeamformerRunning`, and change and archive events for `tileProgrammingState`.
+* [THORN-680] When the beamformer daisy chain can no longer be verified (e.g. a tile's 40G destination IPs become unknown), its contribution to SpsStation health is now `UNKNOWN` rather than keeping the previous result, and `beamformerDaisyChainValid` reports `False`.
+* [THORN-680] MccsTile `testGeneratorActive` is now signal-backed, so it pushes change events when `ConfigureTestGenerator` is called.
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
 
 ## 15.1.0

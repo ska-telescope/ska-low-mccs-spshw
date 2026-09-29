@@ -3297,6 +3297,49 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         assert tile_component_manager._forty_gb_core_list == [core_dict]
 
+    def test_update_configuration_from_tile_retries_until_programmed(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """
+        Test that the read-configuration request isn't consumed until programmed.
+
+        ``__update_configuration_from_tile`` is only ever invoked again while
+        the request provider's "read configuration" request is still desired.
+        If it were consumed (via ``inform_configuration_read``) on a pass
+        where the TPM wasn't yet programmed, attributes like
+        ``fortyGbDestinationIps``/``fortyGbCoreConfigurations`` would be stuck
+        at their unprogrammed defaults for the rest of the connection, since
+        nothing would ever trigger another read once the TPM does become
+        programmed.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param monkeypatch: pytest monkeypatch fixture.
+        """
+        tile_simulator.connect()
+        inform_configuration_read = unittest.mock.Mock()
+        monkeypatch.setattr(
+            tile_component_manager._request_provider,
+            "inform_configuration_read",
+            inform_configuration_read,
+        )
+
+        update_configuration_from_tile = getattr(
+            tile_component_manager,
+            "_TileComponentManager__update_configuration_from_tile",
+        )
+
+        monkeypatch.setattr(tile_simulator, "is_programmed", lambda: False)
+        update_configuration_from_tile()
+        inform_configuration_read.assert_not_called()
+
+        monkeypatch.setattr(tile_simulator, "is_programmed", lambda: True)
+        update_configuration_from_tile()
+        inform_configuration_read.assert_called_once()
+
     def test_channeliser_truncation(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,

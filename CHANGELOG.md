@@ -3,6 +3,7 @@
 ## 15.2.0
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
+* [THORN-717] Don't remove the poll that reads the TPM config until we've done it in `programmed` state and got *all* the info.
 
 ## 15.1.0
 

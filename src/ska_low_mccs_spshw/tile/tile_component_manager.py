@@ -1945,6 +1945,7 @@ class TileComponentManager(
         forty_gb_destination_ips: list[str] = []
         forty_gb_destination_ports: list[int] = []
         forty_gb_cores: list[dict] = []
+        preadu_levels = None
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
@@ -2006,7 +2007,14 @@ class TileComponentManager(
 
         self.logger.info("Configuration information read from TPM")
         assert self._request_provider is not None
-        self._request_provider.inform_configuration_read()
+        if is_programmed:
+            # Only consume the request once it's actually read the
+            # programmed-dependent state (40G config, static delays,
+            # beamformer table, etc.) -- otherwise this poll never runs
+            # again for the rest of the connection, and those attributes
+            # are stuck at their unprogrammed defaults even once the TPM
+            # does get programmed.
+            self._request_provider.inform_configuration_read()
 
     def __update_tpm_id(
         self: TileComponentManager, station_id: int, tile_id: int

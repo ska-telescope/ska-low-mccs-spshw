@@ -17,7 +17,13 @@ from typing import Any, Callable
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
+from ska_control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+)
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
@@ -135,7 +141,11 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
 
     mock_device.subscribe_event.side_effect = _subscribe_event
 
-    def _push_change_event(attribute_name: str, value: Any) -> None:
+    def _push_change_event(
+        attribute_name: str,
+        value: Any,
+        quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
+    ) -> None:
         subscription = subscriptions.get(attribute_name.lower())
         if subscription is None:
             return
@@ -145,13 +155,20 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         mock_event_data.err = False
         mock_event_data.attr_value.name = attribute_name
         mock_event_data.attr_value.value = value
-        mock_event_data.attr_value.quality = tango.AttrQuality.ATTR_VALID
+        mock_event_data.attr_value.quality = quality
         # Called synchronously, both for the subscription bootstrap and for
         # every subsequent write, so that by the time subscribe_event or
         # the attribute assignment returns, the station's cache has
         # already been updated -- callers then don't need to sleep and
         # poll waiting for a background thread to run.
         callback(mock_event_data)
+
+    # Lets tests push an ATTR_INVALID change event through the same
+    # subscription path as ordinary writes, so it is delivered in order
+    # with them rather than racing them.
+    mock_device.push_invalid_change_event = lambda attribute_name: _push_change_event(
+        attribute_name, None, tango.AttrQuality.ATTR_INVALID
+    )
 
     # Each Mock() instance gets its own dynamically-created class, so
     # patching __setattr__ here is instance-scoped, not global.
@@ -568,6 +585,20 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                     args[key],
                     tango.AttrQuality.ATTR_VALID,
                 )
+
+        @command(dtype_in="DevLong")
+        def MockTileCommunicationLost(
+            self: PatchedSpsStationDevice, argin: int
+        ) -> None:
+            """
+            Mock the station losing communication with a single tile.
+
+            :param argin: the logical id of the tile.
+            """
+            fqdn = list(self.component_manager._tile_proxies)[argin]
+            self.component_manager._device_communication_state_changed(
+                fqdn, CommunicationStatus.NOT_ESTABLISHED
+            )
 
     return PatchedSpsStationDevice
 

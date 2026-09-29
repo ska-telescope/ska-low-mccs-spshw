@@ -47,6 +47,7 @@ from tests.test_tools import (
     LRCManager,
     execute_lrc_to_completion,
     wait_for_attribute_value,
+    wait_for_condition,
     wait_for_lrc_result,
 )
 
@@ -103,6 +104,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
     return MockTangoEventCallbackGroup(
         "admin_mode",
+        "attribute_change",
         "beamformerDaisyChainValid",
         "finalTileBeamformerFlaggedCountOk",
         "lrc_finished",
@@ -1542,6 +1544,440 @@ def test_station_tile_attributes(
     assert wait_for_attribute_value(
         station_device, attribute_name, final_expected_value(num_tiles)
     )
+
+
+def _wait_for_attribute_value_nan_ok(
+    device: DeviceProxy,
+    attribute_name: str,
+    expected_value: Any,
+    timeout: float = 1.0,
+) -> bool:
+    """
+    Poll a device attribute until it matches an expected value that may hold NaN.
+
+    :param device: the Tango device proxy to poll.
+    :param attribute_name: the name of the attribute to poll.
+    :param expected_value: the value the attribute is expected to reach.
+    :param timeout: seconds to keep polling before giving up.
+
+    :returns: True if the attribute reached expected_value within
+        timeout, False otherwise.
+    """
+    return wait_for_condition(
+        lambda: bool(
+            getattr(device, attribute_name)
+            == pytest.approx(expected_value, nan_ok=True)
+        ),
+        timeout=timeout,
+        poll_interval=0.01,
+    )
+
+
+def _expected_channeliser_rounding(
+    num_tiles: int, invalid_tile: int | None = None
+) -> np.ndarray:
+    """
+    Return the expected station channeliserRounding for the default mock tiles.
+
+    :param num_tiles: the number of mock tiles.
+    :param invalid_tile: a tile whose channeliserRounding is INVALID, if any.
+
+    :returns: a 16x512 array of expected roundings.
+    """
+    expected = np.zeros((16, 512), dtype=int)
+    expected[:num_tiles, :] = 3
+    if invalid_tile is not None:
+        expected[invalid_tile, :] = -1
+    return expected
+
+
+def _per_tile(n: int, value: Callable[[int], float], invalid_tile: int) -> list:
+    """
+    Return 32 entries per tile, with NaN for an invalid tile.
+
+    :param n: the number of tiles.
+    :param value: the value for each tile's entries, as a function of the
+        logical tile id.
+    :param invalid_tile: the tile whose entries are NaN, or -1 for none.
+
+    :returns: a flat list of 32 entries per tile.
+    """
+    return [
+        np.nan if i == invalid_tile else value(i) for i in range(n) for _ in range(32)
+    ]
+
+
+def _summary(values: list[float]) -> list[float]:
+    """
+    Return the [min, mean, max] summary of some values.
+
+    :param values: the values to summarise.
+
+    :returns: the [min, mean, max] of the values.
+    """
+    return [min(values), sum(values) / len(values), max(values)]
+
+
+@pytest.mark.parametrize(
+    [
+        "attribute_name",
+        "tile_attribute_name",
+        "tile_values",
+        "invalid_tile",
+        "valid_expected_value",
+        "invalid_expected_value",
+    ],
+    [
+        pytest.param(
+            "staticTimeDelays",
+            "staticTimeDelays",
+            lambda i: [float(i)] * 32,
+            1,
+            lambda n: _per_tile(n, float, -1),
+            lambda n: _per_tile(n, float, 1),
+            id="staticTimeDelays",
+        ),
+        pytest.param(
+            "preaduLevels",
+            "preaduLevels",
+            lambda i: [float(i + 10)] * 32,
+            2,
+            lambda n: _per_tile(n, lambda i: float(i + 10), -1),
+            lambda n: _per_tile(n, lambda i: float(i + 10), 2),
+            id="preaduLevels",
+        ),
+        pytest.param(
+            "adcPower",
+            "adcPower",
+            lambda i: [float(i + 20)] * 32,
+            0,
+            lambda n: _per_tile(n, lambda i: float(i + 20), -1),
+            lambda n: _per_tile(n, lambda i: float(i + 20), 0),
+            id="adcPower",
+        ),
+        pytest.param(
+            "channeliserRounding",
+            "channeliserRounding",
+            lambda _: [3] * 512,
+            1,
+            _expected_channeliser_rounding,
+            lambda n: _expected_channeliser_rounding(n, invalid_tile=1),
+            id="channeliserRounding",
+        ),
+        pytest.param(
+            "boardTemperaturesSummary",
+            "boardTemperature",
+            float,
+            3,
+            lambda n: _summary([float(i) for i in range(n)]),
+            lambda n: _summary([float(i) for i in range(n) if i != 3]),
+            id="boardTemperaturesSummary",
+        ),
+        pytest.param(
+            "fpgaTemperaturesSummary",
+            "fpga1Temperature",
+            float,
+            0,
+            # fpga2Temperature is 25.0 on every tile, and stays valid.
+            lambda n: _summary([float(i) for i in range(n)] + [25.0] * n),
+            lambda n: _summary([float(i) for i in range(1, n)] + [25.0] * n),
+            id="fpgaTemperaturesSummary",
+        ),
+        pytest.param(
+            "ppsDelaySummary",
+            "ppsDelay",
+            lambda i: i,
+            3,
+            lambda n: _summary([float(i) for i in range(n)]),
+            lambda n: _summary([float(i) for i in range(n) if i != 3]),
+            id="ppsDelaySummary",
+        ),
+        pytest.param(
+            "pllLockedSummary",
+            "pllLocked",
+            lambda _: True,
+            2,
+            lambda _: True,
+            lambda _: False,
+            id="pllLockedSummary",
+        ),
+        pytest.param(
+            "ppsPresentSummary",
+            "ppsPresent",
+            lambda _: True,
+            2,
+            lambda _: True,
+            lambda _: False,
+            id="ppsPresentSummary",
+        ),
+        pytest.param(
+            "isBeamformerRunning",
+            "isBeamformerRunning",
+            lambda _: True,
+            1,
+            lambda _: True,
+            lambda _: False,
+            id="isBeamformerRunning",
+        ),
+        pytest.param(
+            "testGeneratorActive",
+            "testGeneratorActive",
+            lambda i: i == 0,
+            0,
+            lambda _: True,
+            lambda _: False,
+            id="testGeneratorActive",
+        ),
+        pytest.param(
+            "tileProgrammingState",
+            "tileProgrammingState",
+            lambda _: "Synchronised",
+            1,
+            lambda n: ["Synchronised"] * n,
+            lambda n: ["Synchronised", "Unknown"] + ["Synchronised"] * (n - 2),
+            id="tileProgrammingState",
+        ),
+    ],
+)
+def test_station_invalid_tile_attribute(
+    on_station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    num_tiles: int,
+    attribute_name: str,
+    tile_attribute_name: str,
+    tile_values: Callable[[int], Any],
+    invalid_tile: int,
+    valid_expected_value: Callable[[int], Any],
+    invalid_expected_value: Callable[[int], Any],
+) -> None:
+    """
+    Test that an INVALID tile attribute is reflected in the station attribute.
+
+    Each tile first reports a valid value, then one tile pushes an
+    ATTR_INVALID change event. The station must drop that tile's cached
+    value rather than continuing to report its last valid reading, and
+    pick it up again once the tile reports a valid value.
+
+    :param on_station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    :param attribute_name: the attribute to access on the station
+    :param tile_attribute_name: the attribute on the tile that is invalidated
+    :param tile_values: the valid value each tile reports, as a function of
+        the logical tile id.
+    :param invalid_tile: the logical id of the tile that reports INVALID.
+    :param valid_expected_value: the expected station attribute value while
+        every tile is valid, as a function of the number of tiles.
+    :param invalid_expected_value: the expected station attribute value
+        after invalidation, as a function of the number of tiles.
+    """
+    for i, tile in enumerate(mock_tile_device_proxies):
+        setattr(tile, tile_attribute_name, tile_values(i))
+    # Tile change events are processed asynchronously, so make sure the
+    # valid values have landed before the INVALID event is pushed.
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device, attribute_name, valid_expected_value(num_tiles)
+    ), getattr(on_station_device, attribute_name)
+
+    mock_tile_device_proxies[invalid_tile].push_invalid_change_event(
+        tile_attribute_name
+    )
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device, attribute_name, invalid_expected_value(num_tiles)
+    ), getattr(on_station_device, attribute_name)
+
+    setattr(
+        mock_tile_device_proxies[invalid_tile],
+        tile_attribute_name,
+        tile_values(invalid_tile),
+    )
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device, attribute_name, valid_expected_value(num_tiles)
+    ), getattr(on_station_device, attribute_name)
+
+
+@pytest.mark.parametrize(
+    ["attribute_name", "tile_attribute_name"],
+    [
+        pytest.param("pllLockedSummary", "pllLocked", id="pllLockedSummary"),
+        pytest.param("ppsPresentSummary", "ppsPresent", id="ppsPresentSummary"),
+        pytest.param(
+            "isBeamformerRunning", "isBeamformerRunning", id="isBeamformerRunning"
+        ),
+    ],
+)
+def test_station_summary_change_events(
+    on_station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    attribute_name: str,
+    tile_attribute_name: str,
+) -> None:
+    """
+    Test that boolean summary attributes push change events on tile updates.
+
+    :param on_station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param attribute_name: the summary attribute on the station.
+    :param tile_attribute_name: the per-tile attribute being summarised.
+    """
+    for tile in mock_tile_device_proxies:
+        setattr(tile, tile_attribute_name, True)
+    assert wait_for_attribute_value(on_station_device, attribute_name, True)
+
+    on_station_device.subscribe_event(
+        attribute_name,
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["attribute_change"],
+    )
+    change_event_callbacks["attribute_change"].assert_change_event(True)
+
+    setattr(mock_tile_device_proxies[0], tile_attribute_name, False)
+    change_event_callbacks["attribute_change"].assert_change_event(False)
+
+    setattr(mock_tile_device_proxies[0], tile_attribute_name, True)
+    change_event_callbacks["attribute_change"].assert_change_event(True)
+
+    mock_tile_device_proxies[1].push_invalid_change_event(tile_attribute_name)
+    change_event_callbacks["attribute_change"].assert_change_event(False)
+
+
+@pytest.mark.parametrize(
+    ["attribute_name", "tile_values", "expected_value"],
+    [
+        pytest.param(
+            "staticTimeDelays",
+            lambda i: [float(i)] * 32,
+            lambda n: [float(i) for i in range(n) for _ in range(32)],
+            id="staticTimeDelays",
+        ),
+        pytest.param(
+            "preaduLevels",
+            lambda i: [float(i + 10)] * 32,
+            lambda n: [float(i + 10) for i in range(n) for _ in range(32)],
+            id="preaduLevels",
+        ),
+        pytest.param(
+            "channeliserRounding",
+            lambda i: [i] * 512,
+            lambda n: [[i] * 512 if i < n else [0] * 512 for i in range(16)],
+            id="channeliserRounding",
+        ),
+        pytest.param(
+            "tileProgrammingState",
+            lambda i: "Synchronised" if i % 2 == 0 else "Initialised",
+            lambda n: tuple(
+                "Synchronised" if i % 2 == 0 else "Initialised" for i in range(n)
+            ),
+            id="tileProgrammingState",
+        ),
+    ],
+)
+def test_station_array_change_events(
+    on_station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    num_tiles: int,
+    attribute_name: str,
+    tile_values: Callable[[int], Any],
+    expected_value: Callable[[int], Any],
+) -> None:
+    """
+    Test that per-tile array attributes push change events on tile updates.
+
+    :param on_station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param num_tiles: the number of mock tiles
+    :param attribute_name: the attribute on the station, which is also the
+        name of the per-tile attribute it aggregates.
+    :param tile_values: the value each tile reports, as a function of the
+        logical tile id.
+    :param expected_value: the expected station attribute value, as a
+        function of the number of tiles.
+    """
+    on_station_device.subscribe_event(
+        attribute_name,
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["attribute_change"],
+    )
+    # Discard the initial value pushed on subscription.
+    change_event_callbacks["attribute_change"].assert_against_call()
+
+    for i, tile in enumerate(mock_tile_device_proxies):
+        setattr(tile, attribute_name, tile_values(i))
+
+    # Every tile update pushes an event for the whole station attribute, on
+    # top of any still-arriving subscription bootstrap events, so look well
+    # ahead for the one carrying every tile's new value.
+    change_event_callbacks["attribute_change"].assert_change_event(
+        expected_value(num_tiles), lookahead=20
+    )
+
+
+def test_tile_communication_lost_invalidates_caches(
+    on_station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    num_tiles: int,
+) -> None:
+    """
+    Test that losing communication with a tile invalidates its cached values.
+
+    A tile we can no longer talk to pushes no ATTR_INVALID events, so the
+    station must invalidate that tile's cached readings itself, rather than
+    presenting its last reported values as current.
+
+    :param on_station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    """
+    lost_tile = 1
+    for i, tile in enumerate(mock_tile_device_proxies):
+        tile.tileProgrammingState = "Synchronised"
+        tile.staticTimeDelays = [float(i)] * 32
+        tile.boardTemperature = float(i)
+        tile.pllLocked = True
+    mock_tile_device_proxies[-1].cspRounding = [5] * 384
+
+    assert wait_for_attribute_value(on_station_device, "pllLockedSummary", True)
+    assert wait_for_attribute_value(on_station_device, "cspRounding", [5] * 384)
+
+    on_station_device.MockTileCommunicationLost(lost_tile)
+
+    expected_delays = [
+        np.nan if i == lost_tile else float(i)
+        for i in range(num_tiles)
+        for _ in range(32)
+    ]
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device, "staticTimeDelays", expected_delays
+    )
+    assert np.array_equal(
+        on_station_device.channeliserRounding,
+        _expected_channeliser_rounding(num_tiles, invalid_tile=lost_tile),
+    )
+    assert list(on_station_device.tileProgrammingState) == [
+        "Unknown" if i == lost_tile else "Synchronised" for i in range(num_tiles)
+    ]
+    other_temperatures = [float(i) for i in range(num_tiles) if i != lost_tile]
+    assert on_station_device.boardTemperaturesSummary == pytest.approx(
+        [
+            min(other_temperatures),
+            sum(other_temperatures) / len(other_temperatures),
+            max(other_temperatures),
+        ]
+    )
+    assert not on_station_device.pllLockedSummary
+    assert not on_station_device.isBeamformerRunning
+    # cspRounding doubles as the configured value, so it is not invalidated.
+    assert list(on_station_device.cspRounding) == [5] * 384
 
 
 def test_stations_daq_trl(station_device: SpsStation) -> None:

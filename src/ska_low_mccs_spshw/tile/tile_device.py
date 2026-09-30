@@ -4450,7 +4450,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fortyGbDestinationIps = attribute_from_signal(
         forty_gb_destination_ips_signal,
         dtype=("DevString",),
-        max_dim_x=16,
+        max_dim_x=32,
         label="40Gb Destination IPs",
         doc="The destination IPs for all 40Gb ports on the tile",
     )
@@ -4458,7 +4458,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fortyGbDestinationPorts = attribute_from_signal(
         forty_gb_destination_ports_signal,
         dtype=("DevLong",),
-        max_dim_x=16,
+        max_dim_x=32,
         abs_change=1,
         archive_abs_change=1,
         label="40Gn Destination Ports",

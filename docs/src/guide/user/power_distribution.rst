@@ -6,13 +6,13 @@ The Monitor, Control and Calibration System covers power management for the SKA 
 Hardware Overview
 -----------------
 
-In order to properly cover this topic it's important to get an overview of the hardware. At the core of the LFAA we have the Radio Antenna. The signal received from it is transmitted over coaxial cables connected to a smartbox. Each smartbox supplies power to several antennas (to a maximum of 12), and it is in turn connected to a Field Node Distribution Hub (FNDH). This device provides power downstream and aggregates the signal upstream. [These set of devices are grouped together in what is called a Field Station, each containing 256 antennas, 24 smartboxes and 1 FNDH]-depends who you ask, the Field Station is a bit overloaded. In MCCS this hardware is controlled by the Power and Signal Distribution (PaSD) system.
+In order to properly cover this topic it's important to get an overview of the hardware. At the core of the LFAA we have the Radio Antenna. The signal received from it is transmitted over coaxial cables connected to a smartbox. Each smartbox supplies power to several antennas (to a maximum of 12), and it is in turn connected to a Field Node Distribution Hub (FNDH). This device provides power downstream and aggregates the signal upstream. These set of devices are grouped together in what is called a Field Station, each containing 256 antennas, 24 smartboxes and 1 FNDH. In MCCS this hardware is controlled by the Power and Signal Distribution (PaSD) system.
 
-All the data from the antennas is digitised and sent to the Tile Processing Modules (TPM). Each Tile processes the signal from 16 antennas, and an entire FieldStation has it's output covered by 16 TPMs. The Subrack supplies power to 8 TPMs, and in turn it has it's power supplied by the PDU.
+All the data from the antennas is sent to the Tile Processing Modules (TPM). Each Tile processes the signal from 16 antennas, and an entire FieldStation has it's output covered by 16 TPMs. The Subrack supplies power to 8 TPMs, and in turn it has it's power supplied by the PDU.
 
 To sum everything up, the LFAA components are supplied with power through FNDH (for all the antenna related hardware) and PDU + Subracks (for the signal processing).
 
-This hardware comprises what is called a Field Node or Station. The LFAA will be comprised of 
+This hardware comprises what is called a Field Node or Station. The LFAA will be comprised of roughly ~500 such Stations. MCCS aggregates all of them under the Controller device which has the role of assigning resources for observations.
 
 Software Overview
 -----------------
@@ -106,7 +106,7 @@ PowerMarshaller
 **Power state:** a purely virtual device. It is ``ON`` as soon as communication is established.
 
 - ``On``/``Off``/``Standby``: not implemented.
-- ``SchedulePower(json)`` takes a device TRL, a command name and an argument and runs that command on the target device (for example ``pduPortOn`` on a PDU). At the moment it runs the command straight away; nothing is actually scheduled yet.
+- ``SchedulePower`` takes a device TRL, a command name and an argument and runs that command on the target device (for example ``pduPortOn`` on a PDU). At the moment it runs the command straight away; nothing is actually scheduled yet.
 
 .. image:: images/subrack_schedule_power_sequence.png
   :alt: A graph of the schedule power process in the PowerMarshaller through the Subrack

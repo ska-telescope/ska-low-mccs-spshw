@@ -16,12 +16,13 @@ import os.path
 import re
 import sys
 import threading
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
 from ipaddress import IPv4Address
 from operator import getitem
-from typing import Any, Callable, Final, NoReturn, Optional
+from typing import Any, Callable, Final, NoReturn, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -792,7 +793,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # "attribute-defined-outside-init" etc. We still need to make sure that
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
-        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_state = (
+            HealthState.UNKNOWN,
+            time.time(),
+            tango.AttrQuality.ATTR_VALID,
+        )
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int] = []
@@ -1200,11 +1205,33 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if self._stopping:
             return
         if self.UseAttributesForHealth:
-            self.healthReport_signal = health_report
+            self._push_health_events(health, health_report)
 
-            if self._health_state != health:
-                self.logger.info(f"Health changed ==> {health=}, {health_report=}")
-                self._health_state = health
+    def _push_health_events(
+        self: MccsTile, health: HealthState, health_report: str
+    ) -> None:
+        """
+        Push the healthState and healthReport events for one health evaluation.
+
+        :param health: the new health value
+        :param health_report: the new health report
+        """
+        # Give both events one timestamp, so that a client can pair them.
+        timestamp = time.time()
+        # healthReport is defined as an attribute_from_signal, so setting the
+        # signal pushes its change and archive events for us.
+        self.healthReport_signal = (
+            health_report,
+            timestamp,
+            tango.AttrQuality.ATTR_VALID,
+        )
+        # Every write to this signal is a (value, timestamp, quality) triple.
+        last_health, _, _ = cast(
+            tuple[HealthState, float, tango.AttrQuality], self._health_state
+        )
+        if last_health != health:
+            self.logger.info(f"Health changed ==> {health=}, {health_report=}")
+            self._health_state = (health, timestamp, tango.AttrQuality.ATTR_VALID)
 
     def _intermediate_health_changed(
         self: MccsTile,
@@ -1250,7 +1277,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
-        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+        # InitCommand.do() does this too late.
+        self._health_state = (
+            HealthState.UNKNOWN,
+            time.time(),
+            tango.AttrQuality.ATTR_VALID,
+        )
 
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, self.VerifyEvents)
@@ -1712,8 +1744,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if self._stopping:
             return
-        if self._health_state != health:
-            self._health_state = health
+        self._push_health_events(health, self._health_model.health_report)
 
     def shutdown_on_max_alarm(self: MccsTile, attr_name: str) -> None:
         """

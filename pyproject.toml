@@ -7,7 +7,7 @@ dependencies = [
     "PyYAML >= 6.0.1, <7.0.0",
     "requests >= 2.31.0, <3.0.0",
     "scipy >= 1.11.2, <2.0.0",
-    "ska-control-model[health_rollup] >= 1.2.0, <2.0.0",
+    "ska-control-model[health_rollup] >= 1.4.0, <2.0.0",
     "ska-tango-base >= 1.6.1, < 2.0.0",
     "ska-low-mccs-common >= 4.8.0, < 5.0.0",
     "ska-low-mccs-daq >= 6.0.0, <7.0.0",
@@ -67,9 +67,6 @@ url = "https://artefact.skao.int/repository/pypi-internal/simple"
 [[tool.uv.index]]
 name = "PyPI-public"
 url = "https://pypi.org/simple"
-
-[tool.uv.sources]
-ska-control-model = { git = "https://gitlab.com/ska-telescope/ska-control-model.git", branch = "thorn-711" }
 
 
 [dependency-groups]

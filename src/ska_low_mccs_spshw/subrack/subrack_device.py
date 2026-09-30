@@ -14,7 +14,8 @@ import importlib
 import json
 import sys
 import threading
-from typing import Any, Final, Optional
+import time
+from typing import Any, Final, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -217,7 +218,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         super().__init__(*args, **kwargs)
 
         self._health_model: SubrackHealthModel
-        self._health_state: HealthState
         self._stopping = False
         self._health_recorder: HealthRecorder | None
         self._health_report = ""
@@ -312,9 +312,33 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             return
 
         if self.UseAttributesForHealth:
+            self._push_health_events(health, health_report)
+
+    def _push_health_events(
+        self: MccsSubrack, health: HealthState, health_report: str
+    ) -> None:
+        """
+        Push the healthState and healthReport events for one health evaluation.
+
+        :param health: the new health value
+        :param health_report: the new health report
+        """
+        # Give both events one timestamp, so that a client can pair them.
+        timestamp = time.time()
+        if self._health_report != health_report:
             self._health_report = health_report
-            if self._health_state != health:
-                self._health_state = health
+            self.push_change_event(
+                "healthReport", health_report, timestamp, AttrQuality.ATTR_VALID
+            )
+            self.push_archive_event(
+                "healthReport", health_report, timestamp, AttrQuality.ATTR_VALID
+            )
+        # Every write to this signal is a (value, timestamp, quality) triple.
+        last_health, _, _ = cast(
+            tuple[HealthState, float, AttrQuality], self._health_state
+        )
+        if last_health != health:
+            self._health_state = (health, timestamp, AttrQuality.ATTR_VALID)
 
     def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
         """
@@ -345,7 +369,11 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
-        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+        # InitCommand.do() does this too late.
+        self._health_state = (HealthState.UNKNOWN, time.time(), AttrQuality.ATTR_VALID)
+        # Set up before the health model, which pushes these events.
+        self.set_change_event("healthReport", True, False)
+        self.set_archive_event("healthReport", True, False)
 
         if self.UseAttributesForHealth:
             healthful_attrs = set(self._HEALTH_STATUS_MAP.keys()) | set(
@@ -2043,8 +2071,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param health: the new health value
         """
         if not self.UseAttributesForHealth:
-            if self._health_state != health:
-                self._health_state = health
+            self._push_health_events(health, self._health_model.health_report)
 
     def _update_board_current(self: MccsSubrack, board_current: float) -> None:
         if board_current is None:

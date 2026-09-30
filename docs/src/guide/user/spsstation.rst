@@ -70,6 +70,9 @@ In that example the overall ``healthState`` would still be ``OK``, because the `
 ``(1, 1, 2)`` shown in the diagrams above means a single degraded tile is not enough to degrade the whole
 station. A second degraded tile is needed for that.
 
+Each ``healthState`` event and the ``healthReport`` event that the same health update causes have the same
+timestamp. A health update that does not change the overall health state gives only a ``healthReport`` event.
+
 Drilling down
 -------------
 If a specific Tile or Subrack is reporting ``DEGRADED`` or ``FAILED``, you should then 

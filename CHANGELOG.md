@@ -3,7 +3,8 @@
 ## Unreleased
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
-* [THORN-711] ``healthReport`` now only contains the subdevices that are not OK, and reports each health state by name, such as ``FAILED``, instead of by its integer value. A subdevice group is omitted if all of its members are OK, so an empty report means that all subdevices are OK. The device keeps the full health summary internally, so a threshold change still restores the health of every subdevice.
+* [THORN-711] ``SpsStation.healthReport`` now only contains the subdevices that are not OK, and reports each health state by name, such as ``FAILED``, instead of by its integer value. A subdevice group is omitted if all of its members are OK, so an empty report means that all subdevices are OK. The device keeps the full health summary internally, so a threshold change still restores the health of every subdevice.
+* [THORN-711] ``SpsStation``, ``MccsTile`` and ``MccsSubrack`` now push ``healthReport`` change and archive events. Each ``healthState`` event and the ``healthReport`` event that the same health update causes have the same timestamp, so a client can pair them. A health update that does not change the overall health state gives only a ``healthReport`` event.
 
 ## 15.1.0
 

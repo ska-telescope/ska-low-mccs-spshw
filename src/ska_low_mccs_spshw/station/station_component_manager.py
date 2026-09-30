@@ -166,9 +166,13 @@ class _TileProxy(DeviceComponentManager):
             "boardTemperature": self._on_attribute_change,
             "fpga1Temperature": self._on_attribute_change,
             "fpga2Temperature": self._on_attribute_change,
+            # ================================================================
             # sysrefPresent and clockPresent are not subscribed: they are not
             # yet implemented in ska-low-sps-tpm-api, so the tile never pushes
             # events for them and every subscription attempt logs a failure.
+            # "clockPresent": self._on_attribute_change,
+            # "sysrefPresent": self._on_attribute_change,
+            # ================================================================
             "pllLocked": self._on_attribute_change,
             "ppsPresent": self._on_attribute_change,
             "testGeneratorActive": self._on_attribute_change,
@@ -818,6 +822,9 @@ class SpsStationComponentManager(
         self._is_beamformer_running: list[bool | None] = [None] * self._number_of_tiles
         self._channeliser_roundings: np.ndarray = np.zeros([16, 512], dtype=np.int32)
         self._pps_delay_corrections_reported: set[int] = set()
+        # Logical ids of tiles we currently have communication established
+        # with, so that caches are only invalidated when a tile drops out.
+        self._tiles_established: set[int] = set()
         self._desired_static_delays: None | list[float] = None
         self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
@@ -1301,11 +1308,16 @@ class SpsStationComponentManager(
         communication_state: CommunicationStatus,
     ) -> None:
         tile_proxy = self._tile_proxies.get(fqdn)
-        if (
-            tile_proxy is not None
-            and communication_state != CommunicationStatus.ESTABLISHED
-        ):
-            self._invalidate_tile_caches(tile_proxy._logical_tile_id)
+        if tile_proxy is not None:
+            tile_id = tile_proxy._logical_tile_id
+            if communication_state == CommunicationStatus.ESTABLISHED:
+                self._tiles_established.add(tile_id)
+            elif tile_id in self._tiles_established:
+                # Only a tile we were talking to has readings worth
+                # invalidating; before first connection the caches are
+                # already invalid.
+                self._tiles_established.discard(tile_id)
+                self._invalidate_tile_caches(tile_id)
         self._communication_manager.update_communication_status(
             fqdn, communication_state
         )

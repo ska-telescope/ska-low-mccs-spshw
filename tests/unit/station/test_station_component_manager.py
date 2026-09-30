@@ -431,6 +431,40 @@ def communicating_station_component_manager_fixture(
     yield station_component_manager
 
 
+def test_tile_caches_only_invalidated_on_losing_communication(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that a tile's caches are only invalidated when it drops out of ESTABLISHED.
+
+    Before first connection the caches are already invalid, so reporting
+    NOT_ESTABLISHED/DISABLED for a tile we have never talked to must not
+    re-fire the aggregate attributes. Once established, losing
+    communication must invalidate exactly once.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    """
+    tile_fqdn, tile_proxy = next(iter(station_component_manager._tile_proxies.items()))
+    state_changed = station_component_manager._device_communication_state_changed
+
+    with unittest.mock.patch.object(
+        station_component_manager,
+        "_invalidate_tile_caches",
+        wraps=station_component_manager._invalidate_tile_caches,
+    ) as invalidate:
+        state_changed(tile_fqdn, CommunicationStatus.NOT_ESTABLISHED)
+        state_changed(tile_fqdn, CommunicationStatus.DISABLED)
+        invalidate.assert_not_called()
+
+        state_changed(tile_fqdn, CommunicationStatus.ESTABLISHED)
+        state_changed(tile_fqdn, CommunicationStatus.NOT_ESTABLISHED)
+        invalidate.assert_called_once_with(tile_proxy._logical_tile_id)
+
+        state_changed(tile_fqdn, CommunicationStatus.DISABLED)
+        invalidate.assert_called_once()
+
+
 def test_static_delays_fanout_to_correct_tile(
     communicating_station_component_manager: SpsStationComponentManager,
     mock_tiles: list[MccsDeviceProxy],
@@ -915,7 +949,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=subrack._name,
             health=HealthState.OK,
-            lookahead=120,
+            lookahead=40,
         )
 
     for tile in station_component_manager._tile_proxies.values():
@@ -924,13 +958,13 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             health=HealthState.OK,
-            lookahead=120,
+            lookahead=40,
         )
         # Need to wait for this event to come through before we turn a tile OFF.
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             power=PowerState.ON,
-            lookahead=120,
+            lookahead=40,
         )
     callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=120)
     assert station_component_manager._component_state["power"] == PowerState.ON
@@ -1140,7 +1174,7 @@ def test_beamformer_table(
     # Component state callback is getting called by many many sources.
     callbacks["component_state"].assert_call(
         beamformerTable=tile_initial_beamformer_table,
-        lookahead=140,
+        lookahead=60,
         consume_nonmatches=True,
     )
     callbacks["component_state"].assert_call(
@@ -1319,7 +1353,7 @@ def test_pointing_delays(
     # Large lookahead as this is only done once we got data for all TPMs
     callbacks["component_state"].assert_call(
         pointingdelays=expected_call,
-        lookahead=105,
+        lookahead=60,
     )
 
 

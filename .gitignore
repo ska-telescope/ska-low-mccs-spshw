@@ -63,3 +63,6 @@ testing/results/*
 docs/src/_build
 venv/
 tpm/
+
+# DIFDoc
+docs/src/device-interfaces/*-device.rst

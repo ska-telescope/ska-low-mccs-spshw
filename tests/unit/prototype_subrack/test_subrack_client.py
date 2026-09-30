@@ -14,11 +14,10 @@ simulator server over HTTP.
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import queue
 import threading
-from typing import Any, Iterator
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -31,8 +30,10 @@ from ska_low_mccs_spshw.prototype_subrack import (
     Subrack,
     SubrackPollResponse,
 )
-from ska_low_mccs_spshw.prototype_subrack.constants import BATCH_ATTRIBUTES
-from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
+from ska_low_mccs_spshw.prototype_subrack.constants import (
+    BATCH_ATTRIBUTES,
+    HEALTH_STATUS_KEY,
+)
 
 from .conftest import FakeHardwareClient, make_subrack
 
@@ -215,7 +216,7 @@ class TestHealthRead:
 
         for _ in range(2):
             response = healthy_faked_subrack.poll(request)
-            assert response.health_status == {"psus": {}}
+            assert response.values[HEALTH_STATUS_KEY] == {"psus": {}}
 
         health_reads = [
             c for c in fake_client.command_calls if c[0] == "get_health_status"
@@ -227,8 +228,6 @@ class TestHealthRead:
         [
             HardwareClientResponseStatusCodes.ERROR.name,
             HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name,
-            HardwareClientResponseStatusCodes.BUSY.name,
-            HardwareClientResponseStatusCodes.STARTED.name,
         ],
     )
     def test_a_health_status_the_board_cannot_supply_is_unknown(
@@ -256,7 +255,9 @@ class TestHealthRead:
             },
         )
 
-        assert faked_subrack.poll(faked_subrack.get_request()).health_status is None
+        response = faked_subrack.poll(faked_subrack.get_request())
+
+        assert response.values[HEALTH_STATUS_KEY] is None
 
     @pytest.mark.parametrize(
         ("status", "info", "expected"),
@@ -384,8 +385,6 @@ class TestErrorBranches:
         [
             HardwareClientResponseStatusCodes.ERROR.name,
             HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name,
-            HardwareClientResponseStatusCodes.BUSY.name,
-            HardwareClientResponseStatusCodes.STARTED.name,
         ],
     )
     def test_a_value_the_board_cannot_supply_is_unknown(
@@ -398,8 +397,8 @@ class TestErrorBranches:
         A board that answers but supplies no value must give ``None``.
 
         The device turns ``None`` into invalid attribute quality, which is the
-        correct outcome whether the board reported an error or was busy. Only
-        a transport failure raises.
+        correct outcome when the board reports an error. Only a transport
+        failure raises.
 
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
@@ -801,151 +800,94 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
-        derived.apply.side_effect = lambda values, _: values.update({"computed": 42})
+        derived.apply.side_effect = lambda values: values.update({"computed": 42})
         subrack = make_subrack(fake_client, logger, derived)
 
         response = subrack.poll(subrack.get_request())
 
         derived.apply.assert_called_once()
-        (values, health_status) = derived.apply.call_args.args
+        (values,) = derived.apply.call_args.args
         assert values is response.values, "the response dropped what they wrote into"
-        assert health_status is response.health_status
         assert response.values["computed"] == 42
 
 
-class TestLockContention:
+class TestABusyBoard:
     """
-    Tests of what happens when the client lock is not free.
+    Tests of a poll that lands while the board runs a command.
 
-    The board fails every request while a command is active, so polls and
-    commands share one lock. These tests cover a lock that another operation
-    still holds.
+    The board answers every read with ``BUSY`` until the command ends. A busy
+    read says nothing about the value, so it must not change anything.
     """
 
-    @staticmethod
-    @contextlib.contextmanager
-    def _held(lock: LogLock) -> Iterator[None]:
-        """
-        Hold the lock on another thread for the duration of the block.
-
-        The lock is reentrant, so a second thread is needed to hold it against
-        the caller. Events carry the handshake in both directions.
-
-        :param lock: the lock to hold.
-
-        :yields: once the other thread holds the lock.
-        """
-        holding = threading.Event()
-        release = threading.Event()
-
-        def hold() -> None:
-            with acquire_timeout(lock, 5.0, context="stalled operation"):
-                holding.set()
-                release.wait(5.0)
-
-        thread = threading.Thread(target=hold, daemon=True)
-        thread.start()
-        assert holding.wait(5.0), "the holder thread never acquired the lock"
-        try:
-            yield
-        finally:
-            release.set()
-            thread.join(5.0)
-
-    def test_a_poll_that_cannot_get_the_lock_raises(
-        self: TestLockContention,
+    @pytest.mark.parametrize(
+        "status",
+        [
+            HardwareClientResponseStatusCodes.BUSY.name,
+            HardwareClientResponseStatusCodes.STARTED.name,
+        ],
+    )
+    def test_a_busy_attribute_is_left_out_and_the_poll_goes_on(
+        self: TestABusyBoard,
+        faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
+        status: str,
     ) -> None:
         """
-        A poll must raise when the lock stays busy.
+        A busy attribute must be absent, and every other key still read.
 
-        The poller routes the exception to ``poll_failed``, which the device
-        turns into ``UNKNOWN``.
+        Absent, rather than ``None``, is what keeps its last value on the
+        device.
 
+        :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
+        :param status: the busy status the board reports.
         """
-        lock = LogLock("busy", logger)
-        subrack = make_subrack(
-            fake_client, logger, derived, lock=lock, lock_timeout=0.01
+        busy_key = BATCH_ATTRIBUTES[0]
+        fake_client.set_attribute_response(value=1)
+        fake_client.attribute_responses[busy_key] = {
+            "status": status,
+            "info": "turn_on_tpm still running",
+            "attribute": busy_key,
+            "value": "",
+        }
+
+        response = faked_subrack.poll(faked_subrack.get_request())
+
+        assert busy_key not in response.values
+        for key in BATCH_ATTRIBUTES[1:]:
+            assert response.values[key] == 1, f"{key} should still be read"
+        assert fake_client.attribute_calls == list(BATCH_ATTRIBUTES)
+
+    @pytest.mark.parametrize(
+        "status",
+        [
+            HardwareClientResponseStatusCodes.BUSY.name,
+            HardwareClientResponseStatusCodes.STARTED.name,
+        ],
+    )
+    def test_a_busy_health_read_is_left_out(
+        self: TestABusyBoard,
+        faked_subrack: Subrack,
+        fake_client: FakeHardwareClient,
+        status: str,
+    ) -> None:
+        """
+        A busy health read must be absent, so the last health status stands.
+
+        :param faked_subrack: the client under test.
+        :param fake_client: the fake hardware client.
+        :param status: the busy status the board reports.
+        """
+        fake_client.set_command_responses(
+            "get_health_status",
+            {
+                "status": status,
+                "info": "turn_on_tpm still running",
+                "command": "get_health_status",
+                "retvalue": "",
+            },
         )
 
-        with self._held(lock):
-            with pytest.raises(RequestError, match="still holds the client"):
-                subrack.poll(subrack.get_request())
+        response = faked_subrack.poll(faked_subrack.get_request())
 
-    def test_a_command_that_cannot_get_the_lock_fails(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-    ) -> None:
-        """
-        A command must fail rather than block its worker thread.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        """
-        subrack = make_subrack(fake_client, logger, derived, lock_timeout=0.01)
-
-        with self._held(subrack._client_lock):
-            (status, message, _) = subrack.run_board_command("turn_on_tpm", "1")
-
-        assert status == BoardCommandStatus.FAILED
-        assert "busy with another operation" in message
-
-    def test_a_poll_reports_how_long_it_held_the_lock(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """
-        A poll must report its lock hold, naming itself as the holder.
-
-        The name is what makes a stalled board attributable to the poll rather
-        than to a command. A threshold of zero reports every hold, so the test
-        needs no delay.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        :param caplog: the pytest log capture fixture.
-        """
-        lock = LogLock("slow", logger, timeout_warning=0.0)
-        subrack = make_subrack(fake_client, logger, derived, lock=lock)
-        fake_client.set_attribute_response(value=None)
-
-        with caplog.at_level(logging.WARNING, logger=logger.name):
-            subrack.poll(subrack.get_request())
-
-        assert "lock slow held for" in caplog.text
-        assert "poll sweep" in caplog.text
-
-    def test_a_command_reports_how_long_it_held_the_lock(
-        self: TestLockContention,
-        fake_client: FakeHardwareClient,
-        logger: logging.Logger,
-        derived: mock.Mock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """
-        A command must report its lock hold, naming the command.
-
-        :param fake_client: the fake hardware client.
-        :param logger: a logger.
-        :param derived: a stand-in for the computed values.
-        :param caplog: the pytest log capture fixture.
-        """
-        subrack = make_subrack(fake_client, logger, derived, lock_warning=0.0)
-
-        with caplog.at_level(logging.WARNING, logger=logger.name):
-            subrack.run_board_command("turn_on_tpm", "1")
-
-        assert "held for" in caplog.text
-        assert "command turn_on_tpm" in caplog.text
+        assert HEALTH_STATUS_KEY not in response.values

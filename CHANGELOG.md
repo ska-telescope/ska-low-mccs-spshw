@@ -3,6 +3,7 @@
 ## 15.2.0
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
+* [THORN-430] Added tangodiffdoc to the documentation pipeline
 
 ## 15.1.0
 

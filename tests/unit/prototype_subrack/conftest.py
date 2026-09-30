@@ -29,7 +29,6 @@ from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
     SubrackServerContextManager,
 )
-from ska_low_mccs_spshw.tile.utils import LogLock
 
 
 class FakeHardwareClient:
@@ -252,9 +251,6 @@ def make_subrack(
     client: Any,
     logger: logging.Logger,
     derived: Any,
-    *,
-    name: str = "no-such-host",
-    lock: LogLock | None = None,
     **kwargs: Any,
 ) -> Subrack:
     """
@@ -269,8 +265,6 @@ def make_subrack(
     :param derived: the computed values. A test that asserts nothing about
         them passes the ``derived`` fixture, so that no real computation runs
         behind the test. One that does passes a real ``DerivedValues``.
-    :param name: what the subrack calls itself in the log.
-    :param lock: the client lock, defaulting to a fresh one.
     :param kwargs: overrides passed to the subrack.
 
     :return: a subrack client.
@@ -281,7 +275,7 @@ def make_subrack(
         "stopped_callback": lambda: None,
     }
     options.update(kwargs)
-    return Subrack(client, derived, name, logger, _lock=lock, **options)
+    return Subrack(client, derived, logger, **options)
 
 
 @pytest.fixture(name="simulated_subrack")
@@ -307,7 +301,6 @@ def simulated_subrack_fixture(
         WebHardwareClient(host, port),
         logger,
         derived,
-        name=host,
         data_callback=data_callback,
         error_callback=error_callback,
     )

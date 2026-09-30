@@ -136,6 +136,19 @@ class TileAttribute:
     timestamp: float
 
 
+def _get_firmware_threshold_db_connection() -> tango.Database | None:
+    """
+    Return a connection to the Tango database, or None if none is available.
+
+    :returns: a connection to the real Tango database, or None if this
+        server has no real database to connect to.
+    """
+    util = tango.Util.instance()
+    if bool(util._FileDb) or not util._UseDb:
+        return None
+    return tango.Database()
+
+
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 # pylint: disable=too-many-ancestors
 class MccsTile(MccsBaseDevice[TileComponentManager]):
@@ -1128,6 +1141,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             device_name=self.get_name(),
             thresholds=self.db_firmware_thresholds,
             logger=self.logger,
+            db_connection=_get_firmware_threshold_db_connection(),
         )
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -4829,7 +4843,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         4. subarray_logical_channel
         5. subarray_beam_id
         6. substation_id
-        8. aperture_id
+        7. aperture_id
 
         Each row is a set of 8 consecutive elements in the list.
 

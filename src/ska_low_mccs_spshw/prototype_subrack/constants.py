@@ -19,9 +19,8 @@ __all__ = [
     "ClientCommand",
     "DerivedKey",
     "FILTERED_ATTRIBUTES",
+    "HEALTH_STATUS_KEY",
     "HttpError",
-    "LOCK_TIMEOUT",
-    "LOCK_WARNING",
     "MIN_PWM_DUTY_FRACTION",
     "PSU_DEAD_VOLTAGE_THRESHOLD",
     "PSU_NAMES",
@@ -91,6 +90,13 @@ class ClientCommand(str, Enum):
 BATCH_ATTRIBUTES: Final[tuple[str, ...]] = tuple(key.value for key in ReadKey)
 """The hardware read keys fetched on every poll."""
 
+HEALTH_STATUS_KEY: Final = ClientCommand.GET_HEALTH_STATUS.value
+"""The poll value key that carries the health status.
+
+It is named after the command that reads it, so a poll keys every value by
+what it asked the board for.
+"""
+
 FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
     ReadKey.TPM_CURRENTS.value,
     ReadKey.TPM_POWERS.value,
@@ -100,20 +106,6 @@ FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
 
 COMMAND_TIMEOUT: Final = 30.0
 """How long, in seconds, to wait for an asynchronous board command."""
-
-LOCK_TIMEOUT: Final = 60.0
-"""How long, in seconds, to wait for the client lock before giving up.
-
-Longer than ``COMMAND_TIMEOUT``, so a legitimate asynchronous command never
-causes a poll to time out. A wait this long means the board has stalled.
-"""
-
-LOCK_WARNING: Final = 5.0
-"""How long, in seconds, a client lock hold must exceed to be logged.
-
-Longer than a healthy attribute sweep, which is about one second against a
-board on a normal network, and far shorter than a stall.
-"""
 
 COMMAND_POLL_INTERVAL: Final = 0.1
 """How long, in seconds, between ``command_completed`` probes."""

@@ -1317,7 +1317,15 @@ class SpsStationComponentManager(
                 # invalidating; before first connection the caches are
                 # already invalid.
                 self._tiles_established.discard(tile_id)
-                self._invalidate_tile_caches(tile_id)
+                try:
+                    self._invalidate_tile_caches(tile_id)
+                except Exception:  # pylint: disable=broad-exception-caught
+                    # Must not stop the communication status update below,
+                    # or the station would keep reporting this tile as
+                    # ESTABLISHED.
+                    self.logger.exception(
+                        f"Failed to invalidate cached values for tile {tile_id}"
+                    )
         self._communication_manager.update_communication_status(
             fqdn, communication_state
         )
@@ -1333,15 +1341,12 @@ class SpsStationComponentManager(
 
         :param logical_tile_id: the logical id of the tile to invalidate.
         """
+        # Mark everything first, then publish each aggregate once, rather
+        # than re-publishing (and re-evaluating health) per attribute.
         for attribute_name in _CACHED_TILE_ATTRIBUTES:
-            self._on_tile_attribute_change(
-                logical_tile_id,
-                attribute_name,
-                None,
-                tango.AttrQuality.ATTR_INVALID,
-            )
+            self._invalidate_tile_attribute(logical_tile_id, attribute_name.lower())
+        self._publish_invalidated_tile_attributes(_CACHED_TILE_ATTRIBUTES)
 
-    # pylint: disable=too-many-branches
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
         logical_tile_id: int,
@@ -1349,97 +1354,141 @@ class SpsStationComponentManager(
         attribute_value: Any,
         attribute_quality: tango.AttrQuality,
     ) -> None:
-        # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
-        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
-            match attribute_name.lower():
-                case "ppsdelay":
-                    self._pps_delays_reported.discard(logical_tile_id)
-                    self._fire_pps_delay_spread()
-                case "ppsdelaycorrection":
-                    self._pps_delay_corrections_reported.discard(logical_tile_id)
-                case "statictimedelays":
-                    self._static_delays[logical_tile_id] = np.full(
-                        TileData.ADC_CHANNELS, np.nan
-                    )
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            staticTimeDelays=self.static_delays
-                        )
-                case "adcpower":
-                    self._adc_power[logical_tile_id] = np.full(
-                        TileData.ADC_CHANNELS, np.nan
-                    )
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            adc_power=np.concatenate(list(self._adc_power.values()))
-                        )
-                case "preadulevels":
-                    self._preadu_levels[logical_tile_id] = np.full(
-                        TileData.ADC_CHANNELS, np.nan
-                    )
-                    if self._component_state_callback:
-                        self._component_state_callback(preaduLevels=self.preadu_levels)
-                case "pointingdelays":
-                    self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
-                case "tileprogrammingstate":
-                    self._tile_programming_state[logical_tile_id] = "Unknown"
-                    self._pps_delays_reported.discard(logical_tile_id)
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            tileProgrammingState=self._tile_programming_state
-                        )
-                    self._fire_pps_delay_spread()
-                case "dstip40gfpga1":
-                    _, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
-                    self._tile_dst_ips[logical_tile_id] = ("", ip2)
-                    self._validate_beamformer_daisy_chain()
-                case "dstip40gfpga2":
-                    ip1, _ = self._tile_dst_ips.get(logical_tile_id, ("", ""))
-                    self._tile_dst_ips[logical_tile_id] = (ip1, "")
-                    self._validate_beamformer_daisy_chain()
-                case "boardtemperature":
-                    self._board_temperatures[logical_tile_id] = np.nan
-                case "fpga1temperature":
-                    self._fpga1_temperatures[logical_tile_id] = np.nan
-                case "fpga2temperature":
-                    self._fpga2_temperatures[logical_tile_id] = np.nan
-                case "plllocked":
-                    self._pll_locked[logical_tile_id] = None
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            pllLockedSummary=self.pll_locked_summary()
-                        )
-                case "ppspresent":
-                    self._pps_present[logical_tile_id] = None
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            ppsPresentSummary=self.pps_present_summary()
-                        )
-                case "testgeneratoractive":
-                    self._test_generator_active[logical_tile_id] = None
-                case "isbeamformerrunning":
-                    self._is_beamformer_running[logical_tile_id] = None
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            isBeamformerRunning=self.is_beamformer_running
-                        )
-                case "channeliserrounding":
-                    self._channeliser_roundings[
-                        logical_tile_id, :
-                    ] = INVALID_CHANNELISER_ROUNDING
-                    if self._component_state_callback:
-                        self._component_state_callback(
-                            channeliserRounding=self.channeliser_rounding
-                        )
-                case _:
-                    self.logger.debug(
-                        f"Tile {logical_tile_id} attribute {attribute_name} "
-                        f"has quality {attribute_quality}. "
-                        "SpsStation is not yet capable of handling this. "
-                        "Ignoring!"
-                    )
-            return
         attribute_name = attribute_name.lower()
+        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            if self._invalidate_tile_attribute(logical_tile_id, attribute_name):
+                self._publish_invalidated_tile_attributes([attribute_name])
+            else:
+                self.logger.debug(
+                    f"Tile {logical_tile_id} attribute {attribute_name} "
+                    f"has quality {attribute_quality}. "
+                    "SpsStation is not yet capable of handling this. "
+                    "Ignoring!"
+                )
+            return
+        self._update_tile_attribute(logical_tile_id, attribute_name, attribute_value)
+
+    def _invalidate_tile_attribute(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        attribute_name: str,
+    ) -> bool:
+        """
+        Mark one tile's cached reading of an attribute as invalid.
+
+        This only updates the cache; the caller is responsible for
+        publishing the affected aggregates, see
+        :py:meth:`_publish_invalidated_tile_attributes`.
+
+        :param logical_tile_id: the logical id of the tile.
+        :param attribute_name: the lower-cased tile attribute name.
+
+        :return: whether the attribute is one the station caches.
+        """
+        match attribute_name:
+            case "ppsdelay":
+                self._pps_delays_reported.discard(logical_tile_id)
+            case "ppsdelaycorrection":
+                self._pps_delay_corrections_reported.discard(logical_tile_id)
+            case "statictimedelays":
+                self._static_delays[logical_tile_id] = np.full(
+                    TileData.ADC_CHANNELS, np.nan
+                )
+            case "adcpower":
+                self._adc_power[logical_tile_id] = np.full(
+                    TileData.ADC_CHANNELS, np.nan
+                )
+            case "preadulevels":
+                self._preadu_levels[logical_tile_id] = np.full(
+                    TileData.ADC_CHANNELS, np.nan
+                )
+            case "pointingdelays":
+                self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+            case "tileprogrammingstate":
+                self._tile_programming_state[logical_tile_id] = "Unknown"
+                self._pps_delays_reported.discard(logical_tile_id)
+            case "dstip40gfpga1":
+                _, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = ("", ip2)
+            case "dstip40gfpga2":
+                ip1, _ = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = (ip1, "")
+            case "boardtemperature":
+                self._board_temperatures[logical_tile_id] = np.nan
+            case "fpga1temperature":
+                self._fpga1_temperatures[logical_tile_id] = np.nan
+            case "fpga2temperature":
+                self._fpga2_temperatures[logical_tile_id] = np.nan
+            case "plllocked":
+                self._pll_locked[logical_tile_id] = None
+            case "ppspresent":
+                self._pps_present[logical_tile_id] = None
+            case "testgeneratoractive":
+                self._test_generator_active[logical_tile_id] = None
+            case "isbeamformerrunning":
+                self._is_beamformer_running[logical_tile_id] = None
+            case "channeliserrounding":
+                self._channeliser_roundings[
+                    logical_tile_id, :
+                ] = INVALID_CHANNELISER_ROUNDING
+            case _:
+                return False
+        return True
+
+    def _publish_invalidated_tile_attributes(
+        self: SpsStationComponentManager,
+        attribute_names: Sequence[str],
+    ) -> None:
+        """
+        Publish the station aggregates affected by invalidated tile attributes.
+
+        Each affected aggregate is published, and each derived check run,
+        exactly once however many of its inputs were invalidated.
+
+        :param attribute_names: the tile attributes that were invalidated.
+        """
+        names = {name.lower() for name in attribute_names}
+        if self._component_state_callback:
+            publishers: dict[str, Callable[[], dict[str, Any]]] = {
+                "statictimedelays": lambda: {"staticTimeDelays": self.static_delays},
+                "adcpower": lambda: {
+                    "adc_power": np.concatenate(list(self._adc_power.values()))
+                },
+                "preadulevels": lambda: {"preaduLevels": self.preadu_levels},
+                "tileprogrammingstate": lambda: {
+                    "tileProgrammingState": self._tile_programming_state
+                },
+                "plllocked": lambda: {"pllLockedSummary": self.pll_locked_summary()},
+                "ppspresent": lambda: {"ppsPresentSummary": self.pps_present_summary()},
+                "isbeamformerrunning": lambda: {
+                    "isBeamformerRunning": self.is_beamformer_running
+                },
+                "channeliserrounding": lambda: {
+                    "channeliserRounding": self.channeliser_rounding
+                },
+            }
+            for name, state in publishers.items():
+                if name in names:
+                    self._component_state_callback(**state())
+        if names & {"ppsdelay", "tileprogrammingstate"}:
+            self._fire_pps_delay_spread()
+        if names & {"dstip40gfpga1", "dstip40gfpga2"}:
+            self._validate_beamformer_daisy_chain()
+
+    # pylint: disable=too-many-branches
+    def _update_tile_attribute(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        attribute_name: str,
+        attribute_value: Any,
+    ) -> None:
+        """
+        Update the station's cache from a valid tile attribute reading.
+
+        :param logical_tile_id: the logical id of the tile.
+        :param attribute_name: the lower-cased tile attribute name.
+        :param attribute_value: the new value.
+        """
         match attribute_name:
             case "adcpower":
                 self._adc_power[logical_tile_id] = np.array(

@@ -536,10 +536,10 @@ class TestErrorBranches:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         # command_completed always reports "still running".
@@ -580,10 +580,10 @@ class TestErrorBranches:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         abort_event = threading.Event()
@@ -617,10 +617,10 @@ class TestErrorBranches:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         busy = {
@@ -690,10 +690,10 @@ class TestErrorBranches:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         fake_client.set_command_responses(
@@ -970,10 +970,10 @@ class TestCommandsThatDoNotRunToPlan:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         fake_client.set_command_responses(
@@ -1015,10 +1015,10 @@ class TestCommandsThatDoNotRunToPlan:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         not_yet = {
@@ -1038,7 +1038,7 @@ class TestCommandsThatDoNotRunToPlan:
         completions = [
             c for c in fake_client.command_calls if c[0] == "command_completed"
         ]
-        assert len(completions) == 2, "it should have waited through the empty reply"
+        assert len(completions) == 2, "it should have waited through the False reply"
 
     def test_a_command_that_never_finishes_times_out(
         self: TestCommandsThatDoNotRunToPlan,
@@ -1061,10 +1061,10 @@ class TestCommandsThatDoNotRunToPlan:
         fake_client.set_command_responses(
             "turn_on_tpms",
             {
-                "status": HardwareClientResponseStatusCodes.OK.name,
+                "status": HardwareClientResponseStatusCodes.STARTED.name,
                 "info": "",
                 "command": "turn_on_tpms",
-                "retvalue": HardwareClientResponseStatusCodes.STARTED.name,
+                "retvalue": "",
             },
         )
         readings = iter([0.0])

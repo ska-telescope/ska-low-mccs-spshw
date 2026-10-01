@@ -422,7 +422,8 @@ class SpsTangoTestHarness:
             **optional_properties,
         )
 
-    def add_prototype_subrack_device(  # pylint: disable=too-many-arguments
+    # pylint: disable-next=too-many-arguments, too-many-locals
+    def add_prototype_subrack_device(
         self: SpsTangoTestHarness,
         subrack_id: int,
         address: tuple[str, int] | None = None,
@@ -433,6 +434,8 @@ class SpsTangoTestHarness:
         filter_max_samples: int = 5,
         max_fan_errors: int = 5,
         max_fan_rpm_delta: int = 25,
+        device_name: str | None = None,
+        define_parent_trl: bool = False,
     ) -> None:
         """
         Add a prototype subrack Tango device to the test harness.
@@ -453,6 +456,12 @@ class SpsTangoTestHarness:
             replace, per fan.
         :param max_fan_rpm_delta: The tolerance, as a percentage of the maximum
             fan speed, outside which a fan rpm estimate counts as bad.
+        :param device_name: The Tango device name to serve the device at.
+            Defaults to None, in which case the prototype subrack name is
+            used. Pass the subrack name to stand the device in for
+            ``MccsSubrack``.
+        :param define_parent_trl: True to make the SPS station the parent
+            that the device inherits its modes from.
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -467,8 +476,17 @@ class SpsTangoTestHarness:
         else:
             (host, port) = address
 
+        optional_properties = {}
+        if define_parent_trl:
+            optional_properties.update(
+                {"ParentTRL": get_sps_station_name(self._station_label)}
+            )
+
         self._tango_test_harness.add_device(
-            get_prototype_subrack_name(subrack_id, station_label=self._station_label),
+            device_name
+            or get_prototype_subrack_name(
+                subrack_id, station_label=self._station_label
+            ),
             device_class,
             SubrackIp=host,
             SubrackPort=port,
@@ -478,6 +496,7 @@ class SpsTangoTestHarness:
             AttributeFilterMaxSamples=filter_max_samples,
             MaxFanErrors=max_fan_errors,
             MaxFanRpmDelta=max_fan_rpm_delta,
+            **optional_properties,
         )
 
     def add_power_marshaller_device(self: SpsTangoTestHarness) -> None:

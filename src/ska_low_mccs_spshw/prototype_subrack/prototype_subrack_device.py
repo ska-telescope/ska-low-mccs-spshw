@@ -162,6 +162,13 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         self.assemble()
 
+        # The parent can pass on its admin mode before the poller exists, and
+        # then the poller never starts. So the admin mode is applied again here.
+        # A late inherited mode that also starts polling does no harm, because
+        # starting the poller is idempotent.
+        if _CONTROL_LEVELS.get(self._admin_mode) == ControlLevel.FULL_CONTROL:
+            self.change_control_level(ControlLevel.FULL_CONTROL)
+
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
 

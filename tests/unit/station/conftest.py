@@ -77,7 +77,7 @@ def tile_initial_pointing_delays_fixture() -> np.ndarray:
     :returns: an example initial pointing delays for a tile.
     """
     delays = []
-    for beam in range(8):
+    for beam in range(48):
         delays.append([float(beam * antenna) for antenna in range(32)])
     return np.array(delays, dtype=float)
 

@@ -66,6 +66,11 @@ helm_values:
       MccsSubrack: # SPRTS-787
         low-mccs/subrack/stfc-ral-2-sr2:
           tpmPowers->max_alarm: 124.0
+    deviceServers:
+      spshw:
+        subrack-stfc-ral-2-sr2:
+          env:
+            MCCS_SUBRACK_IMPLEMENTATION: prototype
     # deviceServerTypes:
     #   spshw:
     #     image:

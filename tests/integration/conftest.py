@@ -162,7 +162,7 @@ def integration_test_context_fixture(
             harness.add_prototype_subrack_device(
                 subrack_id,
                 logging_level=int(LoggingLevel.ERROR),
-                device_class=subrack_factory(),
+                device_class=subrack_factory(class_name="MccsSubrack"),
                 device_name=get_subrack_name(subrack_id),
                 define_parent_trl=True,
             )

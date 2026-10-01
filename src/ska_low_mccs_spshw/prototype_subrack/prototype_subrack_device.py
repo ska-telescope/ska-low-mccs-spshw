@@ -170,10 +170,17 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             self.change_control_level(ControlLevel.FULL_CONTROL)
 
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+        # The Tango class name can be MccsSubrack, so the build state names
+        # the implementation as well.
+        self._build_state = (
+            f"{sys.modules['ska_low_mccs_spshw'].__version_info__}, "
+            f"implementation {MccsPrototypeSubrack.__name__}"
+        )
 
         self.logger.info(
-            "Initialised %s for subrack %s:%s at an update rate of %ss.",
+            "Initialised %s as Tango class %s for subrack %s:%s at an update "
+            "rate of %ss.",
+            MccsPrototypeSubrack.__name__,
             self.__class__.__name__,
             self.SubrackIp,
             self.SubrackPort,
@@ -402,6 +409,7 @@ def subrack_factory(
     derived_values: Any = DerivedValues,
     subrack: Any = Subrack,
     subrack_poller: Any = SubrackPoller,
+    class_name: str = "MccsPrototypeSubrack",
 ) -> type[MccsPrototypeSubrack]:
     """
     Build the device class, choosing what :py:meth:`~.assemble` builds with.
@@ -414,11 +422,14 @@ def subrack_factory(
         and the device's callbacks.
     :param subrack_poller: builds the poller, from a poll model, a poll rate
         and a logger.
+    :param class_name: the Tango class name to serve the device under. Pass
+        ``MccsSubrack`` to stand the device in for the old subrack, so that the
+        Tango DB rows for the device do not change.
 
     :return: the device class to serve.
     """
     return type(
-        "MccsPrototypeSubrack",
+        class_name,
         (MccsPrototypeSubrack,),
         {
             "_web_hardware_client_factory": web_hardware_client,

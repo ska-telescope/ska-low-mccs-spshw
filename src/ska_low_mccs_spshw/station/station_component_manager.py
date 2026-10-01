@@ -74,9 +74,26 @@ _CALIBRATION_LANE = "calibration"
 # are 0-7, so -1 is unambiguous.
 INVALID_CHANNELISER_ROUNDING = -1
 
+# Reported in every element of beamformerTable, beamformerRegions and
+# cspRounding when the final tile's value is INVALID. These are DevLong
+# attributes so cannot carry NaN, and none of their elements can validly
+# be negative, so -1 is unambiguous.
+INVALID_FINAL_TILE_VALUE = -1
+
+# Tile attributes for which only the final tile's value is used, so an
+# INVALID value from any other tile has nothing to invalidate.
+_FINAL_TILE_ATTRIBUTES = frozenset(
+    {
+        "beamformertable",
+        "beamformerregions",
+        "csprounding",
+        "fpga0_station_beamformer_flagged_count",
+        "fpga1_station_beamformer_flagged_count",
+    }
+)
+
 # Tile attributes whose station-side caches are invalidated when
-# communication with that tile is lost. cspRounding is deliberately
-# excluded: its cache is also the configured value written back to tiles.
+# communication with that tile is lost.
 _CACHED_TILE_ATTRIBUTES = (
     "ppsDelay",
     "ppsDelayCorrection",
@@ -95,6 +112,11 @@ _CACHED_TILE_ATTRIBUTES = (
     "testGeneratorActive",
     "isBeamformerRunning",
     "channeliserRounding",
+    "beamformerTable",
+    "beamformerRegions",
+    "cspRounding",
+    "fpga0_station_beamformer_flagged_count",
+    "fpga1_station_beamformer_flagged_count",
 )
 
 
@@ -654,8 +676,9 @@ class SpsStationComponentManager(
         self._pointing_delays_received: set[int] = set()
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
-        self._final_tile_fpga0_flagged_count: int = 0
-        self._final_tile_fpga1_flagged_count: int = 0
+        # None when the final tile's count is INVALID.
+        self._final_tile_fpga0_flagged_count: Optional[int] = 0
+        self._final_tile_fpga1_flagged_count: Optional[int] = 0
         self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = np.full(TileData.ADC_CHANNELS, np.nan)
@@ -800,6 +823,9 @@ class SpsStationComponentManager(
         self._pps_delay_corrections = [0] * 16
         self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
+        # The configured rounding, written back to the tiles, and the final
+        # tile's reported rounding, which may be INVALID.
+        self._desired_csp_rounding = [csp_rounding] * 384
         self._csp_rounding = [csp_rounding] * 384
 
         # Caches kept current from tile change-event subscriptions (see
@@ -1373,9 +1399,12 @@ class SpsStationComponentManager(
         """
         # Mark everything first, then publish each aggregate once, rather
         # than re-publishing (and re-evaluating health) per attribute.
-        for attribute_name in _CACHED_TILE_ATTRIBUTES:
-            self._invalidate_tile_attribute(logical_tile_id, attribute_name.lower())
-        self._publish_invalidated_tile_attributes(_CACHED_TILE_ATTRIBUTES)
+        invalidated = [
+            attribute_name
+            for attribute_name in _CACHED_TILE_ATTRIBUTES
+            if self._invalidate_tile_attribute(logical_tile_id, attribute_name.lower())
+        ]
+        self._publish_invalidated_tile_attributes(invalidated)
 
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
@@ -1396,7 +1425,7 @@ class SpsStationComponentManager(
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
             if self._invalidate_tile_attribute(logical_tile_id, attribute_name):
                 self._publish_invalidated_tile_attributes([attribute_name])
-            else:
+            elif attribute_name not in _FINAL_TILE_ATTRIBUTES:
                 self.logger.debug(
                     f"Tile {logical_tile_id} attribute {attribute_name} "
                     f"has quality {attribute_quality}. "
@@ -1421,8 +1450,15 @@ class SpsStationComponentManager(
         :param logical_tile_id: the logical id of the tile.
         :param attribute_name: the lower-cased tile attribute name.
 
-        :return: whether the attribute is one the station caches.
+        :return: whether a cached reading was invalidated, and so needs
+            publishing.
         """
+        if (
+            attribute_name in _FINAL_TILE_ATTRIBUTES
+            and logical_tile_id != self._number_of_tiles - 1
+        ):
+            # Only the final tile's value is used.
+            return False
         match attribute_name:
             case "ppsdelay":
                 self._pps_delays_reported.discard(logical_tile_id)
@@ -1441,7 +1477,7 @@ class SpsStationComponentManager(
                     TileData.ADC_CHANNELS, np.nan
                 )
             case "pointingdelays":
-                self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+                self._hw_pointing_delays[logical_tile_id] = np.full((48, 32), np.nan)
             case "tileprogrammingstate":
                 self._tile_programming_state[logical_tile_id] = "Unknown"
                 self._pps_delays_reported.discard(logical_tile_id)
@@ -1469,6 +1505,22 @@ class SpsStationComponentManager(
                 self._channeliser_roundings[
                     logical_tile_id, :
                 ] = INVALID_CHANNELISER_ROUNDING
+            case "beamformertable":
+                self._beamformer_table = np.full(
+                    (48, 7), INVALID_FINAL_TILE_VALUE, dtype=int
+                )
+            case "beamformerregions":
+                self._beamformer_regions = np.full(
+                    (48, 8), INVALID_FINAL_TILE_VALUE, dtype=int
+                )
+            case "csprounding":
+                # Only the reported value: the configured value written back
+                # to the tiles is kept in self._desired_csp_rounding.
+                self._csp_rounding = [INVALID_FINAL_TILE_VALUE] * 384
+            case "fpga0_station_beamformer_flagged_count":
+                self._final_tile_fpga0_flagged_count = None
+            case "fpga1_station_beamformer_flagged_count":
+                self._final_tile_fpga1_flagged_count = None
             case _:
                 return False
         return True
@@ -1504,6 +1556,12 @@ class SpsStationComponentManager(
                 "channeliserrounding": lambda: {
                     "channeliserRounding": self.channeliser_rounding
                 },
+                "beamformertable": lambda: {
+                    "beamformerTable": self._beamformer_table.flatten().tolist()
+                },
+                "beamformerregions": lambda: {
+                    "beamformerRegions": self._beamformer_regions.flatten().tolist()
+                },
             }
             for name, state in publishers.items():
                 if name in names:
@@ -1512,6 +1570,11 @@ class SpsStationComponentManager(
             self._fire_pps_delay_spread()
         if names & {"dstip40gfpga1", "dstip40gfpga2"}:
             self._validate_beamformer_daisy_chain()
+        if names & {
+            "fpga0_station_beamformer_flagged_count",
+            "fpga1_station_beamformer_flagged_count",
+        }:
+            self._update_beamformer_flagged_count_health()
 
     # pylint: disable=too-many-branches
     def _update_tile_attribute(
@@ -1583,7 +1646,11 @@ class SpsStationComponentManager(
                         np.pad(attribute_value, (0, (48 * 7 - len(attribute_value)))),
                         (48, 7),
                     )
-                    if not np.array_equal(reshaped_table, self._beamformer_table):
+                    # An invalidated cache was not a local value, so a
+                    # readback differing from it is expected.
+                    if not np.all(
+                        self._beamformer_table == INVALID_FINAL_TILE_VALUE
+                    ) and not np.array_equal(reshaped_table, self._beamformer_table):
                         filtered_old = self._beamformer_table[
                             ~np.all(self._beamformer_table == 0, axis=1)
                         ]
@@ -1741,12 +1808,22 @@ class SpsStationComponentManager(
         """
         Update the station health from the final tile's beamformer flagged count.
 
-        Fires a state callback whenever the OK/not-OK status changes.
+        Fires a state callback whenever the OK/not-OK status changes. A
+        non-zero count is not OK even if the other count is INVALID; if
+        neither count is non-zero but one is INVALID, the status is unknown
+        (None).
         """
-        ok = (
-            self._final_tile_fpga0_flagged_count == 0
-            and self._final_tile_fpga1_flagged_count == 0
+        counts = (
+            self._final_tile_fpga0_flagged_count,
+            self._final_tile_fpga1_flagged_count,
         )
+        ok: Optional[bool]
+        if any(count is not None and count != 0 for count in counts):
+            ok = False
+        elif None in counts:
+            ok = None
+        else:
+            ok = True
         if ok == self._final_tile_beamformer_flagged_count_ok:
             return
         self._final_tile_beamformer_flagged_count_ok = ok
@@ -2874,7 +2951,9 @@ class SpsStationComponentManager(
         )
         raise_for_group_failures(
             "write cspRounding",
-            group_write_attribute(self._tile_group, "cspRounding", self._csp_rounding),
+            group_write_attribute(
+                self._tile_group, "cspRounding", self._desired_csp_rounding
+            ),
         )
         raise_for_group_failures(
             "write cspSpeadFormat",
@@ -3275,7 +3354,8 @@ class SpsStationComponentManager(
         """
         Return whether the final tile's station beamformer flagged count is zero.
 
-        None until the final tile has reported its flagged packet counts.
+        None until the final tile has reported its flagged packet counts,
+        or while a count is INVALID and the other is zero.
 
         :return: True if both FPGA counts are zero, False otherwise, None if unknown.
         """
@@ -3416,7 +3496,8 @@ class SpsStationComponentManager(
         """
         # self._csp_rounding is set at construction, kept current on every
         # write, and kept current by _on_tile_attribute_change's
-        # "csprounding" case, so no live tile read is needed here.
+        # "csprounding" case, so no live tile read is needed here. It is
+        # -1 for every channel while the final tile's value is INVALID.
         return copy.deepcopy(self._csp_rounding)
 
     @csp_rounding.setter
@@ -3427,6 +3508,7 @@ class SpsStationComponentManager(
         :param truncation: list of up to 384 values in the range 0-7.
             Current hardware supports only a single value, thus oly 1st value is used
         """
+        self._desired_csp_rounding = copy.deepcopy(truncation)
         self._csp_rounding = copy.deepcopy(truncation)
         final_tile = list(self._tile_proxies.values())[-1]
         assert final_tile._proxy is not None  # for the type checker

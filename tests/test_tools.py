@@ -1107,6 +1107,45 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
             setattr(self, kwarg, val)
 
 
+class LRCListHolding:  # noqa: PLW1641 # eq-without-hash
+    """
+    Matches an LRC attribute value that holds one entry equal to ``entry``.
+
+    ``lrcQueue``, ``lrcExecuting`` and ``lrcFinished`` each read as a sequence
+    of JSON blobs, one per command, so a change event carries the whole
+    sequence rather than the one command a test is waiting on. Comparing a
+    :py:class:`JSONRepresenting` against that sequence never matches, so an
+    assertion that wants one command has to look inside.
+    """
+
+    def __init__(self, entry: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param entry: what one member of the sequence must equal.
+        """
+        self.entry = entry
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation for logging purposes.
+
+        :return: string of object
+        """
+        return f"LRCListHolding({self.entry!r})"
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Return True if other is a sequence holding something equal to entry.
+
+        :param other: the object used to compare
+        :return: result of assertion
+        """
+        if not isinstance(other, (list, tuple)):
+            return False
+        return any(self.entry == member for member in other)
+
+
 class JSONRepresenting:  # noqa: PLW1641 # eq-without-hash
     """
     A representation of a JSON string using a python object.
@@ -1254,7 +1293,7 @@ class LRCManager:
         """
         try:
             self.lrcQueue.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,
@@ -1310,7 +1349,7 @@ class LRCManager:
         """
         try:
             self.lrcExecuting.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,
@@ -1385,7 +1424,7 @@ class LRCManager:
 
         try:
             self.lrcFinished.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,

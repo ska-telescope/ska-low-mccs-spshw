@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [THORN-748] Update dependencies.
 
 ## 15.1.0
 

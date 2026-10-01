@@ -725,17 +725,24 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "beamformer_daisy_chain", daisy_chain_health
             )
 
-        flagged_count_ok = state_change.get("finalTileBeamformerFlaggedCountOk")
-        if flagged_count_ok is not None:
+        if "finalTileBeamformerFlaggedCountOk" in state_change:
+            # None means a final tile count is INVALID, so the result can no
+            # longer be verified; withdraw any earlier result.
+            flagged_count_ok = state_change["finalTileBeamformerFlaggedCountOk"]
             self.push_change_event(
-                "finalTileBeamformerFlaggedCountOk", cast(bool, flagged_count_ok)
+                "finalTileBeamformerFlaggedCountOk", bool(flagged_count_ok)
             )
             self.push_archive_event(
-                "finalTileBeamformerFlaggedCountOk", cast(bool, flagged_count_ok)
+                "finalTileBeamformerFlaggedCountOk", bool(flagged_count_ok)
             )
+            if flagged_count_ok is None:
+                flagged_count_health = HealthState.UNKNOWN
+            elif flagged_count_ok:
+                flagged_count_health = HealthState.OK
+            else:
+                flagged_count_health = HealthState.DEGRADED
             self._health_rollup.health_changed(
-                "beamformer_flagged_count",
-                HealthState.OK if flagged_count_ok else HealthState.DEGRADED,
+                "beamformer_flagged_count", flagged_count_health
             )
 
         static_time_delays = state_change.get("staticTimeDelays")
@@ -1161,7 +1168,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=384,
         label="CSP Rounding",
         unit="Decibel",
-        doc="CSP formatter rounding. Range 0 to 7, as number of discarded LS bits.",
+        doc="CSP formatter rounding. Range 0 to 7, as number of discarded LS bits. "
+        "-1 for every channel while the final tile's value is invalid.",
     )
     def cspRounding(self: SpsStation) -> list[int]:
         """
@@ -1304,6 +1312,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         True when both fpga0 and fpga1 discarded_or_flagged_packet_count values on
         the final tile are 0.
         False (and station health DEGRADED) when either is non-zero.
+        False (and station health UNKNOWN) when one is invalid and the other
+        is zero.
         This defaults to False when value has not been updated yet.
 
         :return: True if the final tile beamformer flagged count is zero.
@@ -1324,7 +1334,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         "4. subarray_beam_id, "
         "5. substation_id, "
         "6. aperture_id "
-        "Each row is a set of 7 consecutive elements in the list.",
+        "Each row is a set of 7 consecutive elements in the list. "
+        "Every element is -1 while the final tile's value is invalid.",
     )
     def beamformerTable(self: SpsStation) -> list[int] | None:
         """
@@ -1362,7 +1373,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         "5. subarray_beam_id, "
         "6. substation_id, "
         "8. aperture_id. "
-        "Each row is a set of 8 consecutive elements in the list.",
+        "Each row is a set of 8 consecutive elements in the list. "
+        "Every element is -1 while the final tile's value is invalid.",
     )
     def beamformerRegions(self: SpsStation) -> list[int] | None:
         """

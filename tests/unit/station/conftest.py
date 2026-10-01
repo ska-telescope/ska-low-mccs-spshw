@@ -11,6 +11,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import logging
+import threading
 import unittest.mock
 from typing import Any, Callable
 
@@ -123,6 +124,13 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         tango.EventType.ATTR_CONF_EVENT: "attr_conf",
     }
     subscriptions: dict[str, tuple[tango.EventType, Callable]] = {}
+    # Subscriptions are made on the station's connection threads while
+    # tests write attributes from the main thread. Without this, a write
+    # landing between the subscription bootstrap's read and its push would
+    # be overtaken by the stale bootstrap value. Real Tango delivers the
+    # initial subscription event and later pushes in order. Reentrant, as
+    # a synchronously-called callback may itself write to this mock.
+    lock = threading.RLock()
 
     def _subscribe_event(
         attribute_name: str,
@@ -130,14 +138,15 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
         callback: Callable,
         stateless: bool,
     ) -> None:
-        subscriptions[attribute_name.lower()] = (event_type, callback)
-        current_value = (
-            mock_device.state()
-            if attribute_name == "state"
-            else getattr(mock_device, attribute_name)
-        )
-        if current_value is not None:
-            _push_change_event(attribute_name, current_value)
+        with lock:
+            subscriptions[attribute_name.lower()] = (event_type, callback)
+            current_value = (
+                mock_device.state()
+                if attribute_name == "state"
+                else getattr(mock_device, attribute_name)
+            )
+            if current_value is not None:
+                _push_change_event(attribute_name, current_value)
 
     mock_device.subscribe_event.side_effect = _subscribe_event
 
@@ -166,9 +175,11 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
     # Lets tests push an ATTR_INVALID change event through the same
     # subscription path as ordinary writes, so it is delivered in order
     # with them rather than racing them.
-    mock_device.push_invalid_change_event = lambda attribute_name: _push_change_event(
-        attribute_name, None, tango.AttrQuality.ATTR_INVALID
-    )
+    def _push_invalid_change_event(attribute_name: str) -> None:
+        with lock:
+            _push_change_event(attribute_name, None, tango.AttrQuality.ATTR_INVALID)
+
+    mock_device.push_invalid_change_event = _push_invalid_change_event
 
     # Each Mock() instance gets its own dynamically-created class, so
     # patching __setattr__ here is instance-scoped, not global.
@@ -176,8 +187,9 @@ def _make_mock_push_change_events(mock_device: unittest.mock.Mock) -> None:
     original_setattr = mock_class.__setattr__
 
     def _setattr(self: unittest.mock.Mock, name: str, value: Any) -> None:
-        original_setattr(self, name, value)
-        _push_change_event(name, value)
+        with lock:
+            original_setattr(self, name, value)
+            _push_change_event(name, value)
 
     mock_class.__setattr__ = _setattr  # type: ignore[assignment]
 

@@ -11,7 +11,6 @@
   * These final-tile attributes are also invalidated when communication with the final tile is lost. INVALID values from other tiles are ignored, since only the final tile's values are used.
 * [THORN-680] SpsStation now pushes change events for `staticTimeDelays`, `preaduLevels`, `channeliserRounding`, `pllLockedSummary`, `ppsPresentSummary` and `isBeamformerRunning`, and change and archive events for `tileProgrammingState`.
 * [THORN-680] When the beamformer daisy chain can no longer be verified (e.g. a tile's 40G destination IPs become unknown), its contribution to SpsStation health is now `UNKNOWN` rather than keeping the previous result, and `beamformerDaisyChainValid` reports `False`.
-* [THORN-680] When SpsStation loses communication with a tile, it now invalidates that tile's cached values only after processing tile events that were already queued, and drops any later events from that tile. Previously, stale events processed after the invalidation could restore the tile's old values.
 * [THORN-680] MccsTile `testGeneratorActive` is now signal-backed, so it pushes change events when `ConfigureTestGenerator` is called.
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
 

@@ -76,9 +76,9 @@ helm_values:
   ska-low-mccs-daq:
     bandpassLoadBalancer:
       enabled: false
-      ska-tango-devices:
-        deviceServerTypes:
-          daq:
-            image:
-              registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-              tag: 9.0.0-dev.cdd6afaaf
+    ska-tango-devices:
+      deviceServerTypes:
+        daq:
+          image:
+            registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+            tag: 9.0.0-dev.cdd6afaaf

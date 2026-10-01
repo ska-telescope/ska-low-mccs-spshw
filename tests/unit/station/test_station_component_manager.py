@@ -29,6 +29,7 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
+from ska_low_mccs_common import EventSerialiser
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -463,6 +464,96 @@ def test_tile_caches_only_invalidated_on_losing_communication(
 
         state_changed(tile_fqdn, CommunicationStatus.DISABLED)
         invalidate.assert_called_once()
+
+
+def _mark_tiles_established(
+    station_component_manager: SpsStationComponentManager, num_tiles: int
+) -> None:
+    """
+    Mark every tile as communication established, without connecting.
+
+    Events from a tile the station is not communicating with are dropped,
+    so tests that push events directly must first mark the tiles as
+    established.
+
+    :param station_component_manager: the SPS station component manager
+    :param num_tiles: the number of tiles to mark.
+    """
+    for tile_id in range(num_tiles):
+        station_component_manager._tile_communication_state_changed(
+            tile_id, CommunicationStatus.ESTABLISHED
+        )
+
+
+def test_tile_invalidation_ordered_after_queued_events(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that losing a tile invalidates its caches after its queued events.
+
+    Tile attribute events are delivered through the event serialiser, so
+    when communication is lost, events from before the unsubscribe may
+    still be queued. They must not repopulate the caches after the
+    invalidation.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    """
+    tile_fqdn, tile_proxy = next(iter(station_component_manager._tile_proxies.items()))
+    tile_id = tile_proxy._logical_tile_id
+    serialiser = EventSerialiser()
+    station_component_manager._event_serialiser = serialiser
+
+    station_component_manager._device_communication_state_changed(
+        tile_fqdn, CommunicationStatus.ESTABLISHED
+    )
+    serialiser._event_queue.join()
+
+    # Hold the serialiser so the stale event is still queued when we
+    # lose communication.
+    release = threading.Event()
+    serialiser.queue_event(
+        tile_fqdn,
+        "block",
+        None,
+        tango.AttrQuality.ATTR_VALID,
+        callback=lambda *_: release.wait(timeout=5),
+    )
+    serialiser.queue_event(
+        tile_fqdn,
+        "boardTemperature",
+        42.0,
+        tango.AttrQuality.ATTR_VALID,
+        callback=tile_proxy._on_attribute_change,
+    )
+    station_component_manager._device_communication_state_changed(
+        tile_fqdn, CommunicationStatus.NOT_ESTABLISHED
+    )
+    release.set()
+    serialiser._event_queue.join()
+
+    assert np.isnan(station_component_manager._board_temperatures[tile_id])
+
+
+def test_tile_events_dropped_when_not_established(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that events from a tile we are not communicating with are dropped.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    """
+    station_component_manager._on_tile_attribute_change(
+        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+    )
+    assert np.isnan(station_component_manager._board_temperatures[0])
+
+    _mark_tiles_established(station_component_manager, 1)
+    station_component_manager._on_tile_attribute_change(
+        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+    )
+    assert station_component_manager._board_temperatures[0] == 42.0
 
 
 def test_static_delays_fanout_to_correct_tile(
@@ -1378,6 +1469,7 @@ def test_pointing_delays_with_unsupported_beams_still_publishes(
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
     """
+    _mark_tiles_established(station_component_manager, num_tiles)
     full_delays = np.arange(48 * 32, dtype=float).reshape(48, 32)
     old_firmware_delays = full_delays.copy()
     old_firmware_delays[8:] = np.nan
@@ -1426,6 +1518,7 @@ def test_beamformer_daisy_chain(
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
     """
+    _mark_tiles_established(station_component_manager, num_tiles)
     # Fixture uses IPv4Interface("10.0.0.152/16").
     sdn_base = ipaddress.IPv4Address("10.0.0.152")
     last = num_tiles - 1
@@ -1478,6 +1571,7 @@ def test_beamformer_flagged_count(
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
     """
+    _mark_tiles_established(station_component_manager, num_tiles)
     last = num_tiles - 1
 
     # Non-final tiles must not trigger any callback.

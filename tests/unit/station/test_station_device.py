@@ -1788,7 +1788,7 @@ def test_station_invalid_tile_attribute(
     # Tile change events are processed asynchronously, so make sure the
     # valid values have landed before the INVALID event is pushed.
     assert _wait_for_attribute_value_nan_ok(
-        on_station_device, attribute_name, valid_expected_value(num_tiles)
+        on_station_device, attribute_name, valid_expected_value(num_tiles), timeout=3.0
     ), getattr(on_station_device, attribute_name)
 
     mock_tile_device_proxies[invalid_tile].push_invalid_change_event(
@@ -1964,23 +1964,32 @@ def test_tile_communication_lost_invalidates_caches(
         for i in range(num_tiles)
         for _ in range(32)
     ]
+    # The assertion for change_event with nans is not supported
+    # very well by the MockTangoEventCallbackGroup
+    # We use a _wait_for_attribute_value_nan_ok instead.
     assert _wait_for_attribute_value_nan_ok(
         on_station_device, "staticTimeDelays", expected_delays
     )
-    assert np.array_equal(
-        on_station_device.channeliserRounding,
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device,
+        "channeliserRounding",
         _expected_channeliser_rounding(num_tiles, invalid_tile=lost_tile),
     )
-    assert list(on_station_device.tileProgrammingState) == [
-        "Unknown" if i == lost_tile else "Synchronised" for i in range(num_tiles)
-    ]
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device,
+        "tileProgrammingState",
+        ["Unknown" if i == lost_tile else "Synchronised" for i in range(num_tiles)],
+    )
+
     other_temperatures = [float(i) for i in range(num_tiles) if i != lost_tile]
-    assert on_station_device.boardTemperaturesSummary == pytest.approx(
+    assert _wait_for_attribute_value_nan_ok(
+        on_station_device,
+        "boardTemperaturesSummary",
         [
             min(other_temperatures),
             sum(other_temperatures) / len(other_temperatures),
             max(other_temperatures),
-        ]
+        ],
     )
     assert not on_station_device.pllLockedSummary
     assert not on_station_device.isBeamformerRunning

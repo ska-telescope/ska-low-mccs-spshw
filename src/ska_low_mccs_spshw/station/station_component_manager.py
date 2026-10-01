@@ -823,7 +823,10 @@ class SpsStationComponentManager(
         self._channeliser_roundings: np.ndarray = np.zeros([16, 512], dtype=np.int32)
         self._pps_delay_corrections_reported: set[int] = set()
         # Logical ids of tiles we currently have communication established
-        # with, so that caches are only invalidated when a tile drops out.
+        # with, so that caches are only invalidated when a tile drops out,
+        # and events from a tile we have lost are dropped. Only touched on
+        # the event serialiser thread (when there is one), in order with
+        # the tile's attribute events, so needs no lock.
         self._tiles_established: set[int] = set()
         self._desired_static_delays: None | list[float] = None
         self._desired_preadu_levels: None | list[float] = None
@@ -1310,25 +1313,52 @@ class SpsStationComponentManager(
         tile_proxy = self._tile_proxies.get(fqdn)
         if tile_proxy is not None:
             tile_id = tile_proxy._logical_tile_id
-            if communication_state == CommunicationStatus.ESTABLISHED:
-                self._tiles_established.add(tile_id)
-            elif tile_id in self._tiles_established:
-                # Only a tile we were talking to has readings worth
-                # invalidating; before first connection the caches are
-                # already invalid.
-                self._tiles_established.discard(tile_id)
-                try:
-                    self._invalidate_tile_caches(tile_id)
-                except Exception:  # pylint: disable=broad-exception-caught
-                    # Must not stop the communication status update below,
-                    # or the station would keep reporting this tile as
-                    # ESTABLISHED.
-                    self.logger.exception(
-                        f"Failed to invalidate cached values for tile {tile_id}"
-                    )
+            if self._event_serialiser is not None:
+                # The tile's attribute events are delivered through the
+                # serialiser, so events queued before the unsubscribe may
+                # not have been processed yet. Queue behind them, so that
+                # they can't repopulate the caches after we invalidate.
+                self._event_serialiser.queue_event(
+                    fqdn,
+                    "communicationstate",
+                    communication_state,
+                    tango.AttrQuality.ATTR_VALID,
+                    callback=lambda _name, state, _quality: (
+                        self._tile_communication_state_changed(tile_id, state)
+                    ),
+                )
+            else:
+                self._tile_communication_state_changed(tile_id, communication_state)
         self._communication_manager.update_communication_status(
             fqdn, communication_state
         )
+
+    def _tile_communication_state_changed(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        """
+        Track which tiles we are talking to, invalidating any we have lost.
+
+        :param logical_tile_id: the logical id of the tile.
+        :param communication_state: the tile's new communication state.
+        """
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            self._tiles_established.add(logical_tile_id)
+        elif logical_tile_id in self._tiles_established:
+            # Only a tile we were talking to has readings worth
+            # invalidating; before first connection the caches are
+            # already invalid.
+            self._tiles_established.discard(logical_tile_id)
+            try:
+                self._invalidate_tile_caches(logical_tile_id)
+            except Exception:  # pylint: disable=broad-exception-caught
+                # Must not escape, or the communication status update
+                # would be skipped when not using the event serialiser.
+                self.logger.exception(
+                    f"Failed to invalidate cached values for tile {logical_tile_id}"
+                )
 
     def _invalidate_tile_caches(
         self: SpsStationComponentManager, logical_tile_id: int
@@ -1355,6 +1385,14 @@ class SpsStationComponentManager(
         attribute_quality: tango.AttrQuality,
     ) -> None:
         attribute_name = attribute_name.lower()
+        if logical_tile_id not in self._tiles_established:
+            # An event delivered after we lost the tile, e.g. one already
+            # in flight when we unsubscribed. Its value is stale.
+            self.logger.debug(
+                f"Dropping {attribute_name} event from tile {logical_tile_id}, "
+                "which we are not communicating with."
+            )
+            return
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
             if self._invalidate_tile_attribute(logical_tile_id, attribute_name):
                 self._publish_invalidated_tile_attributes([attribute_name])

@@ -37,6 +37,7 @@ from ska_low_mccs_spshw.station import (
     SpsStationSelfCheckManager,
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 from tests.test_tools import FakeGroup as _FakeGroup
 from tests.test_tools import FakeGroupReply as _FakeGroupReply
@@ -914,23 +915,18 @@ def test_route_data_sends_only_default_data_to_lmc_daq_when_calibration_daq_unav
     assert set_lmc_download.call_args.kwargs["dst_port"] == 1234
 
 
-def test_start_stop_daq_target_calibration_daq_when_available(
+def test_start_stop_daq_target_active_calibration_daq(
     station_component_manager: SpsStationComponentManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Test that ``_start_daq``/``_stop_daq`` target the Calibration DAQ TRL.
+    Test that ``_start_daq``/``_stop_daq`` target the DAQ pinned for calibration.
 
     :param station_component_manager: the SPS station component manager under test.
     :param monkeypatch: pytest monkeypatch fixture.
     """
-    station_component_manager._lmc_daq_trl = "low-mccs/daqreceiver/lmc"
-    station_component_manager._lmc_daq_proxy = SimpleNamespace(
-        _proxy=unittest.mock.Mock()  # type: ignore[assignment]
-    )
-    station_component_manager._calibration_daq_trl = "low-mccs/daqreceiver/calibration"
-    station_component_manager._calibration_daq_proxy = SimpleNamespace(
-        _proxy=unittest.mock.Mock()  # type: ignore[assignment]
+    station_component_manager._active_calibration_daq_trl = (
+        "low-mccs/daqreceiver/calibration"
     )
 
     mock_command_proxy = unittest.mock.Mock(return_value=(ResultCode.OK, "ok"))
@@ -952,12 +948,15 @@ def test_start_stop_daq_target_calibration_daq_when_available(
     )
 
 
-def test_start_stop_daq_falls_back_to_lmc_daq_when_calibration_daq_unavailable(
+def test_start_stop_daq_ignore_daq_availability_changes_after_configure(
     station_component_manager: SpsStationComponentManager,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Test that ``_start_daq``/``_stop_daq`` fall back to the LMC DAQ TRL.
+    Test that ``_start_daq``/``_stop_daq`` stay on the DAQ chosen at configure time.
+
+    If the Calibration DAQ becomes unavailable mid-acquisition, the DAQ that
+    was configured and routed to must still be the one started and stopped.
 
     :param station_component_manager: the SPS station component manager under test.
     :param monkeypatch: pytest monkeypatch fixture.
@@ -968,6 +967,9 @@ def test_start_stop_daq_falls_back_to_lmc_daq_when_calibration_daq_unavailable(
     )
     station_component_manager._calibration_daq_trl = ""
     station_component_manager._calibration_daq_proxy = None
+    station_component_manager._active_calibration_daq_trl = (
+        "low-mccs/daqreceiver/calibration"
+    )
 
     mock_command_proxy = unittest.mock.Mock(return_value=(ResultCode.OK, "ok"))
     mock_command_proxy_cls = unittest.mock.Mock(return_value=mock_command_proxy)
@@ -976,8 +978,49 @@ def test_start_stop_daq_falls_back_to_lmc_daq_when_calibration_daq_unavailable(
     station_component_manager._stop_daq()
 
     mock_command_proxy_cls.assert_called_once_with(
-        "low-mccs/daqreceiver/lmc", "Stop", station_component_manager.logger
+        "low-mccs/daqreceiver/calibration", "Stop", station_component_manager.logger
     )
+
+
+def test_acquire_data_for_calibration_does_not_stop_daq_it_never_configured(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that a rejected acquisition doesn't send Stop to any DAQ.
+
+    Teardown must only stop a DAQ that this acquisition selected. Rejecting
+    before ``configure_station_for_calibration`` has run leaves nothing to stop,
+    and must not stop e.g. the LMC DAQ while it is in use for something else.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test.
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    station_component_manager._lmc_daq_trl = "low-mccs/daqreceiver/lmc"
+    station_component_manager._lmc_daq_proxy = SimpleNamespace(
+        _proxy=unittest.mock.Mock()  # type: ignore[assignment]
+    )
+    station_component_manager._calibration_daq_trl = ""
+    station_component_manager._calibration_daq_proxy = None
+    monkeypatch.setattr(
+        station_component_manager,
+        "tile_programming_state",
+        unittest.mock.Mock(return_value=[TpmStatus.UNPROGRAMMED.pretty_name()]),
+    )
+
+    mock_command_proxy_cls = unittest.mock.Mock()
+    monkeypatch.setattr(station_cm, "MccsCommandProxy", mock_command_proxy_cls)
+    task_callback = unittest.mock.Mock()
+
+    station_component_manager.acquire_data_for_calibration(
+        first_channel=1, last_channel=2, task_callback=task_callback
+    )
+
+    task_callback.assert_called_once()
+    assert task_callback.call_args.kwargs["status"] == TaskStatus.REJECTED
+    mock_command_proxy_cls.assert_not_called()
 
 
 def test_configure_station_for_calibration_uses_calibration_daq_when_available(

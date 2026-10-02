@@ -4299,20 +4299,18 @@ class SpsStationComponentManager(
         # Stop any consumers left by a previous run so Start begins from idle.
         self._stop_daq()
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        calibration_daq_trl = (
-            self._active_calibration_daq_trl or self._get_calibration_daq()[1]
+        on_command = MccsCommandProxy(
+            self._active_calibration_daq_trl, "Start", self.logger
         )
-        on_command = MccsCommandProxy(calibration_daq_trl, "Start", self.logger)
         result, message = on_command(json.dumps({"modes_to_start": daq_mode}))
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to start in {daq_mode}: {message}")
 
     def _stop_daq(self: SpsStationComponentManager) -> None:
         self.logger.info("Stopping DAQ")
-        calibration_daq_trl = (
-            self._active_calibration_daq_trl or self._get_calibration_daq()[1]
+        off_command = MccsCommandProxy(
+            self._active_calibration_daq_trl, "Stop", self.logger
         )
-        off_command = MccsCommandProxy(calibration_daq_trl, "Stop", self.logger)
         result, message = off_command()
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to stop: {message}")
@@ -4473,10 +4471,15 @@ class SpsStationComponentManager(
                     self.logger.exception("Failed to stop TPM transmission on teardown")
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
-            try:
-                self._stop_daq()
-            except Exception:  # pylint: disable=broad-except
-                self.logger.exception("Failed to stop DAQ on teardown")
+            # Only stop a DAQ this run actually selected. If we bailed out
+            # before configure_station_for_calibration ran, no DAQ is pinned
+            # and there's nothing of ours to stop (and guessing could stop a
+            # DAQ that is in use for something else).
+            if self._active_calibration_daq_trl:
+                try:
+                    self._stop_daq()
+                except Exception:  # pylint: disable=broad-except
+                    self.logger.exception("Failed to stop DAQ on teardown")
             self._active_calibration_daq_trl = ""
 
         if task_callback:

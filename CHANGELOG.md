@@ -3,6 +3,8 @@
 ## Unreleased
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [SP-7403] Add `MccsPrototypeSubrack`, a simplified subrack device that can replace `MccsSubrack`. It drives the subrack management board through a plain HTTP polling client, with no component manager and no driver. It has the same attributes as `MccsSubrack`, except the PDU attributes and the old health model attributes. It has the same TPM power and fan commands. A health attribute with no value gives `FAILED` health, where `MccsSubrack` gives `UNKNOWN`, in line with newest base classes. It has no `On` or `Off` command, and it does not control its PDU port. The `stfc-ral-2-sr2` subrack now uses it.
+* [THORN-724] Add the `MCCS_SUBRACK_IMPLEMENTATION` environment variable to the spshw server. With `prototype`, the server serves `MccsPrototypeSubrack` under the Tango class name `MccsSubrack`, so the Tango DB rows do not change. The default is `legacy`. Set it per device server instance through `helm_values`.
 
 ## 15.1.0
 

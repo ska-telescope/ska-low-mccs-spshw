@@ -29,7 +29,7 @@ The second group implement power commands by communicating with their subdevices
 
 The last group often don't implement power command, and if they have a power state it is simply "On".
 
-There is, however, a forth group: hardware devices with no direct Tango device representative. This is where the Antennas fall in. Considering that there are 131,000 Antennas planned for LFAA, having that many Tango Devices is too resource demanding when considering the benefit. As such, the antennas have their power controlled by the FieldStation Device (which represents a Field Node).
+MCCS has no tango devices for the Individual Antenna, as their states are reflected in the SmartBox ports.
 
 .. note::
 
@@ -102,6 +102,9 @@ The **Power State** is ``ON`` whenever an hardware poll succeeds, ``UNKNOWN`` wh
 
 PowerMarshaller
 ^^^^^^^^^^^^^^^
+
+.. note:: 
+  The PowerMarshaller is currently implemented only as a stand in, and there are future plans to extend its functionality and it will be responsible for scheduling power operations to take account of load change rates and phase balancing. See https://confluence.skatelescope.org/display/SE/SP-4250+Power+control+proposal for further information.
 
 **Power state:** a purely virtual device. It is ``ON`` as soon as communication is established.
 

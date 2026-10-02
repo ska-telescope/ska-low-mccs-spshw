@@ -9,8 +9,10 @@
 A Tango device for an SPS subrack, built on the prototype subrack client.
 
 The device holds one :py:class:`~.subrack_client.SubrackPoller`, which holds the
-:py:class:`~.subrack_client.Subrack` it drives. There is no component manager,
-no driver and no health model between the device and the board.
+:py:class:`~.subrack_client.Subrack` it drives. There is no component manager
+and no driver between the device and the board. A
+:py:class:`~ska_low_mccs_common.HealthRecorder` turns the quality of the
+device's own attributes into its health.
 
 The board commands live in :py:class:`~.prototype_subrack_commands.SubrackCommands`,
 which the device mixes in. The device supplies the subrack that those commands
@@ -23,7 +25,7 @@ import time
 from typing import Any, Final, Optional, cast
 
 from ska_control_model import AdminMode, HealthState, PowerState
-from ska_low_mccs_common import MccsBaseInterface
+from ska_low_mccs_common import HealthRecorder, MccsBaseInterface
 from ska_low_mccs_common.component import WebHardwareClient
 from ska_tango_base.base import ControlLevel
 from tango import AttrQuality, DevState
@@ -32,10 +34,11 @@ from tango.server import device_property
 from utils import walk
 
 from ..subrack.subrack_data import SubrackData
-from .constants import HEALTH_STATUS_KEY, ReadKey, RequestError
+from .constants import HEALTH_NO_VALUE_REASON, HEALTH_STATUS_KEY, ReadKey, RequestError
 from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
+    HEALTH_ATTRIBUTES,
     HEALTH_PATH_TO_SIGNAL,
     READ_KEY_TO_SIGNAL,
     TPM_POWER_STATE_SIGNALS,
@@ -72,6 +75,15 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     corresponding attribute reads back with ``ATTR_INVALID`` quality rather
     than a stale or invented number. The TPM power states are the exception.
     They read back ``UNKNOWN`` instead, the same as on ``MccsSubrack``.
+
+    Health reflects only the hardware. It comes from the
+    :py:class:`~ska_low_mccs_common.HealthRecorder`, which subscribes to the
+    attributes in ``HEALTH_ATTRIBUTES``. An attribute in warning
+    makes the device ``DEGRADED``, and one in alarm makes it ``FAILED``. An
+    invalid attribute also makes it ``FAILED``, because ``report_health`` does
+    not accept ``UNKNOWN``. Whether the device can poll the subrack shows in
+    the state, not the health. A device that cannot poll invalidates every
+    attribute, and so its health fails through them.
     """
 
     # ----------
@@ -90,6 +102,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     # --------------
     _poller: Optional[SubrackPoller] = None
     _subrack: Optional[Subrack] = None
+    _health_recorder: Optional[HealthRecorder] = None
     _tpm_power_states: list[PowerState]
 
     def assemble(self: MccsPrototypeSubrack) -> None:
@@ -162,6 +175,14 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         self.assemble()
 
+        self._health_recorder = self._health_recorder_factory(
+            self.get_name(),
+            self.logger,
+            attributes=list(HEALTH_ATTRIBUTES),
+            health_callback=self._health_changed,
+            attr_conf_callback=self._attribute_config_changed,
+        )
+
         # The parent can pass on its admin mode before the poller exists, and
         # then the poller never starts. So the admin mode is applied again here.
         # A late inherited mode that also starts polling does no harm, because
@@ -189,8 +210,11 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self.init_completed()
 
     def delete_device(self: MccsPrototypeSubrack) -> None:
-        """Delete the device, reclaiming the polling thread."""
+        """Delete the device, reclaiming the polling and health threads."""
         self.disassemble()
+        if self._health_recorder is not None:
+            self._health_recorder.cleanup()
+            self._health_recorder = None
         super().delete_device()
 
     # ----------------
@@ -231,10 +255,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             # UNKNOWN until a poll succeeds, because nothing has been read from
             # the board yet.
             self.component_unknown()
-            self.report_health(
-                HealthState.FAILED,
-                ["Establishing communication with the subrack."],
-            )
             self._poller.start_polling()
 
     def _admin_mode_changed(self: MccsPrototypeSubrack, admin_mode: AdminMode) -> None:
@@ -289,7 +309,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         self.component_on()
         self.component_no_fault()
-        self.report_health(HealthState.OK, [])
         self.logger.debug("Poll succeeded")
 
     def _poll_failed(self: MccsPrototypeSubrack, exception: Exception) -> None:
@@ -313,10 +332,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         else:
             self.component_fault()
         self.logger.warning(f"Poll failed with {type(exception).__name__}. {exception}")
-        self.report_health(
-            HealthState.FAILED,
-            [f"Poll failed with {type(exception).__name__}. {exception}"],
-        )
 
     def _polling_stopped(self: MccsPrototypeSubrack) -> None:
         """
@@ -331,8 +346,51 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._update_tpm_power_states(
             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
         )
-        self.report_health(HealthState.FAILED, ["adminMode is OFFLINE."])
         self.component_disconnected()
+
+    # ----------------
+    # Health
+    # ----------------
+    def _health_changed(
+        self: MccsPrototypeSubrack, health: HealthState, health_report: str
+    ) -> None:
+        """
+        Report the health that the attribute qualities give.
+
+        Called on the health recorder's event thread.
+
+        :param health: the health the attribute qualities give.
+        :param health_report: the recorder's reasons, one on each line.
+        """
+        if health == HealthState.OK:
+            health_info = []
+        elif health == HealthState.UNKNOWN:
+            # report_health refuses UNKNOWN. The recorder gives it for an
+            # invalid attribute, and before it has received any event.
+            health = HealthState.FAILED
+            health_info = [HEALTH_NO_VALUE_REASON]
+        else:
+            health_info = health_report.splitlines()
+
+        # Emitted first, so the report is already readable when a client hears
+        # of the new health.
+        self._emit(
+            "_health_report", "\n".join(health_info) or "Health is OK.", time.time()
+        )
+        self.report_health(health, health_info)
+
+    def _attribute_config_changed(
+        self: MccsPrototypeSubrack, attribute_name: str
+    ) -> None:
+        """
+        Ignore a change to a health attribute's configuration.
+
+        Tango evaluates alarm thresholds only when a value is pushed, so a new
+        threshold takes effect at the next poll, which pushes every value it
+        reads. That is soon enough, so nothing is pushed here.
+
+        :param attribute_name: the attribute whose configuration changed.
+        """
 
     # ----------------
     # Emission helpers
@@ -404,15 +462,16 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 # ----------
 
 
-def subrack_factory(
+def subrack_factory(  # pylint: disable=too-many-arguments
     web_hardware_client: Any = WebHardwareClient,
     derived_values: Any = DerivedValues,
     subrack: Any = Subrack,
     subrack_poller: Any = SubrackPoller,
+    health_recorder: Any = HealthRecorder,
     class_name: str = "MccsPrototypeSubrack",
 ) -> type[MccsPrototypeSubrack]:
     """
-    Build the device class, choosing what :py:meth:`~.assemble` builds with.
+    Build the device class, choosing what the device builds its parts with.
 
     :param web_hardware_client: builds the hardware client, from a host and a
         port.
@@ -422,6 +481,8 @@ def subrack_factory(
         and the device's callbacks.
     :param subrack_poller: builds the poller, from a poll model, a poll rate
         and a logger.
+    :param health_recorder: builds the health recorder, from the device name,
+        a logger, the health attributes and the device's health callbacks.
     :param class_name: the Tango class name to serve the device under. Pass
         ``MccsSubrack`` to stand the device in for the old subrack, so that the
         Tango DB rows for the device do not change.
@@ -436,6 +497,7 @@ def subrack_factory(
             "_derived_values_factory": derived_values,
             "_subrack_factory": subrack,
             "_subrack_poller_factory": subrack_poller,
+            "_health_recorder_factory": health_recorder,
         },
     )
 

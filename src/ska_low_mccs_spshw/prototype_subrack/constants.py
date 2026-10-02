@@ -19,6 +19,7 @@ __all__ = [
     "ClientCommand",
     "DerivedKey",
     "FILTERED_ATTRIBUTES",
+    "HEALTH_NO_VALUE_REASON",
     "HEALTH_STATUS_KEY",
     "HttpError",
     "MIN_PWM_DUTY_FRACTION",
@@ -114,6 +115,14 @@ FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
     ReadKey.TPM_VOLTAGES.value,
 )
 """The read keys that pass through the noise filter."""
+
+HEALTH_NO_VALUE_REASON: Final = "At least one health attribute has no value."
+"""The health info while a health attribute has no value.
+
+It does not name the attributes. The health recorder hears of each attribute
+through its own event, so a list of names would change, and push an event,
+once for each attribute that a poll reads or loses.
+"""
 
 COMMAND_TIMEOUT: Final = 30.0
 """How long, in seconds, to wait for an asynchronous board command."""

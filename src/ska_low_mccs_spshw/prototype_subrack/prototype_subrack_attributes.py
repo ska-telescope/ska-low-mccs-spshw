@@ -27,6 +27,7 @@ from .constants import DerivedKey, ReadKey
 
 __all__ = [
     "ALL_SIGNALS",
+    "HEALTH_ATTRIBUTES",
     "HEALTH_PATH_TO_SIGNAL",
     "READ_KEY_TO_SIGNAL",
     "VALUE_CONVERTERS",
@@ -100,6 +101,44 @@ TPM_POWER_STATE_SIGNALS: Final[tuple[str, ...]] = tuple(
 # of them.
 ALL_SIGNALS: Final[tuple[str, ...]] = tuple(READ_KEY_TO_SIGNAL.values()) + tuple(
     HEALTH_PATH_TO_SIGNAL
+)
+
+
+# The attributes whose quality decides the health of the device. The health
+# recorder subscribes to these. The others are left out because their quality
+# says nothing about the subrack, or because they have no alarm thresholds.
+# This is the same set that MccsSubrack uses.
+HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
+    "backplaneTemperatures",
+    "boardTemperatures",
+    "powerSupplyPowers",
+    "powerSupplyVoltages",
+    "subrackMaxFanSpeeds",
+    "tpmPowers",
+    "tpmVoltages",
+    "psuDeadCount",
+    "internalVoltages1V1",
+    "internalVoltages1V5",
+    "internalVoltages2V5",
+    "internalVoltages2V8",
+    "internalVoltages3V",
+    "internalVoltages3V3",
+    "internalVoltages5V",
+    "internalVoltagesARM",
+    "internalVoltagesCORE",
+    "internalVoltagesDDR",
+    "internalVoltagesPOWERIN",
+    "internalVoltagesSOC",
+    "psu1Present",
+    "psu2Present",
+    "psu1PowerIn",
+    "psu2PowerIn",
+    "psu1PowerOut",
+    "psu2PowerOut",
+    "psu1VoltageIn",
+    "psu2VoltageIn",
+    "psu1VoltageOut",
+    "psu2VoltageOut",
 )
 
 
@@ -208,6 +247,11 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     _psu1_voltage_out: AttrSignal[float] = AttrSignal[float]()
     _psu2_voltage_out: AttrSignal[float] = AttrSignal[float]()
     _psu_dead_count: AttrSignal[int] = AttrSignal[int]()
+
+    # ------------------------------
+    # Signal for the health recorder
+    # ------------------------------
+    _health_report: AttrSignal[str] = AttrSignal[str]()
 
     # ---------------------------
     # Attributes for board reads
@@ -729,5 +773,18 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         doc=(
             "Count of PSUs that are present and receive input voltage but "
             "supply no output voltage."
+        ),
+    )
+
+    # ---------------------------------
+    # Attribute for the health recorder
+    # ---------------------------------
+    healthReport = attribute_from_signal(
+        _health_report,
+        dtype=str,
+        label="Health Report",
+        doc=(
+            "The reasons for the current health, one on each line, or "
+            "'Health is OK.'."
         ),
     )

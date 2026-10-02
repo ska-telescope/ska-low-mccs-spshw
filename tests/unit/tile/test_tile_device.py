@@ -1872,6 +1872,51 @@ class TestMccsTile:
             list(range(2, 34)), lookahead=2
         )
 
+    def test_programming_state_kept_on_power_off(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that power OFF does not invalidate tileProgrammingState.
+
+        When the TPM is unreachable, the component manager publishes "Off" just
+        before it reports power OFF. The power OFF must not overwrite that value.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        on_tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
+
+        tile_component_manager._update_attribute_callback(programming_state="Off")
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Off", lookahead=5
+        )
+        tile_component_manager._update_component_state(power=PowerState.OFF)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF, lookahead=5)
+
+        change_event_callbacks["tile_programming_state"].assert_not_called()
+        attr = on_tile_device.read_attribute("tileProgrammingState")
+        assert attr.value == "Off"
+        assert attr.quality == tango.AttrQuality.ATTR_VALID
+
     @pytest.mark.parametrize(
         "attribute_name",
         [

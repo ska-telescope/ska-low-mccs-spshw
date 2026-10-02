@@ -102,12 +102,25 @@ class SubrackPollResponse:
     """The wall clock time at which the poll completed."""
 
 
-SubrackPoller = Poller[tuple[str, ...], SubrackPollResponse]
-"""The poller that drives a :py:class:`Subrack`.
+class SubrackPoller(Poller[tuple[str, ...], SubrackPollResponse]):
+    """
+    The poller that drives a :py:class:`Subrack`.
 
-The caller builds one of these around a subrack, and owns it. A subrack holds
-no poller of its own, so the two are built in order rather than at once.
-"""
+    The caller builds one of these around a subrack, and owns it. A subrack
+    holds no poller of its own, so the two are built in order rather than at
+    once.
+    """
+
+    def wake(self: SubrackPoller) -> None:
+        """
+        Make the next poll run now, rather than at the end of the poll rate.
+
+        This only interrupts the wait between polls. It leaves the polling
+        state alone, so it never starts a stopped poller. A wake that arrives
+        while a poll runs has no wait to interrupt, so it does nothing.
+        """
+        with self._condition:
+            self._condition.notify()
 
 
 class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):

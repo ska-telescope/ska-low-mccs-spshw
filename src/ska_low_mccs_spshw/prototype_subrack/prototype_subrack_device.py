@@ -259,6 +259,15 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             self._poller.start_polling()
             self.logger.info("Starting polling the subrack.")
 
+    def wake_poller(self: MccsPrototypeSubrack) -> None:
+        """
+        Make the next poll run now, rather than at the update rate.
+
+        A stopped poller stays stopped, so this is safe at any admin mode.
+        """
+        if self._poller is not None:
+            self._poller.wake()
+
     def _admin_mode_changed(self: MccsPrototypeSubrack, admin_mode: AdminMode) -> None:
         """
         Take on the admin mode of the parent device.

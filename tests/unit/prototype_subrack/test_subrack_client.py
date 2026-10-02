@@ -29,6 +29,7 @@ from ska_low_mccs_spshw.prototype_subrack import (
     HttpError,
     RequestError,
     Subrack,
+    SubrackPoller,
     SubrackPollResponse,
 )
 from ska_low_mccs_spshw.prototype_subrack import subrack_client as subrack_client_module
@@ -788,6 +789,56 @@ class TestTheCallbacks:
         subrack.polling_stopped()
 
         stopped.assert_called_once_with()
+
+
+# pylint: disable=too-few-public-methods
+class TestWakingThePoller:
+    """
+    Tests of :py:meth:`SubrackPoller.wake`.
+
+    Each poller polls once an hour, so a second poll inside the test can only
+    come from a wake.
+    """
+
+    @staticmethod
+    def _build_poller(
+        logger: logging.Logger,
+    ) -> tuple[SubrackPoller, queue.SimpleQueue]:
+        """
+        Build a poller around a model that records each poll.
+
+        :param logger: a logger.
+
+        :return: the poller, and the queue each successful poll feeds.
+        """
+        polls: queue.SimpleQueue = queue.SimpleQueue()
+        model = mock.Mock(name="model")
+        model.get_request.return_value = BATCH_ATTRIBUTES
+        model.poll_succeeded.side_effect = polls.put
+        return (SubrackPoller(model, 3600.0, logger), polls)
+
+    def test_a_wake_runs_the_next_poll_now(
+        self: TestWakingThePoller,
+        logger: logging.Logger,
+    ) -> None:
+        """
+        A wake must end the wait between polls.
+
+        Reporting the poll is the last thing the poller does before it waits,
+        so the wait has almost always begun by the time this test wakes it.
+
+        :param logger: a logger.
+        """
+        (poller, polls) = self._build_poller(logger)
+        try:
+            poller.start_polling()
+            _next_response(polls)
+
+            poller.wake()
+
+            _next_response(polls, timeout=5.0)
+        finally:
+            poller.kill_polling_thread()
 
 
 # One test, because there is one thing to say about the wiring.

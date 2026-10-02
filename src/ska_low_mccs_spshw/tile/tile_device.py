@@ -1514,8 +1514,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             case PowerState.OFF | PowerState.UNKNOWN:
                 for signal in self._HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
-                for signal in self._GENERIC_SIGNAL_MAP.values():
-                    setattr(self, signal, None)
+                for name, signal in self._GENERIC_SIGNAL_MAP.items():
+                    # The component manager publishes the programming state
+                    # itself, and "Off" is a valid value while powered off.
+                    if name != "programming_state":
+                        setattr(self, signal, None)
                 for signal in self._INTERMEDIATE_HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
             case PowerState.ON:

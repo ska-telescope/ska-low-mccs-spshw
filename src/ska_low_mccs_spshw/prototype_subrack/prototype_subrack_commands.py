@@ -98,6 +98,16 @@ class SubrackCommands(LRCMixin):
             f"'subrack' property must be implemented by '{type(self).__name__}'."
         )
 
+    def wake_poller(self: SubrackCommands) -> None:
+        """
+        Make the next poll run now, rather than at the update rate.
+
+        :raises NotImplementedError: always, because the device supplies it.
+        """
+        raise NotImplementedError(
+            f"'wake_poller' must be implemented by '{type(self).__name__}'."
+        )
+
     _admin_mode: AdminMode
     """The admin mode, which ``BaseInterface`` stores as it is written."""
 
@@ -352,6 +362,9 @@ class SubrackCommands(LRCMixin):
             (outcome, message, _) = subrack.run_board_command(
                 name.value, args, abort_event=task_abort_event
             )
+            # The command can change what the board reports, such as the TPM
+            # power states, so the device reads it now.
+            self.wake_poller()
             self._report_outcome(task_callback, outcome, message)
             self.logger.info(
                 f"Board command {name.value} with args '{args}' finished with "

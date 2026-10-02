@@ -2190,7 +2190,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            self.component_manager.initialise(
+            self.component_manager.reinitialise(
                 start_bandpasses,
                 global_reference_time,
                 task_callback=task_callback,

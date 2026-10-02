@@ -1223,6 +1223,93 @@ def test_initialise_progress_callbacks(
     )
 
 
+def test_reinitialise_progress_callbacks(
+    communicating_station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that reinitialise fires progress callbacks at each step in the right order.
+
+    Unlike ``initialise``, ``reinitialise`` does not reprogram the tiles, so the
+    source IP, global reference time, tile re-initialisation and tile parameter
+    steps must not run.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    """
+    # Local alias to avoid reformatting every line below to fit the
+    # longer fixture name within the line-length limit.
+    station_component_manager = communicating_station_component_manager
+
+    # All subracks and tiles must report ON for reinitialise to proceed.
+    for fqdn in station_component_manager._subrack_power_states:
+        station_component_manager._subrack_power_states[fqdn] = PowerState.ON
+    for fqdn in station_component_manager._tile_power_states:
+        station_component_manager._tile_power_states[fqdn] = PowerState.ON
+
+    task_callback = unittest.mock.Mock()
+
+    ok = (ResultCode.OK, "")
+    with (
+        unittest.mock.patch.object(
+            station_component_manager, "_wait_for_wren", return_value=ok
+        ) as mock_wait_for_wren,
+        unittest.mock.patch.object(
+            station_component_manager, "_set_tile_source_ips", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager,
+            "_set_global_reference_time",
+            return_value=ResultCode.OK,
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_initialise_tile_parameters", return_value=ok
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_wren_proxy", new=unittest.mock.Mock()
+        ),
+        unittest.mock.patch.object(
+            station_component_manager, "_initialise_station", return_value=ok
+        ) as mock_initialise_station,
+        unittest.mock.patch.object(
+            station_component_manager, "_wait_for_arp_table", return_value=ok
+        ) as mock_wait_for_arp_table,
+        unittest.mock.patch.object(
+            station_component_manager, "_route_data", return_value=ok
+        ) as mock_route_data,
+        unittest.mock.patch.object(
+            station_component_manager,
+            "_check_station_synchronisation",
+            return_value=ok,
+        ) as mock_check_station_synchronisation,
+        unittest.mock.patch.object(
+            station_component_manager, "start_beamformer"
+        ) as mock_start_beamformer,
+    ):
+        station_component_manager.reinitialise(task_callback=task_callback)
+
+    progress_calls = [
+        call.kwargs["progress"]
+        for call in task_callback.call_args_list
+        if "progress" in call.kwargs
+    ]
+    assert progress_calls == [5, 10, 70, 75, 85, 90, 95]
+
+    for step in [
+        mock_wait_for_wren,
+        mock_initialise_station,
+        mock_wait_for_arp_table,
+        mock_route_data,
+        mock_check_station_synchronisation,
+        mock_start_beamformer,
+    ]:
+        step.assert_called_once()
+
+    task_callback.assert_called_with(
+        status=TaskStatus.COMPLETED,
+        result=(ResultCode.OK, "Reinitialisation Complete"),
+    )
+
+
 def test_reinitialise_tiles_progress_callbacks(
     communicating_station_component_manager: SpsStationComponentManager,
     num_tiles: int,

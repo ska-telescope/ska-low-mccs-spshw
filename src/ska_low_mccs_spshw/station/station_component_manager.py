@@ -2127,6 +2127,187 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
+    def _check_tile_power_state(
+        self: SpsStationComponentManager, desired_state: PowerState
+    ) -> tuple[ResultCode, str]:
+        """
+        Check if the tiles are in the correct PowerState.
+
+        :param desired_state: The desired PowerState for all the tiles
+        :return: ResultCode and message
+        """
+        if not all(
+            power_state == desired_state
+            for power_state in self._tile_power_states.values()
+        ):
+            msg = f"Tiles are not in state: {desired_state}"
+            self.logger.info(msg)
+            return (ResultCode.FAILED, msg)
+        return (ResultCode.OK, "")
+
+    def _check_subrack_power_state(
+        self: SpsStationComponentManager, desired_state: PowerState
+    ) -> tuple[ResultCode, str]:
+        """
+        Check if the subracks are in the correct PowerState.
+
+        :param desired_state: The desired PowerState for all the subracks
+        :return: ResultCode and message
+        """
+        if not all(
+            power_state == desired_state
+            for power_state in self._subrack_power_states.values()
+        ):
+            msg = f"Subracks are not in state: {desired_state}"
+            self.logger.info(msg)
+            return (ResultCode.FAILED, msg)
+        return (ResultCode.OK, "")
+
+    def _wait_for_wren_initilised(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Wait for the WREN to be initialised if available.
+
+        :param task_callback: Update task state
+        :param task_abort_event: Abort the task
+        :return: ResultCode and message
+        """
+        if not self._wren_proxy:
+            return (ResultCode.OK, "")
+
+        self.logger.debug("Waiting for WREN")
+        result_code, failure_step = self._wait_for_wren(
+            task_callback,
+            task_abort_event,
+            timeout=self._wren_health_check_timeout,
+            fail_on_timeout=self._wren_health_check_fail_on_timeout,
+        )
+        if task_callback:
+            task_callback(progress=5)
+
+        return (result_code, failure_step)
+
+    @check_communicating
+    # pylint: disable=too-many-branches
+    def reinitialise(  # noqa: C901
+        self: SpsStationComponentManager,
+        start_bandpasses: Optional[bool] = None,
+        global_reference_time: Optional[str] = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Reinitialisation this station.
+
+        The order to turn a station on is: subrack, then tiles
+
+        :param start_bandpasses: Whether to configure TPMs to send
+            integrated data.
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        message: str = ""
+        failure_step: str = ""
+        self.logger.info("Starting initialise sequence")
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        result_code = ResultCode.OK
+
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_subrack_power_state(PowerState.ON)
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_tile_power_state(PowerState.ON)
+
+        # Now, if the wren proxy is set, wait for the WREN to initialise
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._wait_for_wren_initilised(
+                task_callback, task_abort_event
+            )
+
+        if result_code == ResultCode.OK:
+            self.logger.info("Setting tile source IPs before initialisation")
+            result_code, failure_step = self._set_tile_source_ips(
+                task_callback, task_abort_event
+            )
+
+        if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=10)
+            self.logger.info("Setting global reference time")
+            self._set_global_reference_time(global_reference_time)
+            # This is very quick to complete so no progress update here
+
+        if result_code == ResultCode.OK:
+            self.logger.info("Initialising tile parameters")
+            result_code, failure_step = self._initialise_tile_parameters(
+                task_callback,
+                task_abort_event,
+            )
+
+        if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=70)
+            self.logger.info("Initialising station")
+            result_code, failure_step = self._initialise_station(
+                task_callback, task_abort_event
+            )
+
+        if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=75)
+            self.logger.info("Waiting for ARP table")
+            result_code, failure_step = self._wait_for_arp_table(
+                task_callback, task_abort_event
+            )
+            if task_callback:
+                task_callback(progress=85)
+
+        if result_code == ResultCode.OK:
+            self.logger.info("Routing data")
+            result_code, failure_step = self._route_data(
+                start_bandpasses,
+                task_callback,
+                task_abort_event,
+            )
+
+        if result_code == ResultCode.OK:
+            if task_callback:
+                task_callback(progress=90)
+            self.logger.info("Checking synchronisation")
+            result_code, failure_step = self._check_station_synchronisation(
+                task_callback, task_abort_event
+            )
+
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            if task_callback:
+                task_callback(progress=95)
+            self.logger.info("End Reinitialisation")
+            task_status = TaskStatus.COMPLETED
+            message = "Reinitialisation Complete"
+
+            self.logger.info(
+                "Starting station beamformer with empty channel_groups "
+                "to start the beamformer daisy chain during station reinitialise"
+            )
+            start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
+                self.RFC_FORMAT
+            )
+            self.start_beamformer(
+                start_time=start_time, duration=-1, channel_groups=[], scan_id=0
+            )
+        else:
+            self.logger.error(f"Reinitialisation failed: {failure_step}")
+            task_status = TaskStatus.FAILED
+            message = f"Reinitialisation Failed: {failure_step}"
+        if task_callback:
+            task_callback(status=task_status, result=(result_code, message))
+
     @check_communicating
     def _turn_on_subracks(
         self: SpsStationComponentManager,

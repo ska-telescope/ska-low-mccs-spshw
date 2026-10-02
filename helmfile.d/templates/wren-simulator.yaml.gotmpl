@@ -7,7 +7,7 @@ ska-sat-lmc:
   enabled: true
   ska-tango-devices:
     deviceServerTypes:
-      WhiteRabbitSimulator:
+      WhiteRabbitSNMPSimulator:
         metadata:
           component: sat
         image:
@@ -15,7 +15,7 @@ ska-sat-lmc:
           name: ska-sat-lmc
           tag: {{$tag}}
           pullPolicy: IfNotPresent
-        command: WhiteRabbitSimulator
+        command: WhiteRabbitSNMPSimulator
         resources:
           limits:
             memory: 2Gi
@@ -35,13 +35,13 @@ ska-sat-lmc:
           successThreshold: 1
           failureThreshold: 3
     deviceServers:
-      WhiteRabbitSimulator:
+      WhiteRabbitSNMPSimulator:
         whiterabbitsim-1:
           devices:
-            WhiteRabbitSimulator:
+            WhiteRabbitSNMPSimulator:
             - {{$trl}}
     devices:
-      WhiteRabbitSimulator:
+      WhiteRabbitSNMPSimulator:
         {{$trl}}:
           Host: 127.0.0.1
 {{- end }}

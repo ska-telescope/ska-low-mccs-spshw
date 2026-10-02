@@ -19,10 +19,11 @@ __all__ = [
     "ClientCommand",
     "DerivedKey",
     "FILTERED_ATTRIBUTES",
+    "HEALTH_STATUS_KEY",
     "HttpError",
-    "LOCK_TIMEOUT",
-    "LOCK_WARNING",
     "MIN_PWM_DUTY_FRACTION",
+    "PSU_DEAD_VOLTAGE_THRESHOLD",
+    "PSU_NAMES",
     "ReadKey",
     "RequestError",
 ]
@@ -70,23 +71,42 @@ class DerivedKey(str, Enum):
     """The keys computed from a poll rather than read from the board."""
 
     SUBRACK_MAX_FAN_SPEEDS = "subrack_max_fan_speeds"
+    PSU_DEAD_COUNT = "psu_dead_count"
 
 
 class ClientCommand(str, Enum):
     """
-    The board commands this client issues on its own behalf.
+    The board commands this client issues.
 
-    A device passes any other command straight through, so this is not the
-    full set the board accepts.
+    A member is a ``str``, so it reaches the board unchanged. The board accepts
+    more commands than these, so this is not the full set.
     """
 
     GET_HEALTH_STATUS = "get_health_status"
+    TURN_ON_TPM = "turn_on_tpm"
+    TURN_OFF_TPM = "turn_off_tpm"
+    TURN_ON_TPMS = "turn_on_tpms"
+    TURN_OFF_TPMS = "turn_off_tpms"
+    SET_SUBRACK_FAN_SPEED = "set_subrack_fan_speed"
+    SET_FAN_MODE = "set_fan_mode"
+    SET_POWER_SUPPLY_FAN_SPEED = "set_power_supply_fan_speed"
+
+    # The asynchronous handshake. A caller runs a command and waits for it
+    # through :py:meth:`~.subrack_client.Subrack.run_board_command`, which is
+    # the only thing that issues these two.
     COMMAND_COMPLETED = "command_completed"
     ABORT_COMMAND = "abort_command"
 
 
 BATCH_ATTRIBUTES: Final[tuple[str, ...]] = tuple(key.value for key in ReadKey)
 """The hardware read keys fetched on every poll."""
+
+HEALTH_STATUS_KEY: Final = ClientCommand.GET_HEALTH_STATUS.value
+"""The poll value key that carries the health status.
+
+It is named after the command that reads it, so a poll keys every value by
+what it asked the board for.
+"""
 
 FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
     ReadKey.TPM_CURRENTS.value,
@@ -98,22 +118,14 @@ FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
 COMMAND_TIMEOUT: Final = 30.0
 """How long, in seconds, to wait for an asynchronous board command."""
 
-LOCK_TIMEOUT: Final = 60.0
-"""How long, in seconds, to wait for the client lock before giving up.
-
-Longer than ``COMMAND_TIMEOUT``, so a legitimate asynchronous command never
-causes a poll to time out. A wait this long means the board has stalled.
-"""
-
-LOCK_WARNING: Final = 5.0
-"""How long, in seconds, a client lock hold must exceed to be logged.
-
-Longer than a healthy attribute sweep, which is about one second against a
-board on a normal network, and far shorter than a stall.
-"""
-
 COMMAND_POLL_INTERVAL: Final = 0.1
 """How long, in seconds, between ``command_completed`` probes."""
+
+PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
+"""The power supplies the health status reports on."""
+
+PSU_DEAD_VOLTAGE_THRESHOLD: Final = 1.0
+"""A PSU below this output voltage, in Volts, is supplying nothing."""
 
 MIN_PWM_DUTY_FRACTION: Final = 0.1
 """The floor applied to pwm duty when the fan rpm estimate scales up.

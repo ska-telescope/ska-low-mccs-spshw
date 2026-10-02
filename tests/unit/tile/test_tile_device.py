@@ -483,9 +483,10 @@ def test_context_fixture(
     :yields: a test context.
     """
     with patch(
-        "ska_low_mccs_spshw.tile.firmware_threshold_interface.Database"
-    ) as mock_tango_db:
-        mock_tango_db.return_value.get_device_attribute_property.return_value = {
+        "ska_low_mccs_spshw.tile.tile_device._get_firmware_threshold_db_connection"
+    ) as mock_get_db_connection:
+        mock_db = mock_get_db_connection.return_value
+        mock_db.get_device_attribute_property.return_value = {
             "temperatures": db_temperature_thresholds,
             "voltages": db_voltage_thresholds,
             "currents": db_current_thresholds,
@@ -3316,6 +3317,7 @@ class TestMccsTileCommands:
         * Configure40GCore command
         * fortyGBDestinationIps attribute
         * fortyGBDestinationPorts attribute
+        * fortyGbCoreConfigurations attribute
 
         :param on_tile_device: fixture that provides a
         :param on_tile_device: fixture that provides a
@@ -3347,6 +3349,26 @@ class TestMccsTileCommands:
         assert on_tile_device.fortyGbDestinationIps[5] == "10.0.98.4"
         assert on_tile_device.fortyGbDestinationPorts[0] == 5000
         assert on_tile_device.fortyGbDestinationPorts[5] == 5001
+
+        core_configs = json.loads(on_tile_device.fortyGbCoreConfigurations)
+        assert len(core_configs) == 8
+        core_configs_by_id = {
+            (c["core_id"], c["arp_table_entry"]): c for c in core_configs
+        }
+        for expected in (config_1, config_2):
+            actual = core_configs_by_id[
+                expected["core_id"], expected["arp_table_entry"]
+            ]
+            for key in (
+                "core_id",
+                "arp_table_entry",
+                "source_mac",
+                "source_ip",
+                "source_port",
+                "destination_ip",
+                "destination_port",
+            ):
+                assert actual[key] == expected[key]
 
         arg = {
             "core_id": 0,

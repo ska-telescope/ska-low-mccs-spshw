@@ -1,0 +1,448 @@
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""
+A Tango device for an SPS subrack, built on the prototype subrack client.
+
+The device holds one :py:class:`~.subrack_client.SubrackPoller`, which holds the
+:py:class:`~.subrack_client.Subrack` it drives. There is no component manager,
+no driver and no health model between the device and the board.
+
+The board commands live in :py:class:`~.prototype_subrack_commands.SubrackCommands`,
+which the device mixes in. The device supplies the subrack that those commands
+run through, and the poller that reads it.
+"""
+from __future__ import annotations
+
+import sys
+import time
+from typing import Any, Final, Optional, cast
+
+from ska_control_model import AdminMode, HealthState, PowerState
+from ska_low_mccs_common import MccsBaseInterface
+from ska_low_mccs_common.component import WebHardwareClient
+from ska_tango_base.base import ControlLevel
+from tango import AttrQuality, DevState
+from tango.server import device_property
+
+from utils import walk
+
+from ..subrack.subrack_data import SubrackData
+from .constants import HEALTH_STATUS_KEY, ReadKey, RequestError
+from .derived_values import DerivedValues
+from .prototype_subrack_attributes import (
+    ALL_SIGNALS,
+    HEALTH_PATH_TO_SIGNAL,
+    READ_KEY_TO_SIGNAL,
+    TPM_POWER_STATE_SIGNALS,
+    VALUE_CONVERTERS,
+    SubrackAttributes,
+)
+from .prototype_subrack_commands import SubrackCommands
+from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
+
+__all__ = ["MccsPrototypeSubrack", "main"]
+
+# The control level each admin mode asks for. A mode that is absent leaves the
+# control level as it is, the same as a write to ``adminMode`` does.
+_CONTROL_LEVELS: Final[dict[AdminMode, ControlLevel]] = {
+    AdminMode.OFFLINE: ControlLevel.NO_CONTACT,
+    AdminMode.ONLINE: ControlLevel.FULL_CONTROL,
+    AdminMode.ENGINEERING: ControlLevel.FULL_CONTROL,
+}
+
+
+# pylint: disable=too-many-ancestors
+class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface):
+    """
+    A Tango device that monitors and commands an SPS subrack management board.
+
+    The device owns the :py:class:`~.subrack_client.SubrackPoller`, and through
+    it the :py:class:`~.subrack_client.Subrack` that answers each poll. The
+    device keeps the subrack too, because the board commands run through it
+    rather than through the poll loop.Polling starts and stops with ``adminMode``,
+    through :py:meth:`change_control_level`. Each poll response is emitted onto the
+    signal bus, which pushes the change and archive events for every attribute.
+
+    A value the board could not supply is emitted as ``None``, so the
+    corresponding attribute reads back with ``ATTR_INVALID`` quality rather
+    than a stale or invented number. The TPM power states are the exception.
+    They read back ``UNKNOWN`` instead, the same as on ``MccsSubrack``.
+    """
+
+    # ----------
+    # Properties
+    # ----------
+    SubrackIp = device_property(dtype=str)
+    SubrackPort = device_property(dtype=int, default_value=8081)
+    UpdateRate = device_property(dtype=float, default_value=15.0)
+    MaxFanErrors = device_property(dtype=int, default_value=5)
+    MaxFanRpmDelta = device_property(dtype=int, default_value=25)
+    AttributeFilterType = device_property(dtype=str, default_value="none")
+    AttributeFilterMaxSamples = device_property(dtype=int, default_value=5)
+
+    # --------------
+    # Initialisation
+    # --------------
+    _poller: Optional[SubrackPoller] = None
+    _subrack: Optional[Subrack] = None
+    _tpm_power_states: list[PowerState]
+
+    def assemble(self: MccsPrototypeSubrack) -> None:
+        """
+        Build the hardware client, the poll model and the poller.
+
+        Paired with :py:meth:`disassemble`. ``Init()`` runs
+        :py:meth:`delete_device` before :py:meth:`init_device`, so
+        :py:meth:`disassemble` reclaims the running poller before this builds
+        its replacement.
+
+        Both the poller and the subrack are dropped before anything is built,
+        so a failure part way through leaves each as ``None`` rather than the
+        reclaimed one. A reclaimed poller would accept ``start_polling`` and
+        then never poll, and a reclaimed subrack would accept a command and
+        reach a board the device no longer monitors.
+        """
+        self._poller = None
+        self._subrack = None
+
+        client = self._web_hardware_client_factory(self.SubrackIp, self.SubrackPort)
+        derived = self._derived_values_factory(
+            self.logger,
+            max_fan_errors=self.MaxFanErrors,
+            max_fan_rpm_delta=self.MaxFanRpmDelta,
+            attribute_filter_type=self.AttributeFilterType,
+            attribute_filter_max_samples=self.AttributeFilterMaxSamples,
+        )
+        self._subrack = self._subrack_factory(
+            client,
+            derived=derived,
+            logger=self.logger,
+            data_callback=self._poll_succeeded,
+            error_callback=self._poll_failed,
+            stopped_callback=self._polling_stopped,
+        )
+        self._poller = self._subrack_poller_factory(
+            self._subrack, self.UpdateRate, self.logger
+        )
+
+    def disassemble(self: MccsPrototypeSubrack) -> None:
+        """Reclaim the poller's thread, if there is one to reclaim."""
+        if self._poller is not None:
+            self._poller.kill_polling_thread()
+
+    @property
+    def subrack(self: MccsPrototypeSubrack) -> Subrack:
+        """
+        Return the client the board commands run through.
+
+        :raises ValueError: if the device did not finish initialising.
+
+        :return: the subrack client.
+        """
+        if self._subrack is None:
+            raise ValueError(
+                "The device did not finish initialising, try running Init()."
+            )
+        return self._subrack
+
+    def init_device(self: MccsPrototypeSubrack) -> None:
+        """Initialise the device, building the client and the poller."""
+        super().init_device()
+
+        # Emitted once here, so a subscriber gets UNKNOWN rather than an
+        # invalid value before the first poll.
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        for signal_name in TPM_POWER_STATE_SIGNALS:
+            self._emit(signal_name, PowerState.UNKNOWN, time.time())
+
+        self.assemble()
+
+        # The parent can pass on its admin mode before the poller exists, and
+        # then the poller never starts. So the admin mode is applied again here.
+        # A late inherited mode that also starts polling does no harm, because
+        # starting the poller is idempotent.
+        if _CONTROL_LEVELS.get(self._admin_mode) == ControlLevel.FULL_CONTROL:
+            self.change_control_level(ControlLevel.FULL_CONTROL)
+
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
+        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+
+        self.logger.info(
+            "Initialised %s for subrack %s:%s at an update rate of %ss.",
+            self.__class__.__name__,
+            self.SubrackIp,
+            self.SubrackPort,
+            self.UpdateRate,
+        )
+        self.init_completed()
+
+    def delete_device(self: MccsPrototypeSubrack) -> None:
+        """Delete the device, reclaiming the polling thread."""
+        self.disassemble()
+        super().delete_device()
+
+    # ----------------
+    # Monitoring hook
+    # ----------------
+    def change_control_level(
+        self: MccsPrototypeSubrack, control_level: ControlLevel
+    ) -> None:
+        """
+        Start or stop monitoring the subrack.
+
+        Stopping also aborts the running board command and every queued one,
+        so the device makes no further contact with the board.
+
+        This is the hook ``BaseInterface`` calls when ``adminMode`` is written.
+        ``OFFLINE`` arrives as :py:const:`ControlLevel.NO_CONTACT`, and both
+        ``ONLINE`` and ``ENGINEERING`` arrive as
+        :py:const:`ControlLevel.FULL_CONTROL`.
+
+        :param control_level: how the device should now interact with the
+            subrack.
+
+        """
+        if self._poller is None:
+            self.logger.error(
+                "Cannot change control level, because the device did not "
+                "finish initialising. Fix the cause and run Init()."
+            )
+            return
+
+        if control_level == ControlLevel.NO_CONTACT:
+            self.abort_board_commands()
+            # Stopping does not block, so a poll already in flight still
+            # reports back. The device goes offline in :py:meth:`_polling_stopped`,
+            # which the poller calls after that last report.
+            self._poller.stop_polling()
+        else:
+            # UNKNOWN until a poll succeeds, because nothing has been read from
+            # the board yet.
+            self.component_unknown()
+            self.report_health(
+                HealthState.FAILED,
+                ["Establishing communication with the subrack."],
+            )
+            self._poller.start_polling()
+
+    def _admin_mode_changed(self: MccsPrototypeSubrack, admin_mode: AdminMode) -> None:
+        """
+        Take on the admin mode of the parent device.
+
+        ``MccsBaseInterface`` only updates the admin mode model, so the
+        control level is changed here, in the same way that a write to
+        ``adminMode`` changes it.
+
+        :param admin_mode: the admin mode of the parent device.
+        """
+        previous_admin_mode = self._admin_mode
+        super()._admin_mode_changed(admin_mode)
+        control_level = _CONTROL_LEVELS.get(admin_mode)
+        if admin_mode != previous_admin_mode and control_level is not None:
+            self.change_control_level(control_level)
+
+    # ----------------
+    # Poll callbacks
+    # ----------------
+    def _poll_succeeded(
+        self: MccsPrototypeSubrack, poll_response: SubrackPollResponse
+    ) -> None:
+        """
+        Emit a successful poll response onto the signal bus.
+
+        Called on the polling thread, which ``Poller`` already wraps in a
+        :py:class:`tango.EnsureOmniThread`.
+
+        :param poll_response: the response to the poll.
+        """
+        timestamp = poll_response.timestamp
+        values = poll_response.values
+        # A key the board was too busy to read is absent, so its attribute keeps
+        # its last value.
+        for key, signal_name in READ_KEY_TO_SIGNAL.items():
+            if key in values:
+                self._emit(signal_name, values[key], timestamp)
+        if HEALTH_STATUS_KEY in values:
+            self._emit_health_status(values[HEALTH_STATUS_KEY], timestamp)
+        if ReadKey.TPM_ON_OFF.value in values:
+            tpm_on_off = values[ReadKey.TPM_ON_OFF.value]
+            self._update_tpm_power_states(
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+                if tpm_on_off is None
+                else [
+                    PowerState.ON if is_on else PowerState.OFF for is_on in tpm_on_off
+                ],
+                timestamp,
+            )
+
+        self.component_on()
+        self.component_no_fault()
+        self.report_health(HealthState.OK, [])
+        self.logger.debug("Poll succeeded")
+
+    def _poll_failed(self: MccsPrototypeSubrack, exception: Exception) -> None:
+        """
+        Invalidate every attribute after a failed poll.
+
+        A request that never reached the board leaves the subrack in an unknown
+        state. So does a board error before any poll has succeeded, because
+        nothing has been read to say the subrack is there at all. A board error
+        after that is the subrack itself failing.
+
+        :param exception: the exception raised by the poll.
+        """
+        self._invalidate_all()
+        self._update_tpm_power_states(
+            [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
+        )
+        # TODO: Jank to be removed when we upgrade ska-tango-base.
+        if isinstance(exception, RequestError) or self.get_state() == DevState.UNKNOWN:
+            self.component_unknown()
+        else:
+            self.component_fault()
+        self.logger.warning(f"Poll failed with {type(exception).__name__}. {exception}")
+        self.report_health(
+            HealthState.FAILED,
+            [f"Poll failed with {type(exception).__name__}. {exception}"],
+        )
+
+    def _polling_stopped(self: MccsPrototypeSubrack) -> None:
+        """
+        Take the device offline once polling has really stopped.
+
+        Called on the polling thread after the last poll has reported back, so
+        this always runs after :py:meth:`_poll_succeeded` and
+        :py:meth:`_poll_failed` rather than racing them. That ordering is what
+        stops a late poll from leaving the device ON after it went offline.
+        """
+        self._invalidate_all()
+        self._update_tpm_power_states(
+            [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
+        )
+        self.report_health(HealthState.FAILED, ["adminMode is OFFLINE."])
+        self.component_disconnected()
+
+    # ----------------
+    # Emission helpers
+    # ----------------
+    def _emit(
+        self: MccsPrototypeSubrack, signal_name: str, value: Any, timestamp: float
+    ) -> None:
+        """
+        Emit one value for one signal.
+
+        Emitting ``None`` is what gives the linked attribute ``ATTR_INVALID``
+        quality, which is how a value the board could not supply is reported.
+
+        :param signal_name: the name of the signal to emit for.
+        :param value: the value to emit, or ``None`` when it is unknown.
+        :param timestamp: the wall clock time the value was read at.
+        """
+        if value is None:
+            setattr(self, signal_name, None)
+            return
+        converter = VALUE_CONVERTERS.get(signal_name)
+        if converter is not None:
+            value = converter(value)
+        setattr(self, signal_name, (value, timestamp, AttrQuality.ATTR_VALID))
+
+    def _emit_health_status(
+        self: MccsPrototypeSubrack,
+        health_status: Optional[dict],
+        timestamp: float,
+    ) -> None:
+        """
+        Unpack the polled health status and emit each value it holds.
+
+        :param health_status: the polled health status, or ``None`` when this
+            poll did not read it.
+        :param timestamp: the wall clock time the health status was read at.
+        """
+        for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
+            self._emit(signal_name, walk(health_status, path), timestamp)
+
+    def _update_tpm_power_states(
+        self: MccsPrototypeSubrack,
+        power_states: list[PowerState],
+        timestamp: float,
+    ) -> None:
+        """
+        Emit the TPM power state of each bay whose power state changed.
+
+        Only a change is emitted, so a tile gets one event for each transition
+        rather than one for each poll. Every caller runs on the polling thread,
+        so no lock is needed for the stored power states.
+
+        :param power_states: the power state of each bay, in bay order.
+        :param timestamp: the wall clock time the power states were read at.
+        """
+        for bay, power_state in enumerate(power_states):
+            if self._tpm_power_states[bay] != power_state:
+                self._tpm_power_states[bay] = power_state
+                self._emit(TPM_POWER_STATE_SIGNALS[bay], power_state, timestamp)
+
+    def _invalidate_all(self: MccsPrototypeSubrack) -> None:
+        """Mark every attribute invalid, so no stale value is readable."""
+        for signal_name in ALL_SIGNALS:
+            setattr(self, signal_name, None)
+
+
+# ----------
+# Run server
+# ----------
+
+
+def subrack_factory(
+    web_hardware_client: Any = WebHardwareClient,
+    derived_values: Any = DerivedValues,
+    subrack: Any = Subrack,
+    subrack_poller: Any = SubrackPoller,
+) -> type[MccsPrototypeSubrack]:
+    """
+    Build the device class, choosing what :py:meth:`~.assemble` builds with.
+
+    :param web_hardware_client: builds the hardware client, from a host and a
+        port.
+    :param derived_values: builds the computed values, from a logger and the
+        device's fan and filter settings.
+    :param subrack: builds the poll model, from a client, the computed values
+        and the device's callbacks.
+    :param subrack_poller: builds the poller, from a poll model, a poll rate
+        and a logger.
+
+    :return: the device class to serve.
+    """
+    return type(
+        "MccsPrototypeSubrack",
+        (MccsPrototypeSubrack,),
+        {
+            "_web_hardware_client_factory": web_hardware_client,
+            "_derived_values_factory": derived_values,
+            "_subrack_factory": subrack,
+            "_subrack_poller_factory": subrack_poller,
+        },
+    )
+
+
+def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
+    """
+    Entry point for module.
+
+    :param args: positional arguments.
+    :param kwargs: named arguments.
+
+    :return: exit code.
+    """
+    return cast(
+        int,
+        subrack_factory().run_server(args=args or None, **kwargs),
+    )
+
+
+if __name__ == "__main__":
+    main()

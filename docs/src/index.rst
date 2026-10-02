@@ -47,6 +47,11 @@ software for the SKA-Low radio telescope.
    reference/station.rst
    reference/station_synchronisation.rst
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Device Interfaces
+
+   Device Interfaces<device-interfaces/index>
 
 Indices and tables
 ------------------

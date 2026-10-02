@@ -8,9 +8,10 @@
 """
 The subrack values that are computed rather than read from the board.
 
-``subrack_max_fan_speeds`` estimates fan rpm at 100% pwm duty.
+``subrack_max_fan_speeds`` estimates fan rpm at 100% pwm duty, and
 ``tpm_currents``, ``tpm_powers`` and ``tpm_voltages`` pass through a noise
-filter. Both keep state between polls.
+filter. Both keep state between polls. ``psu_dead_count`` counts the power
+supplies that are fed but supplying nothing, and keeps no state.
 
 This module holds no HTTP code and reads no status codes. It works on a
 dictionary of poll values.
@@ -18,11 +19,20 @@ dictionary of poll values.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any, Optional
 
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
-from .constants import FILTERED_ATTRIBUTES, MIN_PWM_DUTY_FRACTION, DerivedKey, ReadKey
+from .constants import (
+    FILTERED_ATTRIBUTES,
+    HEALTH_STATUS_KEY,
+    MIN_PWM_DUTY_FRACTION,
+    PSU_DEAD_VOLTAGE_THRESHOLD,
+    PSU_NAMES,
+    DerivedKey,
+    ReadKey,
+)
 
 __all__ = ["DerivedValues"]
 
@@ -81,26 +91,110 @@ class DerivedValues:
         """
         return list(self._fan_error_counts)
 
-    def apply(self: DerivedValues, values: dict[str, Any]) -> None:
+    def apply(
+        self: DerivedValues,
+        values: dict[str, Any],
+    ) -> None:
         """
         Add the derived values, and filter the noisy ones, in place.
 
-        :param values: the poll values, modified in place.
+        A key is absent from ``values`` when the board was too busy to read it.
+        A derived value that needs an absent key is left out too, and the state
+        that spans polls is kept, so a busy board changes nothing.
+
+        :param values: the poll values, modified in place. The health status
+            is under ``HEALTH_STATUS_KEY``.
         """
-        values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
-            values.get(ReadKey.SUBRACK_FAN_SPEEDS.value),
-            values.get(ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value),
-        )
+        fan_speeds = ReadKey.SUBRACK_FAN_SPEEDS.value
+        fan_speeds_percent = ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value
+        if fan_speeds in values and fan_speeds_percent in values:
+            values[DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value] = self.estimate_max_fan_rpm(
+                values[fan_speeds], values[fan_speeds_percent]
+            )
+        if HEALTH_STATUS_KEY in values:
+            values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(
+                values[HEALTH_STATUS_KEY]
+            )
         for key, attribute_filter in self._filters.items():
+            if key not in values:
+                continue
             # An unknown value is passed in too, because that clears the
             # sample buffer.
-            values[key] = attribute_filter(values.get(key))
+            values[key] = attribute_filter(self.known_bays(values.get(key)))
 
     def clear(self: DerivedValues) -> None:
         """Drop the fan counters and the filter sample buffers."""
         self._fan_error_counts = [0] * SubrackData.FAN_COUNT
         for attribute_filter in self._filters.values():
             attribute_filter.clear()
+
+    @staticmethod
+    def known_bays(value: Any) -> Any:
+        """
+        Replace an unknown per bay reading with ``nan``.
+
+        The board reports ``None`` for a bay whose TPM is powered off, so a
+        subrack with nothing switched on reads every bay as ``None``. Tango
+        cannot push ``None`` inside a float spectrum, and the noise filter
+        cannot average it either, so each unknown bay becomes ``nan``.
+
+        ``nan`` is what the filter skips, so a bay that is off does not drag
+        down the average of the bays that are on. It is also what the subrack
+        device this one replaces reports for the same reading.
+
+        :param value: the reading as the board gave it.
+
+        :return: the reading, with each unknown bay as ``nan``.
+        """
+        if not isinstance(value, list):
+            return value
+        return [math.nan if reading is None else reading for reading in value]
+
+    @staticmethod
+    def count_dead_psus(health_status: Optional[dict]) -> Optional[int]:
+        """
+        Count the power supplies that are present and fed but supplying nothing.
+
+        A supply counts as dead when it is fitted, its input voltage is above
+        the threshold, and its output voltage is below it.
+
+        :param health_status: the polled health status, or ``None`` when this
+            poll did not read it.
+
+        :return: the number of dead power supplies, or ``None`` when the health
+            status does not say enough to tell.
+        """
+        # The board does not always answer with a mapping. A failed read gives
+        # a string, so the type alone cannot be relied on.
+        if not isinstance(health_status, dict):
+            return None
+
+        psus = health_status.get("psus")
+        if not isinstance(psus, dict):
+            return None
+
+        def field(name: str, psu: str) -> Any:
+            """
+            Read one field of one power supply.
+
+            :param name: the health status field to read.
+            :param psu: the power supply to read it for.
+
+            :return: the value, or ``None`` when it is not reported.
+            """
+            values = psus.get(name)
+            return values.get(psu) if isinstance(values, dict) else None
+
+        dead_count = 0
+        for psu in PSU_NAMES:
+            present = field("present", psu)
+            voltage_in = field("voltage_in", psu)
+            voltage_out = field("voltage_out", psu)
+            if present is None or voltage_in is None or voltage_out is None:
+                return None
+            if present and voltage_out < PSU_DEAD_VOLTAGE_THRESHOLD < voltage_in:
+                dead_count += 1
+        return dead_count
 
     def estimate_max_fan_rpm(
         self: DerivedValues,

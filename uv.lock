@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = "==3.10.*"
 
 [[package]]
@@ -1934,7 +1934,7 @@ health-rollup = [
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "4.7.0"
+version = "4.8.0"
 source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1953,9 +1953,9 @@ dependencies = [
     { name = "ska-tango-testing" },
     { name = "transitions" },
 ]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.7.0/ska_low_mccs_common-4.7.0.tar.gz", hash = "sha256:b40e74c8ed998815fc739b37a4dd9bbc6b27dd1c09acf3bad12437df96182fc9" }
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.8.0/ska_low_mccs_common-4.8.0.tar.gz", hash = "sha256:c93e93044646625ec934f531a7ebfbf0de0e6e3ea8dc47494844c30d4eb175b4" }
 wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.7.0/ska_low_mccs_common-4.7.0-py3-none-any.whl", hash = "sha256:3a05ef64b49b1c6223288b92794903338ba64279cf0364a0766808be089fd08b" },
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.8.0/ska_low_mccs_common-4.8.0-py3-none-any.whl", hash = "sha256:75ab2c5bd4c629fd39c5ce478d8e45a3578b8a5717f9a60c27ee7cbcbcd1fb67" },
 ]
 
 [[package]]
@@ -1985,7 +1985,7 @@ wheels = [
 
 [[package]]
 name = "ska-low-mccs-spshw"
-version = "15.0.0"
+version = "15.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -2076,6 +2076,7 @@ docs = [
     { name = "semver" },
     { name = "ska-ser-snmp" },
     { name = "ska-ser-sphinx-theme" },
+    { name = "ska-tango-difdoc" },
     { name = "ska-telmodel" },
     { name = "sphinx" },
     { name = "sphinx-autodoc-typehints" },
@@ -2118,7 +2119,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.2,<2.0.0" },
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
-    { name = "ska-low-mccs-common", specifier = ">=4.7.0,<5.0.0" },
+    { name = "ska-low-mccs-common", specifier = ">=4.8.0,<5.0.0" },
     { name = "ska-low-mccs-daq", specifier = ">=6.0.0,<7.0.0" },
     { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.2" },
     { name = "ska-ser-skuid", specifier = ">=3.3.3,<4.0.0" },
@@ -2174,6 +2175,7 @@ docs = [
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<0.7.0" },
     { name = "ska-ser-sphinx-theme", specifier = ">=0.2.1,<1.0.0" },
+    { name = "ska-tango-difdoc", specifier = ">=0.6.0" },
     { name = "ska-telmodel", specifier = ">=1.4.1,<2.0.0" },
     { name = "sphinx", specifier = ">=8.1.0,<9.0.0" },
     { name = "sphinx-autodoc-typehints", specifier = ">=1.23.0,<2.0.0" },
@@ -2261,6 +2263,19 @@ dependencies = [
 sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.6.1/ska_tango_base-1.6.1.tar.gz", hash = "sha256:0dc25a265c005b7664d90c4aaa855df22578e24fe042c0e812b91d468736d7f8" }
 wheels = [
     { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-base/1.6.1/ska_tango_base-1.6.1-py3-none-any.whl", hash = "sha256:8bc7eab1f826b652e7962afb76468210c5af9b025ecac205948c66518f3963c1" },
+]
+
+[[package]]
+name = "ska-tango-difdoc"
+version = "0.6.0"
+source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+dependencies = [
+    { name = "pytango" },
+    { name = "tomli" },
+]
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-difdoc/0.6.0/ska_tango_difdoc-0.6.0.tar.gz", hash = "sha256:730c36fd84db96b093f5e0097e5dc8e61e340d6a5d2f07f3a266b4b39e4d07b0" }
+wheels = [
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-tango-difdoc/0.6.0/ska_tango_difdoc-0.6.0-py3-none-any.whl", hash = "sha256:601b70c269586e7e9922f8e27e51053da88ea0689e5487e29560f6c56cab4c81" },
 ]
 
 [[package]]

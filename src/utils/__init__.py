@@ -8,6 +8,7 @@
 """This subpackage contains utils."""
 
 
-__all__ = ["CALENDAR_METADATA", "is_calendar_booked", "parse_duration"]
+__all__ = ["CALENDAR_METADATA", "is_calendar_booked", "parse_duration", "walk"]
 
 from .calendar_check import CALENDAR_METADATA, is_calendar_booked, parse_duration
+from .dict_walk import walk

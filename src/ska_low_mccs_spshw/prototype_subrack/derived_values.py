@@ -11,7 +11,9 @@ The subrack values that are computed rather than read from the board.
 ``subrack_max_fan_speeds`` estimates fan rpm at 100% pwm duty, and
 ``tpm_currents``, ``tpm_powers`` and ``tpm_voltages`` pass through a noise
 filter. Both keep state between polls. ``psu_dead_count`` counts the power
-supplies that are fed but supplying nothing, and keeps no state.
+supplies that are fed but supplying nothing, ``tpm_count`` counts the occupied
+bays, and ``psu1_load`` and ``psu2_load`` give the load on each power supply.
+These keep no state.
 
 This module holds no HTTP code and reads no status codes. It works on a
 dictionary of poll values.
@@ -22,6 +24,8 @@ import logging
 import math
 from typing import Any, Optional
 
+from utils import walk
+
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
 from .constants import (
@@ -29,12 +33,16 @@ from .constants import (
     HEALTH_STATUS_KEY,
     MIN_PWM_DUTY_FRACTION,
     PSU_DEAD_VOLTAGE_THRESHOLD,
+    PSU_MAX_POWER,
     PSU_NAMES,
     DerivedKey,
     ReadKey,
 )
 
 __all__ = ["DerivedValues"]
+
+# The key for the load on each power supply, in ``PSU_NAMES`` order.
+_PSU_LOAD_KEYS = (DerivedKey.PSU1_LOAD.value, DerivedKey.PSU2_LOAD.value)
 
 
 class DerivedValues:
@@ -115,6 +123,15 @@ class DerivedValues:
             values[DerivedKey.PSU_DEAD_COUNT.value] = self.count_dead_psus(
                 values[HEALTH_STATUS_KEY]
             )
+        tpm_present = ReadKey.TPM_PRESENT.value
+        if tpm_present in values:
+            values[DerivedKey.TPM_COUNT.value] = self.count_tpms(values[tpm_present])
+        power_supply_powers = ReadKey.POWER_SUPPLY_POWERS.value
+        if power_supply_powers in values:
+            loads = self.psu_loads(
+                values[power_supply_powers], values.get(HEALTH_STATUS_KEY)
+            )
+            values.update(zip(_PSU_LOAD_KEYS, loads))
         for key, attribute_filter in self._filters.items():
             if key not in values:
                 continue
@@ -149,6 +166,50 @@ class DerivedValues:
         if not isinstance(value, list):
             return value
         return [math.nan if reading is None else reading for reading in value]
+
+    @staticmethod
+    def count_tpms(tpm_present: Optional[list[bool]]) -> Optional[int]:
+        """
+        Count the bays that hold a TPM.
+
+        :param tpm_present: whether each bay holds a TPM, or ``None`` when the
+            board could not say.
+
+        :return: the number of occupied bays, or ``None`` when the board could
+            not say.
+        """
+        return None if tpm_present is None else tpm_present.count(True)
+
+    @staticmethod
+    def psu_loads(
+        power_supply_powers: Optional[list[Optional[float]]],
+        health_status: Optional[dict],
+    ) -> list[Optional[float]]:
+        """
+        Give the load on each power supply, as a fraction of its maximum power.
+
+        The load comes from ``power_supply_powers``. A supply that this reading
+        does not report takes its output power from the health status instead.
+
+        :param power_supply_powers: the output power of each supply in Watts,
+            or ``None`` when the board could not say.
+        :param health_status: the polled health status, or ``None`` when this
+            poll did not read it.
+
+        :return: the load on each supply in ``PSU_NAMES`` order, with ``None``
+            for a supply that neither source reports.
+        """
+        loads: list[Optional[float]] = []
+        for index, psu in enumerate(PSU_NAMES):
+            power = None
+            if isinstance(power_supply_powers, list) and index < len(
+                power_supply_powers
+            ):
+                power = power_supply_powers[index]
+            if power is None:
+                power = walk(health_status, ("psus", "power_out", psu))
+            loads.append(None if power is None else float(power) / PSU_MAX_POWER)
+        return loads
 
     @staticmethod
     def count_dead_psus(health_status: Optional[dict]) -> Optional[int]:

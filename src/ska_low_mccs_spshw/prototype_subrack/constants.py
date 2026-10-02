@@ -24,6 +24,7 @@ __all__ = [
     "HttpError",
     "MIN_PWM_DUTY_FRACTION",
     "PSU_DEAD_VOLTAGE_THRESHOLD",
+    "PSU_MAX_POWER",
     "PSU_NAMES",
     "ReadKey",
     "RequestError",
@@ -73,6 +74,9 @@ class DerivedKey(str, Enum):
 
     SUBRACK_MAX_FAN_SPEEDS = "subrack_max_fan_speeds"
     PSU_DEAD_COUNT = "psu_dead_count"
+    TPM_COUNT = "tpm_count"
+    PSU1_LOAD = "psu1_load"
+    PSU2_LOAD = "psu2_load"
 
 
 class ClientCommand(str, Enum):
@@ -135,6 +139,9 @@ PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
 
 PSU_DEAD_VOLTAGE_THRESHOLD: Final = 1.0
 """A PSU below this output voltage, in Volts, is supplying nothing."""
+
+PSU_MAX_POWER: Final = 1200.0
+"""The most power, in Watts, that one PSU can supply."""
 
 MIN_PWM_DUTY_FRACTION: Final = 0.1
 """The floor applied to pwm duty when the fan rpm estimate scales up.

@@ -210,7 +210,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             key for key in (*poll_request, HEALTH_STATUS_KEY) if key not in values
         ]
         if not_read:
-            self._logger.info(
+            self._logger.debug(
                 "The board is busy, so this poll did not read %s.",
                 ", ".join(not_read),
             )

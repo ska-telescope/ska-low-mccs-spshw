@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -27,12 +28,13 @@ the health recorder.
 from __future__ import annotations
 
 import gc
+import json
 from typing import Any, Callable, Iterator
 from unittest import mock
 
 import pytest
 import tango
-from ska_control_model import AdminMode, HealthState
+from ska_control_model import AdminMode, HealthState, PowerState
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
@@ -86,7 +88,6 @@ POLLED: list[tuple[str, str, Any]] = [
         "tpm_present",
         [True, False, True, False, False, False, False, False],
     ),
-    ("tpmOnOff", "tpm_on_off", [True, False, False, False, False, False, False, False]),
     ("backplaneTemperatures", "backplane_temperatures", [38.5, 39.5]),
     ("boardTemperatures", "board_temperatures", [40.5, 41.5]),
     ("cpldPllLocked", "cpld_pll_locked", True),
@@ -102,11 +103,20 @@ POLLED: list[tuple[str, str, Any]] = [
     ("tpmCurrents", "tpm_currents", [0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48]),
     ("tpmPowers", "tpm_powers", [4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6]),
     ("tpmVoltages", "tpm_voltages", [12.0, 12.1, 12.2, 12.3, 11.9, 11.8, 11.7, 11.6]),
-    # The subrack computes these two and reports them alongside the raw reads.
+    # The subrack computes these and reports them alongside the raw reads.
     ("subrackMaxFanSpeeds", "subrack_max_fan_speeds", [6500.0] * 4),
     # Zero, because anything higher warns or alarms on this attribute.
     ("psuDeadCount", "psu_dead_count", 0),
+    # Agrees with tpm_present, which has two bays occupied.
+    ("tpmCount", "tpm_count", 2),
+    # Agree with power_supply_powers, over a maximum of 1200 W.
+    ("psu1Load", "psu1_load", 0.045),
+    ("psu2Load", "psu2_load", 0.055),
 ]
+
+# The TPM on off flags from a poll, and the power state each bay should report.
+TPM_ON_OFF = [True, False, True, False, False, False, False, False]
+TPM_POWER_STATES = [PowerState.ON if is_on else PowerState.OFF for is_on in TPM_ON_OFF]
 
 # The two attributes the device converts on the way through, so what it reports
 # differs from what the subrack reported. Attribute, key, reported, expected.
@@ -172,13 +182,21 @@ def _nest(rows: list[tuple[str, tuple[str, ...], Any]]) -> dict[str, Any]:
 POLL_VALUES: dict[str, Any] = {key: value for _, key, value in POLLED}
 POLL_VALUES.update({key: reported for _, key, reported, _ in CONVERTED})
 
+POLL_VALUES["tpm_on_off"] = TPM_ON_OFF
 POLL_VALUES[HEALTH_STATUS_KEY] = _nest(HEALTH)
+
+# Every attribute the health status feeds, and the value it should report. The
+# health status itself is reported whole, as JSON.
+EXPECTED_FROM_HEALTH: dict[str, Any] = {
+    **{attribute: value for attribute, _, value in HEALTH},
+    "healthStatus": json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]),
+}
 
 # Every attribute a successful poll populates, and the value it should report.
 EXPECTED: dict[str, Any] = {
     **{attribute: value for attribute, _, value in POLLED},
     **{attribute: expected for attribute, _, _, expected in CONVERTED},
-    **{attribute: value for attribute, _, value in HEALTH},
+    **EXPECTED_FROM_HEALTH,
 }
 
 
@@ -640,6 +658,22 @@ def test_a_poll_populates_every_attribute(
         _assert_reads(online_device, attribute_name, expected)
 
 
+def test_a_poll_sets_each_tpm_power_state(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that each bay's power state follows its TPM on off flag.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    poll_succeeded()
+
+    for bay, expected in enumerate(TPM_POWER_STATES, start=1):
+        assert online_device.read_attribute(f"tpm{bay}PowerState").value == expected
+
+
 def test_unknown_value_is_invalid_but_the_poll_still_counts(
     online_device: tango.DeviceProxy,
     poll_succeeded: Callable[..., None],
@@ -675,7 +709,7 @@ def test_missing_health_status_invalidates_only_its_attributes(
     """
     poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: None})
 
-    for attribute_name, _, _ in HEALTH:
+    for attribute_name in EXPECTED_FROM_HEALTH:
         assert (
             online_device.read_attribute(attribute_name).quality
             == tango.AttrQuality.ATTR_INVALID
@@ -705,7 +739,7 @@ def test_a_busy_read_keeps_the_last_value(
     )
 
     _assert_reads(online_device, "boardTemperatures", [40.5, 41.5])
-    for attribute_name, _, expected in HEALTH:
+    for attribute_name, expected in EXPECTED_FROM_HEALTH.items():
         _assert_reads(online_device, attribute_name, expected)
     assert online_device.state() == DevState.ON
 

@@ -47,7 +47,7 @@ def health(**overrides: Any) -> dict[str, Any]:
     return {"psus": psus}
 
 
-class TestDerivedValues:
+class TestDerivedValues:  # pylint: disable=too-many-public-methods
     """
     Tests of the values that are computed rather than read.
 
@@ -521,3 +521,122 @@ class TestDerivedValues:
         self._derived(logger).apply(values)
 
         assert values["psu_dead_count"] == expected
+
+    # ----------------
+    # The TPM count
+    # ----------------
+    @pytest.mark.parametrize(
+        ("tpm_present", "expected"),
+        [
+            pytest.param([True, False, True, False, False, False, False, True], 3),
+            pytest.param([False] * 8, 0, id="empty"),
+            pytest.param(None, None, id="unknown"),
+        ],
+    )
+    def test_apply_counts_the_tpms(
+        self: TestDerivedValues,
+        logger: logging.Logger,
+        tpm_present: Optional[list[bool]],
+        expected: Optional[int],
+    ) -> None:
+        """
+        The count must reach the poll values, and be unknown when presence is.
+
+        :param logger: a logger.
+        :param tpm_present: whether each bay holds a TPM.
+        :param expected: the count it should report.
+        """
+        values: dict[str, Any] = {"tpm_present": tpm_present}
+
+        self._derived(logger).apply(values)
+
+        assert values["tpm_count"] == expected
+
+    def test_a_busy_presence_read_leaves_the_count_out(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        A count must not be reported when the board was too busy to read it.
+
+        :param logger: a logger.
+        """
+        values: dict[str, Any] = {}
+
+        self._derived(logger).apply(values)
+
+        assert "tpm_count" not in values
+
+    # ----------------
+    # The power supply loads
+    # ----------------
+    @pytest.mark.parametrize(
+        ("power_supply_powers", "health_status", "expected"),
+        [
+            pytest.param([600.0, 300.0], None, [0.5, 0.25], id="from the powers"),
+            pytest.param(
+                [600.0, 300.0],
+                {"psus": {"power_out": {"PSU1": 120.0, "PSU2": 240.0}}},
+                [0.5, 0.25],
+                id="the powers come first",
+            ),
+            pytest.param(
+                [600.0, None],
+                {"psus": {"power_out": {"PSU1": 120.0, "PSU2": 240.0}}},
+                [0.5, 0.2],
+                id="one supply from the health status",
+            ),
+            pytest.param(
+                None,
+                {"psus": {"power_out": {"PSU1": 120.0, "PSU2": 240.0}}},
+                [0.1, 0.2],
+                id="both from the health status",
+            ),
+            pytest.param([600.0], None, [0.5, None], id="one supply short"),
+            pytest.param(None, None, [None, None], id="unknown"),
+            pytest.param(None, "", [None, None], id="health status a string"),
+        ],
+    )
+    def test_apply_reports_the_loads(
+        self: TestDerivedValues,
+        logger: logging.Logger,
+        power_supply_powers: Optional[list[Optional[float]]],
+        health_status: Any,
+        expected: list[Optional[float]],
+    ) -> None:
+        """
+        Each load must come from the powers, or else from the health status.
+
+        :param logger: a logger.
+        :param power_supply_powers: the output power of each supply.
+        :param health_status: the health status to fall back on.
+        :param expected: the load on each supply.
+        """
+        values: dict[str, Any] = {
+            "power_supply_powers": power_supply_powers,
+            HEALTH_STATUS_KEY: health_status,
+        }
+
+        self._derived(logger).apply(values)
+
+        assert [values["psu1_load"], values["psu2_load"]] == pytest.approx(expected)
+
+    def test_a_busy_power_read_leaves_the_loads_out(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        No load must be reported when the board was too busy to read the powers.
+
+        The health status alone is not enough, because the powers are the
+        first source. So a busy read keeps the last load, as it does for every
+        other key.
+
+        :param logger: a logger.
+        """
+        values: dict[str, Any] = {
+            HEALTH_STATUS_KEY: {"psus": {"power_out": {"PSU1": 120.0, "PSU2": 240.0}}}
+        }
+
+        self._derived(logger).apply(values)
+
+        assert "psu1_load" not in values
+        assert "psu2_load" not in values

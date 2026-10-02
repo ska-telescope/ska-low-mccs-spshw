@@ -346,10 +346,17 @@ class SubrackCommands(LRCMixin):
             task_abort_event: threading.Event,
         ) -> None:
             task_callback(status=TaskStatus.IN_PROGRESS)
+            self.logger.info(
+                f"Running board command {name.value} with args '{args}'..."
+            )
             (outcome, message, _) = subrack.run_board_command(
                 name.value, args, abort_event=task_abort_event
             )
             self._report_outcome(task_callback, outcome, message)
+            self.logger.info(
+                f"Board command {name.value} with args '{args}' finished with "
+                f"outcome {outcome.name} and message '{message}'."
+            )
 
         return task
 

@@ -251,11 +251,13 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             # reports back. The device goes offline in :py:meth:`_polling_stopped`,
             # which the poller calls after that last report.
             self._poller.stop_polling()
+            self.logger.info("Stopping polling the subrack.")
         else:
             # UNKNOWN until a poll succeeds, because nothing has been read from
             # the board yet.
             self.component_unknown()
             self._poller.start_polling()
+            self.logger.info("Starting polling the subrack.")
 
     def _admin_mode_changed(self: MccsPrototypeSubrack, admin_mode: AdminMode) -> None:
         """
@@ -347,6 +349,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
         )
         self.component_disconnected()
+        self.logger.info("Stopped polling the subrack.")
 
     # ----------------
     # Health

@@ -22,6 +22,9 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
 
+from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
+    subrack_factory,
+)
 from ska_low_mccs_spshw.subrack import SubrackSimulator
 from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulator
 from tests.harness import (
@@ -60,6 +63,25 @@ def subrack_simulator_fixture(
     return SubrackSimulator(**subrack_simulator_config)
 
 
+@pytest.fixture(
+    name="subrack_device_class",
+    params=[
+        "ska_low_mccs_spshw.MccsSubrack",
+        "ska_low_mccs_spshw.MccsPrototypeSubrack",
+    ],
+    ids=["subrack", "prototype_subrack"],
+)
+def subrack_device_class_fixture(request: pytest.FixtureRequest) -> str:
+    """
+    Return the subrack device class that each integration test runs against.
+
+    :param request: the pytest request, which holds the parameter.
+
+    :return: the name of the subrack device class.
+    """
+    return request.param
+
+
 @pytest.fixture(name="subrack_bay")
 def subrack_bay_fixture() -> int:
     """
@@ -95,6 +117,7 @@ def daq_id_fixture() -> int:
 def integration_test_context_fixture(
     subrack_id: int,
     subrack_simulator: SubrackSimulator,
+    subrack_device_class: str,
     tile_id: int,
     subrack_bay: int,
     patched_tile_device_class: MccsTile,
@@ -109,6 +132,7 @@ def integration_test_context_fixture(
     :param subrack_id: the ID of the subrack under test
     :param subrack_simulator: the backend simulator that the Tango
         device will monitor and control
+    :param subrack_device_class: the subrack device class to serve.
     :param tile_id: the ID of the tile under test
     :param subrack_bay: This tile's position in its subrack
     :param patched_tile_device_class: A MccsTile class patched with
@@ -134,7 +158,18 @@ def integration_test_context_fixture(
         }
         harness = SpsTangoTestHarness()
         harness.add_subrack_simulator(subrack_id, subrack_simulator)
-        harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
+        if subrack_device_class == "ska_low_mccs_spshw.MccsPrototypeSubrack":
+            harness.add_prototype_subrack_device(
+                subrack_id,
+                logging_level=int(LoggingLevel.ERROR),
+                device_class=subrack_factory(),
+                device_name=get_subrack_name(subrack_id),
+                define_parent_trl=True,
+            )
+        else:
+            harness.add_subrack_device(
+                subrack_id, logging_level=int(LoggingLevel.ERROR)
+            )
         # harness.add_pdu_device(
         #     "ENLOGIC", "10.135.253.170", "public",
         # logging_level=int(LoggingLevel.ERROR)

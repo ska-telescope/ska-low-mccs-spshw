@@ -1940,7 +1940,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         # op-state actions. Cache the latest fault and replay it once we have
         # a non-UNKNOWN power update.
         in_unknown = power == PowerState.UNKNOWN or (
-            power is None and self.dev_state() == DevState.UNKNOWN
+            power is None and self.get_state() == DevState.UNKNOWN
         )
 
         fault_to_propagate = fault

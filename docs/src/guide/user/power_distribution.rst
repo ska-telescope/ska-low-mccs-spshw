@@ -6,18 +6,18 @@ The Monitor, Control and Calibration System covers power management for the SKA 
 Hardware Overview
 -----------------
 
-In order to properly cover this topic it's important to get an overview of the hardware. At the core of the LFAA we have the Radio Antenna. The signal received from it is transmitted over coaxial cables connected to a smartbox. Each smartbox supplies power to several antennas (to a maximum of 12), and it is in turn connected to a Field Node Distribution Hub (FNDH). This device provides power downstream and aggregates the signal upstream. These set of devices are grouped together in what is called a Field Station, each containing 256 antennas, 24 smartboxes and 1 FNDH. In MCCS this hardware is controlled by the Power and Signal Distribution (PaSD) system.
+In order to properly cover this topic it's important to get an overview of the hardware. At the core of the LFAA we have the (dual polarized) RF Antenna, each containing a pair of Low Noise Amplifiers (LNAs). Each LNA is connected by coaxial cable to a Smartbox. This serves to power the LNA and carry the RF signals. Each Smartbox serves up to 12 antennas and is in turn connected to a Field Node Distribution Hub (FNDH). This device provides power downstream and aggregates the signal upstream. These sets of devices are grouped together in what is called a SKA-Low station, each containing 256 antennas, 24 smartboxes and 1 FNDH. In MCCS this hardware is controlled by the Power and Signal Distribution (PaSD) system.
 
-All the data from the antennas is sent to the Tile Processing Modules (TPM). Each Tile processes the signal from 16 antennas, and an entire FieldStation has it's output covered by 16 TPMs. The Subrack supplies power to 8 TPMs, and in turn it has it's power supplied by the PDU.
+All the data from the antennas is sent to the Tile Processing Modules (TPM). Each Tile processes the signal from 16 antennas, and an entire FieldStation has its output covered by 16 TPMs. The Subrack supplies power to 8 TPMs, and in turn it has its power supplied by the PDU.
 
 To sum everything up, the LFAA components are supplied with power through FNDH (for all the antenna related hardware) and PDU + Subracks (for the signal processing).
 
-This hardware comprises what is called a Field Node or Station. The LFAA will be comprised of roughly ~500 such Stations. MCCS aggregates all of them under the Controller device which has the role of assigning resources for observations.
+This hardware comprises what is called a Field Node or Station. The LFAA will be composed of roughly ~500 such Stations. MCCS aggregates all of them under the Controller device which has the role of assigning resources for observations.
 
 Software Overview
 -----------------
 
-MCCS is composed of MCCS Tango Devices. These are self contained programs that control portions of the telescope. Some of these Tango Devices are directly responsible for hardware components, such as the Tile, Subrack, Smartbox, and so on. Other devices work to aggregate this devices, like the SpsStation and the FieldStation (both aggregating the devices in a Field Node for their respective system). Both of these devices are in turn controlled by the MccsStation, and all such stations are then controlled by the MccsController. At this point we should note that there are other Tango Devices in MCCS that are purely virtual. And so, we find three broad groups of Tango Devices in MCCS:
+MCCS is composed of MCCS Tango Devices. These are self contained programs that control portions of the telescope. Some of these Tango Devices are directly responsible for hardware components, such as the Tile, Subrack, Smartbox, and so on. Other devices work to aggregate these devices, like the SpsStation and the FieldStation (both aggregating the devices in a SKA-Low Station for their respective system). Both of these devices are in turn controlled by the MccsStation, and all such stations are then controlled by the MccsController. At this point we should note that there are other Tango Devices in MCCS that are purely virtual. And so, we find three broad groups of Tango Devices in MCCS:
 
 - hardware-facing devices
 - aggregate devices
@@ -29,7 +29,7 @@ The second group implement power commands by communicating with their subdevices
 
 The last group often don't implement power command, and if they have a power state it is simply "On".
 
-There is, however, a forth group: hardware devices with no direct Tango device representative. This is where the Antennas fall in. Considering that there are 131,000 Antennas planned for LFAA, having that many Tango Devices is to resource demanding when considering the benefit. As such, the antennas have their power controlled by the FieldStation Device (which represents a Field Node).
+There is, however, a forth group: hardware devices with no direct Tango device representative. This is where the Antennas fall in. Considering that there are 131,000 Antennas planned for LFAA, having that many Tango Devices is too resource demanding when considering the benefit. As such, the antennas have their power controlled by the FieldStation Device (which represents a Field Node).
 
 .. note::
 
@@ -114,7 +114,7 @@ PowerMarshaller
 SpsStation
 ^^^^^^^^^^
 
-SpsStation is a virtual device that mostly aggregates all other tango devices in a Field Station. As such, **Power state:** is determined from the power states of its subracks and tiles:
+SpsStation is a virtual device that mostly aggregates all other tango devices in a SKA-Low station. As such, **Power state:** is determined from the power states of its subracks and tiles:
 
 #. Any tile ``ON`` → ``ON``
 #. Any subrack ``ON`` and all tiles ``OFF``/``NO_SUPPLY`` → ``STANDBY``

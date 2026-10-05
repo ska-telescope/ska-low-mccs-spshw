@@ -63,7 +63,7 @@ All of the Tango Devices in SPSHW have a Power State and a set of commands to tu
 MccsTile
 ^^^^^^^^
 
-The **Power state:** of a tile is influenced by the subrack that the tile is connected to. The tile polls the hardware for information periodically and as part of this process, if the poll succeeds, it sets the PowerState to ON. If a poll fails, it goes back to the value from the subrack, a mismatch between the two (TPM reachable but subrack says not ``ON``, or subrack says ``ON`` but TPM unreachable) is marked by the fault flag.
+The **Power state:** of a tile is influenced by the subrack that the tile is connected too. The tile polls the hardware for information periodically and as part of this process, if the poll succeeds, it sets the PowerState to ON. If a poll to the TPM fails, it defaults to the power state value reported by the subrack, a mismatch between the two (TPM reachable but subrack says not ``ON``, or subrack says ``ON`` but TPM unreachable) is marked by the fault flag.
 
 The power commands of tile are implemented as follows:
 

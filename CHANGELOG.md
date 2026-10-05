@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [THORN-704] Updated power distribution docs
 
 ## 15.1.0
 

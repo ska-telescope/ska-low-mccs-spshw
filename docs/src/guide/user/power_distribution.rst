@@ -88,6 +88,7 @@ The power commands of subrack are implemented as follows:
 
 .. figure:: images/subrack_power_sequence.png
    :alt: A graph of the power on/off commands sequences in the subrack
+  
    The subrack is under redesign and the power command structure will be simplified in the future.
 
 MccsPdu
@@ -134,7 +135,8 @@ The WREN power state is logged but not used.
   ``STANDBY`` is the lowest state the station can be commanded to.
 
 .. figure:: images/sps_station_on_sequence.png
-  :alt: A graph of the power on command sequence in the SpsStation. 
+  :alt: A graph of the power on command sequence in the SpsStation.
+
   The global reference time step will soon be removed, as upcoming firmware changes make it irrelevant.
 
 .. image:: images/sps_station_standby_off_sequence.png

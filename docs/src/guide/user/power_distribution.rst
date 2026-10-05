@@ -33,7 +33,7 @@ MCCS has no tango devices for the Individual Antenna, as their states are reflec
 
 .. note::
 
-    MCCS is a distributed system composed of microservices hosted on Kubernetees. In practice this means that the Hardware MCCS controls lives separate than the Server that hosts MCCS (at least from a power management perspective). MCCS doesn't control the power distribution to the servers hosting it. All the power commands in MCCS control power on the LFAA.
+    MCCS is a distributed system composed of microservices hosted on Kubernetes. In practice this means that the Hardware MCCS controls lives separate than the Server that hosts MCCS (at least from a power management perspective). MCCS doesn't control the power distribution to the servers hosting it. All the power commands in MCCS control power on the LFAA.
 
 
 Power Mode Implementation
@@ -58,12 +58,12 @@ The ``On``/``Off``/``Standby`` commands do different things depending on the har
 SPS Devices
 -----------
 
-All of the Tango Devices in SPSHW have a Power State and a set of commands to turn the device on or off. How the device determines its power state depending on it's role, and the commands are also higly dependent on the device. This section will cover each device and their peculiarities.
+All of the Tango Devices in SPSHW have a Power State and a set of commands to turn the device on or off. How the device determines its power state depends on its role, and the commands are also highly dependent on the device. This section will cover each device and their peculiarities.
 
 MccsTile
 ^^^^^^^^
 
-The **Power state:** of a tile is influenced by the subrack that the tile is connected too. The tile polls the hardware for information periodically and as part of this process, if the poll succeeds, it sets the PowerState to ON.If a poll fails, it goes back to the value from the subrack, a mismatch between the two (TPM reachable but subrack says not ``ON``, or subrack says ``ON`` but TPM unreachable) is marked by the fault flag.
+The **Power state:** of a tile is influenced by the subrack that the tile is connected to. The tile polls the hardware for information periodically and as part of this process, if the poll succeeds, it sets the PowerState to ON. If a poll fails, it goes back to the value from the subrack, a mismatch between the two (TPM reachable but subrack says not ``ON``, or subrack says ``ON`` but TPM unreachable) is marked by the fault flag.
 
 The power commands of tile are implemented as follows:
 

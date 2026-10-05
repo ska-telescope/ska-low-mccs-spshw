@@ -4632,3 +4632,130 @@ class TestOldHealth:
         expected_result = copy.deepcopy(expected_init_params)
         expected_result = _merge_dicts(expected_result, new_params)
         assert tile_device.healthModelParams == json.dumps(expected_result)
+
+
+class _FakeTile:
+    """
+    Minimal stand-in for MccsTile, for exercising its health update logic.
+
+    Records the value assigned to each signal instead of emitting it, so no
+    Tango device is needed.
+    """
+
+    UseAttributesForHealth = True
+    _HEALTH_SIGNAL_MAP = MccsTile._HEALTH_SIGNAL_MAP
+    _GENERIC_SIGNAL_MAP = MccsTile._GENERIC_SIGNAL_MAP
+
+    def __init__(self: _FakeTile) -> None:
+        """Initialise a new instance."""
+        self.logger = unittest.mock.Mock()
+        self.attribute_monitoring_point_map = HEALTH_ATTRIBUTE_PATHS
+        self.tile_health_structure: dict[str, Any] = {}
+        self.emitted: dict[str, Any] = {}
+
+    def __setattr__(self: _FakeTile, name: str, value: Any) -> None:
+        """
+        Record signal assignments, set everything else as normal.
+
+        :param name: the name of the attribute being set.
+        :param value: the value being set.
+        """
+        if name.endswith("_signal"):
+            # Snapshot, as the structure emitted from is merged into later.
+            self.emitted[name] = copy.deepcopy(value)
+        else:
+            super().__setattr__(name, value)
+
+    def update_tile_health_attributes(
+        self: _FakeTile, *args: Any, **kwargs: Any
+    ) -> None:
+        """
+        Delegate to the MccsTile implementation.
+
+        :param args: positional arguments to pass through.
+        :param kwargs: keyword arguments to pass through.
+        """
+        MccsTile.update_tile_health_attributes(
+            self, *args, **kwargs  # type: ignore[arg-type]
+        )
+
+    def _emit_health_attribute(self: _FakeTile, *args: Any, **kwargs: Any) -> None:
+        """
+        Delegate to the MccsTile implementation.
+
+        :param args: positional arguments to pass through.
+        :param kwargs: keyword arguments to pass through.
+        """
+        MccsTile._emit_health_attribute(self, *args, **kwargs)  # type: ignore[arg-type]
+
+    def _mark_attribute_invalid(self: _FakeTile, *args: Any, **kwargs: Any) -> None:
+        """
+        Delegate to the MccsTile implementation.
+
+        :param args: positional arguments to pass through.
+        :param kwargs: keyword arguments to pass through.
+        """
+        MccsTile._mark_attribute_invalid(
+            self, *args, **kwargs  # type: ignore[arg-type]
+        )
+
+
+def _signals_for(*updated_path: str) -> set[str]:
+    """
+    Return the signals expected to be emitted for an update at a path.
+
+    An attribute is emitted if its path lies within the updated portion of
+    the health structure, or contains it (e.g. a whole-group attribute).
+
+    :param updated_path: path within the tile health structure updated.
+
+    :return: the names of the signals expected to be emitted.
+    """
+    signal_map = {**MccsTile._GENERIC_SIGNAL_MAP, **MccsTile._HEALTH_SIGNAL_MAP}
+    return {
+        signal_map[name]
+        for name, path in HEALTH_ATTRIBUTE_PATHS.items()
+        if name in signal_map
+        and tuple(path[: len(updated_path)]) == updated_path[: len(path)]
+    }
+
+
+def test_update_attribute_callback_only_emits_polled_health_subgroup() -> None:
+    """
+    Test that a subgroup health poll does not interfere with other subgroups.
+
+    The adcs group is polled one subgroup at a time, so each poll returns
+    only ``{"adcs": {<subgroup>: ...}}``. Attributes of the other subgroups
+    have not changed, so must not be re-emitted, and their values in the
+    tile health structure must be preserved.
+    """
+    tile = _FakeTile()
+    adc_names = TileSimulator.TILE_MONITORING_POINTS["adcs"]["pll_status"]
+    subgroups = {
+        "pll_status": {adc: (True, True) for adc in adc_names},
+        "sysref_counter": {adc: i for i, adc in enumerate(adc_names)},
+        "sysref_timing_requirements": {adc: True for adc in adc_names},
+    }
+    subgroup_signals = {
+        "pll_status": "adc_pll_lock_status_signal",
+        "sysref_counter": "adc_sysref_counter_signal",
+        "sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
+    }
+
+    for subgroup, values in subgroups.items():
+        tile.emitted.clear()
+        MccsTile._update_attribute_callback(
+            tile,  # type: ignore[arg-type]
+            tile_health_structure={"adcs": {subgroup: copy.deepcopy(values)}},
+        )
+
+        assert set(tile.emitted) == _signals_for("adcs", subgroup)
+        assert subgroup_signals[subgroup] in tile.emitted
+        for other, other_signal in subgroup_signals.items():
+            if other != subgroup:
+                assert other_signal not in tile.emitted
+
+    # Every subgroup is retained in the merged structure, so the whole-group
+    # attribute reflects all of them rather than just the latest poll.
+    assert tile.tile_health_structure["adcs"] == subgroups
+    assert tile.emitted["adcs_signal"] == subgroups

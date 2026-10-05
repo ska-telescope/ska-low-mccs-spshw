@@ -86,8 +86,9 @@ The power commands of subrack are implemented as follows:
 
 - ``On``/``Off``: go through ``ComponentManagerWithUpstreamPowerSupply``, but the upstream supply is a ``PowerSupplyProxySimulator`` (starts ``ON``), so these commands don't switch any real power. ``Off`` just stops hardware polling and makes the device report ``OFF``, which the subrack's TPMs then see as ``NO_SUPPLY``. ``On`` starts polling again.
 
-.. image:: images/subrack_power_sequence.png
+.. figure:: images/subrack_power_sequence.png
    :alt: A graph of the power on/off commands sequences in the subrack
+   The subrack is under redesign and the power command structure will be simplified in the future.
 
 MccsPdu
 ^^^^^^^
@@ -132,10 +133,9 @@ The WREN power state is logged but not used.
 - ``Off``: always rejected. MCCS can't switch the subracks' PDUs from here, so
   ``STANDBY`` is the lowest state the station can be commanded to.
 
-.. TODO: diagram - SpsStation power state evaluation table/flow
-
-.. image:: images/sps_station_on_sequence.png
-  :alt: A graph of the power on command sequence in the SpsStation
+.. figure:: images/sps_station_on_sequence.png
+  :alt: A graph of the power on command sequence in the SpsStation. 
+  The global reference time step will soon be removed, as upcoming firmware changes make it irrelevant.
 
 .. image:: images/sps_station_standby_off_sequence.png
   :alt: A graph of the power off and standby commands sequences in the SpsStation

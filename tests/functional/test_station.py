@@ -1085,18 +1085,42 @@ def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
         )
 
 
+# SpsStation attributes checked when a tile is powered off, with the
+# change event callback each is subscribed to.
+_OFF_TILE_STATION_ATTRIBUTES: Final = [
+    ("tileProgrammingState", "station_tile_programming_state"),
+    ("adcPower", "station_adc_power"),
+    ("staticTimeDelays", "station_static_time_delays"),
+    ("preaduLevels", "station_preadu_levels"),
+    ("channeliserRounding", "station_channeliser_rounding"),
+    ("pllLockedSummary", "station_pll_locked_summary"),
+    ("ppsPresentSummary", "station_pps_present_summary"),
+    ("isBeamformerRunning", "station_is_beamformer_running"),
+]
+
+
 @when("we turn off a single tile", target_fixture="powered_off_tile")
 def turn_off_single_tile(
+    station: tango.DeviceProxy,
     station_tiles: list[tango.DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> Iterator[dict[str, Any]]:
     """
     Power off a single tile in the station, and restore it at teardown.
 
+    The station attributes are subscribed to before the tile is powered
+    off, and the event sent when each subscription starts is consumed, so
+    that the Then steps can only pass on an event SpsStation pushes for
+    the transition, not on the current value sent at subscription.
+
     pytest-bdd runs steps as fixtures, so the code after ``yield`` runs
     at test teardown, whether the scenario passes or fails.
 
+    :param station: station device under test.
     :param station_tiles: A list containing the ``tango.DeviceProxy``
         of the exported tiles. Or Empty list if no devices exported.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
 
     :yields: a dict recording which tile was powered off, for the
         Then steps to check.
@@ -1104,6 +1128,14 @@ def turn_off_single_tile(
     assert station_tiles, "No station tiles were discovered"
     tile = station_tiles[0]
     initial_programming_state = tile.tileProgrammingState
+
+    for attribute_name, callback_name in _OFF_TILE_STATION_ATTRIBUTES:
+        station.subscribe_event(
+            attribute_name,
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks[callback_name],
+        )
+        change_event_callbacks[callback_name].assert_change_event(Anything)
 
     try:
         logical_tile_id = tile.logicalTileId
@@ -1166,7 +1198,8 @@ def spsstation_attributes_present_off_tile(
     A powered-off tile's attributes go ATTR_INVALID, which
     station_component_manager.py handles by caching NaN (for array
     attributes) or excluding the tile from station-wide boolean summaries,
-    rather than reporting a stale last-known-good value.
+    rather than reporting a stale last-known-good value. It must also push
+    change events for those values.
 
     :param station: station device under test.
     :param station_tiles: A list containing the ``tango.DeviceProxy``
@@ -1180,22 +1213,8 @@ def spsstation_attributes_present_off_tile(
     start = off_tile_id * channels_per_tile
     end = start + channels_per_tile
 
-    for attribute_name, callback_name in [
-        ("tileProgrammingState", "station_tile_programming_state"),
-        ("adcPower", "station_adc_power"),
-        ("staticTimeDelays", "station_static_time_delays"),
-        ("preaduLevels", "station_preadu_levels"),
-        ("channeliserRounding", "station_channeliser_rounding"),
-        ("pllLockedSummary", "station_pll_locked_summary"),
-        ("ppsPresentSummary", "station_pps_present_summary"),
-        ("isBeamformerRunning", "station_is_beamformer_running"),
-    ]:
-        station.subscribe_event(
-            attribute_name,
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks[callback_name],
-        )
-
+    # The When step subscribed before powering the tile off, so these
+    # match only events SpsStation pushed after subscribing.
     def _all_nan_in(lo: int, hi: int) -> Callable[[Any], bool]:
         return lambda v: bool(np.all(np.isnan(np.asarray(v)[lo:hi])))
 

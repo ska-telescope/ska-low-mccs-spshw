@@ -1110,7 +1110,13 @@ class TileSimulator:
                 "discarded_or_flagged_packet_count"
             ] = {"FPGA0": None, "FPGA1": None}
         if not self.is_programmed():
-            return self._filter_cpld_only(health_status)
+            health_status = self._filter_cpld_only(health_status)
+        if "group" in kwargs:
+            # ska-low-sps-tpm-api only returns the requested group.
+            group = kwargs["group"]
+            if group not in health_status:
+                return {}
+            return {group: health_status[group]}
         return health_status
 
     def _filter_cpld_only(

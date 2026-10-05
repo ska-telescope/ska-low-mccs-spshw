@@ -149,11 +149,14 @@ def _normalise_attribute_value(value: Any) -> Any:
 
     :return: the normalised value.
     """
-    # if isinstance(value, str):
-    #     try:
-    #         return json.loads(value)
-    #     except (json.JSONDecodeError, TypeError):
-    #         return value
+    if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return value
+        if isinstance(decoded, (dict, list)):
+            return _JsonValue(decoded)
+        return value
     if isinstance(value, np.ndarray):
         return value.tolist()
     if isinstance(value, (list, tuple)):
@@ -162,9 +165,50 @@ def _normalise_attribute_value(value: Any) -> Any:
         # DevFloat attributes are single precision, so round to avoid
         # spurious float32/float64 precision mismatches.
         return pytest.approx(value, abs=1e-3)
-    # if isinstance(value, dict):
-    #     return json.dumps(value)
     return value
+
+
+class _JsonValue:
+    """
+    A decoded JSON value that compares equal to any JSON string encoding it.
+
+    Health groups are assembled on the device from several polls (e.g. the
+    three ADC subgroups), so the key order of the serialised attribute can
+    differ from the simulator's, even though the content is the same.
+    """
+
+    def __init__(self: _JsonValue, value: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param value: the decoded JSON value.
+        """
+        self.value = value
+
+    def __eq__(self: _JsonValue, other: object) -> bool:
+        """
+        Compare by decoded content rather than by serialised string.
+
+        :param other: a _JsonValue, a JSON string, or a decoded value.
+
+        :return: whether the decoded values are equal.
+        """
+        if isinstance(other, _JsonValue):
+            other = other.value
+        elif isinstance(other, str):
+            try:
+                other = json.loads(other)
+            except json.JSONDecodeError:
+                return False
+        return bool(self.value == other)
+
+    def __repr__(self: _JsonValue) -> str:
+        """
+        Return a printable representation.
+
+        :return: a printable representation.
+        """
+        return f"_JsonValue({self.value!r})"
 
 
 def _mask_unpolled_dsp_fields(raw_value: Any) -> Any:
@@ -4759,3 +4803,29 @@ def test_update_attribute_callback_only_emits_polled_health_subgroup() -> None:
     # attribute reflects all of them rather than just the latest poll.
     assert tile.tile_health_structure["adcs"] == subgroups
     assert tile.emitted["adcs_signal"] == subgroups
+
+
+@pytest.mark.parametrize("group", ["temperatures", "voltages", "timing"])
+def test_simulator_group_poll_only_emits_polled_group(group: str) -> None:
+    """
+    Test that a TileSimulator group poll only emits that group's attributes.
+
+    Like ska-low-sps-tpm-api, the simulator must return only the requested
+    group, otherwise every health attribute is re-emitted on every poll.
+
+    :param group: the health group polled.
+    """
+    tile_simulator = TileSimulator(unittest.mock.Mock())
+    tile_simulator.connect()
+    assert tile_simulator.tpm is not None
+    tile_simulator.tpm._is_programmed = True
+
+    health = tile_simulator.get_health_status(group=group)
+    assert list(health) == [group]
+
+    tile = _FakeTile()
+    MccsTile._update_attribute_callback(
+        tile,  # type: ignore[arg-type]
+        tile_health_structure=health,
+    )
+    assert set(tile.emitted) == _signals_for(group)

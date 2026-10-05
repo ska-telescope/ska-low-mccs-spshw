@@ -1128,12 +1128,15 @@ def turn_off_single_tile(
     assert station_tiles, "No station tiles were discovered"
     tile = station_tiles[0]
     initial_programming_state = tile.tileProgrammingState
+    sub_ids = []
 
     for attribute_name, callback_name in _OFF_TILE_STATION_ATTRIBUTES:
-        station.subscribe_event(
-            attribute_name,
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks[callback_name],
+        sub_ids.append(
+            station.subscribe_event(
+                attribute_name,
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks[callback_name],
+            )
         )
         change_event_callbacks[callback_name].assert_change_event(Anything)
 
@@ -1156,6 +1159,8 @@ def turn_off_single_tile(
             initial_programming_state,
             lookahead=10,
         )
+        for s_id in sub_ids:
+            station.unsubscribe_event(s_id)
 
 
 # pylint: disable=too-few-public-methods

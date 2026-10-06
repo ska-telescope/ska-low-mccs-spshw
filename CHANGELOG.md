@@ -4,6 +4,7 @@
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
 * [THORN-748] Update dependencies.
+* [SKB-1579] Fix over-emission issue in MccsTile.
 
 ## 15.1.0
 

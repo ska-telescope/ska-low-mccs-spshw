@@ -12,53 +12,66 @@ The device holds one :py:class:`~.subrack_client.SubrackPoller`, which holds the
 :py:class:`~.subrack_client.Subrack` it drives. There is no component manager,
 no driver and no health model between the device and the board.
 
-The device monitors only. It defines no commands, so the board commands that
-:py:meth:`~.subrack_client.Subrack.run_board_command` supports are not reachable
-through this interface.
+The board commands live in :py:class:`~.prototype_subrack_commands.SubrackCommands`,
+which the device mixes in. The device supplies the subrack that those commands
+run through, and the poller that reads it.
 """
 from __future__ import annotations
 
 import sys
-from typing import Any, Optional, cast
+import time
+from typing import Any, Final, Optional, cast
 
-from ska_control_model import HealthState
+from ska_control_model import AdminMode, HealthState, PowerState
+from ska_low_mccs_common import MccsBaseInterface
 from ska_low_mccs_common.component import WebHardwareClient
-from ska_tango_base import BaseInterface
 from ska_tango_base.base import ControlLevel
 from tango import AttrQuality, DevState
 from tango.server import device_property
 
 from utils import walk
 
-from .constants import HEALTH_STATUS_KEY, RequestError
+from ..subrack.subrack_data import SubrackData
+from .constants import HEALTH_STATUS_KEY, ReadKey, RequestError
 from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
     HEALTH_PATH_TO_SIGNAL,
     READ_KEY_TO_SIGNAL,
+    TPM_POWER_STATE_SIGNALS,
     VALUE_CONVERTERS,
     SubrackAttributes,
 )
+from .prototype_subrack_commands import SubrackCommands
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
 
 __all__ = ["MccsPrototypeSubrack", "main"]
 
+# The control level each admin mode asks for. A mode that is absent leaves the
+# control level as it is, the same as a write to ``adminMode`` does.
+_CONTROL_LEVELS: Final[dict[AdminMode, ControlLevel]] = {
+    AdminMode.OFFLINE: ControlLevel.NO_CONTACT,
+    AdminMode.ONLINE: ControlLevel.FULL_CONTROL,
+    AdminMode.ENGINEERING: ControlLevel.FULL_CONTROL,
+}
+
 
 # pylint: disable=too-many-ancestors
-class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
+class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface):
     """
-    A Tango device that monitors an SPS subrack management board.
+    A Tango device that monitors and commands an SPS subrack management board.
 
     The device owns the :py:class:`~.subrack_client.SubrackPoller`, and through
     it the :py:class:`~.subrack_client.Subrack` that answers each poll. The
-    poller is the only piece the device has to reclaim, so it is the only one
-    it keeps. Polling starts and stops with ``adminMode``, through
-    :py:meth:`change_control_level`. Each poll response is emitted onto the
+    device keeps the subrack too, because the board commands run through it
+    rather than through the poll loop.Polling starts and stops with ``adminMode``,
+    through :py:meth:`change_control_level`. Each poll response is emitted onto the
     signal bus, which pushes the change and archive events for every attribute.
 
     A value the board could not supply is emitted as ``None``, so the
     corresponding attribute reads back with ``ATTR_INVALID`` quality rather
-    than a stale or invented number.
+    than a stale or invented number. The TPM power states are the exception.
+    They read back ``UNKNOWN`` instead, the same as on ``MccsSubrack``.
     """
 
     # ----------
@@ -76,6 +89,8 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
     # Initialisation
     # --------------
     _poller: Optional[SubrackPoller] = None
+    _subrack: Optional[Subrack] = None
+    _tpm_power_states: list[PowerState]
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -86,11 +101,14 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :py:meth:`disassemble` reclaims the running poller before this builds
         its replacement.
 
-        The poller is dropped before anything is built, so a failure part way
-        through leaves ``_poller`` as ``None`` rather than the reclaimed
-        poller, which would accept ``start_polling`` and then never poll.
+        Both the poller and the subrack are dropped before anything is built,
+        so a failure part way through leaves each as ``None`` rather than the
+        reclaimed one. A reclaimed poller would accept ``start_polling`` and
+        then never poll, and a reclaimed subrack would accept a command and
+        reach a board the device no longer monitors.
         """
         self._poller = None
+        self._subrack = None
 
         client = self._web_hardware_client_factory(self.SubrackIp, self.SubrackPort)
         derived = self._derived_values_factory(
@@ -100,7 +118,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             attribute_filter_type=self.AttributeFilterType,
             attribute_filter_max_samples=self.AttributeFilterMaxSamples,
         )
-        subrack = self._subrack_factory(
+        self._subrack = self._subrack_factory(
             client,
             derived=derived,
             logger=self.logger,
@@ -109,7 +127,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             stopped_callback=self._polling_stopped,
         )
         self._poller = self._subrack_poller_factory(
-            subrack, self.UpdateRate, self.logger
+            self._subrack, self.UpdateRate, self.logger
         )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
@@ -117,11 +135,39 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         if self._poller is not None:
             self._poller.kill_polling_thread()
 
+    @property
+    def subrack(self: MccsPrototypeSubrack) -> Subrack:
+        """
+        Return the client the board commands run through.
+
+        :raises ValueError: if the device did not finish initialising.
+
+        :return: the subrack client.
+        """
+        if self._subrack is None:
+            raise ValueError(
+                "The device did not finish initialising, try running Init()."
+            )
+        return self._subrack
+
     def init_device(self: MccsPrototypeSubrack) -> None:
         """Initialise the device, building the client and the poller."""
         super().init_device()
 
+        # Emitted once here, so a subscriber gets UNKNOWN rather than an
+        # invalid value before the first poll.
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        for signal_name in TPM_POWER_STATE_SIGNALS:
+            self._emit(signal_name, PowerState.UNKNOWN, time.time())
+
         self.assemble()
+
+        # The parent can pass on its admin mode before the poller exists, and
+        # then the poller never starts. So the admin mode is applied again here.
+        # A late inherited mode that also starts polling does no harm, because
+        # starting the poller is idempotent.
+        if _CONTROL_LEVELS.get(self._admin_mode) == ControlLevel.FULL_CONTROL:
+            self.change_control_level(ControlLevel.FULL_CONTROL)
 
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -149,6 +195,9 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         """
         Start or stop monitoring the subrack.
 
+        Stopping also aborts the running board command and every queued one,
+        so the device makes no further contact with the board.
+
         This is the hook ``BaseInterface`` calls when ``adminMode`` is written.
         ``OFFLINE`` arrives as :py:const:`ControlLevel.NO_CONTACT`, and both
         ``ONLINE`` and ``ENGINEERING`` arrive as
@@ -166,6 +215,7 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
             return
 
         if control_level == ControlLevel.NO_CONTACT:
+            self.abort_board_commands()
             # Stopping does not block, so a poll already in flight still
             # reports back. The device goes offline in :py:meth:`_polling_stopped`,
             # which the poller calls after that last report.
@@ -179,6 +229,22 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
                 ["Establishing communication with the subrack."],
             )
             self._poller.start_polling()
+
+    def _admin_mode_changed(self: MccsPrototypeSubrack, admin_mode: AdminMode) -> None:
+        """
+        Take on the admin mode of the parent device.
+
+        ``MccsBaseInterface`` only updates the admin mode model, so the
+        control level is changed here, in the same way that a write to
+        ``adminMode`` changes it.
+
+        :param admin_mode: the admin mode of the parent device.
+        """
+        previous_admin_mode = self._admin_mode
+        super()._admin_mode_changed(admin_mode)
+        control_level = _CONTROL_LEVELS.get(admin_mode)
+        if admin_mode != previous_admin_mode and control_level is not None:
+            self.change_control_level(control_level)
 
     # ----------------
     # Poll callbacks
@@ -203,6 +269,16 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
                 self._emit(signal_name, values[key], timestamp)
         if HEALTH_STATUS_KEY in values:
             self._emit_health_status(values[HEALTH_STATUS_KEY], timestamp)
+        if ReadKey.TPM_ON_OFF.value in values:
+            tpm_on_off = values[ReadKey.TPM_ON_OFF.value]
+            self._update_tpm_power_states(
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+                if tpm_on_off is None
+                else [
+                    PowerState.ON if is_on else PowerState.OFF for is_on in tpm_on_off
+                ],
+                timestamp,
+            )
 
         self.component_on()
         self.component_no_fault()
@@ -221,6 +297,9 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         :param exception: the exception raised by the poll.
         """
         self._invalidate_all()
+        self._update_tpm_power_states(
+            [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
+        )
         # TODO: Jank to be removed when we upgrade ska-tango-base.
         if isinstance(exception, RequestError) or self.get_state() == DevState.UNKNOWN:
             self.component_unknown()
@@ -242,6 +321,9 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         stops a late poll from leaving the device ON after it went offline.
         """
         self._invalidate_all()
+        self._update_tpm_power_states(
+            [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
+        )
         self.report_health(HealthState.FAILED, ["adminMode is OFFLINE."])
         self.component_disconnected()
 
@@ -283,6 +365,26 @@ class MccsPrototypeSubrack(SubrackAttributes, BaseInterface):
         """
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
             self._emit(signal_name, walk(health_status, path), timestamp)
+
+    def _update_tpm_power_states(
+        self: MccsPrototypeSubrack,
+        power_states: list[PowerState],
+        timestamp: float,
+    ) -> None:
+        """
+        Emit the TPM power state of each bay whose power state changed.
+
+        Only a change is emitted, so a tile gets one event for each transition
+        rather than one for each poll. Every caller runs on the polling thread,
+        so no lock is needed for the stored power states.
+
+        :param power_states: the power state of each bay, in bay order.
+        :param timestamp: the wall clock time the power states were read at.
+        """
+        for bay, power_state in enumerate(power_states):
+            if self._tpm_power_states[bay] != power_state:
+                self._tpm_power_states[bay] = power_state
+                self._emit(TPM_POWER_STATE_SIGNALS[bay], power_state, timestamp)
 
     def _invalidate_all(self: MccsPrototypeSubrack) -> None:
         """Mark every attribute invalid, so no stale value is readable."""

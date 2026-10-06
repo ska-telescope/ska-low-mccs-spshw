@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 from typing import Any, Final
 
+from ska_control_model import PowerState
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 
 from ..subrack.subrack_data import SubrackData
@@ -29,6 +30,7 @@ __all__ = [
     "HEALTH_PATH_TO_SIGNAL",
     "READ_KEY_TO_SIGNAL",
     "VALUE_CONVERTERS",
+    "TPM_POWER_STATE_SIGNALS",
     "SubrackAttributes",
 ]
 
@@ -85,6 +87,14 @@ HEALTH_PATH_TO_SIGNAL: Final[dict[str, tuple[str, ...]]] = {
     "_psu1_voltage_out": ("psus", "voltage_out", "PSU1"),
     "_psu2_voltage_out": ("psus", "voltage_out", "PSU2"),
 }
+
+# The signal for each bay's TPM power state, in bay order. These are derived
+# from the polled TPM on off flags rather than read. They are left out of
+# ALL_SIGNALS because they behave as they do on MccsSubrack. A lost board makes
+# them UNKNOWN rather than invalid.
+TPM_POWER_STATE_SIGNALS: Final[tuple[str, ...]] = tuple(
+    f"_tpm{bay}_power_state" for bay in range(1, SubrackData.TPM_BAY_COUNT + 1)
+)
 
 # Every signal this device emits, so that a lost board can invalidate all
 # of them.
@@ -159,6 +169,18 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     _tpm_powers: AttrSignal[list[float]] = AttrSignal[list[float]]()
     _tpm_voltages: AttrSignal[list[float]] = AttrSignal[list[float]]()
     _subrack_board_info: AttrSignal[str] = AttrSignal[str]()
+
+    # ---------------------------------
+    # Signals for the TPM power states
+    # ---------------------------------
+    _tpm1_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm2_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm3_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm4_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm5_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm6_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm7_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm8_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
 
     # -----------------------------
     # Signals for the health status
@@ -394,6 +416,65 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         dtype=str,
         label="Subrack Board Info",
         doc="The subrack board information, as a JSON string.",
+    )
+
+    # ---------------------------------
+    # Attributes for the TPM power states
+    # ---------------------------------
+    tpm1PowerState = attribute_from_signal(
+        _tpm1_power_state,
+        dtype=PowerState,
+        label="TPM 1 power state",
+        doc="The power state of the TPM in bay 1.",
+    )
+
+    tpm2PowerState = attribute_from_signal(
+        _tpm2_power_state,
+        dtype=PowerState,
+        label="TPM 2 power state",
+        doc="The power state of the TPM in bay 2.",
+    )
+
+    tpm3PowerState = attribute_from_signal(
+        _tpm3_power_state,
+        dtype=PowerState,
+        label="TPM 3 power state",
+        doc="The power state of the TPM in bay 3.",
+    )
+
+    tpm4PowerState = attribute_from_signal(
+        _tpm4_power_state,
+        dtype=PowerState,
+        label="TPM 4 power state",
+        doc="The power state of the TPM in bay 4.",
+    )
+
+    tpm5PowerState = attribute_from_signal(
+        _tpm5_power_state,
+        dtype=PowerState,
+        label="TPM 5 power state",
+        doc="The power state of the TPM in bay 5.",
+    )
+
+    tpm6PowerState = attribute_from_signal(
+        _tpm6_power_state,
+        dtype=PowerState,
+        label="TPM 6 power state",
+        doc="The power state of the TPM in bay 6.",
+    )
+
+    tpm7PowerState = attribute_from_signal(
+        _tpm7_power_state,
+        dtype=PowerState,
+        label="TPM 7 power state",
+        doc="The power state of the TPM in bay 7.",
+    )
+
+    tpm8PowerState = attribute_from_signal(
+        _tpm8_power_state,
+        dtype=PowerState,
+        label="TPM 8 power state",
+        doc="The power state of the TPM in bay 8.",
     )
 
     # -------------------------------

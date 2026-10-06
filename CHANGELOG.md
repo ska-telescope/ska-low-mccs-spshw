@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [THORN-704] Updated power distribution docs
 * [SKB-1579] Fix over-emission issue in MccsTile.
 
 ## 15.1.0

@@ -37,7 +37,7 @@ timestamp registers.
 .. uml:: tile_on.uml
 
 For more information about how the Tile On command fits into the power sequence 
-see https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/reference/power.html
+see :doc:`../guide/user/power_distribution`.
 
 Tile operation state
 ====================

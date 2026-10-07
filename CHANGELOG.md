@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-752] Update CODEOWNERS.
+
 ## 15.1.1
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline

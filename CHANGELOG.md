@@ -1,8 +1,9 @@
 # Version History
 
-## Unreleased
+## 15.1.1
 
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [THORN-748] Update dependencies.
 * [THORN-704] Updated power distribution docs
 * [SKB-1579] Fix over-emission issue in MccsTile.
 

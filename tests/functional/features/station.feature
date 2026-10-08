@@ -42,6 +42,14 @@ Feature: Test station
         And all TPMs transition to Off state
 
 
+    Scenario: Reinitialise does not reprogram the TPMs
+        Given an SPS deployment against a real context
+        And the station and its tiles are synchronised
+        When the station is reinitialised
+        Then the ReInitialise command completed successfully
+        And no TPM was reprogrammed
+
+
     Scenario Outline: Fanout attribute writes reach the correct tile
         Given an SPS deployment against HW
         And the SpsStation is ON

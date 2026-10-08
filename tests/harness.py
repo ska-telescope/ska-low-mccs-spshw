@@ -304,6 +304,7 @@ class SpsTangoTestHarness:
         :param device_class: The device class to use.
             This may be used to override the usual device class,
             for example with a patched subclass.
+        :param health_thresholds: HealthThresholds value to use in tests.
         """
         self._tango_test_harness.add_device(
             get_sps_station_name(self._station_label),

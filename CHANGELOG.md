@@ -3,6 +3,8 @@
 ## Unreleased
 
 * [THORN-752] Update CODEOWNERS.
+* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
+* [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.1.1
 

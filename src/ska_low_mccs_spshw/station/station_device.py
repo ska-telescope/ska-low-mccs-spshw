@@ -138,11 +138,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "The health theshholds are provided as a JSON string where"
             "keys are the devices names and values are an array of"
             "three values corresponding to the rollup thresholds"
-            ),
+        ),
         default_value="",
     )
-    
-    
+
     # ---------------
     # Initialisation
     # ---------------

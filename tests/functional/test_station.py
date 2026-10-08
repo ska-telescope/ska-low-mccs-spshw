@@ -1241,6 +1241,7 @@ def reinitialise_station(
     command_info["programming_states"] = programming_states
     command_info["subscriptions"] = []
     for tile, states in zip(station_tiles, programming_states):
+
         def _record_state(event: tango.EventData, states: list[str] = states) -> None:
             if not event.err and event.attr_value is not None:
                 states.append(event.attr_value.value)

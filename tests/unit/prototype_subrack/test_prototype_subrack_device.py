@@ -336,8 +336,8 @@ def polling_stopped_fixture(subrack_factory: mock.Mock) -> Callable[[], None]:
     return report
 
 
-@pytest.fixture(name="test_context")
-def test_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessContext]:
+@pytest.fixture(name="device_context")
+def device_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Run a prototype subrack device with everything below it mocked out.
 
@@ -362,16 +362,16 @@ def test_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessCont
 
 @pytest.fixture(name="subrack_device")
 def subrack_device_fixture(
-    test_context: SpsTangoTestHarnessContext,
+    device_context: SpsTangoTestHarnessContext,
 ) -> tango.DeviceProxy:
     """
     Return a proxy to the prototype subrack device under test.
 
-    :param test_context: the running test harness context.
+    :param device_context: the running test harness context.
 
     :return: a proxy to the device under test.
     """
-    return test_context.get_prototype_subrack_device(SUBRACK_ID)
+    return device_context.get_prototype_subrack_device(SUBRACK_ID)
 
 
 @pytest.fixture(name="change_event_callbacks")

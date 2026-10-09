@@ -17,7 +17,7 @@ import threading
 import time
 import unittest.mock
 from types import SimpleNamespace
-from typing import Any, Final, Generator, Iterator
+from typing import Any, Final, Generator, Iterator, Optional
 
 import numpy as np
 import pytest
@@ -37,6 +37,8 @@ from ska_low_mccs_spshw.station import (
     SpsStationSelfCheckManager,
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
+from ska_low_mccs_spshw.station.tests import BaseDaqTest
+from ska_low_mccs_spshw.station.tests.base_tpm_test import TestResult
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 from tests.test_tools import FakeGroup as _FakeGroup
 from tests.test_tools import FakeGroupReply as _FakeGroupReply
@@ -675,6 +677,1003 @@ def test_read_lmc_integrated_mode_retries_proxy_not_ready_then_returns_none(
 
     assert logger.info.call_count == 3
     logger.warning.assert_called_once()
+
+
+_DAQ_TRL = "low-mccs/daqreceiver/ci-1"
+
+
+def _fake_daq(ip: str, port: int = 4660) -> SimpleNamespace:
+    """
+    Return a stand-in for a DAQ proxy, advertising the given destination.
+
+    :param ip: the IP the DAQ advertises.
+    :param port: the port the DAQ advertises.
+
+    :return: a stand-in for a DAQ proxy.
+    """
+    status = json.dumps({"Receiver IP": [ip], "Receiver Ports": [port]})
+    return SimpleNamespace(
+        _proxy=SimpleNamespace(
+            DaqStatus=lambda: status, bandpassLoadBalancerEnabled=False
+        )
+    )
+
+
+def _sent(
+    tile_commands: unittest.mock.Mock, command_name: str, timeout: float = 5.0
+) -> list[dict[str, Any]]:
+    """
+    Return the arguments of every send of a command to the tiles.
+
+    Re-routes happen asynchronously, so wait up to a timeout for the first,
+    then a little longer so that any duplicate sends are also returned.
+
+    :param tile_commands: the mock standing in for the tile fan-out.
+    :param command_name: the tile command of interest.
+    :param timeout: how long to wait for at least one send.
+
+    :return: the decoded JSON argument of each send, in order.
+    """
+
+    def sends() -> list[dict[str, Any]]:
+        return [
+            json.loads(sent.args[1])
+            for sent in tile_commands.call_args_list
+            if sent.args[0] == command_name
+        ]
+
+    deadline = time.monotonic() + timeout
+    while not sends() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    time.sleep(0.3)
+    return sends()
+
+
+@pytest.fixture(name="routed")
+def routed_fixture(
+    station_component_manager: SpsStationComponentManager,
+) -> SimpleNamespace:
+    """
+    Return a station component manager that has routed data to its DAQs.
+
+    The LMC DAQ advertises 10.0.0.1:4663 and the bandpass DAQ advertises
+    10.0.0.2:4660. The bandpass DAQ has no load balancer, so integrated
+    data is routed over 40G.
+
+    :param station_component_manager: the SPS station component manager under test.
+
+    :return: the component manager, the mock tile fan-out, and the JSON
+        that was routed for each tile command.
+    """
+    station_component_manager._lmc_daq_proxy = _fake_daq(  # type: ignore[assignment]
+        "10.0.0.1", 4663
+    )
+    station_component_manager._bandpass_daq_proxy = _fake_daq(
+        "10.0.0.2"
+    )  # type: ignore[assignment]
+    tile_commands = unittest.mock.Mock(return_value=([ResultCode.OK], ["OK"]))
+    station_component_manager._execute_async_on_tiles = (  # type: ignore[method-assign]
+        tile_commands
+    )
+    result_code, _ = station_component_manager._route_data(start_bandpasses=False)
+    assert result_code == ResultCode.OK
+    routed_json = {
+        command_name: _sent(tile_commands, command_name)[-1]
+        for command_name in ("SetLmcDownload", "SetLmcIntegratedDownload")
+    }
+    assert routed_json["SetLmcIntegratedDownload"]["destination_ip"] == "10.0.0.2"
+    assert routed_json["SetLmcIntegratedDownload"]["mode"] == "10G"
+    assert routed_json["SetLmcDownload"]["destination_ip"] == "10.0.0.1"
+    assert routed_json["SetLmcDownload"]["destination_port"] == 4663
+    tile_commands.reset_mock()
+    return SimpleNamespace(
+        component_manager=station_component_manager,
+        tile_commands=tile_commands,
+        json=routed_json,
+    )
+
+
+@pytest.mark.parametrize(
+    ("daq", "command_name", "advertisement", "changed_fields"),
+    [
+        pytest.param(
+            "bandpass",
+            "SetLmcIntegratedDownload",
+            {"receiverIP": "10.0.0.20"},
+            {"destination_ip": "10.0.0.20"},
+            id="bandpass DAQ moves",
+        ),
+        pytest.param(
+            "lmc",
+            "SetLmcDownload",
+            {"receiverIP": "10.0.0.10"},
+            {"destination_ip": "10.0.0.10"},
+            id="LMC DAQ moves",
+        ),
+        pytest.param(
+            "bandpass",
+            "SetLmcIntegratedDownload",
+            {"receiverPorts": [5000]},
+            {"destination_port": 5000},
+            id="only the port changes",
+        ),
+    ],
+)
+def test_daq_destination_change_reroutes_tiles(
+    routed: SimpleNamespace,
+    daq: str,
+    command_name: str,
+    advertisement: dict[str, Any],
+    changed_fields: dict[str, Any],
+) -> None:
+    """
+    Test that a change in a DAQ's advertised destination re-routes the tiles.
+
+    Only the destination changes: the rest of the previous command,
+    including the 40G mode, is sent unchanged.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    :param daq: which DAQ advertises the change.
+    :param command_name: the tile command expected to be re-sent.
+    :param advertisement: the change the DAQ advertises.
+    :param changed_fields: the fields expected to differ from the routed command.
+    """
+    state_changed = getattr(routed.component_manager, f"_{daq}_daq_state_changed")
+    state_changed(_DAQ_TRL, **advertisement)
+
+    assert _sent(routed.tile_commands, command_name) == [
+        routed.json[command_name] | changed_fields
+    ]
+
+
+def test_daq_move_detected_from_events_alone(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that a DAQ move is detected when only its events give its destination.
+
+    A new subscription reports the IP and the ports as separate events, so
+    each must be recorded on its own for the DAQ's destination to be known.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    tile_commands = unittest.mock.Mock(return_value=([ResultCode.OK], ["OK"]))
+    station_component_manager._execute_async_on_tiles = (  # type: ignore[method-assign]
+        tile_commands
+    )
+    station_component_manager.set_lmc_integrated_download(
+        mode="1G",
+        channel_payload_length=1024,
+        beam_payload_length=1024,
+        dst_ip="10.0.0.2",
+        override=False,
+    )
+    routed = _sent(tile_commands, "SetLmcIntegratedDownload")[-1]
+    tile_commands.reset_mock()
+    station_component_manager._bandpass_daq_state_changed(
+        _DAQ_TRL, receiverIP="10.0.0.2"
+    )
+    station_component_manager._bandpass_daq_state_changed(
+        _DAQ_TRL, receiverPorts=[4660]
+    )
+
+    station_component_manager._bandpass_daq_state_changed(
+        _DAQ_TRL, receiverIP="10.0.0.20"
+    )
+
+    assert _sent(tile_commands, "SetLmcIntegratedDownload") == [
+        routed | {"destination_ip": "10.0.0.20"}
+    ]
+
+
+@pytest.mark.parametrize("proxy_class", ["_LMCDaqProxy", "_BandpassDaqProxy"])
+@pytest.mark.parametrize(
+    "version_id",
+    ["9.1.0", "9.1.0-rc1", "9.1.0-dev.c1234abcd", "9.1.0+dev.c1234abcd", "9.1.0.dev1"],
+)
+def test_daq_proxy_subscribes_to_destination_when_supported(
+    proxy_class: str,
+    version_id: str,
+    logger: logging.Logger,
+) -> None:
+    """
+    Test that a DAQ proxy subscribes to the destination on a DAQ that publishes it.
+
+    Development and pre-release builds of the first release that publishes
+    it publish it too.
+
+    :param proxy_class: the DAQ proxy class under test.
+    :param version_id: the DAQ's version.
+    :param logger: a logger for the proxy.
+    """
+    proxy = getattr(station_cm, proxy_class)(
+        _DAQ_TRL, 1, logger, unittest.mock.Mock(), unittest.mock.Mock()
+    )
+    proxy._proxy = SimpleNamespace(versionId=version_id)
+
+    subscribed = {name.lower() for name in proxy.get_change_event_callbacks()}
+
+    assert {"receiverip", "receiverports"} <= subscribed
+
+
+@pytest.mark.parametrize(
+    "advertisement",
+    [
+        pytest.param({"receiverIP": "10.0.0.2"}, id="same IP"),
+        pytest.param({"receiverPorts": [4660]}, id="same port"),
+        pytest.param({"receiverIP": "123.123.123"}, id="invalid IP"),
+        pytest.param({"receiverIP": "0.0.0.0"}, id="unspecified IP"),
+        pytest.param({"receiverIP": ""}, id="empty IP"),
+        pytest.param({"receiverPorts": []}, id="no ports"),
+    ],
+)
+def test_daq_destination_without_change_is_ignored(
+    routed: SimpleNamespace,
+    advertisement: dict[str, Any],
+) -> None:
+    """
+    Test that an advertisement that doesn't move the DAQ doesn't re-route.
+
+    This guards the DAQ-following behaviour; it does not reproduce the bug.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    :param advertisement: what the DAQ advertises.
+    """
+    component_manager = routed.component_manager
+    with unittest.mock.patch.object(
+        component_manager, "submit_task", wraps=component_manager.submit_task
+    ) as submit_task:
+        component_manager._bandpass_daq_state_changed(_DAQ_TRL, **advertisement)
+
+    submit_task.assert_not_called()
+    assert not _sent(routed.tile_commands, "SetLmcIntegratedDownload", timeout=0.5)
+
+
+def test_daq_destination_before_routing_is_only_recorded(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that DAQ advertisements don't route data the station never routed.
+
+    This covers the station restarting while tiles are running: whatever
+    the tiles are doing is left alone. This guards the DAQ-following
+    behaviour; it does not reproduce the bug.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    tile_commands = unittest.mock.Mock(return_value=([ResultCode.OK], ["OK"]))
+    station_component_manager._execute_async_on_tiles = (  # type: ignore[method-assign]
+        tile_commands
+    )
+
+    for ip in ("10.0.0.2", "10.0.0.20"):
+        station_component_manager._bandpass_daq_state_changed(
+            _DAQ_TRL, receiverIP=ip, receiverPorts=[4660]
+        )
+
+    assert not _sent(tile_commands, "SetLmcIntegratedDownload", timeout=0.5)
+
+
+def test_first_destination_after_station_start_is_only_recorded(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that the first destination a DAQ advertises is not acted on.
+
+    After the station starts, whatever the tiles were last told is left
+    alone, even though it differs from what the DAQ advertises. Here the
+    tiles were told by a manual override. This guards the DAQ-following
+    behaviour; it does not reproduce the bug.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    tile_commands = unittest.mock.Mock(return_value=([ResultCode.OK], ["OK"]))
+    station_component_manager._execute_async_on_tiles = (  # type: ignore[method-assign]
+        tile_commands
+    )
+    station_component_manager.set_lmc_integrated_download(
+        mode="1G",
+        channel_payload_length=1024,
+        beam_payload_length=1024,
+        dst_ip="10.0.0.99",
+    )
+    tile_commands.reset_mock()
+
+    station_component_manager._bandpass_daq_state_changed(
+        _DAQ_TRL, receiverIP="10.0.0.2"
+    )
+    station_component_manager._bandpass_daq_state_changed(
+        _DAQ_TRL, receiverPorts=[4661]
+    )
+
+    assert not _sent(tile_commands, "SetLmcIntegratedDownload", timeout=0.5)
+
+
+def test_reroute_skipped_when_tiles_already_at_destination(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a queued re-route does nothing if the stream was routed meanwhile.
+
+    A DAQ change during On or Initialise queues a re-route behind that
+    command, which has itself routed data to the DAQ's new destination.
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    routed.component_manager._reroute("bandpass")
+
+    assert not _sent(routed.tile_commands, "SetLmcIntegratedDownload", timeout=0.5)
+
+
+@pytest.mark.parametrize(
+    ("version_id", "log_level"),
+    [
+        ("9.0.1", "info"),
+        ("9.0.2-rc1", "info"),
+        ("not a version", "warning"),
+        (None, "warning"),
+    ],
+)
+def test_daq_proxy_does_not_subscribe_to_destination_when_unsupported(
+    version_id: Optional[str],
+    log_level: str,
+) -> None:
+    """
+    Test that a DAQ proxy doesn't subscribe to an older DAQ's destination.
+
+    An older DAQ is expected, but a version that can't be read or understood
+    is a problem, so it is warned about. This tests behaviour that only
+    exists with the DAQ-following fix, so it cannot be run against the code
+    without it.
+
+    :param version_id: the DAQ's version, or None if it can't be read.
+    :param log_level: the level at which not subscribing should be logged.
+    """
+    logger = unittest.mock.Mock()
+    proxy = station_cm._BandpassDaqProxy(
+        _DAQ_TRL, 1, logger, unittest.mock.Mock(), unittest.mock.Mock()
+    )
+    if version_id is None:
+        proxy._proxy = unittest.mock.Mock()
+        type(proxy._proxy).versionId = unittest.mock.PropertyMock(
+            side_effect=tango.DevFailed()
+        )
+    else:
+        proxy._proxy = SimpleNamespace(versionId=version_id)  # type: ignore[assignment]
+
+    subscribed = {name.lower() for name in proxy.get_change_event_callbacks()}
+
+    assert not {"receiverip", "receiverports"} & subscribed
+    assert any(
+        "does not publish its destination" in str(call)
+        or "could not be read" in str(call)
+        for call in getattr(logger, log_level).call_args_list
+    )
+
+
+def test_daq_proxy_ignores_invalid_destination_event(
+    logger: logging.Logger,
+) -> None:
+    """
+    Test that a DAQ proxy doesn't pass on an invalid destination.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param logger: a logger for the proxy.
+    """
+    component_state_callback = unittest.mock.Mock()
+    proxy = station_cm._BandpassDaqProxy(
+        _DAQ_TRL, 1, logger, unittest.mock.Mock(), component_state_callback
+    )
+    proxy._proxy = SimpleNamespace(versionId="9.1.0")  # type: ignore[assignment]
+    callback = proxy.get_change_event_callbacks()["receiverIP"]
+
+    callback("receiverIP", "10.0.0.20", tango.AttrQuality.ATTR_INVALID)
+
+    component_state_callback.assert_not_called()
+
+
+def test_daq_move_while_routing_data_is_followed(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a DAQ move reported while data is being routed is not lost.
+
+    Here the move is reported after _route_data has read the DAQ's old
+    destination from DaqStatus, and before it has used it.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    old_status = component_manager._bandpass_daq_proxy._proxy.DaqStatus()
+
+    def daq_status_then_move() -> str:
+        component_manager._bandpass_daq_state_changed(_DAQ_TRL, receiverIP="10.0.0.20")
+        return old_status
+
+    component_manager._bandpass_daq_proxy._proxy.DaqStatus = daq_status_then_move
+
+    component_manager._route_data(start_bandpasses=False)
+
+    assert (
+        _sent(routed.tile_commands, "SetLmcIntegratedDownload")[-1]["destination_ip"]
+        == "10.0.0.20"
+    )
+    assert component_manager._daq_routes["bandpass"].advertised_ip == "10.0.0.20"
+
+
+def test_manual_override_during_reroute_is_kept(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a manual override made while a re-route is in progress is kept.
+
+    The re-route must not send its stale copy of the previous command's
+    settings after the override has been sent.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    send_route = component_manager._send_route
+    override_done = threading.Event()
+
+    def override() -> None:
+        component_manager.set_lmc_integrated_download(
+            mode="1G",
+            channel_payload_length=512,
+            beam_payload_length=256,
+            dst_ip="10.0.0.99",
+            override=True,
+        )
+        override_done.set()
+
+    def send_route_with_override(*args: Any, **kwargs: Any) -> Any:
+        if threading.current_thread() is not override_thread:
+            override_thread.start()
+            override_done.wait(timeout=0.5)
+        return send_route(*args, **kwargs)
+
+    override_thread = threading.Thread(target=override)
+    with unittest.mock.patch.object(
+        component_manager, "_send_route", side_effect=send_route_with_override
+    ):
+        component_manager._bandpass_daq_state_changed(_DAQ_TRL, receiverIP="10.0.0.20")
+        assert override_done.wait(timeout=5.0)
+    override_thread.join(timeout=5.0)
+
+    final = _sent(routed.tile_commands, "SetLmcIntegratedDownload")[-1]
+    assert (final["destination_ip"], final["beam_payload_length"]) == (
+        "10.0.0.99",
+        256,
+    )
+    assert component_manager._daq_routes["bandpass"].last_sent == final
+
+
+def acquire_data_for_calibration(
+    component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Acquire data for calibration, without needing communication established.
+
+    :param component_manager: the SPS station component manager under test.
+    """
+    # Called past its check_communicating decorator.
+    acquire = SpsStationComponentManager.acquire_data_for_calibration
+    acquire.__wrapped__(  # type: ignore[attr-defined] # pylint: disable=no-member
+        component_manager, first_channel=0, last_channel=1
+    )
+
+
+def test_daq_move_during_calibration_acquisition_waits(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a DAQ move isn't followed during a calibration acquisition.
+
+    Re-routing would disrupt the acquisition, so the move is followed when
+    the acquisition's teardown runs. Here the acquisition stops early,
+    because the tiles aren't synchronised.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    component_manager._stop_daq = unittest.mock.Mock()  # type: ignore[method-assign]
+
+    def move_daq_during_acquisition() -> list[str]:
+        component_manager._lmc_daq_state_changed(_DAQ_TRL, receiverIP="10.0.0.10")
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline and not any(
+            "calibration acquisition" in str(call) for call in warning.call_args_list
+        ):
+            time.sleep(0.05)
+        assert not _sent(routed.tile_commands, "SetLmcDownload", timeout=0.1)
+        return ["Initialised"]
+
+    with unittest.mock.patch.object(
+        component_manager.logger, "warning", wraps=component_manager.logger.warning
+    ) as warning, unittest.mock.patch.object(
+        component_manager,
+        "tile_programming_state",
+        side_effect=move_daq_during_acquisition,
+    ):
+        acquire_data_for_calibration(component_manager)
+
+    assert any(
+        "calibration acquisition" in str(call) for call in warning.call_args_list
+    )
+    assert _sent(routed.tile_commands, "SetLmcDownload") == [
+        routed.json["SetLmcDownload"] | {"destination_ip": "10.0.0.10"}
+    ]
+    component_manager._stop_daq.assert_called_once()
+
+
+def test_calibration_teardown_stops_daq_even_if_following_daqs_fails(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that an acquisition's teardown stops the DAQ whatever else fails.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    component_manager._stop_daq = unittest.mock.Mock()  # type: ignore[method-assign]
+    component_manager._follow_daqs = unittest.mock.Mock(  # type: ignore[method-assign]
+        side_effect=RuntimeError("Executor has been shut down")
+    )
+
+    with unittest.mock.patch.object(
+        component_manager, "tile_programming_state", return_value=["Initialised"]
+    ):
+        acquire_data_for_calibration(component_manager)
+
+    component_manager._stop_daq.assert_called_once()
+
+
+@pytest.mark.parametrize("command_name", ["SetLmcDownload", "SetLmcIntegratedDownload"])
+def test_omitted_destination_rejected_when_daq_has_not_advertised(
+    station_component_manager: SpsStationComponentManager,
+    command_name: str,
+) -> None:
+    """
+    Test that a routing command without a destination needs one from the DAQ.
+
+    There is no silent fallback to 0.0.0.0, and the rejected command changes
+    none of the station's routing settings.
+
+    :param station_component_manager: the SPS station component manager under test.
+    :param command_name: the routing command under test.
+    """
+    tile_commands = unittest.mock.Mock(return_value=([ResultCode.OK], ["OK"]))
+    station_component_manager._execute_async_on_tiles = (  # type: ignore[method-assign]
+        tile_commands
+    )
+    settings = (
+        station_component_manager._lmc_integrated_mode,
+        station_component_manager._lmc_integrated_mode_locked,
+        station_component_manager._lmc_channel_payload_length,
+        station_component_manager._lmc_beam_payload_length,
+    )
+
+    if command_name == "SetLmcDownload":
+        result = station_component_manager.set_lmc_download(
+            mode="10G", payload_length=8192, dst_ip=""
+        )
+    else:
+        result = station_component_manager.set_lmc_integrated_download(
+            mode="40G", channel_payload_length=512, beam_payload_length=256
+        )
+
+    assert result[0] == [ResultCode.REJECTED]
+    tile_commands.assert_not_called()
+    assert settings == (
+        station_component_manager._lmc_integrated_mode,
+        station_component_manager._lmc_integrated_mode_locked,
+        station_component_manager._lmc_channel_payload_length,
+        station_component_manager._lmc_beam_payload_length,
+    )
+
+
+def test_route_data_skips_stream_whose_daq_destination_is_unknown(
+    station_component_manager: SpsStationComponentManager,
+) -> None:
+    """
+    Test that data is not routed to a DAQ whose destination is unknown.
+
+    Here there is no bandpass DAQ, so the bandpass stream is neither routed
+    nor started, rather than being sent to 0.0.0.0.
+
+    :param station_component_manager: the SPS station component manager under test.
+    """
+    station_component_manager._lmc_daq_proxy = _fake_daq(  # type: ignore[assignment]
+        "10.0.0.1"
+    )
+    tile_commands = unittest.mock.Mock(return_value=([ResultCode.OK], ["OK"]))
+    station_component_manager._execute_async_on_tiles = (  # type: ignore[method-assign]
+        tile_commands
+    )
+
+    result_code, _ = station_component_manager._route_data(start_bandpasses=True)
+
+    assert result_code == ResultCode.OK
+    assert [sent.args[0] for sent in tile_commands.call_args_list] == ["SetLmcDownload"]
+
+
+class _ReroutingDaqSelfCheck(BaseDaqTest):
+    """A DAQ self-check that routes data elsewhere, as the real ones do."""
+
+    fail = False
+
+    def test(self: _ReroutingDaqSelfCheck) -> None:
+        """
+        Route both streams to somewhere other than their DAQs.
+
+        :raises RuntimeError: if the self-check is set to fail.
+        """
+        self.component_manager.set_lmc_integrated_download(
+            mode="1G",
+            channel_payload_length=512,
+            beam_payload_length=256,
+            dst_ip="10.0.0.1",
+        )
+        self.component_manager.set_lmc_download(
+            mode="10G", payload_length=8192, dst_ip="10.0.0.1", dst_port=4999
+        )
+        if self.fail:
+            raise RuntimeError("Self-check failed part way through.")
+
+
+@pytest.mark.parametrize("self_check_fails", [False, True])
+def test_daq_self_check_restores_routing(
+    routed: SimpleNamespace,
+    logger: logging.Logger,
+    self_check_fails: bool,
+) -> None:
+    """
+    Test that a DAQ self-check leaves the station's data routing as it found it.
+
+    That includes the routing settings that the station uses next time it
+    routes data, such as the integrated mode and payload lengths.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    :param logger: a logger for the self-check.
+    :param self_check_fails: whether the self-check fails part way through.
+    """
+    component_manager = routed.component_manager
+    settings = (
+        component_manager._lmc_integrated_mode,
+        component_manager._lmc_integrated_mode_locked,
+        component_manager._lmc_channel_payload_length,
+        component_manager._lmc_beam_payload_length,
+    )
+    self_check = _ReroutingDaqSelfCheck(component_manager, logger, [], [], "", "")
+    self_check._proxies_constructed = True
+    self_check.fail = self_check_fails
+
+    with unittest.mock.patch.object(
+        self_check, "check_requirements", return_value=(True, "")
+    ):
+        result, _ = self_check.run_test()
+
+    assert result == (TestResult.ERROR if self_check_fails else TestResult.PASSED)
+    for route_name, command_name in [
+        ("bandpass", "SetLmcIntegratedDownload"),
+        ("lmc", "SetLmcDownload"),
+    ]:
+        assert (
+            _sent(routed.tile_commands, command_name)[-1] == routed.json[command_name]
+        )
+        route = component_manager._daq_routes[route_name]
+        assert route.last_sent == routed.json[command_name]
+    assert settings == (
+        component_manager._lmc_integrated_mode,
+        component_manager._lmc_integrated_mode_locked,
+        component_manager._lmc_channel_payload_length,
+        component_manager._lmc_beam_payload_length,
+    )
+    assert component_manager.misrouted_data_streams == []
+
+
+@pytest.mark.parametrize("command_name", ["SetLmcDownload", "SetLmcIntegratedDownload"])
+def test_failed_routing_command_not_recorded(
+    routed: SimpleNamespace,
+    command_name: str,
+) -> None:
+    """
+    Test that a routing command the tiles don't accept changes no settings.
+
+    The station must not believe the tiles are routed in a way they
+    rejected, nor re-send that command later.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    :param command_name: the routing command under test.
+    """
+    component_manager = routed.component_manager
+    settings = (
+        component_manager._lmc_integrated_mode,
+        component_manager._lmc_integrated_mode_locked,
+        component_manager._lmc_channel_payload_length,
+        component_manager._lmc_beam_payload_length,
+    )
+    routed.tile_commands.return_value = ([ResultCode.FAILED], ["Rejected."])
+
+    if command_name == "SetLmcDownload":
+        component_manager.set_lmc_download(
+            mode="1G", payload_length=1024, dst_ip="10.0.0.99"
+        )
+        route = component_manager._daq_routes["lmc"]
+    else:
+        component_manager.set_lmc_integrated_download(
+            mode="1G",
+            channel_payload_length=512,
+            beam_payload_length=256,
+            dst_ip="10.0.0.99",
+        )
+        route = component_manager._daq_routes["bandpass"]
+
+    assert route.last_sent == routed.json[command_name]
+    assert settings == (
+        component_manager._lmc_integrated_mode,
+        component_manager._lmc_integrated_mode_locked,
+        component_manager._lmc_channel_payload_length,
+        component_manager._lmc_beam_payload_length,
+    )
+
+
+def test_failed_reroute_flags_misrouted_stream(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that the station flags tiles left sending data to an old DAQ address.
+
+    A failed re-route is not retried; the operator is told, and
+    RouteDataToDaqs puts it right.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    routed.tile_commands.return_value = ([ResultCode.FAILED], ["Rejected."])
+
+    component_manager._bandpass_daq_state_changed(_DAQ_TRL, receiverIP="10.0.0.20")
+
+    assert _sent(routed.tile_commands, "SetLmcIntegratedDownload")
+    assert component_manager.misrouted_data_streams == ["bandpass: 10.0.0.2:4660"]
+
+    routed.tile_commands.reset_mock()
+    routed.tile_commands.return_value = ([ResultCode.OK], ["OK"])
+    component_manager._bandpass_daq_state_changed(_DAQ_TRL, receiverIP="10.0.0.20")
+    assert not _sent(routed.tile_commands, "SetLmcIntegratedDownload", timeout=0.5)
+
+    component_manager._bandpass_daq_proxy = _fake_daq(  # type: ignore[assignment]
+        "10.0.0.20"
+    )
+    component_manager.route_data_to_daqs()
+
+    assert component_manager.misrouted_data_streams == []
+
+
+def test_misrouted_data_streams(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test which routing the station flags as sending data to no DAQ.
+
+    Routing a stream to another of the station's DAQs, as the self-checks
+    do, is not flagged. Routing it to an address that none of them
+    advertise is.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    assert component_manager.misrouted_data_streams == []
+
+    component_manager.set_lmc_integrated_download(
+        mode="10G",
+        channel_payload_length=1024,
+        beam_payload_length=1024,
+        dst_ip="10.0.0.1",
+        dst_port=4663,
+    )
+    assert component_manager.misrouted_data_streams == []
+
+    component_manager.set_lmc_integrated_download(
+        mode="10G",
+        channel_payload_length=1024,
+        beam_payload_length=1024,
+        dst_ip="10.0.0.99",
+    )
+    assert component_manager.misrouted_data_streams == ["bandpass: 10.0.0.99:4660"]
+
+    component_manager._lmc_daq_state_changed(_DAQ_TRL, receiverIP="0.0.0.0")
+    assert component_manager.misrouted_data_streams == [
+        "bandpass: 10.0.0.99:4660",
+        "LMC: 10.0.0.1:4663",
+    ]
+
+
+def test_reroutes_coalesce(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that DAQ moves made before a re-route has run share that re-route.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    lane_free = threading.Event()
+
+    def occupy_lane(task_callback: Any = None, task_abort_event: Any = None) -> None:
+        lane_free.wait(timeout=5.0)
+
+    component_manager.submit_task(occupy_lane)
+    with unittest.mock.patch.object(
+        component_manager, "submit_task", wraps=component_manager.submit_task
+    ) as submit_task:
+        for ip in ("10.0.0.20", "10.0.0.21", "10.0.0.20", "10.0.0.22"):
+            component_manager._bandpass_daq_state_changed(_DAQ_TRL, receiverIP=ip)
+        lane_free.set()
+        assert _sent(routed.tile_commands, "SetLmcIntegratedDownload") == [
+            routed.json["SetLmcIntegratedDownload"] | {"destination_ip": "10.0.0.22"}
+        ]
+
+    assert submit_task.call_count == 1
+
+
+def test_route_data_carries_on_when_daq_status_cannot_be_read(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a DAQ that can't be asked for its destination doesn't stop routing.
+
+    The DAQ's last advertised destination is used instead, and the other
+    stream is routed as usual.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    component_manager._bandpass_daq_proxy._proxy.DaqStatus = unittest.mock.Mock(
+        side_effect=tango.DevFailed()
+    )
+    task_callback = unittest.mock.Mock()
+
+    component_manager.route_data_to_daqs(task_callback=task_callback)
+
+    assert _sent(routed.tile_commands, "SetLmcIntegratedDownload") == [
+        routed.json["SetLmcIntegratedDownload"]
+    ]
+    assert _sent(routed.tile_commands, "SetLmcDownload") == [
+        routed.json["SetLmcDownload"]
+    ]
+    assert task_callback.call_args.kwargs["status"] == TaskStatus.COMPLETED
+
+
+@pytest.mark.parametrize(
+    "problem", ["bandpass DAQ has no destination", "bandpasses fail to start"]
+)
+def test_on_and_initialise_unaffected_by_daq_routing_problems(
+    routed: SimpleNamespace,
+    problem: str,
+) -> None:
+    """
+    Test that DAQ routing problems don't fail On or Initialise.
+
+    They fail only if the tiles reject a routing command, as before. A
+    stream that can't be routed is skipped with a warning, and the result
+    of starting the bandpasses is not checked.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    :param problem: what goes wrong while routing data.
+    """
+    component_manager = routed.component_manager
+    if problem == "bandpass DAQ has no destination":
+        component_manager._bandpass_daq_proxy = _fake_daq(  # type: ignore[assignment]
+            "0.0.0.0"
+        )
+    else:
+        routed.tile_commands.side_effect = lambda command_name, *args: (
+            ([ResultCode.FAILED], ["Rejected."])
+            if command_name == "ConfigureIntegratedChannelData"
+            else ([ResultCode.OK], ["OK"])
+        )
+
+    result_code, _ = component_manager._route_data(start_bandpasses=True)
+
+    assert result_code == ResultCode.OK
+    assert _sent(routed.tile_commands, "SetLmcDownload") == [
+        routed.json["SetLmcDownload"]
+    ]
+
+
+def test_route_data_fails_when_daq_no_longer_advertises_a_destination(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a stream whose DAQ now reports 0.0.0.0 is neither routed nor ignored.
+
+    Routing it to the DAQ's previous destination would be routing it to a
+    stale address, so it isn't routed, and the command fails, saying what
+    was routed.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    component_manager = routed.component_manager
+    component_manager._bandpass_daq_proxy = _fake_daq(  # type: ignore[assignment]
+        "0.0.0.0"
+    )
+    task_callback = unittest.mock.Mock()
+
+    component_manager.route_data_to_daqs(task_callback=task_callback)
+
+    assert not _sent(routed.tile_commands, "SetLmcIntegratedDownload", timeout=0.5)
+    assert _sent(routed.tile_commands, "SetLmcDownload") == [
+        routed.json["SetLmcDownload"]
+    ]
+    status = task_callback.call_args.kwargs["status"]
+    result_code, message = task_callback.call_args.kwargs["result"]
+    assert (status, result_code) == (TaskStatus.FAILED, ResultCode.FAILED)
+    assert "bandpass" in message and "LMC" in message
+
+
+def test_omitted_destination_uses_daq_ip(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that a routing command without a destination IP uses the DAQ's IP.
+
+    The port still defaults to 4660, even though the LMC DAQ here advertises
+    another port.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    routed.component_manager.set_lmc_download(
+        mode="10G", payload_length=8192, dst_ip=""
+    )
+
+    sent = _sent(routed.tile_commands, "SetLmcDownload")[-1]
+    assert (sent["destination_ip"], sent["destination_port"]) == ("10.0.0.1", 4660)
+
+
+def test_route_data_to_daqs_does_not_start_bandpasses(
+    routed: SimpleNamespace,
+) -> None:
+    """
+    Test that routing data to the DAQs on request doesn't start the bandpasses.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param routed: a component manager that has routed data to its DAQs.
+    """
+    task_callback = unittest.mock.Mock()
+
+    routed.component_manager.route_data_to_daqs(task_callback=task_callback)
+
+    assert [sent.args[0] for sent in routed.tile_commands.call_args_list] == [
+        "SetLmcIntegratedDownload",
+        "SetLmcDownload",
+    ]
+    task_callback.assert_called_with(
+        status=TaskStatus.COMPLETED,
+        result=(
+            ResultCode.OK,
+            "Data routed to DAQs: bandpass data routed to 10.0.0.2:4660; "
+            "LMC data routed to 10.0.0.1:4663.",
+        ),
+    )
 
 
 def test_get_static_delays(

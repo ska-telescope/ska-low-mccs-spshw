@@ -266,9 +266,10 @@ network configuration, which is better managed using structured
     * payload_length - (int) SPEAD payload length for channel data. Default
       is 1024 bytes for 1G interface and 8192 bytes for 40G interface.
 
-    * destination_ip - (string) Destination IP. Is mandatory for 40G link,
-      not required for 1G link (will use the IP address of the MCCS tile
-      control node).
+    * destination_ip - (string) Destination IP. Defaults to the IP
+      advertised by the LMC DAQ. If the LMC DAQ has not advertised one, the
+      command is rejected rather than routing data to 0.0.0.0. See
+      `Following the DAQs`_ for when that happens.
 
     * source_port - (int) Source port for sample data streams
 
@@ -286,14 +287,104 @@ network configuration, which is better managed using structured
 
     * beam_payload_length - (int) SPEAD payload length for integrated beam data
 
-    * destination_ip - (string) Destination IP. Same IP and port is used for
-      LMC and integrated LMC, so values should be specified only in one of
-      SetLmcDownload and SetLmcIntegratedDownload. Last specified overrides
-      IP and port for both.
+    * destination_ip - (string) Destination IP. Defaults to the IP
+      advertised by the bandpass DAQ. If the bandpass DAQ has not advertised
+      one, the command is rejected rather than routing data to 0.0.0.0. See
+      `Following the DAQs`_ for when that happens.
 
     * source_port - (int) Source port for integrated data streams
 
     * destination_port - (int) Destination port for integrated data streams
+
+  * *RouteDataToDaqs*: Point every tile at the destinations advertised by the
+    DAQs, routing data exactly as On and Initialise do. This is a long running
+    command, and it is rejected while a calibration acquisition is in progress.
+    It succeeds only if every stream was routed; otherwise it fails, and its
+    message says what was and wasn't done.
+
+    It ends any manual SetLmcDownload or SetLmcIntegratedDownload, so that the
+    streams follow their DAQs again. Not every setting of a manual override is
+    kept: the bandpass stream keeps the mode and payload lengths it was last
+    given but goes back to the default source port, and the LMC stream goes
+    back to the station's defaults (10G, payload length 8192, default source
+    port).
+
+    It only routes the LMC and bandpass streams. It does not start the
+    bandpasses (use ConfigureIntegratedChannelData), and it does not restore
+    the beamformer chain or CSP routing.
+
+Following the DAQs
+^^^^^^^^^^^^^^^^^^
+
+The DAQs' receiver IPs can change, for example when a DAQ pod restarts. The
+station keeps the tiles sending each data stream to the destination that its
+DAQ advertises through its ``receiverIP`` and ``receiverPorts`` attributes:
+
+  * When a DAQ advertises a different IP or port from the one it advertised
+    before, the station re-sends the last SetLmcDownload or
+    SetLmcIntegratedDownload that the tiles accepted, with only the destination
+    changed. The mode, payload lengths and other settings are kept.
+    Re-advertising the same IP and port does nothing, and several changes made
+    before a re-route has run share that re-route.
+
+  * The IP and the ports are advertised separately, so when both change, for
+    example when a DAQ restarts on a new address, the tiles can briefly be sent
+    the new IP with the old port before the new port arrives.
+
+  * A routing command is only remembered if every tile accepts it. If a
+    re-route fails, the station does not retry it. Instead, the
+    ``misroutedDataStreams`` attribute lists every stream that the tiles send
+    to an address none of the station's DAQs advertise, and a warning is
+    logged. Run RouteDataToDaqs to route those streams to their DAQs.
+
+  * While a calibration acquisition is in progress, re-routes wait until it
+    has finished, so as not to disrupt it.
+
+  * A manual SetLmcDownload or SetLmcIntegratedDownload stops that stream
+    following its DAQ until On, Initialise or RouteDataToDaqs routes it to
+    its DAQ again. This includes a command that omits destination_ip, and so
+    is routed to the DAQ's current destination. If the DAQ then moves, the
+    stream is listed in ``misroutedDataStreams``.
+
+  * When the station starts, it only records what the DAQs advertise, so that
+    a restarting station does not change what the tiles are doing. As a result,
+    after a restart a stream does not follow its DAQ until data has been routed
+    again by On (which routes only if the tiles are not already initialised),
+    Initialise or RouteDataToDaqs. Until then the station does not know where
+    the tiles send data, so ``misroutedDataStreams`` is empty.
+
+  * When a tile initialises other than as part of the station's On or
+    Initialise, for example after its TPM is power cycled, it loses its data
+    routing and stops sending integrated data. The station does not restore
+    them, and cannot tell that the tile has lost them. Run RouteDataToDaqs to
+    route the tile's data to the DAQs again, and ConfigureIntegratedChannelData
+    to restart its bandpasses. Neither restores its beamformer chain or CSP
+    routing.
+
+  * The station never routes data to 0.0.0.0. On, Initialise and
+    RouteDataToDaqs ask each DAQ for its destination through DaqStatus. If a
+    DAQ reports an IP that data can't be routed to, such as 0.0.0.0, its
+    destination becomes unknown. If DaqStatus can't be read, the destination
+    the DAQ last advertised is used. A stream whose DAQ's destination is
+    unknown is not routed (and the bandpasses are not started if it is the
+    bandpass stream): RouteDataToDaqs fails, saying so, while On and Initialise
+    log a warning and carry on, failing only if the tiles reject a routing
+    command, as before. SetLmcDownload or SetLmcIntegratedDownload without a
+    destination_ip is rejected in that case. A stream with no DAQ configured is
+    not routed, and that is not a failure.
+
+  * DAQs older than the ska-low-mccs-daq release that added these events
+    (expected to be 9.1.0, including its development and pre-release builds)
+    do not advertise their destination with events, so the station does not
+    subscribe to them, and asks them for their destination only on On,
+    Initialise and RouteDataToDaqs. ConfigureStationForCalibration also reads
+    the LMC DAQ's destination when it routes calibration data. If the station
+    cannot read a DAQ's version, it logs a warning and does not follow that DAQ
+    until it next connects to it.
+
+  * The station's DAQ self-check tests route data wherever they need it, and
+    afterwards restore the routing and the routing settings, such as the
+    integrated mode and payload lengths, as they were.
 
 Scan configuration commands
 ---------------------------

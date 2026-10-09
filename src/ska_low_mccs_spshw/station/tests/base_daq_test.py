@@ -25,7 +25,7 @@ from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
 from ...tile.tile_data import TileData
-from .base_tpm_test import TpmSelfCheckTest
+from .base_tpm_test import TestResult, TpmSelfCheckTest
 from .data_handlers import BaseDataReceivedHandler
 
 if TYPE_CHECKING:
@@ -80,6 +80,23 @@ class BaseDaqTest(TpmSelfCheckTest):
         super().__init__(
             component_manager, logger, tile_trls, subrack_trls, daq_trl, wren_trl
         )
+
+    def run_test(self: BaseDaqTest) -> tuple[TestResult, str]:
+        """
+        Run the self-check test, then restore the station's data routing.
+
+        DAQ tests route data to wherever they need it, so put the routing,
+        and the routing settings such as the integrated mode and payload
+        lengths, back as they were, for the station's DAQ-following to carry
+        on from.
+
+        :returns: test result.
+        """
+        routing = self.component_manager.get_routing()
+        try:
+            return super().run_test()
+        finally:
+            self.component_manager.restore_routing(routing)
 
     def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
         self._data = data

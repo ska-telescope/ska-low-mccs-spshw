@@ -12,11 +12,13 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import functools
 import ipaddress
 import itertools
 import json
 import logging
+import re
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -69,9 +71,169 @@ _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
 # from executing, so it does not share the general lane with them.
 _CALIBRATION_LANE = "calibration"
 
+# The first ska-low-mccs-daq release whose receiverIP and receiverPorts attributes
+# push change events: the release that includes SKB-1621, expected to be the minor
+# release 9.1.0. Older DAQs are not subscribed to: a stateless subscription to an
+# attribute that never pushes events retries, and logs a warning, every 10s.
+# Only major.minor.patch is compared, so that development and pre-release builds
+# of that release (such as 9.1.0-dev.c1234abcd, as images built in CI or locally
+# report, or 9.1.0-rc1) are subscribed to.
+_MIN_DAQ_VERSION_WITH_DESTINATION_EVENTS = (9, 1, 0)
+
 
 class _BandpassDaqReadRetryError(RuntimeError):
     """Raised to trigger retry when reading bandpass DAQ integrated mode."""
+
+
+def _is_routable_ip(ip: Optional[str]) -> bool:
+    """
+    Return whether tile data can be routed to an IP.
+
+    :param ip: the IP to check.
+
+    :return: whether the IP is a specified IPv4 address.
+    """
+    try:
+        return not ipaddress.IPv4Address(ip).is_unspecified
+    except ValueError:
+        return False
+
+
+@dataclasses.dataclass
+class _DaqRoute:  # pylint: disable=too-many-instance-attributes
+    """
+    A stream of tile data, and the DAQ that receives it.
+
+    The station keeps every tile sending each stream to the destination
+    that the stream's DAQ advertises. A route remembers what its DAQ
+    advertises, so that the station can tell when the DAQ moves, and what
+    the tiles last accepted, so that the stream can be re-pointed at the
+    DAQ's new destination with all other settings unchanged.
+
+    Each new DAQ that the station routes data to is one more route.
+    """
+
+    name: str
+    """Name of the stream, for logging."""
+
+    command: str
+    """The MccsTile command that routes this stream."""
+
+    advertised_ip: Optional[str] = None
+    """The IP that the DAQ last advertised, if known."""
+
+    advertised_port: Optional[int] = None
+    """The port that the DAQ last advertised, if known."""
+
+    advertisements: int = 0
+    """How many advertisements the DAQ has made, to spot any made concurrently."""
+
+    seen_advertisement: bool = False
+    """Whether the DAQ has advertised a destination since the station started."""
+
+    last_sent: Optional[dict[str, Any]] = None
+    """The arguments of the routing command that the tiles last accepted."""
+
+    overridden: bool = False
+    """
+    Whether a manual SetLmcDownload or SetLmcIntegratedDownload is in force.
+
+    The stream doesn't follow its DAQ until it is routed to it again, by
+    On, Initialise or RouteDataToDaqs.
+    """
+
+    reroute_queued: bool = False
+    """Whether a re-route of this stream is waiting to run."""
+
+    @property
+    def advertised(self) -> Optional[tuple[str, int]]:
+        """
+        Return the destination that the DAQ advertises.
+
+        :return: the IP and port that the DAQ advertises, if both are known.
+        """
+        if self.advertised_ip is None or self.advertised_port is None:
+            return None
+        return self.advertised_ip, self.advertised_port
+
+    @property
+    def sent_destination(self) -> Optional[tuple[str, int]]:
+        """
+        Return the destination that the tiles last accepted for this stream.
+
+        :return: the IP and port, if the tiles have accepted any.
+        """
+        if self.last_sent is None:
+            return None
+        return self.last_sent["destination_ip"], self.last_sent["destination_port"]
+
+
+@dataclasses.dataclass
+class _RoutingSnapshot:
+    """How the station's data was routed at some moment, so it can be restored."""
+
+    routes: dict[str, tuple[Optional[dict[str, Any]], bool]]
+    """Each route's last accepted command, and whether it was overridden."""
+
+    integrated_settings: tuple[str, bool, int, int]
+    """The integrated mode, whether it is locked, and the two payload lengths."""
+
+
+class _DaqDestinationMixin:  # pylint: disable=too-few-public-methods
+    """
+    Subscribe a DAQ proxy to the destination that its DAQ advertises.
+
+    Changes to the DAQ's ``receiverIP`` and ``receiverPorts`` are passed to
+    the component state callback, so that the station can keep the tiles
+    pointed at the DAQ.
+    """
+
+    _proxy: Optional[MccsDeviceProxy]
+    _component_state_callback: Optional[Callable[..., None]]
+    logger: logging.Logger
+
+    def _destination_change_event_callbacks(self) -> dict[str, Callable]:
+        assert self._proxy is not None
+        not_followed = (
+            "so the station routes data to it only on On, Initialise or "
+            "RouteDataToDaqs, until the station reconnects to it."
+        )
+        try:
+            version = str(self._proxy.versionId)
+        except tango.DevFailed as e:
+            self.logger.warning(f"DAQ version could not be read, {not_followed} {e}")
+            return {}
+        release = re.match(r"(\d+)\.(\d+)\.(\d+)", version)
+        if release is None:
+            self.logger.warning(
+                f"DAQ version {version!r} could not be read, {not_followed}"
+            )
+            return {}
+        if tuple(map(int, release.groups())) < _MIN_DAQ_VERSION_WITH_DESTINATION_EVENTS:
+            self.logger.info(
+                f"DAQ version {version} does not publish its destination, "
+                f"{not_followed}"
+            )
+            return {}
+        return {
+            "receiverIP": self._daq_destination_callback,
+            "receiverPorts": self._daq_destination_callback,
+        }
+
+    def _daq_destination_callback(
+        self,
+        attribute_name: str,
+        attribute_value: Any,
+        attribute_quality: tango.AttrQuality,
+    ) -> None:
+        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            self.logger.warning(f"Ignoring invalid DAQ {attribute_name} event.")
+            return
+        if self._component_state_callback is not None:
+            name = {"receiverip": "receiverIP", "receiverports": "receiverPorts"}[
+                attribute_name.lower()
+            ]
+            self._component_state_callback(**{name: attribute_value})
 
 
 class _TileProxy(DeviceComponentManager):
@@ -189,7 +351,7 @@ class _TileProxy(DeviceComponentManager):
         return self._proxy.adcPower
 
 
-class _LMCDaqProxy(DeviceComponentManager):
+class _LMCDaqProxy(_DaqDestinationMixin, DeviceComponentManager):
     """A proxy to a LMC DAQ, for a station to use."""
 
     # pylint: disable=too-many-arguments
@@ -230,6 +392,7 @@ class _LMCDaqProxy(DeviceComponentManager):
     def get_change_event_callbacks(self) -> dict[str, Callable]:
         return {
             **super().get_change_event_callbacks(),
+            **self._destination_change_event_callbacks(),
             "dataReceivedResult": self._daq_data_callback,
         }
 
@@ -301,7 +464,7 @@ class _LMCDaqProxy(DeviceComponentManager):
         return self._proxy.receiverPorts
 
 
-class _BandpassDaqProxy(DeviceComponentManager):
+class _BandpassDaqProxy(_DaqDestinationMixin, DeviceComponentManager):
     """A proxy to a Bandpass DAQ, for a station to use."""
 
     # pylint: disable=too-many-arguments
@@ -342,6 +505,7 @@ class _BandpassDaqProxy(DeviceComponentManager):
     def get_change_event_callbacks(self) -> dict[str, Callable]:
         return {
             **super().get_change_event_callbacks(),
+            **self._destination_change_event_callbacks(),
             "xPolBandpass": self._daq_data_callback,
             "yPolBandpass": self._daq_data_callback,
         }
@@ -727,15 +891,23 @@ class SpsStationComponentManager(
 
         self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
-        self._lmc_integrated_ip = "0.0.0.0"
-        self._lmc_integrated_port = self._destination_port
         self._lmc_channel_payload_length = 1024
         self._lmc_beam_payload_length = 1024
 
         self._lmc_mode = "10G"
-        self._lmc_ip = "0.0.0.0"
-        self._lmc_port = self._destination_port
         self._lmc_payload_length = 8192
+
+        # In the order that _route_data sends them to the tiles.
+        self._daq_routes = {
+            "bandpass": _DaqRoute("bandpass", "SetLmcIntegratedDownload"),
+            "lmc": _DaqRoute("LMC", "SetLmcDownload"),
+        }
+        # Guards the routes' fields. Never held while commanding tiles.
+        self._daq_routes_lock = threading.Lock()
+        # Serialises routing commands, so that a re-route cannot overwrite a
+        # command sent while it is in progress.
+        self._route_send_lock = threading.RLock()
+        self._misrouted_data_streams: list[str] = []
 
         self._desired_beamformer_table = np.zeros(shape=(48, 7), dtype=int)
         self._desired_beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
@@ -1491,6 +1663,7 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._lmc_daq_power_state[fqdn] = power
                 self._evaluate_power_state()
+        self._handle_daq_destination("lmc", state_change)
         if "dataReceivedResult" in state_change:
             data_received_result: tuple[str, str] = state_change.get(
                 "dataReceivedResult", ("", "")
@@ -1516,6 +1689,7 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._bandpass_daq_power_state[fqdn] = power
                 self._evaluate_power_state()
+        self._handle_daq_destination("bandpass", state_change)
         if "xPolBandpass" in state_change:
             x_bandpass_data = state_change.get("xPolBandpass")
             if self._component_state_callback is not None:
@@ -2702,6 +2876,418 @@ class SpsStationComponentManager(
         self.logger.error(msg)
         return ResultCode.FAILED, msg
 
+    def _daq_destination(
+        self: SpsStationComponentManager, route: _DaqRoute
+    ) -> Optional[tuple[str, int]]:
+        """
+        Return the destination that a stream's DAQ advertises.
+
+        :param route: the stream's route.
+
+        :return: the IP and port that the DAQ advertises, if known.
+        """
+        with self._daq_routes_lock:
+            return route.advertised
+
+    @property
+    def misrouted_data_streams(self: SpsStationComponentManager) -> list[str]:
+        """
+        Return the streams that tiles send to an address no DAQ advertises.
+
+        :return: each such stream and the address its data is sent to.
+        """
+        with self._daq_routes_lock:
+            return list(self._misrouted_data_streams)
+
+    def _update_misrouted_data_streams(self: SpsStationComponentManager) -> None:
+        """
+        Flag streams that tiles send to an address that none of the DAQs advertise.
+
+        This happens when a re-route fails, or a DAQ moves while its stream
+        is overridden, for example. RouteDataToDaqs puts it right.
+        """
+        with self._daq_routes_lock:
+            daq_destinations = {
+                route.advertised for route in self._daq_routes.values()
+            } - {None}
+            misrouted = [
+                f"{route.name}: {destination[0]}:{destination[1]}"
+                for route in self._daq_routes.values()
+                if (destination := route.sent_destination) is not None
+                and destination not in daq_destinations
+            ]
+            if misrouted == self._misrouted_data_streams:
+                return
+            self._misrouted_data_streams = misrouted
+        if misrouted:
+            self.logger.warning(
+                "Tiles are sending data to addresses that none of the station's "
+                f"DAQs advertise: {', '.join(misrouted)}. Run RouteDataToDaqs to "
+                "route the data to the DAQs."
+            )
+        else:
+            self.logger.info("Tiles are sending all data to the station's DAQs.")
+        if self._component_state_callback is not None:
+            self._component_state_callback(misroutedDataStreams=misrouted)
+
+    def _read_daq_destination(
+        self: SpsStationComponentManager,
+        route: _DaqRoute,
+        daq_proxy: Optional[DeviceComponentManager],
+    ) -> None:
+        """
+        Read the destination that a stream's DAQ advertises from its DaqStatus.
+
+        If DaqStatus can't be read, the DAQ's last advertised destination is
+        kept. If the DAQ reports an IP that data can't be routed to, its
+        destination becomes unknown.
+
+        :param route: the stream's route.
+        :param daq_proxy: the stream's DAQ, if any.
+        """
+        if daq_proxy is None or daq_proxy._proxy is None:
+            return
+        with self._daq_routes_lock:
+            advertisements = route.advertisements
+        try:
+            daq_status = json.loads(daq_proxy._proxy.DaqStatus())
+            ip = str(daq_status["Receiver IP"][0])
+            port = int(daq_status["Receiver Ports"][0])
+        # pylint: disable=broad-except
+        except Exception as e:
+            self.logger.warning(
+                f"Could not read the {route.name} DAQ's DaqStatus, so using the "
+                f"destination it last advertised: {e!r}"
+            )
+            return
+        with self._daq_routes_lock:
+            # An advertisement made while DaqStatus was being read is newer.
+            if route.advertisements != advertisements:
+                return
+            if _is_routable_ip(ip):
+                route.advertised_ip, route.advertised_port = ip, port
+                route.seen_advertisement = True
+            else:
+                route.advertised_ip = None
+        if not _is_routable_ip(ip):
+            self.logger.warning(
+                f"{route.name} DAQ reports IP {ip!r}, which data cannot be routed to."
+            )
+        self._update_misrouted_data_streams()
+
+    def _send_route(
+        self: SpsStationComponentManager,
+        route: _DaqRoute,
+        params: dict[str, Any],
+        override: Optional[bool] = None,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Route a stream of tile data, and remember how it was routed.
+
+        It is remembered only if every tile accepts it.
+
+        :param route: the stream's route.
+        :param params: the arguments of the routing command.
+        :param override: True if this is a manual override, False if it
+            routes the stream to its DAQ, so that the stream follows its DAQ
+            again, or None to leave that unchanged.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        with self._route_send_lock:
+            result = self._execute_async_on_tiles(route.command, json.dumps(params))
+            if result[0][0] == ResultCode.OK:
+                with self._daq_routes_lock:
+                    route.last_sent = params
+                    if override is not None:
+                        route.overridden = override
+        self._update_misrouted_data_streams()
+        return result
+
+    def _handle_daq_destination(
+        self: SpsStationComponentManager,
+        route_name: str,
+        state_change: dict[str, Any],
+    ) -> None:
+        """
+        Re-route a stream if its DAQ advertises a new destination.
+
+        The DAQ publishes its destination whenever it might have changed, so
+        the stream is re-routed only when the advertised destination differs
+        from the one the DAQ advertised before. Several moves made before a
+        re-route has run share that re-route.
+
+        A stream with a manual SetLmcDownload or SetLmcIntegratedDownload in
+        force doesn't follow its DAQ until it is routed to it again, by On,
+        Initialise or RouteDataToDaqs.
+
+        The first advertisement after the station starts is only recorded,
+        so that restarting the station leaves the tiles as they are. As a
+        result, after a restart a stream is not recorded as following its DAQ until it
+        has been routed again, by On (which routes only if the tiles are
+        not already initialised), Initialise, RouteDataToDaqs, or a manual
+        SetLmcDownload or SetLmcIntegratedDownload. Until then the station
+        has no routing command to re-send.
+
+        :param route_name: the route whose DAQ sent the state change.
+        :param state_change: the DAQ's state change.
+        """
+        if "receiverIP" not in state_change and "receiverPorts" not in state_change:
+            return
+        route = self._daq_routes[route_name]
+        unroutable = []
+        with self._daq_routes_lock:
+            previous = route.advertised
+            # The IP and the ports can arrive in separate events, so take each
+            # on its own.
+            if "receiverIP" in state_change:
+                ip = str(state_change["receiverIP"])
+                route.advertised_ip = ip if _is_routable_ip(ip) else None
+                if route.advertised_ip is None:
+                    unroutable.append(f"IP {ip!r}")
+            if "receiverPorts" in state_change:
+                ports = list(state_change["receiverPorts"])
+                route.advertised_port = int(ports[0]) if ports else None
+                if route.advertised_port is None:
+                    unroutable.append("no ports")
+            route.advertisements += 1
+            advertised = route.advertised
+            seen_before = route.seen_advertisement
+            if advertised is not None:
+                route.seen_advertisement = True
+            # Re-route only if all of these hold:
+            # - seen_before: this isn't the first destination the DAQ has
+            #   advertised since the station started. The first is only
+            #   recorded, so that restarting the station leaves the tiles alone.
+            # - advertised is not None: the DAQ's IP and port are both known
+            #   and routable.
+            # - advertised != previous: the DAQ has actually moved. It re-sends
+            #   its destination whenever it *might* have changed.
+            # - last_sent is not None: this station has successfully routed the
+            #   stream since it started, so there is a routing command to
+            #   re-send with the new destination. Until then the station doesn't
+            #   know how the tiles are routed (after a station restart, they keep
+            #   whatever routing they had), so it leaves them alone.
+            # - not overridden: no manual SetLmcDownload or SetLmcIntegratedDownload
+            #   is in force; it is kept until RouteDataToDaqs.
+            # - not reroute_queued: no re-route is already waiting to run. It will
+            #   use the latest advertised destination when it does.
+            reroute = (
+                seen_before
+                and advertised is not None
+                and advertised != previous
+                and route.last_sent is not None
+                and not route.overridden
+                and not route.reroute_queued
+            )
+            if reroute:
+                route.reroute_queued = True
+        if unroutable:
+            self.logger.warning(
+                f"{route.name} DAQ advertises {' and '.join(unroutable)}, which "
+                "data cannot be routed to."
+            )
+        self._update_misrouted_data_streams()
+        if not reroute:
+            return
+        assert advertised is not None
+        self.logger.warning(
+            f"{route.name} DAQ destination changed to "
+            f"{advertised[0]}:{advertised[1]}; re-routing tiles."
+        )
+        self._submit_reroute(route_name)
+
+    def _submit_reroute(self: SpsStationComponentManager, route_name: str) -> None:
+        """
+        Queue a re-route of a stream to its DAQ's advertised destination.
+
+        :param route_name: the route to re-route.
+        """
+        route = self._daq_routes[route_name]
+        task_status, message = self.submit_task(self._reroute, args=[route_name])
+        if task_status == TaskStatus.REJECTED:
+            with self._daq_routes_lock:
+                route.reroute_queued = False
+            self.logger.error(
+                f"Could not re-route {route.name} data: {message}. Run "
+                "RouteDataToDaqs to route it to its DAQ."
+            )
+
+    def _follow_daqs(self: SpsStationComponentManager) -> None:
+        """Re-route every stream whose DAQ is not where its data is sent."""
+        moved = []
+        with self._daq_routes_lock:
+            for route_name, route in self._daq_routes.items():
+                if (
+                    route.advertised is not None
+                    and route.sent_destination not in (None, route.advertised)
+                    and not route.overridden
+                    and not route.reroute_queued
+                ):
+                    route.reroute_queued = True
+                    moved.append(route_name)
+        for route_name in moved:
+            self._submit_reroute(route_name)
+
+    def _reroute(
+        self: SpsStationComponentManager,
+        route_name: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Point a stream at its DAQ's advertised destination.
+
+        Only the destination changes: every other argument of the last
+        routing command is sent again unchanged.
+
+        Re-routing would disrupt a calibration acquisition, so it waits until
+        the acquisition has finished.
+
+        :param route_name: the route to re-route.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        route = self._daq_routes[route_name]
+        with self._route_send_lock:
+            with self._daq_routes_lock:
+                route.reroute_queued = False
+            if self.acquiring_data_for_calibration.is_set():
+                self.logger.warning(
+                    f"Not re-routing {route.name} data during a calibration "
+                    "acquisition. It is re-routed when the acquisition finishes."
+                )
+                return
+            with self._daq_routes_lock:
+                destination = route.advertised
+                if route.overridden or route.last_sent is None or destination is None:
+                    return
+                params = route.last_sent | {
+                    "destination_ip": destination[0],
+                    "destination_port": destination[1],
+                }
+                if params == route.last_sent:
+                    return
+            [result_code], [message] = self._send_route(route, params)
+        if result_code != ResultCode.OK:
+            self.logger.error(
+                f"Failed to re-route {route.name} data: {message}. Run "
+                "RouteDataToDaqs to route it to its DAQ."
+            )
+
+    def get_routing(self: SpsStationComponentManager) -> _RoutingSnapshot:
+        """
+        Return how the station's data is routed, so that it can be restored.
+
+        :return: a snapshot of the routing, for restore_routing.
+        """
+        with self._daq_routes_lock:
+            return _RoutingSnapshot(
+                routes={
+                    route_name: (route.last_sent, route.overridden)
+                    for route_name, route in self._daq_routes.items()
+                },
+                integrated_settings=(
+                    self._lmc_integrated_mode,
+                    self._lmc_integrated_mode_locked,
+                    self._lmc_channel_payload_length,
+                    self._lmc_beam_payload_length,
+                ),
+            )
+
+    def restore_routing(
+        self: SpsStationComponentManager, snapshot: _RoutingSnapshot
+    ) -> None:
+        """
+        Route the station's data as it was routed before.
+
+        Only streams whose routing has changed are sent to the tiles again.
+        A stream that hadn't been routed before can't be restored, so a
+        warning is logged.
+
+        :param snapshot: how the data was routed, from get_routing.
+        """
+        (
+            self._lmc_integrated_mode,
+            self._lmc_integrated_mode_locked,
+            self._lmc_channel_payload_length,
+            self._lmc_beam_payload_length,
+        ) = snapshot.integrated_settings
+        for route_name, (params, overridden) in snapshot.routes.items():
+            route = self._daq_routes[route_name]
+            with self._daq_routes_lock:
+                unchanged = route.last_sent == params
+                if unchanged or params is None:
+                    route.overridden = overridden
+            if unchanged:
+                continue
+            if params is None:
+                self.logger.warning(
+                    f"Cannot restore the routing of {route.name} data, which had "
+                    "not been routed. Run RouteDataToDaqs to route it to its DAQ."
+                )
+                continue
+            [result_code], [message] = self._send_route(route, params, overridden)
+            if result_code != ResultCode.OK:
+                self.logger.error(
+                    f"Failed to restore the routing of {route.name} data: {message}"
+                )
+        self._update_misrouted_data_streams()
+
+    def route_data_to_daqs(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Point every tile at the destinations that the DAQs advertise.
+
+        This ends any manual SetLmcDownload or SetLmcIntegratedDownload, so
+        that the streams follow their DAQs again, routing data exactly as On
+        and Initialise do. It does not start the bandpasses.
+
+        Not every setting of a manual override is kept. The bandpass stream
+        keeps the mode and payload lengths it was last given, but goes back
+        to the default source port. The LMC stream goes back to the
+        station's defaults: 10G, a payload length of 8192 and the default
+        source port.
+
+        It only routes the LMC and bandpass streams. It does not start the
+        bandpasses, and it does not restore the beamformer chain or CSP
+        routing. Use it, for example, after a tile has re-initialised on its
+        own, which loses its routing, or when any streams are misrouted.
+
+        It succeeds only if every stream with a DAQ configured is routed. A
+        stream whose DAQ's destination is unknown is not routed, and the
+        command fails, saying what was and wasn't done.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        done, problems, rejected = self._route_streams(start_bandpasses=False)
+        problems = rejected + problems
+        if problems:
+            result_code = ResultCode.FAILED
+            message = f"Failed to route data to DAQs: {'; '.join(problems)}."
+            message += f" Done: {'; '.join(done)}." if done else " Nothing was done."
+            self.logger.error(message)
+        else:
+            result_code = ResultCode.OK
+            message = f"Data routed to DAQs: {'; '.join(done)}."
+        if task_callback:
+            task_callback(
+                status=(
+                    TaskStatus.COMPLETED
+                    if result_code == ResultCode.OK
+                    else TaskStatus.FAILED
+                ),
+                result=(result_code, message),
+            )
+
     def _route_data(
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
@@ -2718,21 +3304,33 @@ class SpsStationComponentManager(
             integrated data, defaults to deployed default.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
-        :return: a result code and message
+        :return: a result code and message. It fails only if the tiles reject
+            a routing command. A stream whose DAQ's destination is unknown is
+            skipped with a warning, and whether the bandpasses start is not
+            checked.
         """
-        if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
-            lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
-            self._lmc_ip = lmc_daq_status["Receiver IP"][0]
-            self._lmc_port = lmc_daq_status["Receiver Ports"][0]
-        if (
-            self._bandpass_daq_proxy is not None
-            and self._bandpass_daq_proxy._proxy is not None
-        ):
-            bandpass_daq_status = json.loads(
-                self._bandpass_daq_proxy._proxy.DaqStatus()
-            )
-            self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
-            self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
+        _, _, rejected = self._route_streams(start_bandpasses)
+        if rejected:
+            return ResultCode.FAILED, "; ".join(rejected)
+        return ResultCode.OK, ""
+
+    def _route_streams(
+        self: SpsStationComponentManager,
+        start_bandpasses: Optional[bool] = None,
+    ) -> tuple[list[str], list[str], list[str]]:
+        """
+        Route each data stream to its DAQ, and optionally start the bandpasses.
+
+        :param start_bandpasses: whether to start sending
+            integrated data, defaults to deployed default.
+
+        :return: what was done, what wasn't done, and which routing commands
+            the tiles rejected.
+        """
+        bandpass_route = self._daq_routes["bandpass"]
+        lmc_route = self._daq_routes["lmc"]
+        self._read_daq_destination(bandpass_route, self._bandpass_daq_proxy)
+        self._read_daq_destination(lmc_route, self._lmc_daq_proxy)
         if not self._lmc_integrated_mode_locked:
             mode = self._read_lmc_integrated_mode_from_bandpass_daq(
                 log_context="route_data"
@@ -2741,49 +3339,86 @@ class SpsStationComponentManager(
                 self._lmc_integrated_mode = mode
                 self._lmc_integrated_mode_locked = True
 
-        self.logger.info(
-            "Configuring LMC Integrated Download: "
-            f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
-        )
-        integrated_result_code, integrated_message = self.set_lmc_integrated_download(
-            mode=self._lmc_integrated_mode,
-            dst_ip=self._lmc_integrated_ip,
-            dst_port=self._lmc_integrated_port,
-            channel_payload_length=self._lmc_channel_payload_length,
-            beam_payload_length=self._lmc_beam_payload_length,
-            lock_mode=False,
-        )
-        if integrated_result_code[0] != ResultCode.OK:
-            msg = (
-                f"Failed to configure LMC integrated download: {integrated_message[0]}"
-            )
-            self.logger.error(msg)
-            return ResultCode.FAILED, msg
+        done: list[str] = []
+        problems: list[str] = []
+        rejected: list[str] = []
 
-        self.logger.info(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
-        lmc_result_code, lmc_message = self.set_lmc_download(
-            mode=self._lmc_mode,
-            dst_ip=self._lmc_ip,
-            dst_port=self._lmc_port,
-            payload_length=self._lmc_payload_length,
-        )
-        if lmc_result_code[0] != ResultCode.OK:
-            msg = f"Failed to configure LMC download: {lmc_message[0]}"
-            self.logger.error(msg)
-            return ResultCode.FAILED, msg
+        bandpass_routed = False
+        bandpass_destination = self._daq_destination(bandpass_route)
+        if bandpass_destination is None:
+            if self._bandpass_daq_proxy is not None:
+                problems.append(
+                    "bandpass data was not routed, because the bandpass DAQ has "
+                    "not advertised a destination"
+                )
+        else:
+            ip, port = bandpass_destination
+            self.logger.info(f"Configuring LMC Integrated Download: {ip}:{port}")
+            [result_code], [message] = self.set_lmc_integrated_download(
+                mode=self._lmc_integrated_mode,
+                dst_ip=ip,
+                dst_port=port,
+                channel_payload_length=self._lmc_channel_payload_length,
+                beam_payload_length=self._lmc_beam_payload_length,
+                lock_mode=False,
+                override=False,
+            )
+            if result_code == ResultCode.OK:
+                bandpass_routed = True
+                done.append(f"bandpass data routed to {ip}:{port}")
+            else:
+                rejected.append(
+                    f"Failed to configure LMC integrated download: {message}"
+                )
+
+        lmc_destination = self._daq_destination(lmc_route)
+        if lmc_destination is None:
+            if self._lmc_daq_proxy is not None:
+                problems.append(
+                    "LMC data was not routed, because the LMC DAQ has not "
+                    "advertised a destination"
+                )
+        else:
+            ip, port = lmc_destination
+            self.logger.info(f"Configuring LMC Download: {ip}:{port}")
+            [result_code], [message] = self.set_lmc_download(
+                mode=self._lmc_mode,
+                dst_ip=ip,
+                dst_port=port,
+                payload_length=self._lmc_payload_length,
+                override=False,
+            )
+            if result_code == ResultCode.OK:
+                done.append(f"LMC data routed to {ip}:{port}")
+            else:
+                rejected.append(f"Failed to configure LMC download: {message}")
 
         if (
             start_bandpasses
             if start_bandpasses is not None
             else self._start_bandpasses_in_initialise
         ):
-            self.logger.info("Starting integrated channel data stream.")
-            self.configure_integrated_channel_data(
-                integration_time=self._bandpass_integration_time,
-                first_channel=0,
-                last_channel=511,
-            )
-        return ResultCode.OK, ""
+            if not bandpass_routed:
+                # Without a bandpass DAQ there is nowhere to send them.
+                if self._bandpass_daq_proxy is not None:
+                    problems.append("bandpasses were not started")
+            else:
+                self.logger.info("Starting integrated channel data stream.")
+                [result_code], [message] = self.configure_integrated_channel_data(
+                    integration_time=self._bandpass_integration_time,
+                    first_channel=0,
+                    last_channel=511,
+                )
+                if result_code == ResultCode.OK:
+                    done.append("bandpasses started")
+                else:
+                    problems.append(f"bandpasses were not started: {message}")
+
+        for problem in problems:
+            self.logger.warning(f"Routing data to DAQs: {problem}.")
+        for rejection in rejected:
+            self.logger.error(rejection)
+        return done, problems, rejected
 
     @property  # type: ignore[misc]
     @check_communicating
@@ -3497,33 +4132,46 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
+        override: Optional[bool] = None,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of LMC channel.
 
         :param mode: '1G' or '10G'
         :param payload_length: SPEAD payload length for LMC packets
-        :param dst_ip: Destination IP, defaults to None
+        :param dst_ip: Destination IP, or empty for the IP the DAQ advertises.
+            The command is rejected if it is empty and the DAQ has not
+            advertised an IP.
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param override: True for a manual SetLmcDownload, which stops the
+            stream following its DAQ until it is routed to it again; False
+            to route the stream to its DAQ, so that it follows the DAQ; None
+            to leave that unchanged.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
-        json_param = json.dumps(
+        route = self._daq_routes["lmc"]
+        destination = self._requested_destination(route, dst_ip, dst_port)
+        if isinstance(destination, str):
+            return [ResultCode.REJECTED], [destination]
+        return self._send_route(
+            route,
             {
                 "mode": mode,
                 "payload_length": payload_length,
-                "destination_ip": dst_ip,
-                "destination_port": int(dst_port),
+                "destination_ip": destination[0],
+                "destination_port": destination[1],
                 "source_port": src_port,
                 "netmask_40g": self._sdn_netmask,
                 "gateway_40g": self._sdn_gateway,
-            }
+            },
+            override,
         )
-        return self._execute_async_on_tiles("SetLmcDownload", json_param)
 
+    # pylint: disable=too-many-arguments
     def set_lmc_integrated_download(
         self: SpsStationComponentManager,
         mode: str,
@@ -3533,19 +4181,29 @@ class SpsStationComponentManager(
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
         lock_mode: bool = True,
+        override: Optional[bool] = None,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of integrated LMC channel.
+
+        The mode and payload lengths are remembered, for routing data to the
+        bandpass DAQ later, only if every tile accepts the command.
 
         :param mode: '1G' or '10G'
         :param channel_payload_length: SPEAD payload length for
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated
             beam data
-        :param dst_ip: Destination IP, defaults to None
+        :param dst_ip: Destination IP, or empty for the IP the DAQ advertises.
+            The command is rejected if it is empty and the DAQ has not
+            advertised an IP.
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         :param lock_mode: whether this call should lock integrated-mode auto refresh.
+        :param override: True for a manual SetLmcIntegratedDownload, which
+            stops the stream following its DAQ until it is routed to it again;
+            False to route the stream to its DAQ, so that it follows the DAQ;
+            None to leave that unchanged.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -3555,26 +4213,60 @@ class SpsStationComponentManager(
             # 1G means NSDN, 10G means 40G (now 100G) SDN
             # Terminology needs refactoring.
             mode = "10G"
-        self._lmc_integrated_mode = mode
-        if lock_mode:
-            self._lmc_integrated_mode_locked = True
-        self._lmc_channel_payload_length = channel_payload_length
-        self._lmc_beam_payload_length = beam_payload_length
-        if dst_ip == "":
-            dst_ip = self._lmc_integrated_ip
-        json_param = json.dumps(
+        route = self._daq_routes["bandpass"]
+        destination = self._requested_destination(route, dst_ip, dst_port)
+        if isinstance(destination, str):
+            return [ResultCode.REJECTED], [destination]
+        result = self._send_route(
+            route,
             {
                 "mode": mode,
                 "channel_payload_length": channel_payload_length,
                 "beam_payload_length": beam_payload_length,
-                "destination_ip": dst_ip,
+                "destination_ip": destination[0],
                 "source_port": src_port,
-                "destination_port": int(dst_port),
+                "destination_port": destination[1],
                 "netmask_40g": self._sdn_netmask,
                 "gateway_40g": self._sdn_gateway,
-            }
+            },
+            override,
         )
-        return self._execute_async_on_tiles("SetLmcIntegratedDownload", json_param)
+        if result[0][0] == ResultCode.OK:
+            self._lmc_integrated_mode = mode
+            if lock_mode:
+                self._lmc_integrated_mode_locked = True
+            self._lmc_channel_payload_length = channel_payload_length
+            self._lmc_beam_payload_length = beam_payload_length
+        return result
+
+    def _requested_destination(
+        self: SpsStationComponentManager,
+        route: _DaqRoute,
+        dst_ip: str,
+        dst_port: int,
+    ) -> tuple[str, int] | str:
+        """
+        Return where a routing command asks for a stream to be sent.
+
+        An omitted IP means the IP that the DAQ advertises.
+
+        :param route: the stream's route.
+        :param dst_ip: the requested IP, or empty for the DAQ's.
+        :param dst_port: the requested port.
+
+        :return: the destination, or why there isn't one.
+        """
+        if dst_ip == "":
+            destination = self._daq_destination(route)
+            if destination is None:
+                msg = (
+                    f"No destination IP was given, and the {route.name} DAQ has "
+                    "not advertised one."
+                )
+                self.logger.error(msg)
+                return msg
+            dst_ip = destination[0]
+        return dst_ip, int(dst_port)
 
     def set_csp_ingest(
         self: SpsStationComponentManager,
@@ -4342,6 +5034,11 @@ class SpsStationComponentManager(
                 self._stop_daq()
             except Exception:  # pylint: disable=broad-except
                 self.logger.exception("Failed to stop DAQ on teardown")
+            try:
+                # Follow any DAQ that moved during the acquisition.
+                self._follow_daqs()
+            except Exception:  # pylint: disable=broad-except
+                self.logger.exception("Failed to re-route data on teardown")
 
         if task_callback:
             if success:

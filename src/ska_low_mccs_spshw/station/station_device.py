@@ -165,6 +165,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
         self._data_received_result: tuple[str, str] = ("", "")
+        self._misrouted_data_streams: list[str] = []
         self._beamformer_table: Optional[list[int]] = None
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((48, 512), np.nan)
@@ -240,6 +241,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("tileProgrammingState", True, False)
         self.set_change_event("adcPower", True, False)
         self.set_change_event("dataReceivedResult", True, False)
+        self.set_change_event("misroutedDataStreams", True, False)
         self.set_change_event("beamformerTable", True, False)
         self.set_change_event("beamformerRegions", True, False)
         self.set_change_event("beamformerDaisyChainValid", True, False)
@@ -252,6 +254,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("tileProgrammingState", True, True)
         self.set_archive_event("adcPower", True, True)
         self.set_archive_event("dataReceivedResult", True, True)
+        self.set_archive_event("misroutedDataStreams", True, True)
         self.set_archive_event("ppsDelaySpread", True, True)
         self.set_archive_event("beamformerTable", True, True)
         self.set_archive_event("beamformerRegions", True, True)
@@ -613,6 +616,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._data_received_result = state_change.get("dataReceivedResult", "")
             self.push_change_event("dataReceivedResult", self._data_received_result)
             self.push_archive_event("dataReceivedResult", self._data_received_result)
+        if "misroutedDataStreams" in state_change:
+            self._misrouted_data_streams = state_change["misroutedDataStreams"]
+            self.push_change_event("misroutedDataStreams", self._misrouted_data_streams)
+            self.push_archive_event(
+                "misroutedDataStreams", self._misrouted_data_streams
+            )
 
         if state_change.get("beamformerTable") is not None:
             self._beamformer_table = state_change.get("beamformerTable")
@@ -869,6 +878,26 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             name.
         """
         return self._data_received_result
+
+    @attribute(
+        dtype=(str,),
+        max_dim_x=16,
+        label="Misrouted data streams",
+        doc="Streams of tile data that tiles send to an address that none of "
+        "the station's DAQs advertise, each as 'stream: IP:port'. Run "
+        "RouteDataToDaqs to route them to the DAQs.",
+    )
+    def misroutedDataStreams(self: SpsStation) -> list[str]:
+        """
+        Return the streams that tiles send to an address no DAQ advertises.
+
+        This happens when a re-route fails, or a DAQ moves while its stream
+        is overridden by a manual SetLmcDownload or SetLmcIntegratedDownload,
+        for example. RouteDataToDaqs puts it right.
+
+        :return: each such stream and the address its data is sent to.
+        """
+        return self._misrouted_data_streams
 
     @attribute(
         dtype=str,
@@ -2075,6 +2104,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         return self._check_not_acquiring_for_calibration("Initialise")
 
+    def is_RouteDataToDaqs_allowed(
+        self: SpsStation,
+        request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
+    ) -> bool:
+        """
+        Return whether the RouteDataToDaqs command is allowed.
+
+        :param request_type: the request type.
+
+        :return: True if the command is allowed.
+        """
+        return self._check_not_acquiring_for_calibration("RouteDataToDaqs")
+
     def is_ReInitialise_allowed(
         self: SpsStation,
         request_type: LRCReqType | None = LRCReqType.ENQUEUE_REQ,
@@ -2152,6 +2194,53 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_abort_event: threading.Event,
         ) -> None:
             self.component_manager.initialise(
+                task_callback=task_callback, task_abort_event=task_abort_event
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    def RouteDataToDaqs(
+        self: SpsStation,
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Point every tile at the destinations that the DAQs advertise.
+
+        This ends any manual SetLmcDownload or SetLmcIntegratedDownload, so
+        that the streams follow their DAQs again, routing data exactly as On
+        and Initialise do. It does not start the
+        bandpasses.
+
+        Not every setting of a manual override is kept. The bandpass stream
+        keeps the mode and payload lengths it was last given, but goes back
+        to the default source port. The LMC stream goes back to the
+        station's defaults: 10G, a payload length of 8192 and the default
+        source port.
+
+        It only routes the LMC and bandpass streams. It does not start the
+        bandpasses (use ConfigureIntegratedChannelData), and it does not
+        restore the beamformer chain or CSP routing. Use it, for example,
+        after a tile has re-initialised on its own, which loses its routing,
+        or when misroutedDataStreams lists any streams.
+
+        It succeeds only if every stream with a DAQ configured is routed. A
+        stream whose DAQ's destination is unknown is not routed, and the
+        command fails, saying what was and wasn't done.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("RouteDataToDaqs")
+        """  # noqa: E501, D202
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.route_data_to_daqs(
                 task_callback=task_callback, task_abort_event=task_abort_event
             )
 
@@ -2519,11 +2608,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
+        This stops the LMC data stream following the LMC DAQ, until On,
+        Initialise or RouteDataToDaqs routes it to the DAQ again.
+
         :param argin: json dictionary with optional keywords:
 
             * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
             * payload_length - (int) SPEAD payload length for channel data
-            * destination_ip - (string) Destination IP.
+            * destination_ip - (string) Destination IP. Defaults to the IP the
+                LMC DAQ advertises; the command is rejected if it has
+                not advertised one.
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
 
@@ -2549,12 +2643,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 payload_length = 8192
             else:
                 payload_length = 1024
-        dst_ip = params.get("destination_ip", None)
+        dst_ip = params.get("destination_ip", "")
         src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
         dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
         return self.component_manager.set_lmc_download(
-            mode, payload_length, dst_ip, src_port, dst_port
+            mode, payload_length, dst_ip, src_port, dst_port, override=True
         )
 
     @command(
@@ -2567,13 +2661,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Configure link and size for integrated data packets, for all tiles.
 
+        This stops the bandpass data stream following the bandpass DAQ, until On,
+        Initialise or RouteDataToDaqs routes it to the DAQ again.
+
         :param argin: json dictionary with optional keywords:
 
             * mode - (string) '1G' '10G' '40G' - default 40G
             * channel_payload_length - (int) SPEAD payload length for integrated
                  channel data
             * beam_payload_length - (int) SPEAD payload length for integrated beam data
-            * destination_ip - (string) Destination IP
+            * destination_ip - (string) Destination IP. Defaults to the IP the
+                bandpass DAQ advertises; the command is rejected if it has
+                not advertised one.
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
 
@@ -2594,7 +2693,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         channel_payload_length = params.get("channel_payload_length", 1024)
         beam_payload_length = params.get("beam_payload_length", 1024)
-        dst_ip = params.get("destination_ip", None)
+        dst_ip = params.get("destination_ip", "")
         src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
         dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
 
@@ -2605,6 +2704,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             dst_ip,
             src_port,
             dst_port,
+            override=True,
         )
 
     @command(

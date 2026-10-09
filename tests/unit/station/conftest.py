@@ -173,25 +173,30 @@ def mock_tile_builder_fixture(
     return builder
 
 
-@pytest.fixture(name="mock_daq_device_proxy")
-def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
+def _mock_daq(ip: str, port: int) -> unittest.mock.Mock:
     """
-    Fixture that provides mock MccsDaqReceiver device proxy.
+    Return a mock MccsDaqReceiver device proxy, advertising a destination.
+
+    :param ip: the IP the DAQ advertises.
+    :param port: the port the DAQ advertises.
 
     :return: a mock MccsDaqReceiver device proxy.
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    builder.add_attribute("receiverIP", "123.123.123")
-    builder.add_attribute("receiverPorts", [4660])
+    # A real DAQ advertises the same destination through these attributes
+    # and through DaqStatus, so keep them consistent.
+    builder.add_attribute("receiverIP", ip)
+    builder.add_attribute("receiverPorts", [port])
+    builder.add_attribute("versionId", "9.1.0")
     builder.add_command(
         "DaqStatus",
         json.dumps(
             {
                 "Running Consumers": [],
                 "Receiver Interface": "eth0",
-                "Receiver Ports": [4660],
-                "Receiver IP": ["10.244.170.166"],
+                "Receiver Ports": [port],
+                "Receiver IP": [ip],
                 "Bandpass Monitor": False,
                 "Daq Health": ["OK", 0],
             }
@@ -208,6 +213,29 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
         "Configure", result_code=ResultCode.OK, status="Configure completed OK."
     )
     return builder()
+
+
+@pytest.fixture(name="mock_daq_device_proxy")
+def mock_daq_device_proxy_fixture() -> unittest.mock.Mock:
+    """
+    Fixture that provides a mock LMC MccsDaqReceiver device proxy.
+
+    :return: a mock MccsDaqReceiver device proxy.
+    """
+    return _mock_daq("10.244.170.166", 4660)
+
+
+@pytest.fixture(name="mock_bandpass_daq_device_proxy")
+def mock_bandpass_daq_device_proxy_fixture() -> unittest.mock.Mock:
+    """
+    Fixture that provides a mock bandpass MccsDaqReceiver device proxy.
+
+    It advertises a different destination from the LMC DAQ, so that tests
+    can tell which DAQ each stream is routed to.
+
+    :return: a mock MccsDaqReceiver device proxy.
+    """
+    return _mock_daq("10.244.170.177", 4661)
 
 
 @pytest.fixture(name="mock_wren_device_proxy")
@@ -336,6 +364,20 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             """
             for name in self.component_manager._subrack_proxies:
                 self.component_manager._subrack_state_changed(name, power=PowerState.ON)
+
+        @command(dtype_in=bool)
+        def MockCalibrationAcquisition(
+            self: PatchedSpsStationDevice, acquiring: bool
+        ) -> None:
+            """
+            Mock a calibration acquisition being in progress, or not.
+
+            :param acquiring: whether an acquisition is in progress.
+            """
+            if acquiring:
+                self.component_manager.acquiring_data_for_calibration.set()
+            else:
+                self.component_manager.acquiring_data_for_calibration.clear()
 
         @command()
         def MockTilesOff(self: PatchedSpsStationDevice) -> None:

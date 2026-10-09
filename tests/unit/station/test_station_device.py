@@ -134,6 +134,7 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     mock_daq_device_proxy: unittest.mock.Mock,
+    mock_bandpass_daq_device_proxy: unittest.mock.Mock,
     mock_wren_device_proxy: unittest.mock.Mock,
     patched_sps_station_device_class: type[SpsStation],
 ) -> Iterator[SpsTangoTestHarnessContext]:
@@ -147,8 +148,10 @@ def test_context_fixture(
         the subrack device
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
         devices
-    :param mock_daq_device_proxy: a fixture returning a mocked MccsDaqReceiver
-        for unittests.
+    :param mock_daq_device_proxy: a fixture returning a mocked LMC
+        MccsDaqReceiver for unittests.
+    :param mock_bandpass_daq_device_proxy: a fixture returning a mocked bandpass
+        MccsDaqReceiver for unittests.
     :param mock_wren_device_proxy: a fixture returning a mocked WREN device
         for unittests.
     :param patched_sps_station_device_class: a subclass of SpsStation
@@ -175,7 +178,7 @@ def test_context_fixture(
     )
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
-    harness.add_mock_bandpass_daq_device(mock_daq_device_proxy)
+    harness.add_mock_bandpass_daq_device(mock_bandpass_daq_device_proxy)
     # harness.add_mock_wren_device(mock_wren_device_proxy)
 
     # SpsStationComponentManager builds a real tango.Group over the tiles.
@@ -442,15 +445,477 @@ def test_On(
                     "mode": "1G",
                     "channel_payload_length": 1024,
                     "beam_payload_length": 1024,
-                    "destination_ip": "10.244.170.166",
+                    "destination_ip": "10.244.170.177",
                     "source_port": 61648,
-                    "destination_port": 4660,
+                    "destination_port": 4661,
                     "netmask_40g": str(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
                     "gateway_40g": sdn_gateway,
                 }
             )
+        )
+
+
+def _turn_station_on(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> LRCManager:
+    """
+    Turn the station on from OFFLINE, so that it routes data to the DAQs.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    :return: a manager for running further long running commands on the station.
+    """
+    counter = 0
+    sync_time = None
+
+    def get_fpga_unix_time(*args: Any) -> list:
+        # The FPGA time must tick over before the station considers it synced.
+        nonlocal counter, sync_time
+        if counter < 2:
+            counter += 1
+            sync_time = datetime.datetime.now()
+        return [sync_time]
+
+    for tile in mock_tile_device_proxies:
+        tile.GetFpgaUnixTime = unittest.mock.Mock(side_effect=get_fpga_unix_time)
+
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    station_device.MockSubracksOff()
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+    station_lrc_manager = LRCManager(station_device, change_event_callbacks)
+    station_lrc_manager.run_command_with_checks("On", expected_status=ResultCode.QUEUED)
+    station_lrc_manager.assert_command_in_progress()
+    station_device.MockSubracksOn()
+    station_device.MockTilesOn()
+    for mock_tile_proxy in mock_tile_device_proxies:
+        mock_tile_proxy.tileProgrammingState = "Initialised"
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    station_lrc_manager.assert_command_finished("COMPLETED")
+    return station_lrc_manager
+
+
+def _advertise_daq_destination(
+    mock_daq_device_proxy: unittest.mock.Mock,
+    attribute_name: str,
+    attribute_value: Any,
+) -> None:
+    """
+    Deliver a change event from the mock DAQ to every subscriber.
+
+    :param mock_daq_device_proxy: the mock DAQ device.
+    :param attribute_name: the DAQ attribute that changed.
+    :param attribute_value: its new value.
+    """
+    callbacks = [
+        subscription.args[2]
+        for subscription in mock_daq_device_proxy.subscribe_event.call_args_list
+        if subscription.args[0].lower() == attribute_name.lower()
+    ]
+    assert callbacks, f"SpsStation did not subscribe to {attribute_name} on the DAQ"
+    for callback in callbacks:
+        event = unittest.mock.Mock()
+        event.event = "change"
+        event.err = False
+        event.attr_value.name = attribute_name
+        event.attr_value.value = attribute_value
+        event.attr_value.quality = tango.AttrQuality.ATTR_VALID
+        callback(event)
+
+
+def _lmc_download_json(
+    destination_ip: str,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+    destination_port: int = 4660,
+) -> str:
+    return json.dumps(
+        {
+            "mode": "10G",
+            "payload_length": 8192,
+            "destination_ip": destination_ip,
+            "destination_port": destination_port,
+            "source_port": 61648,
+            "netmask_40g": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": sdn_gateway,
+        }
+    )
+
+
+def _lmc_integrated_download_json(
+    destination_ip: str,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+    destination_port: int = 4660,
+) -> str:
+    return json.dumps(
+        {
+            "mode": "1G",
+            "channel_payload_length": 1024,
+            "beam_payload_length": 1024,
+            "destination_ip": destination_ip,
+            "source_port": 61648,
+            "destination_port": destination_port,
+            "netmask_40g": str(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": sdn_gateway,
+        }
+    )
+
+
+def test_tiles_follow_daq_advertised_destination(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    mock_daq_device_proxy: unittest.mock.Mock,
+    mock_bandpass_daq_device_proxy: unittest.mock.Mock,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+) -> None:
+    """
+    Test that tiles are re-routed when a DAQ advertises a new destination.
+
+    This is the SPRTS-1254 scenario: the DAQ restarts and comes back on a
+    different IP, and the tiles must follow it rather than keep sending
+    to the old one. Each stream must follow its own DAQ, and only its own.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param mock_daq_device_proxy: the mock LMC DAQ.
+    :param mock_bandpass_daq_device_proxy: the mock bandpass DAQ.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+    """
+    _turn_station_on(station_device, mock_tile_device_proxies, change_event_callbacks)
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcDownload.assert_last_call(
+            _lmc_download_json("10.244.170.166", sdn_first_interface, sdn_gateway)
+        )
+        tile.SetLmcIntegratedDownload.assert_last_call(
+            _lmc_integrated_download_json(
+                "10.244.170.177", sdn_first_interface, sdn_gateway, 4661
+            )
+        )
+
+    _advertise_daq_destination(mock_daq_device_proxy, "receiverIP", "10.244.170.200")
+
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcDownload.assert_next_call(
+            _lmc_download_json("10.244.170.200", sdn_first_interface, sdn_gateway)
+        )
+        tile.SetLmcIntegratedDownload.assert_not_called()
+
+    _advertise_daq_destination(mock_bandpass_daq_device_proxy, "receiverPorts", [4662])
+
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_next_call(
+            _lmc_integrated_download_json(
+                "10.244.170.177", sdn_first_interface, sdn_gateway, 4662
+            )
+        )
+        tile.SetLmcDownload.assert_not_called()
+
+
+def test_RouteDataToDaqs(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+) -> None:
+    """
+    Test that RouteDataToDaqs undoes a manual override of the data routing.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+    """
+    station_lrc_manager = _turn_station_on(
+        station_device, mock_tile_device_proxies, change_event_callbacks
+    )
+    override = {
+        "mode": "1G",
+        "channel_payload_length": 512,
+        "beam_payload_length": 256,
+        "destination_ip": "10.0.0.99",
+        "source_port": 61000,
+    }
+    station_device.SetLmcIntegratedDownload(json.dumps(override))
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcDownload.assert_last_call(
+            _lmc_download_json("10.244.170.166", sdn_first_interface, sdn_gateway)
+        )
+        tile.SetLmcIntegratedDownload.assert_last_call(
+            json.dumps(
+                json.loads(
+                    _lmc_integrated_download_json(
+                        "10.0.0.99", sdn_first_interface, sdn_gateway
+                    )
+                )
+                | {"channel_payload_length": 512, "beam_payload_length": 256}
+                | {"source_port": 61000}
+            )
+        )
+
+    station_lrc_manager.run_command_with_checks(
+        "RouteDataToDaqs", expected_status=ResultCode.QUEUED
+    )
+    station_lrc_manager.assert_command_finished("COMPLETED")
+
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcDownload.assert_next_call(
+            _lmc_download_json("10.244.170.166", sdn_first_interface, sdn_gateway)
+        )
+        # The bandpass stream keeps the mode and payload lengths it was last
+        # given, but goes back to the default source port.
+        tile.SetLmcIntegratedDownload.assert_next_call(
+            json.dumps(
+                json.loads(
+                    _lmc_integrated_download_json(
+                        "10.244.170.177", sdn_first_interface, sdn_gateway, 4661
+                    )
+                )
+                | {"channel_payload_length": 512, "beam_payload_length": 256}
+            )
+        )
+
+
+def test_RouteDataToDaqs_rejected_during_calibration_acquisition(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that RouteDataToDaqs is rejected while a calibration acquisition runs.
+
+    This tests behaviour that only exists with the DAQ-following fix, so it
+    cannot be run against the code without it.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    _turn_station_on(station_device, mock_tile_device_proxies, change_event_callbacks)
+    station_device.MockCalibrationAcquisition(True)
+
+    with pytest.raises(tango.DevFailed, match="calibration acquisition"):
+        station_device.RouteDataToDaqs()
+
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcDownload.assert_last_call(ANY)
+        tile.SetLmcDownload.assert_not_called()
+
+
+def test_manual_override_not_followed_until_RouteDataToDaqs(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    mock_bandpass_daq_device_proxy: unittest.mock.Mock,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+) -> None:
+    """
+    Test that a manual SetLmcIntegratedDownload stops the stream following its DAQ.
+
+    The override is kept, even when the DAQ moves, until RouteDataToDaqs.
+    The station flags that the tiles are sending to an address none of its
+    DAQs advertise.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param mock_bandpass_daq_device_proxy: the mock bandpass DAQ.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+    """
+    station_lrc_manager = _turn_station_on(
+        station_device, mock_tile_device_proxies, change_event_callbacks
+    )
+    station_device.SetLmcIntegratedDownload(
+        json.dumps({"mode": "1G", "destination_ip": "10.0.0.99"})
+    )
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_last_call(
+            _lmc_integrated_download_json("10.0.0.99", sdn_first_interface, sdn_gateway)
+        )
+
+    _advertise_daq_destination(
+        mock_bandpass_daq_device_proxy, "receiverIP", "10.244.170.201"
+    )
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_not_called()
+    assert list(station_device.misroutedDataStreams) == ["bandpass: 10.0.0.99:4660"]
+
+    mock_bandpass_daq_device_proxy.configure_mock(
+        DaqStatus=lambda: json.dumps(
+            {"Receiver IP": ["10.244.170.201"], "Receiver Ports": [4661]}
+        )
+    )
+    station_lrc_manager.run_command_with_checks(
+        "RouteDataToDaqs", expected_status=ResultCode.QUEUED
+    )
+    station_lrc_manager.assert_command_finished("COMPLETED")
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_last_call(
+            _lmc_integrated_download_json(
+                "10.244.170.201", sdn_first_interface, sdn_gateway, 4661
+            )
+        )
+    assert not station_device.misroutedDataStreams
+
+    _advertise_daq_destination(
+        mock_bandpass_daq_device_proxy, "receiverIP", "10.244.170.202"
+    )
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_next_call(
+            _lmc_integrated_download_json(
+                "10.244.170.202", sdn_first_interface, sdn_gateway, 4661
+            )
+        )
+
+
+def test_tiles_follow_daq_restarted_on_new_address(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    mock_bandpass_daq_device_proxy: unittest.mock.Mock,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+) -> None:
+    """
+    Test that tiles follow a DAQ that comes back on a new address.
+
+    When a DAQ pod restarts, the station's subscription to it reconnects
+    and reports the new pod's destination. Here the station reconnects to
+    a DAQ that now has a different IP and port.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param mock_bandpass_daq_device_proxy: the mock bandpass DAQ.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+    """
+    _turn_station_on(station_device, mock_tile_device_proxies, change_event_callbacks)
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_last_call(
+            _lmc_integrated_download_json(
+                "10.244.170.177", sdn_first_interface, sdn_gateway, 4661
+            )
+        )
+
+    mock_bandpass_daq_device_proxy.receiverIP = "10.244.170.203"
+    mock_bandpass_daq_device_proxy.receiverPorts = [4664]
+    station_device.adminMode = AdminMode.OFFLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(
+        DevState.DISABLE, lookahead=5, consume_nonmatches=True
+    )
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+
+    # The new IP and port are reported separately, so the tiles can briefly
+    # be sent the new IP with the old port before both are known.
+    for tile in mock_tile_device_proxies:
+        tile.SetLmcIntegratedDownload.assert_last_call(
+            _lmc_integrated_download_json(
+                "10.244.170.203", sdn_first_interface, sdn_gateway, 4664
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    ("command_name", "argument", "expected_json", "daq_ip", "daq_port"),
+    [
+        (
+            "SetLmcDownload",
+            {"mode": "10G"},
+            _lmc_download_json,
+            "10.244.170.166",
+            4660,
+        ),
+        (
+            "SetLmcIntegratedDownload",
+            {"mode": "1G"},
+            _lmc_integrated_download_json,
+            "10.244.170.177",
+            4661,
+        ),
+    ],
+)
+# pylint: disable=too-many-arguments
+def test_set_lmc_download_without_destination_uses_daq_destination(
+    station_device: DeviceProxy,
+    mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
+    command_name: str,
+    argument: dict[str, Any],
+    expected_json: Callable[[str, str, str, int], str],
+    daq_ip: str,
+    daq_port: int,
+) -> None:
+    """
+    Test that routing commands without a destination use the DAQ's.
+
+    The IP comes from the DAQ, and the port defaults to 4660 as before.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+    :param command_name: the routing command under test.
+    :param argument: its argument, which has no destination.
+    :param expected_json: builds the JSON the tiles should receive.
+    :param daq_ip: the IP the command's DAQ advertises.
+    :param daq_port: the port the command's DAQ advertises.
+    """
+    _turn_station_on(station_device, mock_tile_device_proxies, change_event_callbacks)
+    routed_json = expected_json(daq_ip, sdn_first_interface, sdn_gateway, daq_port)
+    for tile in mock_tile_device_proxies:
+        getattr(tile, command_name).assert_last_call(routed_json)
+
+    getattr(station_device, command_name)(json.dumps(argument))
+
+    for tile in mock_tile_device_proxies:
+        getattr(tile, command_name).assert_next_call(
+            expected_json(daq_ip, sdn_first_interface, sdn_gateway, 4660)
         )
 
 
@@ -643,9 +1108,9 @@ def test_Initialise(
                     "mode": "1G",
                     "channel_payload_length": 1024,
                     "beam_payload_length": 1024,
-                    "destination_ip": "10.244.170.166",
+                    "destination_ip": "10.244.170.177",
                     "source_port": 61648,
-                    "destination_port": 4660,
+                    "destination_port": 4661,
                     "netmask_40g": str(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),

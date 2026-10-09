@@ -231,15 +231,32 @@ class SubrackSimulator(SubrackProtocol):
         "turn_on_tpms",
     )
 
-    def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:
+    SUPPORTED_API_VERSIONS: Final = ("1.6.0", "1.8.0")
+
+    def __init__(
+        self: SubrackSimulator,
+        api_version: str = "1.6.0",
+        **kwargs: JsonSerializable,
+    ) -> None:
         """
         Initialise a new instance.
 
+        :param api_version: the version of the subrack web API that the
+            simulator should emulate. This also sets the BIOS version
+            reported in ``board_info``.
         :param kwargs: initial values, different from the defaults, that
             the simulator should take.
 
         :raises AttributeError: if kwargs refer to an non-existent attribute.
+        :raises ValueError: if the API version is not supported.
         """
+        if api_version not in self.SUPPORTED_API_VERSIONS:
+            raise ValueError(
+                f"Unsupported API version {api_version}; "
+                f"must be one of {', '.join(self.SUPPORTED_API_VERSIONS)}."
+            )
+        self._api_version: Final = api_version
+
         unknown_names = [name for name in kwargs if name not in self.ATTRIBUTE_METADATA]
         if unknown_names:
             raise AttributeError(f"Unknown attributes: {','.join(unknown_names)}.")
@@ -247,6 +264,13 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values: dict[str, JsonSerializable] = copy.deepcopy(kwargs)
         for attribute, metadata in self.ATTRIBUTE_METADATA.items():
             self._attribute_values.setdefault(attribute, metadata["default"])
+
+        # The BIOS version is how clients tell which API version they are
+        # talking to, so it must always agree with the emulated API version.
+        board_info = copy.deepcopy(self._attribute_values["board_info"])
+        board_info["SMM"]["bios"] = f"v{api_version}"
+        self._attribute_values["board_info"] = board_info
+
         self._network_jitter_limits: tuple[int, int] = (0, 0)  # ms
 
         self._aborted_event = threading.Event()
@@ -270,6 +294,15 @@ class SubrackSimulator(SubrackProtocol):
         if special_set_method is None:
             return self._set_attribute(name, value)
         return special_set_method(value)
+
+    @property
+    def api_version(self: SubrackSimulator) -> str:
+        """
+        Return the version of the subrack web API that this simulator emulates.
+
+        :return: the emulated API version, e.g. "1.8.0".
+        """
+        return self._api_version
 
     @property
     def network_jitter_limits(self: SubrackSimulator) -> tuple[int, int]:

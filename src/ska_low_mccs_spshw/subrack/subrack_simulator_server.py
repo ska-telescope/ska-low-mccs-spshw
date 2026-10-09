@@ -129,7 +129,8 @@ def run_server_forever(backend: SubrackProtocol, port: int) -> None:
 
 def main() -> None:
     """Entry point for an HTTP server that fronts a subrack simulator."""
-    subrack = SubrackSimulator()
+    api_version = os.getenv("SUBRACK_SIMULATOR_API_VERSION", "1.6.0")
+    subrack = SubrackSimulator(api_version=api_version)
 
     port = int(os.getenv("SUBRACK_SIMULATOR_PORT", "8081"))
     run_server_forever(subrack, port)

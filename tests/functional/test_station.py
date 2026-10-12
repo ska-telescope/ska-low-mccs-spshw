@@ -1228,8 +1228,15 @@ def reinitialise_station(
     command_info: dict[str, Any],
 ) -> None:
     """
-    Run ReInitialise, recording what each tile reports while it runs.
+    Run Reinitialise and monitor the TileProgrammingState for all tiles
 
+    This test will subscribe to the programming states of all the station's
+    tiles and saves all the values recorded in the command_info dictionary,
+    then it starts the Reinitialise command.
+    
+    If the tile's are reprogrammed, then the "Not Programmed" state would be
+    saved in command_info["programming_states"] which is checked later.
+    
     :param station: station device under test.
     :param station_tiles: list of TPM DeviceProxies.
     :param command_info: a dict in which to store command IDs and tile data.

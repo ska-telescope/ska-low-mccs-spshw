@@ -2183,7 +2183,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("Initialise")
+            >>> dp.command_inout("Reinitialise")
         """  # noqa: E501, D202
 
         def task(

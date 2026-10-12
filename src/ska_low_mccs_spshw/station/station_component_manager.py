@@ -2165,12 +2165,14 @@ class SpsStationComponentManager(
 
     def _wait_for_wren_initilised(
         self: SpsStationComponentManager,
+        progress: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[ResultCode, str]:
         """
         Wait for the WREN to be initialised if available.
 
+        :param progress: progress callback update value
         :param task_callback: Update task state
         :param task_abort_event: Abort the task
         :return: ResultCode and message
@@ -2186,7 +2188,7 @@ class SpsStationComponentManager(
             fail_on_timeout=self._wren_health_check_fail_on_timeout,
         )
         if task_callback:
-            task_callback(progress=5)
+            task_callback(progress)
 
         return (result_code, failure_step)
 
@@ -2227,7 +2229,9 @@ class SpsStationComponentManager(
         # Now, if the wren proxy is set, wait for the WREN to initialise
         if result_code == ResultCode.OK:
             result_code, failure_step = self._wait_for_wren_initilised(
-                task_callback, task_abort_event
+                progress=5,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
             )
 
         if result_code == ResultCode.OK:

@@ -3618,6 +3618,10 @@ class TestMccsTileCommands:
         :param duration: duration of time that the beamformer should run
         :param channel_groups: Channel groups started and stopped
         """
+        on_tile_device.startAcquisition("{}")
+        _wait_for_attribute_value(
+            on_tile_device, "tileProgrammingState", "Synchronised"
+        )
         start_time = None  # it used to be a parameter but only None was tested
         _wait_for_attribute_value(on_tile_device, "isBeamformerRunning", False)
         assert not on_tile_device.BeamformerRunningForChannels("{}")

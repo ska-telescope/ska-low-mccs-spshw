@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.
 * [THORN-752] Update CODEOWNERS.
 * [THORN-680] SpsStation aggregate attributes are now served from a cache kept up to date by change-event subscriptions on each MccsTile, rather than by reading every tile serially over the network on each read.
 * [THORN-680] Fix reporting of aggregate SpsStation attributes when a tile has no value. Previously, an aggregate attribute such as `staticTimeDelays` could return `[tile1, tile2, tile4]`, making it unclear which tile was missing. Tile positions are now preserved, e.g. `[tile1, tile2, nan, tile4]`.

@@ -4387,11 +4387,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    def _is_synchronised(self: MccsTile, *args: Any) -> bool:
+    def _is_synchronised(self: MccsTile, *args: Any, **kwargs: Any) -> bool:
         """
         Return a flag representing whether we are in Synchronised state.
 
         :param args: The tango.AttReqType.
+        :param kwargs: Optional request_type from long running commands.
 
         :return: True if Tile is in Synchronised state.
         """
@@ -6872,7 +6873,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.apply_pointing_delays(start_time)
 
-    @stb.long_running_commands.long_running_command
+    @stb.long_running_commands.long_running_command(fisallowed="_is_synchronised")
     @stb.validators.validate_json_args(schema=StartBeamformer_SCHEMA)
     def StartBeamformer(
         self: MccsTile,

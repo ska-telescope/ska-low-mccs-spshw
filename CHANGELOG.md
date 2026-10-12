@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 15.2.0
 
 * [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.
 * [THORN-752] Update CODEOWNERS.

@@ -55,7 +55,9 @@ gc.disable()
 
 TARGET = "ska_low_mccs_common.component.command_proxy.invoke_lrc"
 
-HEALTH_THRESHOLDS_PROPERTY_VALUE = "{ 'fred': [42,42,42], 'jim': [53,53,53], 'sheila': [8,8,8] }"
+HEALTH_THRESHOLDS_PROPERTY_VALUE = (
+    "{ 'fred': [42,42,42], 'jim': [53,53,53], 'sheila': [8,8,8] }"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -2077,7 +2079,7 @@ def test_health_threshold_property_set(station_device: SpsStation) -> None:
     """
     result = station_device.healthThresholds
     assert result is not None
-    assert result  == HEALTH_THRESHOLDS_PROPERTY_VALUE
+    assert result == HEALTH_THRESHOLDS_PROPERTY_VALUE
 
 
 def test_csp_set_reset(

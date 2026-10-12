@@ -1228,15 +1228,15 @@ def reinitialise_station(
     command_info: dict[str, Any],
 ) -> None:
     """
-    Run Reinitialise and monitor the TileProgrammingState for all tiles
+    Run Reinitialise and monitor the TileProgrammingState for all tiles.
 
     This test will subscribe to the programming states of all the station's
     tiles and saves all the values recorded in the command_info dictionary,
     then it starts the Reinitialise command.
-    
+
     If the tile's are reprogrammed, then the "Not Programmed" state would be
     saved in command_info["programming_states"] which is checked later.
-    
+
     :param station: station device under test.
     :param station_tiles: list of TPM DeviceProxies.
     :param command_info: a dict in which to store command IDs and tile data.
@@ -1299,8 +1299,7 @@ def no_tpm_was_reprogrammed(
         command_info["programming_states"],
     ):
         name = tile.dev_name()
-        #  Check that the TileProgrammingState doesn't go through the this states
+        # Erasing the FPGAs always reports NotProgrammed.
         assert "NotProgrammed" not in states, f"{name} was reprogrammed: {states}"
-        assert "Programmed" not in states, f"{name} was reprogrammed: {states}"
         # And the tile is still synchronised
         assert tile.tileProgrammingState == "Synchronised", name

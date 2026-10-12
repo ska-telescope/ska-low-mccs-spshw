@@ -1229,9 +1229,8 @@ def test_reinitialise_progress_callbacks(
     """
     Test that reinitialise fires progress callbacks at each step in the right order.
 
-    Unlike ``initialise``, ``reinitialise`` does not reprogram the tiles, so the
-    source IP, global reference time, tile re-initialisation and tile parameter
-    steps must not run.
+    Unlike ``initialise``, ``reinitialise`` re-initialises the tiles without
+    reprogramming their FPGAs.
 
     :param communicating_station_component_manager: the SPS station component
         manager under test
@@ -1261,6 +1260,9 @@ def test_reinitialise_progress_callbacks(
             "_set_global_reference_time",
             return_value=ResultCode.OK,
         ),
+        unittest.mock.patch.object(
+            station_component_manager, "_reinitialise_tiles", return_value=ok
+        ) as mock_reinitialise_tiles,
         unittest.mock.patch.object(
             station_component_manager, "_initialise_tile_parameters", return_value=ok
         ),
@@ -1303,6 +1305,7 @@ def test_reinitialise_progress_callbacks(
         mock_start_beamformer,
     ]:
         step.assert_called_once()
+    assert mock_reinitialise_tiles.call_args.kwargs["force_reprogramming"] is False
 
     task_callback.assert_called_with(
         status=TaskStatus.COMPLETED,

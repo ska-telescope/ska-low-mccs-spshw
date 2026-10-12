@@ -751,6 +751,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
     )
 
+    ReInitialise_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ReInitialise.json",
+        )
+    )
+
     ConfigureTestGenerator_SCHEMA: Final = json.loads(
         importlib.resources.read_text(
             "ska_low_mccs_spshw.schemas.tile",
@@ -5859,6 +5866,46 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ) -> None:
             self.component_manager.initialise(
                 task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=ReInitialise_SCHEMA)
+    def ReInitialise(
+        self: MccsTile, force_reprogramming: bool
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Perform all required initialisation, optionally without reprogramming.
+
+        This is the same as Initialise, except that the caller chooses
+        whether the FPGAs are erased and reprogrammed. With
+        ``force_reprogramming`` false, a programmed TPM keeps its firmware:
+        the FPGAs are reset and the TPM is reinitialised, and acquisition is
+        restarted if a global reference time is set.
+
+        :param force_reprogramming: whether to erase and reprogram the FPGAs
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ReInitialise.json
+            :language: json
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ReInitialise", '{"force_reprogramming": false}')
+        """  # noqa: E501, D202
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.initialise(
+                task_callback=task_callback,
+                force_reprogramming=force_reprogramming,
             )
 
         return task

@@ -2992,6 +2992,7 @@ class TestMccsTileCommands:
         ("command_name", "command_args"),
         [
             ("Initialise", None),
+            ("ReInitialise", '{"force_reprogramming": false}'),
             ("DownloadFirmware", "tests/data/Vivado_test_firmware_bitfile.bit"),
         ],
     )
@@ -3005,8 +3006,8 @@ class TestMccsTileCommands:
         """
         Test that Long Running Commands can execute.
 
-        Here we are testing the 'Initialise' and 'DownloadFirmware' command the start
-        acquisition is tested in 'test_StartAcquisition'
+        Here we are testing the 'Initialise', 'ReInitialise' and 'DownloadFirmware'
+        commands; start acquisition is tested in 'test_StartAcquisition'
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

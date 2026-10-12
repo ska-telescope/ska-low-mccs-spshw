@@ -4,6 +4,7 @@
 
 * [THORN-752] Update CODEOWNERS.
 * [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
+* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
 * [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.1.1

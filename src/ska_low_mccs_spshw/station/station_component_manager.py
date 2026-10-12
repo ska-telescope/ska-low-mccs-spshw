@@ -2188,7 +2188,7 @@ class SpsStationComponentManager(
             fail_on_timeout=self._wren_health_check_fail_on_timeout,
         )
         if task_callback:
-            task_callback(progress)
+            task_callback(progress=progress)
 
         return (result_code, failure_step)
 
@@ -2246,6 +2246,17 @@ class SpsStationComponentManager(
             self.logger.info("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
             # This is very quick to complete so no progress update here
+
+        if result_code == ResultCode.OK:
+            self.logger.info("Re-initialising tiles without reprogramming")
+            result_code, failure_step = self._reinitialise_tiles(
+                task_callback,
+                task_abort_event,
+                progress_start=10,
+                progress_end=65,
+                force_reprogramming=False,
+            )
+            # Progress is reported incrementally inside _reinitialise_tiles
 
         if result_code == ResultCode.OK:
             self.logger.info("Initialising tile parameters")
@@ -2542,18 +2553,22 @@ class SpsStationComponentManager(
         task_abort_event: Optional[threading.Event] = None,
         progress_start: int = 0,
         progress_end: int = 100,
+        force_reprogramming: bool = True,
     ) -> tuple[ResultCode, str]:
         """
         Initialise tiles.
 
-        Initialise tiles by completely reprogram and reconfigure all internal
-        peripherals. This is required prior to station synchronization.
+        Initialise tiles by reconfiguring all internal peripherals, and
+        optionally reprogramming the FPGAs. This is required prior to
+        station synchronization.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :param progress_start: progress percentage at the start of this step,
             used to interpolate progress callbacks during the polling wait.
         :param progress_end: progress percentage reported once tiles are ready.
+        :param force_reprogramming: whether to erase and reprogram the FPGAs.
+            If false, the tiles keep their firmware.
         :return: a result code and message
 
         """
@@ -2566,7 +2581,12 @@ class SpsStationComponentManager(
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
-                result_code = proxy._proxy.initialise()
+                if force_reprogramming:
+                    result_code = proxy._proxy.initialise()
+                else:
+                    result_code = proxy._proxy.ReInitialise(
+                        json.dumps({"force_reprogramming": False})
+                    )
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:

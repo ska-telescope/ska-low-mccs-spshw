@@ -170,6 +170,7 @@ def mock_tile_builder_fixture(
     )
     builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     builder.add_result_command("initialise", ResultCode.OK)
+    builder.add_result_command("ReInitialise", ResultCode.OK)
     return builder
 
 

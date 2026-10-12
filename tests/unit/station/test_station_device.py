@@ -55,7 +55,7 @@ gc.disable()
 
 TARGET = "ska_low_mccs_common.component.command_proxy.invoke_lrc"
 
-HEALTH_PROPERTY_VALUE = "{ 'fred': [42,42,42], 'jim': [53,53,53], 'sheila': [8,8,8] }"
+HEALTH_THRESHOLDS_PROPERTY_VALUE = "{ 'fred': [42,42,42], 'jim': [53,53,53], 'sheila': [8,8,8] }"
 
 
 @pytest.fixture(autouse=True)
@@ -174,7 +174,7 @@ def test_context_fixture(
         bandpass_daq_trl=get_bandpass_daq_name(),
         wren_trl="",  # This is a causing intermittent test failure.
         device_class=patched_sps_station_device_class,
-        health_thresholds=HEALTH_PROPERTY_VALUE,
+        health_thresholds=HEALTH_THRESHOLDS_PROPERTY_VALUE,
     )
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
@@ -2075,9 +2075,9 @@ def test_health_threshold_property_set(station_device: SpsStation) -> None:
 
     :param station_device: the SPS station Tango device under test.
     """
-    result = station_device.get_property("HealthThresholds")
+    result = station_device.healthThresholds
     assert result is not None
-    assert result.get("HealthThresholds") == HEALTH_PROPERTY_VALUE
+    assert result  == HEALTH_THRESHOLDS_PROPERTY_VALUE
 
 
 def test_csp_set_reset(

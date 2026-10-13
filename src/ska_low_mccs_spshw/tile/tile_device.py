@@ -219,6 +219,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     is_programmed_signal: AttrSignal[bool] = AttrSignal[bool]()
     is_beamformer_running_signal: AttrSignal[bool] = AttrSignal[bool]()
+    testGeneratorActive_signal: AttrSignal[bool] = AttrSignal[bool]()
     pps_delay_signal: AttrSignal[int] = AttrSignal[int]()
     pending_data_requests_signal: AttrSignal[bool] = AttrSignal[bool]()
     current_tile_beamformer_frame_signal: AttrSignal[int] = AttrSignal[int]()
@@ -836,6 +837,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.dstip40gfpga2_signal = ""
         self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
         self.antennaIds_signal = self._antenna_ids
+        self.testGeneratorActive_signal = False
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -1457,7 +1459,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._health_model.update_state(
                         tile_health_structure=self.tile_health_structure
                     )
-                self.update_tile_health_attributes(mark_invalid=mark_invalid)
+                if mark_invalid:
+                    self.update_tile_health_attributes(mark_invalid=True)
+                elif attribute_value is not None:
+                    # Each poll only returns one group of the health structure,
+                    # so only emit the attributes that group contains.
+                    self.update_tile_health_attributes(updated=attribute_value)
             elif attribute_name == "firmware_thresholds":
                 self.logger.debug(
                     "hw read thresholds reporting "
@@ -1638,24 +1645,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 setattr(self, alarm_signal, alarm_value)
 
     def update_tile_health_attributes(
-        self: MccsTile, mark_invalid: bool = False
+        self: MccsTile,
+        mark_invalid: bool = False,
+        updated: dict[str, Any] | None = None,
     ) -> None:
         """
         Update TANGO attributes from the tile health structure dictionary.
 
         :param mark_invalid: True when values being reported are not valid.
+        :param updated: the portion of the tile health structure that has
+            just been updated. If given, only attributes within it are emitted;
+            otherwise all attributes are emitted.
         """
         for (
             attribute_name,
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
+            if updated is not None and not mark_invalid:
+                try:
+                    reduce(getitem, dictionary_path, updated)
+                except (KeyError, TypeError):
+                    continue
+
             if mark_invalid:
-                if attribute_name in self._HEALTH_SIGNAL_MAP:
-                    setattr(self, self._HEALTH_SIGNAL_MAP[attribute_name], None)
-                elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                    setattr(self, self._GENERIC_SIGNAL_MAP[attribute_name], None)
-                else:
-                    self.logger.warning(f"Attribute {attribute_name} not found.")
+                self._mark_attribute_invalid(attribute_name)
                 continue
 
             try:
@@ -1669,38 +1682,59 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 )
                 attribute_value = None
 
-            try:
-                if attribute_name in self._HEALTH_SIGNAL_MAP:
-                    emit_value = attribute_value
-                    if (
-                        attribute_name.lower() == "ppspresent"
-                        and attribute_value is False
-                    ):
-                        # Signal ALARM quality directly rather than relying on
-                        # Tango's min_alarm, which isn't usable on a DevBoolean.
-                        emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
-                    setattr(
-                        self,
-                        self._HEALTH_SIGNAL_MAP[attribute_name],
-                        emit_value,
-                    )
-                elif attribute_name in self._GENERIC_SIGNAL_MAP:
-                    emit_value = attribute_value
-                    setattr(
-                        self,
-                        self._GENERIC_SIGNAL_MAP[attribute_name],
-                        emit_value,
-                    )
-                else:
-                    self.logger.warning(f"Attribute {attribute_name} not found.")
-            except Exception as e:  # pylint: disable=broad-except
-                # Note: attribute converters were removed in
-                # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
-                # These converters added in skb-520 can be implemented
-                # now that skb-609 is fixed.
-                self.logger.error(
-                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
-                )
+            self._emit_health_attribute(attribute_name, attribute_value)
+
+    def _mark_attribute_invalid(self: MccsTile, attribute_name: str) -> None:
+        """
+        Mark a health attribute as invalid.
+
+        :param attribute_name: the name of the attribute to mark invalid.
+        """
+        signal_name = self._HEALTH_SIGNAL_MAP.get(
+            attribute_name
+        ) or self._GENERIC_SIGNAL_MAP.get(attribute_name)
+
+        if signal_name is None:
+            self.logger.warning(f"Attribute {attribute_name} not found.")
+            return
+
+        setattr(self, signal_name, None)
+
+    def _emit_health_attribute(
+        self: MccsTile,
+        attribute_name: str,
+        attribute_value: Any,
+    ) -> None:
+        """
+        Emit a health attribute to its corresponding TANGO attribute.
+
+        :param attribute_name: the name of the attribute to emit.
+        :param attribute_value: the value to emit.
+        """
+        signal_name = self._HEALTH_SIGNAL_MAP.get(
+            attribute_name
+        ) or self._GENERIC_SIGNAL_MAP.get(attribute_name)
+
+        if signal_name is None:
+            self.logger.warning(f"Attribute {attribute_name} not found.")
+            return
+
+        emit_value = attribute_value
+        if attribute_name.lower() == "ppspresent" and attribute_value is False:
+            # Signal ALARM quality directly rather than relying on
+            # Tango's min_alarm, which isn't usable on a DevBoolean.
+            emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
+
+        try:
+            setattr(self, signal_name, emit_value)
+        except Exception as e:  # pylint: disable=broad-except
+            # Note: attribute converters were removed in
+            # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+            # These converters added in skb-520 can be implemented
+            # now that skb-609 is fixed.
+            self.logger.error(
+                f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+            )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -4033,18 +4067,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.firmware_name
 
-    @attribute(
+    testGeneratorActive = attribute_from_signal(
+        testGeneratorActive_signal,
         dtype="DevBoolean",
         label="Test Generator Active",
-        description="Whether the test generator is being used.",
+        doc="Whether the test generator is being used.",
     )
-    def testGeneratorActive(self: MccsTile) -> bool:
-        """
-        Report if the test generator is used for some channels.
-
-        :return: test generator status
-        """
-        return self.component_manager.test_generator_active
 
     @attribute(
         dtype="DevString",
@@ -7336,6 +7364,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 inputs = inputs | (1 << channel)
         self.component_manager.test_generator_input_select(inputs)
         self.component_manager.test_generator_active = active
+        self.testGeneratorActive_signal = active
         return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
     @engineering_mode_required

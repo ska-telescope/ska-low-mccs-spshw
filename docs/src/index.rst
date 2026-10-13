@@ -38,7 +38,6 @@ software for the SKA-Low radio telescope.
    reference/tile_brief_overview.rst
    reference/firmware_thresholds.rst
    reference/tile_health.rst
-   reference/power
    reference/tile_device_to_tpm
    reference/tile_device_methods.rst
    reference/tile_test_generator.rst

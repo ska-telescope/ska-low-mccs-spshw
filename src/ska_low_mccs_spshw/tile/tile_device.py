@@ -5886,9 +5886,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param force_reprogramming: whether to erase and reprogram the FPGAs
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ReInitialise.json
-            :language: json
-
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.

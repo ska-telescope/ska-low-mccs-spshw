@@ -2167,6 +2167,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Reinitialise the station with overridable defaults.
 
+        This runs the same sequence as Initialise, except that the tiles are
+        re-initialised without reprogramming their FPGAs.
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -2190,9 +2193,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             task_callback: stb.type_hints.TaskCallbackType,
             task_abort_event: threading.Event,
         ) -> None:
-            self.component_manager.reinitialise(
+            self.component_manager.initialise(
                 start_bandpasses,
                 global_reference_time,
+                force_reprogramming=False,
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,
             )

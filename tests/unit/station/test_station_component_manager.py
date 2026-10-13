@@ -1227,10 +1227,10 @@ def test_reinitialise_progress_callbacks(
     communicating_station_component_manager: SpsStationComponentManager,
 ) -> None:
     """
-    Test that reinitialise fires progress callbacks at each step in the right order.
+    Test initialise without reprogramming, as used by ReInitialise.
 
-    Unlike ``initialise``, ``reinitialise`` re-initialises the tiles without
-    reprogramming their FPGAs.
+    Progress is reported at the same steps as a normal initialise, and the
+    tiles are re-initialised without reprogramming their FPGAs.
 
     :param communicating_station_component_manager: the SPS station component
         manager under test
@@ -1287,7 +1287,9 @@ def test_reinitialise_progress_callbacks(
             station_component_manager, "start_beamformer"
         ) as mock_start_beamformer,
     ):
-        station_component_manager.reinitialise(task_callback=task_callback)
+        station_component_manager.initialise(
+            force_reprogramming=False, task_callback=task_callback
+        )
 
     progress_calls = [
         call.kwargs["progress"]

@@ -1991,56 +1991,44 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
+        force_reprogramming: bool = True,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Initialise this station.
 
-        The order to turn a station on is: subrack, then tiles
-
         :param start_bandpasses: Whether to configure TPMs to send
             integrated data.
         :param global_reference_time: Common global reference time for all TPMs,
             needs to be some time in the last 2 weeks.
-            If not provided, 8am on the most recent Monday AWST will be used.
+            If not provided, midnight today (TAI) will be used.
+        :param force_reprogramming: whether to erase and reprogram the tile
+            FPGAs. If false, the tiles keep their firmware and are only
+            re-initialised (used by ReInitialise).
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        name = "Initialisation" if force_reprogramming else "Reinitialisation"
         message: str = ""
         failure_step: str = ""
-        self.logger.info("Starting initialise sequence")
+        self.logger.info(f"Starting {name.lower()} sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
-        if not all(
-            power_state == PowerState.ON
-            for power_state in self._subrack_power_states.values()
-        ):
-            self.logger.info("Subracks not on.")
-            result_code = ResultCode.FAILED
-            failure_step = "subracks not on"
 
-        if not all(
-            power_state == PowerState.ON
-            for power_state in self._tile_power_states.values()
-        ):
-            self.logger.info("Tiles not on.")
-            result_code = ResultCode.FAILED
-            failure_step = "tiles not on"
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_subrack_power_state(PowerState.ON)
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_tile_power_state(PowerState.ON)
 
         # Now, if the wren proxy is set, wait for the WREN to initialise
-        if self._wren_proxy:
-            if result_code == ResultCode.OK:
-                self.logger.debug("Waiting for WREN")
-                result_code, failure_step = self._wait_for_wren(
-                    task_callback,
-                    task_abort_event,
-                    timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
-                )
-                if task_callback:
-                    task_callback(progress=5)
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._wait_for_wren_initilised(
+                progress=5,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
 
         if result_code == ResultCode.OK:
             self.logger.info("Setting tile source IPs before initialisation")
@@ -2056,9 +2044,13 @@ class SpsStationComponentManager(
             # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
-            self.logger.info("Re-initialising tiles")
+            self.logger.info(f"Re-initialising tiles ({force_reprogramming=})")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=10, progress_end=65
+                task_callback,
+                task_abort_event,
+                progress_start=10,
+                progress_end=65,
+                force_reprogramming=force_reprogramming,
             )
             # Progress is reported incrementally inside _reinitialise_tiles
 
@@ -2106,13 +2098,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             if task_callback:
                 task_callback(progress=95)
-            self.logger.info("End initialisation")
+            self.logger.info(f"End {name.lower()}")
             task_status = TaskStatus.COMPLETED
-            message = "Initialisation Complete"
+            message = f"{name} Complete"
 
             self.logger.info(
                 "Starting station beamformer with empty channel_groups "
-                "to start the beamformer daisy chain during station initialise"
+                f"to start the beamformer daisy chain during station {name.lower()}"
             )
             start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
                 self.RFC_FORMAT
@@ -2121,9 +2113,9 @@ class SpsStationComponentManager(
                 start_time=start_time, duration=-1, channel_groups=[], scan_id=0
             )
         else:
-            self.logger.error(f"Initialisation failed: {failure_step}")
+            self.logger.error(f"{name} failed: {failure_step}")
             task_status = TaskStatus.FAILED
-            message = f"Initialisation Failed: {failure_step}"
+            message = f"{name} Failed: {failure_step}"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 
@@ -2191,137 +2183,6 @@ class SpsStationComponentManager(
             task_callback(progress=progress)
 
         return (result_code, failure_step)
-
-    @check_communicating
-    # pylint: disable=too-many-branches
-    def reinitialise(  # noqa: C901
-        self: SpsStationComponentManager,
-        start_bandpasses: Optional[bool] = None,
-        global_reference_time: Optional[str] = None,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Reinitialisation this station.
-
-        The order to turn a station on is: subrack, then tiles
-
-        :param start_bandpasses: Whether to configure TPMs to send
-            integrated data.
-        :param global_reference_time: Common global reference time for all TPMs,
-            needs to be some time in the last 2 weeks.
-            If not provided, 8am on the most recent Monday AWST will be used.
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Abort the task
-        """
-        message: str = ""
-        failure_step: str = ""
-        self.logger.info("Starting initialise sequence")
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        result_code = ResultCode.OK
-
-        if result_code == ResultCode.OK:
-            result_code, failure_step = self._check_subrack_power_state(PowerState.ON)
-        if result_code == ResultCode.OK:
-            result_code, failure_step = self._check_tile_power_state(PowerState.ON)
-
-        # Now, if the wren proxy is set, wait for the WREN to initialise
-        if result_code == ResultCode.OK:
-            result_code, failure_step = self._wait_for_wren_initilised(
-                progress=5,
-                task_callback=task_callback,
-                task_abort_event=task_abort_event,
-            )
-
-        if result_code == ResultCode.OK:
-            self.logger.info("Setting tile source IPs before initialisation")
-            result_code, failure_step = self._set_tile_source_ips(
-                task_callback, task_abort_event
-            )
-
-        if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=10)
-            self.logger.info("Setting global reference time")
-            self._set_global_reference_time(global_reference_time)
-            # This is very quick to complete so no progress update here
-
-        if result_code == ResultCode.OK:
-            self.logger.info("Re-initialising tiles without reprogramming")
-            result_code, failure_step = self._reinitialise_tiles(
-                task_callback,
-                task_abort_event,
-                progress_start=10,
-                progress_end=65,
-                force_reprogramming=False,
-            )
-            # Progress is reported incrementally inside _reinitialise_tiles
-
-        if result_code == ResultCode.OK:
-            self.logger.info("Initialising tile parameters")
-            result_code, failure_step = self._initialise_tile_parameters(
-                task_callback,
-                task_abort_event,
-            )
-
-        if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=70)
-            self.logger.info("Initialising station")
-            result_code, failure_step = self._initialise_station(
-                task_callback, task_abort_event
-            )
-
-        if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=75)
-            self.logger.info("Waiting for ARP table")
-            result_code, failure_step = self._wait_for_arp_table(
-                task_callback, task_abort_event
-            )
-            if task_callback:
-                task_callback(progress=85)
-
-        if result_code == ResultCode.OK:
-            self.logger.info("Routing data")
-            result_code, failure_step = self._route_data(
-                start_bandpasses,
-                task_callback,
-                task_abort_event,
-            )
-
-        if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=90)
-            self.logger.info("Checking synchronisation")
-            result_code, failure_step = self._check_station_synchronisation(
-                task_callback, task_abort_event
-            )
-
-        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            if task_callback:
-                task_callback(progress=95)
-            self.logger.info("End Reinitialisation")
-            task_status = TaskStatus.COMPLETED
-            message = "Reinitialisation Complete"
-
-            self.logger.info(
-                "Starting station beamformer with empty channel_groups "
-                "to start the beamformer daisy chain during station reinitialise"
-            )
-            start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
-                self.RFC_FORMAT
-            )
-            self.start_beamformer(
-                start_time=start_time, duration=-1, channel_groups=[], scan_id=0
-            )
-        else:
-            self.logger.error(f"Reinitialisation failed: {failure_step}")
-            task_status = TaskStatus.FAILED
-            message = f"Reinitialisation Failed: {failure_step}"
-        if task_callback:
-            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def _turn_on_subracks(
@@ -2581,12 +2442,9 @@ class SpsStationComponentManager(
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
-                if force_reprogramming:
-                    result_code = proxy._proxy.initialise()
-                else:
-                    result_code = proxy._proxy.ReInitialise(
-                        json.dumps({"force_reprogramming": False})
-                    )
+                result_code = proxy._proxy.ReInitialise(
+                    json.dumps({"force_reprogramming": force_reprogramming})
+                )
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:

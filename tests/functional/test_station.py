@@ -1241,22 +1241,41 @@ def reinitialise_station(
     :param station_tiles: list of TPM DeviceProxies.
     :param command_info: a dict in which to store command IDs and tile data.
     """
-    assert station_tiles, "Station tiles are"
+    assert station_tiles, "Station tiles are missing"
 
-    # Create a list for programming states as they change
+    # Create a set of lists for each tile to be filled with the programming
+    # states as they change, and to log any errors raised.
     programming_states: list[list[str]] = [[] for _ in station_tiles]
+    event_errors: list[str] = []
     command_info["programming_states"] = programming_states
+    command_info["event_errors"] = event_errors
     command_info["subscriptions"] = []
     for tile, states in zip(station_tiles, programming_states):
 
-        def _record_state(event: tango.EventData, states: list[str] = states) -> None:
-            if not event.err and event.attr_value is not None:
+        def _record_state(
+            event: tango.EventData,
+            states: list[str] = states,
+            name: str = tile.dev_name(),
+        ) -> None:
+            if event.err or event.attr_value is None:
+                event_errors.append(f"{name}: {event.errors}")
+            else:
                 states.append(event.attr_value.value)
 
         event_id = tile.subscribe_event(
             "tileProgrammingState", tango.EventType.CHANGE_EVENT, _record_state
         )
         command_info["subscriptions"].append((tile, event_id))
+
+    # Wait for a first event from every tile before sending ReInitialise.
+    deadline = time.time() + 10
+    while not all(programming_states) and not event_errors:
+        if time.time() > deadline:
+            pytest.fail(
+                f"No initial programming state from every tile: {programming_states}"
+            )
+        time.sleep(0.1)
+    assert not event_errors, f"Programming state subscription failed: {event_errors}"
 
     [result_code], [command_id] = station.ReInitialise(json.dumps({}))
     assert result_code == ResultCode.QUEUED
@@ -1293,6 +1312,10 @@ def no_tpm_was_reprogrammed(
     """
     for tile, event_id in command_info["subscriptions"]:
         tile.unsubscribe_event(event_id)
+
+    assert not command_info[
+        "event_errors"
+    ], f"Programming state subscription failed: {command_info['event_errors']}"
 
     for tile, states in zip(
         station_tiles,

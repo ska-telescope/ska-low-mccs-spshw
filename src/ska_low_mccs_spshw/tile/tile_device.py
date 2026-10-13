@@ -788,56 +788,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         # We aren't supposed to define initialisation methods for Tango
         # devices; we are only supposed to define an `init_device` method. But
-        # we insist on doing so here, just so that we can define some
+        # we insist on doing so here, just so that we can declare some
         # attributes, thereby stopping the linters from complaining about
-        # "attribute-defined-outside-init" etc. We still need to make sure that
-        # `init_device` re-initialises any values defined in here.
-        super().__init__(*args, **kwargs)
-        self._health_state: HealthState = HealthState.UNKNOWN
+        # "attribute-defined-outside-init" etc.
+        #
+        # Values must NOT be assigned here: PyTango's ``Device.__init__`` calls
+        # ``init_device()``, so anything assigned after ``super().__init__``
+        # does not exist while ``init_device`` (and any callbacks it triggers)
+        # runs, and then clobbers whatever state those callbacks set.
+        # Initialise values in ``init_device`` instead.
+        
+        self._health_state: HealthState
         self._health_model: TileHealthModel
-        self.tile_health_structure: dict[str, dict[str, Any]] = {}
-        self._antenna_ids: list[int] = []
-        self._info: dict[str, Any] = {}
+        self.tile_health_structure: dict[str, dict[str, Any]]
+        self._antenna_ids: list[int]
+        self._info: dict[str, Any]
         self.component_manager: TileComponentManager
         self._stopping: bool
         self._health_recorder: TileHealthRecorder | None
-        self.healthReport_signal = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds
-        self.db_configuration_fault: tuple[bool | None, str] = (
-            None,
-            "No information gathered",
-        )
-        self.component_manager_fault: bool | None = None
-        self.power_state: PowerState | None = None
-        self.faultReport_signal = {}
-
-        self._intermediate_healths: dict[str, HealthState] = {
-            "temperatures": HealthState.UNKNOWN,
-            "currents": HealthState.UNKNOWN,
-            "dsp": HealthState.UNKNOWN,
-            "voltages": HealthState.UNKNOWN,
-            "io": HealthState.UNKNOWN,
-            "timing": HealthState.UNKNOWN,
-            "adcs": HealthState.UNKNOWN,
-            "alarms": HealthState.UNKNOWN,
-        }
+        self.db_configuration_fault: tuple[bool | None, str]
+        self.component_manager_fault: bool | None
+        self.power_state: PowerState | None
+        self._intermediate_healths: dict[str, HealthState]
         self._intermediate_attrs: dict[str, list[str]]
-        # Not sure about these...
-        self.cspDestinationIp_signal = ""
-        self.cspDestinationMac_signal = ""
-        self.cspDestinationPort_signal = 0
-        self.simulationMode_signal = self.SimulationConfig
-        self.testMode_signal = self.TestConfig
-        self.useAttributesForHealth_signal = self.UseAttributesForHealth
-        self.stationId_signal = self.StationID
-        self.srcip40gfpga1_signal = ""
-        self.srcip40gfpga2_signal = ""
-        self.dstip40gfpga1_signal = ""
-        self.dstip40gfpga2_signal = ""
-        self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
-        self.antennaIds_signal = self._antenna_ids
-        self.testGeneratorActive_signal = False
+        super().__init__(*args, **kwargs)
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -864,6 +840,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
         self._stopping = False
+        # These must be set before super().init_device(), as it starts the
+        # component manager and health recorder whose callbacks use them.
+        self.tile_health_structure = {}
+        self._antenna_ids = []
+        self._info = {}
+        self.db_configuration_fault = (None, "No information gathered")
+        self.component_manager_fault = None
+        self.power_state = None
+        self._intermediate_healths = {
+            "temperatures": HealthState.UNKNOWN,
+            "currents": HealthState.UNKNOWN,
+            "dsp": HealthState.UNKNOWN,
+            "voltages": HealthState.UNKNOWN,
+            "io": HealthState.UNKNOWN,
+            "timing": HealthState.UNKNOWN,
+            "adcs": HealthState.UNKNOWN,
+            "alarms": HealthState.UNKNOWN,
+        }
         # Pre-compute absolute signal names for alarm handling in notify_emission.
         self._alarm_signal_map: dict[str, str] = {
             sig._absolute_name_for(self): tango_attr_name
@@ -1174,19 +1168,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
-        # Re-seed stored signals that are read before being written elsewhere
-        # (e.g. faultReport_signal is read-then-merged in _evaluate_fault).
-        # On a later Init command, init_device runs standalone and __init__
-        # does not run again, so these need seeding here too, or they're
-        # permanently unset thereafter and any unconditional read of them
-        # raises AttributeError. On first construction, init_device instead
-        # runs *nested inside* __init__'s own super().__init__() call, i.e.
-        # before the rest of __init__'s body (including self._antenna_ids)
-        # has executed, so antennaIds_signal can't just read self._antenna_ids
-        # here - use getattr with the same default __init__ would assign.
+        # Seed stored signals here rather than in __init__: the shared bus
+        # only exists once super().init_device() has run, and some signals
+        # are read before being written elsewhere (e.g. faultReport_signal is
+        # read-then-merged in _evaluate_fault), so they must also be re-seeded
+        # on a later Init command, when __init__ does not run again.
+        # super().init_device() reports FAILED ("Device implementation has not
+        # provided a health report"); we are UNKNOWN until the recorder/model
+        # says otherwise.
+        self._health_state = HealthState.UNKNOWN
         self.faultReport_signal = {}
         self.healthReport_signal = ""
-        self.antennaIds_signal = getattr(self, "_antenna_ids", [])
+        self.cspDestinationIp_signal = ""
+        self.cspDestinationMac_signal = ""
+        self.cspDestinationPort_signal = 0
+        self.simulationMode_signal = self.SimulationConfig
+        self.testMode_signal = self.TestConfig
+        self.useAttributesForHealth_signal = self.UseAttributesForHealth
+        self.stationId_signal = self.StationID
+        self.srcip40gfpga1_signal = ""
+        self.srcip40gfpga2_signal = ""
+        self.dstip40gfpga1_signal = ""
+        self.dstip40gfpga2_signal = ""
+        self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
+        self.antennaIds_signal = self._antenna_ids
+        self.testGeneratorActive_signal = False
 
         self.init_completed()
 

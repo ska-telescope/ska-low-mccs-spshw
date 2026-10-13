@@ -171,6 +171,20 @@ def mock_tile_builder_fixture(
     builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     builder.add_result_command("initialise", ResultCode.OK)
     builder.add_result_command("ReInitialise", ResultCode.OK)
+    # The mock ReInitialise returns its status message where a real command
+    # returns its LRC id, so report that "id" as completed.
+    builder.add_attribute(
+        "lrcFinished",
+        (
+            json.dumps(
+                {
+                    "uid": "Mock information-only message",
+                    "status": "COMPLETED",
+                    "result": [ResultCode.OK, "Command executed to completion."],
+                }
+            ),
+        ),
+    )
     return builder
 
 

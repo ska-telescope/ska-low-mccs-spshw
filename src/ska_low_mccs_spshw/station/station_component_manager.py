@@ -2434,21 +2434,25 @@ class SpsStationComponentManager(
 
         """
         progress_window = progress_end - progress_start
+        # The LRC id of each tile's ReInitialise command, by tile TRL.
+        command_ids: dict[str, str] = {}
+        rejected: list[str] = []
         with self._power_state_lock:
-            results = []
-            for proxy in self._tile_proxies.values():
+            for tile_trl, proxy in self._tile_proxies.items():
                 if proxy._proxy is None:
                     msg = f"tile proxy {proxy} not formed"
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
-                result_code = proxy._proxy.ReInitialise(
+                [result_code], [command_id] = proxy._proxy.ReInitialise(
                     json.dumps({"force_reprogramming": force_reprogramming})
                 )
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
-                results.append(result_code)
-        if ResultCode.FAILED in results:
-            msg = "one or more tiles failed to initialise"
+                if result_code in [ResultCode.FAILED, ResultCode.REJECTED]:
+                    rejected.append(f"{tile_trl}: {command_id}")
+                command_ids[tile_trl] = command_id
+        if rejected:
+            msg = f"tiles failed to start initialising: {rejected}"
             self.logger.error(msg)
             return ResultCode.FAILED, msg
 
@@ -2466,7 +2470,21 @@ class SpsStationComponentManager(
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            ready_count = sum(state in desired_states for state in states)
+            # Wait for each tile to finish initialise and reach the correct state 
+            ready_count = 0
+            for (tile_trl, proxy), state in zip(self._tile_proxies.items(), states):
+                finished = self._get_lrc_finished(proxy, command_ids[tile_trl])
+                if finished is None:
+                    continue
+                if finished["status"] != TaskStatus.COMPLETED.name:
+                    msg = (
+                        f"{tile_trl} failed to initialise: "
+                        f"{finished['status']} {finished.get('result')}"
+                    )
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
+                if state in desired_states:
+                    ready_count += 1
             if ready_count == n_tiles:
                 self.logger.info(
                     f"All {n_tiles} tiles reached {desired_states} "
@@ -2484,6 +2502,26 @@ class SpsStationComponentManager(
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg
+
+    def _get_lrc_finished(
+        self: SpsStationComponentManager,
+        proxy: _TileProxy,
+        command_id: str,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Return a tile's finished entry for a long running command.
+
+        :param proxy: the proxy of the tile that ran the command.
+        :param command_id: the id of the long running command.
+        :return: the command's entry from the tile's ``lrcFinished``, with its
+            ``status`` and ``result``, or None if it has not finished yet.
+        """
+        assert proxy._proxy is not None  # for the type checker
+        for finished in proxy._proxy.lrcFinished or []:
+            entry = json.loads(finished)
+            if entry.get("uid") == command_id:
+                return entry
+        return None
 
     @check_communicating
     def _wait_for_wren(

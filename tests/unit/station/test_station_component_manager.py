@@ -1315,6 +1315,51 @@ def test_reinitialise_progress_callbacks(
     )
 
 
+def test_reinitialise_tiles_fails_if_a_tile_command_fails(
+    communicating_station_component_manager: SpsStationComponentManager,
+    num_tiles: int,
+) -> None:
+    """
+    Test that _reinitialise_tiles fails if a tile's ReInitialise command fails.
+
+    The tile still reports Synchronised, as it would if it was synchronised
+    before the command, so only the command result shows the failure.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param num_tiles: number of TPMs in the test.
+    """
+    station_component_manager = communicating_station_component_manager
+    station_component_manager._global_reference_time = "2026-01-01T00:00:00.000000Z"
+    tile_trl, proxy = next(iter(station_component_manager._tile_proxies.items()))
+    assert proxy._proxy is not None
+    proxy._proxy.lrcFinished = (
+        json.dumps(
+            {
+                "uid": "Mock information-only message",
+                "status": "FAILED",
+                "result": [ResultCode.FAILED, "Programming failed"],
+            }
+        ),
+    )
+
+    with (
+        unittest.mock.patch(
+            "ska_low_mccs_spshw.station.station_component_manager.time.sleep"
+        ),
+        unittest.mock.patch.object(
+            station_component_manager,
+            "tile_programming_state",
+            return_value=["Synchronised"] * num_tiles,
+        ),
+    ):
+        result_code, message = station_component_manager._reinitialise_tiles()
+
+    assert result_code == ResultCode.FAILED
+    assert f"{tile_trl} failed to initialise" in message
+    assert "Programming failed" in message
+
+
 def test_reinitialise_tiles_progress_callbacks(
     communicating_station_component_manager: SpsStationComponentManager,
     num_tiles: int,

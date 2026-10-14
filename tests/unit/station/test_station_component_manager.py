@@ -1040,7 +1040,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=subrack._name,
             health=HealthState.OK,
-            lookahead=40,
+            lookahead=100,
         )
 
     for tile in station_component_manager._tile_proxies.values():
@@ -1049,13 +1049,13 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             health=HealthState.OK,
-            lookahead=40,
+            lookahead=100,
         )
         # Need to wait for this event to come through before we turn a tile OFF.
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             power=PowerState.ON,
-            lookahead=40,
+            lookahead=100,
         )
     callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=120)
     assert station_component_manager._component_state["power"] == PowerState.ON
@@ -1282,100 +1282,35 @@ def test_beamformer_table(
     )
 
 
+@pytest.mark.parametrize(
+    ("force_reprogramming", "expected_message"),
+    [
+        pytest.param(True, "Initialisation Complete", id="Initialise"),
+        pytest.param(False, "Reinitialisation Complete", id="ReInitialise"),
+    ],
+)
 def test_initialise_progress_callbacks(
     communicating_station_component_manager: SpsStationComponentManager,
+    force_reprogramming: bool,
+    expected_message: str,
 ) -> None:
     """
-    Test that initialise fires progress callbacks at each step in the right order.
+    Test that initialise runs each step and fires progress callbacks in order.
 
-    The per-tile incremental progress inside ``_reinitialise_tiles`` is
-    covered by the dedicated test below.
+    Runs with and without reprogramming the tiles; ReInitialise uses the
+    latter. The per-tile incremental progress inside ``_reinitialise_tiles``
+    is covered by the dedicated test below.
 
     :param communicating_station_component_manager: the SPS station component
         manager under test
+    :param force_reprogramming: whether initialise reprograms the tiles.
+    :param expected_message: the message initialise should complete with.
     """
     # Local alias to avoid reformatting every line below to fit the
     # longer fixture name within the line-length limit.
     station_component_manager = communicating_station_component_manager
 
     # All subracks and tiles must report ON for initialise to proceed.
-    for fqdn in station_component_manager._subrack_power_states:
-        station_component_manager._subrack_power_states[fqdn] = PowerState.ON
-    for fqdn in station_component_manager._tile_power_states:
-        station_component_manager._tile_power_states[fqdn] = PowerState.ON
-
-    task_callback = unittest.mock.Mock()
-
-    ok = (ResultCode.OK, "")
-    with (
-        unittest.mock.patch.object(
-            station_component_manager, "_wait_for_wren", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_set_tile_source_ips", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager,
-            "_set_global_reference_time",
-            return_value=ResultCode.OK,
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_reinitialise_tiles", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_initialise_tile_parameters", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_wren_proxy", return_value=object
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_initialise_station", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_wait_for_arp_table", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager, "_route_data", return_value=ok
-        ),
-        unittest.mock.patch.object(
-            station_component_manager,
-            "_check_station_synchronisation",
-            return_value=ok,
-        ),
-        unittest.mock.patch.object(station_component_manager, "start_beamformer"),
-    ):
-        station_component_manager.initialise(task_callback=task_callback)
-
-    progress_calls = [
-        call.kwargs["progress"]
-        for call in task_callback.call_args_list
-        if "progress" in call.kwargs
-    ]
-    assert progress_calls == [5, 10, 70, 75, 85, 90, 95]
-
-    task_callback.assert_called_with(
-        status=TaskStatus.COMPLETED,
-        result=(ResultCode.OK, "Initialisation Complete"),
-    )
-
-
-def test_reinitialise_progress_callbacks(
-    communicating_station_component_manager: SpsStationComponentManager,
-) -> None:
-    """
-    Test initialise without reprogramming, as used by ReInitialise.
-
-    Progress is reported at the same steps as a normal initialise, and the
-    tiles are re-initialised without reprogramming their FPGAs.
-
-    :param communicating_station_component_manager: the SPS station component
-        manager under test
-    """
-    # Local alias to avoid reformatting every line below to fit the
-    # longer fixture name within the line-length limit.
-    station_component_manager = communicating_station_component_manager
-
-    # All subracks and tiles must report ON for reinitialise to proceed.
     for fqdn in station_component_manager._subrack_power_states:
         station_component_manager._subrack_power_states[fqdn] = PowerState.ON
     for fqdn in station_component_manager._tile_power_states:
@@ -1424,18 +1359,18 @@ def test_reinitialise_progress_callbacks(
         ) as mock_start_beamformer,
     ):
         station_component_manager.initialise(
-            force_reprogramming=False, task_callback=task_callback
+            force_reprogramming=force_reprogramming, task_callback=task_callback
         )
 
-    progress_calls = [
+    assert [
         call.kwargs["progress"]
         for call in task_callback.call_args_list
         if "progress" in call.kwargs
-    ]
-    assert progress_calls == [5, 10, 70, 75, 85, 90, 95]
+    ] == [5, 10, 70, 75, 85, 90, 95]
 
     for step in [
         mock_wait_for_wren,
+        mock_reinitialise_tiles,
         mock_initialise_station,
         mock_wait_for_arp_table,
         mock_route_data,
@@ -1443,11 +1378,14 @@ def test_reinitialise_progress_callbacks(
         mock_start_beamformer,
     ]:
         step.assert_called_once()
-    assert mock_reinitialise_tiles.call_args.kwargs["force_reprogramming"] is False
+    assert (
+        mock_reinitialise_tiles.call_args.kwargs["force_reprogramming"]
+        is force_reprogramming
+    )
 
     task_callback.assert_called_with(
         status=TaskStatus.COMPLETED,
-        result=(ResultCode.OK, "Reinitialisation Complete"),
+        result=(ResultCode.OK, expected_message),
     )
 
 

@@ -219,6 +219,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     is_programmed_signal: AttrSignal[bool] = AttrSignal[bool]()
     is_beamformer_running_signal: AttrSignal[bool] = AttrSignal[bool]()
+    testGeneratorActive_signal: AttrSignal[bool] = AttrSignal[bool]()
     pps_delay_signal: AttrSignal[int] = AttrSignal[int]()
     pending_data_requests_signal: AttrSignal[bool] = AttrSignal[bool]()
     current_tile_beamformer_frame_signal: AttrSignal[int] = AttrSignal[int]()
@@ -843,6 +844,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.dstip40gfpga2_signal = ""
         self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
         self.antennaIds_signal = self._antenna_ids
+        self.testGeneratorActive_signal = False
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -4069,18 +4071,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.firmware_name
 
-    @attribute(
+    testGeneratorActive = attribute_from_signal(
+        testGeneratorActive_signal,
         dtype="DevBoolean",
         label="Test Generator Active",
-        description="Whether the test generator is being used.",
+        doc="Whether the test generator is being used.",
     )
-    def testGeneratorActive(self: MccsTile) -> bool:
-        """
-        Report if the test generator is used for some channels.
-
-        :return: test generator status
-        """
-        return self.component_manager.test_generator_active
 
     @attribute(
         dtype="DevString",
@@ -4398,11 +4394,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    def _is_synchronised(self: MccsTile, *args: Any) -> bool:
+    def _is_synchronised(self: MccsTile, *args: Any, **kwargs: Any) -> bool:
         """
         Return a flag representing whether we are in Synchronised state.
 
         :param args: The tango.AttReqType.
+        :param kwargs: Optional request_type from long running commands.
 
         :return: True if Tile is in Synchronised state.
         """
@@ -6920,7 +6917,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.apply_pointing_delays(start_time)
 
-    @stb.long_running_commands.long_running_command
+    @stb.long_running_commands.long_running_command(fisallowed="_is_synchronised")
     @stb.validators.validate_json_args(schema=StartBeamformer_SCHEMA)
     def StartBeamformer(
         self: MccsTile,
@@ -7409,6 +7406,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 inputs = inputs | (1 << channel)
         self.component_manager.test_generator_input_select(inputs)
         self.component_manager.test_generator_active = active
+        self.testGeneratorActive_signal = active
         return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
     @engineering_mode_required

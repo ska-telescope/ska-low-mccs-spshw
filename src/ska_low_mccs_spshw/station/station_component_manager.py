@@ -2882,7 +2882,7 @@ class SpsStationComponentManager(
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            # Wait for each tile to finish initialise and reach the correct state 
+            # Wait for each tile to finish initialise and reach the correct state
             ready_count = 0
             for (tile_trl, proxy), state in zip(self._tile_proxies.items(), states):
                 finished = self._get_lrc_finished(proxy, command_ids[tile_trl])

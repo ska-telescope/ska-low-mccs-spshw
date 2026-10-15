@@ -797,7 +797,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # does not exist while ``init_device`` (and any callbacks it triggers)
         # runs, and then clobbers whatever state those callbacks set.
         # Initialise values in ``init_device`` instead.
-        
+
         self._health_state: HealthState
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]]

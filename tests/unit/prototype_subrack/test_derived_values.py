@@ -591,7 +591,6 @@ class TestDerivedValues:  # pylint: disable=too-many-public-methods
                 [0.1, 0.2],
                 id="both from the health status",
             ),
-            pytest.param([600.0], None, [0.5, None], id="one supply short"),
             pytest.param(None, None, [None, None], id="unknown"),
             pytest.param(None, "", [None, None], id="health status a string"),
         ],

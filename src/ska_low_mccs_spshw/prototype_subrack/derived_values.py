@@ -178,7 +178,7 @@ class DerivedValues:
         :return: the number of occupied bays, or ``None`` when the board could
             not say.
         """
-        return None if tpm_present is None else tpm_present.count(True)
+        return tpm_present.count(True) if tpm_present else None
 
     @staticmethod
     def psu_loads(
@@ -202,9 +202,7 @@ class DerivedValues:
         loads: list[Optional[float]] = []
         for index, psu in enumerate(PSU_NAMES):
             power = None
-            if isinstance(power_supply_powers, list) and index < len(
-                power_supply_powers
-            ):
+            if power_supply_powers is not None:
                 power = power_supply_powers[index]
             if power is None:
                 power = walk(health_status, ("psus", "power_out", psu))

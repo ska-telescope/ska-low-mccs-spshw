@@ -104,6 +104,11 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _subrack: Optional[Subrack] = None
     _health_recorder: Optional[HealthRecorder] = None
     _tpm_power_states: list[PowerState]
+    _web_hardware_client_factory: type[WebHardwareClient]
+    _derived_values_factory: type[DerivedValues]
+    _subrack_factory: type[Subrack]
+    _subrack_poller_factory: type[SubrackPoller]
+    _health_recorder_factory: type[HealthRecorder]
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -374,15 +379,16 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         :param health: the health the attribute qualities give.
         :param health_report: the recorder's reasons, one on each line.
         """
-        if health == HealthState.OK:
-            health_info = []
-        elif health == HealthState.UNKNOWN:
-            # report_health refuses UNKNOWN. The recorder gives it for an
-            # invalid attribute, and before it has received any event.
-            health = HealthState.FAILED
-            health_info = [HEALTH_NO_VALUE_REASON]
-        else:
-            health_info = health_report.splitlines()
+        match health:
+            case HealthState.OK:
+                health_info = []
+            case HealthState.UNKNOWN:
+                # report_health refuses UNKNOWN. The recorder gives it for an
+                # invalid attribute, and before it has received any event.
+                health = HealthState.FAILED
+                health_info = [HEALTH_NO_VALUE_REASON]
+            case _:
+                health_info = health_report.splitlines()
 
         # Emitted first, so the report is already readable when a client hears
         # of the new health.
@@ -475,11 +481,11 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
 
 def subrack_factory(  # pylint: disable=too-many-arguments
-    web_hardware_client: Any = WebHardwareClient,
-    derived_values: Any = DerivedValues,
-    subrack: Any = Subrack,
-    subrack_poller: Any = SubrackPoller,
-    health_recorder: Any = HealthRecorder,
+    web_hardware_client: type[WebHardwareClient] = WebHardwareClient,
+    derived_values: type[DerivedValues] = DerivedValues,
+    subrack: type[Subrack] = Subrack,
+    subrack_poller: type[SubrackPoller] = SubrackPoller,
+    health_recorder: type[HealthRecorder] = HealthRecorder,
     class_name: str = "MccsPrototypeSubrack",
 ) -> type[MccsPrototypeSubrack]:
     """

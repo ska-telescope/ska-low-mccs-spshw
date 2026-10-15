@@ -69,22 +69,17 @@ def server_classes() -> tuple[type[tango.server.Device], ...]:
     :return: the device classes to serve.
     """
     implementation = os.environ.get(SUBRACK_IMPLEMENTATION_ENV_VAR, "legacy")
-    if implementation == "legacy":
-        subrack_class: type[tango.server.Device] = MccsSubrack
-    elif implementation == "prototype":
-        subrack_class = subrack_factory(class_name="MccsSubrack")
-    else:
-        raise ValueError(
-            f"{SUBRACK_IMPLEMENTATION_ENV_VAR} is {implementation!r}. "
-            "Use 'legacy' or 'prototype'."
-        )
-    # Printed because the Tango class name is MccsSubrack either way, and
-    # device logging does not exist yet.
-    print(
-        f"Serving the {implementation} subrack implementation as Tango class "
-        "MccsSubrack.",
-        flush=True,
-    )
+    subrack_class: type[tango.server.Device]
+    match implementation:
+        case "legacy":
+            subrack_class = MccsSubrack
+        case "prototype":
+            subrack_class = subrack_factory(class_name="MccsSubrack")
+        case _:
+            raise ValueError(
+                f"{SUBRACK_IMPLEMENTATION_ENV_VAR} is {implementation!r}. "
+                "Use 'legacy' or 'prototype'."
+            )
     return (
         MccsPdu,
         PowerMarshaller,

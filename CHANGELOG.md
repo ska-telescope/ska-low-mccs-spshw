@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [LOW-2103] Update ska-tango-devices to 0.17.0. This version fixes per-device-server labels, allowing us to label station-specific K8s resources with their station name.
+
 ## 15.2.0
 
 * [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.

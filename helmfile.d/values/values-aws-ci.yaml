@@ -1,5 +1,0 @@
-# Patches the stfc-cloud platform spec for running CI on AWS.
-# Layered on top of values-ci.yaml by the aws-ci environment.
-platform:
-  cluster:
-    domain: cluster.local

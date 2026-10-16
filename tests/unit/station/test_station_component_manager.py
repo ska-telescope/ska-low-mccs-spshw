@@ -663,6 +663,59 @@ def test_static_delays_reports_tile_write_failure(
         assert list(mock_tiles[i].staticTimeDelays) == expected_delays
 
 
+def test_preadu_levels_not_stored_on_tile_write_failure(
+    communicating_station_component_manager: SpsStationComponentManager,
+    num_tiles: int,
+) -> None:
+    """
+    Test that preADU levels are only remembered once the write succeeds.
+
+    Levels the hardware rejected must not be stored in
+    ``_desired_preadu_levels``, otherwise every subsequent Initialise
+    would re-apply (and re-fail on) them.
+
+    :param communicating_station_component_manager: the SPS station component manager
+        under test
+    :param num_tiles: number of tiles in the test.
+    """
+    good_levels = [8.0] * ADC_CHANNELS * num_tiles
+    bad_levels = [33.5] * ADC_CHANNELS * num_tiles
+
+    communicating_station_component_manager.preadu_levels = good_levels
+    assert communicating_station_component_manager._desired_preadu_levels == (
+        good_levels
+    )
+
+    tile_group = communicating_station_component_manager._tile_group
+    real_write_attribute = tile_group.write_attribute
+
+    def _write_attribute_with_one_failure(
+        attr_name: str, value: Any, **kwargs: Any
+    ) -> list[Any]:
+        replies = real_write_attribute(attr_name, value, **kwargs)
+        if attr_name == "preaduLevels":
+            replies[0] = _FakeGroupReply(
+                replies[0].dev_name(),
+                attr_name,
+                exception=tango.DevFailed("HardwareVerificationError"),
+            )
+        return replies
+
+    with (
+        unittest.mock.patch.object(
+            tile_group,
+            "write_attribute",
+            side_effect=_write_attribute_with_one_failure,
+        ),
+        pytest.raises(tango.DevFailed),
+    ):
+        communicating_station_component_manager.preadu_levels = bad_levels
+
+    assert communicating_station_component_manager._desired_preadu_levels == (
+        good_levels
+    )
+
+
 def test_global_reference_time_broadcast_to_all_tiles(
     station_component_manager: SpsStationComponentManager,
     mock_tiles: list[MccsDeviceProxy],

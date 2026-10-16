@@ -140,15 +140,22 @@ class SubrackSimulator(SubrackProtocol):
         :return: the new values for the attribute
         """
         if name not in self.ATTRIBUTES:
-            raise AttributeError(
-                f"Attribute {name} is not available in version {self._api_version}"
-            )
+            raise AttributeError(f"Attribute {name} not present")
 
         special_set_method = getattr(self, f"_set_attribute_{name}", None)
 
         if special_set_method is None:
             return self._set_attribute(name, value)
         return special_set_method(value)
+
+    @property
+    def api_version(self: SubrackSimulator) -> str:
+        """
+        Return the version of the subrack web API that this simulator emulates.
+
+        :return: the emulated API version, e.g. "1.8.0".
+        """
+        return self._api_version
 
     @property
     def network_jitter_limits(self: SubrackSimulator) -> tuple[int, int]:
@@ -219,9 +226,7 @@ class SubrackSimulator(SubrackProtocol):
         :returns: values
         """
         if name not in self.ATTRIBUTES:
-            raise AttributeError(
-                f"Attribute {name} is not available in version {self._api_version}"
-            )
+            raise AttributeError(f"Attribute {name} not present")
 
         metadata = self.ATTRIBUTE_METADATA[name]
         if not metadata["writable"] and not _force:
@@ -271,9 +276,7 @@ class SubrackSimulator(SubrackProtocol):
 
     def _get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:
         if name not in self.ATTRIBUTES:
-            raise AttributeError(
-                f"Attribute {name} is not available in version {self._api_version}"
-            )
+            raise AttributeError(f"Attribute {name} not present")
 
         value = self._attribute_values[name]
         if isinstance(value, Iterator):
@@ -309,9 +312,7 @@ class SubrackSimulator(SubrackProtocol):
             the simulator.
         """
         if name not in self.COMMANDS:
-            raise AttributeError(
-                f"Command {name} is not available in version {self._api_version}"
-            )
+            raise AttributeError(f"Command {name} not implemented")
 
         command_method = getattr(self, f"_{name}", None)
         if command_method is not None:

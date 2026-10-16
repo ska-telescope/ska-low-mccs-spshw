@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-657] Remove the SpsStation `On` workaround. The `OnWorkaroundFlag` device property, the `OnWorkaround` attribute and the brute-force `ensure_tpms_on()` fallback have been deleted.
+
 ## 16.0.0
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.

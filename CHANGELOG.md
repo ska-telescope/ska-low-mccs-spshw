@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-657] Remove the SpsStation `On` workaround. The `OnWorkaroundFlag` device property, the `OnWorkaround` attribute and the brute-force `ensure_tpms_on()` fallback have been deleted.
+* [THORN-657] Remove the unused `AttributeManager` classes (`ska_low_mccs_spshw.tile.attribute_managers`) and their tests. MccsTile attributes are signal backed since THORN-650.
 
 ## 16.0.1
 

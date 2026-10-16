@@ -10,16 +10,21 @@ from __future__ import annotations
 
 import copy
 import functools
-import itertools
 import json
 import random
 import threading
 import time
 from collections.abc import Iterator
-from typing import Any, Callable, Final, Optional, TypedDict, cast
+from typing import Any, Callable, Final, Optional, cast
 
 from .subrack_api import SubrackProtocol
-from .subrack_data import FanMode, SubrackData
+from .subrack_data import SubrackData
+from .subrack_simulator_data import (
+    ATTRIBUTE_METADATA,
+    COMMANDS,
+    HEALTH_STATUS,
+    SUPPORTED_API_VERSIONS,
+)
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
@@ -72,167 +77,6 @@ def apply_jitter(func: Callable[..., Any]) -> Callable[..., Any]:
 class SubrackSimulator(SubrackProtocol):
     """A simple simulator of a subrack management board web server."""
 
-    class AttributeMetadataType(TypedDict):
-        """Type for attribute metadata dictionary."""
-
-        length: Optional[int]
-        default: JsonSerializable
-        writable: bool
-
-    ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
-        "tpm_present": {
-            "length": SubrackData.TPM_BAY_COUNT,
-            "default": [True] + ([False] * (SubrackData.TPM_BAY_COUNT - 1)),
-            "writable": False,
-        },
-        "tpm_on_off": {
-            "length": SubrackData.TPM_BAY_COUNT,
-            "default": [True] + ([False] * (SubrackData.TPM_BAY_COUNT - 1)),
-            "writable": False,
-        },
-        "backplane_temperatures": {
-            "length": 2,
-            "default": itertools.cycle([[38.0, 39.0], [38.5, 39.5]]),
-            "writable": False,
-        },
-        "board_temperatures": {
-            "length": 2,
-            "default": [39.0, 40.0],
-            "writable": False,
-        },
-        "board_current": {
-            "length": None,
-            "default": 1.1,
-            "writable": False,
-        },
-        "cpld_pll_locked": {
-            "length": None,
-            "default": False,
-            "writable": False,
-        },
-        "power_supply_fan_speeds": {
-            "length": 2,
-            "default": [93.0, 94.0],
-            "writable": False,
-        },
-        "power_supply_currents": {
-            "length": 2,
-            "default": [2.2, 2.4],
-            "writable": False,
-        },
-        "power_supply_voltages": {
-            "length": 2,
-            "default": [12.0, 12.1],
-            "writable": False,
-        },
-        "subrack_fan_speeds_percent": {
-            "length": 4,
-            "default": [95.0, 96.0, 97.0, 98.0],
-            "writable": False,
-        },
-        "subrack_fan_speeds": {
-            "length": 4,
-            "default": [
-                0.95 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-                0.96 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-                0.97 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-                0.98 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-            ],
-            "writable": False,
-        },
-        "subrack_fan_mode": {
-            "length": 4,
-            "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
-            "writable": False,
-        },
-        "subrack_pll_locked": {
-            "length": None,
-            "default": False,
-            "writable": False,
-        },
-        "subrack_timestamp": {
-            "length": None,
-            "default": 1234567890,
-            "writable": False,
-        },
-        "tpm_currents": {
-            "length": 8,
-            "default": [0.4] * 8,
-            "writable": True,
-        },
-        # "tpm_temperatures": {  # Not implemented on SMB
-        #     "length": 8,
-        #     "default": [40.0] * 8,
-        #     "writable": False,
-        # },
-        "tpm_voltages": {
-            "length": 8,
-            "default": [12.0] * 8,
-            "writable": True,
-        },
-        "board_info": {
-            "length": None,
-            "default": {
-                "SMM": {
-                    "EXT_LABEL_SN": "",
-                    "EXT_LABEL_PN": "",
-                    "SN": "",
-                    "PN": "SMB",
-                    "SMB_UPS_SN": "",
-                    "HARDWARE_REV": "v1.2.4 ",
-                    "BOARD_MODE": "SUBRACK",
-                    "bios": "v1.6.0",
-                    "bios_cpld": "",
-                    "bios_mcu": "",
-                    "bios_uboot": "",
-                    "bios_krn": "",
-                    "OS": "Debian GNU/Linux 10",
-                    "OS_rev": "",
-                    "OS_root": "",
-                    "BOOT_SEL_KRN": 0,
-                    "BOOT_SEL_FS": 0,
-                    "CPLD_ip_address": "",
-                    "CPLD_netmask": "",
-                    "CPLD_gateway": "",
-                    "CPLD_ip_address_eep": "",
-                    "CPLD_netmask_eep": "",
-                    "CPLD_gateway_eep": "",
-                    "CPLD_MAC": "",
-                    "CPU_ip_address": "",
-                    "CPU_netmask": "",
-                    "CPU_MAC": "",
-                },
-                "SUBRACK": {
-                    "EXT_LABEL": "",
-                    "SN": "",
-                    "PN": "BACKPLANE",
-                    "HARDWARE_REV": "v1.2.2",
-                    "CPLD_ip_address_eep": "",
-                    "CPLD_netmask_eep": "",
-                    "CPLD_gateway_eep": "",
-                },
-                "PSM": {"EXT_LABEL": "", "SN": "", "PN": "", "HARDWARE_REV": ""},
-            },
-            "writable": False,
-        },
-    }
-
-    COMMANDS: Final = (
-        "abort_command",
-        "command_completed",
-        "get_health_status",
-        "list_commands",
-        "set_fan_mode",
-        "set_power_supply_fan_speed",
-        "set_subrack_fan_speed",
-        "turn_off_tpm",
-        "turn_off_tpms",
-        "turn_on_tpm",
-        "turn_on_tpms",
-    )
-
-    SUPPORTED_API_VERSIONS: Final = ("1.6.0", "1.8.0")
-
     def __init__(
         self: SubrackSimulator,
         api_version: str = "1.6.0",
@@ -250,12 +94,17 @@ class SubrackSimulator(SubrackProtocol):
         :raises AttributeError: if kwargs refer to an non-existent attribute.
         :raises ValueError: if the API version is not supported.
         """
-        if api_version not in self.SUPPORTED_API_VERSIONS:
+        if api_version not in SUPPORTED_API_VERSIONS:
             raise ValueError(
                 f"Unsupported API version {api_version}; "
-                f"must be one of {', '.join(self.SUPPORTED_API_VERSIONS)}."
+                f"must be one of {', '.join(SUPPORTED_API_VERSIONS)}."
             )
         self._api_version: Final = api_version
+
+        self.ATTRIBUTE_METADATA = ATTRIBUTE_METADATA[api_version]
+        self.ATTRIBUTES = self.ATTRIBUTE_METADATA.keys()
+        self.COMMANDS = COMMANDS[api_version]
+        self._health_status = HEALTH_STATUS[api_version]
 
         unknown_names = [name for name in kwargs if name not in self.ATTRIBUTE_METADATA]
         if unknown_names:
@@ -287,22 +136,19 @@ class SubrackSimulator(SubrackProtocol):
         :param name: name of the simulator attribute to be set.
         :param value: new values for the simulator attribute
 
+        :raises AttributeError: If name is not a valid attribute
         :return: the new values for the attribute
         """
+        if name not in self.ATTRIBUTES:
+            raise AttributeError(
+                f"Attribute {name} is not available in version {self._api_version}"
+            )
+
         special_set_method = getattr(self, f"_set_attribute_{name}", None)
 
         if special_set_method is None:
             return self._set_attribute(name, value)
         return special_set_method(value)
-
-    @property
-    def api_version(self: SubrackSimulator) -> str:
-        """
-        Return the version of the subrack web API that this simulator emulates.
-
-        :return: the emulated API version, e.g. "1.8.0".
-        """
-        return self._api_version
 
     @property
     def network_jitter_limits(self: SubrackSimulator) -> tuple[int, int]:
@@ -359,8 +205,23 @@ class SubrackSimulator(SubrackProtocol):
         values: JsonSerializable,
         _force: bool = False,
     ) -> list[str]:
-        if name not in self.ATTRIBUTE_METADATA:
-            raise AttributeError(f"{name} not present")
+        """
+        Set the value of an attribute.
+
+        :param name: the name of the attribute
+        :param values: the values to set the attribute to
+        :param _force: set to True to override read only attributes
+
+        :raises AttributeError: If this is not a valid attribute
+        :raises TypeError: If this is a read only attribute and _force is False
+        :raises ValueError: If the number of values doesn't mathc the attribute
+
+        :returns: values
+        """
+        if name not in self.ATTRIBUTES:
+            raise AttributeError(
+                f"Attribute {name} is not available in version {self._api_version}"
+            )
 
         metadata = self.ATTRIBUTE_METADATA[name]
         if not metadata["writable"] and not _force:
@@ -409,8 +270,11 @@ class SubrackSimulator(SubrackProtocol):
         return special_get_method()
 
     def _get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:
-        if name not in self.ATTRIBUTE_METADATA:
-            raise AttributeError(f"{name} not present")
+        if name not in self.ATTRIBUTES:
+            raise AttributeError(
+                f"Attribute {name} is not available in version {self._api_version}"
+            )
+
         value = self._attribute_values[name]
         if isinstance(value, Iterator):
             return next(value)
@@ -444,6 +308,11 @@ class SubrackSimulator(SubrackProtocol):
         :raises AttributeError: if the command method does not exist in
             the simulator.
         """
+        if name not in self.COMMANDS:
+            raise AttributeError(
+                f"Command {name} is not available in version {self._api_version}"
+            )
+
         command_method = getattr(self, f"_{name}", None)
         if command_method is not None:
             return command_method(argument)
@@ -598,199 +467,4 @@ class SubrackSimulator(SubrackProtocol):
         psu_voltages = cast(
             list[float], self._attribute_values["power_supply_voltages"]
         )
-        psu_powers = [
-            current * voltage for current, voltage in zip(psu_currents, psu_voltages)
-        ]
-
-        return {
-            "temperatures": {
-                "SMM1": 40,
-                "SMM2": 41,
-                "BKPLN1": 39,
-                "BKPLN2": 41,
-            },
-            "plls": {
-                "BoardPllLock": True,
-                "CPLDPllLock": True,
-                "PllSource": None,
-            },
-            "psus": {
-                "present": {
-                    "PSU1": True,
-                    "PSU2": True,
-                },
-                "busy": {
-                    "PSU1": None,
-                    "PSU2": None,
-                },
-                "off": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "vout_ov_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "iout_oc_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "vin_uv_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "temp_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "cml_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "vout_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "iout_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "input_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "pwr_gd": {
-                    "PSU1": True,
-                    "PSU2": True,
-                },
-                "fan_fault": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "other": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "unknown": {
-                    "PSU1": False,
-                    "PSU2": False,
-                },
-                "voltage_out": {
-                    "PSU1": psu_voltages[0],
-                    "PSU2": psu_voltages[1],
-                },
-                "power_out": {
-                    "PSU1": psu_powers[0],
-                    "PSU2": psu_powers[1],
-                },
-                "voltage_in": {
-                    "PSU1": 230,
-                    "PSU2": 230,
-                },
-                "power_in": {
-                    "PSU1": 300,
-                    "PSU2": 300,
-                },
-                "fan_speed": {
-                    "PSU1": 90.0,
-                    "PSU2": 100.0,
-                },
-                "temp_inlet": {
-                    "PSU1": 20,
-                    "PSU2": 21,
-                },
-                "temp_fet": {
-                    "PSU1": 30,
-                    "PSU2": 31,
-                },
-            },
-            "pings": {
-                "pings_CPLD": True,
-            },
-            "slots": {
-                "presence": {
-                    "SLOT1": False,
-                    "SLOT2": True,
-                    "SLOT3": False,
-                    "SLOT4": False,
-                    "SLOT5": True,
-                    "SLOT6": False,
-                    "SLOT7": False,
-                    "SLOT8": False,
-                },
-                "on": {
-                    "SLOT1": False,
-                    "SLOT2": False,
-                    "SLOT3": False,
-                    "SLOT4": False,
-                    "SLOT5": False,
-                    "SLOT6": False,
-                    "SLOT7": False,
-                    "SLOT8": False,
-                },
-                "voltages": {
-                    "SLOT1": 12.0,
-                    "SLOT2": 12.0,
-                    "SLOT3": 12.0,
-                    "SLOT4": 12.0,
-                    "SLOT5": 12.0,
-                    "SLOT6": 12.0,
-                    "SLOT7": 12.0,
-                    "SLOT8": 12.0,
-                },
-                "powers": {
-                    "SLOT1": 0.4 * 12.0,
-                    "SLOT2": 0.4 * 12.0,
-                    "SLOT3": 0.4 * 12.0,
-                    "SLOT4": 0.4 * 12.0,
-                    "SLOT5": 0.4 * 12.0,
-                    "SLOT6": 0.4 * 12.0,
-                    "SLOT7": 0.4 * 12.0,
-                    "SLOT8": 0.4 * 12.0,
-                },
-                "pings": {
-                    "SLOT1": True,
-                    "SLOT2": True,
-                    "SLOT3": True,
-                    "SLOT4": True,
-                    "SLOT5": True,
-                    "SLOT6": True,
-                    "SLOT7": True,
-                    "SLOT8": True,
-                },
-            },
-            "internal_voltages": {
-                "V_POWERIN": 12.0,
-                "V_SOC": 1.35,
-                "V_ARM": 1.35,
-                "V_DDR": 1.35,
-                "V_2V5": 2.5,
-                "V_1V1": 1.1,
-                "V_CORE": 1.2,
-                "V_1V5": 1.5,
-                "V_3V3": 3.3,
-                "V_5V": 5.0,
-                "V_3V": 3.0,
-                "V_2V8": 2.8,
-            },
-            "fans": {
-                "speed": {
-                    "FAN1": 1,
-                    "FAN2": 1,
-                    "FAN3": 1,
-                    "FAN4": 1,
-                },
-                "pwm_duty": {
-                    "FAN1": 95,
-                    "FAN2": 96,
-                    "FAN3": 97,
-                    "FAN4": 98,
-                },
-                "mode": {
-                    "FAN1": FanMode.AUTO,
-                    "FAN2": FanMode.AUTO,
-                    "FAN3": FanMode.AUTO,
-                    "FAN4": FanMode.AUTO,
-                },
-            },
-        }
+        return self._health_status(psu_currents, psu_voltages)

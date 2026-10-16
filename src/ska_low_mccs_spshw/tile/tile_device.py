@@ -4060,7 +4060,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="Firmware Name",
-        description="The name of the firmware bitfile in use.",
+        description="The name of the firmware bitfile in use."
+        "This is deprecated in favour or tile_info attribute."
+        "If this reports an empty string use tile_info.",
     )
     def firmwareName(self: MccsTile) -> str:
         """
@@ -4068,7 +4070,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: firmware name
         """
-        return self.component_manager.firmware_name
+        return (
+            self.component_manager.firmware_name
+            or "Cache not available check tile_info"
+        )
 
     testGeneratorActive = attribute_from_signal(
         testGeneratorActive_signal,

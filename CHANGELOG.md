@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-657] Fix firmwareName reporting wrong cache. This is now deprecated in favour of tile_info, if the cache.
 * [THORN-657] Remove the SpsStation `On` workaround. The `OnWorkaroundFlag` device property, the `OnWorkaround` attribute and the brute-force `ensure_tpms_on()` fallback have been deleted.
 * [THORN-657] Remove the unused `AttributeManager` classes (`ska_low_mccs_spshw.tile.attribute_managers`) and their tests. MccsTile attributes are signal backed since THORN-650.
 * [THORN-749] Use CLUSTER_DOMAIN for aws migration.

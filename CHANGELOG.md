@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-657] Remove the SpsStation `On` workaround. The `OnWorkaroundFlag` device property, the `OnWorkaround` attribute and the brute-force `ensure_tpms_on()` fallback have been deleted.
+* [THORN-657] Remove the unused `AttributeManager` classes (`ska_low_mccs_spshw.tile.attribute_managers`) and their tests. MccsTile attributes are signal backed since THORN-650.
 * [THORN-749] Use CLUSTER_DOMAIN for aws migration.
 * [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
 * [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.

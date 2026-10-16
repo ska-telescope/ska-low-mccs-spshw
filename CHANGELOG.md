@@ -2,7 +2,24 @@
 
 ## Unreleased
 
+* [THORN-749] Use CLUSTER_DOMAIN for aws migration.
+* [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
+* [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
+
+## 15.2.0
+
+* [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.
 * [THORN-752] Update CODEOWNERS.
+* [THORN-680] SpsStation aggregate attributes are now served from a cache kept up to date by change-event subscriptions on each MccsTile, rather than by reading every tile serially over the network on each read.
+* [THORN-680] Fix reporting of aggregate SpsStation attributes when a tile has no value. Previously, an aggregate attribute such as `staticTimeDelays` could return `[tile1, tile2, tile4]`, making it unclear which tile was missing. Tile positions are now preserved, e.g. `[tile1, tile2, nan, tile4]`.
+* [THORN-89] Report INVALID tile attributes in aggregate SpsStation attributes. An INVALID tile value is now shown as `nan` in per-tile float arrays (`staticTimeDelays`, `preaduLevels`, `adcPower`) and as `Unknown` in `tileProgrammingState`. It is left out of the temperature summaries, and it makes `isBeamformerRunning`, `pllLockedSummary` and `ppsPresentSummary` report `False`.
+  * `channeliserRounding` is a DevLong attribute and cannot carry `nan`, so an invalid tile reports `-1` for every channel (valid values are 0-7).
+  * An INVALID `beamformerTable`, `beamformerRegions` or `cspRounding` from the final tile is reported as `-1` in every element. The configured `cspRounding` written to tiles by `Initialise` is unaffected.
+  * An INVALID beamformer flagged count from the final tile makes `finalTileBeamformerFlaggedCountOk` report `False`, and its contribution to health `UNKNOWN`, unless the other count is non-zero. In that case it still reports `False` with health `DEGRADED`.
+  * These final-tile attributes are also invalidated when communication with the final tile is lost. INVALID values from other tiles are ignored, since only the final tile's values are used.
+* [THORN-680] SpsStation now pushes change events for `staticTimeDelays`, `preaduLevels`, `channeliserRounding`, `pllLockedSummary`, `ppsPresentSummary` and `isBeamformerRunning`, and change and archive events for `tileProgrammingState`.
+* [THORN-680] When the beamformer daisy chain can no longer be verified (e.g. a tile's 40G destination IPs become unknown), its contribution to SpsStation health is now `UNKNOWN` rather than keeping the previous result, and `beamformerDaisyChainValid` reports `False`.
+* [THORN-680] MccsTile `testGeneratorActive` is now signal-backed, so it pushes change events when `ConfigureTestGenerator` is called.
 
 ## 15.1.1
 

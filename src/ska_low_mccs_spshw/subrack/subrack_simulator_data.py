@@ -179,19 +179,33 @@ DEFAULT_COMMANDS: Final = (
 
 
 def default_health_status(
-    psu_currents: list[float], psu_voltages: list[float]
+    *,
+    psu_currents: list[float],
+    psu_voltages: list[float],
+    board_pll_locked: bool | None,
+    tpm_present: list[bool],
+    tpm_on_off: list[bool],
+    tpm_powers: list[float | None],
 ) -> dict[str, Any]:
     """
     Return the health status reported by the subrack.
 
     :param psu_currents: the current power supply currents.
     :param psu_voltages: the current power supply voltages.
+    :param board_pll_locked: whether the board PLL is locked, or None if
+        it could not be read.
+    :param tpm_present: whether a TPM is present in each slot.
+    :param tpm_on_off: whether each slot is powered on.
+    :param tpm_powers: the power drawn by each slot.
 
     :return: the health status dictionary.
     """
     psu_powers = [
         current * voltage for current, voltage in zip(psu_currents, psu_voltages)
     ]
+
+    def _per_slot(values: list[Any]) -> dict[str, Any]:
+        return {f"SLOT{slot}": value for slot, value in enumerate(values, start=1)}
 
     return {
         "temperatures": {
@@ -201,7 +215,7 @@ def default_health_status(
             "BKPLN2": 41,
         },
         "plls": {
-            "BoardPllLock": True,
+            "BoardPllLock": board_pll_locked,
             "CPLDPllLock": True,
             "PllSource": None,
         },
@@ -299,26 +313,8 @@ def default_health_status(
             "pings_CPLD": True,
         },
         "slots": {
-            "presence": {
-                "SLOT1": False,
-                "SLOT2": True,
-                "SLOT3": False,
-                "SLOT4": False,
-                "SLOT5": True,
-                "SLOT6": False,
-                "SLOT7": False,
-                "SLOT8": False,
-            },
-            "on": {
-                "SLOT1": False,
-                "SLOT2": False,
-                "SLOT3": False,
-                "SLOT4": False,
-                "SLOT5": False,
-                "SLOT6": False,
-                "SLOT7": False,
-                "SLOT8": False,
-            },
+            "presence": _per_slot(tpm_present),
+            "on": _per_slot(tpm_on_off),
             "voltages": {
                 "SLOT1": 12.0,
                 "SLOT2": 12.0,
@@ -329,16 +325,7 @@ def default_health_status(
                 "SLOT7": 12.0,
                 "SLOT8": 12.0,
             },
-            "powers": {
-                "SLOT1": 0.4 * 12.0,
-                "SLOT2": 0.4 * 12.0,
-                "SLOT3": 0.4 * 12.0,
-                "SLOT4": 0.4 * 12.0,
-                "SLOT5": 0.4 * 12.0,
-                "SLOT6": 0.4 * 12.0,
-                "SLOT7": 0.4 * 12.0,
-                "SLOT8": 0.4 * 12.0,
-            },
+            "powers": _per_slot(tpm_powers),
             "pings": {
                 "SLOT1": True,
                 "SLOT2": True,
@@ -392,9 +379,18 @@ SUPPORTED_API_VERSIONS: Final = ("1.6.0", "1.8.0")
 ATTRIBUTE_METADATA: Final[dict[str, dict[str, AttributeMetadataType]]] = {
     "1.6.0": DEFAULT_ATTRIBUTE_METADATA,
     "1.8.0": {
-        name: metadata
-        for name, metadata in DEFAULT_ATTRIBUTE_METADATA.items()
-        if name not in ["tpm_currents"]
+        **{
+            name: metadata
+            for name, metadata in DEFAULT_ATTRIBUTE_METADATA.items()
+            if name not in ["tpm_currents"]
+        },
+        # Without tpm_currents, tpm_powers can no longer be derived, so it is
+        # stored instead. Elements may be None when a slot reading fails.
+        "tpm_powers": {
+            "length": 8,
+            "default": [0.4 * 12.0] * 8,
+            "writable": False,
+        },
     },
 }
 
@@ -407,9 +403,7 @@ COMMANDS: Final[dict[str, tuple[str, ...]]] = {
     ),
 }
 
-HEALTH_STATUS: Final[
-    dict[str, Callable[[list[float], list[float]], dict[str, Any]]]
-] = {
+HEALTH_STATUS: Final[dict[str, Callable[..., dict[str, Any]]]] = {
     "1.6.0": default_health_status,
     "1.8.0": default_health_status,
 }

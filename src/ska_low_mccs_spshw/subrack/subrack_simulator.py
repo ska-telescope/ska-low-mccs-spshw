@@ -121,6 +121,7 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values["board_info"] = board_info
 
         self._network_jitter_limits: tuple[int, int] = (0, 0)  # ms
+        self._failing_attributes: set[str] = set()
 
         self._aborted_event = threading.Event()
         self._command_is_running = False
@@ -206,6 +207,27 @@ class SubrackSimulator(SubrackProtocol):
             return self._set_attribute(name, values, _force=True)
         return special_simulate_method(values)
 
+    def simulate_attribute_failure(
+        self: SubrackSimulator, name: str, failing: bool = True
+    ) -> None:
+        """
+        Simulate a failure to read an attribute.
+
+        While an attribute is failing, every read of it raises an
+        exception, which the web API reports as an ERROR response.
+
+        :param name: name of the simulator attribute.
+        :param failing: whether reads of the attribute should fail.
+
+        :raises AttributeError: if the attribute does not exist.
+        """
+        if name not in self.ATTRIBUTES and not hasattr(self, f"_get_attribute_{name}"):
+            raise AttributeError(f"Attribute {name} not present")
+        if failing:
+            self._failing_attributes.add(name)
+        else:
+            self._failing_attributes.discard(name)
+
     def _set_attribute(
         self: SubrackSimulator,
         name: str,
@@ -266,7 +288,13 @@ class SubrackSimulator(SubrackProtocol):
         :param name: name of the simulator attribute to be returned.
 
         :return: the value of the attribute
+
+        :raises RuntimeError: if a failure of the attribute is being
+            simulated.
         """
+        if name in self._failing_attributes:
+            raise RuntimeError(f"Failed to read attribute {name}")
+
         special_get_method = getattr(self, f"_get_attribute_{name}", None)
 
         if special_get_method is None:
@@ -337,9 +365,11 @@ class SubrackSimulator(SubrackProtocol):
 
         raise AttributeError(f"Unknown command {name}.")
 
-    def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
+    def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float | None]:
+        if "tpm_currents" not in self.ATTRIBUTES:
+            return self._get_attribute("tpm_powers")
         return [
-            current * voltage
+            None if current is None or voltage is None else current * voltage
             for current, voltage in zip(
                 self._attribute_values["tpm_currents"],
                 self._attribute_values["tpm_voltages"],
@@ -468,4 +498,16 @@ class SubrackSimulator(SubrackProtocol):
         psu_voltages = cast(
             list[float], self._attribute_values["power_supply_voltages"]
         )
-        return self._health_status(psu_currents, psu_voltages)
+        board_pll_locked = (
+            None
+            if "subrack_pll_locked" in self._failing_attributes
+            else self._attribute_values["subrack_pll_locked"]
+        )
+        return self._health_status(
+            psu_currents=psu_currents,
+            psu_voltages=psu_voltages,
+            board_pll_locked=board_pll_locked,
+            tpm_present=self._attribute_values["tpm_present"],
+            tpm_on_off=self._attribute_values["tpm_on_off"],
+            tpm_powers=self._get_attribute_tpm_powers(),
+        )

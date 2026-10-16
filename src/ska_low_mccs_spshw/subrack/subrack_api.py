@@ -26,6 +26,14 @@ class SubrackProtocol(Protocol):
     interact with it.
     """
 
+    @property
+    def api_version(self: SubrackProtocol) -> str:
+        """
+        Return the version of the subrack web API, e.g. "1.8.0".
+
+        :return: the subrack web API version.
+        """  # noqa: DAR202
+
     def execute_command(
         self: SubrackProtocol, name: str, argument: Optional[JsonSerializable]
     ) -> JsonSerializable:
@@ -81,7 +89,8 @@ def _handle_getattribute(
             "status": HardwareClientResponseStatusCodes.ERROR.name,
             "info": str(exception),
             "attribute": name,
-            "value": "",
+            # API 1.8.0 reports the value of a failed read as null
+            "value": None if subrack.api_version == "1.8.0" else "",
         }
     return {
         "status": HardwareClientResponseStatusCodes.OK.name,

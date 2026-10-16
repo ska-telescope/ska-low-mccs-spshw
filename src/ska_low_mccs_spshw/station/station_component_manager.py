@@ -3558,7 +3558,6 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._desired_preadu_levels = levels
         n_tiles = self._number_of_tiles
         per_tile_levels = [
             levels[i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS]
@@ -3570,6 +3569,9 @@ class SpsStationComponentManager(
                 self._tile_group, "preaduLevels", per_tile_levels, multi=True
             ),
         )
+        # Only remember levels the hardware accepted, otherwise every
+        # subsequent Initialise would re-apply (and re-fail on) them.
+        self._desired_preadu_levels = levels
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:

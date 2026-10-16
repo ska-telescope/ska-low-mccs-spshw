@@ -13,6 +13,7 @@ include .make/base.mk
 include .make-uv/make/docs-uv.mk
 
 DOCS_SPHINXOPTS = -W --keep-going
+CLUSTER_DOMAIN ?= cluster.local## Domain used for naming Tango Device Servers
 DOCGEN_OUTPUT_DIR := docs/src/device-interfaces		# DIFDoc output dir
 
 ifeq (,$(filter clean,$(DOCS_TARGET_ARGS)))
@@ -90,6 +91,7 @@ K8S_CHART_PARAMS += \
 	--selector chart=ska-tango-base \
 	--selector chart=ska-sat-lmc \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
+	--set global.cluster_domain=$(CLUSTER_DOMAIN) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \
 	--set ska-tango-devices.deviceServerTypes.spshw.image.registry=$(CI_REGISTRY_IMAGE) \
 	--set ska-tango-devices.deviceServerTypes.spshw.image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \

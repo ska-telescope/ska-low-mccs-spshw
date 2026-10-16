@@ -1,5 +1,11 @@
 # Version History
 
+## Unreleased
+
+* [THORN-749] Use CLUSTER_DOMAIN for aws migration.
+* [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
+* [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
+
 ## 15.2.0
 
 * [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.

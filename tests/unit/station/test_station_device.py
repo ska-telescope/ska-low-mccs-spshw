@@ -55,9 +55,18 @@ gc.disable()
 
 TARGET = "ska_low_mccs_common.component.command_proxy.invoke_lrc"
 
-HEALTH_THRESHOLDS_PROPERTY_VALUE = (
-    "{ 'fred': [42,42,42], 'jim': [53,53,53], 'sheila': [8,8,8] }"
-)
+HEALTH_THRESHOLDS_PROPERTY_VALUE = """
+      {
+        "pps_delta_degraded": 4,
+        "pps_delta_failed": 9,
+        "subracks": [1, 1, 1],
+        "tiles": [1, 1, 2],
+        "wren": [1, 1, 1],
+        "fred": [42,42,42],
+        "jim": [53,53,53],
+        "sheila": [8,8,8]
+      }
+    """
 
 
 @pytest.fixture(autouse=True)

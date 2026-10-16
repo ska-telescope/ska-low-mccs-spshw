@@ -76,6 +76,24 @@ def engineering_mode_required(func: Callable) -> Callable:
     return wrapper
 
 
+def json_arrays_to_tuples(json_object_in: dict[str, Any]) -> dict[str, Any]:
+    """
+    Convert lists in the dictionary into tuples.
+
+    The health thresholds are provided in a flat dictionary structure and tuples are
+    encoded as lists.
+    :param json_object_in: incoming dictionary.
+    :returns: dictionary containing tuples.
+    """
+    json_object_out = {}
+    for key, value in json_object_in.items():
+        if isinstance(value, list):
+            json_object_out[key] = tuple(value)
+        else:
+            json_object_out[key] = value
+    return json_object_out
+
+
 # pylint: disable=too-many-instance-attributes, too-many-ancestors
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
@@ -156,21 +174,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # devices; we are only supposed to define an `init_device` method. But
         # we insist on doing so here, just so that we can define some
         # attributes, thereby stopping the linters from complaining about
-        # "attribute-defined-outside-init" etc. We still need to make sure that
-        # `init_device` re-initialises any values defined in here.
+        # "attribute-defined-outside-init" etc.
         self._frame_wrap_timer: threading.Timer | None = None
         self._frame_wrap_timer_stop_event = threading.Event()
         self._frame_wrap_timer_lock = threading.Lock()
 
-        super().__init__(*args, **kwargs)
-
-        self._health_state: HealthState = HealthState.UNKNOWN
         self._health_report: str = ""
         # Need to dynamically define the health rollup members based on deployment.
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
         self._health_rollup_devices: list[str]
+        self._health_thresholds: [dict[str, Any]] = {}
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
@@ -180,16 +195,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._beamformer_regions: Optional[list[int]] = None
         self._hw_pointing_delays: np.ndarray = np.full((48, 512), np.nan)
 
+        # Keep this call at the end of __init__ so that everything setup above
+        # doesn't need reinitialing in init_device.  Keep in mind that Tango calls
+        # init_device from within the Device super class.
+        super().__init__(*args, **kwargs)
+
+        # This needs to be after the __init__ otherwise the correct values
+        # won't be setup to allow signalling of changes.
+        # NOTE: This is actually from the ska-tango-base::base::BaseInterface
+        self._health_state: HealthState = HealthState.UNKNOWN
+
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""
         self._use_new_health_model = True
-        self._health_thresholds: dict[str, Any] = {
-            "pps_delta_degraded": 4,
-            "pps_delta_failed": 9,
-            "subracks": (1, 1, 1),
-            "tiles": (1, 1, 2),
-            "wren": (1, 1, 1),
-        }
+
+        # This needs to be called before any properties are used because the
+        # Tango framework sets properties up in this method.
         super().init_device()
 
         self._frame_wrap_timer_stop_event.clear()  # In case of re-initialisation
@@ -220,14 +241,37 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
             f"\tParentTRL: {self.ParentTRL}\n"
             f"\tOnWorkaroundFlag: {self.OnWorkaroundFlag}\n"
+            f"\tHealthThresholds: {self.HealthThresholds}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+
         self.init_completed()
 
     def _init_state_model(self: SpsStation) -> None:
+        # Why is this here?  Unfortunately we need to wait until
+        # tando.Device.init_device() iscalled as this sets up properties within
+        # the Device itself.  Unfortunately the many layers of SKA base device
+        # code do a whole array of things along the way, one of which results
+        # in our _init_state_model() method being called.  So the only place
+        # this code can be placed is here so that the _health_thresholds value
+        # is setup readt for when it is needed.
+        if self.HealthThresholds:
+            self._health_thresholds = json_arrays_to_tuples(
+                json.loads(self.HealthThresholds)
+            )
+        else:
+            self._health_thresholds = {
+                "pps_delta_degraded": 4,
+                "pps_delta_failed": 9,
+                "subracks": (1, 1, 1),
+                "tiles": (1, 1, 2),
+                "wren": (1, 1, 1),
+            }
+
         super()._init_state_model()
+
         self._obs_state_model = SpsStationObsStateModel(
             self.logger, self._update_obs_state
         )
@@ -692,6 +736,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
+
         # TODO: Refactor this into an extensible health related method.
         pps_delay_spread = state_change.get("ppsDelaySpread")
         if pps_delay_spread is not None:

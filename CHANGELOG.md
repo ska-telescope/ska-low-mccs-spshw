@@ -1,5 +1,9 @@
 # Version History
 
+## 15.2.2
+
+* [THORN-768] HotFix: remove `rfiBlankingEnabledAntennas` from tile health. (this is currently broken when polling enabled on attribute.)
+
 ## 15.2.1
 
 * [LOW-2103] Update ska-tango-devices to 0.17.0. This version fixes per-device-server labels, allowing us to label station-specific K8s resources with their station name.

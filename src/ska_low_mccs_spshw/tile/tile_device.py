@@ -1297,7 +1297,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "ppsDelayCorrection",
                 "ppsDrift",
                 "preaduLevels",
-                "rfiBlankingEnabledAntennas",
+                # "rfiBlankingEnabledAntennas",
                 "rfiCount",
                 "staticTimeDelays",
                 "stationBeamFlagEnabled",
@@ -1313,6 +1313,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # Pointing delay readback is operational metadata, not a health signal.
                 # It can be unavailable in valid startup/runtime windows.
                 "pointingDelays",
+                # # User-set configuration, not a health signal. It can also be
+                # # stuck ATTR_INVALID when empty and polled (Tango rejects empty
+                # # arrays in the polling buffer), e.g. after upgrading from 15.0.0.
+                "rfiBlankingEnabledAntennas",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
                 "fpga0_station_beamformer_flagged_count",

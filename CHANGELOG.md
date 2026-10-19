@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 15.2.2
 
 * [THORN-768] HotFix: remove `rfiBlankingEnabledAntennas` from tile health. (this is currently broken when polling enabled on attribute.)
 

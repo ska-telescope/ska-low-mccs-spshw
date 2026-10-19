@@ -192,18 +192,6 @@ class SubrackDriver(
                 self._communication_state = communication_state
                 self._push_communication_state_update(communication_state)
 
-    # ------------------------------------------------------------------
-    # TEMPORARY DIAGNOSTIC LOGGING for the test_off_on intermittent race.
-    # Logs when this driver is told to stop communicating (poller.stop_polling()
-    # is requested here) versus when the poller confirms it has actually
-    # stopped (polling_stopped, below), and when a poll starts/reports ON
-    # (see poll() / poll_succeeded()). Remove once root cause is
-    # confirmed/fixed.
-    # ------------------------------------------------------------------
-    def stop_communicating(self: SubrackDriver) -> None:
-        """Stop communicating with the subrack hardware."""
-        super().stop_communicating()
-
     def off(
         self: SubrackDriver, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:

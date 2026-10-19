@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1420] Fix subrack device stuck in UNKNOWN state after upstream (PDU/PowerMarshaller) communication loss. Device now properly recovers without requiring manual Init(). The fix includes guarding fault propagation to prevent illegal op-state transitions from UNKNOWN state, and re-asserting cached power state on upstream communication recovery.
+
 ## 15.1.0
 
 * [SKB-1550] Pull in upsteam fixes, meaning that power is evaluated after exception raised in decorated command.
@@ -81,7 +85,6 @@ set a scheduled start time too to avoid this blip,
 * [THORN-529] Add attribute to report seconds until frame counter wrap.
 * [THORN-641] Fix type being pushed. It appears on pytango 10.3.0 (and before, unsure at what version this appeared) that pushing None in a list is invalid. Instead you must push nan.
 * [THORN-641] Clean up Queued to Queued invalid transition logs.
-* [SKB-1420] Fix subrack device stuck in UNKNOWN state after upstream (PDU/PowerMarshaller) communication loss. Device now properly recovers without requiring manual Init(). The fix includes guarding fault propagation to prevent illegal op-state transitions from UNKNOWN state, and re-asserting cached power state on upstream communication recovery.
 * [THORN-593] Report Subrack Per TPM Attributes in Tile
 
 ## 12.2.2

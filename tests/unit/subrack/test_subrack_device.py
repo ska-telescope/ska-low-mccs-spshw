@@ -411,13 +411,7 @@ def test_off_on(
         status="COMPLETED", result_code=ResultCode.OK, timeout=10
     )
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    # Somehow we're getting here and the Subrack is still ON sometimes...
-    # Weirdly state=ON but status=OFF
-    assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF), (
-        subrack_device.state(),
-        subrack_device.status(),
-    )
-    assert subrack_device.state() == DevState.OFF
+    assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
     change_event_callbacks["boardCurrent"].assert_change_event([])
     with pytest.raises(tango.DevFailed):
         _ = subrack_device.boardCurrent

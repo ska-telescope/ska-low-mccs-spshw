@@ -74,6 +74,7 @@ def apply_jitter(func: Callable[..., Any]) -> Callable[..., Any]:
     return inner
 
 
+# pylint: disable=too-many-instance-attributes
 class SubrackSimulator(SubrackProtocol):
     """A simple simulator of a subrack management board web server."""
 

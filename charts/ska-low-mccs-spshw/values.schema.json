@@ -105,6 +105,11 @@
                           "srmb_port": {
                             "type": "integer",
                             "minimum": 1
+                          },
+                          "api_version": {
+                            "$comment": "Subrack web API version to emulate; the simulator defaults to 1.6.0",
+                            "type": "string",
+                            "enum": ["1.6.0", "1.8.0"]
                           }
                         },
                         "required": [

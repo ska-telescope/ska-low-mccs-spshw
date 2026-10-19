@@ -6,6 +6,9 @@
 * [THORN-749] Use CLUSTER_DOMAIN for aws migration.
 * [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
 * [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
+* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
+* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
+* [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.2.0
 

@@ -282,10 +282,24 @@ def mock_tile_builder_fixture(
     )
     builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     builder.add_result_command("initialise", ResultCode.OK)
+    builder.add_result_command("ReInitialise", ResultCode.OK)
+    builder.add_attribute(
+        "lrcFinished",
+        (
+            json.dumps(
+                {
+                    "uid": "Mock information-only message",
+                    "status": "COMPLETED",
+                    "result": [ResultCode.OK, "Command executed to completion."],
+                }
+            ),
+        ),
+    )
 
     def _build(**kwargs: Any) -> unittest.mock.Mock:
         mock_device = builder(**kwargs)
         _make_mock_push_change_events(mock_device)
+
         return mock_device
 
     return _build

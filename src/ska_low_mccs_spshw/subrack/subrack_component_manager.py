@@ -385,6 +385,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self.proxy_map[pdu_trl] = self.pdu_proxy
         if self.power_marshaller_proxy is not None:
             self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
+        self._upstream_communication_states: dict[
+            str, CommunicationStatus
+        ] = dict.fromkeys(self.proxy_map, CommunicationStatus.DISABLED)
 
         # TODO: This CommunicationManager does not play well with the
         # ComponentManagerWithUpstreamPowerSupply.
@@ -418,43 +421,35 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param trl: device trl.
         :param communication_state: communication status
         """
+        was_established = self._upstream_established()
+        self._upstream_communication_states[trl] = communication_state
         if self._communication_manager is not None:
             self._communication_manager.update_communication_status(
                 trl, communication_state
             )
+        if self._upstream_established() and not was_established:
+            self._reassert_hardware_power()
 
-    def _power_supply_communication_state_changed(
-        self: SubrackComponentManager,
-        communication_state: CommunicationStatus,
-    ) -> None:
+    def _upstream_established(self: SubrackComponentManager) -> bool:
+        return bool(self._upstream_communication_states) and all(
+            state == CommunicationStatus.ESTABLISHED
+            for state in self._upstream_communication_states.values()
+        )
+
+    def _reassert_hardware_power(self: SubrackComponentManager) -> None:
         """
-        Handle power supply communication status changes.
+        Re-assert the latest known hardware power after upstream comms recover.
 
-        On restoration of upstream communication we re-assert the latest known
-        hardware power state so downstream device op_state can transition out of
-        UNKNOWN even if hardware power has remained continuously ON.
-
-        :param communication_state: new communication status.
+        During an upstream (PDU / PowerMarshaller) outage the device can enter
+        UNKNOWN while hardware polling continues and power remains ON. Unchanged
+        component-state values are not re-published, so the next poll will not
+        emit another power update; without this explicit callback the device
+        stays in UNKNOWN.
         """
-        super()._power_supply_communication_state_changed(communication_state)
-
-        if communication_state != CommunicationStatus.ESTABLISHED:
-            return
-
         if self._hardware_communication_state != CommunicationStatus.ESTABLISHED:
             return
-
-        # Re-assert the latest known hardware power on upstream comms recovery.
-        # During an upstream outage (PDU/power marshaller), the device can enter
-        # UNKNOWN while hardware polling continues and power remains ON.
-        # Because unchanged component-state values are not re-published, a normal
-        # post-recovery poll will not emit another power update when cached power is
-        # unchanged (for this path); without this explicit callback the device will
-        # remain stuck in UNKNOWN.
-        # Guards above ensure we only do this once both upstream and hardware
-        # communications are established.
         known_power = self._hardware_component_manager.component_state.get("power")
-        if known_power is not None:
+        if known_power not in (None, PowerState.UNKNOWN):
             self._component_state_changed_callback(power=known_power)
 
     def _pdu_state_changed(

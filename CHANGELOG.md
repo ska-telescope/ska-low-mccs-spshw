@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* [SKB-1420] Fix subrack device stuck in UNKNOWN state after upstream (PDU/PowerMarshaller) communication loss. Device now properly recovers without requiring manual Init(). The fix includes guarding fault propagation to prevent illegal op-state transitions from UNKNOWN state, and re-asserting cached power state on upstream communication recovery.
+* [SKB-1420] Fix subrack device stuck in UNKNOWN state when upstream (PDU/PowerMarshaller) communication is established after the subrack is already being polled and is ON. The cached hardware power state is now re-asserted when all upstream connections are established. Fault updates received when the op state does not allow them (UNKNOWN or OFF) are now held and applied once legal, instead of raising illegal op-state transitions.
 
 ## 15.2.2
 

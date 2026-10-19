@@ -20,9 +20,10 @@ import numpy as np
 import ska_tango_base as stb
 from numpy.typing import NDArray
 from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_control_model.faults import StateModelError
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
-from tango import AttrQuality, DevFailed, DevState
+from tango import AttrQuality, DevFailed
 from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -1910,9 +1911,54 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 communicating=(communication_state == CommunicationStatus.ESTABLISHED)
             )
 
+    def _update_op_state_from_component(
+        self: MccsSubrack, fault: Optional[bool], power: Optional[PowerState]
+    ) -> None:
+        """
+        Drive the op state model from a component power and/or fault update.
+
+        The power action is applied first, then any fault (the new one, or a
+        previously held one) once the op state allows it.
+
+        :param fault: whether the component is in fault or not, if changed.
+        :param power: the power state of the component, if changed.
+        """
+        if power is not None:
+            super()._component_state_changed(power=power)
+        if power == PowerState.OFF:
+            # The op state model cannot hold a fault while off.
+            self._deferred_fault = None
+            return
+        fault_to_apply = fault if fault is not None else self._deferred_fault
+        if fault_to_apply is not None:
+            self._apply_or_defer_fault(fault_to_apply)
+
+    def _apply_or_defer_fault(self: MccsSubrack, fault: bool) -> None:
+        """
+        Apply a fault update now if the op state allows it, else hold it.
+
+        Fault actions are only legal in the ON/STANDBY families of op states,
+        so while the device is UNKNOWN (e.g. upstream comms lost) or OFF a
+        fault update would raise. The latest such update is held, and applied
+        by the next component state update that arrives once the op state
+        allows it.
+
+        :param fault: whether the component is in fault or not.
+        """
+        action = "component_fault" if fault else "component_no_fault"
+        try:
+            if self.op_state_model.is_action_allowed(action):
+                super()._component_state_changed(fault=fault)
+                self._deferred_fault = None
+                return
+        except StateModelError:
+            # The op state changed under us (e.g. comms dropped on another
+            # thread) between checking and acting.
+            pass
+        self._deferred_fault = fault
+
     # pylint: disable=too-many-arguments, too-many-branches, too-many-locals
-    # pylint: disable=too-many-statements
-    def _component_state_changed(  # noqa: C901
+    def _component_state_changed(
         self: MccsSubrack,
         fault: Optional[bool] = None,
         power: Optional[PowerState] = None,
@@ -1936,33 +1982,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param health_status: any changes to the health_status variables.
         :param kwargs: other state updates
         """
-        # Guard fault propagation while device is in UNKNOWN to avoid illegal
-        # op-state actions. Cache the latest fault and replay it once we have
-        # a non-UNKNOWN power update.
-        in_unknown = power == PowerState.UNKNOWN or (
-            power is None and self.get_state() == DevState.UNKNOWN
-        )
-
-        fault_to_propagate = fault
-        if in_unknown and fault is not None:
-            self._deferred_fault = fault
-            fault_to_propagate = None
-        elif not in_unknown and fault is not None:
-            self._deferred_fault = None
-        elif (
-            not in_unknown
-            and power is not None
-            and power != PowerState.UNKNOWN
-            and self._deferred_fault is not None
-        ):
-            # Fire a deferred fault when power state recovers.
-            fault_to_propagate = self._deferred_fault
-            self._deferred_fault = None
-
-        # Keep power and fault updates in a single callback so the underlying
-        # state model evaluates them atomically.
-        if power is not None or fault_to_propagate is not None:
-            super()._component_state_changed(power=power, fault=fault_to_propagate)
+        self._update_op_state_from_component(fault, power)
 
         # Ensure the attribute filters are up to date with the tango device property
         self._update_attribute_filters()

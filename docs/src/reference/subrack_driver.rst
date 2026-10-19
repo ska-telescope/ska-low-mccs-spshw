@@ -43,34 +43,41 @@ detected, generates an event. The Tile devices subscribe to this event, in order
 Upstream communication handling
 *******************************
 
-The subrack device maintains communication with upstream components (PDU and PowerMarshaller) to monitor and control power supply state. These upstream components provide critical power supply state information that informs the subrack's operational state.
+The subrack device also connects to upstream devices (the PDU and the
+PowerMarshaller). Their connection status is combined with the status of the
+connection to the subrack itself (SMB) to give the device's communication
+status. While any upstream connection is not ``ESTABLISHED``, the device is in
+``UNKNOWN`` state, because accurate power state information is unavailable.
 
-Communication Loss and Recovery
-================================
+Note that the subrack driver polls only the subrack. The upstream devices are
+not polled: their connection status changes when the device connects to them,
+when communication is started or stopped (for example by changing ``adminMode``),
+and when a connection attempt is retried. Hardware polling continues
+independently of upstream connections.
 
-If communication with upstream components is lost, the subrack device transitions to UNKNOWN state to indicate that accurate power state information is unavailable. The subrack driver polls both:
+Recovery from UNKNOWN
+=====================
 
-* Direct hardware (SMB) communication status - controlled by subrack polling
-* Upstream (PDU/PowerMarshaller) communication status - controlled by base class callback
+The device only leaves ``UNKNOWN`` when it receives a power state update, but
+the driver does not re-publish a value that has not changed. If upstream
+communication is (re-)established while the subrack has been polled
+successfully and is ``ON`` throughout, no new power update would arrive, and
+the device would stay in ``UNKNOWN`` until it was re-initialised.
 
-When upstream communication is lost:
+To avoid this, when all upstream connections and the subrack connection are
+``ESTABLISHED``, the component manager re-asserts the driver's last known power
+state (``ON``). If the driver has no known power state, or the subrack
+connection is not established, nothing is re-asserted.
 
-1. The device enters UNKNOWN state
-2. Hardware polling continues independently
-3. Fault updates are guarded to prevent illegal state machine transitions from UNKNOWN state
+Fault updates
+=============
 
-When upstream communication recovers and both communication paths are ESTABLISHED:
-
-1. The cached power state from the last successful hardware poll is re-asserted
-2. This re-assertion triggers device state recovery from UNKNOWN back to the appropriate operational state (ON/OFF/STANDBY)
-3. No manual Init() call is required
-
-This design ensures that:
-
-* The subrack can survive transient upstream outages
-* State machine integrity is maintained (no illegal op-state transitions)
-* Hardware-observed state is preserved and restored on recovery
-* The user is not required to manually reinitialize the device
+Fault updates are only valid in the ``ON`` and ``STANDBY`` operating states, so
+applying one while the device is ``UNKNOWN`` or ``OFF`` would be an illegal
+state transition. A fault update received at such a time is held, and applied
+by the next component state update after the device reaches a state in which it
+is legal. A later fault update replaces a held one. When the device goes
+``OFF`` any held fault is discarded, as a device that is off cannot be faulty.
 
 PSU Dead Count And Health Events
 ================================

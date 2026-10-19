@@ -21,10 +21,11 @@ import logging
 import re
 import threading
 import time
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
-from typing import Any, Callable, Optional, Sequence, Union, cast
+from typing import Any, Callable, Iterator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
@@ -3177,11 +3178,27 @@ class SpsStationComponentManager(
                 "RouteDataToDaqs to route it to its DAQ."
             )
 
-    def get_routing(self: SpsStationComponentManager) -> _RoutingSnapshot:
+    @contextmanager
+    def routing_preserved(self: SpsStationComponentManager) -> Iterator[None]:
+        """
+        Put the station's data routing back as it was, after the block.
+
+        That includes the routing settings that the station routes data with
+        later, such as the integrated mode and payload lengths.
+
+        :yields: control, for the block to route data as it needs.
+        """
+        snapshot = self._routing_snapshot()
+        try:
+            yield
+        finally:
+            self._restore_routing(snapshot)
+
+    def _routing_snapshot(self: SpsStationComponentManager) -> _RoutingSnapshot:
         """
         Return how the station's data is routed, so that it can be restored.
 
-        :return: a snapshot of the routing, for restore_routing.
+        :return: a snapshot of the routing, for _restore_routing.
         """
         with self._daq_routes_lock:
             return _RoutingSnapshot(
@@ -3197,7 +3214,7 @@ class SpsStationComponentManager(
                 ),
             )
 
-    def restore_routing(
+    def _restore_routing(
         self: SpsStationComponentManager, snapshot: _RoutingSnapshot
     ) -> None:
         """
@@ -3207,7 +3224,7 @@ class SpsStationComponentManager(
         A stream that hadn't been routed before can't be restored, so a
         warning is logged.
 
-        :param snapshot: how the data was routed, from get_routing.
+        :param snapshot: how the data was routed, from _routing_snapshot.
         """
         (
             self._lmc_integrated_mode,

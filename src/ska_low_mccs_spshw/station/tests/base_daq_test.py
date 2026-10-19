@@ -92,11 +92,8 @@ class BaseDaqTest(TpmSelfCheckTest):
 
         :returns: test result.
         """
-        routing = self.component_manager.get_routing()
-        try:
+        with self.component_manager.routing_preserved():
             return super().run_test()
-        finally:
-            self.component_manager.restore_routing(routing)
 
     def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
         self._data = data

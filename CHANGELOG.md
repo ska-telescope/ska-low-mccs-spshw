@@ -3,7 +3,45 @@
 ## Unreleased
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
+* [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicate events from DAQ (usually from EventSystemDown errors)
+
+## 15.2.2
+
+* [THORN-768] HotFix: remove `rfiBlankingEnabledAntennas` from tile health. (this is currently broken when polling enabled on attribute.)
+
+## 15.2.1
+
+* [LOW-2103] Update ska-tango-devices to 0.17.0. This version fixes per-device-server labels, allowing us to label station-specific K8s resources with their station name.
+* [THORN-749] Use CLUSTER_DOMAIN for aws migration.
+* [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
+* [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
+* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
+* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
+* [THORN-735] Added Functional test for SpsStation.Reinitialise
+
+## 15.2.0
+
+* [SKB-1482] Reject User from calling StartBeamformer when not SYNCHRONISED.
+* [THORN-752] Update CODEOWNERS.
+* [THORN-680] SpsStation aggregate attributes are now served from a cache kept up to date by change-event subscriptions on each MccsTile, rather than by reading every tile serially over the network on each read.
+* [THORN-680] Fix reporting of aggregate SpsStation attributes when a tile has no value. Previously, an aggregate attribute such as `staticTimeDelays` could return `[tile1, tile2, tile4]`, making it unclear which tile was missing. Tile positions are now preserved, e.g. `[tile1, tile2, nan, tile4]`.
+* [THORN-89] Report INVALID tile attributes in aggregate SpsStation attributes. An INVALID tile value is now shown as `nan` in per-tile float arrays (`staticTimeDelays`, `preaduLevels`, `adcPower`) and as `Unknown` in `tileProgrammingState`. It is left out of the temperature summaries, and it makes `isBeamformerRunning`, `pllLockedSummary` and `ppsPresentSummary` report `False`.
+  * `channeliserRounding` is a DevLong attribute and cannot carry `nan`, so an invalid tile reports `-1` for every channel (valid values are 0-7).
+  * An INVALID `beamformerTable`, `beamformerRegions` or `cspRounding` from the final tile is reported as `-1` in every element. The configured `cspRounding` written to tiles by `Initialise` is unaffected.
+  * An INVALID beamformer flagged count from the final tile makes `finalTileBeamformerFlaggedCountOk` report `False`, and its contribution to health `UNKNOWN`, unless the other count is non-zero. In that case it still reports `False` with health `DEGRADED`.
+  * These final-tile attributes are also invalidated when communication with the final tile is lost. INVALID values from other tiles are ignored, since only the final tile's values are used.
+* [THORN-680] SpsStation now pushes change events for `staticTimeDelays`, `preaduLevels`, `channeliserRounding`, `pllLockedSummary`, `ppsPresentSummary` and `isBeamformerRunning`, and change and archive events for `tileProgrammingState`.
+* [THORN-680] When the beamformer daisy chain can no longer be verified (e.g. a tile's 40G destination IPs become unknown), its contribution to SpsStation health is now `UNKNOWN` rather than keeping the previous result, and `beamformerDaisyChainValid` reports `False`.
+* [THORN-680] MccsTile `testGeneratorActive` is now signal-backed, so it pushes change events when `ConfigureTestGenerator` is called.
+* [SP-7403] Add `MccsPrototypeSubrack`, a simplified subrack device that can replace `MccsSubrack`. It drives the subrack management board through a plain HTTP polling client, with no component manager and no driver. It has the same attributes as `MccsSubrack`, except the PDU attributes and the old health model attributes. It has the same TPM power and fan commands. A health attribute with no value gives `FAILED` health, where `MccsSubrack` gives `UNKNOWN`, in line with newest base classes. It has no `On` or `Off` command, and it does not control its PDU port. The `stfc-ral-2-sr2` subrack now uses it.
+* [THORN-724] Add the `MCCS_SUBRACK_IMPLEMENTATION` environment variable to the spshw server. With `prototype`, the server serves `MccsPrototypeSubrack` under the Tango class name `MccsSubrack`, so the Tango DB rows do not change. The default is `legacy`. Set it per device server instance through `helm_values`.
+
+## 15.1.1
+
 * [THORN-430] Added tangodiffdoc to the documentation pipeline
+* [THORN-748] Update dependencies.
+* [THORN-704] Updated power distribution docs
+* [SKB-1579] Fix over-emission issue in MccsTile.
 
 ## 15.1.0
 

@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -8,28 +9,32 @@
 """
 Tests of the prototype subrack Tango device, against a mocked subrack.
 
-The hardware client, the computed values, the subrack and the poller are all
-injected through the device module's :py:func:`subrack_factory`, and all four
-are mocks. So no board
-is reached, no thread is started, and nothing is waited for. A test supplies the
-device with a :py:class:`SubrackPollResponse` and asserts what the device does
-with it, which leaves only the device's own code under test.
+The hardware client, the computed values, the subrack, the poller and the
+health recorder are all injected through the device module's
+:py:func:`subrack_factory`, and all five are mocks. So no board is reached, no
+thread is started, and nothing is waited for. A test supplies the device with
+a :py:class:`SubrackPollResponse`, or with a verdict from the health recorder,
+and asserts what the device does with it. That leaves only the device's own
+code under test.
 
-Two fixtures cover the poller, because a mock with a ``side_effect`` bypasses
-its ``return_value`` and so cannot report what it handed back. ``poller_factory``
-is the factory, for asserting how a poller was built. ``pollers`` is what it
-built, in order, for asserting what became of each one.
+Two fixtures cover each of the poller and the health recorder, because a mock
+with a ``side_effect`` bypasses its ``return_value`` and so cannot report what
+it handed back. ``poller_factory`` is the factory, for asserting how a poller
+was built. ``pollers`` is what it built, in order, for asserting what became of
+each one. ``health_recorder_factory`` and ``health_recorders`` do the same for
+the health recorder.
 """
 
 from __future__ import annotations
 
 import gc
+import json
 from typing import Any, Callable, Iterator
 from unittest import mock
 
 import pytest
 import tango
-from ska_control_model import AdminMode, HealthState
+from ska_control_model import AdminMode, HealthState, PowerState
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
@@ -38,7 +43,13 @@ from ska_low_mccs_spshw.prototype_subrack import (
     RequestError,
     SubrackPollResponse,
 )
-from ska_low_mccs_spshw.prototype_subrack.constants import HEALTH_STATUS_KEY
+from ska_low_mccs_spshw.prototype_subrack.constants import (
+    HEALTH_NO_VALUE_REASON,
+    HEALTH_STATUS_KEY,
+)
+from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_attributes import (
+    HEALTH_ATTRIBUTES,
+)
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
 )
@@ -59,6 +70,9 @@ MAX_FAN_ERRORS = 3
 MAX_FAN_RPM_DELTA = 21
 TIMESTAMP = 1700000000.0
 
+# The health info the base device starts with, before any health report.
+BASE_HEALTH_INFO = ("Device implementation has not provided a health report",)
+
 # Distinguishes "the test did not say" from "the test said there was none".
 _UNSET: Any = object()
 
@@ -74,7 +88,6 @@ POLLED: list[tuple[str, str, Any]] = [
         "tpm_present",
         [True, False, True, False, False, False, False, False],
     ),
-    ("tpmOnOff", "tpm_on_off", [True, False, False, False, False, False, False, False]),
     ("backplaneTemperatures", "backplane_temperatures", [38.5, 39.5]),
     ("boardTemperatures", "board_temperatures", [40.5, 41.5]),
     ("cpldPllLocked", "cpld_pll_locked", True),
@@ -90,11 +103,20 @@ POLLED: list[tuple[str, str, Any]] = [
     ("tpmCurrents", "tpm_currents", [0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48]),
     ("tpmPowers", "tpm_powers", [4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6]),
     ("tpmVoltages", "tpm_voltages", [12.0, 12.1, 12.2, 12.3, 11.9, 11.8, 11.7, 11.6]),
-    # The subrack computes these two and reports them alongside the raw reads.
+    # The subrack computes these and reports them alongside the raw reads.
     ("subrackMaxFanSpeeds", "subrack_max_fan_speeds", [6500.0] * 4),
     # Zero, because anything higher warns or alarms on this attribute.
     ("psuDeadCount", "psu_dead_count", 0),
+    # Agrees with tpm_present, which has two bays occupied.
+    ("tpmCount", "tpm_count", 2),
+    # Agree with power_supply_powers, over a maximum of 1200 W.
+    ("psu1Load", "psu1_load", 0.045),
+    ("psu2Load", "psu2_load", 0.055),
 ]
+
+# The TPM on off flags from a poll, and the power state each bay should report.
+TPM_ON_OFF = [True, False, True, False, False, False, False, False]
+TPM_POWER_STATES = [PowerState.ON if is_on else PowerState.OFF for is_on in TPM_ON_OFF]
 
 # The two attributes the device converts on the way through, so what it reports
 # differs from what the subrack reported. Attribute, key, reported, expected.
@@ -160,13 +182,21 @@ def _nest(rows: list[tuple[str, tuple[str, ...], Any]]) -> dict[str, Any]:
 POLL_VALUES: dict[str, Any] = {key: value for _, key, value in POLLED}
 POLL_VALUES.update({key: reported for _, key, reported, _ in CONVERTED})
 
+POLL_VALUES["tpm_on_off"] = TPM_ON_OFF
 POLL_VALUES[HEALTH_STATUS_KEY] = _nest(HEALTH)
+
+# Every attribute the health status feeds, and the value it should report. The
+# health status itself is reported whole, as JSON.
+EXPECTED_FROM_HEALTH: dict[str, Any] = {
+    **{attribute: value for attribute, _, value in HEALTH},
+    "healthStatus": json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]),
+}
 
 # Every attribute a successful poll populates, and the value it should report.
 EXPECTED: dict[str, Any] = {
     **{attribute: value for attribute, _, value in POLLED},
     **{attribute: expected for attribute, _, _, expected in CONVERTED},
-    **{attribute: value for attribute, _, value in HEALTH},
+    **EXPECTED_FROM_HEALTH,
 }
 
 
@@ -246,12 +276,43 @@ def poller_factory_fixture(pollers: list[mock.Mock]) -> mock.Mock:
     return mock.Mock(name="poller_factory", side_effect=build)
 
 
+@pytest.fixture(name="health_recorders")
+def health_recorders_fixture() -> list[mock.Mock]:
+    """
+    Return the list that collects every health recorder the device builds.
+
+    :return: the health recorders built so far, in order.
+    """
+    return []
+
+
+@pytest.fixture(name="health_recorder_factory")
+def health_recorder_factory_fixture(health_recorders: list[mock.Mock]) -> mock.Mock:
+    """
+    Return the health recorder factory to inject into the device.
+
+    The recorder it returns subscribes to nothing, so health changes only when
+    a test calls the device's health callback through :py:func:`verdict`.
+
+    :param health_recorders: the list to collect the health recorders in.
+
+    :return: the factory.
+    """
+
+    def build(*_args: Any, **_kwargs: Any) -> mock.Mock:
+        health_recorders.append(mock.Mock(name=f"recorder{len(health_recorders)}"))
+        return health_recorders[-1]
+
+    return mock.Mock(name="health_recorder_factory", side_effect=build)
+
+
 @pytest.fixture(name="device_class")
 def device_class_fixture(
     client_factory: mock.Mock,
     derived_factory: mock.Mock,
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
+    health_recorder_factory: mock.Mock,
 ) -> type:
     """
     Return the device class with everything below it mocked out.
@@ -264,6 +325,7 @@ def device_class_fixture(
     :param derived_factory: the derived values factory to inject.
     :param subrack_factory: the subrack factory to inject.
     :param poller_factory: the poller factory to inject.
+    :param health_recorder_factory: the health recorder factory to inject.
 
     :return: the device class to serve.
     """
@@ -272,6 +334,7 @@ def device_class_fixture(
         derived_values=derived_factory,
         subrack=subrack_factory,
         subrack_poller=poller_factory,
+        health_recorder=health_recorder_factory,
     )
 
 
@@ -336,8 +399,30 @@ def polling_stopped_fixture(subrack_factory: mock.Mock) -> Callable[[], None]:
     return report
 
 
-@pytest.fixture(name="test_context")
-def test_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessContext]:
+@pytest.fixture(name="verdict")
+def verdict_fixture(
+    health_recorder_factory: mock.Mock,
+) -> Callable[[HealthState, str], None]:
+    """
+    Return a callable that gives the device one verdict of the health recorder.
+
+    :param health_recorder_factory: the injected health recorder factory,
+        which carries the device's health callback.
+
+    :return: a callable taking the health and the recorder's report.
+    """
+
+    def report(health: HealthState, health_report: str) -> None:
+        with tango.EnsureOmniThread():
+            health_recorder_factory.call_args.kwargs["health_callback"](
+                health, health_report
+            )
+
+    return report
+
+
+@pytest.fixture(name="device_context")
+def device_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Run a prototype subrack device with everything below it mocked out.
 
@@ -362,16 +447,16 @@ def test_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessCont
 
 @pytest.fixture(name="subrack_device")
 def subrack_device_fixture(
-    test_context: SpsTangoTestHarnessContext,
+    device_context: SpsTangoTestHarnessContext,
 ) -> tango.DeviceProxy:
     """
     Return a proxy to the prototype subrack device under test.
 
-    :param test_context: the running test harness context.
+    :param device_context: the running test harness context.
 
     :return: a proxy to the device under test.
     """
-    return test_context.get_prototype_subrack_device(SUBRACK_ID)
+    return device_context.get_prototype_subrack_device(SUBRACK_ID)
 
 
 @pytest.fixture(name="change_event_callbacks")
@@ -384,6 +469,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     return MockTangoEventCallbackGroup(
         "state",
         "healthState",
+        "healthInfo",
         timeout=1.0,
         assert_no_error=False,
     )
@@ -397,14 +483,16 @@ def subscribed_device_fixture(
     """
     Return the device, subscribed to, with its initial events consumed.
 
-    The device is still offline, so it reports nothing.
+    The device is still offline, so it reports nothing. Health is the base
+    device's placeholder, because only the health recorder reports health,
+    and it is mocked.
 
     :param subrack_device: the device under test.
     :param change_event_callbacks: the callbacks to subscribe with.
 
     :return: the device under test.
     """
-    for attribute_name in ["state", "healthState"]:
+    for attribute_name in ["state", "healthState", "healthInfo"]:
         subrack_device.subscribe_event(
             attribute_name,
             tango.EventType.CHANGE_EVENT,
@@ -412,6 +500,7 @@ def subscribed_device_fixture(
         )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
+    change_event_callbacks["healthInfo"].assert_change_event(BASE_HEALTH_INFO)
     return subrack_device
 
 
@@ -433,7 +522,6 @@ def online_device_fixture(
     """
     subscribed_device.adminMode = AdminMode.ONLINE
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     return subscribed_device
 
 
@@ -477,6 +565,7 @@ def test_assembles_from_its_properties(
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
     pollers: list[mock.Mock],
+    health_recorder_factory: mock.Mock,
 ) -> None:
     """
     Test that initialisation builds one of each, from the device properties.
@@ -487,6 +576,7 @@ def test_assembles_from_its_properties(
     :param subrack_factory: the injected subrack factory.
     :param poller_factory: the injected poller factory.
     :param pollers: every poller the device has built, in order.
+    :param health_recorder_factory: the injected health recorder factory.
     """
     assert subrack_device.state() == DevState.DISABLE
 
@@ -512,6 +602,13 @@ def test_assembles_from_its_properties(
         subrack_factory.return_value, UPDATE_RATE, mock.ANY
     )
     pollers[0].start_polling.assert_not_called()
+    health_recorder_factory.assert_called_once_with(
+        subrack_device.dev_name(),
+        mock.ANY,
+        attributes=list(HEALTH_ATTRIBUTES),
+        health_callback=mock.ANY,
+        attr_conf_callback=mock.ANY,
+    )
 
 
 def test_starts_disabled(
@@ -524,8 +621,6 @@ def test_starts_disabled(
     """
     assert subscribed_device.adminMode == AdminMode.OFFLINE
     assert subscribed_device.state() == DevState.DISABLE
-    assert subscribed_device.healthState == HealthState.FAILED
-    assert list(subscribed_device.healthInfo)
     _assert_all_invalid(subscribed_device, "before the device is online")
 
 
@@ -540,9 +635,6 @@ def test_online_starts_the_poller_and_waits(
     :param pollers: every poller the device has built, in order.
     """
     pollers[0].start_polling.assert_called_once_with()
-    assert list(online_device.healthInfo) == [
-        "Establishing communication with the subrack."
-    ]
     _assert_all_invalid(online_device, "until the first poll")
 
 
@@ -561,11 +653,25 @@ def test_a_poll_populates_every_attribute(
     poll_succeeded()
 
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
-    assert not list(online_device.healthInfo)
 
     for attribute_name, expected in EXPECTED.items():
         _assert_reads(online_device, attribute_name, expected)
+
+
+def test_a_poll_sets_each_tpm_power_state(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that each bay's power state follows its TPM on off flag.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    poll_succeeded()
+
+    for bay, expected in enumerate(TPM_POWER_STATES, start=1):
+        assert online_device.read_attribute(f"tpm{bay}PowerState").value == expected
 
 
 def test_unknown_value_is_invalid_but_the_poll_still_counts(
@@ -576,14 +682,12 @@ def test_unknown_value_is_invalid_but_the_poll_still_counts(
     Test that a value the subrack could not supply invalidates only its attribute.
 
     The subrack reports an unreadable key as ``None``, which is not a failed
-    poll, so every other attribute takes its value and the device stays healthy.
+    poll, so every other attribute takes its value and the device stays ON.
 
     :param online_device: the device under test, online and not yet polled.
     :param poll_succeeded: supplies a successful poll response.
     """
-    values = dict(POLL_VALUES, board_temperatures=None)
-
-    poll_succeeded(values=values)
+    poll_succeeded(values=dict(POLL_VALUES, board_temperatures=None))
 
     assert (
         online_device.read_attribute("boardTemperatures").quality
@@ -591,7 +695,6 @@ def test_unknown_value_is_invalid_but_the_poll_still_counts(
     )
     assert list(online_device.backplaneTemperatures) == pytest.approx([38.5, 39.5])
     assert online_device.state() == DevState.ON
-    assert online_device.healthState == HealthState.OK
 
 
 def test_missing_health_status_invalidates_only_its_attributes(
@@ -606,13 +709,12 @@ def test_missing_health_status_invalidates_only_its_attributes(
     """
     poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: None})
 
-    for attribute_name, _, _ in HEALTH:
+    for attribute_name in EXPECTED_FROM_HEALTH:
         assert (
             online_device.read_attribute(attribute_name).quality
             == tango.AttrQuality.ATTR_INVALID
         ), attribute_name
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
-    assert online_device.healthState == HealthState.OK
 
 
 def test_a_busy_read_keeps_the_last_value(
@@ -637,10 +739,9 @@ def test_a_busy_read_keeps_the_last_value(
     )
 
     _assert_reads(online_device, "boardTemperatures", [40.5, 41.5])
-    for attribute_name, _, expected in HEALTH:
+    for attribute_name, expected in EXPECTED_FROM_HEALTH.items():
         _assert_reads(online_device, attribute_name, expected)
     assert online_device.state() == DevState.ON
-    assert online_device.healthState == HealthState.OK
 
 
 def test_going_offline_stops_polling_and_invalidates(
@@ -664,14 +765,11 @@ def test_going_offline_stops_polling_and_invalidates(
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
     online_device.adminMode = AdminMode.OFFLINE
     polling_stopped()
 
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-    assert list(online_device.healthInfo) == ["adminMode is OFFLINE."]
     pollers[0].stop_polling.assert_called_once_with()
     _assert_all_invalid(online_device, "once the device is offline")
 
@@ -697,7 +795,6 @@ def test_a_late_poll_cannot_leave_the_device_online(
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
     # The write alone changes nothing, because a poll may still be in flight.
     online_device.adminMode = AdminMode.OFFLINE
@@ -707,9 +804,7 @@ def test_a_late_poll_cannot_leave_the_device_online(
     polling_stopped()
 
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     assert online_device.state() == DevState.DISABLE
-    assert list(online_device.healthInfo) == ["adminMode is OFFLINE."]
     _assert_all_invalid(online_device, "once the device is offline")
 
 
@@ -729,15 +824,10 @@ def test_unreachable_subrack_reports_unknown(
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
     poll_failed(RequestError("Connection refused"))
 
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-    health_info = list(online_device.healthInfo)
-    assert health_info[0].startswith("Poll failed with RequestError")
-    assert "Connection refused" in health_info[0]
     _assert_all_invalid(online_device, "when the subrack is unreachable")
 
 
@@ -757,13 +847,10 @@ def test_board_error_reports_fault(
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
     poll_failed(HttpError("500 Server Error"))
 
     change_event_callbacks["state"].assert_change_event(DevState.FAULT)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-    assert list(online_device.healthInfo)[0].startswith("Poll failed with HttpError")
 
 
 def test_recovers_after_a_failed_poll(
@@ -781,12 +868,10 @@ def test_recovers_after_a_failed_poll(
     :param poll_failed: supplies a failed poll.
     """
     poll_failed(RequestError("Connection refused"))
-    assert online_device.healthState == HealthState.FAILED
 
     poll_succeeded()
 
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
 
 
@@ -794,15 +879,18 @@ def test_init_reclaims_the_poller_and_builds_another(
     online_device: tango.DeviceProxy,
     poll_succeeded: Callable[..., None],
     pollers: list[mock.Mock],
+    health_recorders: list[mock.Mock],
 ) -> None:
     """
-    Test that re-initialising reclaims the old poller's thread.
+    Test that re-initialising reclaims the old poller and health recorder.
 
     That ``Init()`` runs ``delete_device`` and then ``init_device`` is Tango's
     behaviour, not the device's. What is the device's own is that
-    ``disassemble`` reclaims the running poller before ``assemble`` builds its
-    replacement. Nothing else covers it, so without this a re-init leaks a
-    polling thread and the old one keeps polling the board.
+    ``delete_device`` reclaims the running poller and cleans up the health
+    recorder before ``init_device`` builds their replacements. Nothing else
+    covers it, so without this a re-init leaks a polling thread that keeps
+    polling the board, and a recorder thread that stays subscribed to the
+    device.
 
     What each piece is built from is covered by
     :py:func:`test_assembles_from_its_properties`, so this asserts only that
@@ -811,6 +899,8 @@ def test_init_reclaims_the_poller_and_builds_another(
     :param online_device: the device under test, online and not yet polled.
     :param poll_succeeded: supplies a successful poll response.
     :param pollers: every poller the device has built, in order.
+    :param health_recorders: every health recorder the device has built, in
+        order.
     """
     online_device.Init()
 
@@ -819,6 +909,11 @@ def test_init_reclaims_the_poller_and_builds_another(
 
     first.kill_polling_thread.assert_called_once_with()
     second.kill_polling_thread.assert_not_called()
+
+    assert len(health_recorders) == 2, "Init did not build a second recorder"
+    (first_recorder, second_recorder) = health_recorders
+    first_recorder.cleanup.assert_called_once_with()
+    second_recorder.cleanup.assert_not_called()
 
     # adminMode is memorized, so the device comes back online by itself, and it
     # is the new poller it starts, not the reclaimed one.
@@ -838,17 +933,12 @@ def test_board_error_before_any_poll_stays_unknown(
     reported as faulty. The operational state model has no transition from
     UNKNOWN into FAULT either, so reporting one would raise.
 
-    The device is already FAILED from going online, so this pushes no
-    healthState event. Only the reason it gives changes.
-
     :param online_device: the device under test, online and not yet polled.
     :param poll_failed: supplies a failed poll.
     """
     poll_failed(HttpError("500 Server Error"))
 
     assert online_device.state() == DevState.UNKNOWN
-    assert online_device.healthState == HealthState.FAILED
-    assert list(online_device.healthInfo)[0].startswith("Poll failed with HttpError")
 
 
 def test_recovers_from_a_fault(
@@ -870,15 +960,74 @@ def test_recovers_from_a_fault(
     """
     poll_succeeded()
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
 
     poll_failed(HttpError("500 Server Error"))
     change_event_callbacks["state"].assert_change_event(DevState.FAULT)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
 
     poll_succeeded()
 
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
     assert online_device.state() == DevState.ON
     _assert_reads(online_device, "boardTemperatures", [40.5, 41.5])
+
+
+@pytest.mark.parametrize(
+    ("recorded", "health_report", "reported", "health_info"),
+    [
+        pytest.param(HealthState.OK, "Health is OK.", HealthState.OK, [], id="ok"),
+        pytest.param(
+            HealthState.DEGRADED,
+            "psudeadcount is in ATTR_WARNING with value 1",
+            HealthState.DEGRADED,
+            ["psudeadcount is in ATTR_WARNING with value 1"],
+            id="degraded",
+        ),
+        pytest.param(
+            HealthState.FAILED,
+            "tpmvoltages is in ATTR_ALARM with value [13.0]\n"
+            "psu1voltageout is in ATTR_ALARM with value 9.0",
+            HealthState.FAILED,
+            [
+                "tpmvoltages is in ATTR_ALARM with value [13.0]",
+                "psu1voltageout is in ATTR_ALARM with value 9.0",
+            ],
+            id="failed",
+        ),
+        # report_health refuses UNKNOWN, so a missing value fails health with
+        # a reason that does not change as values come and go.
+        pytest.param(
+            HealthState.UNKNOWN,
+            "boardtemperatures is in ATTR_INVALID with value None",
+            HealthState.FAILED,
+            [HEALTH_NO_VALUE_REASON],
+            id="no-value",
+        ),
+    ],
+)
+# pylint: disable-next=too-many-arguments
+def test_reports_the_recorders_verdict(
+    subscribed_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    verdict: Callable[[HealthState, str], None],
+    recorded: HealthState,
+    health_report: str,
+    reported: HealthState,
+    health_info: list[str],
+) -> None:
+    """
+    Test that the device reports each verdict of the health recorder.
+
+    :param subscribed_device: the device under test, subscribed to.
+    :param change_event_callbacks: the callbacks subscribed to the device.
+    :param verdict: gives the device a verdict of the health recorder.
+    :param recorded: the health the recorder gives.
+    :param health_report: the report the recorder gives.
+    :param reported: the health the device should report.
+    :param health_info: the reasons the device should report.
+    """
+    verdict(recorded, health_report)
+
+    change_event_callbacks["healthState"].assert_change_event(reported)
+    change_event_callbacks["healthInfo"].assert_change_event(tuple(health_info))
+    # The report is emitted before the health, so it is already readable.
+    assert subscribed_device.healthReport == ("\n".join(health_info) or "Health is OK.")

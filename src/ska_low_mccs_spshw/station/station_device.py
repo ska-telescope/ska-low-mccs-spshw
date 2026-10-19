@@ -246,6 +246,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("beamformerRegions", True, False)
         self.set_change_event("beamformerDaisyChainValid", True, False)
         self.set_change_event("finalTileBeamformerFlaggedCountOk", True, False)
+        self.set_change_event("staticTimeDelays", True, False)
+        self.set_change_event("preaduLevels", True, False)
+        self.set_change_event("channeliserRounding", True, False)
+        self.set_change_event("pllLockedSummary", True, False)
+        self.set_change_event("ppsPresentSummary", True, False)
+        self.set_change_event("isBeamformerRunning", True, False)
         self.set_change_event("pointingDelays", True, False)
 
         self.set_archive_event("xPolBandpass", False)
@@ -259,6 +265,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("beamformerRegions", True, True)
         self.set_archive_event("beamformerDaisyChainValid", True, True)
         self.set_archive_event("finalTileBeamformerFlaggedCountOk", True, True)
+        self.set_archive_event("staticTimeDelays", False)
+        self.set_archive_event("preaduLevels", False)
+        self.set_archive_event("channeliserRounding", False)
+        self.set_archive_event("pllLockedSummary", False)
+        self.set_archive_event("ppsPresentSummary", False)
+        self.set_archive_event("isBeamformerRunning", False)
         self.set_archive_event("pointingDelays", True, True)
 
         # pylint: disable=attribute-defined-outside-init
@@ -698,34 +710,72 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 self._health_rollup.health_changed("self", HealthState.OK)
 
-        daisy_chain_valid = state_change.get("beamformerDaisyChainValid")
-        if daisy_chain_valid is not None:
-            self.push_change_event(
-                "beamformerDaisyChainValid", cast(bool, daisy_chain_valid)
-            )
+        if "beamformerDaisyChainValid" in state_change:
+            # None means the chain can no longer be verified (e.g. a tile's
+            # destination IPs became unknown), so withdraw any earlier result.
+            daisy_chain_valid = state_change["beamformerDaisyChainValid"]
+            self.push_change_event("beamformerDaisyChainValid", bool(daisy_chain_valid))
             self.push_archive_event(
-                "beamformerDaisyChainValid", cast(bool, daisy_chain_valid)
+                "beamformerDaisyChainValid", bool(daisy_chain_valid)
             )
+            if daisy_chain_valid is None:
+                daisy_chain_health = HealthState.UNKNOWN
+            elif daisy_chain_valid:
+                daisy_chain_health = HealthState.OK
+            else:
+                daisy_chain_health = HealthState.FAILED
             self._health_rollup.health_changed(
-                "beamformer_daisy_chain",
-                HealthState.OK if daisy_chain_valid else HealthState.FAILED,
+                "beamformer_daisy_chain", daisy_chain_health
             )
 
-        flagged_count_ok = state_change.get("finalTileBeamformerFlaggedCountOk")
-        if flagged_count_ok is not None:
+        if "finalTileBeamformerFlaggedCountOk" in state_change:
+            # None means a final tile count is INVALID, so the result can no
+            # longer be verified; withdraw any earlier result.
+            flagged_count_ok = state_change["finalTileBeamformerFlaggedCountOk"]
             self.push_change_event(
-                "finalTileBeamformerFlaggedCountOk", cast(bool, flagged_count_ok)
+                "finalTileBeamformerFlaggedCountOk", bool(flagged_count_ok)
             )
             self.push_archive_event(
-                "finalTileBeamformerFlaggedCountOk", cast(bool, flagged_count_ok)
+                "finalTileBeamformerFlaggedCountOk", bool(flagged_count_ok)
             )
+            if flagged_count_ok is None:
+                flagged_count_health = HealthState.UNKNOWN
+            elif flagged_count_ok:
+                flagged_count_health = HealthState.OK
+            else:
+                flagged_count_health = HealthState.DEGRADED
             self._health_rollup.health_changed(
-                "beamformer_flagged_count",
-                HealthState.OK if flagged_count_ok else HealthState.DEGRADED,
+                "beamformer_flagged_count", flagged_count_health
             )
+
+        static_time_delays = state_change.get("staticTimeDelays")
+        if static_time_delays is not None:
+            self.push_change_event("staticTimeDelays", static_time_delays)
+
+        preadu_levels = state_change.get("preaduLevels")
+        if preadu_levels is not None:
+            self.push_change_event("preaduLevels", preadu_levels)
+
+        channeliser_rounding = state_change.get("channeliserRounding")
+        if channeliser_rounding is not None:
+            self.push_change_event("channeliserRounding", channeliser_rounding)
+
+        pll_locked_summary = state_change.get("pllLockedSummary")
+        if pll_locked_summary is not None:
+            self.push_change_event("pllLockedSummary", pll_locked_summary)
+
+        pps_present_summary = state_change.get("ppsPresentSummary")
+        if pps_present_summary is not None:
+            self.push_change_event("ppsPresentSummary", pps_present_summary)
+
+        is_beamformer_running = state_change.get("isBeamformerRunning")
+        if is_beamformer_running is not None:
+            self.push_change_event("isBeamformerRunning", is_beamformer_running)
 
         tile_programming_state = state_change.get("tileProgrammingState")
         if tile_programming_state is not None:
+            self.push_change_event("tileProgrammingState", tile_programming_state)
+            self.push_archive_event("tileProgrammingState", tile_programming_state)
             if all(tpm_state == "Off" for tpm_state in tile_programming_state) or all(
                 tpm_state == "Synchronised" for tpm_state in tile_programming_state
             ):
@@ -1066,7 +1116,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         doc="Get the current static time delays. "
         "Array of one value per antenna/polarization (32 per tile), in range +/-124. "
         "Delay in nanoseconds (positive = increase the signal delay) to correct for "
-        "static delay mismatches, e.g. cable length.",
+        "static delay mismatches, e.g. cable length. "
+        "NaN for every channel of a tile whose value is invalid.",
     )
     def staticTimeDelays(self: SpsStation) -> list[float]:
         """
@@ -1074,7 +1125,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
         Delay in nanoseconds (positive = increase the signal delay) to correct for
-        static delay mismatches, e.g. cable length.
+        static delay mismatches, e.g. cable length. A tile whose value is
+        invalid reports NaN for every channel.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
@@ -1096,7 +1148,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=512,  # Channels
         max_dim_y=16,  # Tiles
         label="Channeliser Rounding",
-        doc="Number of LS bits dropped in each channeliser freq channel.",
+        doc=(
+            "Number of LS bits dropped in each channeliser freq channel. "
+            "-1 for every channel of a tile whose value is invalid."
+        ),
     )
     def channeliserRounding(self: SpsStation) -> ndarray:
         """
@@ -1104,7 +1159,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         Number of LS bits dropped in each channeliser frequency channel.
         Valid values 0-7 Same value applies to all antennas and
-        polarizations
+        polarizations. A tile whose value is invalid reports -1 for
+        every channel.
 
         :returns: A list of 512 values for every tile, one per channel.
         """
@@ -1115,7 +1171,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=384,
         label="CSP Rounding",
         unit="Decibel",
-        doc="CSP formatter rounding. Range 0 to 7, as number of discarded LS bits.",
+        doc="CSP formatter rounding. Range 0 to 7, as number of discarded LS bits. "
+        "-1 for every channel while the final tile's value is invalid.",
     )
     def cspRounding(self: SpsStation) -> list[int]:
         """
@@ -1144,11 +1201,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=("DevDouble",),
         max_dim_x=512,
         label="Pre-ADU Levels",
-        doc="Get attenuator level of preADU channels, one per input channel.",
+        doc="Get attenuator level of preADU channels, one per input channel. "
+        "NaN for every channel of a tile whose value is invalid.",
     )
     def preaduLevels(self: SpsStation) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
+
+        A tile whose value is invalid reports NaN for every channel.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
@@ -1255,6 +1315,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         True when both fpga0 and fpga1 discarded_or_flagged_packet_count values on
         the final tile are 0.
         False (and station health DEGRADED) when either is non-zero.
+        False (and station health UNKNOWN) when one is invalid and the other
+        is zero.
         This defaults to False when value has not been updated yet.
 
         :return: True if the final tile beamformer flagged count is zero.
@@ -1275,7 +1337,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         "4. subarray_beam_id, "
         "5. substation_id, "
         "6. aperture_id "
-        "Each row is a set of 7 consecutive elements in the list.",
+        "Each row is a set of 7 consecutive elements in the list. "
+        "Every element is -1 while the final tile's value is invalid.",
     )
     def beamformerTable(self: SpsStation) -> list[int] | None:
         """
@@ -1313,7 +1376,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         "5. subarray_beam_id, "
         "6. substation_id, "
         "8. aperture_id. "
-        "Each row is a set of 8 consecutive elements in the list.",
+        "Each row is a set of 8 consecutive elements in the list. "
+        "Every element is -1 while the final tile's value is invalid.",
     )
     def beamformerRegions(self: SpsStation) -> list[int] | None:
         """
@@ -1507,7 +1571,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="Test Generator Active",
         doc="Get the state of the test generator across this station's tiles. "
-        "Returns ``True`` if the test generator is active in at least one tile.",
+        "Returns ``True`` if the test generator is active in at least one tile. "
+        "A tile whose value is invalid is treated as inactive.",
     )
     def testGeneratorActive(self: SpsStation) -> bool:
         """
@@ -1521,7 +1586,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="Is Beamformer Running",
         doc="Get the state of the beamformer across this station's tiles. "
-        "Returns ``True`` if the beamformer is active in all tiles.",
+        "Returns ``True`` if the beamformer is active in all tiles. "
+        "Returns ``False`` if any tile's value is invalid.",
     )
     def isBeamformerRunning(self: SpsStation) -> bool:
         """
@@ -1552,14 +1618,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         archive_period=5000,
         label="ADC Power",
         unit="ADC units",
-        doc="Get the ADC RMS input levels for all input signals.",
+        doc="Get the ADC RMS input levels for all input signals. "
+        "NaN for every channel of a tile whose value is invalid.",
     )
     def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.
 
         Returns an array of 2 values (X and Y polarizations) per antenna, 32
-        per tile, 512 per station
+        per tile, 512 per station. A tile whose value is invalid reports NaN
+        for every channel.
 
         :return: the ADC RMS input levels, in ADC units
         """
@@ -1570,7 +1638,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=3,
         label="Board Temperatures Summary",
         unit="Celsius",
-        doc="Get summary of board temperatures (minimum, average, maximum).",
+        doc="Get summary of board temperatures (minimum, average, maximum). "
+        "Tiles whose value is invalid are excluded.",
     )
     def boardTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
@@ -1585,7 +1654,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         max_dim_x=3,
         label="FPGA Temperatures Summary",
         unit="Celsius",
-        doc="Get summary of FPGA temperatures (minimum, average, maximum).",
+        doc="Get summary of FPGA temperatures (minimum, average, maximum). "
+        "Tiles whose value is invalid are excluded.",
     )
     def fpgaTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
@@ -1628,7 +1698,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="PLL Locked Summary",
         doc="Get summary of PLL locked status for all tiles. "
-        "True if PLL is locked to reference in all tiles.",
+        "True if PLL is locked to reference in all tiles. "
+        "False if any tile's value is invalid.",
     )
     def pllLockedSummary(self: SpsStation) -> bool:
         """
@@ -1642,7 +1713,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevBoolean",
         label="PPS Present Summary",
         doc="Get summary of PPS present status for all tiles. "
-        "True if PPS signal is present in all tiles.",
+        "True if PPS signal is present in all tiles. "
+        "False if any tile's value is invalid.",
     )
     def ppsPresentSummary(self: SpsStation) -> bool:
         """
@@ -2170,6 +2242,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Reinitialise the station with overridable defaults.
 
+        This runs the same sequence as Initialise, except that the tiles are
+        re-initialised without reprogramming their FPGAs.
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -2186,7 +2261,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("Initialise")
+            >>> dp.command_inout("Reinitialise")
         """  # noqa: E501, D202
 
         def task(
@@ -2196,6 +2271,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.initialise(
                 start_bandpasses,
                 global_reference_time,
+                force_reprogramming=False,
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,
             )

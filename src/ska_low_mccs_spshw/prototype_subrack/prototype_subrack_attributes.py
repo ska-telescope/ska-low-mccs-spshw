@@ -19,26 +19,29 @@ from __future__ import annotations
 import json
 from typing import Any, Final
 
+from ska_control_model import PowerState
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 
 from ..subrack.subrack_data import SubrackData
-from .constants import DerivedKey, ReadKey
+from .constants import HEALTH_STATUS_KEY, DerivedKey, ReadKey
 
 __all__ = [
     "ALL_SIGNALS",
+    "HEALTH_ATTRIBUTES",
     "HEALTH_PATH_TO_SIGNAL",
     "READ_KEY_TO_SIGNAL",
     "VALUE_CONVERTERS",
+    "TPM_POWER_STATE_SIGNALS",
     "SubrackAttributes",
 ]
 
 
-# Hardware read key to the name of the signal that carries it. Keyed off the
+# Poll value key to the name of the signal that carries it. Keyed off the
 # enums rather than string literals, so a renamed key is a type error rather
-# than an attribute that silently stops updating.
+# than an attribute that silently stops updating. The TPM on off flags have no
+# signal of their own, because only the TPM power states report them.
 READ_KEY_TO_SIGNAL: Final[dict[str, str]] = {
     ReadKey.TPM_PRESENT.value: "_tpm_present",
-    ReadKey.TPM_ON_OFF.value: "_tpm_on_off",
     ReadKey.BACKPLANE_TEMPERATURES.value: "_backplane_temperatures",
     ReadKey.BOARD_TEMPERATURES.value: "_board_temperatures",
     ReadKey.BOARD_CURRENT.value: "_board_current",
@@ -58,6 +61,10 @@ READ_KEY_TO_SIGNAL: Final[dict[str, str]] = {
     ReadKey.BOARD_INFO.value: "_subrack_board_info",
     DerivedKey.SUBRACK_MAX_FAN_SPEEDS.value: "_subrack_max_fan_speeds",
     DerivedKey.PSU_DEAD_COUNT.value: "_psu_dead_count",
+    DerivedKey.TPM_COUNT.value: "_tpm_count",
+    DerivedKey.PSU1_LOAD.value: "_psu1_load",
+    DerivedKey.PSU2_LOAD.value: "_psu2_load",
+    HEALTH_STATUS_KEY: "_health_status",
 }
 
 # Signal name to its path inside the polled health status dictionary.
@@ -86,10 +93,56 @@ HEALTH_PATH_TO_SIGNAL: Final[dict[str, tuple[str, ...]]] = {
     "_psu2_voltage_out": ("psus", "voltage_out", "PSU2"),
 }
 
+# The signal for each bay's TPM power state, in bay order. These are derived
+# from the polled TPM on off flags rather than read. They are left out of
+# ALL_SIGNALS because they behave as they do on MccsSubrack. A lost board makes
+# them UNKNOWN rather than invalid.
+TPM_POWER_STATE_SIGNALS: Final[tuple[str, ...]] = tuple(
+    f"_tpm{bay}_power_state" for bay in range(1, SubrackData.TPM_BAY_COUNT + 1)
+)
+
 # Every signal this device emits, so that a lost board can invalidate all
 # of them.
 ALL_SIGNALS: Final[tuple[str, ...]] = tuple(READ_KEY_TO_SIGNAL.values()) + tuple(
     HEALTH_PATH_TO_SIGNAL
+)
+
+
+# The attributes whose quality decides the health of the device. The health
+# recorder subscribes to these. The others are left out because their quality
+# says nothing about the subrack, or because they have no alarm thresholds.
+# This is the same set that MccsSubrack uses.
+HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
+    "backplaneTemperatures",
+    "boardTemperatures",
+    "powerSupplyPowers",
+    "powerSupplyVoltages",
+    "subrackMaxFanSpeeds",
+    "tpmPowers",
+    "tpmVoltages",
+    "psuDeadCount",
+    "internalVoltages1V1",
+    "internalVoltages1V5",
+    "internalVoltages2V5",
+    "internalVoltages2V8",
+    "internalVoltages3V",
+    "internalVoltages3V3",
+    "internalVoltages5V",
+    "internalVoltagesARM",
+    "internalVoltagesCORE",
+    "internalVoltagesDDR",
+    "internalVoltagesPOWERIN",
+    "internalVoltagesSOC",
+    "psu1Present",
+    "psu2Present",
+    "psu1PowerIn",
+    "psu2PowerIn",
+    "psu1PowerOut",
+    "psu2PowerOut",
+    "psu1VoltageIn",
+    "psu2VoltageIn",
+    "psu1VoltageOut",
+    "psu2VoltageOut",
 )
 
 
@@ -106,9 +159,10 @@ def _as_spectrum(value: Any) -> list[Any]:
 
 # The few signals whose board value is not already what the attribute expects.
 VALUE_CONVERTERS: Final[dict[str, Any]] = {
-    # The board reports this as a nested dictionary, and the attribute is a
-    # JSON string.
+    # The board reports these as nested dictionaries, and the attributes are
+    # JSON strings.
     "_subrack_board_info": json.dumps,
+    "_health_status": json.dumps,
     # The board reports a single total, and the attribute is a one element
     # spectrum.
     "_board_current": _as_spectrum,
@@ -140,7 +194,7 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     # Signals for the board reads
     # ---------------------------
     _tpm_present: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
-    _tpm_on_off: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _tpm_count: AttrSignal[int] = AttrSignal[int]()
     _backplane_temperatures: AttrSignal[list[float]] = AttrSignal[list[float]]()
     _board_temperatures: AttrSignal[list[float]] = AttrSignal[list[float]]()
     _board_current: AttrSignal[list[float]] = AttrSignal[list[float]]()
@@ -159,6 +213,18 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     _tpm_powers: AttrSignal[list[float]] = AttrSignal[list[float]]()
     _tpm_voltages: AttrSignal[list[float]] = AttrSignal[list[float]]()
     _subrack_board_info: AttrSignal[str] = AttrSignal[str]()
+
+    # ---------------------------------
+    # Signals for the TPM power states
+    # ---------------------------------
+    _tpm1_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm2_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm3_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm4_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm5_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm6_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm7_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
+    _tpm8_power_state: AttrSignal[PowerState] = AttrSignal[PowerState]()
 
     # -----------------------------
     # Signals for the health status
@@ -186,6 +252,14 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     _psu1_voltage_out: AttrSignal[float] = AttrSignal[float]()
     _psu2_voltage_out: AttrSignal[float] = AttrSignal[float]()
     _psu_dead_count: AttrSignal[int] = AttrSignal[int]()
+    _psu1_load: AttrSignal[float] = AttrSignal[float]()
+    _psu2_load: AttrSignal[float] = AttrSignal[float]()
+    _health_status: AttrSignal[str] = AttrSignal[str]()
+
+    # ------------------------------
+    # Signal for the health recorder
+    # ------------------------------
+    _health_report: AttrSignal[str] = AttrSignal[str]()
 
     # ---------------------------
     # Attributes for board reads
@@ -198,12 +272,13 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         doc="Whether each TPM bay is occupied.",
     )
 
-    tpmOnOff = attribute_from_signal(
-        _tpm_on_off,
-        dtype=(bool,),
-        max_dim_x=SubrackData.TPM_BAY_COUNT,
-        label="TPM on off",
-        doc="Whether each TPM bay is powered on.",
+    tpmCount = attribute_from_signal(
+        _tpm_count,
+        dtype="DevShort",
+        label="TPM Count",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="The number of TPM bays that are occupied.",
     )
 
     backplaneTemperatures = attribute_from_signal(
@@ -394,6 +469,65 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         dtype=str,
         label="Subrack Board Info",
         doc="The subrack board information, as a JSON string.",
+    )
+
+    # ---------------------------------
+    # Attributes for the TPM power states
+    # ---------------------------------
+    tpm1PowerState = attribute_from_signal(
+        _tpm1_power_state,
+        dtype=PowerState,
+        label="TPM 1 power state",
+        doc="The power state of the TPM in bay 1.",
+    )
+
+    tpm2PowerState = attribute_from_signal(
+        _tpm2_power_state,
+        dtype=PowerState,
+        label="TPM 2 power state",
+        doc="The power state of the TPM in bay 2.",
+    )
+
+    tpm3PowerState = attribute_from_signal(
+        _tpm3_power_state,
+        dtype=PowerState,
+        label="TPM 3 power state",
+        doc="The power state of the TPM in bay 3.",
+    )
+
+    tpm4PowerState = attribute_from_signal(
+        _tpm4_power_state,
+        dtype=PowerState,
+        label="TPM 4 power state",
+        doc="The power state of the TPM in bay 4.",
+    )
+
+    tpm5PowerState = attribute_from_signal(
+        _tpm5_power_state,
+        dtype=PowerState,
+        label="TPM 5 power state",
+        doc="The power state of the TPM in bay 5.",
+    )
+
+    tpm6PowerState = attribute_from_signal(
+        _tpm6_power_state,
+        dtype=PowerState,
+        label="TPM 6 power state",
+        doc="The power state of the TPM in bay 6.",
+    )
+
+    tpm7PowerState = attribute_from_signal(
+        _tpm7_power_state,
+        dtype=PowerState,
+        label="TPM 7 power state",
+        doc="The power state of the TPM in bay 7.",
+    )
+
+    tpm8PowerState = attribute_from_signal(
+        _tpm8_power_state,
+        dtype=PowerState,
+        label="TPM 8 power state",
+        doc="The power state of the TPM in bay 8.",
     )
 
     # -------------------------------
@@ -648,5 +782,43 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         doc=(
             "Count of PSUs that are present and receive input voltage but "
             "supply no output voltage."
+        ),
+    )
+
+    psu1Load = attribute_from_signal(
+        _psu1_load,
+        dtype="DevDouble",
+        label="PSU 1 Load",
+        abs_change=0.001,
+        archive_abs_change=0.001,
+        doc="The load on PSU1, as a fraction of its maximum power.",
+    )
+
+    psu2Load = attribute_from_signal(
+        _psu2_load,
+        dtype="DevDouble",
+        label="PSU 2 Load",
+        abs_change=0.001,
+        archive_abs_change=0.001,
+        doc="The load on PSU2, as a fraction of its maximum power.",
+    )
+
+    healthStatus = attribute_from_signal(
+        _health_status,
+        dtype=str,
+        label="Health Status Dictionary",
+        doc="Every subrack monitoring point in the health status, as JSON.",
+    )
+
+    # ---------------------------------
+    # Attribute for the health recorder
+    # ---------------------------------
+    healthReport = attribute_from_signal(
+        _health_report,
+        dtype=str,
+        label="Health Report",
+        doc=(
+            "The reasons for the current health, one on each line, or "
+            "'Health is OK.'."
         ),
     )

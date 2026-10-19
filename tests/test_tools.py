@@ -243,6 +243,51 @@ def wait_for_condition(
     return False
 
 
+# pylint: disable=too-many-arguments
+def wait_for_attribute_value(
+    device: tango.DeviceProxy,
+    attribute_name: str,
+    expected_value: Any,
+    timeout: float = 1.0,
+    allow_exceptions: tuple[type[BaseException], ...] = (),
+    poll_interval: float = 0.01,
+) -> bool:
+    """
+    Poll a device attribute until it reaches an expected value, or timeout.
+
+    Use in place of a bare ``time.sleep()`` before asserting on an
+    attribute that is updated asynchronously (e.g. via tile change
+    events), so tests take as long as they need to but no longer.
+
+    :param device: the Tango device proxy to poll.
+    :param attribute_name: the name of the attribute to poll.
+    :param expected_value: the value the attribute is expected to reach.
+        Compared with ``pytest.approx``, so floats, lists and arrays are
+        all supported.
+    :param timeout: seconds to keep polling before giving up.
+    :param allow_exceptions: exception types to swallow while polling
+        (e.g. transient ``tango.DevFailed`` while a proxy is not yet
+        ready), treated as "not yet reached". Anything else propagates
+        immediately.
+    :param poll_interval: seconds to sleep between polls.
+
+    :returns: True if the attribute reached expected_value within
+        timeout, False otherwise.
+    """
+
+    def _reached_expected_value() -> bool:
+        try:
+            return bool(
+                getattr(device, attribute_name) == pytest.approx(expected_value)
+            )
+        except allow_exceptions:
+            return False
+
+    return wait_for_condition(
+        _reached_expected_value, timeout=timeout, poll_interval=poll_interval
+    )
+
+
 def wait_for_device(
     trl: str, timeout: float = 120, poll_interval: float = 3
 ) -> tango.DeviceProxy | None:
@@ -1107,6 +1152,45 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
             setattr(self, kwarg, val)
 
 
+class LRCListHolding:  # noqa: PLW1641 # eq-without-hash
+    """
+    Matches an LRC attribute value that holds one entry equal to ``entry``.
+
+    ``lrcQueue``, ``lrcExecuting`` and ``lrcFinished`` each read as a sequence
+    of JSON blobs, one per command, so a change event carries the whole
+    sequence rather than the one command a test is waiting on. Comparing a
+    :py:class:`JSONRepresenting` against that sequence never matches, so an
+    assertion that wants one command has to look inside.
+    """
+
+    def __init__(self, entry: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param entry: what one member of the sequence must equal.
+        """
+        self.entry = entry
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation for logging purposes.
+
+        :return: string of object
+        """
+        return f"LRCListHolding({self.entry!r})"
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Return True if other is a sequence holding something equal to entry.
+
+        :param other: the object used to compare
+        :return: result of assertion
+        """
+        if not isinstance(other, (list, tuple)):
+            return False
+        return any(self.entry == member for member in other)
+
+
 class JSONRepresenting:  # noqa: PLW1641 # eq-without-hash
     """
     A representation of a JSON string using a python object.
@@ -1254,7 +1338,7 @@ class LRCManager:
         """
         try:
             self.lrcQueue.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,
@@ -1310,7 +1394,7 @@ class LRCManager:
         """
         try:
             self.lrcExecuting.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,
@@ -1385,7 +1469,7 @@ class LRCManager:
 
         try:
             self.lrcFinished.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,

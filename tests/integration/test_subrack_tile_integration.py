@@ -799,7 +799,6 @@ class TestMccsTileTpmDriver:
             tile_subs,
             subrack_subs,
         )
-
         tile_subs.append(
             tile_device.subscribe_event(
                 "ppsPresent",
@@ -807,7 +806,10 @@ class TestMccsTileTpmDriver:
                 change_event_callbacks["pps_present"],
             )
         )
-        change_event_callbacks["pps_present"].assert_change_event(True)
+        # lookahead of due to potential to subscribe before first poll or after.
+        change_event_callbacks["pps_present"].assert_change_event(
+            True, lookahead=2, consume_nonmatches=True
+        )
         assert (
             tile_device.read_attribute("ppspresent").quality
             == tango.AttrQuality.ATTR_VALID

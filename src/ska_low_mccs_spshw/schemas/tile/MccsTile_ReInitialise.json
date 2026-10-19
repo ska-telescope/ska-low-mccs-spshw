@@ -1,0 +1,15 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_ReInitialise.json",
+    "title": "MccsTile ReInitialise schema",
+    "description": "Schema for MccsTile's ReInitialise command",
+    "type": "object",
+    "properties": {
+        "force_reprogramming": {
+            "description": "Whether to erase and reprogram the FPGAs. If false, a programmed TPM keeps its firmware and is only reset and reinitialised.",
+            "type": "boolean"
+        }
+    },
+    "required": ["force_reprogramming"],
+    "additionalProperties": false
+}

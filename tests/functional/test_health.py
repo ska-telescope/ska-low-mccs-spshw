@@ -73,19 +73,7 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     :param reset_attribute_configs: fixture providing reset functions.
     """
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
-            subrack.healthModelParams = json.dumps(
-                {
-                    "failed_fan_speed_diff": 100000,
-                    "degraded_fan_speed_diff": 100000,
-                    "failed_max_board_temp": 50.0,
-                    "degraded_max_board_temp": 45.0,
-                    "failed_min_board_temp": 10.0,
-                    "degraded_min_board_temp": 15.0,
-                }
-            )
-        else:
-            reset_attribute_configs["subrack"](subrack)
+        reset_attribute_configs["subrack"](subrack)
 
 
 @scenario(
@@ -121,12 +109,7 @@ def test_health_changes_when_healththresholds_changes(
     :param reset_attribute_configs: fixture providing reset functions.
     """
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
-            subrack.healthModelParams = json.dumps(
-                {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
-            )
-        else:
-            reset_attribute_configs["subrack"](subrack)
+        reset_attribute_configs["subrack"](subrack)
 
     new_health_params = {
         "subracks": [1, 1, 1],
@@ -453,16 +436,7 @@ def set_subrack_thresholds(
     :param reset_attribute_configs: fixture providing reset functions.
     """
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
-            new_board_params = {
-                "failed_max_board_temp": 50.0,
-                "degraded_max_board_temp": 45.0,
-                "failed_min_board_temp": 10.0,
-                "degraded_min_board_temp": 15.0,
-            }
-            subrack.healthModelParams = json.dumps(new_board_params)
-        else:
-            reset_attribute_configs["subrack"](subrack)
+        reset_attribute_configs["subrack"](subrack)
 
 
 @given("the Station has been commanded to turn On")
@@ -679,40 +653,19 @@ def subrack_health_params_adjusted_fixture(
 
     :yields: control back to the test.
     """
-    new_board_params = {
-        "failed_max_board_temp": 170.0,
-        "degraded_max_board_temp": 160.0,
-        "failed_min_board_temp": 110.0,
-        "degraded_min_board_temp": 120.0,
-    }
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
-            subrack.healthModelParams = json.dumps(new_board_params)
-        else:
-            conf = subrack.get_attribute_config("boardTemperatures")
-            conf.alarms.min_alarm = "110"
-            conf.alarms.min_warning = "120"
-            conf.alarms.max_alarm = "170"
-            conf.alarms.max_warning = "160"
-            subrack.set_attribute_config(conf)
+        conf = subrack.get_attribute_config("boardTemperatures")
+        conf.alarms.min_alarm = "110"
+        conf.alarms.min_warning = "120"
+        conf.alarms.max_alarm = "170"
+        conf.alarms.max_warning = "160"
+        subrack.set_attribute_config(conf)
 
     yield
 
     # Cleanup: Reset to defaults
     for subrack in station_devices["Subracks"]:
-        if not subrack.useAttributesForHealth:
-            subrack.healthModelParams = json.dumps(
-                {
-                    "failed_fan_speed_diff": 100000,
-                    "degraded_fan_speed_diff": 100000,
-                    "failed_max_board_temp": 50.0,
-                    "degraded_max_board_temp": 45.0,
-                    "failed_min_board_temp": 10.0,
-                    "degraded_min_board_temp": 15.0,
-                }
-            )
-        else:
-            reset_attribute_configs["subrack"](subrack)
+        reset_attribute_configs["subrack"](subrack)
 
 
 @pytest.fixture(name="tile_subrack_power_thresholds_exceeded")

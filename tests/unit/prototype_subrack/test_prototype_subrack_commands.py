@@ -126,14 +126,26 @@ def subrack_factory_fixture(subrack: mock.Mock) -> mock.Mock:
     return mock.Mock(name="subrack_factory", return_value=subrack)
 
 
+@pytest.fixture(name="poller_factory", scope="module")
+def poller_factory_fixture() -> mock.Mock:
+    """
+    Return the poller factory. Its return value is the poller the device holds.
+
+    :return: the factory.
+    """
+    return mock.Mock(name="poller_factory")
+
+
 @pytest.fixture(name="device_context", scope="module")
 def device_context_fixture(
     subrack_factory: mock.Mock,
+    poller_factory: mock.Mock,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Run one prototype subrack device for the whole module.
 
     :param subrack_factory: builds the subrack client the device holds.
+    :param poller_factory: builds the poller the device holds.
 
     :yields: the running test harness context.
     """
@@ -143,7 +155,7 @@ def device_context_fixture(
         address=(BOARD_HOST, BOARD_PORT),
         device_class=device_class_factory(
             subrack=subrack_factory,
-            subrack_poller=mock.Mock(name="poller_factory"),
+            subrack_poller=poller_factory,
         ),
     )
     # A second device whose subrack factory supplies nothing, so it assembles
@@ -331,6 +343,44 @@ def test_a_command_sends_one_board_command(  # pylint: disable=too-many-argument
     assert isinstance(
         subrack.run_board_command.call_args.kwargs["abort_event"], threading.Event
     )
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        BoardCommandStatus.COMPLETED,
+        BoardCommandStatus.FAILED,
+        BoardCommandStatus.ABORTED,
+    ],
+    ids=["completed", "failed", "aborted"],
+)
+def test_a_board_command_wakes_the_poller(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    subrack: mock.Mock,
+    poller_factory: mock.Mock,
+    outcome: BoardCommandStatus,
+) -> None:
+    """
+    Test that a board command makes the next poll run now, however it ends.
+
+    A command can change what the board reports, such as the TPM power
+    states. A device that waits out the update rate reports the change late.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param subrack: the mocked subrack client.
+    :param poller_factory: the factory, whose return value is the poller.
+    :param outcome: what the subrack client reports of the command.
+    """
+    poller = poller_factory.return_value
+    poller.reset_mock()
+    subrack.run_board_command.return_value = (outcome, "A message.", None)
+
+    lrc.run_command(OUTCOME_COMMAND)
+
+    lrc.assert_command_finished(status=outcome.name)
+    poller.wake.assert_called_once_with()
 
 
 @pytest.mark.parametrize(

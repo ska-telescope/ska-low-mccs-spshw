@@ -1574,8 +1574,8 @@ class SpsStationComponentManager(
             self.calibration_data_received_queue.put(
                 json.loads(data_received_result[1])["file_name"]
             )
-        if self._component_state_callback is not None:
-            self._component_state_callback(dataReceivedResult=data_received_result)
+            if self._component_state_callback is not None:
+                self._component_state_callback(dataReceivedResult=data_received_result)
 
     def _get_calibration_daq(
         self: SpsStationComponentManager,

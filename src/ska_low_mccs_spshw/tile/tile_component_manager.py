@@ -69,6 +69,8 @@ _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 _MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
+# ARP table entries per 40G core in the firmware shipped with this release
+_NUMBER_OF_ARP_TABLE_ENTRIES: Final[int] = 10
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -309,7 +311,6 @@ class TileComponentManager(
         self._fpga_reference_time = 0
         self._initial_pps_delay: int | None = None
         self._forty_gb_core_list: list = []
-        self._number_of_arp_table_entries: int | None = None
         self._fpgas_time: list[int] = []
         self._pending_data_requests = False
         self._tile_time = TileTime(0)
@@ -1583,7 +1584,6 @@ class TileComponentManager(
                     )
 
                     self.tile.program_fpgas(self._firmware_name)
-                    self._invalidate_firmware_dependent_caches()
                 prog_status = self.tile.is_programmed()
 
                 #
@@ -1710,7 +1710,6 @@ class TileComponentManager(
 
             if is_programmed:
                 self._firmware_name = bitfile
-                self._invalidate_firmware_dependent_caches()
 
     @abort_task_on_exception
     @check_communicating
@@ -2646,7 +2645,6 @@ class TileComponentManager(
                     self.tile[  # pylint: disable=expression-not-assigned
                         int(0x30000000)
                     ]
-                    self._invalidate_firmware_dependent_caches()
                     # After connection lets check the configuration.
                     assert self._request_provider is not None
                     self._request_provider.desire_configuration_read()
@@ -3769,66 +3767,6 @@ class TileComponentManager(
 
         return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
-    def _invalidate_firmware_dependent_caches(self: TileComponentManager) -> None:
-        """
-        Reset caches of values that are only valid for the currently-running firmware.
-
-        Call this whenever the tile (re)connects or (re)programs -- either may
-        mean a different firmware image is now running, so anything cached
-        from the previous one can no longer be trusted.
-        """
-        self._number_of_arp_table_entries = None
-
-    def _get_number_of_arp_table_entries(self: TileComponentManager) -> int:
-        """
-        Return the number of ARP table entries supported by the connected firmware.
-
-        This is a firmware feature that cannot change without a reconnect (e.g.
-        after a power cycle or firmware reprogram), so a successful read from
-        hardware is cached; ``_invalidate_firmware_dependent_caches()`` drops
-        the cache on those occasions.
-
-        A *failed* read is deliberately never cached: reading this (or any)
-        FPGA register raises ``LibraryError`` while the TPM is unprogrammed
-        (``ska_low_sps_tpm_api``'s ``FpgaBoard._checks()`` explicitly checks
-        programming state before every register access), which is a transient
-        condition, not a firmware capability. Caching a fallback value learned
-        while unprogrammed would wrongly stick once the TPM does become
-        programmed with firmware that supports more entries.
-
-        :return: the number of ARP table entries supported by the firmware,
-            or a conservative default of 4 if it can't be read right now.
-        """
-        if self._number_of_arp_table_entries is not None:
-            return self._number_of_arp_table_entries
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            try:
-                core = self.tile.tpm.tpm_10g_core[0]  # type: ignore[union-attr]
-                number_of_arp_table_entries = core.get_number_of_arp_table_entries()
-            except Exception as exc:  # pylint: disable=broad-except
-                # AttributeError: e.g. the tile simulator, which doesn't model
-                # per-data-type ARP entries -- will never succeed, but 4 is a
-                # safe assumption and cheap to keep re-deriving.
-                # LibraryError: most commonly "not programmed" -- transient,
-                # so must not be cached; this call site must also never take
-                # down the whole read-configuration poll, or every attribute
-                # it updates gets stuck at its initial value forever (the
-                # poll never reaches inform_configuration_read()).
-                self.logger.info(
-                    "Failed to read ARP table entry count from firmware "
-                    f"({exc!r}); assuming 4 for now."
-                )
-                return 4
-            self.logger.info(
-                f"Firmware reports {number_of_arp_table_entries} ARP table entries."
-            )
-            self._number_of_arp_table_entries = number_of_arp_table_entries
-            return self._number_of_arp_table_entries
-
     def get_40g_configuration(
         self: TileComponentManager, core_id: int = -1, arp_table_entry: int = 0
     ) -> list[dict]:
@@ -3848,11 +3786,10 @@ class TileComponentManager(
             raise_exception=True,
         ):
             if core_id == -1 or core_id is None:
-                number_of_arp_table_entries = self._get_number_of_arp_table_entries()
                 self._forty_gb_core_list = [
                     config
                     for icore in range(2)
-                    for arp_table_entry_id in range(number_of_arp_table_entries)
+                    for arp_table_entry_id in range(_NUMBER_OF_ARP_TABLE_ENTRIES)
                     if (
                         config := self.tile.get_40g_core_configuration(
                             icore, arp_table_entry_id
@@ -3860,11 +3797,6 @@ class TileComponentManager(
                     )
                     is not None
                 ]
-                self.logger.info(
-                    f"40G configuration read back {len(self._forty_gb_core_list)} "
-                    f"entries from {2 * number_of_arp_table_entries} attempted "
-                    f"(2 cores x {number_of_arp_table_entries} ARP table entries)."
-                )
             else:
                 config = self.tile.get_40g_core_configuration(core_id, arp_table_entry)
                 self._forty_gb_core_list = [config] if config else []

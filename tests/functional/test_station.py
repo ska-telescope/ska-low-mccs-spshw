@@ -106,6 +106,14 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_5_programming_state",
         "tile_6_programming_state",
         "tile_7_programming_state",
+        "station_tile_programming_state",
+        "station_adc_power",
+        "station_static_time_delays",
+        "station_preadu_levels",
+        "station_channeliser_rounding",
+        "station_pll_locked_summary",
+        "station_pps_present_summary",
+        "station_is_beamformer_running",
         timeout=300.0,
     )
 
@@ -192,10 +200,30 @@ def test_standby_during_init(
 
 @scenario(
     "features/station.feature",
+    "Reinitialise does not reprogram the TPMs",
+)
+def test_reinitialise_does_not_reprogram_tpms() -> None:
+    """
+    Run a test scenario that checks ReInitialise leaves the TPMs programmed.
+
+    Runs against simulated and real TPMs alike.
+    """
+
+
+@scenario(
+    "features/station.feature",
     "Fanout attribute writes reach the correct tile",
 )
 def test_fanout_attribute_writes_reach_correct_tile() -> None:
     """Run a test scenario that verifies fanout writes reach the correct tile."""
+
+
+@scenario(
+    "features/station.feature",
+    "Reading SpsStation attributes when tile is Off",
+)
+def test_spsstation_attributes_report_off_tile() -> None:
+    """Run a test scenario that tests the station device."""
 
 
 @given("an SPS deployment against HW")
@@ -208,6 +236,18 @@ def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
     if not hw_context:
         pytest.skip("This test requires real HW.")
+
+
+@given("an SPS deployment against a real context")
+def check_against_real_context(true_context: bool, station_label: str) -> None:
+    """
+    Skip the test if not in real context.
+
+    :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
+    """
+    if not true_context:
+        pytest.skip("This test requires real context.")
 
 
 @given("the SpsStation is ON")
@@ -1069,6 +1109,182 @@ def all_tpms_transition_to_off(station_tiles: list[tango.DeviceProxy]) -> None:
         )
 
 
+# SpsStation attributes checked when a tile is powered off, with the
+# change event callback each is subscribed to.
+_OFF_TILE_STATION_ATTRIBUTES: Final = [
+    ("tileProgrammingState", "station_tile_programming_state"),
+    ("adcPower", "station_adc_power"),
+    ("staticTimeDelays", "station_static_time_delays"),
+    ("preaduLevels", "station_preadu_levels"),
+    ("channeliserRounding", "station_channeliser_rounding"),
+    ("pllLockedSummary", "station_pll_locked_summary"),
+    ("ppsPresentSummary", "station_pps_present_summary"),
+    ("isBeamformerRunning", "station_is_beamformer_running"),
+]
+
+
+@when("we turn off a single tile", target_fixture="powered_off_tile")
+def turn_off_single_tile(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> Iterator[dict[str, Any]]:
+    """
+    Power off a single tile in the station, and restore it at teardown.
+
+    The station attributes are subscribed to before the tile is powered
+    off, and the event sent when each subscription starts is consumed, so
+    that the Then steps can only pass on an event SpsStation pushes for
+    the transition, not on the current value sent at subscription.
+
+    pytest-bdd runs steps as fixtures, so the code after ``yield`` runs
+    at test teardown, whether the scenario passes or fails.
+
+    :param station: station device under test.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+
+    :yields: a dict recording which tile was powered off, for the
+        Then steps to check.
+    """
+    assert station_tiles, "No station tiles were discovered"
+    tile = station_tiles[0]
+    initial_programming_state = tile.tileProgrammingState
+    sub_ids = []
+
+    for attribute_name, callback_name in _OFF_TILE_STATION_ATTRIBUTES:
+        sub_ids.append(
+            station.subscribe_event(
+                attribute_name,
+                tango.EventType.CHANGE_EVENT,
+                change_event_callbacks[callback_name],
+            )
+        )
+        change_event_callbacks[callback_name].assert_change_event(Anything)
+
+    try:
+        logical_tile_id = tile.logicalTileId
+        tile.Off()
+        AttributeWaiter(timeout=60).wait_for_value(
+            tile, "tileProgrammingState", "Off", lookahead=5
+        )
+
+        yield {"tile": tile, "logical_tile_id": logical_tile_id}
+    finally:
+        tile.On()
+        # Wait for the tile to return to its pre-test programming state,
+        # not just the first intermediate update (e.g. NotProgrammed),
+        # so that later tests on a shared deployment are unaffected.
+        AttributeWaiter(timeout=120).wait_for_value(
+            tile,
+            "tileProgrammingState",
+            initial_programming_state,
+            lookahead=10,
+        )
+        for s_id in sub_ids:
+            station.unsubscribe_event(s_id)
+
+
+# pylint: disable=too-few-public-methods
+class _Predicate:
+    """Equality placeholder that matches when ``predicate(other)`` is true."""
+
+    def __init__(self, predicate: Callable[[Any], bool]) -> None:
+        """
+        Initialise a new instance.
+
+        :param predicate: a callable that returns True when ``other``
+            (the value it is compared against) should be considered a match.
+        """
+        self._predicate = predicate
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Check whether ``other`` satisfies this placeholder's predicate.
+
+        :param other: the object against which to test the predicate.
+
+        :return: whether the predicate holds for ``other``.
+        """
+        try:
+            return bool(self._predicate(other))
+        except (TypeError, ValueError, IndexError):
+            return False
+
+
+@then("the spsstation attributes present this")
+def spsstation_attributes_present_off_tile(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    powered_off_tile: dict[str, Any],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Check SpsStation's cached attributes reflect a tile going Off.
+
+    A powered-off tile's attributes go ATTR_INVALID, which
+    station_component_manager.py handles by caching NaN (for array
+    attributes) or excluding the tile from station-wide boolean summaries,
+    rather than reporting a stale last-known-good value. It must also push
+    change events for those values.
+
+    :param station: station device under test.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param powered_off_tile: a dict recording which tile was powered off.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    """
+    off_tile_id = powered_off_tile["logical_tile_id"]
+    channels_per_tile = len(station.adcPower) // len(station_tiles)
+    start = off_tile_id * channels_per_tile
+    end = start + channels_per_tile
+
+    # The When step subscribed before powering the tile off, so these
+    # match only events SpsStation pushed after subscribing.
+    def _all_nan_in(lo: int, hi: int) -> Callable[[Any], bool]:
+        return lambda v: bool(np.all(np.isnan(np.asarray(v)[lo:hi])))
+
+    change_event_callbacks["station_tile_programming_state"].assert_change_event(
+        _Predicate(lambda v: v[off_tile_id] == "Off"),
+        lookahead=10,
+        consume_nonmatches=True,
+    )
+    change_event_callbacks["station_adc_power"].assert_change_event(
+        _Predicate(_all_nan_in(start, end)),
+        lookahead=10,
+        consume_nonmatches=True,
+    )
+    change_event_callbacks["station_static_time_delays"].assert_change_event(
+        _Predicate(_all_nan_in(start, end)),
+        lookahead=10,
+        consume_nonmatches=True,
+    )
+    change_event_callbacks["station_preadu_levels"].assert_change_event(
+        _Predicate(_all_nan_in(start, end)),
+        lookahead=10,
+        consume_nonmatches=True,
+    )
+    # channeliserRounding is DevLong so cannot carry NaN; SpsStation reports
+    # -1 for every channel of a tile whose value is INVALID.
+    change_event_callbacks["station_channeliser_rounding"].assert_change_event(
+        _Predicate(lambda v: bool(np.all(np.asarray(v)[off_tile_id] == -1))),
+        lookahead=10,
+        consume_nonmatches=True,
+    )
+    change_event_callbacks["station_pll_locked_summary"].assert_change_event(
+        False, lookahead=10, consume_nonmatches=True
+    )
+    change_event_callbacks["station_pps_present_summary"].assert_change_event(
+        False, lookahead=10, consume_nonmatches=True
+    )
+    change_event_callbacks["station_is_beamformer_running"].assert_change_event(
+        False, lookahead=10, consume_nonmatches=True
+    )
+
+
 @when(
     parsers.parse("I write distinct {attribute} values to the station"),
     target_fixture="fanout_expectations",
@@ -1195,3 +1411,110 @@ def check_fanout_value_on_each_tile(
             )
             expected_value = mask * expected_value
         AttributeWaiter(timeout=30).wait_for_value(tile, attribute, expected_value)
+
+
+@when("the station is reinitialised")
+def reinitialise_station(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    command_info: dict[str, Any],
+) -> None:
+    """
+    Run Reinitialise and monitor the TileProgrammingState for all tiles.
+
+    This test will subscribe to the programming states of all the station's
+    tiles and saves all the values recorded in the command_info dictionary,
+    then it starts the Reinitialise command.
+
+    If the tile's are reprogrammed, then the "Not Programmed" state would be
+    saved in command_info["programming_states"] which is checked later.
+
+    :param station: station device under test.
+    :param station_tiles: list of TPM DeviceProxies.
+    :param command_info: a dict in which to store command IDs and tile data.
+    """
+    assert station_tiles, "Station tiles are missing"
+
+    # Create a set of lists for each tile to be filled with the programming
+    # states as they change, and to log any errors raised.
+    programming_states: list[list[str]] = [[] for _ in station_tiles]
+    event_errors: list[str] = []
+    command_info["programming_states"] = programming_states
+    command_info["event_errors"] = event_errors
+    command_info["subscriptions"] = []
+    for tile, states in zip(station_tiles, programming_states):
+
+        def _record_state(
+            event: tango.EventData,
+            states: list[str] = states,
+            name: str = tile.dev_name(),
+        ) -> None:
+            if event.err or event.attr_value is None:
+                event_errors.append(f"{name}: {event.errors}")
+            else:
+                states.append(event.attr_value.value)
+
+        event_id = tile.subscribe_event(
+            "tileProgrammingState", tango.EventType.CHANGE_EVENT, _record_state
+        )
+        command_info["subscriptions"].append((tile, event_id))
+
+    # Wait for a first event from every tile before sending ReInitialise.
+    deadline = time.time() + 10
+    while not all(programming_states) and not event_errors:
+        if time.time() > deadline:
+            pytest.fail(
+                f"No initial programming state from every tile: {programming_states}"
+            )
+        time.sleep(0.1)
+    assert not event_errors, f"Programming state subscription failed: {event_errors}"
+
+    [result_code], [command_id] = station.ReInitialise(json.dumps({}))
+    assert result_code == ResultCode.QUEUED
+    command_info["ReInitialise"] = command_id
+
+
+@then("the ReInitialise command completed successfully")
+def reinitialise_completed_successfully(
+    station: tango.DeviceProxy, command_info: dict[str, Any]
+) -> None:
+    """
+    Check the ReInitialise command completed with ResultCode.OK.
+
+    :param station: station device under test.
+    :param command_info: a dict containing command IDs.
+    """
+    wait_for_lrc_result(
+        device=station,
+        uid=command_info["ReInitialise"],
+        expected_result=ResultCode.OK,
+        timeout=300,
+    )
+
+
+@then("no TPM was reprogrammed")
+def no_tpm_was_reprogrammed(
+    station_tiles: list[tango.DeviceProxy], command_info: dict[str, Any]
+) -> None:
+    """
+    Check that no tile was reprogrammed during ReInitialise.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param command_info: a dict containing the data recorded during ReInitialise.
+    """
+    for tile, event_id in command_info["subscriptions"]:
+        tile.unsubscribe_event(event_id)
+
+    assert not command_info[
+        "event_errors"
+    ], f"Programming state subscription failed: {command_info['event_errors']}"
+
+    for tile, states in zip(
+        station_tiles,
+        command_info["programming_states"],
+    ):
+        name = tile.dev_name()
+        # Erasing the FPGAs always reports NotProgrammed.
+        assert "NotProgrammed" not in states, f"{name} was reprogrammed: {states}"
+        # And the tile is still synchronised
+        assert tile.tileProgrammingState == "Synchronised", name

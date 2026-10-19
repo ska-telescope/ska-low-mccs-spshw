@@ -171,7 +171,8 @@ ral-low-k8s-test:
     on_stop: ral-low-stop-k8s
     auto_stop_in: 1 minute
   variables:
-    TANGO_HOST: "databaseds.skaffold.svc.stfc-ral-k8s.skao.int:10000"
+    CLUSTER_DOMAIN: "stfc-ral-k8s.skao.int"
+    TANGO_HOST: "databaseds.skaffold.svc.$CLUSTER_DOMAIN:10000"
     KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
     K8S_HELMFILE_ENV: ral-2
     STATION_LABEL: stfc-ral-2

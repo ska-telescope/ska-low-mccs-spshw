@@ -219,6 +219,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     is_programmed_signal: AttrSignal[bool] = AttrSignal[bool]()
     is_beamformer_running_signal: AttrSignal[bool] = AttrSignal[bool]()
+    testGeneratorActive_signal: AttrSignal[bool] = AttrSignal[bool]()
     pps_delay_signal: AttrSignal[int] = AttrSignal[int]()
     pending_data_requests_signal: AttrSignal[bool] = AttrSignal[bool]()
     current_tile_beamformer_frame_signal: AttrSignal[int] = AttrSignal[int]()
@@ -751,6 +752,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
     )
 
+    ReInitialise_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ReInitialise.json",
+        )
+    )
+
     ConfigureTestGenerator_SCHEMA: Final = json.loads(
         importlib.resources.read_text(
             "ska_low_mccs_spshw.schemas.tile",
@@ -787,55 +795,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         # We aren't supposed to define initialisation methods for Tango
         # devices; we are only supposed to define an `init_device` method. But
-        # we insist on doing so here, just so that we can define some
+        # we insist on doing so here, just so that we can declare some
         # attributes, thereby stopping the linters from complaining about
-        # "attribute-defined-outside-init" etc. We still need to make sure that
-        # `init_device` re-initialises any values defined in here.
-        super().__init__(*args, **kwargs)
-        self._health_state: HealthState = HealthState.UNKNOWN
+        # "attribute-defined-outside-init" etc.
+        #
+        # Values must NOT be assigned here: PyTango's ``Device.__init__`` calls
+        # ``init_device()``, so anything assigned after ``super().__init__``
+        # does not exist while ``init_device`` (and any callbacks it triggers)
+        # runs, and then clobbers whatever state those callbacks set.
+        # Initialise values in ``init_device`` instead.
+
+        self._health_state: HealthState
         self._health_model: TileHealthModel
-        self.tile_health_structure: dict[str, dict[str, Any]] = {}
-        self._antenna_ids: list[int] = []
-        self._info: dict[str, Any] = {}
+        self.tile_health_structure: dict[str, dict[str, Any]]
+        self._antenna_ids: list[int]
+        self._info: dict[str, Any]
         self.component_manager: TileComponentManager
         self._stopping: bool
         self._health_recorder: TileHealthRecorder | None
-        self.healthReport_signal = ""
         self.hw_firmware_thresholds: FirmwareThresholds
         self.db_firmware_thresholds: FirmwareThresholds
-        self.db_configuration_fault: tuple[bool | None, str] = (
-            None,
-            "No information gathered",
-        )
-        self.component_manager_fault: bool | None = None
-        self.power_state: PowerState | None = None
-        self.faultReport_signal = {}
-
-        self._intermediate_healths: dict[str, HealthState] = {
-            "temperatures": HealthState.UNKNOWN,
-            "currents": HealthState.UNKNOWN,
-            "dsp": HealthState.UNKNOWN,
-            "voltages": HealthState.UNKNOWN,
-            "io": HealthState.UNKNOWN,
-            "timing": HealthState.UNKNOWN,
-            "adcs": HealthState.UNKNOWN,
-            "alarms": HealthState.UNKNOWN,
-        }
+        self.db_configuration_fault: tuple[bool | None, str]
+        self.component_manager_fault: bool | None
+        self.power_state: PowerState | None
+        self._intermediate_healths: dict[str, HealthState]
         self._intermediate_attrs: dict[str, list[str]]
-        # Not sure about these...
-        self.cspDestinationIp_signal = ""
-        self.cspDestinationMac_signal = ""
-        self.cspDestinationPort_signal = 0
-        self.simulationMode_signal = self.SimulationConfig
-        self.testMode_signal = self.TestConfig
-        self.useAttributesForHealth_signal = self.UseAttributesForHealth
-        self.stationId_signal = self.StationID
-        self.srcip40gfpga1_signal = ""
-        self.srcip40gfpga2_signal = ""
-        self.dstip40gfpga1_signal = ""
-        self.dstip40gfpga2_signal = ""
-        self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
-        self.antennaIds_signal = self._antenna_ids
+        super().__init__(*args, **kwargs)
 
     def delete_device(self: MccsTile) -> None:
         """
@@ -862,6 +847,24 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
         self._stopping = False
+        # These must be set before super().init_device(), as it starts the
+        # component manager and health recorder whose callbacks use them.
+        self.tile_health_structure = {}
+        self._antenna_ids = []
+        self._info = {}
+        self.db_configuration_fault = (None, "No information gathered")
+        self.component_manager_fault = None
+        self.power_state = None
+        self._intermediate_healths = {
+            "temperatures": HealthState.UNKNOWN,
+            "currents": HealthState.UNKNOWN,
+            "dsp": HealthState.UNKNOWN,
+            "voltages": HealthState.UNKNOWN,
+            "io": HealthState.UNKNOWN,
+            "timing": HealthState.UNKNOWN,
+            "adcs": HealthState.UNKNOWN,
+            "alarms": HealthState.UNKNOWN,
+        }
         # Pre-compute absolute signal names for alarm handling in notify_emission.
         self._alarm_signal_map: dict[str, str] = {
             sig._absolute_name_for(self): tango_attr_name
@@ -1172,19 +1175,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
-        # Re-seed stored signals that are read before being written elsewhere
-        # (e.g. faultReport_signal is read-then-merged in _evaluate_fault).
-        # On a later Init command, init_device runs standalone and __init__
-        # does not run again, so these need seeding here too, or they're
-        # permanently unset thereafter and any unconditional read of them
-        # raises AttributeError. On first construction, init_device instead
-        # runs *nested inside* __init__'s own super().__init__() call, i.e.
-        # before the rest of __init__'s body (including self._antenna_ids)
-        # has executed, so antennaIds_signal can't just read self._antenna_ids
-        # here - use getattr with the same default __init__ would assign.
+        # Seed stored signals here rather than in __init__: the shared bus
+        # only exists once super().init_device() has run, and some signals
+        # are read before being written elsewhere (e.g. faultReport_signal is
+        # read-then-merged in _evaluate_fault), so they must also be re-seeded
+        # on a later Init command, when __init__ does not run again.
+        # super().init_device() reports FAILED ("Device implementation has not
+        # provided a health report"); we are UNKNOWN until the recorder/model
+        # says otherwise.
+        self._health_state = HealthState.UNKNOWN
         self.faultReport_signal = {}
         self.healthReport_signal = ""
-        self.antennaIds_signal = getattr(self, "_antenna_ids", [])
+        self.cspDestinationIp_signal = ""
+        self.cspDestinationMac_signal = ""
+        self.cspDestinationPort_signal = 0
+        self.simulationMode_signal = self.SimulationConfig
+        self.testMode_signal = self.TestConfig
+        self.useAttributesForHealth_signal = self.UseAttributesForHealth
+        self.stationId_signal = self.StationID
+        self.srcip40gfpga1_signal = ""
+        self.srcip40gfpga2_signal = ""
+        self.dstip40gfpga1_signal = ""
+        self.dstip40gfpga2_signal = ""
+        self.tileProgrammingState_signal = TpmStatus.UNKNOWN.pretty_name()
+        self.antennaIds_signal = self._antenna_ids
+        self.testGeneratorActive_signal = False
 
         self.init_completed()
 
@@ -1282,7 +1297,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "ppsDelayCorrection",
                 "ppsDrift",
                 "preaduLevels",
-                "rfiBlankingEnabledAntennas",
+                # "rfiBlankingEnabledAntennas",
                 "rfiCount",
                 "staticTimeDelays",
                 "stationBeamFlagEnabled",
@@ -1298,6 +1313,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # Pointing delay readback is operational metadata, not a health signal.
                 # It can be unavailable in valid startup/runtime windows.
                 "pointingDelays",
+                # # User-set configuration, not a health signal. It can also be
+                # # stuck ATTR_INVALID when empty and polled (Tango rejects empty
+                # # arrays in the polling buffer), e.g. after upgrading from 15.0.0.
+                "rfiBlankingEnabledAntennas",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
                 "fpga0_station_beamformer_flagged_count",
@@ -1519,8 +1538,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             case PowerState.OFF | PowerState.UNKNOWN:
                 for signal in self._HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
-                for signal in self._GENERIC_SIGNAL_MAP.values():
-                    setattr(self, signal, None)
+                for name, signal in self._GENERIC_SIGNAL_MAP.items():
+                    # The component manager publishes the programming state
+                    # itself, and "Off" is a valid value while powered off.
+                    if name != "programming_state":
+                        setattr(self, signal, None)
                 for signal in self._INTERMEDIATE_HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
             case PowerState.ON:
@@ -4062,18 +4084,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.firmware_name
 
-    @attribute(
+    testGeneratorActive = attribute_from_signal(
+        testGeneratorActive_signal,
         dtype="DevBoolean",
         label="Test Generator Active",
-        description="Whether the test generator is being used.",
+        doc="Whether the test generator is being used.",
     )
-    def testGeneratorActive(self: MccsTile) -> bool:
-        """
-        Report if the test generator is used for some channels.
-
-        :return: test generator status
-        """
-        return self.component_manager.test_generator_active
 
     @attribute(
         dtype="DevString",
@@ -4391,11 +4407,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    def _is_synchronised(self: MccsTile, *args: Any) -> bool:
+    def _is_synchronised(self: MccsTile, *args: Any, **kwargs: Any) -> bool:
         """
         Return a flag representing whether we are in Synchronised state.
 
         :param args: The tango.AttReqType.
+        :param kwargs: Optional request_type from long running commands.
 
         :return: True if Tile is in Synchronised state.
         """
@@ -5863,6 +5880,43 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         return task
 
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=ReInitialise_SCHEMA)
+    def ReInitialise(
+        self: MccsTile, force_reprogramming: bool
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Perform all required initialisation, optionally without reprogramming.
+
+        This is the same as Initialise, except that the caller chooses
+        whether the FPGAs are erased and reprogrammed. With
+        ``force_reprogramming`` false, a programmed TPM keeps its firmware:
+        the FPGAs are reset and the TPM is reinitialised, and acquisition is
+        restarted if a global reference time is set.
+
+        :param force_reprogramming: whether to erase and reprogram the FPGAs
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ReInitialise", '{"force_reprogramming": false}')
+        """  # noqa: E501, D202
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.initialise(
+                task_callback=task_callback,
+                force_reprogramming=force_reprogramming,
+            )
+
+        return task
+
     @command(dtype_out="DevBoolean", fisallowed="is_engineering")
     def UpdateThresholdCache(self: MccsTile) -> bool:
         """
@@ -6876,7 +6930,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.apply_pointing_delays(start_time)
 
-    @stb.long_running_commands.long_running_command
+    @stb.long_running_commands.long_running_command(fisallowed="_is_synchronised")
     @stb.validators.validate_json_args(schema=StartBeamformer_SCHEMA)
     def StartBeamformer(
         self: MccsTile,
@@ -7365,6 +7419,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 inputs = inputs | (1 << channel)
         self.component_manager.test_generator_input_select(inputs)
         self.component_manager.test_generator_active = active
+        self.testGeneratorActive_signal = active
         return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
     @engineering_mode_required

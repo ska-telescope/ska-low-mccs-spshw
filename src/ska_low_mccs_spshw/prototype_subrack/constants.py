@@ -19,10 +19,12 @@ __all__ = [
     "ClientCommand",
     "DerivedKey",
     "FILTERED_ATTRIBUTES",
+    "HEALTH_NO_VALUE_REASON",
     "HEALTH_STATUS_KEY",
     "HttpError",
     "MIN_PWM_DUTY_FRACTION",
     "PSU_DEAD_VOLTAGE_THRESHOLD",
+    "PSU_MAX_POWER",
     "PSU_NAMES",
     "ReadKey",
     "RequestError",
@@ -72,6 +74,9 @@ class DerivedKey(str, Enum):
 
     SUBRACK_MAX_FAN_SPEEDS = "subrack_max_fan_speeds"
     PSU_DEAD_COUNT = "psu_dead_count"
+    TPM_COUNT = "tpm_count"
+    PSU1_LOAD = "psu1_load"
+    PSU2_LOAD = "psu2_load"
 
 
 class ClientCommand(str, Enum):
@@ -115,6 +120,14 @@ FILTERED_ATTRIBUTES: Final[tuple[str, ...]] = (
 )
 """The read keys that pass through the noise filter."""
 
+HEALTH_NO_VALUE_REASON: Final = "At least one health attribute has no value."
+"""The health info while a health attribute has no value.
+
+It does not name the attributes. The health recorder hears of each attribute
+through its own event, so a list of names would change, and push an event,
+once for each attribute that a poll reads or loses.
+"""
+
 COMMAND_TIMEOUT: Final = 30.0
 """How long, in seconds, to wait for an asynchronous board command."""
 
@@ -126,6 +139,9 @@ PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
 
 PSU_DEAD_VOLTAGE_THRESHOLD: Final = 1.0
 """A PSU below this output voltage, in Volts, is supplying nothing."""
+
+PSU_MAX_POWER: Final = 1200.0
+"""The most power, in Watts, that one PSU can supply."""
 
 MIN_PWM_DUTY_FRACTION: Final = 0.1
 """The floor applied to pwm duty when the fan rpm estimate scales up.

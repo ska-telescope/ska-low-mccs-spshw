@@ -2239,6 +2239,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Reinitialise the station with overridable defaults.
 
+        This runs the same sequence as Initialise, except that the tiles are
+        re-initialised without reprogramming their FPGAs.
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
@@ -2255,7 +2258,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("Initialise")
+            >>> dp.command_inout("Reinitialise")
         """  # noqa: E501, D202
 
         def task(
@@ -2265,6 +2268,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.component_manager.initialise(
                 start_bandpasses,
                 global_reference_time,
+                force_reprogramming=False,
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,
             )

@@ -504,6 +504,10 @@ def _turn_station_on(
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
+    # As in test_On: this waits out the callback timeout, so that the station has
+    # had its subracks' and tiles' first events before the mocks below drive
+    # them. A late first event would otherwise undo the mocked power states.
+    change_event_callbacks["state"].assert_not_called()
 
     station_device.MockSubracksOff()
     change_event_callbacks["state"].assert_change_event(DevState.OFF)

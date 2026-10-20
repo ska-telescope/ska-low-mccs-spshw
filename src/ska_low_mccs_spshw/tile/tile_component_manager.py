@@ -4311,6 +4311,7 @@ class TileComponentManager(
             + " Hz"
         )
 
+        end_time: int = 0
         with acquire_timeout(
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
@@ -4318,7 +4319,6 @@ class TileComponentManager(
                 try:
                     # If load time not specified, is "now" plus
                     # TileData.TEST_GENERATOR_LOAD_DELAY
-                    end_time: int = 0
                     if load_frame == 0:
                         load_frame = (
                             self.tile.get_fpga_timestamp()

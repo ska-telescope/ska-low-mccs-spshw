@@ -24,6 +24,7 @@ from tango import AttrQuality
 from ...tile.tile_data import TileData
 
 
+# pylint: disable=too-many-instance-attributes
 class BaseDataReceivedHandler(abc.ABC):
     """Base class for the data received handler."""
 

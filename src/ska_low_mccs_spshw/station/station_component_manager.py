@@ -48,7 +48,7 @@ from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
-from ska_telmodel.data import TMData  # type: ignore
+from ska_telmodel_client import TMData  # type: ignore
 
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 

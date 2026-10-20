@@ -39,6 +39,8 @@ CALENDAR_METADATA: dict[str, dict[str, Any]] = {
             "c2cc7177-90e8-4856-91a8-e508f977c559",
             # TPM 1.2
             "07cb51cf-605d-473a-8650-0e7f4fe90828",
+            # notes
+            "965fa53c-8d5b-43dd-86ab-030f6b5ddb61",
         ],
     },
 }

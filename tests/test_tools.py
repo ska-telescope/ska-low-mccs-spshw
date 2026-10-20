@@ -243,6 +243,51 @@ def wait_for_condition(
     return False
 
 
+# pylint: disable=too-many-arguments
+def wait_for_attribute_value(
+    device: tango.DeviceProxy,
+    attribute_name: str,
+    expected_value: Any,
+    timeout: float = 1.0,
+    allow_exceptions: tuple[type[BaseException], ...] = (),
+    poll_interval: float = 0.01,
+) -> bool:
+    """
+    Poll a device attribute until it reaches an expected value, or timeout.
+
+    Use in place of a bare ``time.sleep()`` before asserting on an
+    attribute that is updated asynchronously (e.g. via tile change
+    events), so tests take as long as they need to but no longer.
+
+    :param device: the Tango device proxy to poll.
+    :param attribute_name: the name of the attribute to poll.
+    :param expected_value: the value the attribute is expected to reach.
+        Compared with ``pytest.approx``, so floats, lists and arrays are
+        all supported.
+    :param timeout: seconds to keep polling before giving up.
+    :param allow_exceptions: exception types to swallow while polling
+        (e.g. transient ``tango.DevFailed`` while a proxy is not yet
+        ready), treated as "not yet reached". Anything else propagates
+        immediately.
+    :param poll_interval: seconds to sleep between polls.
+
+    :returns: True if the attribute reached expected_value within
+        timeout, False otherwise.
+    """
+
+    def _reached_expected_value() -> bool:
+        try:
+            return bool(
+                getattr(device, attribute_name) == pytest.approx(expected_value)
+            )
+        except allow_exceptions:
+            return False
+
+    return wait_for_condition(
+        _reached_expected_value, timeout=timeout, poll_interval=poll_interval
+    )
+
+
 def wait_for_device(
     trl: str, timeout: float = 120, poll_interval: float = 3
 ) -> tango.DeviceProxy | None:
@@ -605,6 +650,49 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
         print(f"Device {device_proxy.dev_name()} is already ONLINE nothing to do.")
 
 
+class _ArrayEqual:
+    """
+    Wrap an expected value so array-aware equality survives ``!=``.
+
+    ``ska_tango_testing``'s event matching does a plain ``value !=
+    payload[key]`` when checking characteristics. If ``value`` is a
+    numpy array with more than one element, that raises ``ValueError:
+    The truth value of an array with more than one element is
+    ambiguous`` instead of comparing. Wrapping the expected value in
+    this class makes ``!=``/``==`` resolve via ``np.array_equal``,
+    which always yields a single bool, regardless of whether the
+    other side is an ndarray, list, or tuple.
+    """
+
+    def __init__(self: _ArrayEqual, value: np.ndarray) -> None:
+        """
+        Initialise a new _ArrayEqual.
+
+        :param value: the expected array value to compare against.
+        """
+        self._value = value
+
+    def __eq__(self: _ArrayEqual, other: Any) -> bool:
+        """
+        Return whether other is array-equal to the wrapped value.
+
+        Python derives ``!=`` from this automatically.
+
+        :param other: the value to compare against.
+
+        :return: True if the values are array-equal.
+        """
+        return bool(np.array_equal(self._value, other))
+
+    def __repr__(self: _ArrayEqual) -> str:
+        """
+        Return a repr of the wrapped value.
+
+        :return: the repr of the wrapped value.
+        """
+        return repr(self._value)
+
+
 class AttributeWaiter:  # pylint: disable=too-few-public-methods
     """A AttributeWaiter class."""
 
@@ -636,6 +724,9 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
             use None for Any change event.
         :param attr_value: the value of the attribute
         :param lookahead: the lookahead.
+
+        :raises AssertionError: if the attribute did not reach the
+            expected value within the timeout.
         """
         with tango_event_subscription(
             device_proxy,
@@ -652,11 +743,23 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
                 read_attr_value = read_attr_value()
 
             if not self._values_equal(read_attr_value, attr_value):
-                self._attr_callback["attr_callback"].assert_change_event(
-                    attr_value if attr_value is not None else Anything,
-                    lookahead=lookahead,
-                    consume_nonmatches=True,
-                )
+                expected: Any
+                if isinstance(attr_value, np.ndarray):
+                    expected = _ArrayEqual(attr_value)
+                else:
+                    expected = attr_value if attr_value is not None else Anything
+                try:
+                    self._attr_callback["attr_callback"].assert_change_event(
+                        expected,
+                        lookahead=lookahead,
+                        consume_nonmatches=True,
+                    )
+                except AssertionError as assertion_error:
+                    raise AssertionError(
+                        f"Timed out waiting for {device_proxy.dev_name()}."
+                        f"{attr_name} to become {attr_value!r} "
+                        f"(last read value: {read_attr_value!r})."
+                    ) from assertion_error
 
     def _values_equal(
         self: AttributeWaiter, read_value: Any, expected_value: Any
@@ -1049,6 +1152,45 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
             setattr(self, kwarg, val)
 
 
+class LRCListHolding:  # noqa: PLW1641 # eq-without-hash
+    """
+    Matches an LRC attribute value that holds one entry equal to ``entry``.
+
+    ``lrcQueue``, ``lrcExecuting`` and ``lrcFinished`` each read as a sequence
+    of JSON blobs, one per command, so a change event carries the whole
+    sequence rather than the one command a test is waiting on. Comparing a
+    :py:class:`JSONRepresenting` against that sequence never matches, so an
+    assertion that wants one command has to look inside.
+    """
+
+    def __init__(self, entry: Any) -> None:
+        """
+        Initialise a new instance.
+
+        :param entry: what one member of the sequence must equal.
+        """
+        self.entry = entry
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation for logging purposes.
+
+        :return: string of object
+        """
+        return f"LRCListHolding({self.entry!r})"
+
+    def __eq__(self, other: Any) -> bool:
+        """
+        Return True if other is a sequence holding something equal to entry.
+
+        :param other: the object used to compare
+        :return: result of assertion
+        """
+        if not isinstance(other, (list, tuple)):
+            return False
+        return any(self.entry == member for member in other)
+
+
 class JSONRepresenting:  # noqa: PLW1641 # eq-without-hash
     """
     A representation of a JSON string using a python object.
@@ -1196,7 +1338,7 @@ class LRCManager:
         """
         try:
             self.lrcQueue.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,
@@ -1252,7 +1394,7 @@ class LRCManager:
         """
         try:
             self.lrcExecuting.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,
@@ -1327,7 +1469,7 @@ class LRCManager:
 
         try:
             self.lrcFinished.assert_change_event(
-                (
+                LRCListHolding(
                     JSONRepresenting(
                         {
                             "uid": self.command_id,

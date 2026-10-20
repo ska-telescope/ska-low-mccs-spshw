@@ -52,7 +52,7 @@ class FirmwareThresholdsDbAdapter:
         self: FirmwareThresholdsDbAdapter,
         device_name: str,
         thresholds: FirmwareThresholds,
-        db_connection: Database | None = None,
+        db_connection: Database | None,
         logger: logging.Logger | None = None,
     ) -> None:
         """
@@ -60,18 +60,24 @@ class FirmwareThresholdsDbAdapter:
 
         :param device_name: the trl of the device these thresholds belong to.
         :param thresholds: A class containing the FirmwareThresholds.
-        :param db_connection: An optional database connection to inject for
-            testing.
+        :param db_connection: A connection to the Tango database
         :param logger: an optional logger for information.
         """
         self._device_name = device_name
         self._thresholds = thresholds
-        self._db_connection = db_connection or Database()
+        self._db_connection = db_connection
         self._logger = logger
         self._sync_class_cache_with_db()
 
     def _sync_class_cache_with_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Update threshold cache from database."""
+        if self._db_connection is None:
+            if self._logger:
+                self._logger.info(
+                    "Device server has no real Tango database; skipping "
+                    "firmware threshold database sync."
+                )
+            return
         if self._logger:
             self._logger.debug("Syncing class cache with DB...")
         firmware_thresholds = self._db_connection.get_device_attribute_property(
@@ -87,6 +93,13 @@ class FirmwareThresholdsDbAdapter:
 
     def write_threshold_to_db(self: FirmwareThresholdsDbAdapter) -> None:
         """Put thresholds into database."""
+        if self._db_connection is None:
+            if self._logger:
+                self._logger.info(
+                    "Device server has no real Tango database; not persisting "
+                    "firmware alarm thresholds."
+                )
+            return
         self._db_connection.put_device_attribute_property(
             self._device_name, self._thresholds.to_device_property_dict()
         )

@@ -13,9 +13,14 @@ include .make/base.mk
 include .make-uv/make/docs-uv.mk
 
 DOCS_SPHINXOPTS = -W --keep-going
+CLUSTER_DOMAIN ?= cluster.local## Domain used for naming Tango Device Servers
+DOCGEN_OUTPUT_DIR := docs/src/device-interfaces		# DIFDoc output dir
 
+ifeq (,$(filter clean,$(DOCS_TARGET_ARGS)))
 docs-pre-build:
 	uv sync --frozen --group docs
+	uv run tangodocgen --timeout 120 --auto -o $(DOCGEN_OUTPUT_DIR)
+endif
 
 .PHONY: docs-pre-build
 
@@ -45,24 +50,8 @@ python-lint: mypy
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 10.0.0
-FIRMWARE_VERSION_NEW = 11.0.0
-DESIRED_FIRMWARE_FILE_NAME = tpm_firmware_10.0.0.bit
-DESIRED_FIRMWARE_FILE_NAME_NEW = tpm_firmware_11.0.0.bit
-
-define download_firmware_from_car
-	mkdir -p temp_firmware
-	curl -sSL --retry 3 --connect-timeout 15 \
-		--output temp_firmware/fw.tar.gz \
-		https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$1.tar.gz
-	tar -xzf temp_firmware/fw.tar.gz -C temp_firmware
-	cp temp_firmware/tpm_firmware.bit $2
-	rm -rf temp_firmware
-endef
-
 install-firmware:
-	$(call download_firmware_from_car,$(FIRMWARE_VERSION),$(DESIRED_FIRMWARE_FILE_NAME))
-	$(call download_firmware_from_car,$(FIRMWARE_VERSION_NEW),$(DESIRED_FIRMWARE_FILE_NAME_NEW))
+	./download_firmware.sh
 
 ########################################################################
 # HELM
@@ -102,6 +91,7 @@ K8S_CHART_PARAMS += \
 	--selector chart=ska-tango-base \
 	--selector chart=ska-sat-lmc \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
+	--set global.cluster_domain=$(CLUSTER_DOMAIN) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \
 	--set ska-tango-devices.deviceServerTypes.spshw.image.registry=$(CI_REGISTRY_IMAGE) \
 	--set ska-tango-devices.deviceServerTypes.spshw.image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \

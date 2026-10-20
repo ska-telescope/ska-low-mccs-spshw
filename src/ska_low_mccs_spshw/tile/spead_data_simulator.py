@@ -95,6 +95,10 @@ class SpeadDataSimulator:
         self._nof_channel_packets = self._nof_channels // self._nof_channels_per_packet
         self._nof_antenna_packets = self._nof_ants_per_fpga // self._nof_ants_per_packet
 
+        # The DAQ takes 10*log10 of the integer powers, so scale the sample
+        # powers well above 1 before they are cast to the payload data type.
+        self._power_scale = 1000.0
+
         self._timestamp = 0
 
         self._sample_x_powers = {
@@ -171,8 +175,7 @@ class SpeadDataSimulator:
                 self._nof_channel_packets,
                 self._nof_channels_per_packet * 2,
             ),
-            # dtype=np.uint16,
-            dtype=np.float32,
+            dtype=self._data_type,
         )
         for tpm in range(self._nof_tiles):
             for fpga in range(self._nof_fpgas):
@@ -243,16 +246,16 @@ class SpeadDataSimulator:
 
     def send_channelised_data(
         self: SpeadDataSimulator,
-        sleep_between_antennas: int,
-        number_of_samples: int = 128,
+        sleep_between_integrations: float,
+        nof_integrations: int = 8,
         first_channel: int = 0,
         last_channel: int = 511,
     ) -> None:
         """
         Send integrated channel data.
 
-        :param sleep_between_antennas: time in seconds.
-        :param number_of_samples: Number of spectra to send
+        :param sleep_between_integrations: time in seconds.
+        :param nof_integrations: Number of integrations to send
         :param first_channel: First channel to send
         :param last_channel: Last channel to send
         """
@@ -260,8 +263,8 @@ class SpeadDataSimulator:
             target=self._send_channelised_data,
             name="channel_data_thread",
             args=[
-                sleep_between_antennas,
-                number_of_samples,
+                sleep_between_integrations,
+                nof_integrations,
                 first_channel,
                 last_channel,
             ],
@@ -272,28 +275,32 @@ class SpeadDataSimulator:
 
     def _send_channelised_data(
         self: SpeadDataSimulator,
-        sleep_between_antennas: int,
-        number_of_samples: int = 128,
+        sleep_between_integrations: float,
+        nof_integrations: int = 8,
         first_channel: int = 0,
         last_channel: int = 511,
     ) -> None:
         """
         Send integrated channel data.
 
-        :param sleep_between_antennas: time in seconds.
-        :param number_of_samples: Number of spectra to send
+        Each integration is one packet per antenna and channel block from each
+        FPGA, all with the same timestamp. The DAQ integrated channel consumer
+        persists a tile's integration when it has all of these packets.
+
+        :param sleep_between_integrations: time in seconds.
+        :param nof_integrations: Number of integrations to send
         :param first_channel: First channel to send
         :param last_channel: Last channel to send
         """
         self._stop_events["channel"].clear()
         num_channels = 1 + last_channel - first_channel
-        for tile in range(self._nof_tiles):
-            for ant in range(self._nof_ants_per_fpga):
-                for _ in range(number_of_samples):
-                    for chan in range(
-                        int(num_channels / self._nof_channels_per_packet)
-                    ):
-                        for fpga in range(self._nof_fpgas):
+        for _ in range(nof_integrations):
+            for tile in range(self._nof_tiles):
+                for fpga in range(self._nof_fpgas):
+                    for ant in range(self._nof_ants_per_fpga):
+                        for chan in range(
+                            int(num_channels / self._nof_channels_per_packet)
+                        ):
                             if self._stop_events["channel"].is_set():
                                 return
                             self._transmit_packet(
@@ -304,8 +311,10 @@ class SpeadDataSimulator:
                                 first_channel + (chan * self._nof_channels_per_packet),
                                 self._channelised_packet_data,
                             )
-                time.sleep(sleep_between_antennas)
-                self._timestamp += sleep_between_antennas * 1_000_000_000  # 1e9ns = 1s
+            # The DAQ counts the timestamp in integration periods.
+            self._timestamp += 1
+            if self._stop_events["channel"].wait(sleep_between_integrations):
+                return
 
     def _transmit_packet(  # pylint: disable=too-many-locals
         self: SpeadDataSimulator,
@@ -339,7 +348,9 @@ class SpeadDataSimulator:
             | start_antenna << 8
             | self._nof_ants_per_packet & 0xFF
         )
-        lmc_tpm_info = 1 << 63 | 0x2001 << 48 | tpm_id << 32 | self._station_id << 16
+        lmc_tpm_info = (
+            1 << 63 | 0x2001 << 48 | tpm_id << 32 | self._station_id << 16 | fpga_id
+        )
         sample_offset = 0 << 63 | 0x3300 << 48
 
         packet = (
@@ -396,7 +407,10 @@ class SpeadDataSimulator:
             ((1 + start_channel) * self._nof_channels_per_packet) - 1,
         )
 
-        return np.ravel([x_bandpass, y_bandpass], "F")
+        powers = np.ravel([x_bandpass, y_bandpass], "F") * self._power_scale
+        return np.clip(np.rint(powers), 0, np.iinfo(self._data_type).max).astype(
+            self._data_type
+        )
 
     def _generate_simulated_bandpass(  # pylint: disable=too-many-locals
         self: SpeadDataSimulator,

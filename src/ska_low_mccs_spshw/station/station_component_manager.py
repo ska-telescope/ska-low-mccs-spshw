@@ -69,6 +69,56 @@ _LMC_INTEGRATED_MODE_RETRY_ATTEMPTS = 3
 # from executing, so it does not share the general lane with them.
 _CALIBRATION_LANE = "calibration"
 
+# Reported in a tile's channeliserRounding row when that tile's value is
+# INVALID. The attribute is DevLong so cannot carry NaN, and valid roundings
+# are 0-7, so -1 is unambiguous.
+INVALID_CHANNELISER_ROUNDING = -1
+
+# Reported in every element of beamformerTable, beamformerRegions and
+# cspRounding when the final tile's value is INVALID. These are DevLong
+# attributes so cannot carry NaN, and none of their elements can validly
+# be negative, so -1 is unambiguous.
+INVALID_FINAL_TILE_VALUE = -1
+
+# Tile attributes for which only the final tile's value is used, so an
+# INVALID value from any other tile has nothing to invalidate.
+_FINAL_TILE_ATTRIBUTES = frozenset(
+    {
+        "beamformertable",
+        "beamformerregions",
+        "csprounding",
+        "fpga0_station_beamformer_flagged_count",
+        "fpga1_station_beamformer_flagged_count",
+    }
+)
+
+# Tile attributes whose station-side caches are invalidated when
+# communication with that tile is lost.
+_CACHED_TILE_ATTRIBUTES = (
+    "ppsDelay",
+    "ppsDelayCorrection",
+    "staticTimeDelays",
+    "adcPower",
+    "preaduLevels",
+    "pointingDelays",
+    "tileProgrammingState",
+    "dstip40gfpga1",
+    "dstip40gfpga2",
+    "boardTemperature",
+    "fpga1Temperature",
+    "fpga2Temperature",
+    "pllLocked",
+    "ppsPresent",
+    "testGeneratorActive",
+    "isBeamformerRunning",
+    "channeliserRounding",
+    "beamformerTable",
+    "beamformerRegions",
+    "cspRounding",
+    "fpga0_station_beamformer_flagged_count",
+    "fpga1_station_beamformer_flagged_count",
+)
+
 
 class _BandpassDaqReadRetryError(RuntimeError):
     """Raised to trigger retry when reading bandpass DAQ integrated mode."""
@@ -126,6 +176,7 @@ class _TileProxy(DeviceComponentManager):
             "staticTimeDelays": self._on_attribute_change,
             "preaduLevels": self._on_attribute_change,
             "ppsDelay": self._on_attribute_change,
+            "ppsDelayCorrection": self._on_attribute_change,
             "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
             "beamformerRegions": self._on_attribute_change,
@@ -134,6 +185,22 @@ class _TileProxy(DeviceComponentManager):
             "dstip40gfpga2": self._on_attribute_change,
             "fpga0_station_beamformer_flagged_count": self._on_attribute_change,
             "fpga1_station_beamformer_flagged_count": self._on_attribute_change,
+            "boardTemperature": self._on_attribute_change,
+            "fpga1Temperature": self._on_attribute_change,
+            "fpga2Temperature": self._on_attribute_change,
+            # ================================================================
+            # sysrefPresent and clockPresent are not subscribed: they are not
+            # yet implemented in ska-low-sps-tpm-api, so the tile never pushes
+            # events for them and every subscription attempt logs a failure.
+            # "clockPresent": self._on_attribute_change,
+            # "sysrefPresent": self._on_attribute_change,
+            # ================================================================
+            "pllLocked": self._on_attribute_change,
+            "ppsPresent": self._on_attribute_change,
+            "testGeneratorActive": self._on_attribute_change,
+            "isBeamformerRunning": self._on_attribute_change,
+            "channeliserRounding": self._on_attribute_change,
+            "cspRounding": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -599,20 +666,29 @@ class SpsStationComponentManager(
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
         self._number_of_tiles = len(tile_fqdns)
-        self._adc_power: dict[int, Optional[list[float]]] = {}
-        self._static_delays: dict[int, Optional[list[float]]] = {}
-        self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        # cppTango doesn't handle None in a list of floats well, so unknown
+        # per-tile readings are represented as an np.nan-filled np.ndarray
+        # rather than None.
+        self._adc_power: dict[int, np.ndarray] = {}
+        self._static_delays: dict[int, np.ndarray] = {}
+        self._preadu_levels: dict[int, np.ndarray] = {}
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
+        self._pointing_delays_received: set[int] = set()
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
-        self._final_tile_fpga0_flagged_count: int = 0
-        self._final_tile_fpga1_flagged_count: int = 0
+        # None when the final tile's count is INVALID.
+        self._final_tile_fpga0_flagged_count: Optional[int] = 0
+        self._final_tile_fpga1_flagged_count: Optional[int] = 0
         self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
         for logical_tile_id in range(self._number_of_tiles):
-            self._adc_power[logical_tile_id] = None
-            self._static_delays[logical_tile_id] = None
-            self._preadu_levels[logical_tile_id] = None
-            self._hw_pointing_delays[logical_tile_id] = np.full((8, 32), np.nan)
+            self._adc_power[logical_tile_id] = np.full(TileData.ADC_CHANNELS, np.nan)
+            self._static_delays[logical_tile_id] = np.full(
+                TileData.ADC_CHANNELS, np.nan
+            )
+            self._preadu_levels[logical_tile_id] = np.full(
+                TileData.ADC_CHANNELS, np.nan
+            )
+            self._hw_pointing_delays[logical_tile_id] = np.full((48, 32), np.nan)
             self._tile_dst_ips[logical_tile_id] = ("", "")
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
@@ -724,15 +800,6 @@ class SpsStationComponentManager(
         self._sdn_netmask = str(sdn_first_interface.netmask)
         self._sdn_gateway: str | None = str(sdn_gateway) if sdn_gateway else None
 
-        self._lmc_param: dict[str, str | int | None] = {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": self._destination_port,
-            "source_port": self._source_port,
-            "netmask_40g": self._sdn_netmask,
-            "gateway_40g": self._sdn_gateway,
-        }
         self._lmc_integrated_mode_locked = False
         self._lmc_integrated_mode = "1G"
         self._lmc_integrated_ip = "0.0.0.0"
@@ -756,7 +823,37 @@ class SpsStationComponentManager(
         self._pps_delay_corrections = [0] * 16
         self._tile_programming_state: list[str] = ["Unknown"] * self._number_of_tiles
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
+        # The configured rounding, written back to the tiles, and the final
+        # tile's reported rounding, which may be INVALID.
+        self._desired_csp_rounding = [csp_rounding] * 384
         self._csp_rounding = [csp_rounding] * 384
+
+        # Caches kept current from tile change-event subscriptions (see
+        # _on_tile_attribute_change), so that reading a station-level
+        # summary attribute doesn't require a live per-tile round trip.
+        # The temperature caches back attributes that expose a list of
+        # floats directly to Tango (boardTemperaturesSummary/
+        # fpgaTemperaturesSummary), and cppTango doesn't handle None in a
+        # list of floats well -- so unknown values are represented as
+        # np.nan rather than None.
+        self._board_temperatures: np.ndarray = np.full(self._number_of_tiles, np.nan)
+        self._fpga1_temperatures: np.ndarray = np.full(self._number_of_tiles, np.nan)
+        self._fpga2_temperatures: np.ndarray = np.full(self._number_of_tiles, np.nan)
+        # These caches only ever back a single scalar DevBoolean attribute
+        # (via all()/any()), so there's no list-of-floats-with-a-hole for
+        # cppTango to choke on -- None is fine here.
+        self._pll_locked: list[bool | None] = [None] * self._number_of_tiles
+        self._pps_present: list[bool | None] = [None] * self._number_of_tiles
+        self._test_generator_active: list[bool | None] = [None] * self._number_of_tiles
+        self._is_beamformer_running: list[bool | None] = [None] * self._number_of_tiles
+        self._channeliser_roundings: np.ndarray = np.zeros([16, 512], dtype=np.int32)
+        self._pps_delay_corrections_reported: set[int] = set()
+        # Logical ids of tiles we currently have communication established
+        # with, so that caches are only invalidated when a tile drops out,
+        # and events from a tile we have lost are dropped. Only touched on
+        # the event serialiser thread (when there is one), in order with
+        # the tile's attribute events, so needs no lock.
+        self._tiles_established: set[int] = set()
         self._desired_static_delays: None | list[float] = None
         self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
@@ -1239,11 +1336,76 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
+        tile_proxy = self._tile_proxies.get(fqdn)
+        if tile_proxy is not None:
+            tile_id = tile_proxy._logical_tile_id
+            if self._event_serialiser is not None:
+                # The tile's attribute events are delivered through the
+                # serialiser, so events queued before the unsubscribe may
+                # not have been processed yet. Queue behind them, so that
+                # they can't repopulate the caches after we invalidate.
+                self._event_serialiser.queue_event(
+                    fqdn,
+                    "communicationstate",
+                    communication_state,
+                    tango.AttrQuality.ATTR_VALID,
+                    callback=lambda _name, state, _quality: (
+                        self._tile_communication_state_changed(tile_id, state)
+                    ),
+                )
+            else:
+                self._tile_communication_state_changed(tile_id, communication_state)
         self._communication_manager.update_communication_status(
             fqdn, communication_state
         )
 
-    # pylint: disable=too-many-branches
+    def _tile_communication_state_changed(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        """
+        Track which tiles we are talking to, invalidating any we have lost.
+
+        :param logical_tile_id: the logical id of the tile.
+        :param communication_state: the tile's new communication state.
+        """
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            self._tiles_established.add(logical_tile_id)
+        elif logical_tile_id in self._tiles_established:
+            # Only a tile we were talking to has readings worth
+            # invalidating; before first connection the caches are
+            # already invalid.
+            self._tiles_established.discard(logical_tile_id)
+            try:
+                self._invalidate_tile_caches(logical_tile_id)
+            except Exception:  # pylint: disable=broad-exception-caught
+                # Must not escape, or the communication status update
+                # would be skipped when not using the event serialiser.
+                self.logger.exception(
+                    f"Failed to invalidate cached values for tile {logical_tile_id}"
+                )
+
+    def _invalidate_tile_caches(
+        self: SpsStationComponentManager, logical_tile_id: int
+    ) -> None:
+        """
+        Invalidate every cached reading for a tile we are no longer talking to.
+
+        A tile that loses communication pushes no ATTR_INVALID events, so
+        without this its last reported values would be exposed as current.
+
+        :param logical_tile_id: the logical id of the tile to invalidate.
+        """
+        # Mark everything first, then publish each aggregate once, rather
+        # than re-publishing (and re-evaluating health) per attribute.
+        invalidated = [
+            attribute_name
+            for attribute_name in _CACHED_TILE_ATTRIBUTES
+            if self._invalidate_tile_attribute(logical_tile_id, attribute_name.lower())
+        ]
+        self._publish_invalidated_tile_attributes(invalidated)
+
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
         logical_tile_id: int,
@@ -1251,32 +1413,205 @@ class SpsStationComponentManager(
         attribute_value: Any,
         attribute_quality: tango.AttrQuality,
     ) -> None:
-        # TODO: See THORN-89: Mark SpsStation Attributes as INVALID.
-        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
-            if attribute_name.lower() == "ppsdelay":
-                self._pps_delays_reported.discard(logical_tile_id)
-                self._fire_pps_delay_spread()
+        attribute_name = attribute_name.lower()
+        if logical_tile_id not in self._tiles_established:
+            # An event delivered after we lost the tile, e.g. one already
+            # in flight when we unsubscribed. Its value is stale.
             self.logger.debug(
-                f"Tile {logical_tile_id} attribute {attribute_name} "
-                f"has quality {attribute_quality}. "
-                "SpsStation is not yet capable of handling this. "
-                "Ignoring!"
+                f"Dropping {attribute_name} event from tile {logical_tile_id}, "
+                "which we are not communicating with."
             )
             return
-        attribute_name = attribute_name.lower()
+        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            if self._invalidate_tile_attribute(logical_tile_id, attribute_name):
+                self._publish_invalidated_tile_attributes([attribute_name])
+            elif attribute_name not in _FINAL_TILE_ATTRIBUTES:
+                self.logger.debug(
+                    f"Tile {logical_tile_id} attribute {attribute_name} "
+                    f"has quality {attribute_quality}. "
+                    "SpsStation is not yet capable of handling this. "
+                    "Ignoring!"
+                )
+            return
+        self._update_tile_attribute(logical_tile_id, attribute_name, attribute_value)
+
+    def _invalidate_tile_attribute(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        attribute_name: str,
+    ) -> bool:
+        """
+        Mark one tile's cached reading of an attribute as invalid.
+
+        This only updates the cache; the caller is responsible for
+        publishing the affected aggregates, see
+        :py:meth:`_publish_invalidated_tile_attributes`.
+
+        :param logical_tile_id: the logical id of the tile.
+        :param attribute_name: the lower-cased tile attribute name.
+
+        :return: whether a cached reading was invalidated, and so needs
+            publishing.
+        """
+        if (
+            attribute_name in _FINAL_TILE_ATTRIBUTES
+            and logical_tile_id != self._number_of_tiles - 1
+        ):
+            # Only the final tile's value is used.
+            return False
+        match attribute_name:
+            case "ppsdelay":
+                self._pps_delays_reported.discard(logical_tile_id)
+            case "ppsdelaycorrection":
+                self._pps_delay_corrections_reported.discard(logical_tile_id)
+            case "statictimedelays":
+                self._static_delays[logical_tile_id] = np.full(
+                    TileData.ADC_CHANNELS, np.nan
+                )
+            case "adcpower":
+                self._adc_power[logical_tile_id] = np.full(
+                    TileData.ADC_CHANNELS, np.nan
+                )
+            case "preadulevels":
+                self._preadu_levels[logical_tile_id] = np.full(
+                    TileData.ADC_CHANNELS, np.nan
+                )
+            case "pointingdelays":
+                self._hw_pointing_delays[logical_tile_id] = np.full((48, 32), np.nan)
+            case "tileprogrammingstate":
+                self._tile_programming_state[logical_tile_id] = "Unknown"
+                self._pps_delays_reported.discard(logical_tile_id)
+            case "dstip40gfpga1":
+                _, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = ("", ip2)
+            case "dstip40gfpga2":
+                ip1, _ = self._tile_dst_ips.get(logical_tile_id, ("", ""))
+                self._tile_dst_ips[logical_tile_id] = (ip1, "")
+            case "boardtemperature":
+                self._board_temperatures[logical_tile_id] = np.nan
+            case "fpga1temperature":
+                self._fpga1_temperatures[logical_tile_id] = np.nan
+            case "fpga2temperature":
+                self._fpga2_temperatures[logical_tile_id] = np.nan
+            case "plllocked":
+                self._pll_locked[logical_tile_id] = None
+            case "ppspresent":
+                self._pps_present[logical_tile_id] = None
+            case "testgeneratoractive":
+                self._test_generator_active[logical_tile_id] = None
+            case "isbeamformerrunning":
+                self._is_beamformer_running[logical_tile_id] = None
+            case "channeliserrounding":
+                self._channeliser_roundings[
+                    logical_tile_id, :
+                ] = INVALID_CHANNELISER_ROUNDING
+            case "beamformertable":
+                self._beamformer_table = np.full(
+                    (48, 7), INVALID_FINAL_TILE_VALUE, dtype=int
+                )
+            case "beamformerregions":
+                self._beamformer_regions = np.full(
+                    (48, 8), INVALID_FINAL_TILE_VALUE, dtype=int
+                )
+            case "csprounding":
+                # Only the reported value: the configured value written back
+                # to the tiles is kept in self._desired_csp_rounding.
+                self._csp_rounding = [INVALID_FINAL_TILE_VALUE] * 384
+            case "fpga0_station_beamformer_flagged_count":
+                self._final_tile_fpga0_flagged_count = None
+            case "fpga1_station_beamformer_flagged_count":
+                self._final_tile_fpga1_flagged_count = None
+            case _:
+                return False
+        return True
+
+    def _publish_invalidated_tile_attributes(
+        self: SpsStationComponentManager,
+        attribute_names: Sequence[str],
+    ) -> None:
+        """
+        Publish the station aggregates affected by invalidated tile attributes.
+
+        Each affected aggregate is published, and each derived check run,
+        exactly once however many of its inputs were invalidated.
+
+        :param attribute_names: the tile attributes that were invalidated.
+        """
+        names = {name.lower() for name in attribute_names}
+        if self._component_state_callback:
+            publishers: dict[str, Callable[[], dict[str, Any]]] = {
+                "statictimedelays": lambda: {"staticTimeDelays": self.static_delays},
+                "adcpower": lambda: {
+                    "adc_power": np.concatenate(list(self._adc_power.values()))
+                },
+                "preadulevels": lambda: {"preaduLevels": self.preadu_levels},
+                "tileprogrammingstate": lambda: {
+                    "tileProgrammingState": self._tile_programming_state
+                },
+                "plllocked": lambda: {"pllLockedSummary": self.pll_locked_summary()},
+                "ppspresent": lambda: {"ppsPresentSummary": self.pps_present_summary()},
+                "isbeamformerrunning": lambda: {
+                    "isBeamformerRunning": self.is_beamformer_running
+                },
+                "channeliserrounding": lambda: {
+                    "channeliserRounding": self.channeliser_rounding
+                },
+                "beamformertable": lambda: {
+                    "beamformerTable": self._beamformer_table.flatten().tolist()
+                },
+                "beamformerregions": lambda: {
+                    "beamformerRegions": self._beamformer_regions.flatten().tolist()
+                },
+            }
+            for name, state in publishers.items():
+                if name in names:
+                    self._component_state_callback(**state())
+        if names & {"ppsdelay", "tileprogrammingstate"}:
+            self._fire_pps_delay_spread()
+        if names & {"dstip40gfpga1", "dstip40gfpga2"}:
+            self._validate_beamformer_daisy_chain()
+        if names & {
+            "fpga0_station_beamformer_flagged_count",
+            "fpga1_station_beamformer_flagged_count",
+        }:
+            self._update_beamformer_flagged_count_health()
+
+    # pylint: disable=too-many-branches
+    def _update_tile_attribute(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        attribute_name: str,
+        attribute_value: Any,
+    ) -> None:
+        """
+        Update the station's cache from a valid tile attribute reading.
+
+        :param logical_tile_id: the logical id of the tile.
+        :param attribute_name: the lower-cased tile attribute name.
+        :param attribute_value: the new value.
+        """
         match attribute_name:
             case "adcpower":
-                self._adc_power[logical_tile_id] = list(attribute_value)
-                adc_powers: list[float] = []
-                for _, adc_power in self._adc_power.items():
-                    if adc_power is not None:
-                        adc_powers += adc_power
-                self._update_component_state(adc_power=adc_powers)
+                self._adc_power[logical_tile_id] = np.array(
+                    attribute_value, dtype=float
+                )
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        adc_power=np.concatenate(list(self._adc_power.values()))
+                    )
             case "statictimedelays":
-                self._static_delays[logical_tile_id] = list(attribute_value)
+                self._static_delays[logical_tile_id] = np.array(
+                    attribute_value, dtype=float
+                )
+                if self._component_state_callback:
+                    self._component_state_callback(staticTimeDelays=self.static_delays)
             case "preadulevels":
                 # Note: Currently all we do is update the attribute value.
-                self._preadu_levels[logical_tile_id] = list(attribute_value)
+                self._preadu_levels[logical_tile_id] = np.array(
+                    attribute_value, dtype=float
+                )
+                if self._component_state_callback:
+                    self._component_state_callback(preaduLevels=self.preadu_levels)
             case "ppsdelay":
                 # Cache the value regardless of tile state so that when the
                 # tile later becomes Synchronised the value is available.
@@ -1286,8 +1621,14 @@ class SpsStationComponentManager(
                 # avoid pre-sync divergent values causing spurious DEGRADED.
                 self._fire_pps_delay_spread()
             case "tileprogrammingstate":
+                previous_programming_state = self._tile_programming_state[
+                    logical_tile_id
+                ]
                 self._tile_programming_state[logical_tile_id] = attribute_value
-                if attribute_value not in ("Initialised", "Synchronised"):
+                if previous_programming_state in (
+                    "Initialised",
+                    "Synchronised",
+                ) and attribute_value not in ("Initialised", "Synchronised"):
                     # State dropped below Initialised: the cached pps delay is
                     # stale (tile has power-cycled or re-programmed).  Evict it
                     # so spread is not polluted by the old reading.
@@ -1305,7 +1646,11 @@ class SpsStationComponentManager(
                         np.pad(attribute_value, (0, (48 * 7 - len(attribute_value)))),
                         (48, 7),
                     )
-                    if not np.array_equal(reshaped_table, self._beamformer_table):
+                    # An invalidated cache was not a local value, so a
+                    # readback differing from it is expected.
+                    if not np.all(
+                        self._beamformer_table == INVALID_FINAL_TILE_VALUE
+                    ) and not np.array_equal(reshaped_table, self._beamformer_table):
                         filtered_old = self._beamformer_table[
                             ~np.all(self._beamformer_table == 0, axis=1)
                         ]
@@ -1335,15 +1680,13 @@ class SpsStationComponentManager(
                         )
             case "pointingdelays":
                 self._hw_pointing_delays[logical_tile_id] = attribute_value
-                if all(
-                    not np.isnan(v).any() for v in self._hw_pointing_delays.values()
-                ):
+                self._pointing_delays_received.add(logical_tile_id)
+                if len(self._pointing_delays_received) == len(self._tile_proxies):
                     if self._component_state_callback:
                         self._component_state_callback(
                             pointingdelays=self._hw_pointing_delays.copy()
                         )
-                    for delays in self._hw_pointing_delays.values():
-                        delays.fill(np.nan)
+                    self._pointing_delays_received.clear()
             case "dstip40gfpga1":
                 ip1, ip2 = self._tile_dst_ips.get(logical_tile_id, ("", ""))
                 self._tile_dst_ips[logical_tile_id] = (str(attribute_value), ip2)
@@ -1368,6 +1711,51 @@ class SpsStationComponentManager(
                 if logical_tile_id == self._number_of_tiles - 1:
                     self._final_tile_fpga1_flagged_count = int(attribute_value)
                     self._update_beamformer_flagged_count_health()
+            case "ppsdelaycorrection":
+                self._pps_delay_corrections[logical_tile_id] = attribute_value
+                self._pps_delay_corrections_reported.add(logical_tile_id)
+            case "boardtemperature":
+                self._board_temperatures[logical_tile_id] = attribute_value
+            case "fpga1temperature":
+                self._fpga1_temperatures[logical_tile_id] = attribute_value
+            case "fpga2temperature":
+                self._fpga2_temperatures[logical_tile_id] = attribute_value
+            case "plllocked":
+                self._pll_locked[logical_tile_id] = bool(attribute_value)
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        pllLockedSummary=self.pll_locked_summary()
+                    )
+            case "ppspresent":
+                self._pps_present[logical_tile_id] = bool(attribute_value)
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        ppsPresentSummary=self.pps_present_summary()
+                    )
+            case "testgeneratoractive":
+                self._test_generator_active[logical_tile_id] = bool(attribute_value)
+            case "isbeamformerrunning":
+                self._is_beamformer_running[logical_tile_id] = bool(attribute_value)
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        isBeamformerRunning=self.is_beamformer_running
+                    )
+            case "channeliserrounding":
+                try:
+                    self._channeliser_roundings[logical_tile_id, :] = attribute_value
+                except ValueError as e:
+                    self.logger.error(
+                        f"Unable to update channeliserRounding cache for tile "
+                        f"{logical_tile_id}: {repr(e)}"
+                    )
+                else:
+                    if self._component_state_callback:
+                        self._component_state_callback(
+                            channeliserRounding=self.channeliser_rounding
+                        )
+            case "csprounding":
+                if logical_tile_id == self._number_of_tiles - 1:
+                    self._csp_rounding = list(attribute_value)
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name} "
@@ -1386,13 +1774,17 @@ class SpsStationComponentManager(
         For every tile except the last the expected destinations are the source
         IPs of the next tile.  The last tile's destination IPs are not validated
         (it is free to point wherever the operator configures).  If any checked
-        tile's IPs are empty or not yet known the check is deferred.
+        tile's IPs are empty or not yet known the check is deferred, and any
+        previous result is withdrawn (reported as None) since it can no
+        longer be verified.
         """
+        valid: Optional[bool]
         last = self._number_of_tiles - 1
         for tile_id in range(last):
             ip1, ip2 = self._tile_dst_ips.get(tile_id, ("", ""))
             if not ip1 or not ip2:
-                return
+                valid = None
+                break
             exp1 = str(self._sdn_first_address + 2 * tile_id + 2)
             exp2 = str(self._sdn_first_address + 2 * tile_id + 3)
             if ip1 != exp1 or ip2 != exp2:
@@ -1416,12 +1808,22 @@ class SpsStationComponentManager(
         """
         Update the station health from the final tile's beamformer flagged count.
 
-        Fires a state callback whenever the OK/not-OK status changes.
+        Fires a state callback whenever the OK/not-OK status changes. A
+        non-zero count is not OK even if the other count is INVALID; if
+        neither count is non-zero but one is INVALID, the status is unknown
+        (None).
         """
-        ok = (
-            self._final_tile_fpga0_flagged_count == 0
-            and self._final_tile_fpga1_flagged_count == 0
+        counts = (
+            self._final_tile_fpga0_flagged_count,
+            self._final_tile_fpga1_flagged_count,
         )
+        ok: Optional[bool]
+        if any(count is not None and count != 0 for count in counts):
+            ok = False
+        elif None in counts:
+            ok = None
+        else:
+            ok = True
         if ok == self._final_tile_beamformer_flagged_count_ok:
             return
         self._final_tile_beamformer_flagged_count_ok = ok
@@ -1869,8 +2271,8 @@ class SpsStationComponentManager(
         # pylint: disable=too-many-branches
         message: str = ""
         failure_step: str = ""
-        self.logger.debug("Starting on sequence.")
-        self.logger.debug("State transitions suppressed during power command.")
+        self.logger.info("Starting on sequence.")
+        self.logger.info("State transitions suppressed during power command.")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
@@ -1881,7 +2283,7 @@ class SpsStationComponentManager(
             and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
             for proxy in self._tile_proxies.values()
         ):
-            self.logger.debug("Tiles already initialised")
+            self.logger.info("Tiles already initialised")
             result_code = ResultCode.OK
             if task_callback:
                 task_callback(
@@ -1891,41 +2293,41 @@ class SpsStationComponentManager(
             return
 
         # Now, if the wren proxy is set, wait for the WREN to initialise
-        if self._wren_proxy:
-            if result_code == ResultCode.OK:
-                self.logger.debug("Waiting for WREN")
-                result_code, failure_step = self._wait_for_wren(
-                    task_callback,
-                    task_abort_event,
-                    timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
-                )
+        if self._wren_proxy and result_code == ResultCode.OK:
+            self.logger.info("Waiting for WREN")
+            result_code, failure_step = self._wait_for_wren(
+                task_callback,
+                task_abort_event,
+                timeout=self._wren_health_check_timeout,
+                fail_on_timeout=self._wren_health_check_fail_on_timeout,
+            )
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on subracks")
+            self.logger.info("Starting on sequence on subracks")
             result_code, failure_step = self._turn_on_subracks(
                 task_callback, task_abort_event
             )
-        self.logger.debug("Subracks now on")
+        if result_code == ResultCode.OK:
+            self.logger.info("Subracks now on")
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting tile source IPs before initialisation")
+            self.logger.info("Setting tile source IPs before initialisation")
             result_code, failure_step = self._set_tile_source_ips(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting global reference time")
+            self.logger.info("Setting global reference time")
             self._set_global_reference_time(self._global_reference_time or None)
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
         ):
-            self.logger.debug("Starting on sequence on tiles")
+            self.logger.info("Starting on sequence on tiles")
             result_code, failure_step = self._turn_on_tiles(
                 task_callback, task_abort_event
             )
@@ -1949,38 +2351,38 @@ class SpsStationComponentManager(
                 message = f"On Command failed: {failure_step}"
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tiles")
+            self.logger.info("Initialising tiles")
             result_code, failure_step = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
             # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising station")
+            self.logger.info("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Waiting for ARP table")
+            self.logger.info("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Routing data")
+            self.logger.info("Routing data")
             result_code, failure_step = self._route_data(
                 None, task_callback, task_abort_event
             )
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Checking synchronisation")
+            self.logger.info("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            self.logger.debug("End initialisation")
+            self.logger.info("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
         elif result_code is ResultCode.ABORTED:
@@ -2001,59 +2403,47 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
+        force_reprogramming: bool = True,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Initialise this station.
 
-        The order to turn a station on is: subrack, then tiles
-
         :param start_bandpasses: Whether to configure TPMs to send
             integrated data.
         :param global_reference_time: Common global reference time for all TPMs,
             needs to be some time in the last 2 weeks.
-            If not provided, 8am on the most recent Monday AWST will be used.
+            If not provided, midnight today (TAI) will be used.
+        :param force_reprogramming: whether to erase and reprogram the tile
+            FPGAs. If false, the tiles keep their firmware and are only
+            re-initialised (used by ReInitialise).
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        name = "Initialisation" if force_reprogramming else "Reinitialisation"
         message: str = ""
         failure_step: str = ""
-        self.logger.debug("Starting initialise sequence")
+        self.logger.info(f"Starting {name.lower()} sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
-        if not all(
-            power_state == PowerState.ON
-            for power_state in self._subrack_power_states.values()
-        ):
-            self.logger.debug("Subracks not on.")
-            result_code = ResultCode.FAILED
-            failure_step = "subracks not on"
-
-        if not all(
-            power_state == PowerState.ON
-            for power_state in self._tile_power_states.values()
-        ):
-            self.logger.debug("Tiles not on.")
-            result_code = ResultCode.FAILED
-            failure_step = "tiles not on"
-
-        # Now, if the wren proxy is set, wait for the WREN to initialise
-        if self._wren_proxy:
-            if result_code == ResultCode.OK:
-                self.logger.debug("Waiting for WREN")
-                result_code, failure_step = self._wait_for_wren(
-                    task_callback,
-                    task_abort_event,
-                    timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
-                )
-                if task_callback:
-                    task_callback(progress=5)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Setting tile source IPs before initialisation")
+            result_code, failure_step = self._check_subrack_power_state(PowerState.ON)
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_tile_power_state(PowerState.ON)
+
+        # Now, if the wren proxy is set, wait for the WREN to initialise
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._wait_for_wren_initilised(
+                progress=5,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
+
+        if result_code == ResultCode.OK:
+            self.logger.info("Setting tile source IPs before initialisation")
             result_code, failure_step = self._set_tile_source_ips(
                 task_callback, task_abort_event
             )
@@ -2061,19 +2451,23 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=10)
-            self.logger.debug("Setting global reference time")
+            self.logger.info("Setting global reference time")
             self._set_global_reference_time(global_reference_time)
             # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Re-initialising tiles")
+            self.logger.info(f"Re-initialising tiles ({force_reprogramming=})")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=10, progress_end=65
+                task_callback,
+                task_abort_event,
+                progress_start=10,
+                progress_end=65,
+                force_reprogramming=force_reprogramming,
             )
             # Progress is reported incrementally inside _reinitialise_tiles
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tile parameters")
+            self.logger.info("Initialising tile parameters")
             result_code, failure_step = self._initialise_tile_parameters(
                 task_callback,
                 task_abort_event,
@@ -2082,7 +2476,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=70)
-            self.logger.debug("Initialising station")
+            self.logger.info("Initialising station")
             result_code, failure_step = self._initialise_station(
                 task_callback, task_abort_event
             )
@@ -2090,7 +2484,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=75)
-            self.logger.debug("Waiting for ARP table")
+            self.logger.info("Waiting for ARP table")
             result_code, failure_step = self._wait_for_arp_table(
                 task_callback, task_abort_event
             )
@@ -2098,7 +2492,7 @@ class SpsStationComponentManager(
                 task_callback(progress=85)
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Routing data")
+            self.logger.info("Routing data")
             result_code, failure_step = self._route_data(
                 start_bandpasses,
                 task_callback,
@@ -2108,7 +2502,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             if task_callback:
                 task_callback(progress=90)
-            self.logger.debug("Checking synchronisation")
+            self.logger.info("Checking synchronisation")
             result_code, failure_step = self._check_station_synchronisation(
                 task_callback, task_abort_event
             )
@@ -2116,13 +2510,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             if task_callback:
                 task_callback(progress=95)
-            self.logger.debug("End initialisation")
+            self.logger.info(f"End {name.lower()}")
             task_status = TaskStatus.COMPLETED
-            message = "Initialisation Complete"
+            message = f"{name} Complete"
 
-            self.logger.debug(
+            self.logger.info(
                 "Starting station beamformer with empty channel_groups "
-                "to start the beamformer daisy chain during station initialise"
+                f"to start the beamformer daisy chain during station {name.lower()}"
             )
             start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
                 self.RFC_FORMAT
@@ -2131,11 +2525,76 @@ class SpsStationComponentManager(
                 start_time=start_time, duration=-1, channel_groups=[], scan_id=0
             )
         else:
-            self.logger.error(f"Initialisation failed: {failure_step}")
+            self.logger.error(f"{name} failed: {failure_step}")
             task_status = TaskStatus.FAILED
-            message = f"Initialisation Failed: {failure_step}"
+            message = f"{name} Failed: {failure_step}"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
+
+    def _check_tile_power_state(
+        self: SpsStationComponentManager, desired_state: PowerState
+    ) -> tuple[ResultCode, str]:
+        """
+        Check if the tiles are in the correct PowerState.
+
+        :param desired_state: The desired PowerState for all the tiles
+        :return: ResultCode and message
+        """
+        if not all(
+            power_state == desired_state
+            for power_state in self._tile_power_states.values()
+        ):
+            msg = f"Tiles are not in state: {desired_state}"
+            self.logger.info(msg)
+            return (ResultCode.FAILED, msg)
+        return (ResultCode.OK, "")
+
+    def _check_subrack_power_state(
+        self: SpsStationComponentManager, desired_state: PowerState
+    ) -> tuple[ResultCode, str]:
+        """
+        Check if the subracks are in the correct PowerState.
+
+        :param desired_state: The desired PowerState for all the subracks
+        :return: ResultCode and message
+        """
+        if not all(
+            power_state == desired_state
+            for power_state in self._subrack_power_states.values()
+        ):
+            msg = f"Subracks are not in state: {desired_state}"
+            self.logger.info(msg)
+            return (ResultCode.FAILED, msg)
+        return (ResultCode.OK, "")
+
+    def _wait_for_wren_initilised(
+        self: SpsStationComponentManager,
+        progress: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Wait for the WREN to be initialised if available.
+
+        :param progress: progress callback update value
+        :param task_callback: Update task state
+        :param task_abort_event: Abort the task
+        :return: ResultCode and message
+        """
+        if not self._wren_proxy:
+            return (ResultCode.OK, "")
+
+        self.logger.debug("Waiting for WREN")
+        result_code, failure_step = self._wait_for_wren(
+            task_callback,
+            task_abort_event,
+            timeout=self._wren_health_check_timeout,
+            fail_on_timeout=self._wren_health_check_fail_on_timeout,
+        )
+        if task_callback:
+            task_callback(progress=progress)
+
+        return (result_code, failure_step)
 
     @check_communicating
     def _turn_on_subracks(
@@ -2162,7 +2621,9 @@ class SpsStationComponentManager(
                     # proceed to wait for 180 seconds. THORN-690
                     results[proxy._name] = proxy.on()
                 failed = [
-                    name for name, rc in results.items() if rc == ResultCode.FAILED
+                    name
+                    for name, (status, _) in results.items()
+                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
                 ]
                 if failed:
                     msg = f"subracks failed to power on: {failed}"
@@ -2210,7 +2671,9 @@ class SpsStationComponentManager(
                     results[proxy._proxy.name()] = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                 failed = [
-                    name for name, rc in results.items() if rc == TaskStatus.FAILED
+                    name
+                    for name, (status, _) in results.items()
+                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
                 ]
                 if failed:
                     msg = f"tiles failed to power on: {failed}"
@@ -2219,7 +2682,8 @@ class SpsStationComponentManager(
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
-        last_time = time.time() + timeout
+        start_time = time.time()
+        last_time = start_time + timeout
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
@@ -2228,15 +2692,21 @@ class SpsStationComponentManager(
             if task_abort_event and task_abort_event.is_set():
                 self.logger.info("_turn_on_tiles task has been aborted")
                 return ResultCode.ABORTED, "task aborted"
-            states = self.tile_programming_state()
+            states = self._tile_programming_state
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
+                self.logger.info(
+                    f"All {len(states)} tiles reached {desired_states} "
+                    f"in {time.time() - start_time:.0f}s"
+                )
                 return ResultCode.OK, ""
 
-        states = self.tile_programming_state()
         not_ready = {
             trl: state
-            for trl, state in zip(self._tile_proxies.keys(), states)
+            for trl, state in zip(
+                self._tile_proxies.keys(),
+                self._tile_programming_state,
+            )
             if state not in desired_states
         }
         msg = (
@@ -2267,6 +2737,10 @@ class SpsStationComponentManager(
             str(self._sdn_first_address + 2 * tile_id + 1)
             for tile_id in range(self._number_of_tiles)
         ]
+        for tile_id, (src_ip1, src_ip2) in enumerate(zip(src_ips1, src_ips2)):
+            self.logger.debug(
+                f"Setting source IPs on tile {tile_id}: {src_ip1}, {src_ip2}"
+            )
         raise_for_group_failures(
             "write srcip40gfpga1",
             group_write_attribute(
@@ -2286,7 +2760,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager, global_reference_time: Optional[str] = None
     ) -> ResultCode:
         if self.csp_spead_format != "SKA":
-            self.logger.debug("Not setting global reference time for non-SKA format")
+            self.logger.info("Not setting global reference time for non-SKA format")
             return ResultCode.OK
         if global_reference_time is not None:
             self.global_reference_time = global_reference_time
@@ -2303,7 +2777,7 @@ class SpsStationComponentManager(
             self.global_reference_time = datetime.strftime(
                 datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
             )
-        self.logger.debug(f"Global reference time: {self.global_reference_time}")
+        self.logger.info(f"Global reference time: {self.global_reference_time}")
         return ResultCode.OK
 
     @check_communicating
@@ -2321,6 +2795,7 @@ class SpsStationComponentManager(
         """
         timeout = 30
         tick = 2
+        start_time = time.time()
         for tile_trl, tile_proxy in self._tile_proxies.items():
             last_time = time.time() + timeout
             tile = tile_proxy._proxy
@@ -2338,6 +2813,10 @@ class SpsStationComponentManager(
                 self.logger.error(msg)
                 return ResultCode.FAILED, msg
             self.logger.debug(f"Got ARP table for {tile_trl}")
+        self.logger.info(
+            f"ARP tables populated for all {len(self._tile_proxies)} tiles "
+            f"in {time.time() - start_time:.0f}s"
+        )
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2347,42 +2826,53 @@ class SpsStationComponentManager(
         task_abort_event: Optional[threading.Event] = None,
         progress_start: int = 0,
         progress_end: int = 100,
+        force_reprogramming: bool = True,
     ) -> tuple[ResultCode, str]:
         """
         Initialise tiles.
 
-        Initialise tiles by completely reprogram and reconfigure all internal
-        peripherals. This is required prior to station synchronization.
+        Initialise tiles by reconfiguring all internal peripherals, and
+        optionally reprogramming the FPGAs. This is required prior to
+        station synchronization.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :param progress_start: progress percentage at the start of this step,
             used to interpolate progress callbacks during the polling wait.
         :param progress_end: progress percentage reported once tiles are ready.
+        :param force_reprogramming: whether to erase and reprogram the FPGAs.
+            If false, the tiles keep their firmware.
         :return: a result code and message
 
         """
         progress_window = progress_end - progress_start
+        # The LRC id of each tile's ReInitialise command, by tile TRL.
+        command_ids: dict[str, str] = {}
+        rejected: list[str] = []
         with self._power_state_lock:
-            results = []
-            for proxy in self._tile_proxies.values():
+            for tile_trl, proxy in self._tile_proxies.items():
                 if proxy._proxy is None:
                     msg = f"tile proxy {proxy} not formed"
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
-                result_code = proxy._proxy.initialise()
+                [result_code], [command_id] = proxy._proxy.ReInitialise(
+                    json.dumps({"force_reprogramming": force_reprogramming})
+                )
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
-                results.append(result_code)
-        if ResultCode.FAILED in results:
-            msg = "one or more tiles failed to initialise"
+                if result_code in [ResultCode.FAILED, ResultCode.REJECTED]:
+                    rejected.append(f"{tile_trl}: {command_id}")
+                command_ids[tile_trl] = command_id
+        if rejected:
+            msg = f"tiles failed to start initialising: {rejected}"
             self.logger.error(msg)
             return ResultCode.FAILED, msg
 
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
-        last_time = time.time() + timeout
+        start_time = time.time()
+        last_time = start_time + timeout
         desired_states = ["Synchronised"]
         if self._global_reference_time == "":
             desired_states.append("Initialised")
@@ -2392,8 +2882,26 @@ class SpsStationComponentManager(
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            ready_count = sum(state in desired_states for state in states)
+            # Wait for each tile to finish initialise and reach the correct state
+            ready_count = 0
+            for (tile_trl, proxy), state in zip(self._tile_proxies.items(), states):
+                finished = self._get_lrc_finished(proxy, command_ids[tile_trl])
+                if finished is None:
+                    continue
+                if finished["status"] != TaskStatus.COMPLETED.name:
+                    msg = (
+                        f"{tile_trl} failed to initialise: "
+                        f"{finished['status']} {finished.get('result')}"
+                    )
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
+                if state in desired_states:
+                    ready_count += 1
             if ready_count == n_tiles:
+                self.logger.info(
+                    f"All {n_tiles} tiles reached {desired_states} "
+                    f"in {time.time() - start_time:.0f}s"
+                )
                 if task_callback:
                     task_callback(progress=progress_end)
                 return ResultCode.OK, ""
@@ -2406,6 +2914,26 @@ class SpsStationComponentManager(
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg
+
+    def _get_lrc_finished(
+        self: SpsStationComponentManager,
+        proxy: _TileProxy,
+        command_id: str,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Return a tile's finished entry for a long running command.
+
+        :param proxy: the proxy of the tile that ran the command.
+        :param command_id: the id of the long running command.
+        :return: the command's entry from the tile's ``lrcFinished``, with its
+            ``status`` and ``result``, or None if it has not finished yet.
+        """
+        assert proxy._proxy is not None  # for the type checker
+        for finished in proxy._proxy.lrcFinished or []:
+            entry = json.loads(finished)
+            if entry.get("uid") == command_id:
+                return entry
+        return None
 
     @check_communicating
     def _wait_for_wren(
@@ -2524,7 +3052,9 @@ class SpsStationComponentManager(
         )
         raise_for_group_failures(
             "write cspRounding",
-            group_write_attribute(self._tile_group, "cspRounding", self._csp_rounding),
+            group_write_attribute(
+                self._tile_group, "cspRounding", self._desired_csp_rounding
+            ),
         )
         raise_for_group_failures(
             "write cspSpeadFormat",
@@ -2545,12 +3075,6 @@ class SpsStationComponentManager(
                 "ppsDelayCorrection",
                 self._pps_delay_corrections[:n_tiles],
                 multi=True,
-            ),
-        )
-        raise_for_group_failures(
-            "run SetLmcDownload",
-            group_command(
-                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
             ),
         )
         raise_for_group_failures(
@@ -2630,29 +3154,6 @@ class SpsStationComponentManager(
                 arg_type=tango.CmdArgType.DevString,
             ),
         )
-        raise_for_group_failures(
-            "run SetLmcDownload",
-            group_command(
-                self._tile_group, "SetLmcDownload", json.dumps(self._lmc_param)
-            ),
-        )
-        raise_for_group_failures(
-            "run SetLmcIntegratedDownload",
-            group_command(
-                self._tile_group,
-                "SetLmcIntegratedDownload",
-                json.dumps(
-                    {
-                        "mode": self._lmc_integrated_mode,
-                        "destination_ip": self._lmc_param["destination_ip"],
-                        "channel_payload_length": self._lmc_channel_payload_length,
-                        "beam_payload_length": self._lmc_beam_payload_length,
-                        "netmask_40g": self._sdn_netmask,
-                        "gateway_40g": self._sdn_gateway,
-                    }
-                ),
-            ),
-        )
         return ResultCode.OK, ""
 
     @check_communicating
@@ -2693,9 +3194,12 @@ class SpsStationComponentManager(
                 result = result + list(proxy._proxy.GetFpgaUnixTime())
             self.logger.debug(f"Current FPGA times:{result}")
             if any(result[0] != time_n for time_n in result):
-                self.logger.error("FPGA time counters not synced, try again")
+                self.logger.warning("FPGA time counters not synced, try again")
                 time.sleep(1)
             else:
+                self.logger.info(
+                    f"Station synchronised: all {len(result)} FPGA times = {result[0]}"
+                )
                 return ResultCode.OK, ""
 
         # Loop over tiles, comparing tile n FPGA0, FPGA1 reference time to tile 1 FPGA0
@@ -2751,12 +3255,12 @@ class SpsStationComponentManager(
             if mode is not None:
                 self._lmc_integrated_mode = mode
                 self._lmc_integrated_mode_locked = True
-        self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
-        self.logger.debug(
+
+        self.logger.info(
             "Configuring LMC Integrated Download: "
             f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
         )
-        self.set_lmc_integrated_download(
+        integrated_result_code, integrated_message = self.set_lmc_integrated_download(
             mode=self._lmc_integrated_mode,
             dst_ip=self._lmc_integrated_ip,
             dst_port=self._lmc_integrated_port,
@@ -2764,12 +3268,25 @@ class SpsStationComponentManager(
             beam_payload_length=self._lmc_beam_payload_length,
             lock_mode=False,
         )
-        self.set_lmc_download(
+        if integrated_result_code[0] != ResultCode.OK:
+            msg = (
+                f"Failed to configure LMC integrated download: {integrated_message[0]}"
+            )
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
+
+        self.logger.info(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
+        lmc_result_code, lmc_message = self.set_lmc_download(
             mode=self._lmc_mode,
             dst_ip=self._lmc_ip,
             dst_port=self._lmc_port,
             payload_length=self._lmc_payload_length,
         )
+        if lmc_result_code[0] != ResultCode.OK:
+            msg = f"Failed to configure LMC download: {lmc_message[0]}"
+            self.logger.error(msg)
+            return ResultCode.FAILED, msg
+
         if (
             start_bandpasses
             if start_bandpasses is not None
@@ -2899,10 +3416,9 @@ class SpsStationComponentManager(
 
         :return: Array of one value per tile, in nanoseconds
         """
-        for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            assert proxy._proxy.ppsDelay is not None
-            self._pps_delays[i] = proxy._proxy.ppsDelay
+        # self._pps_delays is kept current by _on_tile_attribute_change's
+        # "ppsdelay" case on every subscribed change event, so no live
+        # per-tile read is needed here.
         return copy.deepcopy(self._pps_delays)
 
     def _fire_pps_delay_spread(self: SpsStationComponentManager) -> None:
@@ -2939,7 +3455,8 @@ class SpsStationComponentManager(
         """
         Return whether the final tile's station beamformer flagged count is zero.
 
-        None until the final tile has reported its flagged packet counts.
+        None until the final tile has reported its flagged packet counts,
+        or while a count is INVALID and the other is zero.
 
         :return: True if both FPGA counts are zero, False otherwise, None if unknown.
         """
@@ -2965,11 +3482,9 @@ class SpsStationComponentManager(
 
         :return: Array of pps delay corrections, one value per tile, in nanoseconds
         """
-        for i, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            assert proxy._proxy.ppsDelayCorrection is not None
-            self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
-
+        # self._pps_delay_corrections is kept current by
+        # _on_tile_attribute_change's "ppsdelaycorrection" case, so no live
+        # per-tile read is needed here.
         return copy.deepcopy(self._pps_delay_corrections)
 
     @pps_delay_corrections.setter
@@ -3003,13 +3518,20 @@ class SpsStationComponentManager(
         Delay in nanoseconds (positive = increase the signal delay) to correct for
         static delay mismathces, e.g. cable length.
 
-        :return: Array of one value per antenna/polarization (32 per tile)
+        Tiles that have not yet reported a value, or whose last reported
+        value was flagged invalid, contribute NaN for their 32 entries so
+        that every other tile's entries stay at their correct antenna
+        offset.
+
+        :return: Array of one value per antenna/polarization (32 per tile),
+            NaN where a tile's static delays are unknown or invalid.
         """
-        static_delays: list[float] = []
-        for _, static_delay in self._static_delays.items():
-            if static_delay is not None:
-                static_delays += static_delay
-        return static_delays
+        return np.concatenate(
+            [
+                self._static_delays[logical_tile_id]
+                for logical_tile_id in range(self._number_of_tiles)
+            ]
+        ).tolist()
 
     @static_delays.setter
     def static_delays(
@@ -3051,22 +3573,15 @@ class SpsStationComponentManager(
 
         Number of LS bits dropped in each channeliser frequency channel.
         Valid values 0-7 Same value applies to all antennas and
-        polarizations
+        polarizations. A tile whose value is INVALID reports -1 for
+        every channel.
 
         :returns: list of 512 values for each Tile, one per channel.
         """
-        channeliser_roundings: np.ndarray = np.zeros([16, 512])
-
-        for tile_idx, proxy in enumerate(self._tile_proxies.values()):
-            assert proxy._proxy is not None  # for the type checker
-            try:
-                channeliser_roundings[tile_idx, :] = proxy._proxy.channeliserRounding
-            except ValueError as e:
-                self.logger.error(
-                    f"unable to update array with {proxy._name} "
-                    f"channeliserRounding attribute: {repr(e)}"
-                )
-        return channeliser_roundings
+        # self._channeliser_roundings is kept current by
+        # _on_tile_attribute_change's "channeliserrounding" case, so no live
+        # per-tile read is needed here.
+        return self._channeliser_roundings.copy()
 
     @property
     def csp_rounding(self: SpsStationComponentManager) -> list[int] | None:
@@ -3080,9 +3595,11 @@ class SpsStationComponentManager(
 
         :return: CSP formatter rounding for each logical channel.
         """
-        proxy = list(self._tile_proxies.values())[-1]
-        assert proxy._proxy is not None  # for the type checker
-        return proxy._proxy.cspRounding
+        # self._csp_rounding is set at construction, kept current on every
+        # write, and kept current by _on_tile_attribute_change's
+        # "csprounding" case, so no live tile read is needed here. It is
+        # -1 for every channel while the final tile's value is INVALID.
+        return copy.deepcopy(self._csp_rounding)
 
     @csp_rounding.setter
     def csp_rounding(self: SpsStationComponentManager, truncation: list[int]) -> None:
@@ -3092,6 +3609,7 @@ class SpsStationComponentManager(
         :param truncation: list of up to 384 values in the range 0-7.
             Current hardware supports only a single value, thus oly 1st value is used
         """
+        self._desired_csp_rounding = copy.deepcopy(truncation)
         self._csp_rounding = copy.deepcopy(truncation)
         final_tile = list(self._tile_proxies.values())[-1]
         assert final_tile._proxy is not None  # for the type checker
@@ -3132,11 +3650,7 @@ class SpsStationComponentManager(
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        preadu_levels_concatenated: list[float] = []
-        for preadu_levels in self._preadu_levels.values():
-            if preadu_levels is not None:
-                preadu_levels_concatenated += preadu_levels
-        return preadu_levels_concatenated
+        return np.concatenate(list(self._preadu_levels.values())).tolist()
 
     @preadu_levels.setter
     def preadu_levels(self: SpsStationComponentManager, levels: list[float]) -> None:
@@ -3145,7 +3659,6 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._desired_preadu_levels = levels
         n_tiles = self._number_of_tiles
         per_tile_levels = [
             levels[i * TileData.ADC_CHANNELS : (i + 1) * TileData.ADC_CHANNELS]
@@ -3157,6 +3670,9 @@ class SpsStationComponentManager(
                 self._tile_group, "preaduLevels", per_tile_levels, multi=True
             ),
         )
+        # Only remember levels the hardware accepted, otherwise every
+        # subsequent Initialise would re-apply (and re-fail on) them.
+        self._desired_preadu_levels = levels
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:
@@ -3276,10 +3792,10 @@ class SpsStationComponentManager(
 
         :return: True if at least one TPM uses test generator
         """
-        return any(
-            tile._proxy is not None and tile._proxy.testGeneratorActive
-            for tile in self._tile_proxies.values()
-        )
+        # self._test_generator_active is kept current by
+        # _on_tile_attribute_change's "testgeneratoractive" case, so no live
+        # per-tile read is needed here.
+        return any(self._test_generator_active)
 
     @property
     def is_beamformer_running(self: SpsStationComponentManager) -> bool:
@@ -3288,10 +3804,10 @@ class SpsStationComponentManager(
 
         :return: Get station beamformer state
         """
-        return all(
-            tile._proxy is not None and tile._proxy.isBeamformerRunning
-            for tile in self._tile_proxies.values()
-        )
+        # self._is_beamformer_running is kept current by
+        # _on_tile_attribute_change's "isbeamformerrunning" case, so no live
+        # per-tile read is needed here.
+        return all(self._is_beamformer_running)
 
     def tile_programming_state(self: SpsStationComponentManager) -> list[str]:
         """
@@ -3299,10 +3815,9 @@ class SpsStationComponentManager(
 
         :return: list of programming state for all TPMs
         """
-        for tile_id, tile in enumerate(self._tile_proxies.values()):
-            assert tile._proxy is not None  # for the type checker
-            assert tile._proxy.tileProgrammingState is not None
-            self._tile_programming_state[tile_id] = tile._proxy.tileProgrammingState
+        # self._tile_programming_state is kept current by
+        # _on_tile_attribute_change's "tileprogrammingstate" case on every
+        # subscribed change event, so no live per-tile read is needed here.
         return self._tile_programming_state.copy()
 
     def adc_power(self: SpsStationComponentManager) -> list[float]:
@@ -3325,18 +3840,19 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of board temperatures
         """
-        board_temperatures = [
-            tile._proxy.boardTemperature
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.boardTemperature is not None
+        # self._board_temperatures is kept current by
+        # _on_tile_attribute_change's "boardtemperature" case, so no live
+        # per-tile read is needed here.
+        board_temperatures = self._board_temperatures[
+            ~np.isnan(self._board_temperatures)
         ]
         if len(board_temperatures) == 0:
             self.logger.info("No data available for summary.")
             return None
         return [
-            min(board_temperatures),
-            mean(board_temperatures),
-            max(board_temperatures),
+            float(np.min(board_temperatures)),
+            float(np.mean(board_temperatures)),
+            float(np.max(board_temperatures)),
         ]
 
     def fpga_temperature_summary(
@@ -3347,21 +3863,24 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_1_temperatures = [
-            tile._proxy.fpga1Temperature
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.fpga1Temperature is not None
+        # self._fpga1_temperatures/_fpga2_temperatures are kept current by
+        # _on_tile_attribute_change's "fpga1temperature"/"fpga2temperature"
+        # cases, so no live per-tile read is needed here.
+        fpga_1_temperatures = self._fpga1_temperatures[
+            ~np.isnan(self._fpga1_temperatures)
         ]
-        fpga_2_temperatures = [
-            tile._proxy.fpga2Temperature
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.fpga2Temperature is not None
+        fpga_2_temperatures = self._fpga2_temperatures[
+            ~np.isnan(self._fpga2_temperatures)
         ]
         if len(fpga_1_temperatures) == 0 or len(fpga_2_temperatures) == 0:
             self.logger.info("No data available for summary.")
             return None
-        fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
-        return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
+        fpga_temperatures = np.concatenate([fpga_1_temperatures, fpga_2_temperatures])
+        return [
+            float(np.min(fpga_temperatures)),
+            float(np.mean(fpga_temperatures)),
+            float(np.max(fpga_temperatures)),
+        ]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float] | None:
         """
@@ -3369,11 +3888,10 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of PPS delays
         """
-        pps_delays = [
-            tile._proxy.ppsDelay
-            for tile in self._tile_proxies.values()
-            if tile._proxy is not None and tile._proxy.ppsDelay is not None
-        ]
+        # self._pps_delays/_pps_delays_reported are kept current by
+        # _on_tile_attribute_change's "ppsdelay" case, so no live per-tile
+        # read is needed here.
+        pps_delays = [self._pps_delays[i] for i in self._pps_delays_reported]
         if len(pps_delays) == 0:
             self.logger.info("No data available for summary.")
             return None
@@ -3384,12 +3902,11 @@ class SpsStationComponentManager(
         """
         Get summary of SYSREF presence.
 
-        :return: TRUE if SYSREF is present in all tiles
+        :return: TRUE if SYSREF is present in all tiles. Always False for
+            now, as sysrefPresent is not yet implemented in
+            ska-low-sps-tpm-api and so is not subscribed to.
         """
-        return all(
-            tile._proxy is not None and tile._proxy.sysrefPresent
-            for tile in self._tile_proxies.values()
-        )
+        return False
 
     def pll_locked_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -3397,10 +3914,9 @@ class SpsStationComponentManager(
 
         :return: TRUE if PLL locked in all tiles
         """
-        return all(
-            tile._proxy is not None and tile._proxy.pllLocked
-            for tile in self._tile_proxies.values()
-        )
+        # self._pll_locked is kept current by _on_tile_attribute_change's
+        # "plllocked" case, so no live per-tile read is needed here.
+        return all(self._pll_locked)
 
     def pps_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -3408,21 +3924,19 @@ class SpsStationComponentManager(
 
         :return: TRUE if PPS is present in all tiles
         """
-        return all(
-            tile._proxy is not None and tile._proxy.ppsPresent
-            for tile in self._tile_proxies.values()
-        )
+        # self._pps_present is kept current by _on_tile_attribute_change's
+        # "ppspresent" case, so no live per-tile read is needed here.
+        return all(self._pps_present)
 
     def clock_present_summary(self: SpsStationComponentManager) -> bool:
         """
         Get summary of 10 MHz clock presence.
 
-        :return: TRUE if 10 MHz clock is present in all tiles
+        :return: TRUE if 10 MHz clock is present in all tiles. Always False
+            for now, as clockPresent is not yet implemented in
+            ska-low-sps-tpm-api and so is not subscribed to.
         """
-        return all(
-            tile._proxy is not None and tile._proxy.clockPresent
-            for tile in self._tile_proxies.values()
-        )
+        return False
 
     def forty_gb_network_errors(self: SpsStationComponentManager) -> list[int]:
         """
@@ -3514,14 +4028,17 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        self._lmc_param["mode"] = mode
-        self._lmc_param["payload_length"] = payload_length
-        self._lmc_param["destination_ip"] = dst_ip
-        self._lmc_param["source_port"] = src_port
-        self._lmc_param["destination_port"] = int(dst_port)
-        self._lmc_param["netmask_40g"] = self._sdn_netmask
-        self._lmc_param["gateway_40g"] = self._sdn_gateway
-        json_param = json.dumps(self._lmc_param)
+        json_param = json.dumps(
+            {
+                "mode": mode,
+                "payload_length": payload_length,
+                "destination_ip": dst_ip,
+                "destination_port": int(dst_port),
+                "source_port": src_port,
+                "netmask_40g": self._sdn_netmask,
+                "gateway_40g": self._sdn_gateway,
+            }
+        )
         return self._execute_async_on_tiles("SetLmcDownload", json_param)
 
     def set_lmc_integrated_download(
@@ -3561,7 +4078,7 @@ class SpsStationComponentManager(
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
         if dst_ip == "":
-            dst_ip = cast(str, self._lmc_param["destination_ip"])
+            dst_ip = self._lmc_integrated_ip
         json_param = json.dumps(
             {
                 "mode": mode,
@@ -4182,7 +4699,6 @@ class SpsStationComponentManager(
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to stop: {message}")
 
-    # pylint: disable = too-many-branches
     @check_communicating
     def acquire_data_for_calibration(
         self: SpsStationComponentManager,
@@ -4318,7 +4834,17 @@ class SpsStationComponentManager(
                         success = False
                     break
                 channel = int(filename.split("_")[0])
-                dropped_channels.remove(channel)
+                if channel in dropped_channels:
+                    dropped_channels.remove(channel)
+                else:
+                    # DAQ can emit the same event more than once, and a stale
+                    # event can name a channel outside the requested range.
+                    # Either way the channel is not dropped, so just note it.
+                    self.logger.warning(
+                        f"Received unexpected data for channel {channel}. "
+                        "It is a duplicate, or outside the requested range of "
+                        f"{first_channel} to {last_channel}."
+                    )
                 if channel == last_channel:
                     self.logger.info(
                         f"Got data for {channel}, this is the last channel expected."
@@ -4410,6 +4936,16 @@ class SpsStationComponentManager(
             "description": "Data from AcquireDataForCalibration",
         }
         base_config.update(daq_config)
+
+        try:
+            self._stop_daq()
+        except ValueError as stop_error:
+            return _fail(
+                "Failed to stop DAQ before configuring for calibration: "
+                f"{stop_error}"
+            )
+        if _check_aborted():
+            return ResultCode.ABORTED, "Task aborted"
 
         configure_command = MccsCommandProxy(
             self._lmc_daq_trl, "Configure", self.logger
@@ -4725,11 +5261,14 @@ class SpsStationComponentManager(
                     ]
 
             results = [_run_while_handling_errors(proxy) for proxy in connected_proxies]
+            dev_names = [proxy.dev_name() for proxy in connected_proxies]
         else:
             arg = command_args[0] if command_args else None
             replies = group_command(self._tile_group, command_name, arg)
             results = []
+            dev_names = []
             for reply in replies:
+                dev_names.append(reply.dev_name())
                 if reply.has_failed():
                     results.append(
                         (
@@ -4740,10 +5279,16 @@ class SpsStationComponentManager(
                 else:
                     results.append(reply.get_data())
 
-        result_codes, _ = zip(*results)
-        self.logger.debug(f"Tiles response from {command_name}: {str(results)}")
-        if all(result[0] == ResultCode.OK for result in result_codes):
+        labelled = [f"{name}: {result}" for name, result in zip(dev_names, results)]
+        self.logger.debug(f"Tiles response from {command_name}: {'; '.join(labelled)}")
+        failures = [
+            f"{name}: {result}"
+            for name, result in zip(dev_names, results)
+            if result[0][0] != ResultCode.OK
+        ]
+        if not failures:
             return [ResultCode.OK], [f"{command_name} finished OK."]
         return [ResultCode.FAILED], [
-            f"{command_name} didn't finish OK. Results: {str(results)}"
+            f"{command_name} didn't finish OK on {len(failures)} of "
+            f"{len(results)} tiles. Failures: {'; '.join(failures)}"
         ]

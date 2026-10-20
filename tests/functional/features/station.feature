@@ -34,12 +34,27 @@ Feature: Test station
         Then we do not get any failures
 
 
+    Scenario: Reading SpsStation attributes when tile is Off
+        Given an SPS deployment against HW
+        And the SpsStation is ON
+        When we turn off a single tile
+        Then the spsstation attributes present this
+
+
     Scenario: Standby commanded during Init takes all TPMs to Off (SKB-1402 regression)
         Given an SPS deployment against HW
         And the station and its tiles are synchronised
         When we trigger skb-1402
         Then the Standby command completed successfully
         And all TPMs transition to Off state
+
+
+    Scenario: Reinitialise does not reprogram the TPMs
+        Given an SPS deployment against a real context
+        And the station and its tiles are synchronised
+        When the station is reinitialised
+        Then the ReInitialise command completed successfully
+        And no TPM was reprogrammed
 
 
     Scenario Outline: Fanout attribute writes reach the correct tile

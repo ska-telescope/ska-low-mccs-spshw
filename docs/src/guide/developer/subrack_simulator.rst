@@ -180,8 +180,8 @@ The tables below show which commands and attributes of the SMB web API the simul
    * - ``api_version``
      - ✓
      - ✓
-     - ✗
-     - ✗
+     - ✓
+     - ✓
    * - ``assigned_tpm_ip_adds``
      - ✓
      - ✓

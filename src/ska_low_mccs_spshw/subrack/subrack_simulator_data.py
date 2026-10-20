@@ -116,6 +116,12 @@ DEFAULT_ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
         "default": [12.0] * 8,
         "writable": True,
     },
+    # The version of the SMB web API software, as the API reports it.
+    "api_version": {
+        "length": None,
+        "default": "2.8.0",
+        "writable": False,
+    },
     "board_info": {
         "length": None,
         "default": {
@@ -383,6 +389,11 @@ ATTRIBUTE_METADATA: Final[dict[str, dict[str, AttributeMetadataType]]] = {
             name: metadata
             for name, metadata in DEFAULT_ATTRIBUTE_METADATA.items()
             if name not in ["tpm_currents"]
+        },
+        "api_version": {
+            "length": None,
+            "default": "2.9.0",
+            "writable": False,
         },
         # Without tpm_currents, tpm_powers can no longer be derived, so it is
         # stored instead. Elements may be None when a slot reading fails.

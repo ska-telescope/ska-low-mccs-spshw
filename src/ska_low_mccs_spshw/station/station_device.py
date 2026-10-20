@@ -185,7 +185,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
         self._health_rollup_devices: list[str]
-        self._health_thresholds: [dict[str, Any]] = {}
+        self._health_thresholds: dict[str, Any] = {}
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel

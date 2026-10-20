@@ -1994,6 +1994,21 @@ def test_programing_state_health_rollup(
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
                 "wren": [1, 1, 1],
+                "fred": [
+                    42,
+                    42,
+                    42,
+                ],  # Dummy test values used in the station device fixture
+                "jim": [
+                    53,
+                    53,
+                    53,
+                ],  # Dummy test values used in the station device fixture
+                "sheila": [
+                    8,
+                    8,
+                    8,
+                ],  # Dummy test values used in the station device fixture
             },
             {
                 "subrack_degraded": 0.1,
@@ -2004,6 +2019,21 @@ def test_programing_state_health_rollup(
                 "wren_failed": 0.5,
                 "pps_delta_degraded": 6,
                 "pps_delta_failed": 10,
+                "fred": [
+                    42,
+                    42,
+                    42,
+                ],  # Dummy test values used in the station device fixture
+                "jim": [
+                    53,
+                    53,
+                    53,
+                ],  # Dummy test values used in the station device fixture
+                "sheila": [
+                    8,
+                    8,
+                    8,
+                ],  # Dummy test values used in the station device fixture
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",
@@ -2045,6 +2075,21 @@ def test_healthParams(
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
                 "wren": [1, 1, 1],
+                "fred": [
+                    42,
+                    42,
+                    42,
+                ],  # Dummy test values used in the station device fixture
+                "jim": [
+                    53,
+                    53,
+                    53,
+                ],  # Dummy test values used in the station device fixture
+                "sheila": [
+                    8,
+                    8,
+                    8,
+                ],  # Dummy test values used in the station device fixture
             },
             {
                 "subrack_degraded": 0.1,
@@ -2055,6 +2100,21 @@ def test_healthParams(
                 "wren_failed": 0.5,
                 "pps_delta_degraded": 6,
                 "pps_delta_failed": 10,
+                "fred": [
+                    42,
+                    42,
+                    42,
+                ],  # Dummy test values used in the station device fixture
+                "jim": [
+                    53,
+                    53,
+                    53,
+                ],  # Dummy test values used in the station device fixture
+                "sheila": [
+                    8,
+                    8,
+                    8,
+                ],  # Dummy test values used in the station device fixture
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",
@@ -2088,7 +2148,7 @@ def test_health_threshold_property_set(station_device: SpsStation) -> None:
     """
     result = station_device.healthThresholds
     assert result is not None
-    assert result == HEALTH_THRESHOLDS_PROPERTY_VALUE
+    assert json.loads(result) == json.loads(HEALTH_THRESHOLDS_PROPERTY_VALUE)
 
 
 def test_csp_set_reset(

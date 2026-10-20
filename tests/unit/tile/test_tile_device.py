@@ -747,6 +747,31 @@ def _wait_for_attribute_value(
     assert getattr(device, attribute) == expected
 
 
+def _wait_for_hardware_value(
+    device: MccsDeviceProxy, attribute: str, expected: Any, timeout: float = 6.0
+) -> None:
+    """
+    Poll a signal-backed attribute until it matches a hardware value.
+
+    Unlike `_wait_for_attribute_value`, this supports spectrum attributes,
+    which are read back as numpy arrays.
+
+    :param device: the tile device proxy.
+    :param attribute: name of the attribute to poll.
+    :param expected: the value the hardware is expected to report.
+    :param timeout: maximum time to wait, in seconds.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if np.allclose(getattr(device, attribute), expected):
+            return
+        time.sleep(0.1)
+    assert np.allclose(getattr(device, attribute), expected), (
+        f"{attribute} did not report the hardware value {expected}, "
+        f"got {getattr(device, attribute)}."
+    )
+
+
 class _TileAccessRecorder:
     """
     A transparent proxy that records accesses made to a wrapped tile.
@@ -2619,6 +2644,81 @@ class TestMccsTile:
                 # Maybe we don't care what was written and we just expect some method
                 # to be called with no params.
                 method_spy.assert_called_once()
+
+    @pytest.mark.parametrize(
+        ("attribute", "write_value", "hardware_value", "simulator_setter", "coerce"),
+        [
+            # The simulated hardware quantises (or only uses part of) these
+            # writes, so the readback naturally differs from the written value.
+            ("staticTimeDelays", [1.0] * 32, [1.25] * 32, None, None),
+            ("preaduLevels", [5.1] * 32, [5.0] * 32, None, None),
+            ("cspRounding", [3] + [5] * 383, [3] * 384, None, None),
+            # The simulator stores these exactly as written, so make the
+            # hardware latch a different value from the one written.
+            (
+                "phaseTerminalCount",
+                5,
+                4,
+                "set_phase_terminal_count",
+                lambda value: value - 1,
+            ),
+            (
+                "channeliserRounding",
+                [5] * 512,
+                [4] * 512,
+                "set_channeliser_truncation",
+                lambda trunc: [value - 1 for value in trunc],
+            ),
+        ],
+    )
+    # pylint: disable=too-many-arguments
+    def test_write_reports_hardware_readback(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        monkeypatch: pytest.MonkeyPatch,
+        attribute: str,
+        write_value: Any,
+        hardware_value: Any,
+        simulator_setter: str | None,
+        coerce: Callable[[Any], Any] | None,
+    ) -> None:
+        """
+        Test that a write reports the value read back from hardware.
+
+        The written value must not be pushed straight from the software
+        cache: the attribute should only ever report what the hardware
+        holds, even when that differs from what was written.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to a device under test that has
+            already been driven to the ON state, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend TileSimulator that the component
+            manager reads back from.
+        :param monkeypatch: PyTest monkeypatch fixture.
+        :param attribute: name of the attribute under test.
+        :param write_value: value written to the attribute.
+        :param hardware_value: value the hardware holds after the write.
+        :param simulator_setter: name of the TileSimulator setter to patch,
+            or None if the simulator already coerces the written value.
+        :param coerce: function mapping the written value to the value the
+            hardware latches, used with `simulator_setter`.
+        """
+        assert not np.array_equal(write_value, hardware_value)
+        assert not np.allclose(getattr(on_tile_device, attribute), hardware_value)
+
+        if simulator_setter is not None:
+            assert coerce is not None
+            original_setter = getattr(tile_simulator, simulator_setter)
+            monkeypatch.setattr(
+                tile_simulator,
+                simulator_setter,
+                lambda value: original_setter(coerce(value)),
+            )
+
+        on_tile_device.write_attribute(attribute, write_value)
+        _wait_for_hardware_value(on_tile_device, attribute, hardware_value)
 
     def test_antennaIds(
         self: TestMccsTile,

@@ -94,6 +94,26 @@ def json_arrays_to_tuples(json_object_in: dict[str, Any]) -> dict[str, Any]:
     return json_object_out
 
 
+def parse_health_thresholds_property(
+    threshold_property: str,
+) -> Optional[dict[str, Any]]:
+    """
+    Parse the JSON in the property value.
+
+    The health thresholds value is provided as a JSON string which must be
+    parsed into a dictionary.
+    :param threshold_property: value from the property.
+    :returns: dictionary containing tuples.
+    """
+    if threshold_property:
+        try:
+            return json_arrays_to_tuples(json.loads(threshold_property))
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
 # pylint: disable=too-many-instance-attributes, too-many-ancestors
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
@@ -185,7 +205,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
         self._health_rollup_devices: list[str]
-        self._health_thresholds: dict[str, Any] = {}
+        self._health_thresholds: dict[str, Any]
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
@@ -251,16 +271,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _init_state_model(self: SpsStation) -> None:
         # Why is this here?  Unfortunately we need to wait until
-        # tando.Device.init_device() iscalled as this sets up properties within
+        # tando.Device.init_device() is called as this sets up properties within
         # the Device itself.  Unfortunately the many layers of SKA base device
         # code do a whole array of things along the way, one of which results
         # in our _init_state_model() method being called.  So the only place
         # this code can be placed is here so that the _health_thresholds value
-        # is setup readt for when it is needed.
-        if self.HealthThresholds:
-            self._health_thresholds = json_arrays_to_tuples(
-                json.loads(self.HealthThresholds)
-            )
+        # is setup ready for when it is needed.
+        parsed_thresholds_value = parse_health_thresholds_property(
+            self.HealthThresholds
+        )
+        if parsed_thresholds_value:
+            self._health_thresholds = parsed_thresholds_value
         else:
             self._health_thresholds = {
                 "pps_delta_degraded": 4,

@@ -748,28 +748,29 @@ def _wait_for_attribute_value(
 
 
 def _wait_for_hardware_value(
-    device: MccsDeviceProxy, attribute: str, expected: Any, timeout: float = 6.0
+    device: MccsDeviceProxy, attribute: str, expected: Any
 ) -> None:
     """
-    Poll a signal-backed attribute until it matches a hardware value.
+    Wait for a signal-backed attribute to push a change event with a hardware value.
 
-    Unlike `_wait_for_attribute_value`, this supports spectrum attributes,
-    which are read back as numpy arrays.
+    Subscribing delivers the current value as the first event, so this also
+    succeeds if the hardware value was pushed before the subscription was made.
+    Spectrum values are compared as lists.
 
     :param device: the tile device proxy.
-    :param attribute: name of the attribute to poll.
+    :param attribute: name of the attribute to subscribe to.
     :param expected: the value the hardware is expected to report.
-    :param timeout: maximum time to wait, in seconds.
     """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if np.allclose(getattr(device, attribute), expected):
-            return
-        time.sleep(0.1)
-    assert np.allclose(getattr(device, attribute), expected), (
-        f"{attribute} did not report the hardware value {expected}, "
-        f"got {getattr(device, attribute)}."
+    callbacks = MockTangoEventCallbackGroup(attribute, timeout=6.0)
+    subscription_id = device.subscribe_event(
+        attribute,
+        EventType.CHANGE_EVENT,
+        callbacks[attribute],
     )
+    try:
+        callbacks[attribute].assert_change_event(expected)
+    finally:
+        device.unsubscribe_event(subscription_id)
 
 
 class _TileAccessRecorder:

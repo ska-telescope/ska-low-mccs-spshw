@@ -930,6 +930,55 @@ def test_self_check(
 
 
 @pytest.mark.parametrize(
+    ("test_names", "expected_status", "expected_result"),
+    [
+        pytest.param(
+            ["PassTest", "BadRequirementsTest"],
+            TaskStatus.COMPLETED,
+            (ResultCode.OK, "Tests completed OK."),
+            id="some_skipped",
+        ),
+        pytest.param(
+            ["BadRequirementsTest"],
+            TaskStatus.FAILED,
+            (
+                ResultCode.FAILED,
+                "No tests ran, test requirements not met, check logs.",
+            ),
+            id="all_skipped",
+        ),
+    ],
+)
+def test_self_check_with_skipped_tests(
+    communicating_station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    test_names: list[str],
+    expected_status: TaskStatus,
+    expected_result: tuple[ResultCode, str],
+) -> None:
+    """
+    Test that a self_check fails only when every test is skipped.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param test_names: names of the example tests to run.
+    :param expected_status: the task status expected at the end.
+    :param expected_result: the task result expected at the end.
+    """
+    self_check_manager = communicating_station_component_manager.self_check_manager
+    self_check_manager._tpm_test_names = test_names
+    self_check_manager._tpm_tests = {
+        test_name: self_check_manager._tpm_tests[test_name] for test_name in test_names
+    }
+
+    communicating_station_component_manager.self_check(task_callback=callbacks["task"])
+
+    callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+    callbacks["task"].assert_call(status=expected_status, result=expected_result)
+
+
+@pytest.mark.parametrize(
     ("test_name"),
     [
         pytest.param("PassTest"),

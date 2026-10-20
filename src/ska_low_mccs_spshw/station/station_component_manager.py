@@ -3326,6 +3326,16 @@ class SpsStationComponentManager(
 
         test_results = self.self_check_manager.run_tests()
 
+        if all(test_result == TestResult.NOT_RUN for test_result in test_results):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(
+                        ResultCode.FAILED,
+                        "No tests ran, test requirements not met, check logs.",
+                    ),
+                )
+            return
         if all(
             test_result in [TestResult.PASSED, TestResult.NOT_RUN]
             for test_result in test_results

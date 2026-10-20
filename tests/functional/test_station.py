@@ -212,6 +212,19 @@ def test_reinitialise_does_not_reprogram_tpms() -> None:
 
 @scenario(
     "features/station.feature",
+    "Reinitialise keeps the beamformer signal chain running",
+)
+def test_reinitialise_keeps_beamformer_running() -> None:
+    """
+    Run a test scenario that checks ReInitialise leaves the signal chain working.
+
+    Initialising the TPMs without reprogramming the FPGAs has been seen in
+    firmware to leave the beamformer ring frame counter stuck.
+    """
+
+
+@scenario(
+    "features/station.feature",
     "Fanout attribute writes reach the correct tile",
 )
 def test_fanout_attribute_writes_reach_correct_tile() -> None:
@@ -1518,3 +1531,72 @@ def no_tpm_was_reprogrammed(
         assert "NotProgrammed" not in states, f"{name} was reprogrammed: {states}"
         # And the tile is still synchronised
         assert tile.tileProgrammingState == "Synchronised", name
+
+
+@given("the station has been initialised")
+def station_initialised(
+    station: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a full Initialise (with FPGA programming) and wait for synchronisation.
+
+    Unlike "the station and its tiles are synchronised", this always
+    initialises, so the starting state does not depend on earlier tests.
+
+    :param station: a proxy to the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    """
+    ensure_spsstation_state_on(
+        station, change_event_callbacks, stations_devices_exported, station_tiles
+    )
+    [result_code], [command_id] = station.Initialise()
+    assert result_code == ResultCode.QUEUED
+    wait_for_lrc_result(
+        device=station,
+        uid=command_id,
+        expected_result=ResultCode.OK,
+        timeout=300,
+    )
+    station_is_synced(station)
+
+
+@given("the beamformer ring frame counter is advancing on every TPM")
+@then("the beamformer ring frame counter is advancing on every TPM")
+def beamformer_ring_advancing(station_tiles: list[tango.DeviceProxy]) -> None:
+    """
+    Check the beamformer ring current frame advances on both FPGAs of every TPM.
+
+    A counter that never changes indicates a broken signal chain. Each
+    FPGA is given a short grace period before being declared stuck.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    """
+    assert station_tiles, "Station tiles are missing"
+
+    stuck: list[str] = []
+    for tile in station_tiles:
+        for fpga in ("fpga1", "fpga2"):
+            register = f"{fpga}.beamf_ring.current_frame"
+            deadline = time.time() + 10
+            while True:
+                first = list(tile.ReadRegister(register))
+                time.sleep(0.01)
+                second = list(tile.ReadRegister(register))
+                assert first and second, f"{tile.dev_name()}: {register} not present"
+                if first != second:
+                    print(f"{tile.dev_name()} {fpga}: {first} -> {second} advancing")
+                    break
+                if time.time() > deadline:
+                    stuck.append(f"{tile.dev_name()} {fpga}: frame {first} STUCK")
+                    break
+                time.sleep(0.5)
+
+    assert not stuck, f"Beamformer ring frame counter stuck: {stuck}"

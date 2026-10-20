@@ -47,6 +47,7 @@ class BaseDataReceivedHandler(abc.ABC):
         self.data: np.ndarray
         self._callback_lock = threading.Lock()
         self.ignore_next_event = False
+        self._watching = False
         self.initialise_data()
 
     @abc.abstractmethod
@@ -86,6 +87,8 @@ class BaseDataReceivedHandler(abc.ABC):
         """
         self._logger.debug(f"Got event: {name}, {value}, {quality}")
         with self._callback_lock:
+            if not self._watching:
+                return
             if self.ignore_next_event:
                 self.ignore_next_event = False
                 return
@@ -123,8 +126,20 @@ class BaseDataReceivedHandler(abc.ABC):
         the clearing of the accumulated files.
         """
         with self._callback_lock:
+            self._watching = True
             self.ignore_next_event = True
             self._reset_locked()
+
+    def end_watch(self: BaseDataReceivedHandler) -> None:
+        """
+        Stop the handler from acting on any further events.
+
+        This waits for a callback that is in progress, because it takes
+        ``_callback_lock``. When it returns, no callback can call back with
+        data until the next call to ``prepare_for_new_watch``.
+        """
+        with self._callback_lock:
+            self._watching = False
 
     def reset(self: BaseDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""

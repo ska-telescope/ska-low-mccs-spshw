@@ -71,12 +71,10 @@ _MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 _MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
 
-# This cannot be raised arbitrarily. The load frame must still arrive before the
-# caller captures data, so it needs to stay well short of the delay between
-# configuring the generator and requesting a data transmission.
-_TEST_GENERATOR_LOAD_DELAY: Final[float] = 0.25  # seconds
+# A caller that captures data after ConfigureTestGenerator must first wait
+# TileData.TEST_GENERATOR_LOAD_DELAY, or it captures the previous tone.
 _TEST_GENERATOR_LOAD_DELAY_FRAMES: Final[int] = int(
-    _TEST_GENERATOR_LOAD_DELAY / TileData.FRAME_PERIOD
+    TileData.TEST_GENERATOR_LOAD_DELAY / TileData.FRAME_PERIOD
 )
 
 
@@ -4319,7 +4317,7 @@ class TileComponentManager(
             if acquired:
                 try:
                     # If load time not specified, is "now" plus
-                    # _TEST_GENERATOR_LOAD_DELAY
+                    # TileData.TEST_GENERATOR_LOAD_DELAY
                     end_time: int = 0
                     if load_frame == 0:
                         load_frame = (

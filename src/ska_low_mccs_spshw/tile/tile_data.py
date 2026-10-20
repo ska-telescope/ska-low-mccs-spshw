@@ -39,6 +39,8 @@ class TileData:
     TOTAL_BANDWIDTH = ADC_SAMPLING_FREQ / 2
     SAMPLE_PERIOD = ADC_SAMPLING_PERIOD * ADC_FRAME_LENGTH
     FRAME_PERIOD = SAMPLE_PERIOD * 256
+    # Delay from ConfigureTestGenerator to when the tone loads, if no time is given.
+    TEST_GENERATOR_LOAD_DELAY = 0.25  # seconds
     CSP_FRAME_PERIOD = SAMPLE_PERIOD * 2048
     ANTENNA_COUNT = 16
     POLS_PER_ANTENNA = 2

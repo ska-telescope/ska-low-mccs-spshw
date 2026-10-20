@@ -235,6 +235,9 @@ class BaseDaqTest(TpmSelfCheckTest):
         if delays is not None:
             json_arg.update({"delays": delays})
         self.component_manager.configure_test_generator(json.dumps(json_arg))
+        # Each tile loads the tone this long after it replies, and no event
+        # marks the load, so wait for it before any data is captured.
+        time.sleep(TileData.TEST_GENERATOR_LOAD_DELAY)
 
     def _disable_test_generator(self: BaseDaqTest) -> None:
         self.component_manager.configure_test_generator("{}")
@@ -289,6 +292,10 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _stop_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Stopping directory watch")
         assert self.daq_proxy is not None
+        # Do this before the unsubscribe, so that a callback still in progress
+        # finishes first and a late event cannot set data after a reset.
+        if self._data_handler is not None:
+            self._data_handler.end_watch()
         if (
             "datareceivedresult"
             not in self.daq_proxy._change_event_subscription_ids[EventType.CHANGE_EVENT]

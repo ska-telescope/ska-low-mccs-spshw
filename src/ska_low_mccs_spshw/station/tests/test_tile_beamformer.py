@@ -145,8 +145,6 @@ class TestTileBeamformer(BaseDaqTest):
                 ],
                 delays=self._delays,
             )
-            # Necessary to give the TPMs time to load the test generator before sending data
-            time.sleep(0.1)
             self._send_beam_data()
             _received = self._data_created_event.wait(60)
             assert (
@@ -177,8 +175,6 @@ class TestTileBeamformer(BaseDaqTest):
             0.5,
             delays=self._delays,
         )
-        # Necessary to give the TPMs time to load the test generator before sending data
-        time.sleep(0.1)
         self._send_beam_data()
         _received = self._data_created_event.wait(60)
         assert (

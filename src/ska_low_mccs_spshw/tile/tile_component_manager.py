@@ -4104,7 +4104,7 @@ class TileComponentManager(
         with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
             self.tile.set_phase_terminal_count(value)
             read_value = self.tile.get_phase_terminal_count()
-            self._update_attribute_callback(phase_terminal_count=read_value)
+        self._update_attribute_callback(phase_terminal_count=read_value)
 
     @property
     @check_communicating

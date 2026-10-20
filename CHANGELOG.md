@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 16.0.1
 
 * [SKB-1647] Attribute source from hardware. Writes to MccsTile `phaseTerminalCount`, `channeliserRounding`, `staticTimeDelays`, `cspRounding` and `preaduLevels` no longer push the written value from the software cache. The attribute now reports the value read back from hardware after the write, so it reflects any quantisation or rejection by the hardware (e.g. `staticTimeDelays` in 1.25 ns steps, `preaduLevels` in 0.25 dB steps).
 * [SKB-1647] MccsTile `abs_change` is now set to a negligible value (`1e-300`) on all attributes, so that any change in value, however small, produces a change event. `archive_abs_change` is unchanged.

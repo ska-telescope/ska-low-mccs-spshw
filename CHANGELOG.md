@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 16.0.0
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
 * [SKB-1420] Fix subrack device stuck in UNKNOWN state when upstream (PDU/PowerMarshaller) communication is established after the subrack is already being polled and is ON. The cached hardware power state is now re-asserted when all upstream connections are established. Fault updates received when the op state does not allow them (UNKNOWN or OFF) are now held and applied once legal, instead of raising illegal op-state transitions.

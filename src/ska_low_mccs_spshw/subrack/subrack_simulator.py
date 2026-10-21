@@ -591,4 +591,5 @@ class SubrackSimulator(SubrackProtocol):
             tpm_present=self._attribute_values["tpm_present"],
             tpm_on_off=self._attribute_values["tpm_on_off"],
             tpm_powers=self._get_attribute_tpm_powers(),
+            pps_phase_window=self._pps_phase_window,
         )

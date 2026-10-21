@@ -1087,32 +1087,44 @@ def test_attribute_alarm_health_model(
             return [value] * SubrackData.FAN_COUNT
         return value
 
+    def _inject_until(
+        value: float, health_state: HealthState, dev_state: DevState
+    ) -> bool:
+        """
+        Inject a value until the device reports the expected health and state.
+
+        The device's attribute config change handler may run after the
+        injection and restore the previously cached value, so the value is
+        re-injected on every poll until it sticks.
+
+        :param value: the scalar value to inject.
+        :param health_state: the expected device health state.
+        :param dev_state: the expected device state.
+
+        :return: whether the device reached the expected health and state.
+        """
+
+        def _injected() -> bool:
+            subrack_device.ChangeHardwareAttributeValue(
+                json.dumps({attribute: _attribute_value(value)})
+            )
+            return (
+                subrack_device.healthState == health_state
+                and subrack_device.state() == dev_state
+            )
+
+        return wait_for_condition(_injected, timeout=30, poll_interval=1.0)
+
     try:
         # Change the values past the max alarm
-        subrack_device.ChangeHardwareAttributeValue(
-            json.dumps(
-                {
-                    attribute: _attribute_value(float(max_alarm * 1.5)),
-                }
-            )
-        )
-        change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
-        # Race condition between receiving the healthstate event
-        # and the devstate actually changing.
-        assert wait_for_condition(
-            lambda: subrack_device.state() == DevState.ALARM, timeout=30
+        assert _inject_until(
+            float(max_alarm * 1.5), HealthState.FAILED, DevState.ALARM
         ), (subrack_device.state(), subrack_device.healthreport)
 
         # Change the value within the warning range
-        subrack_device.ChangeHardwareAttributeValue(
-            json.dumps(
-                {
-                    attribute: _attribute_value(float((max_warning + min_warning) / 2)),
-                }
-            )
-        )
-        change_event_callbacks["healthState"].assert_change_event(HealthState.OK)
-        assert subrack_device.state() == DevState.ON
+        assert _inject_until(
+            float((max_warning + min_warning) / 2), HealthState.OK, DevState.ON
+        ), (subrack_device.state(), subrack_device.healthreport)
     finally:
         # Cleanup: Restore original attribute config
         subrack_device.set_attribute_config(original_attribute_config)

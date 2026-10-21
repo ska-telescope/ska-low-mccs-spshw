@@ -192,6 +192,7 @@ def default_health_status(
     tpm_present: list[bool],
     tpm_on_off: list[bool],
     tpm_powers: list[float | None],
+    pps_phase_window: int,
 ) -> dict[str, Any]:
     """
     Return the health status reported by the subrack.
@@ -203,9 +204,12 @@ def default_health_status(
     :param tpm_present: whether a TPM is present in each slot.
     :param tpm_on_off: whether each slot is powered on.
     :param tpm_powers: the power drawn by each slot.
+    :param pps_phase_window: how many samples the PPS phase is averaged
+        over; not reported before API 1.8.0.
 
     :return: the health status dictionary.
     """
+    del pps_phase_window  # reported from API 1.8.0 only
     psu_powers = [
         current * voltage for current, voltage in zip(psu_currents, psu_voltages)
     ]
@@ -429,7 +433,52 @@ PPS_PHASE_WINDOW_DEFAULT: Final = 30
 PPS_PHASE_WINDOW_MAX: Final = 120
 """The most samples the PPS phase can be averaged over."""
 
+
+def health_status_1_8_0(*, pps_phase_window: int, **kwargs: Any) -> dict[str, Any]:
+    """
+    Return the health status reported by the subrack from API 1.8.0.
+
+    This adds the monitoring points that API 1.8.0 introduced. The peak
+    hold values (min and max) cover the time since the last poll, so here
+    they equal the current values, which do not change between polls.
+
+    :param pps_phase_window: how many samples the PPS phase is averaged
+        over. With one sample there is no spread to report.
+    :param kwargs: the arguments of ``default_health_status``.
+
+    :return: the health status dictionary.
+    """
+    health_status = default_health_status(pps_phase_window=pps_phase_window, **kwargs)
+
+    slots = health_status["slots"]
+    slots["faults"] = {slot: False for slot in slots["on"]}
+    slots["voltages_min"] = dict(slots["voltages"])
+    slots["voltages_max"] = dict(slots["voltages"])
+    slots["powers_max"] = dict(slots["powers"])
+
+    internal_voltages = health_status["internal_voltages"]
+    internal_voltages["V_POWERIN_MIN"] = internal_voltages["V_POWERIN"]
+    internal_voltages["V_POWERIN_MAX"] = internal_voltages["V_POWERIN"]
+    internal_voltages["BkplnPowerGood"] = True
+
+    health_status["plls"].update(
+        {
+            "BoardApllUnlockCount": 0,
+            "BoardDpllUnlockCount": 0,
+            "BoardSysclkEventCount": 0,
+            "PPS": True,
+            "PPSFaultCount": 0,
+            "PPSPhase": 0.0,  # ps
+            "PPSPhaseStdev": None if pps_phase_window == 1 else 0.0,  # ps
+            "PPSPhaseOutliers": 0,
+            "REF": True,
+            "REFFaultCount": 0,
+        }
+    )
+    return health_status
+
+
 HEALTH_STATUS: Final[dict[str, Callable[..., dict[str, Any]]]] = {
     "1.6.0": default_health_status,
-    "1.8.0": default_health_status,
+    "1.8.0": health_status_1_8_0,
 }

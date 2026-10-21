@@ -1967,7 +1967,7 @@ health-rollup = [
 [[package]]
 name = "ska-low-mccs-common"
 version = "4.9.1"
-source = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?rev=thorn-770#14631477d97c1d56a654f4b6b8af637e7f5c6784" }
+source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "backoff" },
@@ -1984,6 +1984,10 @@ dependencies = [
     { name = "ska-tango-base" },
     { name = "ska-tango-testing" },
     { name = "transitions" },
+]
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.9.1/ska_low_mccs_common-4.9.1.tar.gz", hash = "sha256:53e5f2cb3a8706053dc8a2d7d88eb6fd7571d4e3d72155421a56927120327970" }
+wheels = [
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-mccs-common/4.9.1/ska_low_mccs_common-4.9.1-py3-none-any.whl", hash = "sha256:a6d4c103fb5153a64743cd38c936e1b73dc7b5435674cf9c78340f99d7a73397" },
 ]
 
 [[package]]
@@ -2149,7 +2153,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.2,<2.0.0" },
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
-    { name = "ska-low-mccs-common", git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?rev=thorn-770" },
+    { name = "ska-low-mccs-common", specifier = ">=4.9.1" },
     { name = "ska-low-mccs-daq", specifier = ">=9.0.0,<10.0.0" },
     { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.2" },
     { name = "ska-ser-skuid", specifier = ">=6.0.0,<7.0.0" },

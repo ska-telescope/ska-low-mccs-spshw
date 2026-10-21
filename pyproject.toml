@@ -10,7 +10,7 @@ dependencies = [
     "scipy >= 1.11.2, <2.0.0",
     "ska-control-model[health_rollup] >= 1.2.0, <2.0.0",
     "ska-tango-base >= 1.6.1, < 2.0.0",
-    "ska-low-mccs-common @ git+https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common@thorn-770",
+    "ska-low-mccs-common>=4.9.1",
     "ska-low-mccs-daq >= 9.0.0, <10.0.0",
     "ska-telmodel-client>=1.31.0,<2.0.0",
     "ska-ser-skuid >= 6.0.0, <7.0.0",

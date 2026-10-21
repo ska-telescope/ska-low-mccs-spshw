@@ -42,6 +42,7 @@ DATA_TYPE_TO_BITWIDTH = {
 }
 
 
+# pylint: disable=too-many-instance-attributes
 class BaseDaqTest(TpmSelfCheckTest):
     """Base class for a generic DAQ test."""
 
@@ -70,6 +71,8 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._pattern: list | None = None
         self._adders: list | None = None
         self._data_created_event: Event = Event()
+        # The DAQ values to put back on reset, for each key this test configured.
+        self._daq_config_to_restore: dict[str, Any] = {}
         random_id = "".join(
             random.choice(string.ascii_letters + string.digits) for _ in range(24)
         )
@@ -114,6 +117,7 @@ class BaseDaqTest(TpmSelfCheckTest):
                 }
             )
 
+        self._save_daq_config(list(daq_config))
         self.daq_proxy.Configure(json.dumps(daq_config))
         time.sleep(1)
         self.daq_proxy.Start(json.dumps({"modes_to_start": daq_mode}))
@@ -136,6 +140,49 @@ class BaseDaqTest(TpmSelfCheckTest):
                 "payload_length": 8192,
             }
             self.component_manager.set_lmc_download(**tpm_config)
+
+    def _save_daq_config(self: BaseDaqTest, keys: list[str]) -> None:
+        """
+        Save the current DAQ value of each key, so that reset can put it back.
+
+        A key keeps the value from before the first change, because a test can
+        configure the DAQ more than once before it resets.
+
+        :param keys: the configuration keys that the test is about to change.
+        """
+        assert self.daq_proxy is not None
+        unsaved = [key for key in keys if key not in self._daq_config_to_restore]
+        if not unsaved:
+            return
+        current_config = json.loads(self.daq_proxy.GetConfiguration())
+        for key in unsaved:
+            if key in current_config:
+                self._daq_config_to_restore[key] = current_config[key]
+            else:
+                self.test_logger.warning(
+                    f"DAQ configuration has no {key}, so reset cannot restore it."
+                )
+
+    def _restore_daq_config(self: BaseDaqTest) -> None:
+        """
+        Put back the DAQ values that this test changed.
+
+        This leaves the DAQ as the test found it, so the configuration of one
+        test does not leak into the next test or into normal operation.
+
+        :raises AssertionError: if the DAQ rejects the configuration.
+        """
+        assert self.daq_proxy is not None
+        if not self._daq_config_to_restore:
+            return
+        config = self._daq_config_to_restore
+        self._daq_config_to_restore = {}
+        self.test_logger.debug(f"Restoring DAQ configuration {config}")
+        result_codes, messages = self.daq_proxy.Configure(json.dumps(config))
+        assert result_codes[0] == ResultCode.OK, (
+            f"DAQ did not accept the restored configuration {config}: "
+            f"{ResultCode(result_codes[0]).name} - {messages[0]}"
+        )
 
     def _configure_csp_ingest(self: BaseDaqTest) -> None:
         assert self.daq_proxy is not None
@@ -409,9 +456,10 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _reset(self: BaseDaqTest) -> None:
         self._stop_directory_watch()
         if self.daq_proxy is not None:
-            self.daq_proxy.Init()
+            self.daq_proxy.Stop()
             # Sleep to allow time to stop.
             time.sleep(1)
+            self._restore_daq_config()
         self._data = None
         self._data_created_event.clear()
         self._adders = None

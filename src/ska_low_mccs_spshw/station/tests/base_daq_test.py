@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, Iterator
 import numpy as np
 from ska_control_model import ResultCode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from tango import EventType
+from tango import AttrQuality, EventType
 
 from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
@@ -298,10 +298,36 @@ class BaseDaqTest(TpmSelfCheckTest):
             self._data_handler.end_watch()
         if (
             "datareceivedresult"
-            not in self.daq_proxy._change_event_subscription_ids[EventType.CHANGE_EVENT]
+            in self.daq_proxy._change_event_subscription_ids[EventType.CHANGE_EVENT]
         ):
+            self.daq_proxy.unsubscribe_change_event("datareceivedresult")
+        self._drain_daq_events()
+
+    def _drain_daq_events(self: BaseDaqTest) -> None:
+        """
+        Wait until the event serialiser has handled every queued DAQ event.
+
+        Events from this watch can still be in the queue after the unsubscribe.
+        The handler drops them while it is not watching. If the next watch
+        starts first, a stale event can use up the flag that ignores the
+        initial subscription event.
+        """
+        if self._daq_event_serialiser is None:
             return
-        self.daq_proxy.unsubscribe_change_event("datareceivedresult")
+        drained = Event()
+
+        def _set_drained(*_: Any) -> None:
+            drained.set()
+
+        self._daq_event_serialiser.queue_event(
+            self.daq_trl,
+            "drain",
+            None,
+            AttrQuality.ATTR_VALID,
+            _set_drained,
+        )
+        if not drained.wait(10):
+            self.test_logger.warning("Timed out waiting for DAQ events to drain")
 
     def _delete_data(self: BaseDaqTest) -> None:
         if not self.keep_data:

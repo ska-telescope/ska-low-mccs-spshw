@@ -214,6 +214,11 @@ class SpsStationSelfCheckManager:
         """
         return [self._last_test_results[name].value for name in self._tpm_test_names]
 
+    def cleanup(self: SpsStationSelfCheckManager) -> None:
+        """Stop the threads that the self-check tests started."""
+        for tpm_test in self._tpm_tests.values():
+            tpm_test.cleanup()
+
     @property
     def keep_test_data(self) -> bool:
         """

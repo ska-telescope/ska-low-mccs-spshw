@@ -4,6 +4,7 @@
 
 * [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicat events from DAQ (usually from EventSystemDown errors)
 * [SKB-1228] SpsStation.SelfCheck now reports FAILED when no test runs. It reported OK before, because it counted a skipped test as a pass.
+* [SKB-1228] Added the SpsStation `testResults` attribute. It gives the last result of each self-check test, in `testList` order. Each value is a `TestResult` (`PASSED`=0, `FAILED`=1, `ERROR`=2, `NOT_RUN`=3). A test that has not run reports `NOT_RUN`.
 
 ## 15.2.2
 

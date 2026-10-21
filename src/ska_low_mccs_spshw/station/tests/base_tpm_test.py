@@ -16,7 +16,7 @@ from io import StringIO
 from typing import TYPE_CHECKING, Any
 
 from ska_control_model import AdminMode, LoggingLevel, TaskStatus
-from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_ser_logging.configuration import _FORMAT_STR_NO_TAGS  # type: ignore
 
 if TYPE_CHECKING:
@@ -72,6 +72,7 @@ class TpmSelfCheckTest(abc.ABC):
         self.tile_proxies: list[MccsDeviceProxy] = []
         self.subrack_proxies: list[MccsDeviceProxy] = []
         self.daq_proxy: MccsDeviceProxy | None = None
+        self._daq_event_serialiser: EventSerialiser | None = None
         self.proxies: list[MccsDeviceProxy] = []
         self._proxies_constructed = False
 
@@ -91,7 +92,14 @@ class TpmSelfCheckTest(abc.ABC):
         self.proxies = self.tile_proxies + self.subrack_proxies
 
         if self.daq_trl != "":
-            self.daq_proxy = MccsDeviceProxy(fqdn=self.daq_trl, logger=self.logger)
+            # DAQ event callbacks can read HDF5 files for many seconds, so they
+            # run on this thread and not on the Tango event thread.
+            self._daq_event_serialiser = EventSerialiser(logger=self.logger)
+            self.daq_proxy = MccsDeviceProxy(
+                fqdn=self.daq_trl,
+                logger=self.logger,
+                event_serialiser=self._daq_event_serialiser,
+            )
             self.proxies.append(self.daq_proxy)
             self.daq_proxy.set_timeout_millis(20000)
 
@@ -130,6 +138,11 @@ class TpmSelfCheckTest(abc.ABC):
         :raises NotImplementedError: this is abstract.
         """
         raise NotImplementedError
+
+    def cleanup(self: TpmSelfCheckTest) -> None:
+        """Stop the threads that this test started."""
+        if self._daq_event_serialiser is not None:
+            self._daq_event_serialiser.stop()
 
     def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
         """

@@ -23,6 +23,9 @@ from .subrack_simulator_data import (
     ATTRIBUTE_METADATA,
     COMMANDS,
     HEALTH_STATUS,
+    PLL_PHASE_OFFSET_BITS,
+    PPS_PHASE_WINDOW_DEFAULT,
+    PPS_PHASE_WINDOW_MAX,
     SUPPORTED_API_VERSIONS,
 )
 
@@ -127,6 +130,9 @@ class SubrackSimulator(SubrackProtocol):
         self._aborted_event = threading.Event()
         self._command_is_running = False
         self._command_duration: Final = 0.05
+
+        self._pll_phase_offset = 0  # ps
+        self._pps_phase_window = PPS_PHASE_WINDOW_DEFAULT  # samples
 
     @apply_jitter
     def set_attribute(
@@ -468,6 +474,69 @@ class SubrackSimulator(SubrackProtocol):
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
         self._attribute_values["power_supply_fan_speeds"][fan_index] = speed
+
+    def _set_pll_phase_offset(self: SubrackSimulator, arg: str) -> None:
+        """
+        Set the PLL phase offset.
+
+        :param arg: the offset in ps, a whole number.
+
+        :raises ValueError: if the offset is not a whole number, or does not
+            fit the PLL's offset register.
+        """
+        try:
+            phase_offset = int(arg)
+        except ValueError as error:
+            # The API's message says floats are expected, but it parses ints.
+            raise ValueError(f"Invalid parameter (exp: float, got {arg})") from error
+        limit = 2 ** (PLL_PHASE_OFFSET_BITS - 1)
+        if not -limit <= phase_offset < limit:
+            raise ValueError(
+                f"Value {phase_offset} is out of range for a "
+                f"{PLL_PHASE_OFFSET_BITS}-bit signed integer "
+                f"({-limit} to {limit - 1})."
+            )
+        self._pll_phase_offset = phase_offset
+
+    def _get_pll_phase_offset(self: SubrackSimulator, _not_used: Optional[str]) -> int:
+        """
+        Return the PLL phase offset.
+
+        :param _not_used: not used, should always be empty e.g. ""
+
+        :return: the offset in ps.
+        """
+        return self._pll_phase_offset
+
+    def _set_pps_phase_window(self: SubrackSimulator, arg: str) -> None:
+        """
+        Set how many samples the PPS phase is averaged over.
+
+        :param arg: the window size in samples, a whole number.
+
+        :raises ValueError: if the size is not a whole number, or is out of
+            range.
+        """
+        try:
+            samples = int(arg)
+        except ValueError as error:
+            raise ValueError(f"Invalid parameter (exp: int, got {arg})") from error
+        if not 1 <= samples <= PPS_PHASE_WINDOW_MAX:
+            raise ValueError(
+                "PPS phase window must be between 1 and "
+                f"{PPS_PHASE_WINDOW_MAX} samples"
+            )
+        self._pps_phase_window = samples
+
+    def _get_pps_phase_window(self: SubrackSimulator, _not_used: Optional[str]) -> int:
+        """
+        Return how many samples the PPS phase is averaged over.
+
+        :param _not_used: not used, should always be empty e.g. ""
+
+        :return: the window size in samples.
+        """
+        return self._pps_phase_window
 
     def _async_turn_off_tpm(self: SubrackSimulator, arg: str) -> None:
         """

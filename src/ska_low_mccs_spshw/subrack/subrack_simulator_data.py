@@ -411,8 +411,23 @@ COMMANDS: Final[dict[str, tuple[str, ...]]] = {
         command
         for command in DEFAULT_COMMANDS
         if command not in ["set_power_supply_fan_speed"]
+    )
+    + (
+        "get_pll_phase_offset",
+        "get_pps_phase_window",
+        "set_pll_phase_offset",
+        "set_pps_phase_window",
     ),
 }
+
+PLL_PHASE_OFFSET_BITS: Final = 40
+"""The PLL phase offset is a signed integer of this many bits, in ps."""
+
+PPS_PHASE_WINDOW_DEFAULT: Final = 30
+"""How many samples the PPS phase is averaged over, unless set otherwise."""
+
+PPS_PHASE_WINDOW_MAX: Final = 120
+"""The most samples the PPS phase can be averaged over."""
 
 HEALTH_STATUS: Final[dict[str, Callable[..., dict[str, Any]]]] = {
     "1.6.0": default_health_status,

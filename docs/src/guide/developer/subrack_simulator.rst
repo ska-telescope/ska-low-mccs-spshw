@@ -142,22 +142,22 @@ The tables below show which commands and attributes of the SMB web API the simul
      - –
      - ✓
      - –
-     - ✗
+     - ✓
    * - ``get_pps_phase_window``
      - –
      - ✓
      - –
-     - ✗
+     - ✓
    * - ``set_pll_phase_offset``
      - –
      - ✓
      - –
-     - ✗
+     - ✓
    * - ``set_pps_phase_window``
      - –
      - ✓
      - –
-     - ✗
+     - ✓
    * - ``set_watchdog_enabled``
      - –
      - ✓

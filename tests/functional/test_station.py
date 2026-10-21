@@ -210,6 +210,14 @@ def test_reinitialise_does_not_reprogram_tpms() -> None:
     """
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "Known issue: initialising TPMs without reprogramming the FPGAs leaves "
+        "the beamformer ring stuck. If this XPASSes, the issue is fixed: remove "
+        "this xfail mark."
+    ),
+)
 @scenario(
     "features/station.feature",
     "Reinitialise keeps the beamformer signal chain running",

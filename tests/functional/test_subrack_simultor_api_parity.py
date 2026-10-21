@@ -193,21 +193,197 @@ ALL_ATTRIBUTES: Final = frozenset().union(
 )
 """Every attribute of every API version."""
 
-READ_ONLY_COMMANDS: Final = frozenset(
-    {
-        "are_tpms_on",
-        "command_completed",
-        "get_all_attributes",
-        "get_default_pll_source",
-        "get_default_ps_redundancy",
-        "get_health_status",
-        "get_pll_phase_offset",
-        "get_pps_phase_window",
-        "list_attributes",
-        "list_commands",
-    }
-)
-"""Commands that take no argument and change nothing, so are safe to call."""
+UNAVAILABLE_COMMANDS: Final[dict[str, frozenset[str]]] = {
+    "1.6.0": frozenset({"get_all_attributes", "tpm_info"}),
+    "1.8.0": frozenset(),
+}
+"""
+Commands that a version registers but cannot run, so are not tested.
+
+Before 1.8.0, ``tpm_info`` calls a deprecated method, and
+``get_all_attributes`` reads attributes that always fail, so both always
+answer with an error. Unlike unavailable attributes, they stay in
+``API_COMMANDS``, which must match what ``list_commands`` reports.
+"""
+
+ALL_COMMANDS: Final = frozenset().union(*API_COMMANDS.values())
+"""Every command of every API version."""
+
+SAFE_COMMANDS: Final[dict[str, str]] = {
+    "are_tpms_on": "",
+    "command_completed": "",
+    "get_all_attributes": "",
+    "get_default_pll_source": "",
+    "get_default_ps_redundancy": "",
+    "get_health_dictionary": "",
+    "get_health_status": "",
+    "get_pll_phase_offset": "",
+    "get_pps_phase_window": "",
+    "is_tpm_on": "1",
+    "list_attributes": "",
+    "list_commands": "",
+    "tpm_info": "1",
+}
+"""
+The commands that do not change the subrack, with the argument to send.
+
+These are the only commands that the tests send. Any other command could
+change the hardware, so it is never sent, not even to a version that is
+expected to reject it: if that expectation were wrong, the subrack would
+run the command. Whether those commands exist is checked through
+``list_commands`` instead.
+
+Two of these commands have side effects in 1.8.0, although they do not
+change the hardware: ``get_health_status`` resets the peak-hold values
+and counters it reports, and ``command_completed`` releases the block of
+a command that has finished.
+"""
+
+_PSUS: Final = ("PSU1", "PSU2")
+_SLOTS: Final = tuple(f"SLOT{number}" for number in range(1, 9))
+_FANS: Final = tuple(f"FAN{number}" for number in range(1, 5))
+
+HEALTH_STATUS_KEYS: Final[dict[str, dict[str, Any]]] = {
+    "1.6.0": {
+        "iso_datetime": None,
+        "system": None,
+        "SMM": ("power", "power_max"),
+        "temperatures": ("BKPLN1", "BKPLN2", "SMM1", "SMM2", "SMM_PLL"),
+        "plls": ("BoardPllLock", "CPLDPllLock", "PllSource"),
+        "pings": ("pings_CPLD",),
+        "internal_voltages": (
+            "V_1V1",
+            "V_1V5",
+            "V_2V5",
+            "V_2V8",
+            "V_3V",
+            "V_3V3",
+            "V_5V",
+            "V_ARM",
+            "V_CORE",
+            "V_DDR",
+            "V_POWERIN",
+            "V_SOC",
+        ),
+        "fans": {"mode": _FANS, "pwm_duty": _FANS, "speed": _FANS},
+        "psus": {
+            "busy": _PSUS,
+            "cml_fault": _PSUS,
+            "fan_fault": _PSUS,
+            "fan_speed": _PSUS,
+            "input_fault": _PSUS,
+            "iout_fault": _PSUS,
+            "iout_oc_fault": _PSUS,
+            "off": _PSUS,
+            "other": _PSUS,
+            "power_in": _PSUS,
+            "power_out": _PSUS,
+            "present": _PSUS,
+            "pwr_gd": _PSUS,
+            "temp_fault": _PSUS,
+            "temp_fet": _PSUS,
+            "temp_inlet": _PSUS,
+            "unknown": _PSUS,
+            "vin_uv_fault": _PSUS,
+            "voltage_in": _PSUS,
+            "voltage_out": _PSUS,
+            "vout_fault": _PSUS,
+            "vout_ov_fault": _PSUS,
+        },
+        "slots": {
+            "on": _SLOTS,
+            "pings": _SLOTS,
+            "powers": _SLOTS,
+            "presence": _SLOTS,
+            "singlewire": _SLOTS,
+            "voltages": _SLOTS,
+        },
+    },
+    "1.8.0": {
+        "iso_datetime": None,
+        "system": None,
+        "SMM": ("power", "power_max"),
+        "temperatures": ("BKPLN1", "BKPLN2", "SMM1", "SMM2", "SMM_PLL"),
+        "plls": (
+            "BoardApllUnlockCount",
+            "BoardDpllUnlockCount",
+            "BoardPllLock",
+            "BoardSysclkEventCount",
+            "CPLDPllLock",
+            "PPS",
+            "PPSFaultCount",
+            "PPSPhase",
+            "PPSPhaseOutliers",
+            "PPSPhaseStdev",
+            "PllSource",
+            "REF",
+            "REFFaultCount",
+        ),
+        "pings": ("pings_CPLD",),
+        "internal_voltages": (
+            "BkplnPowerGood",
+            "V_1V1",
+            "V_1V5",
+            "V_2V5",
+            "V_2V8",
+            "V_3V",
+            "V_3V3",
+            "V_5V",
+            "V_ARM",
+            "V_CORE",
+            "V_DDR",
+            "V_POWERIN",
+            "V_POWERIN_MAX",
+            "V_POWERIN_MIN",
+            "V_SOC",
+        ),
+        "fans": {"mode": _FANS, "pwm_duty": _FANS, "speed": _FANS},
+        "psus": {
+            "busy": _PSUS,
+            "cml_fault": _PSUS,
+            "fan_fault": _PSUS,
+            "fan_speed": _PSUS,
+            "input_fault": _PSUS,
+            "iout_fault": _PSUS,
+            "iout_oc_fault": _PSUS,
+            "off": _PSUS,
+            "other": _PSUS,
+            "power_in": _PSUS,
+            "power_out": _PSUS,
+            "present": _PSUS,
+            "pwr_gd": _PSUS,
+            "temp_fault": _PSUS,
+            "temp_fet": _PSUS,
+            "temp_inlet": _PSUS,
+            "unknown": _PSUS,
+            "vin_uv_fault": _PSUS,
+            "voltage_in": _PSUS,
+            "voltage_out": _PSUS,
+            "vout_fault": _PSUS,
+            "vout_ov_fault": _PSUS,
+        },
+        "slots": {
+            "faults": _SLOTS,
+            "on": _SLOTS,
+            "pings": _SLOTS,
+            "powers": _SLOTS,
+            "powers_max": _SLOTS,
+            "presence": _SLOTS,
+            "singlewire": _SLOTS,
+            "voltages": _SLOTS,
+            "voltages_max": _SLOTS,
+            "voltages_min": _SLOTS,
+        },
+    },
+}
+"""
+The keys of the health status, from the monitoring point lookup
+(subrack_mng_api/subrack_monitoring_point_lookup.py).
+
+A tuple lists the keys under a key; None marks a key whose contents are
+not checked, because they vary (``system`` is reported by the system
+monitor, not the lookup).
+"""
 
 ATTRIBUTE_RESPONSE_KEYS: Final = frozenset({"status", "info", "attribute", "value"})
 COMMAND_RESPONSE_KEYS: Final = frozenset({"status", "info", "command", "retvalue"})
@@ -251,15 +427,36 @@ _SIMULATOR_GAPS_IN_EVERY_VERSION: Final[dict[str, str]] = {
     ),
     "test_provided_attribute[tpm_ips]": "simulator has no tpm_ips",
     "test_provided_attribute[tpm_supply_fault]": "simulator has no tpm_supply_fault",
+    "test_command_list": "simulator does not provide every command",
+    "test_health_status": "simulator lacks some of the health status",
+    **{
+        f"test_provided_command[{name}]": f"simulator has no {name}"
+        for name in (
+            "are_tpms_on",
+            "get_default_pll_source",
+            "get_default_ps_redundancy",
+            "get_health_dictionary",
+            "is_tpm_on",
+            "list_attributes",
+        )
+    },
 }
 
 SIMULATOR_KNOWN_GAPS: Final[dict[str, dict[str, str]]] = {
     "1.6.0": _SIMULATOR_GAPS_IN_EVERY_VERSION,
     "1.8.0": {
         **_SIMULATOR_GAPS_IN_EVERY_VERSION,
-        "test_command_response_format[command_completed]": (
+        "test_provided_command[command_completed]": (
             "simulator does not add 'failed' to command_completed"
         ),
+        **{
+            f"test_provided_command[{name}]": f"simulator has no {name}"
+            for name in (
+                "get_all_attributes",
+                "get_pll_phase_offset",
+                "get_pps_phase_window",
+            )
+        },
         "test_provided_attribute[get_watchdog_status]": (
             "simulator has no get_watchdog_status"
         ),
@@ -370,61 +567,69 @@ def _request(subrack_url: str, **params: str) -> dict[str, Any]:
     return response.json()
 
 
-def _read_attribute(subrack_url: str, attribute_name: str) -> dict[str, Any]:
+def _request_until_ok(subrack_url: str, **params: str) -> dict[str, Any]:
     """
-    Read an attribute, retrying while the subrack answers with an error.
+    Send a request, retrying while the subrack answers with an error.
 
     :param subrack_url: the URL of the web API.
-    :param attribute_name: the attribute to read.
+    :param params: the query parameters.
 
     :return: the decoded JSON response of the last attempt.
     """
     for _ in range(ATTEMPTS - 1):
-        response = _request(subrack_url, type="getattribute", param=attribute_name)
+        response = _request(subrack_url, **params)
         if response.get("status") != "ERROR":
             return response
         time.sleep(RETRY_INTERVAL)
-    return _request(subrack_url, type="getattribute", param=attribute_name)
+    return _request(subrack_url, **params)
+
+
+def _health_status_paths(keys: dict[str, Any], prefix: str = "") -> set[str]:
+    """
+    Return the dotted paths of the health status keys that are checked.
+
+    :param keys: the expected keys, as in ``HEALTH_STATUS_KEYS``.
+    :param prefix: the path of ``keys`` itself.
+
+    :return: the dotted path of every key with no keys checked under it.
+    """
+    paths = set()
+    for key, below in keys.items():
+        path = f"{prefix}{key}"
+        if below is None:
+            paths.add(path)
+        elif isinstance(below, tuple):
+            paths.update(f"{path}.{name}" for name in below)
+        else:
+            paths.update(_health_status_paths(below, f"{path}."))
+    return paths
+
+
+def _reported_paths(
+    health: dict[str, Any], expected: set[str], prefix: str = ""
+) -> set[str]:
+    """
+    Return the dotted paths of a health status, down to the expected keys.
+
+    :param health: the health status, or part of it.
+    :param expected: the expected paths, below which nothing is collected.
+    :param prefix: the path of ``health`` itself.
+
+    :return: the dotted paths.
+    """
+    paths = set()
+    for key, value in health.items():
+        path = f"{prefix}{key}"
+        if path in expected or not isinstance(value, dict):
+            paths.add(path)
+        else:
+            paths.update(_reported_paths(value, expected, f"{path}."))
+    return paths
 
 
 # ----------------------------------------------------------------------
-# Response format
+# Malformed requests
 # ----------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("read_only_command", sorted(READ_ONLY_COMMANDS))
-def test_command_response_format(
-    subrack_url: str, api_version: str, read_only_command: str
-) -> None:
-    """
-    Test that running a command answers with the command response keys.
-
-    :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
-    :param read_only_command: the command to run.
-    """
-    if read_only_command not in API_COMMANDS[api_version]:
-        pytest.skip(f"{read_only_command} is not a command of this API version")
-    response = _request(subrack_url, type="command", param=read_only_command, value="")
-    expected = COMMAND_RESPONSE_KEYS | EXTRA_COMMAND_RESPONSE_KEYS[api_version].get(
-        read_only_command, frozenset()
-    )
-    assert set(response) == expected, response
-
-
-def test_unknown_command_is_rejected(subrack_url: str) -> None:
-    """
-    Test that a command that does not exist is rejected.
-
-    :param subrack_url: the URL of the web API.
-    """
-    response = _request(subrack_url, type="command", param="no_such_command", value="")
-    assert response == {
-        "status": "ERROR",
-        "info": "Command no_such_command not implemented",
-        "command": "no_such_command",
-        "retvalue": "",
-    }
 
 
 def test_missing_type_is_rejected(subrack_url: str) -> None:
@@ -476,7 +681,7 @@ def test_provided_attribute(
     if attribute_name not in API_ATTRIBUTES[api_version]:
         pytest.skip(f"{attribute_name} is not an attribute of this API version")
 
-    response = _read_attribute(subrack_url, attribute_name)
+    response = _request_until_ok(subrack_url, type="getattribute", param=attribute_name)
     assert set(response) == ATTRIBUTE_RESPONSE_KEYS, response
     assert response["status"] == "OK", response
 
@@ -501,3 +706,113 @@ def test_rejected_attribute(
     assert set(response) == REJECTED_ATTRIBUTE_RESPONSE_KEYS, response
     assert response["status"] == "ERROR", response
     assert response["info"] == f"Attribute {attribute_name} not present", response
+
+
+# ----------------------------------------------------------------------
+# Commands
+# ----------------------------------------------------------------------
+
+
+def test_command_list(subrack_url: str, api_version: str) -> None:
+    """
+    Test that the subrack lists exactly the commands of the API version.
+
+    This also covers the commands that are never sent.
+
+    :param subrack_url: the URL of the web API.
+    :param api_version: the API version under test.
+    """
+    response = _request_until_ok(
+        subrack_url, type="command", param="list_commands", value=""
+    )
+    assert response["status"] == "OK", response
+    listed = set(response["retvalue"])
+    expected = API_COMMANDS[api_version]
+    assert listed == expected, (
+        f"missing: {sorted(expected - listed)}, "
+        f"unexpected: {sorted(listed - expected)}"
+    )
+
+
+@pytest.mark.parametrize("command_name", sorted(ALL_COMMANDS))
+def test_provided_command(
+    subrack_url: str, api_version: str, command_name: str
+) -> None:
+    """
+    Test that a safe command of the API version runs.
+
+    :param subrack_url: the URL of the web API.
+    :param api_version: the API version under test.
+    :param command_name: the command to run.
+    """
+    if command_name not in API_COMMANDS[api_version]:
+        pytest.skip(f"{command_name} is not a command of this API version")
+    if command_name not in SAFE_COMMANDS:
+        pytest.skip(f"{command_name} is never sent: it changes the subrack")
+    if command_name in UNAVAILABLE_COMMANDS[api_version]:
+        pytest.skip(f"{command_name} is unavailable in this API version")
+    if command_name == "get_health_status":
+        pytest.skip("get_health_status is tested by test_health_status")
+
+    response = _request_until_ok(
+        subrack_url,
+        type="command",
+        param=command_name,
+        value=SAFE_COMMANDS[command_name],
+    )
+    expected_keys = COMMAND_RESPONSE_KEYS | EXTRA_COMMAND_RESPONSE_KEYS[
+        api_version
+    ].get(command_name, frozenset())
+    assert set(response) == expected_keys, response
+    assert response["status"] == "OK", response
+
+
+@pytest.mark.parametrize("command_name", sorted(ALL_COMMANDS))
+def test_rejected_command(
+    subrack_url: str, api_version: str, command_name: str
+) -> None:
+    """
+    Test that a safe command of another API version is rejected.
+
+    :param subrack_url: the URL of the web API.
+    :param api_version: the API version under test.
+    :param command_name: the command to send.
+    """
+    if command_name in API_COMMANDS[api_version]:
+        pytest.skip(f"{command_name} is a command of this API version")
+    if command_name not in SAFE_COMMANDS:
+        pytest.skip(f"{command_name} is never sent: it changes the subrack")
+
+    response = _request(
+        subrack_url,
+        type="command",
+        param=command_name,
+        value=SAFE_COMMANDS[command_name],
+    )
+    assert response == {
+        "status": "ERROR",
+        "info": f"Command {command_name} not implemented",
+        "command": command_name,
+        "retvalue": "",
+    }
+
+
+def test_health_status(subrack_url: str, api_version: str) -> None:
+    """
+    Test that the health status has exactly the keys of the API version.
+
+    :param subrack_url: the URL of the web API.
+    :param api_version: the API version under test.
+    """
+    response = _request_until_ok(
+        subrack_url, type="command", param="get_health_status", value=""
+    )
+    assert set(response) == COMMAND_RESPONSE_KEYS, response
+    assert response["status"] == "OK", response
+
+    expected = _health_status_paths(HEALTH_STATUS_KEYS[api_version])
+    reported = _reported_paths(response["retvalue"], expected)
+    assert reported == expected, (
+        f"missing: {sorted(expected - reported)}, "
+        f"unexpected: {sorted(reported - expected)}"
+    )

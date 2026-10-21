@@ -2998,21 +2998,18 @@ class TestMccsTile:
             attribute_name.lower()
         )
 
-        try:
-            attribute_config = original_attribute_config
-            alarm_config = attribute_config.alarms
-            if max_warning is not None:
-                alarm_config.max_warning = str(max_warning)
-            if max_alarm is not None:
-                alarm_config.max_alarm = str(max_alarm)
-            if min_warning is not None:
-                alarm_config.min_warning = str(min_warning)
-            if min_alarm is not None:
-                alarm_config.min_alarm = str(min_alarm)
-            attribute_config.alarms = alarm_config
-            on_tile_device.set_attribute_config(attribute_config)
-        except tango.DevFailed:
-            pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
+        attribute_config = original_attribute_config
+        alarm_config = attribute_config.alarms
+        if max_warning is not None:
+            alarm_config.max_warning = str(max_warning)
+        if max_alarm is not None:
+            alarm_config.max_alarm = str(max_alarm)
+        if min_warning is not None:
+            alarm_config.min_warning = str(min_warning)
+        if min_alarm is not None:
+            alarm_config.min_alarm = str(min_alarm)
+        attribute_config.alarms = alarm_config
+        on_tile_device.set_attribute_config(attribute_config)
 
         try:
             # Simulate value from ska-low-sps-tpm-api
@@ -3034,6 +3031,96 @@ class TestMccsTile:
             # Cleanup: Restore original attribute config
             try:
                 on_tile_device.set_attribute_config(original_attribute_config)
+            except tango.DevFailed:
+                print(f"Failed to restore attribute config for {attribute_name}")
+
+    def test_health_recovers_after_offline_and_missing_value(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that a threshold-derived health survives loss of information.
+
+        Taking the device OFFLINE, or the backend reporting no value for a
+        monitoring point, should report UNKNOWN health. Once the information
+        is available again, the health derived from the attribute's alarm
+        thresholds should be restored, rather than defaulting to OK.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        attribute_name = "fpga0_ddr_reset_counter"
+        backend_health_path = ["io", "ddr_interface", "reset_counter", "FPGA0"]
+        backend_health_value = 2
+
+        on_tile_device.subscribe_event(
+            "HealthState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["health_state"],
+        )
+        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        change_event_callbacks["health_state"].assert_not_called()
+
+        original_max_alarm = on_tile_device.get_attribute_config(
+            attribute_name
+        ).alarms.max_alarm
+        attribute_config = on_tile_device.get_attribute_config(attribute_name)
+        attribute_config.alarms.max_alarm = str(backend_health_value)
+        on_tile_device.set_attribute_config(attribute_config)
+
+        try:
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                backend_health_value,
+            )
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.FAILED
+            )
+
+            on_tile_device.adminMode = AdminMode.OFFLINE
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.UNKNOWN, lookahead=4, consume_nonmatches=True
+            )
+            change_event_callbacks["health_state"].assert_not_called()
+
+            on_tile_device.adminMode = AdminMode.ONLINE
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.FAILED, lookahead=4, consume_nonmatches=True
+            )
+            change_event_callbacks["health_state"].assert_not_called()
+
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                None,
+            )
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.UNKNOWN, lookahead=4, consume_nonmatches=True
+            )
+
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                backend_health_value,
+            )
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.FAILED, lookahead=4, consume_nonmatches=True
+            )
+            change_event_callbacks["health_state"].assert_not_called()
+            assert on_tile_device.healthState == HealthState.FAILED
+        finally:
+            attribute_config = on_tile_device.get_attribute_config(attribute_name)
+            attribute_config.alarms.max_alarm = original_max_alarm
+            try:
+                on_tile_device.set_attribute_config(attribute_config)
             except tango.DevFailed:
                 print(f"Failed to restore attribute config for {attribute_name}")
 

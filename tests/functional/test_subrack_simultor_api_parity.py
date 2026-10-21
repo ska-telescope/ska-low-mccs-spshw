@@ -13,15 +13,10 @@ API is expected to provide. They do not know whether they are talking to
 a real subrack or to the subrack simulator, so they can be used to check
 that the simulator behaves like the API.
 
-They are deselected unless given a target::
-
-    pytest tests/functional/test_subrack_simultor_api_parity.py \
-        --subrack-api=HOST:PORT
-
-The tests choose their expectations from the subrack's SMM BIOS version,
-in its ``board_info`` attribute. ``--subrack-api=simulator[:VERSION]``
-starts a subrack simulator locally instead, emulating VERSION (by
-default 1.6.0).
+They are deselected unless pytest is given a target with
+``--subrack-api``. How to run them, against the simulator or a real
+subrack, is described in the developer guide, on the subrack simulator
+page (docs/src/guide/developer/subrack_simulator.rst).
 """
 from __future__ import annotations
 
@@ -30,7 +25,7 @@ import re
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Final, Iterator
+from typing import Any, Final
 
 import pytest
 import requests
@@ -323,103 +318,22 @@ RETRY_INTERVAL: Final = 1.0
 
 # ----------------------------------------------------------------------
 # Connection to the subrack under test.
-#
-# This is the only part of the module that knows whether the target is
-# the simulator.
 # ----------------------------------------------------------------------
-
-_SIMULATOR_GAPS_IN_EVERY_VERSION: Final[dict[str, str]] = {
-    "test_rejected_attribute": (
-        "simulator rejects an attribute with 'value', not 'retvalue'"
-    ),
-    "test_missing_type_is_rejected": (
-        "simulator answers a missing type with {info, status: HTTP_ERROR}"
-    ),
-    "test_invalid_type_is_rejected": (
-        "simulator answers an invalid type with {info, status: HTTP_ERROR}"
-    ),
-    "test_provided_attribute[assigned_tpm_ip_adds]": (
-        "simulator has no assigned_tpm_ip_adds"
-    ),
-    "test_provided_attribute[tpm_ips]": "simulator has no tpm_ips",
-    "test_provided_attribute[tpm_supply_fault]": "simulator has no tpm_supply_fault",
-    "test_command_list": "simulator does not provide every command",
-    "test_health_status": "simulator lacks some of the health status",
-    **{
-        f"test_provided_command[{name}]": f"simulator has no {name}"
-        for name in (
-            "are_tpms_on",
-            "get_default_pll_source",
-            "get_default_ps_redundancy",
-            "get_health_dictionary",
-            "is_tpm_on",
-            "list_attributes",
-        )
-    },
-}
-
-SIMULATOR_KNOWN_GAPS: Final[dict[str, dict[str, str]]] = {
-    "1.6.0": _SIMULATOR_GAPS_IN_EVERY_VERSION,
-    "1.8.0": {
-        **_SIMULATOR_GAPS_IN_EVERY_VERSION,
-        "test_provided_command[command_completed]": (
-            "simulator does not add 'failed' to command_completed"
-        ),
-        **{
-            f"test_provided_command[{name}]": f"simulator has no {name}"
-            for name in (
-                "get_all_attributes",
-                "get_pll_phase_offset",
-                "get_pps_phase_window",
-            )
-        },
-        "test_provided_attribute[get_watchdog_status]": (
-            "simulator has no get_watchdog_status"
-        ),
-    },
-}
-"""
-Where the simulator is known not to behave like the API.
-
-Each entry is reported as a strict expected failure when testing the
-simulator, so a gap that gets fixed shows up as a failure until its
-entry is removed.
-"""
 
 
 @pytest.fixture(name="subrack_url")
-def subrack_url_fixture(request: pytest.FixtureRequest) -> Iterator[str]:
+def subrack_url_fixture(request: pytest.FixtureRequest) -> str:
     """
-    Yield the URL of the subrack web API under test.
+    Return the URL of the subrack web API under test.
 
     :param request: the pytest request.
 
-    :yields: the URL of the web API.
+    :return: the URL of the web API.
     """
     target = request.config.getoption("--subrack-api")
     if target is None:
         pytest.skip("needs --subrack-api")
-    if not target.startswith("simulator"):
-        yield f"http://{target}/get/json.htm"
-        return
-
-    # pylint: disable-next=import-outside-toplevel
-    from ska_low_mccs_spshw.subrack import SubrackSimulator
-
-    # pylint: disable-next=import-outside-toplevel
-    from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
-        SubrackServerContextManager,
-    )
-
-    _, _, simulator_version = target.partition(":")
-    simulator = SubrackSimulator(api_version=simulator_version or "1.6.0")
-    with SubrackServerContextManager(simulator) as (host, port):
-        url = f"http://{host}:{port}/get/json.htm"
-        gaps = SIMULATOR_KNOWN_GAPS[_read_api_version(url)]
-        gap = gaps.get(request.node.name) or gaps.get(request.node.originalname)
-        if gap is not None:
-            request.node.add_marker(pytest.mark.xfail(reason=gap, strict=True))
-        yield url
+    return f"http://{target}/get/json.htm"
 
 
 @pytest.fixture(name="api_version")

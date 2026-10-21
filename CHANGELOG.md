@@ -5,6 +5,7 @@
 * [THORN-749] Use CLUSTER_DOMAIN for aws migration.
 * [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
 * [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
+* [THORN-755] Modified subrack simulator to support different api versions. Added a manual parity test that makes sure the simulator has the same attributes and commands as the actual api. Added some docs for the simulator.
 
 ## 15.2.0
 

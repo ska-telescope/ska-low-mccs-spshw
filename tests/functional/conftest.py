@@ -80,9 +80,8 @@ def pytest_addoption(
         action="store",
         default=None,
         help=(
-            "Run the subrack web API tests against this target: HOST:PORT of a "
-            "subrack (or subrack simulator), or 'simulator[:VERSION]' to start "
-            "one locally"
+            "Run the subrack web API tests against the web API at HOST:PORT, "
+            "of a subrack or a subrack simulator"
         ),
     )
 

@@ -725,9 +725,6 @@ def test_RouteDataToDaqs_rejected_during_calibration_acquisition(
     """
     Test that RouteDataToDaqs is rejected while a calibration acquisition runs.
 
-    This tests behaviour that only exists with the DAQ-following fix, so it
-    cannot be run against the code without it.
-
     :param station_device: the SPS station Tango device under test.
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.

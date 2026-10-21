@@ -251,14 +251,11 @@ class _DaqDestinationMixin:  # pylint: disable=too-few-public-methods
         )
         try:
             version = str(self._proxy.versionId)
-        except tango.DevFailed as e:
+            release = re.match(r"(\d+)\.(\d+)\.(\d+)", version)
+            if release is None:
+                raise ValueError(f"{version!r} is not a version")
+        except (tango.DevFailed, ValueError) as e:
             self.logger.warning(f"DAQ version could not be read, {not_followed} {e}")
-            return {}
-        release = re.match(r"(\d+)\.(\d+)\.(\d+)", version)
-        if release is None:
-            self.logger.warning(
-                f"DAQ version {version!r} could not be read, {not_followed}"
-            )
             return {}
         if tuple(map(int, release.groups())) < _MIN_DAQ_VERSION_WITH_DESTINATION_EVENTS:
             self.logger.info(
@@ -3392,19 +3389,6 @@ class SpsStationComponentManager(
         self.logger.error(msg)
         return ResultCode.FAILED, msg
 
-    def _daq_destination(
-        self: SpsStationComponentManager, route: _DaqRoute
-    ) -> Optional[tuple[str, int]]:
-        """
-        Return the destination that a stream's DAQ advertises.
-
-        :param route: the stream's route.
-
-        :return: the IP and port that the DAQ advertises, if known.
-        """
-        with self._daq_routes_lock:
-            return route.advertised
-
     @property
     def misrouted_data_streams(self: SpsStationComponentManager) -> list[str]:
         """
@@ -3766,7 +3750,6 @@ class SpsStationComponentManager(
                 self.logger.error(
                     f"Failed to restore the routing of {route.name} data: {message}"
                 )
-        self._update_misrouted_data_streams()
 
     def route_data_to_daqs(
         self: SpsStationComponentManager,
@@ -3876,7 +3859,8 @@ class SpsStationComponentManager(
         rejected: list[str] = []
 
         bandpass_routed = False
-        bandpass_destination = self._daq_destination(bandpass_route)
+        with self._daq_routes_lock:
+            bandpass_destination = bandpass_route.advertised
         if bandpass_destination is None:
             if self._bandpass_daq_proxy is not None:
                 problems.append(
@@ -3903,7 +3887,8 @@ class SpsStationComponentManager(
                     f"Failed to configure LMC integrated download: {message}"
                 )
 
-        lmc_destination = self._daq_destination(lmc_route)
+        with self._daq_routes_lock:
+            lmc_destination = lmc_route.advertised
         if lmc_destination is None:
             if self._lmc_daq_proxy is not None:
                 problems.append(
@@ -4782,7 +4767,8 @@ class SpsStationComponentManager(
         :return: the destination, or why there isn't one.
         """
         if dst_ip == "":
-            destination = self._daq_destination(route)
+            with self._daq_routes_lock:
+                destination = route.advertised
             if destination is None:
                 msg = (
                     f"No destination IP was given, and the {route.name} DAQ has "

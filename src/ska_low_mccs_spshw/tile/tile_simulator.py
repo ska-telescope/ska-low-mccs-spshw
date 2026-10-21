@@ -980,6 +980,16 @@ class TileSimulator:
     STATION_ID = 1
     TILE_ID = 1
     CSP_SPEAD_FORMAT = "SKA"
+    # Data types that ``set_lmc_download`` can route independently on 10G,
+    # as in ``ska_low_sps_tpm_api.Tile.set_lmc_download``.
+    LMC_DATA_TYPES: Final = (
+        "raw",
+        "raw_synchronised",
+        "channelised",
+        "channelised_continuous",
+        "beam",
+        "antenna_buffer",
+    )
 
     def __init__(
         self: TileSimulator,
@@ -1018,8 +1028,7 @@ class TileSimulator:
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
         self._polling_thread.start()
-        self.dst_ip: str | None = None
-        self.dst_port: int | None = None
+        self._lmc_destinations: dict[str, tuple[str, int | None]] = {}
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
         self.csp_spead_format = self.CSP_SPEAD_FORMAT
@@ -1996,8 +2005,19 @@ class TileSimulator:
         # This is required to work out where the Tile will send data to.
         # In the Tile simulator we will not be using IP addresses but rather services
         # to route data to the correct location.
-        self.dst_ip = dst_ip
-        self.dst_port = dst_port
+        if data_type is not None and data_type not in self.LMC_DATA_TYPES:
+            self.logger.error(
+                f"Supported data_type values are {', '.join(self.LMC_DATA_TYPES)}, "
+                "or None for all."
+            )
+            return
+        # As on hardware, data types can only be routed separately over 10G.
+        if data_type is None or mode.upper() != "10G":
+            data_types: tuple[str, ...] = self.LMC_DATA_TYPES
+        else:
+            data_types = (data_type,)
+        for configured_type in data_types:
+            self._lmc_destinations[configured_type] = (dst_ip, dst_port)
 
     @check_mocked_overheating
     @connected
@@ -2664,13 +2684,10 @@ class TileSimulator:
         # Should the data created be meaningful? to what extent?
         # (delay, attenuation, random)
         self.stop_data_transmission()
-        if not self.dst_ip:
-            _dst_ip: str = ""
-        if not self.dst_port:
-            _dst_port: int = 8080
-        _dst_ip = self.dst_ip or _dst_ip
-        _dst_port = self.dst_port or _dst_port
-        self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
+        dst_ip, dst_port = self._lmc_destinations.get(
+            "raw_synchronised" if sync else "raw", ("", None)
+        )
+        self.spead_data_simulator.set_destination_ip(dst_ip or "", dst_port or 8080)
         self.spead_data_simulator.send_raw_data(1)
 
     @connected
@@ -2711,13 +2728,8 @@ class TileSimulator:
         #     number_of_samples = new_value
         self.stop_data_transmission()
 
-        if not self.dst_ip:
-            _dst_ip: str = ""
-        if not self.dst_port:
-            _dst_port: int = 8080
-        _dst_ip = self.dst_ip or _dst_ip
-        _dst_port = self.dst_port or _dst_port
-        self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
+        dst_ip, dst_port = self._lmc_destinations.get("channelised", ("", None))
+        self.spead_data_simulator.set_destination_ip(dst_ip or "", dst_port or 8080)
         # The simulator sends integrated channel data in place of a burst, so
         # number_of_samples does not apply.
         self.spead_data_simulator.send_channelised_data(
@@ -2849,8 +2861,6 @@ class TileSimulator:
         :param netmask_40g: the mask to apply to the 40g.
         :param gateway_ip_40g: the gateway ip for the 40g.
         """
-        self.dst_ip = dst_ip
-        self.dst_port = dst_port
 
     @check_mocked_overheating
     @connected

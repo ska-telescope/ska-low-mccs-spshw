@@ -27,11 +27,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.functional.conftest import poll_until_state_change
-from tests.harness import (
-    get_calibration_daq_name,
-    get_lmc_daq_name,
-    get_sps_station_name,
-)
+from tests.harness import get_lmc_daq_name, get_sps_station_name
 from tests.test_tools import (
     AttributeWaiter,
     get_lrc_executing,
@@ -140,7 +136,7 @@ def daq_device_fixture(station_name: str) -> tango.DeviceProxy:
     )
     has_calibration_daq = bool(calibration_daq_trl and calibration_daq_trl[0])
     daq_name = (
-        get_calibration_daq_name(station_name)
+        calibration_daq_trl[0]
         if has_calibration_daq
         else get_lmc_daq_name(station_name)
     )

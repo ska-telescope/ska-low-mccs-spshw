@@ -509,6 +509,77 @@ class TestOn:
         tpm_on_off[tpm_to_power - 1] = True
         callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
+    def test_recovers_from_upstream_communication_outage(
+        self: TestOn,
+        subrack_component_manager: SubrackComponentManager,
+        subrack_simulator_attribute_values: dict[str, Any],
+        subrack_driver_derived_attribute_values: dict[str, Any],
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test recovery when an upstream outage puts the subrack in UNKNOWN.
+
+        If we lose comms with an upstream device (PDU or power marshaller),
+        combined communication drops to NOT_ESTABLISHED and the device's
+        op_state is driven to UNKNOWN. However, because polling for the subrack
+        itself continues happily, power state remains ON throughout, but only a
+        power state update triggers a state change from UNKNOWN to ON.
+
+        :param subrack_component_manager: the subrack component manager under
+            test.
+        :param subrack_simulator_attribute_values: key-value dictionary of the
+            expected subrack simulator attribute values.
+        :param subrack_driver_derived_attribute_values: key-value dictionary
+            of the expected subrack simulator attribute values
+        :param callbacks: dictionary of driver callbacks.
+        """
+        subrack_component_manager.start_communicating()
+
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        # The subrack hardware is ON and polling successfully; its driver caches
+        # power=ON.
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+        callbacks["component_state"].assert_call(
+            **subrack_simulator_attribute_values,
+            **subrack_driver_derived_attribute_values,
+        )
+        callbacks["component_state"].assert_not_called()
+
+        # Simulate an upstream communication outage while subrack hardware polling
+        # continues. This drives the device op_state to UNKNOWN. We go through
+        # the callback the real PowerMarshaller proxy uses to report its
+        # connection status. (In this test the proxy has no device to connect to,
+        # so first report it connected, then lost.)
+        trl = subrack_component_manager.power_marshaller_trl
+        subrack_component_manager._device_communication_state_changed(
+            trl, CommunicationStatus.ESTABLISHED
+        )
+        # Connecting upstream after hardware is already ON re-asserts power too.
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_not_called()
+        subrack_component_manager._device_communication_state_changed(
+            trl, CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+
+        # Upstream communication is restored.
+        subrack_component_manager._device_communication_state_changed(
+            trl, CommunicationStatus.ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        # On reconnect the component manager should re-assert known hardware power
+        # so the device can leave op_state UNKNOWN.
+        callbacks["component_state"].assert_call(
+            power=PowerState.ON, consume_nonmatches=True
+        )
+
     # pylint: disable=too-many-arguments
     def test_other_commands(
         self: TestOn,

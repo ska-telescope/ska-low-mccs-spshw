@@ -14,7 +14,11 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 
-from ska_low_mccs_spshw.subrack.subrack_api import SubrackProtocol, router
+from ska_low_mccs_spshw.subrack.subrack_api import (
+    CommandResult,
+    SubrackProtocol,
+    router,
+)
 
 
 @pytest.fixture(name="backend")
@@ -334,4 +338,29 @@ def test_good_command(client: TestClient, backend: Mock) -> None:
         "info": "",
         "command": name,
         "retvalue": return_value,
+    }
+
+
+def test_command_with_further_fields(client: TestClient, backend: Mock) -> None:
+    """
+    Test handling of a command whose response has fields besides its value.
+
+    :param client: a test client to test the API with.
+    :param backend: a mock backend to test the API against.
+    """
+    name = "command_completed"
+
+    backend.execute_command.return_value = CommandResult(
+        retvalue=True,
+        fields={"failed": False, "info": "command_completed completed OK"},
+    )
+
+    response = client.get(f"/get/json.htm?type=command&param={name}&value=")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "command_completed completed OK",
+        "command": name,
+        "retvalue": True,
+        "failed": False,
     }

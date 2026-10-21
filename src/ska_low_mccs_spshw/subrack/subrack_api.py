@@ -8,6 +8,7 @@
 """This module provides a HTTP server that acts as front end to a subrack."""
 from __future__ import annotations
 
+import dataclasses
 from typing import Any, Optional, Protocol
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
@@ -15,6 +16,23 @@ from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
+
+
+@dataclasses.dataclass(frozen=True)
+class CommandResult:
+    """
+    The result of a command whose response has more than a return value.
+
+    A backend's ``execute_command`` returns one of these instead of a bare
+    return value when the response needs other fields as well, such as the
+    "failed" field of ``command_completed`` from API 1.8.0.
+    """
+
+    retvalue: JsonSerializable
+    """The return value of the command."""
+
+    fields: dict[str, JsonSerializable] = dataclasses.field(default_factory=dict)
+    """Further fields of the response, which override the defaults."""
 
 
 class SubrackProtocol(Protocol):
@@ -157,6 +175,14 @@ def _handle_command(
             "info": str(exception),
             "command": name,
             "retvalue": "",
+        }
+    if isinstance(return_value, CommandResult):
+        return {
+            "status": HardwareClientResponseStatusCodes.OK.name,
+            "info": "",
+            "command": name,
+            "retvalue": return_value.retvalue,
+            **return_value.fields,
         }
     return {
         "status": HardwareClientResponseStatusCodes.OK.name,

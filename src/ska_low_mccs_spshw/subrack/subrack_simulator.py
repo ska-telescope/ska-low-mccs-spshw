@@ -17,7 +17,7 @@ import time
 from collections.abc import Iterator
 from typing import Any, Callable, Final, Optional, cast
 
-from .subrack_api import SubrackProtocol
+from .subrack_api import CommandResult, SubrackProtocol
 from .subrack_data import SubrackData
 from .subrack_simulator_data import (
     ATTRIBUTE_METADATA,
@@ -406,15 +406,26 @@ class SubrackSimulator(SubrackProtocol):
         assert not _not_used
         return list(self.COMMANDS)
 
-    def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
+    def _command_completed(
+        self: SubrackSimulator, _not_used: Optional[str]
+    ) -> bool | CommandResult:
         """
         Check if no command is currently running.
+
+        From API 1.8.0, the response also says whether the command failed;
+        simulated commands never fail.
 
         :param _not_used: not used, should always be empty e.g. ""
         :return: False if a command is currently run; otherwise True.
         """
         assert not _not_used
-        return not self._command_is_running
+        completed = not self._command_is_running
+        if self._api_version == "1.6.0":
+            return completed
+        return CommandResult(
+            retvalue=completed,
+            fields={"failed": False, "info": "command_completed completed OK"},
+        )
 
     def _abort_command(self: SubrackSimulator, _not_used: Optional[str]) -> None:
         """

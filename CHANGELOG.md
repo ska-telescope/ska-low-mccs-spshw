@@ -4,6 +4,7 @@
 
 * [SKB-1420] Fix subrack device stuck in UNKNOWN state when upstream (PDU/PowerMarshaller) communication is established after the subrack is already being polled and is ON. The cached hardware power state is now re-asserted when all upstream connections are established. Fault updates received when the op state does not allow them (UNKNOWN or OFF) are now held and applied once legal, instead of raising illegal op-state transitions.
 * [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicate events from DAQ (usually from EventSystemDown errors)
+* [THORN-769] Added test if initialising TPMs without reprogramming leads to broken signal chain
 
 ## 15.2.2
 

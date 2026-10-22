@@ -1941,6 +1941,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.test_list
 
     @attribute(
+        dtype=("DevShort",),
+        max_dim_x=32,
+    )
+    def testResults(self: SpsStation) -> list[int]:
+        """
+        Get the last result of each self-check test, in testList order.
+
+        Values correspond to TestResult: PASSED=0, FAILED=1, ERROR=2, NOT_RUN=3.
+
+        :return: list of TestResult integer values, one per test.
+        """
+        return self.component_manager.last_test_results
+
+    @attribute(
         dtype="DevString",
         label="CSP SPEAD Format",
         doc="Gets the SPEAD format currently in use. (AAVS or SKA)",

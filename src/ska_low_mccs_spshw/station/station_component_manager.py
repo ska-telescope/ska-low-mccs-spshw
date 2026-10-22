@@ -945,6 +945,7 @@ class SpsStationComponentManager(
             tile_proxy.cleanup()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.cleanup()
+        self.self_check_manager.cleanup()
         super().cleanup()
 
         # Superclass cleanup currently not implemented.
@@ -3326,6 +3327,16 @@ class SpsStationComponentManager(
 
         test_results = self.self_check_manager.run_tests()
 
+        if all(test_result == TestResult.NOT_RUN for test_result in test_results):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(
+                        ResultCode.FAILED,
+                        "No tests ran, test requirements not met, check logs.",
+                    ),
+                )
+            return
         if all(
             test_result in [TestResult.PASSED, TestResult.NOT_RUN]
             for test_result in test_results
@@ -3976,6 +3987,15 @@ class SpsStationComponentManager(
         :return: list of self-check tests available.
         """
         return self.self_check_manager._tpm_test_names
+
+    @property
+    def last_test_results(self: SpsStationComponentManager) -> list[int]:
+        """
+        Get the last result of each self-check test in testList order.
+
+        :return: list of TestResult integer values, one per test.
+        """
+        return self.self_check_manager.last_test_results
 
     @property
     def keep_test_data(self: "SpsStationComponentManager") -> bool:

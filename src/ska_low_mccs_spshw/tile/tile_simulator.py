@@ -2861,6 +2861,13 @@ class TileSimulator:
         :param netmask_40g: the mask to apply to the 40g.
         :param gateway_ip_40g: the gateway ip for the 40g.
         """
+        # Workaround: the simulator can't stream integrated data yet (see the TODO
+        # in configure_integrated_channel_data), so send_channelised_data sends
+        # integrated channel packets in its place, and tests route those with
+        # SetLmcIntegratedDownload. Overwriting the channelised destination here
+        # keeps that working. To remove this, make configure_integrated_channel_data
+        # stream integrated packets to a destination stored by this method.
+        self._lmc_destinations["channelised"] = (dst_ip, dst_port)
 
     @check_mocked_overheating
     @connected

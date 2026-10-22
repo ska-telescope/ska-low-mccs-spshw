@@ -287,8 +287,8 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
 # in init_device, so not importable directly). Keep in sync with that map.
 HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "ppsPresent": ["timing", "pps", "status"],
-    "fpga1Temperature": ["temperatures", "FPGA0"],
-    "fpga2Temperature": ["temperatures", "FPGA1"],
+    "temperatures_fpga0": ["temperatures", "FPGA0"],
+    "temperatures_fpga1": ["temperatures", "FPGA1"],
     "boardTemperature": ["temperatures", "board"],
     "io": ["io"],
     "dsp": ["dsp"],

@@ -1582,8 +1582,8 @@ def beamformer_ring_advancing(station_tiles: list[tango.DeviceProxy]) -> None:
     """
     Check the beamformer ring current frame advances on both FPGAs of every TPM.
 
-    A counter that never changes indicates a broken signal chain. Each
-    FPGA is given a short grace period before being declared stuck.
+    A counter that never changes indicates a broken signal chain.This code takes
+    two frames at 10ms distance then checks to make sure they are advancing.
 
     :param station_tiles: List of TPM DeviceProxies.
     """
@@ -1593,18 +1593,14 @@ def beamformer_ring_advancing(station_tiles: list[tango.DeviceProxy]) -> None:
     for tile in station_tiles:
         for fpga in ("fpga1", "fpga2"):
             register = f"{fpga}.beamf_ring.current_frame"
-            deadline = time.time() + 10
-            while True:
-                first = list(tile.ReadRegister(register))
-                time.sleep(0.01)
-                second = list(tile.ReadRegister(register))
-                assert first and second, f"{tile.dev_name()}: {register} not present"
-                if first != second:
-                    print(f"{tile.dev_name()} {fpga}: {first} -> {second} advancing")
-                    break
-                if time.time() > deadline:
-                    stuck.append(f"{tile.dev_name()} {fpga}: frame {first} STUCK")
-                    break
-                time.sleep(0.5)
+            time.sleep(0.01)
+            first = list(tile.ReadRegister(register))
+            time.sleep(0.01)
+            second = list(tile.ReadRegister(register))
+            assert first and second, f"{tile.dev_name()}: {register} not present"
+            if first != second:
+                print(f"{tile.dev_name()} {fpga}: {first} -> {second} advancing")
+            else:
+                stuck.append(f"{tile.dev_name()} {fpga}: frame {first} STUCK")
 
     assert not stuck, f"Beamformer ring frame counter stuck: {stuck}"

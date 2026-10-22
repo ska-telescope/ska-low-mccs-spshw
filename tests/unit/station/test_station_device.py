@@ -433,6 +433,7 @@ def test_On(
             json.dumps(
                 {
                     "mode": "10G",
+                    "data_type": None,
                     "payload_length": 8192,
                     "destination_ip": "10.244.170.166",
                     "destination_port": 4660,
@@ -634,6 +635,7 @@ def test_Initialise(
             json.dumps(
                 {
                     "mode": "10G",
+                    "data_type": None,
                     "payload_length": 8192,
                     "destination_ip": "10.244.170.166",
                     "destination_port": 4660,
@@ -893,6 +895,7 @@ def test_Standby(
             json.dumps(
                 {
                     "mode": "10G",
+                    "data_type": None,
                     "payload_length": 8192,
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,

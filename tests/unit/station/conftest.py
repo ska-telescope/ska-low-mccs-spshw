@@ -534,7 +534,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 f"/correlation_burst_{argin}_20250314_58668_{time.time_ns()}.hdf5"
             )
             self.component_manager._lmc_daq_state_changed(
-                "some/daq/fqdn",
+                self.component_manager._active_calibration_daq_trl,
                 dataReceivedResult=(
                     "correlator",
                     json.dumps({"file_name": base_dir + file_name}),

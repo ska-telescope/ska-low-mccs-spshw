@@ -559,6 +559,7 @@ class SpsStationComponentManager(
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
+    #  pylint: disable=too-many-branches
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,
@@ -566,6 +567,7 @@ class SpsStationComponentManager(
         tile_fqdns: Sequence[str],
         lmc_daq_trl: str,
         bandpass_daq_trl: str,
+        calibration_daq_trl: str,
         wren_trl: str,
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
@@ -599,6 +601,8 @@ class SpsStationComponentManager(
             Could be empty if the device property is not set.
         :param bandpass_daq_trl: The TRL of this Station's DAQ Receiver for bandpasses.
             Could be empty if the device property is not set.
+        :param calibration_daq_trl: The TRL of this Station's DAQ Receiver for
+            calibration data. Could be empty if the device property is not set.
         :param wren_trl: The TRL of this Station's WREN instance.
             Could be empty if the device property is not set.
         :param sdn_first_interface: CIDR-style IP address with mask,
@@ -644,11 +648,13 @@ class SpsStationComponentManager(
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
+        self._calibration_daq_proxy: Optional[_LMCDaqProxy] = None
         self._wren_proxy: Optional[_WrenProxy] = None
         self._bandpass_integration_time = bandpass_integration_time
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
+        self._calibration_daq_trl = calibration_daq_trl
         self._wren_trl = wren_trl
         self._wren_health_check_fail_on_timeout = wren_health_check_fail_on_timeout
         self._wren_health_check_timeout = wren_health_check_timeout
@@ -752,6 +758,22 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._bandpass_daq_power_state = {bandpass_daq_trl: PowerState.UNKNOWN}
+        if self._calibration_daq_trl:
+            self._calibration_daq_proxy = _LMCDaqProxy(
+                self._calibration_daq_trl,
+                station_id,
+                logger,
+                functools.partial(
+                    self._device_communication_state_changed, self._calibration_daq_trl
+                ),
+                functools.partial(
+                    self._calibration_daq_state_changed, self._calibration_daq_trl
+                ),
+                event_serialiser=self._event_serialiser,
+            )
+            self._calibration_daq_power_state = {
+                calibration_daq_trl: PowerState.UNKNOWN
+            }
 
         # Create the WREN proxy and WREN power state variable. If the WREN TRL
         # isn't set, create an empty dict for the WREN power state
@@ -811,6 +833,9 @@ class SpsStationComponentManager(
         self._lmc_ip = "0.0.0.0"
         self._lmc_port = self._destination_port
         self._lmc_payload_length = 8192
+
+        self._calibration_ip = "0.0.0.0"
+        self._calibration_port = self._destination_port
 
         self._desired_beamformer_table = np.zeros(shape=(48, 7), dtype=int)
         self._desired_beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
@@ -898,6 +923,8 @@ class SpsStationComponentManager(
             optional_devices[self._lmc_daq_trl] = self._lmc_daq_proxy
         if self._bandpass_daq_proxy:
             optional_devices[self._bandpass_daq_trl] = self._bandpass_daq_proxy
+        if self._calibration_daq_proxy:
+            optional_devices[self._calibration_daq_trl] = self._calibration_daq_proxy
         if self._wren_proxy:
             optional_devices[self._wren_trl] = self._wren_proxy
 
@@ -921,6 +948,10 @@ class SpsStationComponentManager(
 
         self.acquiring_data_for_calibration = threading.Event()
         self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
+        # TRL of the DAQ actually targeted by the in-progress calibration
+        # acquisition (LMC and Calibration DAQ may both be configured and
+        # both live -- only events from this one should feed the queue).
+        self._active_calibration_daq_trl = ""
 
         if antenna_config_uri:
             logger.debug("Retrieving antenna mapping.")
@@ -939,6 +970,8 @@ class SpsStationComponentManager(
             self._lmc_daq_proxy.cleanup()
         if self._bandpass_daq_proxy:
             self._bandpass_daq_proxy.cleanup()
+        if self._calibration_daq_proxy:
+            self._calibration_daq_proxy.cleanup()
         if self._wren_proxy:
             self._wren_proxy.cleanup()
         for tile_proxy in self._tile_proxies.values():
@@ -1908,15 +1941,73 @@ class SpsStationComponentManager(
             data_received_result: tuple[str, str] = state_change.get(
                 "dataReceivedResult", ("", "")
             )
-            if (
-                data_received_result[0] in ("correlator", "tc_correlator")
-                and self.acquiring_data_for_calibration.is_set()
-            ):
-                self.calibration_data_received_queue.put(
-                    json.loads(data_received_result[1])["file_name"]
-                )
+            self._handle_daq_data_received(fqdn, data_received_result)
+
+    @threadsafe
+    def _calibration_daq_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
+    ) -> None:
+        if power is not None:
+            with self._power_state_lock:
+                self._calibration_daq_power_state[fqdn] = power
+                self._evaluate_power_state()
+        if "dataReceivedResult" in state_change:
+            data_received_result: tuple[str, str] = state_change.get(
+                "dataReceivedResult", ("", "")
+            )
+            self._handle_daq_data_received(fqdn, data_received_result)
+
+    def _handle_daq_data_received(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        data_received_result: tuple[str, str],
+    ) -> None:
+        """
+        Handle a ``dataReceivedResult`` event raised by an LMC or Calibration DAQ.
+
+        The LMC and Calibration DAQ proxies can both be configured and both
+        live at once, but only one of them is actually targeted by any given
+        calibration acquisition. A correlator result is only fed into the
+        calibration queue if it came from the DAQ currently selected for
+        that acquisition, so an unrelated/stale result from the other DAQ
+        can't be mistaken for the one being waited on.
+
+        :param fqdn: TRL of the DAQ that raised the event.
+        :param data_received_result: the event payload: a (mode, JSON
+            metadata) tuple.
+        """
+        if (
+            fqdn == self._active_calibration_daq_trl
+            and data_received_result[0] in ("correlator", "tc_correlator")
+            and self.acquiring_data_for_calibration.is_set()
+        ):
+            self.calibration_data_received_queue.put(
+                json.loads(data_received_result[1])["file_name"]
+            )
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
+
+    def _get_calibration_daq(
+        self: SpsStationComponentManager,
+    ) -> tuple[Optional[_LMCDaqProxy], str]:
+        """
+        Return the DAQ proxy/TRL to use for calibration data.
+
+        Prefers the Calibration DAQ if it is configured and we hold a proxy
+        for it, falling back to the LMC DAQ otherwise. Either may be unset
+        (proxy ``None``/TRL ``""``) if neither DAQ is configured.
+
+        :return: a tuple of the DAQ proxy to use (or None), and its TRL.
+        """
+        if (
+            self._calibration_daq_proxy is not None
+            and self._calibration_daq_proxy._proxy is not None
+        ):
+            return self._calibration_daq_proxy, self._calibration_daq_trl
+        return self._lmc_daq_proxy, self._lmc_daq_trl
 
     @threadsafe
     def _bandpass_daq_state_changed(
@@ -3228,7 +3319,8 @@ class SpsStationComponentManager(
         Route data streams to relevant DAQs.
 
         Route integrated data (for bandpasses) over the 1G to bandpass DAQ, route
-        everything else over the 10G to the LMC DAQ.
+        channelised data (for calibration) over the 10G to the calibration DAQ
+        (if available) and everything else over the 10G to the LMC DAQ.
 
         :param start_bandpasses: whether to start sending
             integrated data, defaults to deployed default.
@@ -3240,6 +3332,17 @@ class SpsStationComponentManager(
             lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
             self._lmc_ip = lmc_daq_status["Receiver IP"][0]
             self._lmc_port = lmc_daq_status["Receiver Ports"][0]
+
+        if (
+            self._calibration_daq_proxy is not None
+            and self._calibration_daq_proxy._proxy is not None
+        ):
+            calibration_daq_status = json.loads(
+                self._calibration_daq_proxy._proxy.DaqStatus()
+            )
+            self._calibration_ip = calibration_daq_status["Receiver IP"][0]
+            self._calibration_port = calibration_daq_status["Receiver Ports"][0]
+
         if (
             self._bandpass_daq_proxy is not None
             and self._bandpass_daq_proxy._proxy is not None
@@ -3287,6 +3390,29 @@ class SpsStationComponentManager(
             msg = f"Failed to configure LMC download: {lmc_message[0]}"
             self.logger.error(msg)
             return ResultCode.FAILED, msg
+
+        if (
+            self._calibration_daq_proxy is not None
+            and self._calibration_daq_proxy._proxy is not None
+        ):
+            self.logger.info(
+                "Sending channelised data to Calibration Daq: "
+                f"{self._calibration_ip}:{self._calibration_port}"
+            )
+            calibration_result_code, calibration_message = self.set_lmc_download(
+                mode=self._lmc_mode,
+                data_type="channelised",
+                dst_ip=self._calibration_ip,
+                dst_port=self._calibration_port,
+                payload_length=self._lmc_payload_length,
+            )
+            if calibration_result_code[0] != ResultCode.OK:
+                msg = (
+                    "Failed to configure sending channelised data to "
+                    f"calibration daq: {calibration_message[0]}"
+                )
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
 
         if (
             start_bandpasses
@@ -4023,6 +4149,7 @@ class SpsStationComponentManager(
         mode: str,
         payload_length: int,
         dst_ip: str,
+        data_type: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
@@ -4032,6 +4159,7 @@ class SpsStationComponentManager(
         :param mode: '1G' or '10G'
         :param payload_length: SPEAD payload length for LMC packets
         :param dst_ip: Destination IP, defaults to None
+        :param data_type: Data type to configure or `None` for all.
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
 
@@ -4042,6 +4170,7 @@ class SpsStationComponentManager(
         json_param = json.dumps(
             {
                 "mode": mode,
+                "data_type": data_type,
                 "payload_length": payload_length,
                 "destination_ip": dst_ip,
                 "destination_port": int(dst_port),
@@ -4698,14 +4827,18 @@ class SpsStationComponentManager(
         # Stop any consumers left by a previous run so Start begins from idle.
         self._stop_daq()
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        on_command = MccsCommandProxy(self._lmc_daq_trl, "Start", self.logger)
+        on_command = MccsCommandProxy(
+            self._active_calibration_daq_trl, "Start", self.logger
+        )
         result, message = on_command(json.dumps({"modes_to_start": daq_mode}))
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to start in {daq_mode}: {message}")
 
     def _stop_daq(self: SpsStationComponentManager) -> None:
         self.logger.info("Stopping DAQ")
-        off_command = MccsCommandProxy(self._lmc_daq_trl, "Stop", self.logger)
+        off_command = MccsCommandProxy(
+            self._active_calibration_daq_trl, "Stop", self.logger
+        )
         result, message = off_command()
         if result != ResultCode.OK:
             raise ValueError(f"DAQ failed to stop: {message}")
@@ -4876,10 +5009,16 @@ class SpsStationComponentManager(
                     self.logger.exception("Failed to stop TPM transmission on teardown")
             self.acquiring_data_for_calibration.clear()
             self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
-            try:
-                self._stop_daq()
-            except Exception:  # pylint: disable=broad-except
-                self.logger.exception("Failed to stop DAQ on teardown")
+            # Only stop a DAQ this run actually selected. If we bailed out
+            # before configure_station_for_calibration ran, no DAQ is pinned
+            # and there's nothing of ours to stop (and guessing could stop a
+            # DAQ that is in use for something else).
+            if self._active_calibration_daq_trl:
+                try:
+                    self._stop_daq()
+                except Exception:  # pylint: disable=broad-except
+                    self.logger.exception("Failed to stop DAQ on teardown")
+            self._active_calibration_daq_trl = ""
 
         if task_callback:
             if success:
@@ -4916,7 +5055,9 @@ class SpsStationComponentManager(
         :return: A tuple containing the result code and a human-readable
             status message.
         """
-        assert self._lmc_daq_proxy is not None
+        calibration_daq_proxy, calibration_daq_trl = self._get_calibration_daq()
+        assert calibration_daq_proxy is not None
+        self._active_calibration_daq_trl = calibration_daq_trl
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
@@ -4959,7 +5100,7 @@ class SpsStationComponentManager(
             return ResultCode.ABORTED, "Task aborted"
 
         configure_command = MccsCommandProxy(
-            self._lmc_daq_trl, "Configure", self.logger
+            calibration_daq_trl, "Configure", self.logger
         )
         result_code, message = configure_command(json.dumps(base_config), is_lrc=False)
         if result_code != ResultCode.OK:
@@ -4970,8 +5111,9 @@ class SpsStationComponentManager(
         [download_result_code], [download_message] = self.set_lmc_download(
             mode="10g",
             payload_length=8192,  # Default for using 10g
-            dst_ip=self._lmc_daq_proxy.receiverIP,
-            dst_port=self._lmc_daq_proxy.receiverPorts[0],
+            dst_ip=calibration_daq_proxy.receiverIP,
+            data_type="channelised",
+            dst_port=calibration_daq_proxy.receiverPorts[0],
         )
         if download_result_code != ResultCode.OK:
             return _fail(

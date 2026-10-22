@@ -2965,6 +2965,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         tile_simulator.set_lmc_download.assert_called_once_with(
             mocked_input_params["mode"],
+            data_type=None,
             payload_length=mocked_input_params["payload_length"],
             dst_ip=mocked_input_params["dst_ip"],
             src_port=mocked_input_params["src_port"],
@@ -3874,3 +3875,34 @@ class TestDynamicSimulator:
         final_rfi = tile_component_manager.tile.read_broadband_rfi()
         difference_mask = initial_rfi != final_rfi  # True where values differ
         assert np.all(final_rfi[difference_mask] > initial_rfi[difference_mask])
+
+
+def test_tile_simulator_routes_lmc_data_types_independently(
+    tile_simulator: TileSimulator,
+) -> None:
+    """
+    Test that the simulator keeps a separate LMC destination per data type.
+
+    As on hardware, routing one data type (e.g. channelised data to a
+    Calibration DAQ) must not move the others, and routing with no data type
+    must reset every data type.
+
+    :param tile_simulator: the tile simulator under test.
+    """
+    tile_simulator.connect()
+    spead_data_simulator = unittest.mock.Mock()
+    tile_simulator.spead_data_simulator = spead_data_simulator  # type: ignore
+
+    tile_simulator.set_lmc_download("10g", dst_ip="lmc-daq", dst_port=4660)
+    tile_simulator.set_lmc_download(
+        "10g", data_type="channelised", dst_ip="calibration-daq", dst_port=4661
+    )
+
+    tile_simulator.send_raw_data()
+    spead_data_simulator.set_destination_ip.assert_called_with("lmc-daq", 4660)
+    tile_simulator.send_channelised_data()
+    spead_data_simulator.set_destination_ip.assert_called_with("calibration-daq", 4661)
+
+    tile_simulator.set_lmc_download("10g", dst_ip="lmc-daq", dst_port=4660)
+    tile_simulator.send_channelised_data()
+    spead_data_simulator.set_destination_ip.assert_called_with("lmc-daq", 4660)

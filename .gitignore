@@ -57,6 +57,7 @@ tls.crt
 tls.key
 testing/results/*
 **/charts/*.tgz
+**/tmpcharts-*/
 
 # sphinx
 docs/src/_build

@@ -180,6 +180,8 @@ ral-low-k8s-test:
     CUCUMBER_JSON_PATH: build/reports/ral-low-cucumber.json
     JSON_REPORT_PATH: build/reports/report.json
     HW_DEPLOYMENT: true
+    # The self-check runs in its own manual job, ral-low-self-check-test
+    K8S_PYTEST_EXTRA_ARGUMENTS: "--ignore=tests/functional/test_station_self_check.py"
   before_script:
     - is_calendar_booked --calendar RAL --expected-runtime 30m
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
@@ -245,6 +247,33 @@ ral-low-stop-k8s:
     - make k8s-uninstall-chart
     - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
     - make k8s-delete-namespace
+
+ral-low-self-check-test:
+  stage: test-ral-low
+  extends: ral-low-k8s-test
+  interruptible: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: true
+  environment: null
+  variables:
+    K8S_TEST_RUNNER_PYTEST_TARGET: tests/functional/test_station_self_check.py
+    K8S_PYTEST_EXTRA_ARGUMENTS: ""
+    JUNITXML_REPORT_PATH: build/reports/ral-low-self-check-tests.xml
+    CUCUMBER_JSON_PATH: build/reports/ral-low-self-check-cucumber.json
+  after_script:
+    - export KUBECONFIG=~/.kube/config
+    - make k8s-uninstall-chart || true
+    - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all || true
+    - make k8s-delete-namespace || true
+  artifacts:
+    name: "$CI_PROJECT_NAME-self-check-$CI_JOB_ID"
+    paths:
+      - "build/"
+    reports:
+      junit: build/reports/ral-low-self-check-tests.xml
+    when: always
 
 ral-low-soak-test:
   stage: test-ral-low

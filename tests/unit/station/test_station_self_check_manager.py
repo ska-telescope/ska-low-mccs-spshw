@@ -11,6 +11,7 @@ import unittest.mock
 from typing import Iterator
 
 import pytest
+from ska_low_mccs_common import EventSerialiser
 
 from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TestResult
@@ -136,3 +137,25 @@ def test_test_set(station_self_check_manager: SpsStationSelfCheckManager) -> Non
     assert "Tests NOT_RUN : 1" in station_self_check_manager._test_report
     assert "KeyError" in station_self_check_manager._test_logs
     assert "AssertionError" in station_self_check_manager._test_logs
+
+
+def test_cleanup_stops_daq_event_serialisers(
+    station_self_check_manager: SpsStationSelfCheckManager,
+) -> None:
+    """
+    Test that cleanup stops the DAQ event serialiser of each test.
+
+    A station that is discarded, for example by Init, must not leave the
+    serialiser worker threads running.
+
+    :param station_self_check_manager: SpsStationSelfCheckManager under test.
+    """
+    serialisers = []
+    for tpm_test in station_self_check_manager._tpm_tests.values():
+        tpm_test._daq_event_serialiser = EventSerialiser()
+        serialisers.append(tpm_test._daq_event_serialiser)
+
+    station_self_check_manager.cleanup()
+
+    for serialiser in serialisers:
+        assert not serialiser._worker_thread.is_alive()

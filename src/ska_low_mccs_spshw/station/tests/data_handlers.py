@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import abc
+import json
 import logging
 import os
 import threading
@@ -16,19 +17,15 @@ import time
 import traceback
 from typing import Callable
 
+import h5py  # type: ignore[import-untyped]
 import numpy as np
-from ska_low_mccs_daq.pydaq.persisters import (  # type: ignore
-    BeamFormatFileManager,
-    ChannelFormatFileManager,
-    FileDAQModes,
-    RawFormatFileManager,
-)
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from tango import AttrQuality
 
 from ...tile.tile_data import TileData
 
 
-class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
+# pylint: disable=too-many-instance-attributes
+class BaseDataReceivedHandler(abc.ABC):
     """Base class for the data received handler."""
 
     def __init__(
@@ -47,10 +44,11 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
         self._logger: logging.Logger = logger
         self._data_created_callback = data_created_callback
         self._nof_tiles = nof_tiles
-        self._base_path = ""
-        self._tile_id = 0
+        self._tile_files: dict[int, str] = {}
         self.data: np.ndarray
         self._callback_lock = threading.Lock()
+        self.ignore_next_event = False
+        self._watching = False
         self.initialise_data()
 
     @abc.abstractmethod
@@ -61,33 +59,101 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
     def handle_data(self: BaseDataReceivedHandler) -> None:
         """Handle reading the data from received HDF5."""
 
-    def on_created(self: BaseDataReceivedHandler, event: FileSystemEvent) -> None:
+    def _handle_data_with_backoff(self: BaseDataReceivedHandler) -> None:
+        deadline = time.monotonic() + 30
+        delay = 0.25
+        while True:
+            try:
+                self.handle_data()
+                return
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+                self._logger.warning(
+                    f"handle_data failed, retrying in {delay:.2f}s: {repr(e)}"
+                )
+                time.sleep(min(delay, remaining))
+                delay = min(delay * 2, remaining)
+
+    def on_created(
+        self: BaseDataReceivedHandler, name: str, value: list[str], quality: AttrQuality
+    ) -> None:
         """
         Check every event for newly created files to process.
 
-        :param event: Event to check.
+        :param name: name of the event, should always be datareceivedresult.
+        :param value: value of the data received event.
+        :param quality: the tango.AttrQuality of the event.
         """
+        self._logger.debug(f"Got event: {name}, {value}, {quality}")
         with self._callback_lock:
-            if not event._src_path.endswith(".hdf5") or event.is_directory:
+            if not self._watching:
                 return
-            self._tile_id += 1
-            if self._tile_id < self._nof_tiles:
-                self._logger.debug(f"Got {self._tile_id} files so far.")
+            if self.ignore_next_event:
+                self.ignore_next_event = False
                 return
-            self._logger.debug("Got data for all tiles, gathering data.")
-            self._base_path = os.path.split(event._src_path)[0]
+            if quality != AttrQuality.ATTR_VALID:
+                return
+            assert name.lower() == "datareceivedresult"
+            file = json.loads(value[1])["file_name"]
+            if file in self._tile_files.values():
+                self._logger.debug(f"Already received file {file}, ignoring.")
+                return
+            tile_id = int(os.path.basename(file).split("_")[2])
+            self._tile_files[tile_id] = file
+            if len(self._tile_files) < self._nof_tiles:
+                self._logger.debug(f"Got {len(self._tile_files)} files so far.")
+                return
+            self._logger.info("Got data for all tiles, gathering data.")
             try:
                 time.sleep(1)
-                self.handle_data()
+                self._handle_data_with_backoff()
+                self._logger.debug("Handled data, calling back.")
                 self._data_created_callback(data=self.data)
-                self.reset()
+                self._reset_locked()
             except Exception as e:  # pylint: disable=broad-exception-caught
                 self._logger.error(f"Got error in callback: {repr(e)}, {e}")
                 self._logger.error(traceback.format_exc())
 
+    def prepare_for_new_watch(self: BaseDataReceivedHandler) -> None:
+        """
+        Arm the handler for a new subscription.
+
+        Flags the initial event pushed on subscription to be ignored and clears
+        any state left by a previous watch. Both are done under
+        ``_callback_lock`` so that a callback still in flight from a previous
+        subscription cannot consume the ignore flag partway through, nor race
+        the clearing of the accumulated files.
+        """
+        with self._callback_lock:
+            self._watching = True
+            self.ignore_next_event = True
+            self._reset_locked()
+
+    def end_watch(self: BaseDataReceivedHandler) -> None:
+        """
+        Stop the handler from acting on any further events.
+
+        This waits for a callback that is in progress, because it takes
+        ``_callback_lock``. When it returns, no callback can call back with
+        data until the next call to ``prepare_for_new_watch``.
+        """
+        with self._callback_lock:
+            self._watching = False
+
     def reset(self: BaseDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""
-        self._tile_id = 0
+        with self._callback_lock:
+            self._reset_locked()
+
+    def _reset_locked(self: BaseDataReceivedHandler) -> None:
+        """
+        Reset instance variables for re-use.
+
+        The caller must already hold ``_callback_lock``.
+        """
+        self._tile_files = {}
         self.initialise_data()
 
 
@@ -112,14 +178,12 @@ class RawDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: RawDataReceivedHandler) -> None:
         """Handle the reading of raw data."""
-        raw_file = RawFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=[0, 1],
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_pols = int(f["root"].attrs["n_pols"])
+                # shape: (n_antennas * n_pols, n_samples), row = antenna * n_pols + pol
+                raw = f["raw_"]["data"][:, : self._nof_samples]
+            tile_data = raw.reshape(TileData.ANTENNA_COUNT, n_pols, self._nof_samples)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
@@ -157,19 +221,23 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: ChannelDataReceivedHandler) -> None:
         """Handle the reading of channel data."""
-        raw_file = ChannelFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(TileData.NUM_FREQUENCY_CHANNELS),
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_chans = int(f["root"].attrs["n_chans"])
+                n_pols = int(f["root"].attrs["n_pols"])
+                # shape: (n_samples, n_chans * n_antennas * n_pols)
+                # col = chan * (n_antennas * n_pols) + antenna * n_pols + pol
+                raw = f["chan_"]["data"][: self._nof_samples, :]
+            reshaped = raw.reshape(
+                self._nof_samples, n_chans, TileData.ANTENNA_COUNT, n_pols
             )
+            # → (n_chans, n_antennas, n_pols, n_samples)
+            real = reshaped["real"].transpose(1, 2, 3, 0)
+            imag = reshaped["imag"].transpose(1, 2, 3, 0)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
-            self.data[:, start_idx:end_idx, :, :, 0] = tile_data["real"]
-            self.data[:, start_idx:end_idx, :, :, 1] = tile_data["imag"]
+            self.data[:, start_idx:end_idx, :, :, 0] = real
+            self.data[:, start_idx:end_idx, :, :, 1] = imag
 
     def initialise_data(self: ChannelDataReceivedHandler) -> None:
         """Initialise empty channel data struct."""
@@ -209,16 +277,20 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: BeamDataReceivedHandler) -> None:
         """Handle the reading of beam data."""
-        raw_file = BeamFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            self.data[tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
-            self.data[tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                # shape: (n_samples, n_chans, n_beams), dtype complex16
+                pol0 = f["polarization_0"]["data"][
+                    : self._nof_samples, : self._nof_channels, :
+                ]
+                pol1 = f["polarization_1"]["data"][
+                    : self._nof_samples, : self._nof_channels, :
+                ]
+            # pol["real"][:, :, 0] → (n_samples, n_chans) → .T → (n_chans, n_samples)
+            self.data[tile_id, 0, :, :, 0] = pol0["real"][:, :, 0].T
+            self.data[tile_id, 0, :, :, 1] = pol0["imag"][:, :, 0].T
+            self.data[tile_id, 1, :, :, 0] = pol1["real"][:, :, 0].T
+            self.data[tile_id, 1, :, :, 1] = pol1["imag"][:, :, 0].T
 
     def initialise_data(self: BeamDataReceivedHandler) -> None:
         """Initialise empty beam data struct."""
@@ -255,16 +327,15 @@ class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: IntegratedChannelDataReceivedHandler) -> None:
         """Handle the reading of integrated channel data."""
-        raw_file = ChannelFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Integrated
-        )
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_chans = int(f["root"].attrs["n_chans"])
+                n_pols = int(f["root"].attrs["n_pols"])
+                raw = f["chan_"]["data"][: self._nof_samples, :]
+            # → (n_chans, n_antennas, n_pols, n_samples)
+            tile_data = raw.reshape(
+                self._nof_samples, n_chans, TileData.ANTENNA_COUNT, n_pols
+            ).transpose(1, 2, 3, 0)
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[:, start_idx:end_idx, :, :] = tile_data
@@ -303,17 +374,14 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
 
     def handle_data(self: IntegratedBeamDataReceivedHandler) -> None:
         """Handle the reading of integrated beam data."""
-        raw_file = BeamFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Integrated
-        )
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(TileData.NUM_BEAMFORMER_CHANNELS),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            self.data[:, :, tile_id, :] = tile_data[:, :, 0, :]
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                # shape: (n_samples, n_chans, n_beams), dtype uint32
+                pol0 = f["polarization_0"]["data"][: self._nof_samples, :, :]
+                pol1 = f["polarization_1"]["data"][: self._nof_samples, :, :]
+            # pol0[:, :, 0] → (n_samples, n_chans) → .T → (n_chans, n_samples)
+            self.data[0, :, tile_id, :] = pol0[:, :, 0].T
+            self.data[1, :, tile_id, :] = pol1[:, :, 0].T
 
     def initialise_data(self: IntegratedBeamDataReceivedHandler) -> None:
         """Initialise empty integrated beam data struct."""
@@ -354,21 +422,21 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         """Handle the reading of antenna buffer data."""
         # TODO: Understand this behaviour. Seems without a sleep
         # the file lock is claimed by another process.
-        sleep_time = 10
-        time.sleep(sleep_time)
+        time.sleep(10)
 
-        raw_file = RawFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Burst
-        )
         self._logger.info("+=+= Handle data for tile")
         for tile_id in range(self._nof_tiles):
-            tile_data, _ = raw_file.read_data(
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
+            with h5py.File(self._tile_files[tile_id], "r") as f:
+                n_pols = int(f["root"].attrs["n_pols"])
+                n_antennas = int(f["root"].attrs["n_antennas"])
+                raw = f["raw_"]["data"][:, : self._nof_samples]
+            assert n_antennas == self._nof_antennas, (
+                f"File reports {n_antennas} antennas, "
+                f"handler configured for {self._nof_antennas}"
             )
-            start_idx = TileData.ANTENNA_COUNT * tile_id
-            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
+            tile_data = raw.reshape(self._nof_antennas, n_pols, self._nof_samples)
+            start_idx = self._nof_antennas * tile_id
+            end_idx = self._nof_antennas * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
 
     def set_nof_samples(self: AntennaBufferDataHandler, nof_samples: int) -> None:
@@ -377,8 +445,9 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
 
         :param nof_samples: the new number of samples.
         """
-        self._nof_samples = nof_samples
-        self.initialise_data()
+        with self._callback_lock:
+            self._nof_samples = nof_samples
+            self.initialise_data()
 
     def initialise_data(self: AntennaBufferDataHandler) -> None:
         """Initialise empty antenna buffer data struct.

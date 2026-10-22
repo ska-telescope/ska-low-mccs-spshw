@@ -200,6 +200,18 @@ def test_standby_during_init(
 
 @scenario(
     "features/station.feature",
+    "Reinitialise does not reprogram the TPMs",
+)
+def test_reinitialise_does_not_reprogram_tpms() -> None:
+    """
+    Run a test scenario that checks ReInitialise leaves the TPMs programmed.
+
+    Runs against simulated and real TPMs alike.
+    """
+
+
+@scenario(
+    "features/station.feature",
     "Fanout attribute writes reach the correct tile",
 )
 def test_fanout_attribute_writes_reach_correct_tile() -> None:
@@ -224,6 +236,18 @@ def check_against_hardware(hw_context: bool, station_label: str) -> None:
     """
     if not hw_context:
         pytest.skip("This test requires real HW.")
+
+
+@given("an SPS deployment against a real context")
+def check_against_real_context(true_context: bool, station_label: str) -> None:
+    """
+    Skip the test if not in real context.
+
+    :param true_context: whether or not the current context is real.
+    :param station_label: Station to test against.
+    """
+    if not true_context:
+        pytest.skip("This test requires real context.")
 
 
 @given("the SpsStation is ON")
@@ -1387,3 +1411,110 @@ def check_fanout_value_on_each_tile(
             )
             expected_value = mask * expected_value
         AttributeWaiter(timeout=30).wait_for_value(tile, attribute, expected_value)
+
+
+@when("the station is reinitialised")
+def reinitialise_station(
+    station: tango.DeviceProxy,
+    station_tiles: list[tango.DeviceProxy],
+    command_info: dict[str, Any],
+) -> None:
+    """
+    Run Reinitialise and monitor the TileProgrammingState for all tiles.
+
+    This test will subscribe to the programming states of all the station's
+    tiles and saves all the values recorded in the command_info dictionary,
+    then it starts the Reinitialise command.
+
+    If the tile's are reprogrammed, then the "Not Programmed" state would be
+    saved in command_info["programming_states"] which is checked later.
+
+    :param station: station device under test.
+    :param station_tiles: list of TPM DeviceProxies.
+    :param command_info: a dict in which to store command IDs and tile data.
+    """
+    assert station_tiles, "Station tiles are missing"
+
+    # Create a set of lists for each tile to be filled with the programming
+    # states as they change, and to log any errors raised.
+    programming_states: list[list[str]] = [[] for _ in station_tiles]
+    event_errors: list[str] = []
+    command_info["programming_states"] = programming_states
+    command_info["event_errors"] = event_errors
+    command_info["subscriptions"] = []
+    for tile, states in zip(station_tiles, programming_states):
+
+        def _record_state(
+            event: tango.EventData,
+            states: list[str] = states,
+            name: str = tile.dev_name(),
+        ) -> None:
+            if event.err or event.attr_value is None:
+                event_errors.append(f"{name}: {event.errors}")
+            else:
+                states.append(event.attr_value.value)
+
+        event_id = tile.subscribe_event(
+            "tileProgrammingState", tango.EventType.CHANGE_EVENT, _record_state
+        )
+        command_info["subscriptions"].append((tile, event_id))
+
+    # Wait for a first event from every tile before sending ReInitialise.
+    deadline = time.time() + 10
+    while not all(programming_states) and not event_errors:
+        if time.time() > deadline:
+            pytest.fail(
+                f"No initial programming state from every tile: {programming_states}"
+            )
+        time.sleep(0.1)
+    assert not event_errors, f"Programming state subscription failed: {event_errors}"
+
+    [result_code], [command_id] = station.ReInitialise(json.dumps({}))
+    assert result_code == ResultCode.QUEUED
+    command_info["ReInitialise"] = command_id
+
+
+@then("the ReInitialise command completed successfully")
+def reinitialise_completed_successfully(
+    station: tango.DeviceProxy, command_info: dict[str, Any]
+) -> None:
+    """
+    Check the ReInitialise command completed with ResultCode.OK.
+
+    :param station: station device under test.
+    :param command_info: a dict containing command IDs.
+    """
+    wait_for_lrc_result(
+        device=station,
+        uid=command_info["ReInitialise"],
+        expected_result=ResultCode.OK,
+        timeout=300,
+    )
+
+
+@then("no TPM was reprogrammed")
+def no_tpm_was_reprogrammed(
+    station_tiles: list[tango.DeviceProxy], command_info: dict[str, Any]
+) -> None:
+    """
+    Check that no tile was reprogrammed during ReInitialise.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    :param command_info: a dict containing the data recorded during ReInitialise.
+    """
+    for tile, event_id in command_info["subscriptions"]:
+        tile.unsubscribe_event(event_id)
+
+    assert not command_info[
+        "event_errors"
+    ], f"Programming state subscription failed: {command_info['event_errors']}"
+
+    for tile, states in zip(
+        station_tiles,
+        command_info["programming_states"],
+    ):
+        name = tile.dev_name()
+        # Erasing the FPGAs always reports NotProgrammed.
+        assert "NotProgrammed" not in states, f"{name} was reprogrammed: {states}"
+        # And the tile is still synchronised
+        assert tile.tileProgrammingState == "Synchronised", name

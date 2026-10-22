@@ -1916,6 +1916,51 @@ class TestMccsTile:
             list(range(2, 34)), lookahead=2
         )
 
+    def test_programming_state_kept_on_power_off(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that power OFF does not invalidate tileProgrammingState.
+
+        When the TPM is unreachable, the component manager publishes "Off" just
+        before it reports power OFF. The power OFF must not overwrite that value.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        on_tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
+
+        tile_component_manager._update_attribute_callback(programming_state="Off")
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Off", lookahead=5
+        )
+        tile_component_manager._update_component_state(power=PowerState.OFF)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF, lookahead=5)
+
+        change_event_callbacks["tile_programming_state"].assert_not_called()
+        attr = on_tile_device.read_attribute("tileProgrammingState")
+        assert attr.value == "Off"
+        assert attr.quality == tango.AttrQuality.ATTR_VALID
+
     @pytest.mark.parametrize(
         "attribute_name",
         [
@@ -2992,6 +3037,7 @@ class TestMccsTileCommands:
         ("command_name", "command_args"),
         [
             ("Initialise", None),
+            ("ReInitialise", '{"force_reprogramming": false}'),
             ("DownloadFirmware", "tests/data/Vivado_test_firmware_bitfile.bit"),
         ],
     )
@@ -3005,8 +3051,8 @@ class TestMccsTileCommands:
         """
         Test that Long Running Commands can execute.
 
-        Here we are testing the 'Initialise' and 'DownloadFirmware' command the start
-        acquisition is tested in 'test_StartAcquisition'
+        Here we are testing the 'Initialise', 'ReInitialise' and 'DownloadFirmware'
+        commands; start acquisition is tested in 'test_StartAcquisition'
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -4229,6 +4275,90 @@ class TestMccsTileCommands:
         while on_tile_device.rfiBlankingEnabledAntennas.tolist() == [1, 5]:
             time.sleep(0.1)
         assert on_tile_device.rfiBlankingEnabledAntennas.tolist() == []
+
+    @staticmethod
+    def _emit_empty_rfi_blanking_while_polled(
+        tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Reproduce rfiBlankingEnabledAntennas being emitted empty while polled.
+
+        Mirrors a deployment with stale polling config in the Tango DB: the
+        attribute is INVALID before polling starts, then the config read emits
+        an empty list, which Tango refuses in the polling buffer.
+
+        :param tile_device: a proxy to the tile device under test.
+        :param tile_component_manager: the tile component manager.
+        """
+        tile_component_manager._update_attribute_callback(
+            rfi_blanking_enabled_antennas=None
+        )
+        deadline = time.time() + 5
+        while (
+            tile_device.read_attribute("rfiBlankingEnabledAntennas").quality
+            != AttrQuality.ATTR_INVALID
+        ):
+            assert time.time() < deadline, "Attribute never went INVALID"
+            time.sleep(0.1)
+
+        tile_device.poll_attribute("rfiBlankingEnabledAntennas", 1000)
+        tile_component_manager._update_attribute_callback(
+            rfi_blanking_enabled_antennas=[]
+        )
+
+    def test_polled_empty_rfi_blanking_does_not_affect_health(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test that an empty, polled rfiBlankingEnabledAntennas keeps health OK.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        """
+        assert on_tile_device.healthState == HealthState.OK
+        self._emit_empty_rfi_blanking_while_polled(
+            on_tile_device, tile_component_manager
+        )
+        time.sleep(2)  # Allow health to re-evaluate.
+        assert on_tile_device.healthState == HealthState.OK, on_tile_device.healthReport
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "ska-tango-base on_emission raises filling the polling buffer with an "
+            "empty spectrum before caching the value, leaving it stale/INVALID."
+        ),
+    )
+    def test_polled_empty_rfi_blanking_is_valid(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test that an empty, polled rfiBlankingEnabledAntennas reads as valid.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        """
+        self._emit_empty_rfi_blanking_while_polled(
+            on_tile_device, tile_component_manager
+        )
+        deadline = time.time() + 5
+        while (
+            on_tile_device.read_attribute("rfiBlankingEnabledAntennas").quality
+            != AttrQuality.ATTR_VALID
+        ):
+            assert time.time() < deadline, "Attribute stuck ATTR_INVALID"
+            time.sleep(0.1)
 
     def test_read_rfi(
         self: TestMccsTileCommands, on_tile_device: MccsDeviceProxy

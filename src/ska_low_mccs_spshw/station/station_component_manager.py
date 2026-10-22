@@ -2403,56 +2403,44 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
         global_reference_time: Optional[str] = None,
+        force_reprogramming: bool = True,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Initialise this station.
 
-        The order to turn a station on is: subrack, then tiles
-
         :param start_bandpasses: Whether to configure TPMs to send
             integrated data.
         :param global_reference_time: Common global reference time for all TPMs,
             needs to be some time in the last 2 weeks.
-            If not provided, 8am on the most recent Monday AWST will be used.
+            If not provided, midnight today (TAI) will be used.
+        :param force_reprogramming: whether to erase and reprogram the tile
+            FPGAs. If false, the tiles keep their firmware and are only
+            re-initialised (used by ReInitialise).
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        name = "Initialisation" if force_reprogramming else "Reinitialisation"
         message: str = ""
         failure_step: str = ""
-        self.logger.info("Starting initialise sequence")
+        self.logger.info(f"Starting {name.lower()} sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
-        if not all(
-            power_state == PowerState.ON
-            for power_state in self._subrack_power_states.values()
-        ):
-            self.logger.info("Subracks not on.")
-            result_code = ResultCode.FAILED
-            failure_step = "subracks not on"
 
-        if not all(
-            power_state == PowerState.ON
-            for power_state in self._tile_power_states.values()
-        ):
-            self.logger.info("Tiles not on.")
-            result_code = ResultCode.FAILED
-            failure_step = "tiles not on"
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_subrack_power_state(PowerState.ON)
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._check_tile_power_state(PowerState.ON)
 
         # Now, if the wren proxy is set, wait for the WREN to initialise
-        if self._wren_proxy:
-            if result_code == ResultCode.OK:
-                self.logger.debug("Waiting for WREN")
-                result_code, failure_step = self._wait_for_wren(
-                    task_callback,
-                    task_abort_event,
-                    timeout=self._wren_health_check_timeout,
-                    fail_on_timeout=self._wren_health_check_fail_on_timeout,
-                )
-                if task_callback:
-                    task_callback(progress=5)
+        if result_code == ResultCode.OK:
+            result_code, failure_step = self._wait_for_wren_initilised(
+                progress=5,
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+            )
 
         if result_code == ResultCode.OK:
             self.logger.info("Setting tile source IPs before initialisation")
@@ -2468,9 +2456,13 @@ class SpsStationComponentManager(
             # This is very quick to complete so no progress update here
 
         if result_code == ResultCode.OK:
-            self.logger.info("Re-initialising tiles")
+            self.logger.info(f"Re-initialising tiles ({force_reprogramming=})")
             result_code, failure_step = self._reinitialise_tiles(
-                task_callback, task_abort_event, progress_start=10, progress_end=65
+                task_callback,
+                task_abort_event,
+                progress_start=10,
+                progress_end=65,
+                force_reprogramming=force_reprogramming,
             )
             # Progress is reported incrementally inside _reinitialise_tiles
 
@@ -2518,13 +2510,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             if task_callback:
                 task_callback(progress=95)
-            self.logger.info("End initialisation")
+            self.logger.info(f"End {name.lower()}")
             task_status = TaskStatus.COMPLETED
-            message = "Initialisation Complete"
+            message = f"{name} Complete"
 
             self.logger.info(
                 "Starting station beamformer with empty channel_groups "
-                "to start the beamformer daisy chain during station initialise"
+                f"to start the beamformer daisy chain during station {name.lower()}"
             )
             start_time = (datetime.now(timezone.utc) + timedelta(seconds=4)).strftime(
                 self.RFC_FORMAT
@@ -2533,11 +2525,76 @@ class SpsStationComponentManager(
                 start_time=start_time, duration=-1, channel_groups=[], scan_id=0
             )
         else:
-            self.logger.error(f"Initialisation failed: {failure_step}")
+            self.logger.error(f"{name} failed: {failure_step}")
             task_status = TaskStatus.FAILED
-            message = f"Initialisation Failed: {failure_step}"
+            message = f"{name} Failed: {failure_step}"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
+
+    def _check_tile_power_state(
+        self: SpsStationComponentManager, desired_state: PowerState
+    ) -> tuple[ResultCode, str]:
+        """
+        Check if the tiles are in the correct PowerState.
+
+        :param desired_state: The desired PowerState for all the tiles
+        :return: ResultCode and message
+        """
+        if not all(
+            power_state == desired_state
+            for power_state in self._tile_power_states.values()
+        ):
+            msg = f"Tiles are not in state: {desired_state}"
+            self.logger.info(msg)
+            return (ResultCode.FAILED, msg)
+        return (ResultCode.OK, "")
+
+    def _check_subrack_power_state(
+        self: SpsStationComponentManager, desired_state: PowerState
+    ) -> tuple[ResultCode, str]:
+        """
+        Check if the subracks are in the correct PowerState.
+
+        :param desired_state: The desired PowerState for all the subracks
+        :return: ResultCode and message
+        """
+        if not all(
+            power_state == desired_state
+            for power_state in self._subrack_power_states.values()
+        ):
+            msg = f"Subracks are not in state: {desired_state}"
+            self.logger.info(msg)
+            return (ResultCode.FAILED, msg)
+        return (ResultCode.OK, "")
+
+    def _wait_for_wren_initilised(
+        self: SpsStationComponentManager,
+        progress: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Wait for the WREN to be initialised if available.
+
+        :param progress: progress callback update value
+        :param task_callback: Update task state
+        :param task_abort_event: Abort the task
+        :return: ResultCode and message
+        """
+        if not self._wren_proxy:
+            return (ResultCode.OK, "")
+
+        self.logger.debug("Waiting for WREN")
+        result_code, failure_step = self._wait_for_wren(
+            task_callback,
+            task_abort_event,
+            timeout=self._wren_health_check_timeout,
+            fail_on_timeout=self._wren_health_check_fail_on_timeout,
+        )
+        if task_callback:
+            task_callback(progress=progress)
+
+        return (result_code, failure_step)
 
     @check_communicating
     def _turn_on_subracks(
@@ -2769,35 +2826,45 @@ class SpsStationComponentManager(
         task_abort_event: Optional[threading.Event] = None,
         progress_start: int = 0,
         progress_end: int = 100,
+        force_reprogramming: bool = True,
     ) -> tuple[ResultCode, str]:
         """
         Initialise tiles.
 
-        Initialise tiles by completely reprogram and reconfigure all internal
-        peripherals. This is required prior to station synchronization.
+        Initialise tiles by reconfiguring all internal peripherals, and
+        optionally reprogramming the FPGAs. This is required prior to
+        station synchronization.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :param progress_start: progress percentage at the start of this step,
             used to interpolate progress callbacks during the polling wait.
         :param progress_end: progress percentage reported once tiles are ready.
+        :param force_reprogramming: whether to erase and reprogram the FPGAs.
+            If false, the tiles keep their firmware.
         :return: a result code and message
 
         """
         progress_window = progress_end - progress_start
+        # The LRC id of each tile's ReInitialise command, by tile TRL.
+        command_ids: dict[str, str] = {}
+        rejected: list[str] = []
         with self._power_state_lock:
-            results = []
-            for proxy in self._tile_proxies.values():
+            for tile_trl, proxy in self._tile_proxies.items():
                 if proxy._proxy is None:
                     msg = f"tile proxy {proxy} not formed"
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
-                result_code = proxy._proxy.initialise()
+                [result_code], [command_id] = proxy._proxy.ReInitialise(
+                    json.dumps({"force_reprogramming": force_reprogramming})
+                )
                 time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
-                results.append(result_code)
-        if ResultCode.FAILED in results:
-            msg = "one or more tiles failed to initialise"
+                if result_code in [ResultCode.FAILED, ResultCode.REJECTED]:
+                    rejected.append(f"{tile_trl}: {command_id}")
+                command_ids[tile_trl] = command_id
+        if rejected:
+            msg = f"tiles failed to start initialising: {rejected}"
             self.logger.error(msg)
             return ResultCode.FAILED, msg
 
@@ -2815,7 +2882,21 @@ class SpsStationComponentManager(
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            ready_count = sum(state in desired_states for state in states)
+            # Wait for each tile to finish initialise and reach the correct state
+            ready_count = 0
+            for (tile_trl, proxy), state in zip(self._tile_proxies.items(), states):
+                finished = self._get_lrc_finished(proxy, command_ids[tile_trl])
+                if finished is None:
+                    continue
+                if finished["status"] != TaskStatus.COMPLETED.name:
+                    msg = (
+                        f"{tile_trl} failed to initialise: "
+                        f"{finished['status']} {finished.get('result')}"
+                    )
+                    self.logger.error(msg)
+                    return ResultCode.FAILED, msg
+                if state in desired_states:
+                    ready_count += 1
             if ready_count == n_tiles:
                 self.logger.info(
                     f"All {n_tiles} tiles reached {desired_states} "
@@ -2833,6 +2914,26 @@ class SpsStationComponentManager(
         msg = "timed out waiting for tiles to come up"
         self.logger.error(msg)
         return ResultCode.FAILED, msg
+
+    def _get_lrc_finished(
+        self: SpsStationComponentManager,
+        proxy: _TileProxy,
+        command_id: str,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Return a tile's finished entry for a long running command.
+
+        :param proxy: the proxy of the tile that ran the command.
+        :param command_id: the id of the long running command.
+        :return: the command's entry from the tile's ``lrcFinished``, with its
+            ``status`` and ``result``, or None if it has not finished yet.
+        """
+        assert proxy._proxy is not None  # for the type checker
+        for finished in proxy._proxy.lrcFinished or []:
+            entry = json.loads(finished)
+            if entry.get("uid") == command_id:
+                return entry
+        return None
 
     @check_communicating
     def _wait_for_wren(
@@ -4724,7 +4825,17 @@ class SpsStationComponentManager(
                         success = False
                     break
                 channel = int(filename.split("_")[0])
-                dropped_channels.remove(channel)
+                if channel in dropped_channels:
+                    dropped_channels.remove(channel)
+                else:
+                    # DAQ can emit the same event more than once, and a stale
+                    # event can name a channel outside the requested range.
+                    # Either way the channel is not dropped, so just note it.
+                    self.logger.warning(
+                        f"Received unexpected data for channel {channel}. "
+                        "It is a duplicate, or outside the requested range of "
+                        f"{first_channel} to {last_channel}."
+                    )
                 if channel == last_channel:
                     self.logger.info(
                         f"Got data for {channel}, this is the last channel expected."

@@ -752,6 +752,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
     )
 
+    ReInitialise_SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.schemas.tile",
+            "MccsTile_ReInitialise.json",
+        )
+    )
+
     ConfigureTestGenerator_SCHEMA: Final = json.loads(
         importlib.resources.read_text(
             "ska_low_mccs_spshw.schemas.tile",
@@ -1290,7 +1297,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "ppsDelayCorrection",
                 "ppsDrift",
                 "preaduLevels",
-                "rfiBlankingEnabledAntennas",
+                # "rfiBlankingEnabledAntennas",
                 "rfiCount",
                 "staticTimeDelays",
                 "stationBeamFlagEnabled",
@@ -1306,6 +1313,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # Pointing delay readback is operational metadata, not a health signal.
                 # It can be unavailable in valid startup/runtime windows.
                 "pointingDelays",
+                # # User-set configuration, not a health signal. It can also be
+                # # stuck ATTR_INVALID when empty and polled (Tango rejects empty
+                # # arrays in the polling buffer), e.g. after upgrading from 15.0.0.
+                "rfiBlankingEnabledAntennas",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
                 "fpga0_station_beamformer_flagged_count",
@@ -1527,8 +1538,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             case PowerState.OFF | PowerState.UNKNOWN:
                 for signal in self._HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
-                for signal in self._GENERIC_SIGNAL_MAP.values():
-                    setattr(self, signal, None)
+                for name, signal in self._GENERIC_SIGNAL_MAP.items():
+                    # The component manager publishes the programming state
+                    # itself, and "Off" is a valid value while powered off.
+                    if name != "programming_state":
+                        setattr(self, signal, None)
                 for signal in self._INTERMEDIATE_HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
             case PowerState.ON:
@@ -5862,6 +5876,43 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ) -> None:
             self.component_manager.initialise(
                 task_callback=task_callback,
+            )
+
+        return task
+
+    @stb.long_running_commands.long_running_command
+    @stb.validators.validate_json_args(schema=ReInitialise_SCHEMA)
+    def ReInitialise(
+        self: MccsTile, force_reprogramming: bool
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Perform all required initialisation, optionally without reprogramming.
+
+        This is the same as Initialise, except that the caller chooses
+        whether the FPGAs are erased and reprogrammed. With
+        ``force_reprogramming`` false, a programmed TPM keeps its firmware:
+        the FPGAs are reset and the TPM is reinitialised, and acquisition is
+        restarted if a global reference time is set.
+
+        :param force_reprogramming: whether to erase and reprogram the FPGAs
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ReInitialise", '{"force_reprogramming": false}')
+        """  # noqa: E501, D202
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            self.component_manager.initialise(
+                task_callback=task_callback,
+                force_reprogramming=force_reprogramming,
             )
 
         return task

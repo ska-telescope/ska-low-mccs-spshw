@@ -18,7 +18,13 @@ from typing import Any, Iterator
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
+from ska_control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+)
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType, server
@@ -171,6 +177,31 @@ def test_context_fixture(
                 self._hardware_attributes[name] = value
                 self.push_change_event(name, value)
                 self.push_archive_event(name, value)
+
+        @server.command(dtype_in="DevString")
+        def SimulateUpstreamCommunicationState(self, argin: str) -> None:
+            """
+            Patched method to simulate upstream communication state changes.
+
+            :param argin: communication state name (e.g. "NOT_ESTABLISHED").
+            """
+            self.component_manager._device_communication_state_changed(
+                self.component_manager.power_marshaller_trl,
+                CommunicationStatus[argin],
+            )
+
+        @server.command(dtype_in="DevString")
+        def SimulateComponentState(self, argin: str) -> None:
+            """
+            Patched method to push a component state update into the device.
+
+            :param argin: JSON dictionary with an optional "power" (a PowerState
+                name, e.g. "OFF") and/or an optional "fault" (bool).
+            """
+            kwargs = json.loads(argin)
+            if "power" in kwargs:
+                kwargs["power"] = PowerState[kwargs["power"]]
+            self._component_state_changed(**kwargs)
 
         @server.command
         def ChangeAttributeFilterType(self, filter_type: str) -> None:
@@ -379,6 +410,9 @@ def test_off_on(
     change_event_callbacks["boardCurrent"].assert_change_event(
         subrack_device_attribute_values["boardCurrent"],
     )
+    assert wait_for_condition(
+        lambda: subrack_device.state() == DevState.ON
+    ), subrack_device.state()
 
     # It's on, so let's turn it off.
     subrack_lrc_manager = LRCManager(subrack_device, change_event_callbacks)
@@ -392,7 +426,6 @@ def test_off_on(
     )
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
     assert wait_for_condition(lambda: subrack_device.state() == DevState.OFF)
-
     change_event_callbacks["boardCurrent"].assert_change_event([])
     with pytest.raises(tango.DevFailed):
         _ = subrack_device.boardCurrent
@@ -759,6 +792,160 @@ def test_subrack_connection_lost(
     )
     change_event_callbacks["tpm1PowerState"].assert_not_called()
     assert subrack_device.tpm1PowerState == state_of_device_under_control_after_dropout
+
+
+def _bring_online_then_lose_upstream(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Bring the device ON, then simulate loss of upstream communication.
+
+    Upstream loss is simulated through the callback the real PDU and
+    PowerMarshaller proxies use. No marshaller device is deployed in these
+    tests, so we first report it connected, then lost. On return the device is
+    in UNKNOWN while hardware polling carries on regardless.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    subrack_device.SimulateUpstreamCommunicationState("ESTABLISHED")
+    subrack_device.SimulateUpstreamCommunicationState("NOT_ESTABLISHED")
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=3, consume_nonmatches=True
+    )
+    assert subrack_device.state() == DevState.UNKNOWN
+
+
+def test_subrack_recovery_from_upstream_comms_loss(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test recovery from upstream comms loss without needing Init().
+
+    Upstream (PDU/PowerMarshaller) comms loss drives the device to UNKNOWN
+    while subrack polling carries on and power stays ON. Only a power update
+    moves the device out of UNKNOWN, and unchanged values are not re-published,
+    so the component manager must re-assert power when upstream comms recover.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    _bring_online_then_lose_upstream(subrack_device, change_event_callbacks)
+
+    # Simulate upstream comms recovery while subrack polling continues.
+    subrack_device.SimulateUpstreamCommunicationState("ESTABLISHED")
+
+    # Device should recover to ON without requiring Init().
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=3, consume_nonmatches=True
+    )
+    assert subrack_device.state() == DevState.ON
+
+
+def test_fault_propagates_while_on(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that fault updates still take effect immediately when the device is ON.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    subrack_device.SimulateComponentState(json.dumps({"fault": True}))
+    change_event_callbacks["state"].assert_change_event(DevState.FAULT)
+
+    subrack_device.SimulateComponentState(json.dumps({"fault": False}))
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+
+def test_fault_during_upstream_outage_is_held_then_applied(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that a fault reported while UNKNOWN is neither an error nor lost.
+
+    A fault action is illegal while the op state is UNKNOWN. The fault must be
+    held, and applied once upstream recovery brings the device back to ON.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    _bring_online_then_lose_upstream(subrack_device, change_event_callbacks)
+
+    # Must not raise an illegal op-state action, and must not change state.
+    subrack_device.SimulateComponentState(json.dumps({"fault": True}))
+    assert subrack_device.state() == DevState.UNKNOWN
+
+    subrack_device.SimulateUpstreamCommunicationState("ESTABLISHED")
+
+    change_event_callbacks["state"].assert_change_event(
+        DevState.FAULT, lookahead=3, consume_nonmatches=True
+    )
+    assert subrack_device.state() == DevState.FAULT
+
+
+def test_held_fault_is_discarded_when_device_goes_off(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that a held fault is not replayed into an OFF device.
+
+    A lost connection to the subrack reports power UNKNOWN with fault False.
+    If the power supply then reports OFF, replaying that held fault would
+    raise an illegal op-state action, since fault actions are illegal in OFF.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event callbacks.
+    """
+    _bring_online_then_lose_upstream(subrack_device, change_event_callbacks)
+
+    # What SubrackDriver.poll_failed reports when the subrack cannot be reached.
+    subrack_device.SimulateComponentState(
+        json.dumps({"power": "UNKNOWN", "fault": False})
+    )
+    assert subrack_device.state() == DevState.UNKNOWN
+
+    # Must not raise.
+    subrack_device.SimulateComponentState(json.dumps({"power": "OFF"}))
+    change_event_callbacks["state"].assert_change_event(
+        DevState.OFF, lookahead=3, consume_nonmatches=True
+    )
+
+    # The discarded fault must not resurface when power returns.
+    subrack_device.SimulateComponentState(json.dumps({"power": "ON"}))
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    assert subrack_device.state() == DevState.ON
 
 
 def test_health_status_attributes(

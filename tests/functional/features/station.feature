@@ -56,6 +56,14 @@ Feature: Test station
         Then the ReInitialise command completed successfully
         And no TPM was reprogrammed
 
+    Scenario: Reinitialise keeps the beamformer signal chain running
+        Given an SPS deployment against HW
+        And the station has been initialised
+        And the beamformer ring frame counter is advancing on every TPM
+        When the station is reinitialised
+        Then the ReInitialise command completed successfully
+        And no TPM was reprogrammed
+        And the beamformer ring frame counter is advancing on every TPM
 
     Scenario Outline: Fanout attribute writes reach the correct tile
         Given an SPS deployment against HW

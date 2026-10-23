@@ -892,12 +892,12 @@ class TestMccsTileTpmDriver:
         ("attribute", "initial_value", "alarm_value"),
         [
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 99.0,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 99.0,
             ),

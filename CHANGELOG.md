@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-769] Added test if initialising TPMs without reprogramming leads to broken signal chain
+
 ## 16.0.0
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
@@ -7,7 +11,6 @@
 * [SKB-1228] Added the SpsStation `testResults` attribute. It gives the last result of each self-check test, in `testList` order. Each value is a `TestResult` (`PASSED`=0, `FAILED`=1, `ERROR`=2, `NOT_RUN`=3). A test that has not run reports `NOT_RUN`.
 * [SKB-1420] Fix subrack device stuck in UNKNOWN state when upstream (PDU/PowerMarshaller) communication is established after the subrack is already being polled and is ON. The cached hardware power state is now re-asserted when all upstream connections are established. Fault updates received when the op state does not allow them (UNKNOWN or OFF) are now held and applied once legal, instead of raising illegal op-state transitions.
 * [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicate events from DAQ (usually from EventSystemDown errors)
-* [THORN-769] Added test if initialising TPMs without reprogramming leads to broken signal chain
 
 ## 15.2.2
 

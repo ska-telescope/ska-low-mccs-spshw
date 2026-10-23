@@ -101,26 +101,47 @@ def test_getattribute_with_no_name(client: TestClient) -> None:
     }
 
 
-def test_getattribute_with_bad_name(client: TestClient, backend: Mock) -> None:
+@pytest.mark.parametrize(
+    ("exception", "expected_field"),
+    [
+        pytest.param(
+            AttributeError("foo not present"), {"retvalue": ""}, id="not present"
+        ),
+        pytest.param(
+            RuntimeError("Failed to read foo"), {"value": ""}, id="failed read"
+        ),
+    ],
+)
+def test_getattribute_error(
+    client: TestClient,
+    backend: Mock,
+    exception: Exception,
+    expected_field: dict[str, str],
+) -> None:
     """
-    Test handling of a getattribute request for a non-existent attribute.
+    Test handling of a getattribute request that the backend cannot answer.
+
+    An attribute that does not exist is answered with "retvalue", like the
+    API does; an attribute that fails to read is answered with "value".
 
     :param client: a test client to test the API with.
     :param backend: a mock backend to test the API against.
+    :param exception: the exception that the backend raises.
+    :param expected_field: the field that ends the expected response.
     """
-    bad_name = "foo"
+    name = "foo"
 
-    # Set up the backend mock to raise an AttributeError when we call
+    # Set up the backend mock to raise this exception when we call
     # get_attribute().
-    backend.get_attribute.side_effect = AttributeError(f"{bad_name} not present")
+    backend.get_attribute.side_effect = exception
 
-    response = client.get(f"/get/json.htm?type=getattribute&param={bad_name}")
+    response = client.get(f"/get/json.htm?type=getattribute&param={name}")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "status": HardwareClientResponseStatusCodes.ERROR.name,
-        "info": f"{bad_name} not present",
-        "attribute": bad_name,
-        "value": "",
+        "info": str(exception),
+        "attribute": name,
+        **expected_field,
     }
 
 

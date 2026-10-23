@@ -50,6 +50,7 @@ from .firmware_threshold_interface import (
     VOLTAGE_KEYS,
     FirmwareThresholds,
 )
+from .tile_data import TileData
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -69,6 +70,14 @@ _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 _MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
+# ARP table entries per 40G core in the firmware shipped with this release
+_NUMBER_OF_ARP_TABLE_ENTRIES: Final[int] = 10
+
+# A caller that captures data after ConfigureTestGenerator must first wait
+# TileData.TEST_GENERATOR_LOAD_DELAY, or it captures the previous tone.
+_TEST_GENERATOR_LOAD_DELAY_FRAMES: Final[int] = int(
+    TileData.TEST_GENERATOR_LOAD_DELAY / TileData.FRAME_PERIOD
+)
 
 
 def _select_firmware_name(bios: str) -> str:
@@ -1937,6 +1946,8 @@ class TileComponentManager(
         dst_ip_40g_fpga2 = ""
         forty_gb_destination_ips: list[str] = []
         forty_gb_destination_ports: list[int] = []
+        forty_gb_cores: list[dict] = []
+        preadu_levels = None
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
@@ -3692,6 +3703,7 @@ class TileComponentManager(
     def set_lmc_download(
         self: TileComponentManager,
         mode: str,
+        data_type: str | None = None,
         payload_length: int = 1024,
         dst_ip: str = "10.0.10.1",
         src_port: Optional[int] = 0xF0D0,
@@ -3703,6 +3715,7 @@ class TileComponentManager(
         Specify whether control data will be transmitted over 1G or 40G networks.
 
         :param mode: "1G" or "10G"
+        :param data_type: Which data type to configure or `None` for all.
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination IP, defaults to "10.0.10.1"
@@ -3722,6 +3735,7 @@ class TileComponentManager(
                 try:
                     self.tile.set_lmc_download(
                         mode,
+                        data_type=data_type,
                         payload_length=payload_length,
                         dst_ip=dst_ip,
                         src_port=src_port,
@@ -3782,7 +3796,7 @@ class TileComponentManager(
                 self._forty_gb_core_list = [
                     config
                     for icore in range(2)
-                    for arp_table_entry_id in range(4)
+                    for arp_table_entry_id in range(_NUMBER_OF_ARP_TABLE_ENTRIES)
                     if (
                         config := self.tile.get_40g_core_configuration(
                             icore, arp_table_entry_id
@@ -4303,24 +4317,25 @@ class TileComponentManager(
             + str(frequency1)
             + " Hz"
         )
-        # If load time not specified, is "now" + 30 ms
-        end_time: int = 0
-        if load_frame == 0:
-            with acquire_timeout(
-                self._hardware_lock,
-                timeout=self._default_lock_timeout,
-                raise_exception=True,
-            ):
-                load_frame = self.tile.get_fpga_timestamp() + 180
-            self.logger.info(f"Tile generator uses asynchronous timestamp {load_frame}")
-        else:
-            self.logger.info(f"Test generator load time: {load_frame}")
 
+        end_time: int = 0
         with acquire_timeout(
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
             if acquired:
                 try:
+                    # If load time not specified, is "now" plus
+                    # TileData.TEST_GENERATOR_LOAD_DELAY
+                    if load_frame == 0:
+                        load_frame = (
+                            self.tile.get_fpga_timestamp()
+                            + _TEST_GENERATOR_LOAD_DELAY_FRAMES
+                        )
+                        self.logger.info(
+                            f"Tile generator uses asynchronous timestamp {load_frame}"
+                        )
+                    else:
+                        self.logger.info(f"Test generator load time: {load_frame}")
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
                     # Set everything at same time

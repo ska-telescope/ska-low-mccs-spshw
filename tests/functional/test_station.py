@@ -1268,41 +1268,45 @@ def spsstation_attributes_present_off_tile(
     def _all_nan_in(lo: int, hi: int) -> Callable[[Any], bool]:
         return lambda v: bool(np.all(np.isnan(np.asarray(v)[lo:hi])))
 
+    # Each tile event makes SpsStation re-publish the whole aggregate, so
+    # events from the other tiles can arrive before the off tile's one.
+    lookahead = 20
+
     change_event_callbacks["station_tile_programming_state"].assert_change_event(
         _Predicate(lambda v: v[off_tile_id] == "Off"),
-        lookahead=20,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_adc_power"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=20,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_static_time_delays"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=20,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_preadu_levels"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=20,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     # channeliserRounding is DevLong so cannot carry NaN; SpsStation reports
     # -1 for every channel of a tile whose value is INVALID.
     change_event_callbacks["station_channeliser_rounding"].assert_change_event(
         _Predicate(lambda v: bool(np.all(np.asarray(v)[off_tile_id] == -1))),
-        lookahead=20,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_pll_locked_summary"].assert_change_event(
-        False, lookahead=20, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
     change_event_callbacks["station_pps_present_summary"].assert_change_event(
-        False, lookahead=20, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
     change_event_callbacks["station_is_beamformer_running"].assert_change_event(
-        False, lookahead=20, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
 
 

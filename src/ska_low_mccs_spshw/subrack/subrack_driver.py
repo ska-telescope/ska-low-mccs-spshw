@@ -103,6 +103,9 @@ class SubrackDriver(
         self._command_tick = self._command_max_tick
         self._checked_bios = False
         self._poll_commands = False
+        # From API 1.8.0 the SMB no longer reports TPM currents, so they are
+        # derived from the TPM powers and voltages instead.
+        self._derive_tpm_currents = False
         # Whether the board is busy running a command. Let's be
         # extremely conservative here and assume that it is until we
         # know that it isn't.
@@ -541,6 +544,21 @@ class SubrackDriver(
         :param task_callback: callback to be called when the status of
             the command changes
         """
+        # API 1.8.0 has no set_power_supply_fan_speed command, so don't send
+        # it. Until board_info has been read, the board's own error stands.
+        board_info = self._component_state["board_info"]
+        if board_info and self._bios_version(board_info) >= [1, 8, 0]:
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(
+                        ResultCode.FAILED,
+                        "set_power_supply_fan_speed is not supported by subrack "
+                        f"API {board_info['SMM']['bios']}.",
+                    ),
+                )
+            return
+
         key = f"power_supply_fan_{fan_number}_speed"
         with self._write_lock:
             if key in self._commands_to_execute:
@@ -574,6 +592,17 @@ class SubrackDriver(
         with self._write_lock:
             self._attributes_to_write.update(kwargs)
 
+    @staticmethod
+    def _bios_version(board_info: dict) -> list[int]:
+        """
+        Return the BIOS version reported in the board info.
+
+        :param board_info: the board info reported by the subrack.
+
+        :return: the BIOS version, e.g. [1, 8, 0].
+        """
+        return [int(x) for x in board_info["SMM"]["bios"].lstrip("v").split(".")]
+
     def _check_bios_version(self: SubrackDriver) -> None:
         """Check that the api version is new enough to poll health_status."""
         if self._checked_bios:
@@ -581,10 +610,30 @@ class SubrackDriver(
             return
         board_info: dict = self._component_state["board_info"]
         if board_info:
-            bios_version = board_info["SMM"]["bios"]
-            if [int(x) for x in bios_version.lstrip("v").split(".")] >= [1, 6, 0]:
+            if self._bios_version(board_info) >= [1, 6, 0]:
                 self._poll_commands = True
             self._checked_bios = True
+
+    @staticmethod
+    def _derive_currents(
+        powers: list[float | None] | None,
+        voltages: list[float | None] | None,
+    ) -> list[float | None] | None:
+        """
+        Derive the TPM currents from the TPM powers and voltages.
+
+        :param powers: the power drawn by each TPM.
+        :param voltages: the voltage supplied to each TPM.
+
+        :return: the current drawn by each TPM. An element is None if
+            either reading is unavailable, and 0.0 if the voltage is zero.
+        """
+        if powers is None or voltages is None:
+            return None
+        return [
+            None if p is None or v is None else (p / v if v else 0.0)
+            for p, v in zip(powers, voltages)
+        ]
 
     def _estimate_max_fan_rpm(
         self: SubrackDriver,
@@ -682,12 +731,13 @@ class SubrackDriver(
                 "subrack_fan_mode",
                 "subrack_pll_locked",
                 "subrack_timestamp",
-                "tpm_currents",
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
                 "board_info",
             )
+            if not self._derive_tpm_currents:
+                poll_request.add_getattributes("tpm_currents")
             self._tick = 0
 
             # we only need to read board info once
@@ -790,6 +840,12 @@ class SubrackDriver(
                 poll_response.add_command_response(
                     command, command_response["retvalue"]
                 )
+                # From API 1.8.0, command_completed also reports whether the
+                # finished command failed, e.g. a slot that could not switch.
+                if command == "command_completed" and command_response.get("failed"):
+                    poll_response.set_command_failure(
+                        command_response.get("info") or "no details"
+                    )
             else:
                 # BUSY: the board rejected the command because it is already
                 # executing something.  This is only a genuine failure for the
@@ -926,7 +982,19 @@ class SubrackDriver(
                 self._tick = self._max_tick + 1
                 self._command_tick = self._command_max_tick + 1
             self._board_is_busy = False
-            if self._active_callback is not None:
+            if poll_response.command_failure is not None:
+                self.logger.error(
+                    f"Command failed on the subrack: {poll_response.command_failure}"
+                )
+                if self._active_callback is not None:
+                    self._active_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            f"Command failed: {poll_response.command_failure}",
+                        ),
+                    )
+            elif self._active_callback is not None:
                 self.logger.debug("Command completed")
                 self._active_callback(
                     status=TaskStatus.COMPLETED,
@@ -953,6 +1021,15 @@ class SubrackDriver(
             )
             max_rpm = self._estimate_max_fan_rpm(rpm, pwm)
             values["subrack_max_fan_speeds"] = max_rpm
+        # board_info is polled alongside the TPM values, so it tells us
+        # whether currents must be derived, even on the first poll.
+        board_info = values.get("board_info")
+        if board_info:
+            self._derive_tpm_currents = self._bios_version(board_info) >= [1, 8, 0]
+        if self._derive_tpm_currents and "tpm_powers" in values:
+            values["tpm_currents"] = self._derive_currents(
+                values["tpm_powers"], values.get("tpm_voltages")
+            )
         self._update_component_state(**values)
 
     def polling_stopped(self: SubrackDriver) -> None:

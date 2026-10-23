@@ -216,6 +216,30 @@ class FakeGroup:
         return replies
 
 
+def subrack_simulator_config_for(
+    config: dict[str, Any], api_version: str
+) -> dict[str, Any]:
+    """
+    Adapt a subrack simulator configuration to a version of the web API.
+
+    From API 1.8.0 the board reports TPM powers rather than TPM currents, so
+    the configured currents become the powers they imply.
+
+    :param config: the configuration, written for API 1.6.0.
+    :param api_version: the API version the simulator will emulate.
+
+    :return: a copy of the configuration that the simulator accepts.
+    """
+    config = dict(config)
+    if api_version != "1.6.0":
+        tpm_currents = config.pop("tpm_currents")
+        config["tpm_powers"] = [
+            current * voltage
+            for current, voltage in zip(tpm_currents, config["tpm_voltages"])
+        ]
+    return config
+
+
 def wait_for_condition(
     condition_func: Callable[[], bool], timeout: float = 120, poll_interval: float = 0.1
 ) -> bool:

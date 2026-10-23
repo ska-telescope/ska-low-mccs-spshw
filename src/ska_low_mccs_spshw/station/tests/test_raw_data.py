@@ -9,7 +9,12 @@
 from __future__ import annotations
 
 import json
+import time
 from copy import copy
+
+from ska_control_model import ResultCode
+
+from time_utils import str_from_float_epoch_utc_time
 
 from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
@@ -43,16 +48,38 @@ class TestRaw(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
+    # Each FPGA sends its raw burst at full line rate with no gap between packets.
+    # Bursts from every tile at the same frame can overflow the link to the DAQ,
+    # so each tile starts its burst this long after the tile before it.
+    RAW_SEND_SPACING = 0.05  # seconds
+    # Time for every tile to receive its request before the first burst starts.
+    RAW_SEND_LEAD_TIME = 2.0  # seconds
+
     def _send_raw_data(self: TestRaw, sync: bool) -> None:
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "raw",
-                    "seconds": 1,
-                    "sync": sync,
-                }
+        """
+        Request a raw burst from each tile, with the start times spaced apart.
+
+        :param sync: whether to send synchronised raw data.
+        """
+        result_codes, messages = self.component_manager.stop_data_transmission()
+        assert (
+            result_codes[0] == ResultCode.OK
+        ), f"StopDataTransmission was not accepted: {messages[0]}"
+
+        first_start_time = time.time() + self.RAW_SEND_LEAD_TIME
+        for tile_no, tile in enumerate(self.tile_proxies):
+            params = {
+                "data_type": "raw",
+                "sync": sync,
+                "start_time": str_from_float_epoch_utc_time(
+                    first_start_time + tile_no * self.RAW_SEND_SPACING
+                ),
+            }
+            [result_code], [message] = tile.SendDataSamples(json.dumps(params))
+            assert result_code == ResultCode.OK, (
+                f"SendDataSamples({params}) was not accepted by "
+                f"{tile.dev_name()}: {message}"
             )
-        )
 
     def _check_raw(self: TestRaw, raw_data_synchronised: bool = False) -> None:
         self.test_logger.debug("Checking received data")
@@ -106,7 +133,10 @@ class TestRaw(BaseDaqTest):
             self.test_logger.debug("Sending raw data")
             self._configure_and_start_pattern_generator("jesd")
             self._send_raw_data(sync=sync)
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert (
+                _received
+            ), f"Timed out waiting for raw data at {time.strftime('%H:%M:%S')}"
             self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_raw(raw_data_synchronised=sync)

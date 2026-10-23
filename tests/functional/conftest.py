@@ -342,9 +342,7 @@ def available_station_subracks(
     if not station_label:
         station_label = DEFAULT_STATION_LABEL
 
-    subrack_pattern = (
-        rf"low-mccs/subrack/{re.escape(station_label)}-sr(?P<number>\d{{2}})"
-    )
+    subrack_pattern = rf"low-mccs/subrack/{re.escape(station_label)}-sr(?P<number>\d+)"
 
     if true_context:
         _available_station_subracks = []

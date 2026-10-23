@@ -778,7 +778,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "type": "object",
         "properties": {
             "ddr_start_byte_address": {"type": "integer", "minimum": 0},
-            "max_ddr_byte_size": {"type": "integer"},
+            "max_ddr_byte_size": {"type": ["integer", "null"]},
             "mode": {"type": "string"},
         },
     }
@@ -4513,7 +4513,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fortyGbDestinationIps = attribute_from_signal(
         forty_gb_destination_ips_signal,
         dtype=("DevString",),
-        max_dim_x=16,
+        max_dim_x=32,
         label="40Gb Destination IPs",
         doc="The destination IPs for all 40Gb ports on the tile",
     )
@@ -4521,7 +4521,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fortyGbDestinationPorts = attribute_from_signal(
         forty_gb_destination_ports_signal,
         dtype=("DevLong",),
-        max_dim_x=16,
+        max_dim_x=32,
         abs_change=1,
         archive_abs_change=1,
         label="40Gn Destination Ports",
@@ -6220,7 +6220,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "gateway_ip": item.get("gateway_ip", None),
         }
 
-    @command(dtype_in="DevString", dtype_out="DevString")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevString",
+        fisallowed="_is_programmed",
+    )
     @stb.validators.validate_json_args(schema=Get40GCoreConfiguration_SCHEMA)
     def Get40GCoreConfiguration(
         self: MccsTile, core_id: int = -1, arp_table_entry: int = 0
@@ -6235,7 +6239,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param core_id: (int) core id
         :param arp_table_entry: (int) ARP table entry ID to use
 
-        :return: the configuration is a json string describilg a list (possibly empty)
+        :return: the configuration is a json string describing a list (possibly empty)
                  Each list entry comprising:
                  core_id, arp_table_entry, source_mac, source_ip, source_port,
                  destination_ip, destination_port, netmask, gateway_ip
@@ -6270,6 +6274,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def SetLmcDownload(
         self: MccsTile,
         mode: str,
+        data_type: str | None = None,
         payload_length: int = 1024,
         destination_ip: str = "10.0.10.1",
         source_port: Optional[int] = 0xF0D0,
@@ -6283,6 +6288,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         A json dictionary with optional keywords:
 
         :param mode: (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
+        :param data_type: (string) Data type to configure. Omit for all.
         :param payload_length: (int) SPEAD payload length for channel data
         :param destination_ip: (string) Destination IP.
         :param source_port: (int) Source port for integrated data streams
@@ -6303,6 +6309,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         result_codes, messages = self.component_manager.set_lmc_download(
             mode=mode,
+            data_type=data_type,
             payload_length=payload_length,
             dst_ip=destination_ip,
             src_port=source_port,

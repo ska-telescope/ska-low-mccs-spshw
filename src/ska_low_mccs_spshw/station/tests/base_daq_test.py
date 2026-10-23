@@ -20,9 +20,9 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
+from ska_control_model import ResultCode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.observers import Observer
-from watchdog.observers.api import BaseObserver
+from tango import AttrQuality, EventType
 
 from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
@@ -67,11 +67,12 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param component_manager: SpsStation component manager under test.
         """
         self._data: np.ndarray | None = None
-        self._observer: BaseObserver
         self._data_handler: BaseDataReceivedHandler | None = None
         self._pattern: list | None = None
         self._adders: list | None = None
         self._data_created_event: Event = Event()
+        # The DAQ values to put back on reset, for each key this test configured.
+        self._daq_config_to_restore: dict[str, Any] = {}
         random_id = "".join(
             random.choice(string.ascii_letters + string.digits) for _ in range(24)
         )
@@ -83,12 +84,14 @@ class BaseDaqTest(TpmSelfCheckTest):
 
     def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
         self._data = data
+        self.test_logger.debug("Setting data received event.")
         self._data_created_event.set()
 
     def _configure_daq(
         self: BaseDaqTest,
         daq_mode: str,
         integrated: bool = False,
+        directory: str = "/",
         **daq_config: Any,
     ) -> None:
         assert self.daq_proxy is not None
@@ -97,14 +100,14 @@ class BaseDaqTest(TpmSelfCheckTest):
         time.sleep(1)
         daq_config.update(
             {
-                "directory": "/",
+                "directory": directory,
                 "description": "self-check data",
             }
         )
         if "nof_antennas" not in daq_config:
             daq_config.update(
                 {
-                    "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+                    "nof_antennas": TileData.ANTENNA_COUNT,
                 }
             )
         if "nof_tiles" not in daq_config:
@@ -114,6 +117,7 @@ class BaseDaqTest(TpmSelfCheckTest):
                 }
             )
 
+        self._save_daq_config(list(daq_config))
         self.daq_proxy.Configure(json.dumps(daq_config))
         time.sleep(1)
         self.daq_proxy.Start(json.dumps({"modes_to_start": daq_mode}))
@@ -137,6 +141,49 @@ class BaseDaqTest(TpmSelfCheckTest):
             }
             self.component_manager.set_lmc_download(**tpm_config)
 
+    def _save_daq_config(self: BaseDaqTest, keys: list[str]) -> None:
+        """
+        Save the current DAQ value of each key, so that reset can put it back.
+
+        A key keeps the value from before the first change, because a test can
+        configure the DAQ more than once before it resets.
+
+        :param keys: the configuration keys that the test is about to change.
+        """
+        assert self.daq_proxy is not None
+        unsaved = [key for key in keys if key not in self._daq_config_to_restore]
+        if not unsaved:
+            return
+        current_config = json.loads(self.daq_proxy.GetConfiguration())
+        for key in unsaved:
+            if key in current_config:
+                self._daq_config_to_restore[key] = current_config[key]
+            else:
+                self.test_logger.warning(
+                    f"DAQ configuration has no {key}, so reset cannot restore it."
+                )
+
+    def _restore_daq_config(self: BaseDaqTest) -> None:
+        """
+        Put back the DAQ values that this test changed.
+
+        This leaves the DAQ as the test found it, so the configuration of one
+        test does not leak into the next test or into normal operation.
+
+        :raises AssertionError: if the DAQ rejects the configuration.
+        """
+        assert self.daq_proxy is not None
+        if not self._daq_config_to_restore:
+            return
+        config = self._daq_config_to_restore
+        self._daq_config_to_restore = {}
+        self.test_logger.debug(f"Restoring DAQ configuration {config}")
+        result_codes, messages = self.daq_proxy.Configure(json.dumps(config))
+        assert result_codes[0] == ResultCode.OK, (
+            f"DAQ did not accept the restored configuration {config}: "
+            f"{ResultCode(result_codes[0]).name} - {messages[0]}"
+        )
+
     def _configure_csp_ingest(self: BaseDaqTest) -> None:
         assert self.daq_proxy is not None
         daq_status = json.loads(self.daq_proxy.DaqStatus())
@@ -144,6 +191,34 @@ class BaseDaqTest(TpmSelfCheckTest):
             daq_status["Receiver IP"][0],
             0xF0D0,
             daq_status["Receiver Ports"][0],
+        )
+
+    def _send_data_samples(self: BaseDaqTest, **params: Any) -> None:
+        """
+        Request a data transmission from all tiles, and check it was accepted.
+
+        ``force`` is set because SpsStation gates SendDataSamples on the
+        ``pendingDataRequests`` attribute of every tile, which is polled
+        rather than read live. A stale ``True`` on any one tile makes the
+        station return REJECTED without transmitting from any tile. With
+        ``force`` the station aborts the previous send and proceeds, which is
+        what we want here: the caller has already consumed the data from the
+        previous request.
+
+        The result code is checked because a rejected request is a return
+        value, not an exception. Ignoring it turns "nothing was transmitted"
+        into a timeout waiting for data that was never asked for.
+
+        :param params: parameters for SendDataSamples.
+
+        :raises AssertionError: if the request was not accepted.
+        """
+        result_codes, messages = self.component_manager.send_data_samples(
+            json.dumps(params), force=True
+        )
+        assert result_codes[0] == ResultCode.OK, (
+            f"SendDataSamples({params}) was not accepted: "
+            f"{result_codes[0].name} - {messages[0]}"
         )
 
     def _configure_and_start_pattern_generator(
@@ -207,6 +282,9 @@ class BaseDaqTest(TpmSelfCheckTest):
         if delays is not None:
             json_arg.update({"delays": delays})
         self.component_manager.configure_test_generator(json.dumps(json_arg))
+        # Each tile loads the tone this long after it replies, and no event
+        # marks the load, so wait for it before any data is captured.
+        time.sleep(TileData.TEST_GENERATOR_LOAD_DELAY)
 
     def _disable_test_generator(self: BaseDaqTest) -> None:
         self.component_manager.configure_test_generator("{}")
@@ -251,17 +329,52 @@ class BaseDaqTest(TpmSelfCheckTest):
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
-        self._observer = Observer()
         assert self.daq_proxy is not None
-        daq_dir = json.loads(self.daq_proxy.getconfiguration())["directory"]
-        self.test_logger.info(f"Observer watching {daq_dir}...")
-        self._observer.schedule(self._data_handler, daq_dir, recursive=True)
-        self._observer.start()
+        assert self._data_handler is not None
+        self._data_handler.prepare_for_new_watch()
+        self.daq_proxy.add_change_event_callback(
+            "datareceivedresult", self._data_handler.on_created
+        )
 
     def _stop_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Stopping directory watch")
-        self._observer.stop()
-        self._observer.join()
+        assert self.daq_proxy is not None
+        # Do this before the unsubscribe, so that a callback still in progress
+        # finishes first and a late event cannot set data after a reset.
+        if self._data_handler is not None:
+            self._data_handler.end_watch()
+        if (
+            "datareceivedresult"
+            in self.daq_proxy._change_event_subscription_ids[EventType.CHANGE_EVENT]
+        ):
+            self.daq_proxy.unsubscribe_change_event("datareceivedresult")
+        self._drain_daq_events()
+
+    def _drain_daq_events(self: BaseDaqTest) -> None:
+        """
+        Wait until the event serialiser has handled every queued DAQ event.
+
+        Events from this watch can still be in the queue after the unsubscribe.
+        The handler drops them while it is not watching. If the next watch
+        starts first, a stale event can use up the flag that ignores the
+        initial subscription event.
+        """
+        if self._daq_event_serialiser is None:
+            return
+        drained = Event()
+
+        def _set_drained(*_: Any) -> None:
+            drained.set()
+
+        self._daq_event_serialiser.queue_event(
+            self.daq_trl,
+            "drain",
+            None,
+            AttrQuality.ATTR_VALID,
+            _set_drained,
+        )
+        if not drained.wait(10):
+            self.test_logger.warning("Timed out waiting for DAQ events to drain")
 
     def _delete_data(self: BaseDaqTest) -> None:
         if not self.keep_data:
@@ -341,15 +454,16 @@ class BaseDaqTest(TpmSelfCheckTest):
         return data
 
     def _reset(self: BaseDaqTest) -> None:
+        self._stop_directory_watch()
+        if self.daq_proxy is not None:
+            self.daq_proxy.Stop()
+            # Sleep to allow time to stop.
+            time.sleep(1)
+            self._restore_daq_config()
         self._data = None
         self._data_created_event.clear()
         self._adders = None
         self._pattern = None
-        self._stop_directory_watch()
-        if self.daq_proxy is not None:
-            self.daq_proxy.Init()
-            # Sleep to allow time to stop.
-            time.sleep(1)
         # self._delete_data()
 
     @contextmanager

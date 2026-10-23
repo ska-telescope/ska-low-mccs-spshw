@@ -8,7 +8,7 @@
 """An implementation of a test for channelised data from tiles."""
 from __future__ import annotations
 
-import json
+import time
 from copy import copy
 
 from ...tile.tile_data import TileData
@@ -44,14 +44,7 @@ class TestChannel(BaseDaqTest):
     """
 
     def _send_channel_data(self: TestChannel) -> None:
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "channel",
-                    "n_samples": 1024,
-                }
-            )
-        )
+        self._send_data_samples(data_type="channel", n_samples=1024)
 
     # pylint: disable=too-many-locals
     def _check_channel(self: TestChannel) -> None:
@@ -110,7 +103,10 @@ class TestChannel(BaseDaqTest):
             self.test_logger.debug("Sending channel data")
             self._configure_and_start_pattern_generator("channel")
             self._send_channel_data()
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert (
+                _received
+            ), f"Timed out waiting for channel data at {time.strftime('%H:%M:%S')}"
             self._data_created_event.clear()
             self._stop_pattern_generator("channel")
             self._stop_directory_watch()

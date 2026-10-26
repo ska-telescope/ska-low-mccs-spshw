@@ -1540,8 +1540,8 @@ def test_station_tile_attributes(
 
     for i, tile in enumerate(mock_tile_device_proxies):
         if tile_attribute_name == "fpgaTemperature":
-            setattr(tile, "fpga1Temperature", init_tile_attribute_values(i))
-            setattr(tile, "fpga2Temperature", init_tile_attribute_values(i))
+            setattr(tile, "temperatures_fpga0", init_tile_attribute_values(i))
+            setattr(tile, "temperatures_fpga1", init_tile_attribute_values(i))
         else:
             setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
 
@@ -1550,8 +1550,8 @@ def test_station_tile_attributes(
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         if tile_attribute_name == "fpgaTemperature":
-            setattr(tile, "fpga1Temperature", final_tile_attribute_values(i))
-            setattr(tile, "fpga2Temperature", final_tile_attribute_values(i))
+            setattr(tile, "temperatures_fpga0", final_tile_attribute_values(i))
+            setattr(tile, "temperatures_fpga1", final_tile_attribute_values(i))
         else:
             setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
     assert wait_for_attribute_value(
@@ -1688,10 +1688,10 @@ def _summary(values: list[float]) -> list[float]:
         ),
         pytest.param(
             "fpgaTemperaturesSummary",
-            "fpga1Temperature",
+            "temperatures_fpga0",
             float,
             0,
-            # fpga2Temperature is 25.0 on every tile, and stays valid.
+            # temperatures_fpga1 is 25.0 on every tile, and stays valid.
             lambda n: _summary([float(i) for i in range(n)] + [25.0] * n),
             lambda n: _summary([float(i) for i in range(1, n)] + [25.0] * n),
             id="fpgaTemperaturesSummary",

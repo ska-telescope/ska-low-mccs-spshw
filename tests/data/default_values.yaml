@@ -161,15 +161,15 @@ ska-tango-devices:
       voltageMon->max_alarm: 5.19
       voltageMon->min_alarm: 4.69
 
-      fpga1Temperature->max_alarm: 75.0
-      fpga1Temperature->max_warning: 68.0
-      fpga1Temperature->min_warning: 16.0
-      fpga1Temperature->min_alarm: 15.0
+      temperatures_fpga0->max_alarm: 75.0
+      temperatures_fpga0->max_warning: 68.0
+      temperatures_fpga0->min_warning: 16.0
+      temperatures_fpga0->min_alarm: 15.0
 
-      fpga2Temperature->max_alarm: 75.0
-      fpga2Temperature->max_warning: 68.0
-      fpga2Temperature->min_warning: 16.0
-      fpga2Temperature->min_alarm: 15.0
+      temperatures_fpga1->max_alarm: 75.0
+      temperatures_fpga1->max_warning: 68.0
+      temperatures_fpga1->min_warning: 16.0
+      temperatures_fpga1->min_alarm: 15.0
 
       currentFE0->max_alarm: 2.62
       currentFE1->max_alarm: 2.62

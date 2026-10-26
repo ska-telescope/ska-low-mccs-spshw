@@ -902,7 +902,7 @@ class TestMccsTileTpmDriver:
                 99.0,
             ),
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 96.0,
             ),
@@ -1013,17 +1013,17 @@ class TestMccsTileTpmDriver:
         ("attribute", "initial_value", "alarm_value"),
         [
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 97.0,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 97.0,
             ),
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 96.0,
             ),
@@ -1141,17 +1141,17 @@ class TestMccsTileTpmDriver:
         ("attribute", "initial_value", "threshold_method"),
         [
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
-                "fpga1TemperatureThresholds",
+                "temperatures_fpga0Thresholds",
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 "fpga2TemperatureThresholds",
             ),
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 "boardTemperatureThresholds",
             ),

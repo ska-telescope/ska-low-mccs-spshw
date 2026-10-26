@@ -2305,12 +2305,12 @@ class TestMccsTile:
                 None,
             ),
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 None,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 None,
             ),

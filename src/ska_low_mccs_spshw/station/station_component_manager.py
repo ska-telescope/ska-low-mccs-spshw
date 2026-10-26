@@ -186,8 +186,8 @@ class _TileProxy(DeviceComponentManager):
             "fpga0_station_beamformer_flagged_count": self._on_attribute_change,
             "fpga1_station_beamformer_flagged_count": self._on_attribute_change,
             "boardTemperature": self._on_attribute_change,
-            "fpga1Temperature": self._on_attribute_change,
-            "fpga2Temperature": self._on_attribute_change,
+            "temperatures_fpga0": self._on_attribute_change,
+            "temperatures_fpga1": self._on_attribute_change,
             # ================================================================
             # sysrefPresent and clockPresent are not subscribed: they are not
             # yet implemented in ska-low-sps-tpm-api, so the tile never pushes

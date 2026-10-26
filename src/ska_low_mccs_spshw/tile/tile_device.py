@@ -163,8 +163,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # emitted value from the signal directly in code where reading the
     # attribute self.attr would return a `tango._tango.Attribute` object.
     board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+    fpga0_temperature_signal: AttrSignal[float] = AttrSignal[float]()
     fpga1_temperature_signal: AttrSignal[float] = AttrSignal[float]()
-    fpga2_temperature_signal: AttrSignal[float] = AttrSignal[float]()
     temperature_adc0_signal: AttrSignal[float] = AttrSignal[float]()
     temperature_adc1_signal: AttrSignal[float] = AttrSignal[float]()
     temperature_adc2_signal: AttrSignal[float] = AttrSignal[float]()
@@ -362,16 +362,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
         board_temperature_signal: "boardTemperature",
-        fpga1_temperature_signal: "temperatures_fpga0",
-        fpga2_temperature_signal: "temperatures_fpga1",
+        fpga0_temperature_signal: "temperatures_fpga0",
+        fpga1_temperature_signal: "temperatures_fpga1",
     }
 
     # Maps each health-monitoring attribute name to its signal attribute name,
     # used by update_tile_health_attributes to route updates generically.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
         "boardTemperature": "board_temperature_signal",
-        "temperatures_fpga0": "fpga1_temperature_signal",
-        "temperatures_fpga1": "fpga2_temperature_signal",
+        "temperatures_fpga0": "fpga0_temperature_signal",
+        "temperatures_fpga1": "fpga1_temperature_signal",
         "temperatureADC0": "temperature_adc0_signal",
         "temperatureADC1": "temperature_adc1_signal",
         "temperatureADC2": "temperature_adc2_signal",
@@ -4434,7 +4434,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return False
 
     temperatures_fpga0 = attribute_from_signal(  # noqa: N815
-        fpga1_temperature_signal,
+        fpga0_temperature_signal,
         dtype="DevFloat",
         abs_change=0.1,
         archive_abs_change=0.1,
@@ -4446,7 +4446,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_fpga1 = attribute_from_signal(
-        fpga2_temperature_signal,
+        fpga1_temperature_signal,
         dtype="DevFloat",
         abs_change=0.2,
         archive_abs_change=0.2,

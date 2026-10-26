@@ -540,10 +540,10 @@ configuration:
       isProgrammed:
         code_push_event: true
         archive_period: 0
-      fpga1Temperature:
+      temperatures_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga2Temperature:
+      temperatures_fpga1:
         code_push_event: true
         archive_period: 0
       fpgaReferenceTime:

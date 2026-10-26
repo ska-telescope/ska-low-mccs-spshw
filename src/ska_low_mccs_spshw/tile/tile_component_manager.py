@@ -334,7 +334,7 @@ class TileComponentManager(
         self.integrated_data_transmission_mode: str = "Not transmitting"
         self._preadu_levels = np.array(preadu_levels)
         self._static_time_delays: list[float] = static_time_delays
-        self._firmware_name: str | None = self.FIRMWARE_NAME
+        self._firmware_name: str = ""
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
         self.ddr_write_size: int = 0
@@ -2084,7 +2084,7 @@ class TileComponentManager(
 
         :return: firmware name
         """
-        return self._firmware_name or self.FIRMWARE_NAME
+        return self._firmware_name
 
     @property
     @check_communicating

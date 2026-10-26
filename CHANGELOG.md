@@ -1,5 +1,12 @@
 # Version History
 
+## 16.0.2
+
+* [THORN-657] Bump tpm-api version 4.0.2 -> 4.1.2
+* [THORN-657] Fix firmwareName reporting wrong cache. This is now deprecated in favour of tile_info, if the cache.
+* [THORN-657] Remove the SpsStation `On` workaround. The `OnWorkaroundFlag` device property, the `OnWorkaround` attribute and the brute-force `ensure_tpms_on()` fallback have been deleted.
+* [THORN-657] Remove the unused `AttributeManager` classes (`ska_low_mccs_spshw.tile.attribute_managers`) and their tests. MccsTile attributes are signal backed since THORN-650.
+
 ## 16.0.1
 
 * [SKB-1647] Attribute source from hardware. Writes to MccsTile `phaseTerminalCount`, `channeliserRounding`, `staticTimeDelays`, `cspRounding` and `preaduLevels` no longer push the written value from the software cache. The attribute now reports the value read back from hardware after the write, so it reflects any quantisation or rejection by the hardware (e.g. `staticTimeDelays` in 1.25 ns steps, `preaduLevels` in 0.25 dB steps).

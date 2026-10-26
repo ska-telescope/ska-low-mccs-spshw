@@ -54,7 +54,6 @@ from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 from ..tile.tile_data import TileData
 from .group_utils import group_command, group_write_attribute, raise_for_group_failures
-from .station_on_workaround_utils import ensure_tpms_on
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
@@ -586,7 +585,6 @@ class SpsStationComponentManager(
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         wren_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         tile_group: tango.Group,
-        on_workaround_flag: bool = False,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
@@ -640,11 +638,9 @@ class SpsStationComponentManager(
             called when a subrack's health changed
         :param wren_health_changed_callback: callback to be
             called when a WREN's health changed
-        :param on_workaround_flag: whether to enable the workaround
         :param event_serialiser: the event serialiser to be used by this object.
         :param tile_group: An optional injected group.
         """
-        self._on_workaround_flag = on_workaround_flag
         self._event_serialiser = event_serialiser
         self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
         self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
@@ -2423,24 +2419,6 @@ class SpsStationComponentManager(
             result_code, failure_step = self._turn_on_tiles(
                 task_callback, task_abort_event
             )
-
-        if result_code != ResultCode.OK and self._on_workaround_flag:
-            self.logger.info("Using On bruteforce workaround (timeout=3min).")
-            try:
-                ensure_tpms_on(
-                    list(
-                        proxy._proxy._device
-                        for proxy in self._tile_proxies.values()
-                        if proxy._proxy is not None
-                    )
-                )
-                result_code = ResultCode.OK
-                failure_step = ""
-                message = "On Command Completed"
-            except Exception as e:  # pylint:disable=broad-exception-caught
-                self.logger.error(f"On workaround timed out: {e}")
-                failure_step = f"turning on tiles (workaround timed out: {e})"
-                message = f"On Command failed: {failure_step}"
 
         if result_code == ResultCode.OK:
             self.logger.info("Initialising tiles")

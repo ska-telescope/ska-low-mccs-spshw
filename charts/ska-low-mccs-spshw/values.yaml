@@ -50,10 +50,10 @@ ska-tango-devices:
   # deviceDefaults:
   classProperties:
     MccsTile:
-      boardTemperature->max_alarm: 70.0
-      boardTemperature->max_warning: 65.0
-      boardTemperature->min_warning: 16.0
-      boardTemperature->min_alarm: 15.0
+      temperatures_board->max_alarm: 70.0
+      temperatures_board->max_warning: 65.0
+      temperatures_board->min_warning: 16.0
+      temperatures_board->min_alarm: 15.0
 
       adc_pll_lock_status->min_alarm: 0
 
@@ -385,10 +385,10 @@ ska-tango-devices:
     # daq:
     #   metadata:
     #     component: daq
-      # image:
-      #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-      #   tag: 9.0.0-dev.cdd6afaaf
-      #   name: ska-low-mccs-daq
+    # image:
+    #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+    #   tag: 9.0.0-dev.cdd6afaaf
+    #   name: ska-low-mccs-daq
     spshw:
       metadata:
         component: spshw

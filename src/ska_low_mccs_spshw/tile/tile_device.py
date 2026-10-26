@@ -361,7 +361,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
-        board_temperature_signal: "boardTemperature",
+        board_temperature_signal: "temperatures_board",
         fpga0_temperature_signal: "temperatures_fpga0",
         fpga1_temperature_signal: "temperatures_fpga1",
     }
@@ -369,7 +369,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Maps each health-monitoring attribute name to its signal attribute name,
     # used by update_tile_health_attributes to route updates generically.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
-        "boardTemperature": "board_temperature_signal",
+        "temperatures_board": "board_temperature_signal",
         "temperatures_fpga0": "fpga0_temperature_signal",
         "temperatures_fpga1": "fpga1_temperature_signal",
         "temperatureADC0": "temperature_adc0_signal",
@@ -883,7 +883,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "ppsPresent": ["timing", "pps", "status"],
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
-            "boardTemperature": ["temperatures", "board"],
+            "temperatures_board": ["temperatures", "board"],
             "io": ["io"],
             "dsp": ["dsp"],
             "voltages": ["voltages"],
@@ -1894,7 +1894,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    boardTemperature = attribute_from_signal(
+    temperatures_board = attribute_from_signal(
         board_temperature_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -6429,7 +6429,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
 
-            >>> thresholds = {"boardTemperature" : {
+            >>> thresholds = {"temperatures_board" : {
                 >>>         "max_alarm": "79"
                 >>>         "min_alarm": "25"
                 >>>         "max_warning": "74"

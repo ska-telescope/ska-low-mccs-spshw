@@ -289,7 +289,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "ppsPresent": ["timing", "pps", "status"],
     "temperatures_fpga0": ["temperatures", "FPGA0"],
     "temperatures_fpga1": ["temperatures", "FPGA1"],
-    "boardTemperature": ["temperatures", "board"],
+    "temperatures_board": ["temperatures", "board"],
     "io": ["io"],
     "dsp": ["dsp"],
     "voltages": ["voltages"],
@@ -1964,7 +1964,7 @@ class TestMccsTile:
     @pytest.mark.parametrize(
         "attribute_name",
         [
-            "boardTemperature",
+            "temperatures_board",
             "adcPower",
             "preaduLevels",
             "tileProgrammingState",
@@ -2300,7 +2300,7 @@ class TestMccsTile:
         ("attribute", "initial_value", "write_value"),
         [
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 None,
             ),

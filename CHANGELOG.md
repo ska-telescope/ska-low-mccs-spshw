@@ -1,7 +1,12 @@
 # Version History
 
-## Unreleased
+## 16.0.1
 
+* [SKB-1647] Attribute source from hardware. Writes to MccsTile `phaseTerminalCount`, `channeliserRounding`, `staticTimeDelays`, `cspRounding` and `preaduLevels` no longer push the written value from the software cache. The attribute now reports the value read back from hardware after the write, so it reflects any quantisation or rejection by the hardware (e.g. `staticTimeDelays` in 1.25 ns steps, `preaduLevels` in 0.25 dB steps).
+* [SKB-1647] MccsTile `abs_change` is now set to a negligible value (`1e-300`) on all attributes, so that any change in value, however small, produces a change event. `archive_abs_change` is unchanged.
+  * `abs_change=0` cannot be used: Tango treats it as "Not specified", and clients then fail to subscribe to change events (`API_EventPropertiesNotSet`).
+  * Repeated identical values still do not produce a change event. A transition through `INVALID` and back to `VALID` with the same value does.
+* [THORN-770] Bump ska-telmodel dependency
 * [THORN-769] Added test if initialising TPMs without reprogramming leads to broken signal chain
 
 ## 16.0.0
@@ -15,6 +20,9 @@
 ## 15.2.2
 
 * [THORN-768] HotFix: remove `rfiBlankingEnabledAntennas` from tile health. (this is currently broken when polling enabled on attribute.)
+* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
+* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
+* [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.2.1
 
@@ -22,9 +30,6 @@
 * [THORN-749] Use CLUSTER_DOMAIN for aws migration.
 * [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
 * [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
-* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
-* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
-* [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.2.0
 

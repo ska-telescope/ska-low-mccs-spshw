@@ -72,7 +72,7 @@ know which raw monitoring point feeds which Tango attribute, ``MccsTile``
 keeps a dictionary, ``attribute_monitoring_point_map``:
 
 - the **key** is the Tango attribute name (for example
-  ``fpga1Temperature``);
+  ``temperatures_fpga0``);
 - the **value** is the dictionary traversal path (a list of keys) used to
   look up that monitoring point in the tpm-api monitoring point lookup
   table (for example ``["temperatures", "FPGA0"]``).
@@ -88,8 +88,8 @@ The full map, as of this writing, is:
    :widths: 30, 40
 
    "``ppsPresent``", "``timing -> pps -> status``"
-   "``fpga1Temperature``", "``temperatures -> FPGA0``"
-   "``fpga2Temperature``", "``temperatures -> FPGA1``"
+   "``temperatures_fpga0``", "``temperatures -> FPGA0``"
+   "``temperatures_fpga1``", "``temperatures -> FPGA1``"
    "``boardTemperature``", "``temperatures -> board``"
    "``io``", "``io``"
    "``dsp``", "``dsp``"

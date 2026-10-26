@@ -952,7 +952,7 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
     :param tile_device: tile device under test.
     """
     valid_attrs = [
-        "boardTemperature",
+        "temperatures_board",
         "voltageMGT_AVCC",
         "voltageMGT_AVTT",
         "voltageSW_AVDD1",
@@ -963,7 +963,7 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
         "adc_sysref_timing_requirements",
     ]
     invalid_attrs = [
-        "fpga1Temperature",
+        "temperatures_fpga0",
         "ppsPresent",
         "fpga0_qpll_status",
     ]

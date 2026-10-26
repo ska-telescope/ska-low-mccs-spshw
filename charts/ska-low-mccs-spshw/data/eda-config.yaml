@@ -323,10 +323,10 @@ configuration:
       fpga1_linkup_loss_count:
         code_push_event: true
         archive_period: 0
-      fpga0_data_router_status:
+      io_data_router_status_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_data_router_status:
+      io_data_router_status_fpga1:
         code_push_event: true
         archive_period: 0
       data_router_discarded_packets:
@@ -347,19 +347,22 @@ configuration:
       fpga1_ddr_reset_counter:
         code_push_event: true
         archive_period: 0
-      f2f_soft_errors:
+      io_f2f_interface_soft_error_fpga0:
         code_push_event: true
         archive_period: 0
-      f2f_hard_errors:
+      io_f2f_interface_soft_error_fpga1:
+        code_push_event: true
+        archive_period: 0
+      io_f2f_interface_hard_error_fpga0:
+        code_push_event: true
+        archive_period: 0
+      io_f2f_interface_hard_error_fpga1:
         code_push_event: true
         archive_period: 0
       fpga0_resync_count:
         code_push_event: true
         archive_period: 0
       fpga1_resync_count:
-        code_push_event: true
-        archive_period: 0
-      lane_status:
         code_push_event: true
         archive_period: 0
       link_status:
@@ -407,12 +410,16 @@ configuration:
       fpga1_qpll_counter:
         code_push_event: true
         archive_period: 0
-      f2f_pll_lock_status:
+      io_f2f_interface_pll_status_fpga0:
         code_push_event: true
         archive_period: 0
-      f2f_pll_counter:
+      io_f2f_interface_pll_status_fpga1:
+        code_push_event: true
+      io_f2f_interface_pll_status_fpga0_counter:
         code_push_event: true
         archive_period: 0
+      io_f2f_interface_pll_status_fpga1_counter:
+        code_push_event: true
       timing_pll_lock_status:
         code_push_event: true
         archive_period: 0

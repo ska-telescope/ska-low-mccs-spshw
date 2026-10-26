@@ -4,8 +4,14 @@
 
 - [SKB-1420] Fix subrack device stuck in UNKNOWN state when upstream (PDU/PowerMarshaller) communication is established after the subrack is already being polled and is ON. The cached hardware power state is now re-asserted when all upstream connections are established. Fault updates received when the op state does not allow them (UNKNOWN or OFF) are now held and applied once legal, instead of raising illegal op-state transitions.
 - [SKB-1445] Fix bug in AcquireDataForCalibration when receiving duplicate events from DAQ (usually from EventSystemDown errors)
-- [THORN-757] Rename MccsTile attributes used for monitoring TPM health
-  -
+- [THORN-757] Rename `MccsTile` Tango attributes used for monitoring TPM health using the convention of the full TPM API path, including the leading category.
+  - Renamed outdated fields in charts/ska-low-mccs-spshw/data/eda-config.yaml to match `MccsTile` changes done in [THORN-656]
+    - `fpga0_data_router_status` -> `io_data_router_status_fpga0`
+    - `fpga1_data_router_status` -> `io_data_router_status_fpga1`
+    - `f2f_soft_errors` → `io_f2f_interface_soft_error_fpga0`, `io_f2f_interface_soft_error_fpga1`
+    - `f2f_hard_errors` → `io_f2f_interface_hard_error_fpga0`, `io_f2f_interface_hard_error_fpga1`
+    - `f2f_pll_lock_status` → `io_f2f_interface_pll_status_fpga0`, `io_f2f_interface_pll_status_fpga1`
+    - Removed the `lane_status` field.
 
 ## 15.2.2
 

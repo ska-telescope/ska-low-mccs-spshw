@@ -169,8 +169,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # emitted value from the signal directly in code where reading the
     # attribute self.attr would return a `tango._tango.Attribute` object.
     board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
+    fpga0_temperature_signal: AttrSignal[float] = AttrSignal[float]()
     fpga1_temperature_signal: AttrSignal[float] = AttrSignal[float]()
-    fpga2_temperature_signal: AttrSignal[float] = AttrSignal[float]()
     temperature_adc0_signal: AttrSignal[float] = AttrSignal[float]()
     temperature_adc1_signal: AttrSignal[float] = AttrSignal[float]()
     temperature_adc2_signal: AttrSignal[float] = AttrSignal[float]()
@@ -367,33 +367,33 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
-        board_temperature_signal: "boardTemperature",
-        fpga1_temperature_signal: "fpga1Temperature",
-        fpga2_temperature_signal: "fpga2Temperature",
+        board_temperature_signal: "temperatures_board",
+        fpga0_temperature_signal: "temperatures_fpga0",
+        fpga1_temperature_signal: "temperatures_fpga1",
     }
 
     # Maps each health-monitoring attribute name to its signal attribute name,
     # used by update_tile_health_attributes to route updates generically.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
-        "boardTemperature": "board_temperature_signal",
-        "fpga1Temperature": "fpga1_temperature_signal",
-        "fpga2Temperature": "fpga2_temperature_signal",
-        "temperatureADC0": "temperature_adc0_signal",
-        "temperatureADC1": "temperature_adc1_signal",
-        "temperatureADC2": "temperature_adc2_signal",
-        "temperatureADC3": "temperature_adc3_signal",
-        "temperatureADC4": "temperature_adc4_signal",
-        "temperatureADC5": "temperature_adc5_signal",
-        "temperatureADC6": "temperature_adc6_signal",
-        "temperatureADC7": "temperature_adc7_signal",
-        "temperatureADC8": "temperature_adc8_signal",
-        "temperatureADC9": "temperature_adc9_signal",
-        "temperatureADC10": "temperature_adc10_signal",
-        "temperatureADC11": "temperature_adc11_signal",
-        "temperatureADC12": "temperature_adc12_signal",
-        "temperatureADC13": "temperature_adc13_signal",
-        "temperatureADC14": "temperature_adc14_signal",
-        "temperatureADC15": "temperature_adc15_signal",
+        "temperatures_board": "board_temperature_signal",
+        "temperatures_fpga0": "fpga0_temperature_signal",
+        "temperatures_fpga1": "fpga1_temperature_signal",
+        "temperatures_adc0": "temperature_adc0_signal",
+        "temperatures_adc1": "temperature_adc1_signal",
+        "temperatures_adc2": "temperature_adc2_signal",
+        "temperatures_adc3": "temperature_adc3_signal",
+        "temperatures_adc4": "temperature_adc4_signal",
+        "temperatures_adc5": "temperature_adc5_signal",
+        "temperatures_adc6": "temperature_adc6_signal",
+        "temperatures_adc7": "temperature_adc7_signal",
+        "temperatures_adc8": "temperature_adc8_signal",
+        "temperatures_adc9": "temperature_adc9_signal",
+        "temperatures_adc10": "temperature_adc10_signal",
+        "temperatures_adc11": "temperature_adc11_signal",
+        "temperatures_adc12": "temperature_adc12_signal",
+        "temperatures_adc13": "temperature_adc13_signal",
+        "temperatures_adc14": "temperature_adc14_signal",
+        "temperatures_adc15": "temperature_adc15_signal",
         "currentFE0": "current_fe0_signal",
         "currentFE1": "current_fe1_signal",
         "voltageAVDD3": "voltage_avdd3_signal",
@@ -887,29 +887,29 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
             "ppsPresent": ["timing", "pps", "status"],
-            "fpga1Temperature": ["temperatures", "FPGA0"],
-            "fpga2Temperature": ["temperatures", "FPGA1"],
-            "boardTemperature": ["temperatures", "board"],
+            "temperatures_fpga0": ["temperatures", "FPGA0"],
+            "temperatures_fpga1": ["temperatures", "FPGA1"],
+            "temperatures_board": ["temperatures", "board"],
             "io": ["io"],
             "dsp": ["dsp"],
             "voltages": ["voltages"],
             "temperatures": ["temperatures"],
-            "temperatureADC0": ["temperatures", "ADC0"],
-            "temperatureADC1": ["temperatures", "ADC1"],
-            "temperatureADC2": ["temperatures", "ADC2"],
-            "temperatureADC3": ["temperatures", "ADC3"],
-            "temperatureADC4": ["temperatures", "ADC4"],
-            "temperatureADC5": ["temperatures", "ADC5"],
-            "temperatureADC6": ["temperatures", "ADC6"],
-            "temperatureADC7": ["temperatures", "ADC7"],
-            "temperatureADC8": ["temperatures", "ADC8"],
-            "temperatureADC9": ["temperatures", "ADC9"],
-            "temperatureADC10": ["temperatures", "ADC10"],
-            "temperatureADC11": ["temperatures", "ADC11"],
-            "temperatureADC12": ["temperatures", "ADC12"],
-            "temperatureADC13": ["temperatures", "ADC13"],
-            "temperatureADC14": ["temperatures", "ADC14"],
-            "temperatureADC15": ["temperatures", "ADC15"],
+            "temperatures_adc0": ["temperatures", "ADC0"],
+            "temperatures_adc1": ["temperatures", "ADC1"],
+            "temperatures_adc2": ["temperatures", "ADC2"],
+            "temperatures_adc3": ["temperatures", "ADC3"],
+            "temperatures_adc4": ["temperatures", "ADC4"],
+            "temperatures_adc5": ["temperatures", "ADC5"],
+            "temperatures_adc6": ["temperatures", "ADC6"],
+            "temperatures_adc7": ["temperatures", "ADC7"],
+            "temperatures_adc8": ["temperatures", "ADC8"],
+            "temperatures_adc9": ["temperatures", "ADC9"],
+            "temperatures_adc10": ["temperatures", "ADC10"],
+            "temperatures_adc11": ["temperatures", "ADC11"],
+            "temperatures_adc12": ["temperatures", "ADC12"],
+            "temperatures_adc13": ["temperatures", "ADC13"],
+            "temperatures_adc14": ["temperatures", "ADC14"],
+            "temperatures_adc15": ["temperatures", "ADC15"],
             "adcs": ["adcs"],
             "timing": ["timing"],
             "currents": ["currents"],
@@ -1900,7 +1900,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
-    boardTemperature = attribute_from_signal(
+    temperatures_board = attribute_from_signal(
         board_temperature_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
@@ -3260,7 +3260,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "True if attributes quality is being evaluated in health.",
     )
 
-    temperatureADC0 = attribute_from_signal(
+    temperatures_adc0 = attribute_from_signal(
         temperature_adc0_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3272,7 +3272,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 0 temperature in degrees Celsius.",
     )
 
-    temperatureADC1 = attribute_from_signal(
+    temperatures_adc1 = attribute_from_signal(
         temperature_adc1_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3284,7 +3284,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 1 temperature in degrees Celsius.",
     )
 
-    temperatureADC2 = attribute_from_signal(
+    temperatures_adc2 = attribute_from_signal(
         temperature_adc2_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3296,7 +3296,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 2 temperature in degrees Celsius.",
     )
 
-    temperatureADC3 = attribute_from_signal(
+    temperatures_adc3 = attribute_from_signal(
         temperature_adc3_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3308,7 +3308,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 3 temperature in degrees Celsius.",
     )
 
-    temperatureADC4 = attribute_from_signal(
+    temperatures_adc4 = attribute_from_signal(
         temperature_adc4_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3320,7 +3320,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 4 temperature in degrees Celsius.",
     )
 
-    temperatureADC5 = attribute_from_signal(
+    temperatures_adc5 = attribute_from_signal(
         temperature_adc5_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3332,7 +3332,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 5 temperature in degrees Celsius.",
     )
 
-    temperatureADC6 = attribute_from_signal(
+    temperatures_adc6 = attribute_from_signal(
         temperature_adc6_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3344,7 +3344,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 6 temperature in degrees Celsius.",
     )
 
-    temperatureADC7 = attribute_from_signal(
+    temperatures_adc7 = attribute_from_signal(
         temperature_adc7_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3356,7 +3356,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 7 temperature in degrees Celsius.",
     )
 
-    temperatureADC8 = attribute_from_signal(
+    temperatures_adc8 = attribute_from_signal(
         temperature_adc8_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3368,7 +3368,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 8 temperature in degrees Celsius.",
     )
 
-    temperatureADC9 = attribute_from_signal(
+    temperatures_adc9 = attribute_from_signal(
         temperature_adc9_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3380,7 +3380,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 9 temperature in degrees Celsius.",
     )
 
-    temperatureADC10 = attribute_from_signal(
+    temperatures_adc10 = attribute_from_signal(
         temperature_adc10_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3392,7 +3392,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 10 temperature in degrees Celsius.",
     )
 
-    temperatureADC11 = attribute_from_signal(
+    temperatures_adc11 = attribute_from_signal(
         temperature_adc11_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3404,7 +3404,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 11 temperature in degrees Celsius.",
     )
 
-    temperatureADC12 = attribute_from_signal(
+    temperatures_adc12 = attribute_from_signal(
         temperature_adc12_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3416,7 +3416,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 12 temperature in degrees Celsius.",
     )
 
-    temperatureADC13 = attribute_from_signal(
+    temperatures_adc13 = attribute_from_signal(
         temperature_adc13_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3428,7 +3428,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 13 temperature in degrees Celsius.",
     )
 
-    temperatureADC14 = attribute_from_signal(
+    temperatures_adc14 = attribute_from_signal(
         temperature_adc14_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -3440,7 +3440,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ADC 14 temperature in degrees Celsius.",
     )
 
-    temperatureADC15 = attribute_from_signal(
+    temperatures_adc15 = attribute_from_signal(
         temperature_adc15_signal,
         dtype="DevFloat",
         unit="Celsius",
@@ -4444,8 +4444,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
-    fpga1Temperature = attribute_from_signal(  # noqa: N815
-        fpga1_temperature_signal,
+    temperatures_fpga0 = attribute_from_signal(  # noqa: N815
+        fpga0_temperature_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -4456,8 +4456,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Temperature of FPGA 1 in degrees Celsius.",
     )
 
-    fpga2Temperature = attribute_from_signal(
-        fpga2_temperature_signal,
+    temperatures_fpga1 = attribute_from_signal(
+        fpga1_temperature_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.2,
@@ -6448,7 +6448,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :example:
 
-            >>> thresholds = {"boardTemperature" : {
+            >>> thresholds = {"temperatures_board" : {
                 >>>         "max_alarm": "79"
                 >>>         "min_alarm": "25"
                 >>>         "max_warning": "74"

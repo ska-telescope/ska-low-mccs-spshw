@@ -287,9 +287,9 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
 # in init_device, so not importable directly). Keep in sync with that map.
 HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "ppsPresent": ["timing", "pps", "status"],
-    "fpga1Temperature": ["temperatures", "FPGA0"],
-    "fpga2Temperature": ["temperatures", "FPGA1"],
-    "boardTemperature": ["temperatures", "board"],
+    "temperatures_fpga0": ["temperatures", "FPGA0"],
+    "temperatures_fpga1": ["temperatures", "FPGA1"],
+    "temperatures_board": ["temperatures", "board"],
     "io": ["io"],
     "dsp": ["dsp"],
     "voltages": ["voltages"],
@@ -444,7 +444,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
 }
 
 # HEALTH_ATTRIBUTE_PATHS intentionally omits:
-# - temperatureADC0..15: not populated for the simulated (v1) hardware
+# - temperatures_adc0..15: not populated for the simulated (v1) hardware
 #   version used by this test harness (see `null_value_attributes` fixture).
 # - timing_pll_40g_count: not populated for the simulated bios version used
 #   by this test harness (see `null_value_attributes` fixture).
@@ -1067,22 +1067,22 @@ class TestMccsTile:
         """
         return [
             "timing_pll_40g_count",  # Not updated in simulated bios version
-            "temperatureADC0",  # Not updated in simulated hardware version
-            "temperatureADC1",  # Not updated in simulated hardware version
-            "temperatureADC2",  # Not updated in simulated hardware version
-            "temperatureADC3",  # Not updated in simulated hardware version
-            "temperatureADC4",  # Not updated in simulated hardware version
-            "temperatureADC5",  # Not updated in simulated hardware version
-            "temperatureADC6",  # Not updated in simulated hardware version
-            "temperatureADC7",  # Not updated in simulated hardware version
-            "temperatureADC8",  # Not updated in simulated hardware version
-            "temperatureADC9",  # Not updated in simulated hardware version
-            "temperatureADC10",  # Not updated in simulated hardware version
-            "temperatureADC11",  # Not updated in simulated hardware version
-            "temperatureADC12",  # Not updated in simulated hardware version
-            "temperatureADC13",  # Not updated in simulated hardware version
-            "temperatureADC14",  # Not updated in simulated hardware version
-            "temperatureADC15",  # Not updated in simulated hardware version
+            "temperatures_adc0",  # Not updated in simulated hardware version
+            "temperatures_adc1",  # Not updated in simulated hardware version
+            "temperatures_adc2",  # Not updated in simulated hardware version
+            "temperatures_adc3",  # Not updated in simulated hardware version
+            "temperatures_adc4",  # Not updated in simulated hardware version
+            "temperatures_adc5",  # Not updated in simulated hardware version
+            "temperatures_adc6",  # Not updated in simulated hardware version
+            "temperatures_adc7",  # Not updated in simulated hardware version
+            "temperatures_adc8",  # Not updated in simulated hardware version
+            "temperatures_adc9",  # Not updated in simulated hardware version
+            "temperatures_adc10",  # Not updated in simulated hardware version
+            "temperatures_adc11",  # Not updated in simulated hardware version
+            "temperatures_adc12",  # Not updated in simulated hardware version
+            "temperatures_adc13",  # Not updated in simulated hardware version
+            "temperatures_adc14",  # Not updated in simulated hardware version
+            "temperatures_adc15",  # Not updated in simulated hardware version
             "fpga0_station_beamformer_flagged_count",  # Only valid for final Tile
             "fpga1_station_beamformer_flagged_count",  # Only valid for final Tile
         ]
@@ -1990,7 +1990,7 @@ class TestMccsTile:
     @pytest.mark.parametrize(
         "attribute_name",
         [
-            "boardTemperature",
+            "temperatures_board",
             "adcPower",
             "preaduLevels",
             "tileProgrammingState",
@@ -2326,17 +2326,17 @@ class TestMccsTile:
         ("attribute", "initial_value", "write_value"),
         [
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 None,
             ),
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 None,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 None,
             ),

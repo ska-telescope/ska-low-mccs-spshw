@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 16.0.2
 
 * [THORN-657] Bump tpm-api version 4.0.2 -> 4.1.2
 * [THORN-657] Fix firmwareName reporting wrong cache. This is now deprecated in favour of tile_info, if the cache.

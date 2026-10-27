@@ -127,53 +127,53 @@ ska-tango-devices:
       ppsDrift->max_alarm: 10
       ppsDrift->max_warning: 4
 
-      temperatureADC0->max_alarm: 90.0
-      temperatureADC0->min_alarm: 10.0
+      temperatures_adc0->max_alarm: 90.0
+      temperatures_adc0->min_alarm: 10.0
 
-      temperatureADC1->max_alarm: 90.0
-      temperatureADC1->min_alarm: 10.0
+      temperatures_adc1->max_alarm: 90.0
+      temperatures_adc1->min_alarm: 10.0
 
-      temperatureADC2->max_alarm: 90.0
-      temperatureADC2->min_alarm: 10.0
+      temperatures_adc2->max_alarm: 90.0
+      temperatures_adc2->min_alarm: 10.0
 
-      temperatureADC3->max_alarm: 90.0
-      temperatureADC3->min_alarm: 10.0
+      temperatures_adc3->max_alarm: 90.0
+      temperatures_adc3->min_alarm: 10.0
 
-      temperatureADC4->max_alarm: 90.0
-      temperatureADC4->min_alarm: 10.0
+      temperatures_adc4->max_alarm: 90.0
+      temperatures_adc4->min_alarm: 10.0
 
-      temperatureADC5->max_alarm: 90.0
-      temperatureADC5->min_alarm: 10.0
+      temperatures_adc5->max_alarm: 90.0
+      temperatures_adc5->min_alarm: 10.0
 
-      temperatureADC6->max_alarm: 90.0
-      temperatureADC6->min_alarm: 10.0
+      temperatures_adc6->max_alarm: 90.0
+      temperatures_adc6->min_alarm: 10.0
 
-      temperatureADC7->max_alarm: 90.0
-      temperatureADC7->min_alarm: 10.0
+      temperatures_adc7->max_alarm: 90.0
+      temperatures_adc7->min_alarm: 10.0
 
-      temperatureADC8->max_alarm: 90.0
-      temperatureADC8->min_alarm: 10.0
+      temperatures_adc8->max_alarm: 90.0
+      temperatures_adc8->min_alarm: 10.0
 
-      temperatureADC9->max_alarm: 90.0
-      temperatureADC9->min_alarm: 10.0
+      temperatures_adc9->max_alarm: 90.0
+      temperatures_adc9->min_alarm: 10.0
 
-      temperatureADC10->max_alarm: 90.0
-      temperatureADC10->min_alarm: 10.0
+      temperatures_adc10->max_alarm: 90.0
+      temperatures_adc10->min_alarm: 10.0
 
-      temperatureADC11->max_alarm: 90.0
-      temperatureADC11->min_alarm: 10.0
+      temperatures_adc11->max_alarm: 90.0
+      temperatures_adc11->min_alarm: 10.0
 
-      temperatureADC12->max_alarm: 90.0
-      temperatureADC12->min_alarm: 10.0
+      temperatures_adc12->max_alarm: 90.0
+      temperatures_adc12->min_alarm: 10.0
 
-      temperatureADC13->max_alarm: 90.0
-      temperatureADC13->min_alarm: 10.0
+      temperatures_adc13->max_alarm: 90.0
+      temperatures_adc13->min_alarm: 10.0
 
-      temperatureADC14->max_alarm: 90.0
-      temperatureADC14->min_alarm: 10.0
+      temperatures_adc14->max_alarm: 90.0
+      temperatures_adc14->min_alarm: 10.0
 
-      temperatureADC15->max_alarm: 90.0
-      temperatureADC15->min_alarm: 10.0
+      temperatures_adc15->max_alarm: 90.0
+      temperatures_adc15->min_alarm: 10.0
 
       I2C_access_alm->max_alarm: 2
       I2C_access_alm->max_warning: 1

@@ -747,6 +747,32 @@ def _wait_for_attribute_value(
     assert getattr(device, attribute) == expected
 
 
+def _wait_for_hardware_value(
+    device: MccsDeviceProxy, attribute: str, expected: Any
+) -> None:
+    """
+    Wait for a signal-backed attribute to push a change event with a hardware value.
+
+    Subscribing delivers the current value as the first event, so this also
+    succeeds if the hardware value was pushed before the subscription was made.
+    Spectrum values are compared as lists.
+
+    :param device: the tile device proxy.
+    :param attribute: name of the attribute to subscribe to.
+    :param expected: the value the hardware is expected to report.
+    """
+    callbacks = MockTangoEventCallbackGroup(attribute, timeout=6.0)
+    subscription_id = device.subscribe_event(
+        attribute,
+        EventType.CHANGE_EVENT,
+        callbacks[attribute],
+    )
+    try:
+        callbacks[attribute].assert_change_event(expected)
+    finally:
+        device.unsubscribe_event(subscription_id)
+
+
 class _TileAccessRecorder:
     """
     A transparent proxy that records accesses made to a wrapped tile.
@@ -2620,6 +2646,81 @@ class TestMccsTile:
                 # to be called with no params.
                 method_spy.assert_called_once()
 
+    @pytest.mark.parametrize(
+        ("attribute", "write_value", "hardware_value", "simulator_setter", "coerce"),
+        [
+            # The simulated hardware quantises (or only uses part of) these
+            # writes, so the readback naturally differs from the written value.
+            ("staticTimeDelays", [1.0] * 32, [1.25] * 32, None, None),
+            ("preaduLevels", [5.1] * 32, [5.0] * 32, None, None),
+            ("cspRounding", [3] + [5] * 383, [3] * 384, None, None),
+            # The simulator stores these exactly as written, so make the
+            # hardware latch a different value from the one written.
+            (
+                "phaseTerminalCount",
+                5,
+                4,
+                "set_phase_terminal_count",
+                lambda value: value - 1,
+            ),
+            (
+                "channeliserRounding",
+                [5] * 512,
+                [4] * 512,
+                "set_channeliser_truncation",
+                lambda trunc: [value - 1 for value in trunc],
+            ),
+        ],
+    )
+    # pylint: disable=too-many-arguments
+    def test_write_reports_hardware_readback(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        monkeypatch: pytest.MonkeyPatch,
+        attribute: str,
+        write_value: Any,
+        hardware_value: Any,
+        simulator_setter: str | None,
+        coerce: Callable[[Any], Any] | None,
+    ) -> None:
+        """
+        Test that a write reports the value read back from hardware.
+
+        The written value must not be pushed straight from the software
+        cache: the attribute should only ever report what the hardware
+        holds, even when that differs from what was written.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to a device under test that has
+            already been driven to the ON state, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend TileSimulator that the component
+            manager reads back from.
+        :param monkeypatch: PyTest monkeypatch fixture.
+        :param attribute: name of the attribute under test.
+        :param write_value: value written to the attribute.
+        :param hardware_value: value the hardware holds after the write.
+        :param simulator_setter: name of the TileSimulator setter to patch,
+            or None if the simulator already coerces the written value.
+        :param coerce: function mapping the written value to the value the
+            hardware latches, used with `simulator_setter`.
+        """
+        assert not np.array_equal(write_value, hardware_value)
+        assert not np.allclose(getattr(on_tile_device, attribute), hardware_value)
+
+        if simulator_setter is not None:
+            assert coerce is not None
+            original_setter = getattr(tile_simulator, simulator_setter)
+            monkeypatch.setattr(
+                tile_simulator,
+                simulator_setter,
+                lambda value: original_setter(coerce(value)),
+            )
+
+        on_tile_device.write_attribute(attribute, write_value)
+        _wait_for_hardware_value(on_tile_device, attribute, hardware_value)
+
     def test_antennaIds(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
@@ -2897,21 +2998,18 @@ class TestMccsTile:
             attribute_name.lower()
         )
 
-        try:
-            attribute_config = original_attribute_config
-            alarm_config = attribute_config.alarms
-            if max_warning is not None:
-                alarm_config.max_warning = str(max_warning)
-            if max_alarm is not None:
-                alarm_config.max_alarm = str(max_alarm)
-            if min_warning is not None:
-                alarm_config.min_warning = str(min_warning)
-            if min_alarm is not None:
-                alarm_config.min_alarm = str(min_alarm)
-            attribute_config.alarms = alarm_config
-            on_tile_device.set_attribute_config(attribute_config)
-        except tango.DevFailed:
-            pytest.xfail("Ran into PyTango monitor lock issue, to be fixed in 10.1.0")
+        attribute_config = original_attribute_config
+        alarm_config = attribute_config.alarms
+        if max_warning is not None:
+            alarm_config.max_warning = str(max_warning)
+        if max_alarm is not None:
+            alarm_config.max_alarm = str(max_alarm)
+        if min_warning is not None:
+            alarm_config.min_warning = str(min_warning)
+        if min_alarm is not None:
+            alarm_config.min_alarm = str(min_alarm)
+        attribute_config.alarms = alarm_config
+        on_tile_device.set_attribute_config(attribute_config)
 
         try:
             # Simulate value from ska-low-sps-tpm-api
@@ -2933,6 +3031,96 @@ class TestMccsTile:
             # Cleanup: Restore original attribute config
             try:
                 on_tile_device.set_attribute_config(original_attribute_config)
+            except tango.DevFailed:
+                print(f"Failed to restore attribute config for {attribute_name}")
+
+    def test_health_recovers_after_offline_and_missing_value(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that a threshold-derived health survives loss of information.
+
+        Taking the device OFFLINE, or the backend reporting no value for a
+        monitoring point, should report UNKNOWN health. Once the information
+        is available again, the health derived from the attribute's alarm
+        thresholds should be restored, rather than defaulting to OK.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        attribute_name = "fpga0_ddr_reset_counter"
+        backend_health_path = ["io", "ddr_interface", "reset_counter", "FPGA0"]
+        backend_health_value = 2
+
+        on_tile_device.subscribe_event(
+            "HealthState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["health_state"],
+        )
+        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        change_event_callbacks["health_state"].assert_not_called()
+
+        original_max_alarm = on_tile_device.get_attribute_config(
+            attribute_name
+        ).alarms.max_alarm
+        attribute_config = on_tile_device.get_attribute_config(attribute_name)
+        attribute_config.alarms.max_alarm = str(backend_health_value)
+        on_tile_device.set_attribute_config(attribute_config)
+
+        try:
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                backend_health_value,
+            )
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.FAILED
+            )
+
+            on_tile_device.adminMode = AdminMode.OFFLINE
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.UNKNOWN, lookahead=4, consume_nonmatches=True
+            )
+            change_event_callbacks["health_state"].assert_not_called()
+
+            on_tile_device.adminMode = AdminMode.ONLINE
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.FAILED, lookahead=4, consume_nonmatches=True
+            )
+            change_event_callbacks["health_state"].assert_not_called()
+
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                None,
+            )
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.UNKNOWN, lookahead=4, consume_nonmatches=True
+            )
+
+            set_nested_value(
+                tile_simulator._tile_health_structure,
+                backend_health_path,
+                backend_health_value,
+            )
+            change_event_callbacks["health_state"].assert_change_event(
+                HealthState.FAILED, lookahead=4, consume_nonmatches=True
+            )
+            change_event_callbacks["health_state"].assert_not_called()
+            assert on_tile_device.healthState == HealthState.FAILED
+        finally:
+            attribute_config = on_tile_device.get_attribute_config(attribute_name)
+            attribute_config.alarms.max_alarm = original_max_alarm
+            try:
+                on_tile_device.set_attribute_config(attribute_config)
             except tango.DevFailed:
                 print(f"Failed to restore attribute config for {attribute_name}")
 

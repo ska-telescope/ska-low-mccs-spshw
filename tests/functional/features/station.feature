@@ -14,17 +14,8 @@ Feature: Test station
     Scenario: TPMs transition directly from OFF to ON to Synchronised
         Given an SPS deployment against HW
         And the SpsStation is STANDBY
-        And the SpsStation OnWorkaroundFlag is set to False
         When the SpsStation is turned ON
         Then all TPMs directly transition to Synchronised state
-
-
-    Scenario: TPMs transition from OFF to ON to Synchronised (workaround allowed)
-        Given an SPS deployment against HW
-        And the SpsStation is STANDBY
-        And the SpsStation OnWorkaroundFlag is set to True
-        When the SpsStation is turned ON
-        Then all TPMs eventually transition to Synchronised state
 
 
     Scenario: Stress testing the interface does not cause lock contention (SKB-1440 regression)
@@ -56,6 +47,14 @@ Feature: Test station
         Then the ReInitialise command completed successfully
         And no TPM was reprogrammed
 
+    Scenario: Reinitialise keeps the beamformer signal chain running
+        Given an SPS deployment against HW
+        And the station has been initialised
+        And the beamformer ring frame counter is advancing on every TPM
+        When the station is reinitialised
+        Then the ReInitialise command completed successfully
+        And no TPM was reprogrammed
+        And the beamformer ring frame counter is advancing on every TPM
 
     Scenario Outline: Fanout attribute writes reach the correct tile
         Given an SPS deployment against HW

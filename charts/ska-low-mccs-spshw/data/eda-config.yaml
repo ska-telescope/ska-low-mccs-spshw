@@ -504,19 +504,19 @@ configuration:
       adcs:
         code_push_event: true
         archive_period: 0
-      I2C_access_alm:
+      alarms_i2c_access_alm:
         code_push_event: true
         archive_period: 0
-      temperature_alm:
+      alarms_temperature_alm:
         code_push_event: true
         archive_period: 0
-      voltage_alm:
+      alarms_voltage_alm:
         code_push_event: true
         archive_period: 0
-      SEM_wd:
+      alarms_sem_wd:
         code_push_event: true
         archive_period: 0
-      MCU_wd:
+      alarms_mcu_wd:
         code_push_event: true
         archive_period: 0
       logicalTileId:

@@ -175,20 +175,20 @@ ska-tango-devices:
       temperatures_adc15->max_alarm: 90.0
       temperatures_adc15->min_alarm: 10.0
 
-      I2C_access_alm->max_alarm: 2
-      I2C_access_alm->max_warning: 1
+      alarms_i2c_access_alm->max_alarm: 2
+      alarms_i2c_access_alm->max_warning: 1
 
-      temperature_alm->max_alarm: 2
-      temperature_alm->max_warning: 1
+      alarms_temperature_alm->max_alarm: 2
+      alarms_temperature_alm->max_warning: 1
 
-      voltage_alm->max_alarm: 2
-      voltage_alm->max_warning: 1
+      alarms_voltage_alm->max_alarm: 2
+      alarms_voltage_alm->max_warning: 1
 
-      SEM_wd->max_alarm: 2
-      SEM_wd->max_warning: 1
+      alarms_sem_wd->max_alarm: 2
+      alarms_sem_wd->max_warning: 1
 
-      MCU_wd->max_alarm: 2
-      MCU_wd->max_warning: 1
+      alarms_mcu_wd->max_alarm: 2
+      alarms_mcu_wd->max_warning: 1
 
       voltageMon->max_alarm: 5.19
       voltageMon->min_alarm: 4.69

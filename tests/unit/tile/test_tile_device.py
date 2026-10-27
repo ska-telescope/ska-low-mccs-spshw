@@ -4034,7 +4034,7 @@ class TestMccsTileCommands:
         on_tile_device.adminMode = AdminMode.ENGINEERING
         time.sleep(1)
         on_tile_device.subscribe_event(
-            "temperature_alm",
+            "alarms_temperature_alm",
             EventType.CHANGE_EVENT,
             change_event_callbacks["alarms"],
         )
@@ -4792,7 +4792,7 @@ class TestOldHealth:
             pytest.param(
                 TileData.DEFAULT_MONITORING_POINTS,
                 {
-                    "alarms": {"I2C_access_alm": 1},
+                    "alarms": {"alarms_i2c_access_alm": 1},
                     "adcs": {"pll_status": {"ADC0": (False, True)}},
                     "dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA1": 1}}},
                 },

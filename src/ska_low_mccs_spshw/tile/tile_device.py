@@ -529,11 +529,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "forty_gb_core_configurations": "forty_gb_core_configurations_signal",
         "adc_rms": "adc_power_signal",
         "ddr_write_size": "ddr_write_size_signal",
-        "I2C_access_alm": "I2C_access_alm_signal",
-        "temperature_alm": "temperature_alm_signal",
-        "voltage_alm": "voltage_alm_signal",
-        "SEM_wd": "SEM_wd_signal",
-        "MCU_wd": "MCU_wd_signal",
+        "alarms_i2c_access_alm": "I2C_access_alm_signal",
+        "alarms_temperature_alm": "temperature_alm_signal",
+        "alarms_voltage_alm": "voltage_alm_signal",
+        "alarms_sem_wd": "SEM_wd_signal",
+        "alarms_mcu_wd": "MCU_wd_signal",
         "dst_ip_40g_fpga1": "dstip40gfpga1_signal",
         "dst_ip_40g_fpga2": "dstip40gfpga2_signal",
         "tile_id": "logicalTileId_signal",
@@ -872,11 +872,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
         # Mapping of alarm name to alarm_signal
         self.__alarm_attribute_map: dict[str, str] = {
-            "I2C_access_alm": "I2C_access_alm_signal",
-            "temperature_alm": "temperature_alm_signal",
-            "voltage_alm": "voltage_alm_signal",
-            "SEM_wd": "SEM_wd_signal",
-            "MCU_wd": "MCU_wd_signal",
+            "alarms_i2c_access_alm": "I2C_access_alm_signal",
+            "alarms_temperature_alm": "temperature_alm_signal",
+            "alarms_voltage_alm": "voltage_alm_signal",
+            "alarms_sem_wd": "SEM_wd_signal",
+            "alarms_mcu_wd": "MCU_wd_signal",
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
@@ -3542,7 +3542,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return serialise_object(raw_value)
 
-    I2C_access_alm = attribute_from_signal(
+    alarms_i2c_access_alm = attribute_from_signal(
         I2C_access_alm_signal,
         write_to_signal=True,
         dtype="DevShort",
@@ -3554,7 +3554,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the I2C alarm reading.",
     )
 
-    temperature_alm = attribute_from_signal(
+    alarms_temperature_alm = attribute_from_signal(
         temperature_alm_signal,
         write_to_signal=True,
         dtype="DevShort",
@@ -3569,7 +3569,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "2 -> ALARM",
     )
 
-    voltage_alm = attribute_from_signal(
+    alarms_voltage_alm = attribute_from_signal(
         voltage_alm_signal,
         write_to_signal=True,
         dtype="DevShort",
@@ -3581,7 +3581,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the Voltage alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
-    SEM_wd = attribute_from_signal(
+    alarms_sem_wd = attribute_from_signal(
         SEM_wd_signal,
         write_to_signal=True,
         dtype="DevShort",
@@ -3593,7 +3593,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the SEMwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
-    MCU_wd = attribute_from_signal(
+    alarms_mcu_wd = attribute_from_signal(
         MCU_wd_signal,
         write_to_signal=True,
         dtype="DevShort",

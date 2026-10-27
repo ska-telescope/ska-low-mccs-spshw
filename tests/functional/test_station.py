@@ -22,7 +22,7 @@ import threading
 import time
 from collections.abc import Iterator
 from datetime import datetime
-from typing import Any, Callable, Final, Generator
+from typing import Any, Callable, Final
 
 import numpy as np
 import pytest
@@ -137,23 +137,6 @@ def test_station_syncs_and_bandpasses_start(
     "TPMs transition directly from OFF to ON to Synchronised",
 )
 def test_station_on_strict(stations_devices_exported: list[tango.DeviceProxy]) -> None:
-    """
-    Run a test scenario that tests the station device.
-
-    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
-        for all exported sps devices.
-    """
-    for device in stations_devices_exported:
-        device.adminmode = AdminMode.ONLINE
-
-
-@scenario(
-    "features/station.feature",
-    "TPMs transition from OFF to ON to Synchronised (workaround allowed)",
-)
-def test_station_on_workaround(
-    stations_devices_exported: list[tango.DeviceProxy],
-) -> None:
     """
     Run a test scenario that tests the station device.
 
@@ -475,28 +458,6 @@ def check_station_and_tiles_synchronised(
     station_is_synced(station)
 
 
-@given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag}"))
-def check_spsstation_on_workaround_flag_param(
-    station: tango.DeviceProxy, flag: str
-) -> Generator:
-    """
-    Parametrised step to set the SpsStation OnWorkaroundFlag.
-
-    :param station: a proxy to the station under test.
-    :param flag: Boolean value to set OnWorkaroundFlag.
-
-    :yields: Control to the test then cleans up afterwards.
-    """
-    initial_workaround_flag = station.OnWorkaround
-    flag_bool = flag.lower() == "true"
-    if station.OnWorkaround != flag_bool:
-        station.OnWorkaround = flag_bool
-
-    yield
-
-    station.OnWorkaround = initial_workaround_flag
-
-
 @when("the SpsStation is turned ON")
 def turn_station_on(station: tango.DeviceProxy) -> None:
     """
@@ -615,45 +576,6 @@ def all_tpms_directly_transition_to_synchronised_state(
             change_event_callbacks[f"tile_{i}_programming_state"].assert_change_event(
                 tile_programming_state
             )
-    for tile in station_tiles:
-        assert tile.state() == tango.DevState.ON
-        assert tile.tileProgrammingState == "Synchronised"
-
-
-@then("all TPMs eventually transition to Synchronised state")
-def all_tpms_eventually_transition_to_synchronised_state(
-    station_tiles: list[tango.DeviceProxy],
-    change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
-    """
-    Check all TPMs reach Synchronised state.
-
-    We expect the state transitions to happen at least once.
-
-    :param station_tiles: List of TPM DeviceProxies.
-    :param change_event_callbacks: a dictionary of callables to be used as
-        tango change event callbacks.
-    """
-    for tile in station_tiles:
-        tile.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
-        )
-        tile.subscribe_event(
-            "tileprogrammingstate",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
-        # Expect OFF -> ON eventually.
-        change_event_callbacks["device_state"].assert_change_event(
-            tango.DevState.ON, consume_nonmatches=True, lookahead=50
-        )
-        # Expect to get to Synchronised eventually.
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Synchronised", lookahead=50, consume_nonmatches=True
-        )
-    # All tiles must still end up ON and Synchronised.
     for tile in station_tiles:
         assert tile.state() == tango.DevState.ON
         assert tile.tileProgrammingState == "Synchronised"
@@ -1268,41 +1190,45 @@ def spsstation_attributes_present_off_tile(
     def _all_nan_in(lo: int, hi: int) -> Callable[[Any], bool]:
         return lambda v: bool(np.all(np.isnan(np.asarray(v)[lo:hi])))
 
+    # Each tile event makes SpsStation re-publish the whole aggregate, so
+    # events from the other tiles can arrive before the off tile's one.
+    lookahead = 20
+
     change_event_callbacks["station_tile_programming_state"].assert_change_event(
         _Predicate(lambda v: v[off_tile_id] == "Off"),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_adc_power"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_static_time_delays"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_preadu_levels"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     # channeliserRounding is DevLong so cannot carry NaN; SpsStation reports
     # -1 for every channel of a tile whose value is INVALID.
     change_event_callbacks["station_channeliser_rounding"].assert_change_event(
         _Predicate(lambda v: bool(np.all(np.asarray(v)[off_tile_id] == -1))),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_pll_locked_summary"].assert_change_event(
-        False, lookahead=10, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
     change_event_callbacks["station_pps_present_summary"].assert_change_event(
-        False, lookahead=10, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
     change_event_callbacks["station_is_beamformer_running"].assert_change_event(
-        False, lookahead=10, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
 
 

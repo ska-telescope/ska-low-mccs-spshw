@@ -2025,7 +2025,7 @@ wheels = [
 
 [[package]]
 name = "ska-low-mccs-spshw"
-version = "16.0.0"
+version = "16.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -2066,7 +2066,7 @@ dependencies = [
     { name = "ska-ser-skuid" },
     { name = "ska-ser-snmp" },
     { name = "ska-tango-base" },
-    { name = "ska-telmodel" },
+    { name = "ska-telmodel-client" },
     { name = "tabulate" },
     { name = "types-icalendar" },
     { name = "types-pytz" },
@@ -2117,7 +2117,7 @@ docs = [
     { name = "ska-ser-snmp" },
     { name = "ska-ser-sphinx-theme" },
     { name = "ska-tango-difdoc" },
-    { name = "ska-telmodel" },
+    { name = "ska-telmodel-client" },
     { name = "sphinx" },
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinxcontrib-plantuml" },
@@ -2159,13 +2159,13 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.2,<2.0.0" },
     { name = "semver", specifier = ">=3.0.4,<4.0.0" },
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.2.0,<2.0.0" },
-    { name = "ska-low-mccs-common", specifier = ">=4.8.0,<5.0.0" },
+    { name = "ska-low-mccs-common", specifier = ">=4.9.1" },
     { name = "ska-low-mccs-daq", specifier = ">=9.0.0,<10.0.0" },
-    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.2" },
+    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.1.2" },
     { name = "ska-ser-skuid", specifier = ">=6.0.0,<7.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
     { name = "ska-tango-base", specifier = ">=1.6.1,<2.0.0" },
-    { name = "ska-telmodel", specifier = ">=1.11.0,<2.0.0" },
+    { name = "ska-telmodel-client", specifier = ">=1.31.0,<2.0.0" },
     { name = "tabulate", specifier = ">=0.9.0,<1.0.0" },
     { name = "types-icalendar", specifier = ">=6.3.1.20250521,<7.0.0" },
     { name = "types-pytz", specifier = ">=2025.2.0.20250516,<2026.0.0" },
@@ -2216,7 +2216,7 @@ docs = [
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<0.7.0" },
     { name = "ska-ser-sphinx-theme", specifier = ">=0.2.1,<1.0.0" },
     { name = "ska-tango-difdoc", specifier = ">=0.6.0" },
-    { name = "ska-telmodel", specifier = ">=1.4.1,<2.0.0" },
+    { name = "ska-telmodel-client", specifier = ">=1.31.0,<2.0.0" },
     { name = "sphinx", specifier = ">=8.1.0,<9.0.0" },
     { name = "sphinx-autodoc-typehints", specifier = ">=1.23.0,<2.0.0" },
     { name = "sphinxcontrib-plantuml", specifier = ">=0.25,<1.0.0" },
@@ -2226,11 +2226,26 @@ docs = [
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "4.0.2"
-source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.0.2#440f858cdd937a92cdf8181606b4f6c00dacd47d" }
+version = "4.1.2"
+source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=4.1.2#06d0ad438a64b32ee4a25973a5dfac31b760a5c0" }
 dependencies = [
     { name = "future" },
     { name = "numpy" },
+]
+
+[[package]]
+name = "ska-schemas"
+version = "1.43.0"
+source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
+dependencies = [
+    { name = "appdirs" },
+    { name = "jsonschema" },
+    { name = "requests" },
+    { name = "schema" },
+]
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-schemas/1.43.0/ska_schemas-1.43.0.tar.gz", hash = "sha256:b0334957f858abb87fdc5f1fc28884e256d2e1f6238e5745c5ee519d7a28e7df" }
+wheels = [
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-schemas/1.43.0/ska_schemas-1.43.0-py3-none-any.whl", hash = "sha256:8cf4e3205ae138d4f779111f86b9ec1da397f478b002be8a93b407cbc874b8c6" },
 ]
 
 [[package]]
@@ -2332,25 +2347,24 @@ wheels = [
 ]
 
 [[package]]
-name = "ska-telmodel"
-version = "1.33.0"
+name = "ska-telmodel-client"
+version = "1.31.0"
 source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "appdirs" },
     { name = "filelock" },
     { name = "gitpython" },
-    { name = "jsonschema" },
     { name = "overrides" },
     { name = "prettytable" },
     { name = "python-gitlab" },
     { name = "pyyaml" },
-    { name = "schema" },
+    { name = "ska-schemas" },
     { name = "tomli" },
     { name = "toolz" },
 ]
-sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel/1.33.0/ska_telmodel-1.33.0.tar.gz", hash = "sha256:c9dc501c8b7042ef0953442091f0484f3bd5886a517b9b0d2fa21ef15b0cb88b" }
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel-client/1.31.0/ska_telmodel_client-1.31.0.tar.gz", hash = "sha256:4d948bb45458cc49205cf8899e7f955368ef317b33d8b72a3eb1e8f9ae115657" }
 wheels = [
-    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel/1.33.0/ska_telmodel-1.33.0-py3-none-any.whl", hash = "sha256:9db24d2edc0bd5b450e50321283bc92cc752781a41235e5fffab947cfe84e932" },
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-telmodel-client/1.31.0/ska_telmodel_client-1.31.0-py3-none-any.whl", hash = "sha256:154386cb9ab1835a9e096f5ab0b81ef954066c7d5d11a582298e70853027b310" },
 ]
 
 [[package]]

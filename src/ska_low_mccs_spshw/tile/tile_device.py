@@ -388,8 +388,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "temperatures_adc13": "temperature_adc13_signal",
         "temperatures_adc14": "temperature_adc14_signal",
         "temperatures_adc15": "temperature_adc15_signal",
-        "currentFE0": "current_fe0_signal",
-        "currentFE1": "current_fe1_signal",
+        "currents_fe0_mva": "current_fe0_signal",
+        "currents_fe1_mva": "current_fe1_signal",
         "voltages_avdd3": "voltage_avdd3_signal",
         "voltages_ddr0_vref": "voltage_vref_ddr0_signal",
         "voltages_ddr1_vref": "voltage_vref_ddr1_signal",
@@ -907,8 +907,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs": ["adcs"],
             "timing": ["timing"],
             "currents": ["currents"],
-            "currentFE0": ["currents", "FE0_mVA"],
-            "currentFE1": ["currents", "FE1_mVA"],
+            "currents_fe0_mva": ["currents", "FE0_mVA"],
+            "currents_fe1_mva": ["currents", "FE1_mVA"],
             "voltages_avdd3": ["voltages", "AVDD3"],
             "voltages_ddr0_vref": ["voltages", "DDR0_VREF"],
             "voltages_ddr1_vref": ["voltages", "DDR1_VREF"],
@@ -5273,7 +5273,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return True if station beam data flagging is enabled.",
     )
 
-    currentFE0 = attribute_from_signal(  #
+    currents_fe0_mva = attribute_from_signal(  #
         current_fe0_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5285,7 +5285,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE0 current in Amps.",
     )
 
-    currentFE1 = attribute_from_signal(
+    currents_fe1_mva = attribute_from_signal(
         current_fe1_signal,
         dtype="DevFloat",
         abs_change=0.1,

@@ -297,8 +297,8 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "adcs": ["adcs"],
     "timing": ["timing"],
     "currents": ["currents"],
-    "currentFE0": ["currents", "FE0_mVA"],
-    "currentFE1": ["currents", "FE1_mVA"],
+    "currents_fe0_mva": ["currents", "FE0_mVA"],
+    "currents_fe1_mva": ["currents", "FE1_mVA"],
     "voltages_avdd3": ["voltages", "AVDD3"],
     "voltages_ddr0_vref": ["voltages", "DDR0_VREF"],
     "voltages_ddr1_vref": ["voltages", "DDR1_VREF"],
@@ -2674,7 +2674,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "currentFE0",
+                "currents_fe0_mva",
                 ["currents", "FE0_mVA"],
                 2.62,
                 2.62,
@@ -2756,7 +2756,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "currentFE0",
+                "currents_fe0_mva",
                 ["currents", "FE0_mVA"],
                 2.61,
                 2.62,

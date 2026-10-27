@@ -953,11 +953,11 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
     """
     valid_attrs = [
         "temperatures_board",
-        "voltageMGT_AVCC",
-        "voltageMGT_AVTT",
-        "voltageSW_AVDD1",
-        "voltageSW_AVDD2",
-        "voltageAVDD3",
+        "voltages_mgt_avcc",
+        "voltages_mgt_avtt",
+        "voltages_sw_avdd1",
+        "voltages_sw_avdd2",
+        "voltages_avdd3",
         "timing_pll_40g_count",
         "adc_pll_lock_status",
         "adc_sysref_timing_requirements",

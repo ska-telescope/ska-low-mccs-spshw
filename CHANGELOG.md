@@ -1,5 +1,9 @@
 # Version History
 
+## 16.0.3
+
+* [THORN-773] Update base images. ska-python to 1.1.4, tango-dsconfig to 1.9.2, build-python-uv to 0.4.1.
+
 ## 16.0.2
 
 * [THORN-657] Bump tpm-api version 4.0.2 -> 4.1.2

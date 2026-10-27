@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-772] Updated chart default thresholds for Subrack.MaxFanSpeed, added a docs page for users.
+
 ## 16.0.3
 
 * [THORN-773] Update base images. ska-python to 1.1.4, tango-dsconfig to 1.9.2, build-python-uv to 0.4.1.

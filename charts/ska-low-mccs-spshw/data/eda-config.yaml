@@ -615,10 +615,10 @@ configuration:
       integratedDataTransmissionMode:
         code_push_event: true
         archive_period: 0
-      currentFE0:
+      currents_fe0_mva:
         code_push_event: true
         archive_period: 0
-      currentFE1:
+      currents_fe1_mva:
         code_push_event: true
         archive_period: 0
       voltages_avdd3:

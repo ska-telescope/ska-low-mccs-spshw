@@ -1192,10 +1192,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         abs_change=0.1,
         max_alarm=9750,  # 150%
         max_warning=8125,  # 125%
-        min_alarm="Not specified",  # ignore faults on RAL
-        min_warning="Not specified",  # ignore faults on RAL
-        # min_alarm=1625,  # 25%
-        # min_warning=4875,  # 75%
+        min_alarm=1625,  # 25%
+        min_warning=4875,  # 75%
         label="Estimated Max Fan Speed",
         unit="RPM",
         doc="Expected Fan Speeds at 100% pwm duty.",

@@ -390,39 +390,39 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "temperatures_adc15": "temperature_adc15_signal",
         "currentFE0": "current_fe0_signal",
         "currentFE1": "current_fe1_signal",
-        "voltageAVDD3": "voltage_avdd3_signal",
-        "voltageVrefDDR0": "voltage_vref_ddr0_signal",
-        "voltageVrefDDR1": "voltage_vref_ddr1_signal",
-        "voltageMan1V2": "voltage_man1v2_signal",
-        "voltageMGT_AVCC": "voltage_mgt_avcc_signal",
-        "voltageMGT_AVTT": "voltage_mgt_avtt_signal",
-        "voltageMon5V0": "voltage_mon5v0_signal",
-        "voltageMon3V3": "voltage_mon3v3_signal",
-        "voltageMon1V8": "voltage_mon1v8_signal",
-        "voltageSW_AVDD1": "voltage_sw_avdd1_signal",
-        "voltageSW_AVDD2": "voltage_sw_avdd2_signal",
-        "voltageVIN": "voltage_vin_signal",
-        "voltageVM_AGP0": "voltage_vm_agp0_signal",
-        "voltageVM_AGP1": "voltage_vm_agp1_signal",
-        "voltageVM_AGP2": "voltage_vm_agp2_signal",
-        "voltageVM_AGP3": "voltage_vm_agp3_signal",
-        "voltageVM_AGP4": "voltage_vm_agp4_signal",
-        "voltageVM_AGP5": "voltage_vm_agp5_signal",
-        "voltageVM_AGP6": "voltage_vm_agp6_signal",
-        "voltageVM_AGP7": "voltage_vm_agp7_signal",
-        "voltageVM_CLK0B": "voltage_vm_clk0b_signal",
-        "voltageVM_CLK1B": "voltage_vm_clk1b_signal",
-        "voltageVM_DDR0_VTT": "voltage_vm_ddr0_vtt_signal",
-        "voltageVM_DDR1_VDD": "voltage_vm_ddr1_vdd_signal",
-        "voltageVM_DDR1_VTT": "voltage_vm_ddr1_vtt_signal",
-        "voltageVM_DRVDD": "voltage_vm_drvdd_signal",
-        "voltageVM_DVDD": "voltage_vm_dvdd_signal",
-        "voltageVM_FE0": "voltage_vm_fe0_signal",
-        "voltageVM_FE1": "voltage_vm_fe1_signal",
-        "voltageVM_MGT0_AUX": "voltage_vm_mgt0_aux_signal",
-        "voltageVM_MGT1_AUX": "voltage_vm_mgt1_aux_signal",
-        "voltageVM_PLL": "voltage_vm_pll_signal",
-        "voltageVM_SW_AMP": "voltage_vm_sw_amp_signal",
+        "voltages_avdd3": "voltage_avdd3_signal",
+        "voltages_ddr0_vref": "voltage_vref_ddr0_signal",
+        "voltages_ddr1_vref": "voltage_vref_ddr1_signal",
+        "voltages_man_1v2": "voltage_man1v2_signal",
+        "voltages_mgt_avcc": "voltage_mgt_avcc_signal",
+        "voltages_mgt_avtt": "voltage_mgt_avtt_signal",
+        "voltages_mon_5v0": "voltage_mon5v0_signal",
+        "voltages_mon_3v3": "voltage_mon3v3_signal",
+        "voltages_mon_1v8": "voltage_mon1v8_signal",
+        "voltages_sw_avdd1": "voltage_sw_avdd1_signal",
+        "voltages_sw_avdd2": "voltage_sw_avdd2_signal",
+        "voltages_vin": "voltage_vin_signal",
+        "voltages_vm_agp0": "voltage_vm_agp0_signal",
+        "voltages_vm_agp1": "voltage_vm_agp1_signal",
+        "voltages_vm_agp2": "voltage_vm_agp2_signal",
+        "voltages_vm_agp3": "voltage_vm_agp3_signal",
+        "voltages_vm_agp4": "voltage_vm_agp4_signal",
+        "voltages_vm_agp5": "voltage_vm_agp5_signal",
+        "voltages_vm_agp6": "voltage_vm_agp6_signal",
+        "voltages_vm_agp7": "voltage_vm_agp7_signal",
+        "voltages_vm_clk0b": "voltage_vm_clk0b_signal",
+        "voltages_vm_clk1b": "voltage_vm_clk1b_signal",
+        "voltages_vm_ddr0_vtt": "voltage_vm_ddr0_vtt_signal",
+        "voltages_vm_ddr1_vdd": "voltage_vm_ddr1_vdd_signal",
+        "voltages_vm_ddr1_vtt": "voltage_vm_ddr1_vtt_signal",
+        "voltages_vm_drvdd": "voltage_vm_drvdd_signal",
+        "voltages_vm_dvdd": "voltage_vm_dvdd_signal",
+        "voltages_vm_fe0": "voltage_vm_fe0_signal",
+        "voltages_vm_fe1": "voltage_vm_fe1_signal",
+        "voltages_vm_mgt0_aux": "voltage_vm_mgt0_aux_signal",
+        "voltages_vm_mgt1_aux": "voltage_vm_mgt1_aux_signal",
+        "voltages_vm_pll": "voltage_vm_pll_signal",
+        "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
         "adc_pll_lock_status": "adc_pll_lock_status_signal",
         "tile_beamformer_status": "tile_beamformer_status_signal",
         "station_beamformer_status": "station_beamformer_status_signal",
@@ -909,40 +909,40 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "currents": ["currents"],
             "currentFE0": ["currents", "FE0_mVA"],
             "currentFE1": ["currents", "FE1_mVA"],
-            "voltageAVDD3": ["voltages", "AVDD3"],
-            "voltageVrefDDR0": ["voltages", "DDR0_VREF"],
-            "voltageVrefDDR1": ["voltages", "DDR1_VREF"],
+            "voltages_avdd3": ["voltages", "AVDD3"],
+            "voltages_ddr0_vref": ["voltages", "DDR0_VREF"],
+            "voltages_ddr1_vref": ["voltages", "DDR1_VREF"],
             # "voltageVref2V5": ["voltages", "VREF_2V5"],
-            "voltageMan1V2": ["voltages", "MAN_1V2"],
-            "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
-            "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
-            "voltageMon5V0": ["voltages", "MON_5V0"],
-            "voltageMon3V3": ["voltages", "MON_3V3"],
-            "voltageMon1V8": ["voltages", "MON_1V8"],
-            "voltageSW_AVDD1": ["voltages", "SW_AVDD1"],
-            "voltageSW_AVDD2": ["voltages", "SW_AVDD2"],
-            "voltageVIN": ["voltages", "VIN"],
-            "voltageVM_AGP0": ["voltages", "VM_AGP0"],
-            "voltageVM_AGP1": ["voltages", "VM_AGP1"],
-            "voltageVM_AGP2": ["voltages", "VM_AGP2"],
-            "voltageVM_AGP3": ["voltages", "VM_AGP3"],
-            "voltageVM_AGP4": ["voltages", "VM_AGP4"],
-            "voltageVM_AGP5": ["voltages", "VM_AGP5"],
-            "voltageVM_AGP6": ["voltages", "VM_AGP6"],
-            "voltageVM_AGP7": ["voltages", "VM_AGP7"],
-            "voltageVM_CLK0B": ["voltages", "VM_CLK0B"],
-            "voltageVM_CLK1B": ["voltages", "VM_CLK1B"],
-            "voltageVM_DDR0_VTT": ["voltages", "VM_DDR0_VTT"],
-            "voltageVM_DDR1_VDD": ["voltages", "VM_DDR1_VDD"],
-            "voltageVM_DDR1_VTT": ["voltages", "VM_DDR1_VTT"],
-            "voltageVM_DRVDD": ["voltages", "VM_DRVDD"],
-            "voltageVM_DVDD": ["voltages", "VM_DVDD"],
-            "voltageVM_FE0": ["voltages", "VM_FE0"],
-            "voltageVM_FE1": ["voltages", "VM_FE1"],
-            "voltageVM_MGT0_AUX": ["voltages", "VM_MGT0_AUX"],
-            "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
-            "voltageVM_PLL": ["voltages", "VM_PLL"],
-            "voltageVM_SW_AMP": ["voltages", "VM_SW_AMP"],
+            "voltages_man_1v2": ["voltages", "MAN_1V2"],
+            "voltages_mgt_avcc": ["voltages", "MGT_AVCC"],
+            "voltages_mgt_avtt": ["voltages", "MGT_AVTT"],
+            "voltages_mon_5v0": ["voltages", "MON_5V0"],
+            "voltages_mon_3v3": ["voltages", "MON_3V3"],
+            "voltages_mon_1v8": ["voltages", "MON_1V8"],
+            "voltages_sw_avdd1": ["voltages", "SW_AVDD1"],
+            "voltages_sw_avdd2": ["voltages", "SW_AVDD2"],
+            "voltages_vin": ["voltages", "VIN"],
+            "voltages_vm_agp0": ["voltages", "VM_AGP0"],
+            "voltages_vm_agp1": ["voltages", "VM_AGP1"],
+            "voltages_vm_agp2": ["voltages", "VM_AGP2"],
+            "voltages_vm_agp3": ["voltages", "VM_AGP3"],
+            "voltages_vm_agp4": ["voltages", "VM_AGP4"],
+            "voltages_vm_agp5": ["voltages", "VM_AGP5"],
+            "voltages_vm_agp6": ["voltages", "VM_AGP6"],
+            "voltages_vm_agp7": ["voltages", "VM_AGP7"],
+            "voltages_vm_clk0b": ["voltages", "VM_CLK0B"],
+            "voltages_vm_clk1b": ["voltages", "VM_CLK1B"],
+            "voltages_vm_ddr0_vtt": ["voltages", "VM_DDR0_VTT"],
+            "voltages_vm_ddr1_vdd": ["voltages", "VM_DDR1_VDD"],
+            "voltages_vm_ddr1_vtt": ["voltages", "VM_DDR1_VTT"],
+            "voltages_vm_drvdd": ["voltages", "VM_DRVDD"],
+            "voltages_vm_dvdd": ["voltages", "VM_DVDD"],
+            "voltages_vm_fe0": ["voltages", "VM_FE0"],
+            "voltages_vm_fe1": ["voltages", "VM_FE1"],
+            "voltages_vm_mgt0_aux": ["voltages", "VM_MGT0_AUX"],
+            "voltages_vm_mgt1_aux": ["voltages", "VM_MGT1_AUX"],
+            "voltages_vm_pll": ["voltages", "VM_PLL"],
+            "voltages_vm_sw_amp": ["voltages", "VM_SW_AMP"],
             "adc_pll_lock_status": ["adcs", "pll_status"],
             # qpll_status is a tuple, extracting status and
             # conuter in different attributes
@@ -5297,7 +5297,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE1 current in Amps.",
     )
 
-    voltageAVDD3 = attribute_from_signal(
+    voltages_avdd3 = attribute_from_signal(
         voltage_avdd3_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5311,7 +5311,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Analog 2.5V voltage in Volts.",
     )
 
-    voltageVrefDDR0 = attribute_from_signal(
+    voltages_ddr0_vref = attribute_from_signal(
         voltage_vref_ddr0_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5323,7 +5323,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Vref voltage for DDR0 in Volts.",
     )
 
-    voltageVrefDDR1 = attribute_from_signal(
+    voltages_ddr1_vref = attribute_from_signal(
         voltage_vref_ddr1_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5335,7 +5335,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Vref voltage for DDR1 in Volts.",
     )
 
-    voltageMan1V2 = attribute_from_signal(
+    voltages_man_1v2 = attribute_from_signal(
         voltage_man1v2_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5347,7 +5347,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 1.2V voltage in Volts.",
     )
 
-    voltageMGT_AVCC = attribute_from_signal(
+    voltages_mgt_avcc = attribute_from_signal(
         voltage_mgt_avcc_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5359,7 +5359,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT AV voltage in Volts.",
     )
 
-    voltageMGT_AVTT = attribute_from_signal(
+    voltages_mgt_avtt = attribute_from_signal(
         voltage_mgt_avtt_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5371,7 +5371,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT AVTT voltage in Volts.",
     )
 
-    voltageMon5V0 = attribute_from_signal(
+    voltages_mon_5v0 = attribute_from_signal(
         voltage_mon5v0_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5383,7 +5383,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 5V supply of the TPM in Volts.",
     )
 
-    voltageMon3V3 = attribute_from_signal(
+    voltages_mon_3v3 = attribute_from_signal(
         voltage_mon3v3_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5395,7 +5395,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 3.3 V supply of the TPM in Volts.",
     )
 
-    voltageMon1V8 = attribute_from_signal(
+    voltages_mon_1v8 = attribute_from_signal(
         voltage_mon1v8_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5407,7 +5407,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Management 1.8 V supply of the TPM in Volts.",
     )
 
-    voltageSW_AVDD1 = attribute_from_signal(
+    voltages_sw_avdd1 = attribute_from_signal(
         voltage_sw_avdd1_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5419,7 +5419,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW Analog 1.1V voltage in Volts.",
     )
 
-    voltageSW_AVDD2 = attribute_from_signal(
+    voltages_sw_avdd2 = attribute_from_signal(
         voltage_sw_avdd2_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5431,7 +5431,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW Analog 2.3 V voltage in Volts.",
     )
 
-    voltageVIN = attribute_from_signal(
+    voltages_vin = attribute_from_signal(
         voltage_vin_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5443,7 +5443,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Input supply voltage in Volts.",
     )
 
-    voltageVM_AGP0 = attribute_from_signal(
+    voltages_vm_agp0 = attribute_from_signal(
         voltage_vm_agp0_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5455,7 +5455,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 0 voltage in Volts.",
     )
 
-    voltageVM_AGP1 = attribute_from_signal(
+    voltages_vm_agp1 = attribute_from_signal(
         voltage_vm_agp1_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5467,7 +5467,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 1 voltage in Volts.",
     )
 
-    voltageVM_AGP2 = attribute_from_signal(
+    voltages_vm_agp2 = attribute_from_signal(
         voltage_vm_agp2_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5479,7 +5479,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 2 voltage in Volts.",
     )
 
-    voltageVM_AGP3 = attribute_from_signal(
+    voltages_vm_agp3 = attribute_from_signal(
         voltage_vm_agp3_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5491,7 +5491,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 3 voltage in Volts.",
     )
 
-    voltageVM_AGP4 = attribute_from_signal(
+    voltages_vm_agp4 = attribute_from_signal(
         voltage_vm_agp4_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5503,7 +5503,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 4 voltage in Volts.",
     )
 
-    voltageVM_AGP5 = attribute_from_signal(
+    voltages_vm_agp5 = attribute_from_signal(
         voltage_vm_agp5_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5515,7 +5515,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 5 voltage in Volts.",
     )
 
-    voltageVM_AGP6 = attribute_from_signal(
+    voltages_vm_agp6 = attribute_from_signal(
         voltage_vm_agp6_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5527,7 +5527,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 6 voltage in Volts.",
     )
 
-    voltageVM_AGP7 = attribute_from_signal(
+    voltages_vm_agp7 = attribute_from_signal(
         voltage_vm_agp7_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5539,7 +5539,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD AGP group 7 voltage in Volts.",
     )
 
-    voltageVM_CLK0B = attribute_from_signal(
+    voltages_vm_clk0b = attribute_from_signal(
         voltage_vm_clk0b_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5551,7 +5551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Clock Buffer0 3.3V voltage in Volts.",
     )
 
-    voltageVM_CLK1B = attribute_from_signal(
+    voltages_vm_clk1b = attribute_from_signal(
         voltage_vm_clk1b_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5563,7 +5563,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Clock Buffer1 3.3V voltage in Volts.",
     )
 
-    voltageVM_DDR0_VTT = attribute_from_signal(
+    voltages_vm_ddr0_vtt = attribute_from_signal(
         voltage_vm_ddr0_vtt_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5575,7 +5575,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR FPGA0 Vtt voltage in Volts.",
     )
 
-    voltageVM_DDR1_VDD = attribute_from_signal(
+    voltages_vm_ddr1_vdd = attribute_from_signal(
         voltage_vm_ddr1_vdd_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5587,7 +5587,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR4 voltage in Volts.",
     )
 
-    voltageVM_DDR1_VTT = attribute_from_signal(
+    voltages_vm_ddr1_vtt = attribute_from_signal(
         voltage_vm_ddr1_vtt_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5599,7 +5599,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="DDR FPGA1 Vtt voltage in Volts.",
     )
 
-    voltageVM_DRVDD = attribute_from_signal(
+    voltages_vm_drvdd = attribute_from_signal(
         voltage_vm_drvdd_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5611,7 +5611,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="SW DRVDD 1.8V voltage in Volts.",
     )
 
-    voltageVM_DVDD = attribute_from_signal(
+    voltages_vm_dvdd = attribute_from_signal(
         voltage_vm_dvdd_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5623,7 +5623,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="AD DVDD voltage in Volts.",
     )
 
-    voltageVM_FE0 = attribute_from_signal(
+    voltages_vm_fe0 = attribute_from_signal(
         voltage_vm_fe0_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5635,7 +5635,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE0 voltage in Volts. PreADU must be on.",
     )
 
-    voltageVM_FE1 = attribute_from_signal(
+    voltages_vm_fe1 = attribute_from_signal(
         voltage_vm_fe1_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5647,7 +5647,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FE1 voltage in Volts. PreADU must be on.",
     )
 
-    voltageVM_MGT0_AUX = attribute_from_signal(
+    voltages_vm_mgt0_aux = attribute_from_signal(
         voltage_vm_mgt0_aux_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5659,7 +5659,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT0 AUX voltage in Volts.",
     )
 
-    voltageVM_MGT1_AUX = attribute_from_signal(
+    voltages_vm_mgt1_aux = attribute_from_signal(
         voltage_vm_mgt1_aux_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5671,7 +5671,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="FPGA MGT1 AUX voltage in Volts.",
     )
 
-    voltageVM_PLL = attribute_from_signal(
+    voltages_vm_pll = attribute_from_signal(
         voltage_vm_pll_signal,
         dtype="DevFloat",
         abs_change=0.1,
@@ -5683,7 +5683,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="ANALOG PLL voltage in Volts.",
     )
 
-    voltageVM_SW_AMP = attribute_from_signal(
+    voltages_vm_sw_amp = attribute_from_signal(
         voltage_vm_sw_amp_signal,
         dtype="DevFloat",
         abs_change=0.1,

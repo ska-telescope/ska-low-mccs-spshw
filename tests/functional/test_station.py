@@ -22,7 +22,7 @@ import threading
 import time
 from collections.abc import Iterator
 from datetime import datetime
-from typing import Any, Callable, Final, Generator
+from typing import Any, Callable, Final
 
 import numpy as np
 import pytest
@@ -149,23 +149,6 @@ def test_station_on_strict(stations_devices_exported: list[tango.DeviceProxy]) -
 
 @scenario(
     "features/station.feature",
-    "TPMs transition from OFF to ON to Synchronised (workaround allowed)",
-)
-def test_station_on_workaround(
-    stations_devices_exported: list[tango.DeviceProxy],
-) -> None:
-    """
-    Run a test scenario that tests the station device.
-
-    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
-        for all exported sps devices.
-    """
-    for device in stations_devices_exported:
-        device.adminmode = AdminMode.ONLINE
-
-
-@scenario(
-    "features/station.feature",
     "Stress testing the interface does not cause lock contention (SKB-1440 regression)",
 )
 def test_lock_contention_not_observed(
@@ -207,6 +190,27 @@ def test_reinitialise_does_not_reprogram_tpms() -> None:
     Run a test scenario that checks ReInitialise leaves the TPMs programmed.
 
     Runs against simulated and real TPMs alike.
+    """
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "Known issue: initialising TPMs without reprogramming the FPGAs leaves "
+        "the beamformer ring stuck. If this XPASSes, the issue is fixed: remove "
+        "this xfail mark."
+    ),
+)
+@scenario(
+    "features/station.feature",
+    "Reinitialise keeps the beamformer signal chain running",
+)
+def test_reinitialise_keeps_beamformer_running() -> None:
+    """
+    Run a test scenario that checks ReInitialise leaves the signal chain working.
+
+    Initialising the TPMs without reprogramming the FPGAs has been seen in
+    firmware to leave the beamformer ring frame counter stuck.
     """
 
 
@@ -454,28 +458,6 @@ def check_station_and_tiles_synchronised(
     station_is_synced(station)
 
 
-@given(parsers.parse("the SpsStation OnWorkaroundFlag is set to {flag}"))
-def check_spsstation_on_workaround_flag_param(
-    station: tango.DeviceProxy, flag: str
-) -> Generator:
-    """
-    Parametrised step to set the SpsStation OnWorkaroundFlag.
-
-    :param station: a proxy to the station under test.
-    :param flag: Boolean value to set OnWorkaroundFlag.
-
-    :yields: Control to the test then cleans up afterwards.
-    """
-    initial_workaround_flag = station.OnWorkaround
-    flag_bool = flag.lower() == "true"
-    if station.OnWorkaround != flag_bool:
-        station.OnWorkaround = flag_bool
-
-    yield
-
-    station.OnWorkaround = initial_workaround_flag
-
-
 @when("the SpsStation is turned ON")
 def turn_station_on(station: tango.DeviceProxy) -> None:
     """
@@ -594,45 +576,6 @@ def all_tpms_directly_transition_to_synchronised_state(
             change_event_callbacks[f"tile_{i}_programming_state"].assert_change_event(
                 tile_programming_state
             )
-    for tile in station_tiles:
-        assert tile.state() == tango.DevState.ON
-        assert tile.tileProgrammingState == "Synchronised"
-
-
-@then("all TPMs eventually transition to Synchronised state")
-def all_tpms_eventually_transition_to_synchronised_state(
-    station_tiles: list[tango.DeviceProxy],
-    change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
-    """
-    Check all TPMs reach Synchronised state.
-
-    We expect the state transitions to happen at least once.
-
-    :param station_tiles: List of TPM DeviceProxies.
-    :param change_event_callbacks: a dictionary of callables to be used as
-        tango change event callbacks.
-    """
-    for tile in station_tiles:
-        tile.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
-        )
-        tile.subscribe_event(
-            "tileprogrammingstate",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
-        # Expect OFF -> ON eventually.
-        change_event_callbacks["device_state"].assert_change_event(
-            tango.DevState.ON, consume_nonmatches=True, lookahead=50
-        )
-        # Expect to get to Synchronised eventually.
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Synchronised", lookahead=50, consume_nonmatches=True
-        )
-    # All tiles must still end up ON and Synchronised.
     for tile in station_tiles:
         assert tile.state() == tango.DevState.ON
         assert tile.tileProgrammingState == "Synchronised"
@@ -1247,41 +1190,45 @@ def spsstation_attributes_present_off_tile(
     def _all_nan_in(lo: int, hi: int) -> Callable[[Any], bool]:
         return lambda v: bool(np.all(np.isnan(np.asarray(v)[lo:hi])))
 
+    # Each tile event makes SpsStation re-publish the whole aggregate, so
+    # events from the other tiles can arrive before the off tile's one.
+    lookahead = 20
+
     change_event_callbacks["station_tile_programming_state"].assert_change_event(
         _Predicate(lambda v: v[off_tile_id] == "Off"),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_adc_power"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_static_time_delays"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_preadu_levels"].assert_change_event(
         _Predicate(_all_nan_in(start, end)),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     # channeliserRounding is DevLong so cannot carry NaN; SpsStation reports
     # -1 for every channel of a tile whose value is INVALID.
     change_event_callbacks["station_channeliser_rounding"].assert_change_event(
         _Predicate(lambda v: bool(np.all(np.asarray(v)[off_tile_id] == -1))),
-        lookahead=10,
+        lookahead=lookahead,
         consume_nonmatches=True,
     )
     change_event_callbacks["station_pll_locked_summary"].assert_change_event(
-        False, lookahead=10, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
     change_event_callbacks["station_pps_present_summary"].assert_change_event(
-        False, lookahead=10, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
     change_event_callbacks["station_is_beamformer_running"].assert_change_event(
-        False, lookahead=10, consume_nonmatches=True
+        False, lookahead=lookahead, consume_nonmatches=True
     )
 
 
@@ -1518,3 +1465,68 @@ def no_tpm_was_reprogrammed(
         assert "NotProgrammed" not in states, f"{name} was reprogrammed: {states}"
         # And the tile is still synchronised
         assert tile.tileProgrammingState == "Synchronised", name
+
+
+@given("the station has been initialised")
+def station_initialised(
+    station: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    stations_devices_exported: list[tango.DeviceProxy],
+    station_tiles: list[tango.DeviceProxy],
+) -> None:
+    """
+    Run a full Initialise (with FPGA programming) and wait for synchronisation.
+
+    Unlike "the station and its tiles are synchronised", this always
+    initialises, so the starting state does not depend on earlier tests.
+
+    :param station: a proxy to the station under test.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    :param stations_devices_exported: Fixture containing the ``tango.DeviceProxy``
+        for all exported sps devices.
+    :param station_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    """
+    ensure_spsstation_state_on(
+        station, change_event_callbacks, stations_devices_exported, station_tiles
+    )
+    [result_code], [command_id] = station.Initialise()
+    assert result_code == ResultCode.QUEUED
+    wait_for_lrc_result(
+        device=station,
+        uid=command_id,
+        expected_result=ResultCode.OK,
+        timeout=300,
+    )
+    station_is_synced(station)
+
+
+@given("the beamformer ring frame counter is advancing on every TPM")
+@then("the beamformer ring frame counter is advancing on every TPM")
+def beamformer_ring_advancing(station_tiles: list[tango.DeviceProxy]) -> None:
+    """
+    Check the beamformer ring current frame advances on both FPGAs of every TPM.
+
+    A counter that never changes indicates a broken signal chain.This code takes
+    two frames at 10ms distance then checks to make sure they are advancing.
+
+    :param station_tiles: List of TPM DeviceProxies.
+    """
+    assert station_tiles, "Station tiles are missing"
+
+    stuck: list[str] = []
+    for tile in station_tiles:
+        for fpga in ("fpga1", "fpga2"):
+            register = f"{fpga}.beamf_ring.current_frame"
+            time.sleep(0.01)
+            first = list(tile.ReadRegister(register))
+            time.sleep(0.01)
+            second = list(tile.ReadRegister(register))
+            assert first and second, f"{tile.dev_name()}: {register} not present"
+            if first != second:
+                print(f"{tile.dev_name()} {fpga}: {first} -> {second} advancing")
+            else:
+                stuck.append(f"{tile.dev_name()} {fpga}: frame {first} STUCK")
+
+    assert not stuck, f"Beamformer ring frame counter stuck: {stuck}"

@@ -1970,7 +1970,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # again automatically detect the BIOS version.
         # An alternative is to create a separate TileSimulator with the
         # BIOS set to ^1.0.0
-        tile_component_manager._firmware_name = None
+        tile_component_manager._firmware_name = None  # type: ignore[assignment]
         tile_simulator.tpm._bios_version = (
             "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
         )

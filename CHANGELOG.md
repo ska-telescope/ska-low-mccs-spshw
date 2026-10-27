@@ -1,5 +1,25 @@
 # Version History
 
+## 16.0.3
+
+* [THORN-773] Update base images. ska-python to 1.1.4, tango-dsconfig to 1.9.2, build-python-uv to 0.4.1.
+
+## 16.0.2
+
+* [THORN-657] Bump tpm-api version 4.0.2 -> 4.1.2
+* [THORN-657] Fix firmwareName reporting wrong cache. This is now deprecated in favour of tile_info, if the cache.
+* [THORN-657] Remove the SpsStation `On` workaround. The `OnWorkaroundFlag` device property, the `OnWorkaround` attribute and the brute-force `ensure_tpms_on()` fallback have been deleted.
+* [THORN-657] Remove the unused `AttributeManager` classes (`ska_low_mccs_spshw.tile.attribute_managers`) and their tests. MccsTile attributes are signal backed since THORN-650.
+
+## 16.0.1
+
+* [SKB-1647] Attribute source from hardware. Writes to MccsTile `phaseTerminalCount`, `channeliserRounding`, `staticTimeDelays`, `cspRounding` and `preaduLevels` no longer push the written value from the software cache. The attribute now reports the value read back from hardware after the write, so it reflects any quantisation or rejection by the hardware (e.g. `staticTimeDelays` in 1.25 ns steps, `preaduLevels` in 0.25 dB steps).
+* [SKB-1647] MccsTile `abs_change` is now set to a negligible value (`1e-300`) on all attributes, so that any change in value, however small, produces a change event. `archive_abs_change` is unchanged.
+  * `abs_change=0` cannot be used: Tango treats it as "Not specified", and clients then fail to subscribe to change events (`API_EventPropertiesNotSet`).
+  * Repeated identical values still do not produce a change event. A transition through `INVALID` and back to `VALID` with the same value does.
+* [THORN-770] Bump ska-telmodel dependency
+* [THORN-769] Added test if initialising TPMs without reprogramming leads to broken signal chain
+
 ## 16.0.0
 
 * [THORN-717] Add CalibrationDaqTRL property to SpsStation. Update .deploy submodule to deploy 3 instances of Daq per station: Bandpass, Calibration and LMC. Change Calibration operations and Initialise/route_data to prefer the Calibration daq when it is available and fallback to LMC daq when it is not.
@@ -11,6 +31,9 @@
 ## 15.2.2
 
 * [THORN-768] HotFix: remove `rfiBlankingEnabledAntennas` from tile health. (this is currently broken when polling enabled on attribute.)
+* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
+* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
+* [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.2.1
 
@@ -18,9 +41,6 @@
 * [THORN-749] Use CLUSTER_DOMAIN for aws migration.
 * [THORN-749] Correct some dev_init race conditions. Observed in SKB-1579 logs.
 * [THORN-749] Correct preadu cache error. A incorrect (i.e out of range) value written directly to the SpsStation populated a cache with incorrect values. This caused all subsequent initialisations to fail.
-* [THORN-732] Reworking SpsStation.Reinitialise to not reprogram the FPGAs
-* [THORN-732] Added MccsTile.ReInitialise, which takes a `force_reprogramming` argument. SpsStation.ReInitialise uses it to re-initialise the tiles without reprogramming the FPGAs.
-* [THORN-735] Added Functional test for SpsStation.Reinitialise
 
 ## 15.2.0
 

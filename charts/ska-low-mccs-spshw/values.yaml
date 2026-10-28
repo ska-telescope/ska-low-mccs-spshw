@@ -63,14 +63,14 @@ ska-tango-devices:
       fpga0_station_beamformer_flagged_count->max_alarm: 1
       fpga1_station_beamformer_flagged_count->max_alarm: 1
 
-      fpga0_crc_error_count->max_alarm: 1
-      fpga1_crc_error_count->max_alarm: 1
+      io_udp_interface_crc_error_count_fpga0->max_alarm: 1
+      io_udp_interface_crc_error_count_fpga1->max_alarm: 1
 
-      fpga0_bip_error_count->max_alarm: 1
-      fpga1_bip_error_count->max_alarm: 1
+      io_udp_interface_bip_error_count_fpga0->max_alarm: 1
+      io_udp_interface_bip_error_count_fpga1->max_alarm: 1
 
-      fpga0_decode_error_count->max_alarm: 1
-      fpga1_decode_error_count->max_alarm: 1
+      io_udp_interface_decode_error_count_fpga0->max_alarm: 1
+      io_udp_interface_decode_error_count_fpga1->max_alarm: 1
 
       fpga0_linkup_loss_count->max_alarm: 1
       fpga1_linkup_loss_count->max_alarm: 1

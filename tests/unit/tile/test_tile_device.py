@@ -244,7 +244,7 @@ def _mask_unpolled_dsp_fields(raw_value: Any) -> Any:
 # actually exposed on the Tango attribute. Attributes not listed here are
 # exposed unconverted (identity transform).
 HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
-    "adc_pll_lock_status": adc_pll_to_list,
+    "adcs_pll_status_adcs": adc_pll_to_list,
     "fpga0_bip_error_count": udp_error_count_to_list,
     "fpga1_bip_error_count": udp_error_count_to_list,
     "fpga0_decode_error_count": udp_error_count_to_list,
@@ -257,8 +257,8 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "fpga1_clock_managers_status": clock_managers_status,
     "fpga0_clocks": clocks_to_list,
     "fpga1_clocks": clocks_to_list,
-    "adc_sysref_counter": adc_to_list,
-    "adc_sysref_timing_requirements": adc_to_list,
+    "adcs_sysref_counter_adcs": adc_to_list,
+    "adcs_sysref_timing_requirements_adcs": adc_to_list,
     "fpga0_qpll_status": lambda v: int(v[0]),
     "fpga1_qpll_status": lambda v: int(v[0]),
     "timing_pll_lock_status": lambda v: int(v[0]),
@@ -332,7 +332,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "voltages_vm_mgt1_aux": ["voltages", "VM_MGT1_AUX"],
     "voltages_vm_pll": ["voltages", "VM_PLL"],
     "voltages_vm_sw_amp": ["voltages", "VM_SW_AMP"],
-    "adc_pll_lock_status": ["adcs", "pll_status"],
+    "adcs_pll_status_adcs": ["adcs", "pll_status"],
     "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
     "fpga0_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA0"],
     "fpga1_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA1"],
@@ -388,8 +388,8 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "timing_pll_lock_status": ["timing", "pll"],
     "timing_pll_count": ["timing", "pll"],
     "timing_pll_40g_lock_status": ["timing", "pll_40g"],
-    "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
-    "adc_sysref_counter": ["adcs", "sysref_counter"],
+    "adcs_sysref_timing_requirements_adcs": ["adcs", "sysref_timing_requirements"],
+    "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
     "fpga0_clocks": ["timing", "clocks", "FPGA0"],
     "fpga1_clocks": ["timing", "clocks", "FPGA1"],
     "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
@@ -1979,7 +1979,7 @@ class TestMccsTile:
             "fpga0_lane_error_count",
             "fpga0_resync_count",
             "station_beamformer_status",
-            "adc_pll_lock_status",
+            "adcs_pll_status_adcs",
             "timing_pll_40g_lock_status",
         ],
     )
@@ -2781,7 +2781,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "adc_pll_lock_status",
+                "adcs_pll_status_adcs",
                 ["adcs", "pll_status"],
                 {
                     "ADC0": (True, True),

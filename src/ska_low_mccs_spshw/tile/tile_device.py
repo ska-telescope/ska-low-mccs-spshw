@@ -423,7 +423,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltages_vm_mgt1_aux": "voltage_vm_mgt1_aux_signal",
         "voltages_vm_pll": "voltage_vm_pll_signal",
         "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
-        "adc_pll_lock_status": "adc_pll_lock_status_signal",
+        "adcs_pll_status_adcs": "adc_pll_lock_status_signal",
         "tile_beamformer_status": "tile_beamformer_status_signal",
         "station_beamformer_status": "station_beamformer_status_signal",
         "fpga0_station_beamformer_error_count": (
@@ -469,8 +469,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga1_clock_managers_status": "fpga1_clock_managers_status_signal",
         "fpga0_clocks": "fpga0_clocks_signal",
         "fpga1_clocks": "fpga1_clocks_signal",
-        "adc_sysref_counter": "adc_sysref_counter_signal",
-        "adc_sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
+        "adcs_sysref_counter_adcs": "adc_sysref_counter_signal",
+        "adcs_sysref_timing_requirements_adcs": "adc_sysref_timing_requirements_signal",
         "fpga0_qpll_status": "fpga0_qpll_status_signal",
         "fpga1_qpll_status": "fpga1_qpll_status_signal",
         "fpga0_qpll_counter": "fpga0_qpll_counter_signal",
@@ -943,7 +943,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltages_vm_mgt1_aux": ["voltages", "VM_MGT1_AUX"],
             "voltages_vm_pll": ["voltages", "VM_PLL"],
             "voltages_vm_sw_amp": ["voltages", "VM_SW_AMP"],
-            "adc_pll_lock_status": ["adcs", "pll_status"],
+            "adcs_pll_status_adcs": ["adcs", "pll_status"],
             # qpll_status is a tuple, extracting status and
             # conuter in different attributes
             "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
@@ -1009,8 +1009,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_lock_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
             "timing_sync_time": ["timing", "sync_time"],
-            "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
-            "adc_sysref_counter": ["adcs", "sysref_counter"],
+            "adcs_sysref_timing_requirements_adcs": [
+                "adcs",
+                "sysref_timing_requirements",
+            ],
+            "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
             "fpga0_clocks": ["timing", "clocks", "FPGA0"],
             "fpga1_clocks": ["timing", "clocks", "FPGA1"],
             # Extracting status and count in different attributes
@@ -1921,7 +1924,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="ADC PLL Lock Status",
         doc="Return the pll status of all 16 ADCs.",
     )
-    def adc_pll_lock_status(
+    def adcs_pll_status_adcs(
         self: MccsTile, raw_value: dict[str, tuple[bool, bool]] | None
     ) -> np.ndarray | None:
         """
@@ -2686,7 +2689,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: `1` if SYSREF counter is incrementing (SYSREF is present), "
         "`0` if not present.",
     )
-    def adc_sysref_counter(
+    def adcs_sysref_counter_adcs(
         self: MccsTile, raw_value: dict[str, bool] | None
     ) -> list[int] | None:
         """
@@ -2696,7 +2699,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         `0` if not present.
 
         :example:
-            >>> tile.adc_sysref_counter
+            >>> tile.adcs_sysref_counter_adcs
             [1] * 16
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2721,7 +2724,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: `1` if setup and hold requirements for SYSREF are met, "
         "else return `0`.",
     )
-    def adc_sysref_timing_requirements(
+    def adcs_sysref_timing_requirements_adcs(
         self: MccsTile, raw_value: dict[str, bool] | None
     ) -> list[int] | None:
         """
@@ -2731,7 +2734,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         else return `0`.
 
         :example:
-            >>> tile.adc_sysref_timing_requirements
+            >>> tile.adcs_sysref_timing_requirements_adcs
             [1] * 16
 
         :param raw_value: the raw attribute value emitted on the signal, or

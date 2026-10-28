@@ -55,7 +55,7 @@ ska-tango-devices:
       temperatures_board->min_warning: 16.0
       temperatures_board->min_alarm: 15.0
 
-      adc_pll_lock_status->min_alarm: 0
+      adcs_pll_status_adcs->min_alarm: 0
 
       fpga0_station_beamformer_error_count->max_alarm: 1
       fpga1_station_beamformer_error_count->max_alarm: 1
@@ -102,9 +102,9 @@ ska-tango-devices:
       fpga0_clocks->min_alarm: 0
       fpga1_clocks->min_alarm: 0
 
-      adc_sysref_counter->min_alarm: 0
+      adcs_sysref_counter_adcs->min_alarm: 0
 
-      adc_sysref_timing_requirements->min_alarm: 0
+      adcs_sysref_timing_requirements_adcs->min_alarm: 0
 
       fpga0_qpll_status->min_alarm: 0
       fpga1_qpll_status->min_alarm: 0

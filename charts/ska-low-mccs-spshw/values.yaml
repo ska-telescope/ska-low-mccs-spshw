@@ -78,8 +78,8 @@ ska-tango-devices:
       fpga0_data_router_status->max_alarm: 1
       fpga1_data_router_status->max_alarm: 1
 
-      fpga0_ddr_reset_counter->max_alarm: 1
-      fpga1_ddr_reset_counter->max_alarm: 1
+      io_ddr_interface_reset_counter_fpga0->max_alarm: 1
+      io_ddr_interface_reset_counter_fpga1->max_alarm: 1
 
       f2f_soft_errors->max_alarm: 1
       f2f_soft_errors->min_alarm: -1

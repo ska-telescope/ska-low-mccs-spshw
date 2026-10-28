@@ -338,13 +338,13 @@ configuration:
       udp_status:
         code_push_event: true
         archive_period: 0
-      ddr_initialisation:
+      io_ddr_interface_initialisation:
         code_push_event: true
         archive_period: 0
-      fpga0_ddr_reset_counter:
+      io_ddr_interface_reset_counter_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_ddr_reset_counter:
+      io_ddr_interface_reset_counter_fpga1:
         code_push_event: true
         archive_period: 0
       io_f2f_interface_soft_error_fpga0:

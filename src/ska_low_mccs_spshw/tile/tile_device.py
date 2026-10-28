@@ -451,9 +451,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "data_router_discarded_packets": "data_router_discarded_packets_signal",
         "arp": "arp_signal",
         "udp_status": "udp_status_signal",
-        "ddr_initialisation": "ddr_initialisation_signal",
-        "fpga0_ddr_reset_counter": "fpga0_ddr_reset_counter_signal",
-        "fpga1_ddr_reset_counter": "fpga1_ddr_reset_counter_signal",
+        "io_ddr_interface_initialisation": "ddr_initialisation_signal",
+        "io_ddr_interface_reset_counter_fpga0": "fpga0_ddr_reset_counter_signal",
+        "io_ddr_interface_reset_counter_fpga1": "fpga1_ddr_reset_counter_signal",
         "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0_signal",
         "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1_signal",
         "io_f2f_interface_hard_error_fpga0": "io_f2f_interface_hard_error_fpga0_signal",
@@ -1074,14 +1074,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "resync_count",
                 "FPGA1",
             ],
-            "ddr_initialisation": ["io", "ddr_interface", "initialisation"],
-            "fpga0_ddr_reset_counter": [
+            "io_ddr_interface_initialisation": [
+                "io",
+                "ddr_interface",
+                "initialisation",
+            ],
+            "io_ddr_interface_reset_counter_fpga0": [
                 "io",
                 "ddr_interface",
                 "reset_counter",
                 "FPGA0",
             ],
-            "fpga1_ddr_reset_counter": [
+            "io_ddr_interface_reset_counter_fpga1": [
                 "io",
                 "ddr_interface",
                 "reset_counter",
@@ -2322,7 +2326,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: `True` if virtual lanes aligned and no BIP or CRC errors.",
     )
 
-    ddr_initialisation = attribute_from_signal(
+    io_ddr_interface_initialisation = attribute_from_signal(
         ddr_initialisation_signal,
         dtype="DevBoolean",
         label="DDR Initialisation Status",
@@ -2330,7 +2334,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: True if DDR interface was successfully initialised.",
     )
 
-    fpga0_ddr_reset_counter = attribute_from_signal(
+    io_ddr_interface_reset_counter_fpga0 = attribute_from_signal(
         fpga0_ddr_reset_counter_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2341,7 +2345,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no reset events have occurred.",
     )
 
-    fpga1_ddr_reset_counter = attribute_from_signal(
+    io_ddr_interface_reset_counter_fpga1 = attribute_from_signal(
         fpga1_ddr_reset_counter_signal,
         dtype="DevShort",
         max_alarm=1,

@@ -445,9 +445,19 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "resync_count",
         "FPGA1",
     ],
-    "ddr_initialisation": ["io", "ddr_interface", "initialisation"],
-    "fpga0_ddr_reset_counter": ["io", "ddr_interface", "reset_counter", "FPGA0"],
-    "fpga1_ddr_reset_counter": ["io", "ddr_interface", "reset_counter", "FPGA1"],
+    "io_ddr_interface_initialisation": ["io", "ddr_interface", "initialisation"],
+    "io_ddr_interface_reset_counter_fpga0": [
+        "io",
+        "ddr_interface",
+        "reset_counter",
+        "FPGA0",
+    ],
+    "io_ddr_interface_reset_counter_fpga1": [
+        "io",
+        "ddr_interface",
+        "reset_counter",
+        "FPGA1",
+    ],
     "arp": ["io", "udp_interface", "arp"],
     "udp_status": ["io", "udp_interface", "status"],
     "fpga0_crc_error_count": ["io", "udp_interface", "crc_error_count", "FPGA0"],
@@ -2693,7 +2703,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_ddr_reset_counter",
+                "io_ddr_interface_reset_counter_fpga0",
                 [
                     "io",
                     "ddr_interface",

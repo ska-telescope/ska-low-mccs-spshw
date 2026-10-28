@@ -124,7 +124,7 @@ configuration:
       pllLockedSummary:
         code_push_event: true
         archive_period: 0
-      ppsPresentSummary:
+      timing_pps_statusSummary:
         code_push_event: true
         archive_period: 0
       clockPresentSummary:
@@ -386,10 +386,10 @@ configuration:
       fpga1_clock_managers_status:
         code_push_event: true
         archive_period: 0
-      fpga0_clocks:
+      timing_clocks_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_clocks:
+      timing_clocks_fpga1:
         code_push_event: true
         archive_period: 0
       adcs_sysref_counter_adcs:
@@ -420,13 +420,13 @@ configuration:
         archive_period: 0
       io_f2f_interface_pll_status_fpga1_counter:
         code_push_event: true
-      timing_pll_lock_status:
+      timing_pll_status:
         code_push_event: true
         archive_period: 0
       timing_pll_count:
         code_push_event: true
         archive_period: 0
-      timing_pll_40g_lock_status:
+      timing_pll_40g_status:
         code_push_event: true
         archive_period: 0
       timing_pll_40g_count:
@@ -576,7 +576,7 @@ configuration:
       ppsDelayCorrection:
         code_push_event: true
         archive_period: 0
-      ppsPresent:
+      timing_pps_status:
         code_push_event: true
         archive_period: 0
       pllLocked:

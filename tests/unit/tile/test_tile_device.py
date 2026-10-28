@@ -255,14 +255,14 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "fpga1_clock_managers_count": clock_managers_count,
     "fpga0_clock_managers_status": clock_managers_status,
     "fpga1_clock_managers_status": clock_managers_status,
-    "fpga0_clocks": clocks_to_list,
-    "fpga1_clocks": clocks_to_list,
+    "timing_clocks_fpga0": clocks_to_list,
+    "timing_clocks_fpga1": clocks_to_list,
     "adcs_sysref_counter_adcs": adc_to_list,
     "adcs_sysref_timing_requirements_adcs": adc_to_list,
     "fpga0_qpll_status": lambda v: int(v[0]),
     "fpga1_qpll_status": lambda v: int(v[0]),
-    "timing_pll_lock_status": lambda v: int(v[0]),
-    "timing_pll_40g_lock_status": lambda v: int(v[0]),
+    "timing_pll_status": lambda v: int(v[0]),
+    "timing_pll_40g_status": lambda v: int(v[0]),
     "io_f2f_interface_pll_status_fpga0": lambda v: int(v[0]),
     "io_f2f_interface_pll_status_fpga1": lambda v: int(v[0]),
     "fpga0_qpll_counter": lambda v: int(v[1]),
@@ -280,13 +280,13 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "currents": serialise_object,
     "timing": serialise_object,
     "adcs": serialise_object,
-    "ppsPresent": int,  # Bool alarms cause problems so this is an int signal.
+    "timing_pps_status": int,  # Bool alarms cause problems so this is an int signal.
 }
 
 # Mirrors MccsTile.attribute_monitoring_point_map (an instance attribute set
 # in init_device, so not importable directly). Keep in sync with that map.
 HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
-    "ppsPresent": ["timing", "pps", "status"],
+    "timing_pps_status": ["timing", "pps", "status"],
     "temperatures_fpga0": ["temperatures", "FPGA0"],
     "temperatures_fpga1": ["temperatures", "FPGA1"],
     "temperatures_board": ["temperatures", "board"],
@@ -385,13 +385,13 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "hard_error",
         "FPGA1",
     ],
-    "timing_pll_lock_status": ["timing", "pll"],
+    "timing_pll_status": ["timing", "pll"],
     "timing_pll_count": ["timing", "pll"],
-    "timing_pll_40g_lock_status": ["timing", "pll_40g"],
+    "timing_pll_40g_status": ["timing", "pll_40g"],
     "adcs_sysref_timing_requirements_adcs": ["adcs", "sysref_timing_requirements"],
     "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
-    "fpga0_clocks": ["timing", "clocks", "FPGA0"],
-    "fpga1_clocks": ["timing", "clocks", "FPGA1"],
+    "timing_clocks_fpga0": ["timing", "clocks", "FPGA0"],
+    "timing_clocks_fpga1": ["timing", "clocks", "FPGA1"],
     "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
     "fpga0_clock_managers_status": ["timing", "clock_managers", "FPGA0"],
     "fpga1_clock_managers_count": ["timing", "clock_managers", "FPGA1"],
@@ -1684,7 +1684,7 @@ class TestMccsTile:
         assert tile_device.healthState == HealthState.OK
 
         tile_device.subscribe_event(
-            "fpga0_clocks",
+            "timing_clocks_fpga0",
             EventType.CHANGE_EVENT,
             change_event_callbacks["fpga0_clock"],
         )
@@ -1700,7 +1700,7 @@ class TestMccsTile:
 
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
-                if attr in ["fpga0_clocks", "voltages_ddr1_vref"]:
+                if attr in ["timing_clocks_fpga0", "voltages_ddr1_vref"]:
                     try:
                         assert (
                             tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
@@ -1980,7 +1980,7 @@ class TestMccsTile:
             "fpga0_resync_count",
             "station_beamformer_status",
             "adcs_pll_status_adcs",
-            "timing_pll_40g_lock_status",
+            "timing_pll_40g_status",
         ],
     )
     def test_archive(
@@ -2041,7 +2041,7 @@ class TestMccsTile:
         ("attribute_name", "health_path", "write_value"),
         [
             (
-                "ppsPresent",
+                "timing_pps_status",
                 ["timing", "pps", "status"],
                 False,
             ),
@@ -2253,13 +2253,13 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         on_tile_device.subscribe_event(
-            "ppsPresent",
+            "timing_pps_status",
             EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
         change_event_callbacks["pps_present"].assert_change_event(Anything)
         assert (
-            on_tile_device.read_attribute("ppsPresent").quality
+            on_tile_device.read_attribute("timing_pps_status").quality
             == AttrQuality.ATTR_VALID
         )
 
@@ -2275,7 +2275,7 @@ class TestMccsTile:
         change_event_callbacks["pps_present"].assert_change_event(Anything)
         time.sleep(1)  # Wait for attr to update.
         assert (
-            on_tile_device.read_attribute("ppsPresent").quality
+            on_tile_device.read_attribute("timing_pps_status").quality
             == AttrQuality.ATTR_ALARM
         )
         assert on_tile_device.state() == DevState.ALARM
@@ -2291,7 +2291,7 @@ class TestMccsTile:
             DevState.OFF, lookahead=5, consume_nonmatches=True
         )
         assert (
-            on_tile_device.read_attribute("ppsPresent").quality
+            on_tile_device.read_attribute("timing_pps_status").quality
             == AttrQuality.ATTR_INVALID
         )
         assert on_tile_device.state() == DevState.OFF
@@ -2649,7 +2649,7 @@ class TestMccsTile:
         ),
         [
             (
-                "ppsPresent",
+                "timing_pps_status",
                 ["timing", "pps", "status"],
                 False,
                 None,
@@ -2828,7 +2828,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_clocks",
+                "timing_clocks_fpga0",
                 ["timing", "clocks", "FPGA0"],
                 {"JESD": 1, "DDR": 1, "UDP": 1},
                 None,
@@ -2838,7 +2838,7 @@ class TestMccsTile:
                 HealthState.OK,
             ),
             (
-                "fpga0_clocks",
+                "timing_clocks_fpga0",
                 ["timing", "clocks", "FPGA0"],
                 {"JESD": 1, "DDR": 0, "UDP": 1},
                 None,

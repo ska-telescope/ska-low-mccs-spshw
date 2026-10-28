@@ -964,7 +964,7 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
     ]
     invalid_attrs = [
         "temperatures_fpga0",
-        "ppsPresent",
+        "timing_pps_status",
         "fpga0_qpll_status",
     ]
     acceptable_valid_qualities = (

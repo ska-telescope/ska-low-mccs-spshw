@@ -467,8 +467,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga1_clock_managers_count": "fpga1_clock_managers_count_signal",
         "fpga0_clock_managers_status": "fpga0_clock_managers_status_signal",
         "fpga1_clock_managers_status": "fpga1_clock_managers_status_signal",
-        "fpga0_clocks": "fpga0_clocks_signal",
-        "fpga1_clocks": "fpga1_clocks_signal",
+        "timing_clocks_fpga0": "fpga0_clocks_signal",
+        "timing_clocks_fpga1": "fpga1_clocks_signal",
         "adcs_sysref_counter_adcs": "adc_sysref_counter_signal",
         "adcs_sysref_timing_requirements_adcs": "adc_sysref_timing_requirements_signal",
         "fpga0_qpll_status": "fpga0_qpll_status_signal",
@@ -483,10 +483,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_f2f_interface_pll_status_fpga1_counter": (
             "io_f2f_interface_pll_status_fpga1_counter_signal"
         ),
-        "timing_pll_lock_status": "timing_pll_lock_status_signal",
+        "timing_pll_status": "timing_pll_lock_status_signal",
         "timing_pll_count": "timing_pll_count_signal",
         "timing_pll_40g_count": "timing_pll_40g_count_signal",
-        "timing_pll_40g_lock_status": "timing_pll_40g_lock_status_signal",
+        "timing_pll_40g_status": "timing_pll_40g_lock_status_signal",
         "voltages": "voltages_signal",
         "temperatures": "temperatures_signal",
         "currents": "currents_signal",
@@ -494,7 +494,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io": "io_signal",
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
-        "ppsPresent": "ppsPresent_signal",
+        "timing_pps_status": "ppsPresent_signal",
         "timing_sync_time": "timing_sync_time_signal",
     }
 
@@ -880,7 +880,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
-            "ppsPresent": ["timing", "pps", "status"],
+            "timing_pps_status": ["timing", "pps", "status"],
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
             "temperatures_board": ["temperatures", "board"],
@@ -1002,11 +1002,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ],
             # Extracting status and count in different attributes
             # by use of converters.
-            "timing_pll_lock_status": ["timing", "pll"],
+            "timing_pll_status": ["timing", "pll"],
             "timing_pll_count": ["timing", "pll"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "timing_pll_40g_lock_status": ["timing", "pll_40g"],
+            "timing_pll_40g_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
             "timing_sync_time": ["timing", "sync_time"],
             "adcs_sysref_timing_requirements_adcs": [
@@ -1014,8 +1014,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "sysref_timing_requirements",
             ],
             "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
-            "fpga0_clocks": ["timing", "clocks", "FPGA0"],
-            "fpga1_clocks": ["timing", "clocks", "FPGA1"],
+            "timing_clocks_fpga0": ["timing", "clocks", "FPGA0"],
+            "timing_clocks_fpga1": ["timing", "clocks", "FPGA1"],
             # Extracting status and count in different attributes
             # by use of converters.
             "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
@@ -2617,7 +2617,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the status of clocks for the interfaces of FPGA0. "
         "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
-    def fpga0_clocks(
+    def timing_clocks_fpga0(
         self: MccsTile, raw_value: dict[str, bool] | None
     ) -> list[int] | None:
         """
@@ -2626,7 +2626,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` per interface if status is OK. `0` if not OK.
 
         :example:
-            >>> tile.fpga0_clocks
+            >>> tile.timing_clocks_fpga0
             [1, 1, 1]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2652,7 +2652,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the status of clocks for the interfaces of FPGA1. "
         "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
-    def fpga1_clocks(
+    def timing_clocks_fpga1(
         self: MccsTile, raw_value: dict[str, bool] | None
     ) -> list[int] | None:
         """
@@ -2662,7 +2662,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         not OK.
 
         :example:
-            >>> tile.fpga1_clocks
+            >>> tile.timing_clocks_fpga1
             [1, 1, 1]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -3021,16 +3021,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the PLL lock status and lock loss counter. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
-    def timing_pll_lock_status(
-        self: MccsTile, raw_value: list[int] | None
-    ) -> int | None:
+    def timing_pll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
         """
         Return the PLL lock status and lock loss counter.
 
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.timing_pll_lock_status
+            >>> tile.timing_pll_status
             1
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -3088,7 +3086,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="Timing PLL 40G Lock Status",
         doc="Return the PLL 40G lock status. Expected: `1` if PLL 40G locked.",
     )
-    def timing_pll_40g_lock_status(
+    def timing_pll_40g_status(
         self: MccsTile, raw_value: list[int] | None
     ) -> int | None:
         """
@@ -3097,7 +3095,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if PLL 40G locked.
 
         :example:
-            >>> tile.timing_pll_40g_lock_status
+            >>> tile.timing_pll_40g_status
             '1`
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -4707,7 +4705,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
-    ppsPresent = attribute_from_signal(
+    timing_pps_status = attribute_from_signal(
         ppsPresent_signal,
         dtype="DevBoolean",
         label="PPS Present",

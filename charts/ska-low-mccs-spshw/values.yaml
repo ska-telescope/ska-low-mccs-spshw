@@ -99,8 +99,8 @@ ska-tango-devices:
       fpga0_clock_managers_status->min_alarm: 0
       fpga1_clock_managers_status->min_alarm: 0
 
-      fpga0_clocks->min_alarm: 0
-      fpga1_clocks->min_alarm: 0
+      timing_clocks_fpga0->min_alarm: 0
+      timing_clocks_fpga1->min_alarm: 0
 
       adcs_sysref_counter_adcs->min_alarm: 0
 
@@ -116,11 +116,11 @@ ska-tango-devices:
 
       f2f_pll_counter->max_alarm: 1
 
-      timing_pll_lock_status->min_alarm: 0
+      timing_pll_status->min_alarm: 0
 
       timing_pll_count->max_alarm: 1
 
-      timing_pll_40g_lock_status->min_alarm: 0
+      timing_pll_40g_status->min_alarm: 0
 
       timing_pll_40g_count->max_alarm: 1
 

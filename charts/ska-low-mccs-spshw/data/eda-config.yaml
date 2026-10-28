@@ -329,7 +329,7 @@ configuration:
       io_data_router_status_fpga1:
         code_push_event: true
         archive_period: 0
-      data_router_discarded_packets:
+      io_data_router_discarded_packets:
         code_push_event: true
         archive_period: 0
       io_udp_interface_arp:

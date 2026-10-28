@@ -299,22 +299,22 @@ configuration:
       fpga1_station_beamformer_flagged_count:
         code_push_event: true
         archive_period: 0
-      fpga0_crc_error_count:
+      io_udp_interface_crc_error_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_crc_error_count:
+      io_udp_interface_crc_error_count_fpga1:
         code_push_event: true
         archive_period: 0
-      fpga0_bip_error_count:
+      io_udp_interface_bip_error_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_bip_error_count:
+      io_udp_interface_bip_error_count_fpga1:
         code_push_event: true
         archive_period: 0
-      fpga1_decode_error_count:
+      io_udp_interface_decode_error_count_fpga1:
         code_push_event: true
         archive_period: 0
-      fpga0_decode_error_count:
+      io_udp_interface_decode_error_count_fpga0:
         code_push_event: true
         archive_period: 0
       fpga0_linkup_loss_count:
@@ -332,10 +332,10 @@ configuration:
       data_router_discarded_packets:
         code_push_event: true
         archive_period: 0
-      arp:
+      io_udp_interface_arp:
         code_push_event: true
         archive_period: 0
-      udp_status:
+      io_udp_interface_status:
         code_push_event: true
         archive_period: 0
       io_ddr_interface_initialisation:

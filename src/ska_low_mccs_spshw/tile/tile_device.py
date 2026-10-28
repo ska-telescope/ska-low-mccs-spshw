@@ -444,19 +444,19 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga1_station_beamformer_flagged_count": (
             "fpga1_station_beamformer_flagged_count_signal"
         ),
-        "fpga0_crc_error_count": "fpga0_crc_error_count_signal",
-        "fpga1_crc_error_count": "fpga1_crc_error_count_signal",
-        "fpga0_bip_error_count": "fpga0_bip_error_count_signal",
-        "fpga1_bip_error_count": "fpga1_bip_error_count_signal",
-        "fpga0_decode_error_count": "fpga0_decode_error_count_signal",
-        "fpga1_decode_error_count": "fpga1_decode_error_count_signal",
+        "io_udp_interface_crc_error_count_fpga0": "fpga0_crc_error_count_signal",
+        "io_udp_interface_crc_error_count_fpga1": "fpga1_crc_error_count_signal",
+        "io_udp_interface_bip_error_count_fpga0": "fpga0_bip_error_count_signal",
+        "io_udp_interface_bip_error_count_fpga1": "fpga1_bip_error_count_signal",
+        "io_udp_interface_decode_error_count_fpga0": "fpga0_decode_error_count_signal",
+        "io_udp_interface_decode_error_count_fpga1": "fpga1_decode_error_count_signal",
         "fpga0_linkup_loss_count": "fpga0_linkup_loss_count_signal",
         "fpga1_linkup_loss_count": "fpga1_linkup_loss_count_signal",
         "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
         "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
         "data_router_discarded_packets": "data_router_discarded_packets_signal",
-        "arp": "arp_signal",
-        "udp_status": "udp_status_signal",
+        "io_udp_interface_arp": "arp_signal",
+        "io_udp_interface_status": "udp_status_signal",
         "io_ddr_interface_initialisation": "ddr_initialisation_signal",
         "io_ddr_interface_reset_counter_fpga0": "fpga0_ddr_reset_counter_signal",
         "io_ddr_interface_reset_counter_fpga1": "fpga1_ddr_reset_counter_signal",
@@ -1097,39 +1097,39 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "reset_counter",
                 "FPGA1",
             ],
-            "arp": ["io", "udp_interface", "arp"],
-            "udp_status": ["io", "udp_interface", "status"],
-            "fpga0_crc_error_count": [
+            "io_udp_interface_arp": ["io", "udp_interface", "arp"],
+            "io_udp_interface_status": ["io", "udp_interface", "status"],
+            "io_udp_interface_crc_error_count_fpga0": [
                 "io",
                 "udp_interface",
                 "crc_error_count",
                 "FPGA0",
             ],
-            "fpga1_crc_error_count": [
+            "io_udp_interface_crc_error_count_fpga1": [
                 "io",
                 "udp_interface",
                 "crc_error_count",
                 "FPGA1",
             ],
-            "fpga0_bip_error_count": [
+            "io_udp_interface_bip_error_count_fpga0": [
                 "io",
                 "udp_interface",
                 "bip_error_count",
                 "FPGA0",
             ],
-            "fpga0_decode_error_count": [
+            "io_udp_interface_decode_error_count_fpga0": [
                 "io",
                 "udp_interface",
                 "decode_error_count",
                 "FPGA0",
             ],
-            "fpga1_bip_error_count": [
+            "io_udp_interface_bip_error_count_fpga1": [
                 "io",
                 "udp_interface",
                 "bip_error_count",
                 "FPGA1",
             ],
-            "fpga1_decode_error_count": [
+            "io_udp_interface_decode_error_count_fpga1": [
                 "io",
                 "udp_interface",
                 "decode_error_count",
@@ -2048,7 +2048,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga0_crc_error_count = attribute_from_signal(
+    io_udp_interface_crc_error_count_fpga0 = attribute_from_signal(
         fpga0_crc_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2059,7 +2059,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
 
-    fpga1_crc_error_count = attribute_from_signal(
+    io_udp_interface_crc_error_count_fpga1 = attribute_from_signal(
         fpga1_crc_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2081,7 +2081,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the BIP error count for FPGA0. "
         "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
-    def fpga0_bip_error_count(
+    def io_udp_interface_bip_error_count_fpga0(
         self: MccsTile, raw_value: dict[str, int] | None
     ) -> list[int] | None:
         """
@@ -2090,7 +2090,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no bit-interleaved parity (BIP) errors detected.
 
         :example:
-            >>> tile.fpga0_bip_error_count
+            >>> tile.io_udp_interface_bip_error_count_fpga0
             [0, 0, 0, 0]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2113,7 +2113,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the bip error count for FPGA1. "
         "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
-    def fpga1_bip_error_count(
+    def io_udp_interface_bip_error_count_fpga1(
         self: MccsTile, raw_value: dict[str, int] | None
     ) -> list[int] | None:
         """
@@ -2122,7 +2122,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no bit-interleaved parity (BIP) errors detected.
 
         :example:
-            >>> tile.fpga1_bip_error_count
+            >>> tile.io_udp_interface_bip_error_count_fpga1
             [0, 0, 0, 0]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2145,7 +2145,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the decode error count for FPGA0. "
         "Expected: 0 if errors have not been detected.",
     )
-    def fpga0_decode_error_count(
+    def io_udp_interface_decode_error_count_fpga0(
         self: MccsTile, raw_value: dict[str, int] | None
     ) -> list[int] | None:
         """
@@ -2156,7 +2156,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             detected in a clock cycle.
 
         :example:
-            >>> tile.fpga0_decode_error_count
+            >>> tile.io_udp_interface_decode_error_count_fpga0
             [0, 0, 0, 0]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2179,7 +2179,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the decode error count for FPGA1. "
         "Expected: 0 if errors have not been detected.",
     )
-    def fpga1_decode_error_count(
+    def io_udp_interface_decode_error_count_fpga1(
         self: MccsTile, raw_value: dict[str, int] | None
     ) -> list[int] | None:
         """
@@ -2190,7 +2190,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             detected in a clock cycle.
 
         :example:
-            >>> tile.fpga1_decode_error_count
+            >>> tile.io_udp_interface_decode_error_count_fpga1
             [0, 0, 0, 0]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2316,7 +2316,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return serialise_object(raw_value)
 
-    arp = attribute_from_signal(
+    io_udp_interface_arp = attribute_from_signal(
         arp_signal,
         dtype="DevBoolean",
         label="ARP",
@@ -2324,7 +2324,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: `True` if table entries are valid and resolved.",
     )
 
-    udp_status = attribute_from_signal(
+    io_udp_interface_status = attribute_from_signal(
         udp_status_signal,
         dtype="DevBoolean",
         label="UDP Status",

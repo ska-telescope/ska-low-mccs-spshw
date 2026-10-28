@@ -108,11 +108,17 @@ ska-tango-devices:
       timing_clock_managers_fpga0_count->max_alarm: 1
       timing_clock_managers_fpga1_count->max_alarm: 1
 
+<<<<<<< HEAD
       timing_clock_managers_fpga0_status->min_alarm: 0
       timing_clock_managers_fpga1_status->min_alarm: 0
 
       timing_clocks_fpga0->min_alarm: 0
       timing_clocks_fpga1->min_alarm: 0
+=======
+      adcs_sysref_counter_adcs->min_alarm: 0
+
+      adcs_sysref_timing_requirements_adcs->min_alarm: 0
+>>>>>>> 15442a841 (THORN-757: rename 'adcs' attributes on Tile and config)
 
       adcs_sysref_counter->min_alarm: 0
 

@@ -332,6 +332,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "voltages_vm_mgt1_aux": ["voltages", "VM_MGT1_AUX"],
     "voltages_vm_pll": ["voltages", "VM_PLL"],
     "voltages_vm_sw_amp": ["voltages", "VM_SW_AMP"],
+<<<<<<< HEAD
     "adcs_pll_status": ["adcs", "pll_status"],
     "io_jesd_interface_qpll_status_fpga0_status": [
         "io",
@@ -358,6 +359,14 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "FPGA1",
     ],
     "io_f2f_interface_pll_status_fpga0_status": [
+=======
+    "adcs_pll_status_adcs": ["adcs", "pll_status"],
+    "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
+    "fpga0_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA0"],
+    "fpga1_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA1"],
+    "fpga1_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA1"],
+    "io_f2f_interface_pll_status_fpga0": [
+>>>>>>> 15442a841 (THORN-757: rename 'adcs' attributes on Tile and config)
         "io",
         "f2f_interface",
         "pll_status",
@@ -407,6 +416,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     ],
     "timing_pll_status": ["timing", "pll"],
     "timing_pll_count": ["timing", "pll"],
+<<<<<<< HEAD
     "timing_pll_40g_status": ["timing", "pll_40g"],
     "adcs_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
     "adcs_sysref_counter": ["adcs", "sysref_counter"],
@@ -417,6 +427,18 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "timing_clock_managers_fpga1_count": ["timing", "clock_managers", "FPGA1"],
     "timing_clock_managers_fpga1_status": ["timing", "clock_managers", "FPGA1"],
     "io_jesd_interface_lane_error_count_fpga0": [
+=======
+    "timing_pll_40g_lock_status": ["timing", "pll_40g"],
+    "adcs_sysref_timing_requirements_adcs": ["adcs", "sysref_timing_requirements"],
+    "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
+    "fpga0_clocks": ["timing", "clocks", "FPGA0"],
+    "fpga1_clocks": ["timing", "clocks", "FPGA1"],
+    "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
+    "fpga0_clock_managers_status": ["timing", "clock_managers", "FPGA0"],
+    "fpga1_clock_managers_count": ["timing", "clock_managers", "FPGA1"],
+    "fpga1_clock_managers_status": ["timing", "clock_managers", "FPGA1"],
+    "fpga0_lane_error_count": [
+>>>>>>> 15442a841 (THORN-757: rename 'adcs' attributes on Tile and config)
         "io",
         "jesd_interface",
         "lane_error_count",
@@ -2092,6 +2114,7 @@ class TestMccsTile:
             "voltages_vm_sw_amp",
             "voltages_ddr0_vref",
             "currentTileBeamformerFrame",
+<<<<<<< HEAD
             "io_f2f_interface_pll_status_fpga0_status",
             "timing_clock_managers_fpga0_status",
             "timing_clock_managers_fpga1_count",
@@ -2100,6 +2123,16 @@ class TestMccsTile:
             "dsp_station_beamf_status",
             "adcs_pll_status",
             "timing_pll_40g_status",
+=======
+            "io_f2f_interface_pll_status_fpga0",
+            "fpga0_clock_managers_status",
+            "fpga1_clock_managers_count",
+            "fpga0_lane_error_count",
+            "fpga0_resync_count",
+            "station_beamformer_status",
+            "adcs_pll_status_adcs",
+            "timing_pll_40g_lock_status",
+>>>>>>> 15442a841 (THORN-757: rename 'adcs' attributes on Tile and config)
         ],
     )
     def test_archive(
@@ -2975,7 +3008,11 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
+<<<<<<< HEAD
                 "adcs_pll_status",
+=======
+                "adcs_pll_status_adcs",
+>>>>>>> 15442a841 (THORN-757: rename 'adcs' attributes on Tile and config)
                 ["adcs", "pll_status"],
                 {
                     "ADC0": (True, True),

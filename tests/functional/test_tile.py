@@ -959,8 +959,8 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
         "voltages_sw_avdd2",
         "voltages_avdd3",
         "timing_pll_40g_count",
-        "adc_pll_lock_status",
-        "adc_sysref_timing_requirements",
+        "adcs_pll_status_adcs",
+        "adcs_sysref_timing_requirements_adcs",
     ]
     invalid_attrs = [
         "temperatures_fpga0",

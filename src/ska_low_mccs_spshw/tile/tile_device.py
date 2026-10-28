@@ -458,11 +458,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1_signal",
         "io_f2f_interface_hard_error_fpga0": "io_f2f_interface_hard_error_fpga0_signal",
         "io_f2f_interface_hard_error_fpga1": "io_f2f_interface_hard_error_fpga1_signal",
-        "fpga0_resync_count": "fpga0_resync_count_signal",
-        "fpga1_resync_count": "fpga1_resync_count_signal",
-        "link_status": "link_status_signal",
-        "fpga0_lane_error_count": "fpga0_lane_error_count_signal",
-        "fpga1_lane_error_count": "fpga1_lane_error_count_signal",
+        "io_jesd_interface_resync_count_fpga0": "fpga0_resync_count_signal",
+        "io_jesd_interface_resync_count_fpga1": "fpga1_resync_count_signal",
+        "io_jesd_interface_link_status": "link_status_signal",
+        "io_jesd_interface_lane_error_count_fpga0": "fpga0_lane_error_count_signal",
+        "io_jesd_interface_lane_error_count_fpga1": "fpga1_lane_error_count_signal",
         "fpga0_clock_managers_count": "fpga0_clock_managers_count_signal",
         "fpga1_clock_managers_count": "fpga1_clock_managers_count_signal",
         "fpga0_clock_managers_status": "fpga0_clock_managers_status_signal",
@@ -471,16 +471,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "timing_clocks_fpga1": "fpga1_clocks_signal",
         "adcs_sysref_counter_adcs": "adc_sysref_counter_signal",
         "adcs_sysref_timing_requirements_adcs": "adc_sysref_timing_requirements_signal",
-        "fpga0_qpll_status": "fpga0_qpll_status_signal",
-        "fpga1_qpll_status": "fpga1_qpll_status_signal",
-        "fpga0_qpll_counter": "fpga0_qpll_counter_signal",
-        "fpga1_qpll_counter": "fpga1_qpll_counter_signal",
-        "io_f2f_interface_pll_status_fpga0": "io_f2f_interface_pll_status_fpga0_signal",
-        "io_f2f_interface_pll_status_fpga1": "io_f2f_interface_pll_status_fpga1_signal",
-        "io_f2f_interface_pll_status_fpga0_counter": (
+        "io_jesd_interface_qpll_status_fpga0_status": "fpga0_qpll_status_signal",
+        "io_jesd_interface_qpll_status_fpga1_status": "fpga1_qpll_status_signal",
+        "io_jesd_interface_qpll_status_fpga0_count": "fpga0_qpll_counter_signal",
+        "io_jesd_interface_qpll_status_fpga1_count": "fpga1_qpll_counter_signal",
+        "io_f2f_interface_pll_status_fpga0_status": "io_f2f_interface_pll_status_fpga0_signal",
+        "io_f2f_interface_pll_status_fpga1_status": "io_f2f_interface_pll_status_fpga1_signal",
+        "io_f2f_interface_pll_status_fpga0_count": (
             "io_f2f_interface_pll_status_fpga0_counter_signal"
         ),
-        "io_f2f_interface_pll_status_fpga1_counter": (
+        "io_f2f_interface_pll_status_fpga1_count": (
             "io_f2f_interface_pll_status_fpga1_counter_signal"
         ),
         "timing_pll_status": "timing_pll_lock_status_signal",
@@ -946,31 +946,51 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "adcs_pll_status_adcs": ["adcs", "pll_status"],
             # qpll_status is a tuple, extracting status and
             # conuter in different attributes
-            "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
-            "fpga0_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA0"],
-            "fpga1_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA1"],
-            "fpga1_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA1"],
+            "io_jesd_interface_qpll_status_fpga0_status": [
+                "io",
+                "jesd_interface",
+                "qpll_status",
+                "FPGA0",
+            ],
+            "io_jesd_interface_qpll_status_fpga0_count": [
+                "io",
+                "jesd_interface",
+                "qpll_status",
+                "FPGA0",
+            ],
+            "io_jesd_interface_qpll_status_fpga1_status": [
+                "io",
+                "jesd_interface",
+                "qpll_status",
+                "FPGA1",
+            ],
+            "io_jesd_interface_qpll_status_fpga1_count": [
+                "io",
+                "jesd_interface",
+                "qpll_status",
+                "FPGA1",
+            ],
             # Extracting status and count in different attributes
             # by use of converters.
-            "io_f2f_interface_pll_status_fpga0": [
+            "io_f2f_interface_pll_status_fpga0_status": [
                 "io",
                 "f2f_interface",
                 "pll_status",
                 "FPGA0",
             ],
-            "io_f2f_interface_pll_status_fpga0_counter": [
+            "io_f2f_interface_pll_status_fpga0_count": [
                 "io",
                 "f2f_interface",
                 "pll_status",
                 "FPGA0",
             ],
-            "io_f2f_interface_pll_status_fpga1": [
+            "io_f2f_interface_pll_status_fpga1_status": [
                 "io",
                 "f2f_interface",
                 "pll_status",
                 "FPGA1",
             ],
-            "io_f2f_interface_pll_status_fpga1_counter": [
+            "io_f2f_interface_pll_status_fpga1_count": [
                 "io",
                 "f2f_interface",
                 "pll_status",
@@ -1025,21 +1045,35 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
             # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
             # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
-            "fpga0_lane_error_count": [
+            "io_jesd_interface_lane_error_count_fpga0": [
                 "io",
                 "jesd_interface",
                 "lane_error_count",
                 "FPGA0",
             ],
-            "fpga1_lane_error_count": [
+            "io_jesd_interface_lane_error_count_fpga1": [
                 "io",
                 "jesd_interface",
                 "lane_error_count",
                 "FPGA1",
             ],
-            "link_status": ["io", "jesd_interface", "link_status"],
-            "fpga0_resync_count": ["io", "jesd_interface", "resync_count", "FPGA0"],
-            "fpga1_resync_count": ["io", "jesd_interface", "resync_count", "FPGA1"],
+            "io_jesd_interface_link_status": [
+                "io",
+                "jesd_interface",
+                "io_jesd_interface_link_status",
+            ],
+            "io_jesd_interface_resync_count_fpga0": [
+                "io",
+                "jesd_interface",
+                "resync_count",
+                "FPGA0",
+            ],
+            "io_jesd_interface_resync_count_fpga1": [
+                "io",
+                "jesd_interface",
+                "resync_count",
+                "FPGA1",
+            ],
             "ddr_initialisation": ["io", "ddr_interface", "initialisation"],
             "fpga0_ddr_reset_counter": [
                 "io",
@@ -2370,7 +2404,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "reinitialising the TPM entirely due to the impact on beamformers.",
     )
 
-    fpga0_resync_count = attribute_from_signal(
+    io_jesd_interface_resync_count_fpga0 = attribute_from_signal(
         fpga0_resync_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2381,7 +2415,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no resync events have ocurred.",
     )
 
-    fpga1_resync_count = attribute_from_signal(
+    io_jesd_interface_resync_count_fpga1 = attribute_from_signal(
         fpga1_resync_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2392,7 +2426,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no resync events have ocurred.",
     )
 
-    link_status = attribute_from_signal(
+    io_jesd_interface_link_status = attribute_from_signal(
         link_status_signal,
         dtype="DevBoolean",
         label="Link Status",
@@ -2412,7 +2446,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the error count per lane, per core for FPGA0. "
         "Expected: 0 for all lanes.",
     )
-    def fpga0_lane_error_count(
+    def io_jesd_interface_lane_error_count_fpga0(
         self: MccsTile, raw_value: dict[str, dict[str, int | None]] | None
     ) -> np.ndarray | None:
         """
@@ -2421,7 +2455,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 for all lanes.
 
         :example:
-            >>> tile.fpga0_lane_error_count
+            >>> tile.io_jesd_interface_lane_error_count_fpga0
             [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2446,7 +2480,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the error count per lane, per core for FPGA1. "
         "Expected: 0 for all lanes.",
     )
-    def fpga1_lane_error_count(
+    def io_jesd_interface_lane_error_count_fpga1(
         self: MccsTile, raw_value: dict[str, dict[str, int | None]] | None
     ) -> np.ndarray | None:
         """
@@ -2455,7 +2489,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 for all lanes.
 
         :example:
-            >>> tile.fpga1_lane_error_count
+            >>> tile.io_jesd_interface_lane_error_count_fpga1
             [ [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0] ]
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2756,14 +2790,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="FPGA0 QPLL Status",
         doc="Return the QPLL lock status for FPGA0. Expected: `1` if QPLL locked.",
     )
-    def fpga0_qpll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
+    def io_jesd_interface_qpll_status_fpga0_status(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the QPLL lock status.
 
         Expected: `1` if QPLL locked.
 
         :example:
-            >>> tile.fpga0_qpll_status
+            >>> tile.io_jesd_interface_qpll_status_fpga0_status
             1
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2786,14 +2822,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="FPGA1 QPLL Status",
         doc="Return the QPLL lock status for FPGA1. Expected: `1` if QPLL locked.",
     )
-    def fpga1_qpll_status(self: MccsTile, raw_value: list[int] | None) -> int | None:
+    def io_jesd_interface_qpll_status_fpga1_status(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the QPLL lock status.
 
         Expected: `1` if QPLL locked.
 
         :example:
-            >>> tile.fpga1_qpll_status
+            >>> tile.io_jesd_interface_qpll_status_fpga1_status
             1
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2817,7 +2855,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the QPLL lock loss counter for FPGA0. "
         "Expected: `0` if no lock loss events detected.",
     )
-    def fpga0_qpll_counter(self: MccsTile, raw_value: list[int] | None) -> int | None:
+    def io_jesd_interface_qpll_status_fpga0_count(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the QPLL lock loss counter.
 
@@ -2825,7 +2865,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
 
         :example:
-            >>> tile.fpga0_qpll_counter
+            >>> tile.io_jesd_interface_qpll_status_fpga0_count
             0
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2849,7 +2889,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the QPLL lock loss counter for FPGA1. "
         "Expected: `0` if no lock loss events detected.",
     )
-    def fpga1_qpll_counter(self: MccsTile, raw_value: list[int] | None) -> int | None:
+    def io_jesd_interface_qpll_status_fpga1_count(
+        self: MccsTile, raw_value: list[int] | None
+    ) -> int | None:
         """
         Return the QPLL lock loss counter.
 
@@ -2857,7 +2899,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
 
         :example:
-            >>> tile.fpga1_qpll_counter
+            >>> tile.io_jesd_interface_qpll_status_fpga1_count
             0
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2883,7 +2925,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA0 F2F PLL lock status. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
-    def io_f2f_interface_pll_status_fpga0(
+    def io_f2f_interface_pll_status_fpga0_status(
         self: MccsTile, raw_value: list[int] | None
     ) -> int | None:
         """
@@ -2892,7 +2934,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.io_f2f_interface_pll_status_fpga0
+            >>> tile.io_f2f_interface_pll_status_fpga0_status
             '1'
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2918,7 +2960,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA1 F2F PLL lock status. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
-    def io_f2f_interface_pll_status_fpga1(
+    def io_f2f_interface_pll_status_fpga1_status(
         self: MccsTile, raw_value: list[int] | None
     ) -> int | None:
         """
@@ -2927,7 +2969,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if PLL locked, `0` otherwise.
 
         :example:
-            >>> tile.io_f2f_interface_pll_status_fpga1
+            >>> tile.io_f2f_interface_pll_status_fpga1_status
             '1'
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2951,7 +2993,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA0 F2F PLL lock loss counter. "
         "Expected: `0` if no PLL lock loss events detected.",
     )
-    def io_f2f_interface_pll_status_fpga0_counter(
+    def io_f2f_interface_pll_status_fpga0_count(
         self: MccsTile, raw_value: list[int] | None
     ) -> int | None:
         """
@@ -2961,7 +3003,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
 
         :example:
-            >>> tile.io_f2f_interface_pll_status_fpga0_counter
+            >>> tile.io_f2f_interface_pll_status_fpga0_count
             '0'
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2985,7 +3027,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA1 F2F PLL lock loss counter. "
         "Expected: `0` if no PLL lock loss events detected.",
     )
-    def io_f2f_interface_pll_status_fpga1_counter(
+    def io_f2f_interface_pll_status_fpga1_count(
         self: MccsTile, raw_value: list[int] | None
     ) -> int | None:
         """
@@ -2995,7 +3037,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Increments for each lock loss event.
 
         :example:
-            >>> tile.io_f2f_interface_pll_status_fpga1_counter
+            >>> tile.io_f2f_interface_pll_status_fpga1_count
             '0'
 
         :param raw_value: the raw attribute value emitted on the signal, or

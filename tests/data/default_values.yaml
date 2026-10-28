@@ -51,11 +51,11 @@ ska-tango-devices:
       io_f2f_interface_hard_error_fpga1->max_alarm: 1
       io_f2f_interface_hard_error_fpga1->min_alarm: -1
 
-      fpga0_resync_count->max_alarm: 1
-      fpga1_resync_count->max_alarm: 1
+      io_jesd_interface_resync_count_fpga0->max_alarm: 1
+      io_jesd_interface_resync_count_fpga1->max_alarm: 1
 
-      fpga0_lane_error_count->max_alarm: 1
-      fpga1_lane_error_count->max_alarm: 1
+      io_jesd_interface_lane_error_count_fpga0->max_alarm: 1
+      io_jesd_interface_lane_error_count_fpga1->max_alarm: 1
 
       fpga0_clock_managers_count->max_alarm: 1
       fpga1_clock_managers_count->max_alarm: 1
@@ -70,17 +70,17 @@ ska-tango-devices:
 
       adcs_sysref_timing_requirements_adcs->min_alarm: 0
 
-      fpga0_qpll_status->min_alarm: 0
-      fpga1_qpll_status->min_alarm: 0
+      io_jesd_interface_qpll_status_fpga0_status->min_alarm: 0
+      io_jesd_interface_qpll_status_fpga1_status->min_alarm: 0
 
-      fpga0_qpll_counter->max_alarm: 1
-      fpga1_qpll_counter->max_alarm: 1
+      io_jesd_interface_qpll_status_fpga0_count->max_alarm: 1
+      io_jesd_interface_qpll_status_fpga1_count->max_alarm: 1
 
-      io_f2f_interface_pll_status_fpga0->min_alarm: 0
-      io_f2f_interface_pll_status_fpga1->min_alarm: 0
+      io_f2f_interface_pll_status_fpga0_status->min_alarm: 0
+      io_f2f_interface_pll_status_fpga1_status->min_alarm: 0
 
-      io_f2f_interface_pll_status_fpga0_counter->max_alarm: 1
-      io_f2f_interface_pll_status_fpga1_counter->max_alarm: 1
+      io_f2f_interface_pll_status_fpga0_count->max_alarm: 1
+      io_f2f_interface_pll_status_fpga1_count->max_alarm: 1
 
       timing_pll_status->min_alarm: 0
 

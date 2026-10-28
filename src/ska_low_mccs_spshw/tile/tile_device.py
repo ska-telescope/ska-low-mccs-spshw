@@ -454,7 +454,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga1_linkup_loss_count": "fpga1_linkup_loss_count_signal",
         "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
         "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
-        "data_router_discarded_packets": "data_router_discarded_packets_signal",
+        "io_data_router_discarded_packets": "data_router_discarded_packets_signal",
         "io_udp_interface_arp": "arp_signal",
         "io_udp_interface_status": "udp_status_signal",
         "io_ddr_interface_initialisation": "ddr_initialisation_signal",
@@ -1149,7 +1149,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ],
             "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
             "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-            "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
+            "io_data_router_discarded_packets": [
+                "io",
+                "data_router",
+                "discarded_packets",
+            ],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
             "fpga0_station_beamformer_error_count": [
@@ -2293,7 +2297,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the number of discarded packets. "
         "Expected: 0 if no packets are discarded.",
     )
-    def data_router_discarded_packets(
+    def io_data_router_discarded_packets(
         self: MccsTile, raw_value: dict[str, Any] | None
     ) -> str | None:
         """
@@ -2302,7 +2306,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no packets are discarded.
 
         :example:
-            >>> tile.data_router_discarded_packets
+            >>> tile.io_data_router_discarded_packets
             '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
 
         :param raw_value: the raw attribute value emitted on the signal, or

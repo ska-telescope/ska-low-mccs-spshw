@@ -45,11 +45,11 @@ class SubrackProtocol(Protocol):
     """
 
     @property
-    def api_version(self: SubrackProtocol) -> str:
+    def bios_version(self: SubrackProtocol) -> str:
         """
-        Return the version of the subrack web API, e.g. "1.8.0".
+        Return the SMM BIOS version of the subrack, e.g. "1.8.0".
 
-        :return: the subrack web API version.
+        :return: the SMM BIOS version.
         """  # noqa: DAR202
 
     def execute_command(
@@ -117,7 +117,7 @@ def _handle_getattribute(
             "info": str(exception),
             "attribute": name,
             # API 1.8.0 reports the value of a failed read as null
-            "value": None if subrack.api_version == "1.8.0" else "",
+            "value": None if subrack.bios_version == "1.8.0" else "",
         }
     return {
         "status": HardwareClientResponseStatusCodes.OK.name,

@@ -383,7 +383,7 @@ def default_health_status(
     }
 
 
-SUPPORTED_API_VERSIONS: Final = ("1.6.0", "1.8.0")
+SUPPORTED_BIOS_VERSIONS: Final = ("1.6.0", "1.8.0")
 
 ATTRIBUTE_METADATA: Final[dict[str, dict[str, AttributeMetadataType]]] = {
     "1.6.0": DEFAULT_ATTRIBUTE_METADATA,

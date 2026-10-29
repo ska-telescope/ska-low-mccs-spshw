@@ -36,7 +36,7 @@ simulators: {} # e.g.
   #   s8-1-1:
   #     srmb_host: subrack-simulator-s8-1
   #     srmb_port: 8081
-  #     api_version: "1.8.0"  # optional; the simulator defaults to 1.6.0
+  #     bios_version: "1.8.0"  # optional; the simulator defaults to 1.6.0
 
 pgadmin4:
   enabled: false

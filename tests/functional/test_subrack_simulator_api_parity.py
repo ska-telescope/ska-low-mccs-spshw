@@ -40,7 +40,7 @@ pytestmark = pytest.mark.subrack_api
 # HardwareThreadedClass.py). "1.6.0" is the API before 1.8.0.
 # ----------------------------------------------------------------------
 
-# The expectations are keyed by SMM BIOS version, like the simulator's API
+# The expectations are keyed by SMM BIOS version, like the simulator's
 # versions. A subrack gets those of the highest key not newer than its BIOS,
 # so BIOS 1.7.0 gets "1.6.0". The ``api_version`` attribute is not used: its
 # number is not always bumped (v2.7.0 of the API reports 2.6.0).
@@ -150,7 +150,7 @@ removed them, so it must refuse them.
 ALL_ATTRIBUTES: Final = frozenset().union(
     *API_ATTRIBUTES.values(), *UNAVAILABLE_ATTRIBUTES.values()
 )
-"""Every attribute of every API version."""
+"""Every attribute of every BIOS version."""
 
 UNAVAILABLE_COMMANDS: Final[dict[str, frozenset[str]]] = {
     "1.6.0": frozenset({"get_all_attributes", "tpm_info"}),
@@ -166,7 +166,7 @@ answer with an error. Unlike unavailable attributes, they stay in
 """
 
 ALL_COMMANDS: Final = frozenset().union(*API_COMMANDS.values())
-"""Every command of every API version."""
+"""Every command of every BIOS version."""
 
 SAFE_COMMANDS: Final[dict[str, str]] = {
     "are_tpms_on": "",
@@ -336,8 +336,8 @@ def subrack_url_fixture(request: pytest.FixtureRequest) -> str:
     return f"http://{target}/get/json.htm"
 
 
-@pytest.fixture(name="api_version")
-def api_version_fixture(subrack_url: str) -> str:
+@pytest.fixture(name="bios_version")
+def bios_version_fixture(subrack_url: str) -> str:
     """
     Return which expectations apply to the subrack web API under test.
 
@@ -345,10 +345,10 @@ def api_version_fixture(subrack_url: str) -> str:
 
     :return: the key of the expectations, e.g. "1.8.0".
     """
-    return _read_api_version(subrack_url)
+    return _read_bios_version(subrack_url)
 
 
-def _read_api_version(subrack_url: str) -> str:
+def _read_bios_version(subrack_url: str) -> str:
     """
     Read the subrack's BIOS version, and return which expectations apply.
 
@@ -363,11 +363,11 @@ def _read_api_version(subrack_url: str) -> str:
     match = re.match(r"v?(\d+)\.(\d+)\.(\d+)", bios)
     if match is None:
         pytest.fail(f"Cannot parse the subrack's BIOS version {bios!r}")
-    bios_version = tuple(int(part) for part in match.groups())
+    bios_parts = tuple(int(part) for part in match.groups())
     applicable = [
         version
         for version in API_ATTRIBUTES
-        if tuple(int(part) for part in version.split(".")) <= bios_version
+        if tuple(int(part) for part in version.split(".")) <= bios_parts
     ]
     if not applicable:
         pytest.fail(f"No expectations for BIOS version {bios}")
@@ -499,17 +499,17 @@ def test_invalid_type_is_rejected(subrack_url: str) -> None:
 
 @pytest.mark.parametrize("attribute_name", sorted(ALL_ATTRIBUTES))
 def test_provided_attribute(
-    subrack_url: str, api_version: str, attribute_name: str
+    subrack_url: str, bios_version: str, attribute_name: str
 ) -> None:
     """
-    Test that an attribute of the API version can be read.
+    Test that an attribute of the BIOS version can be read.
 
     :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
+    :param bios_version: the BIOS version under test.
     :param attribute_name: the attribute to read.
     """
-    if attribute_name not in API_ATTRIBUTES[api_version]:
-        pytest.skip(f"{attribute_name} is not an attribute of this API version")
+    if attribute_name not in API_ATTRIBUTES[bios_version]:
+        pytest.skip(f"{attribute_name} is not an attribute of this BIOS version")
 
     response = _request_until_ok(subrack_url, type="getattribute", param=attribute_name)
     assert set(response) == ATTRIBUTE_RESPONSE_KEYS, response
@@ -518,19 +518,19 @@ def test_provided_attribute(
 
 @pytest.mark.parametrize("attribute_name", sorted(ALL_ATTRIBUTES))
 def test_rejected_attribute(
-    subrack_url: str, api_version: str, attribute_name: str
+    subrack_url: str, bios_version: str, attribute_name: str
 ) -> None:
     """
-    Test that an attribute of another API version is rejected.
+    Test that an attribute of another BIOS version is rejected.
 
     :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
+    :param bios_version: the BIOS version under test.
     :param attribute_name: the attribute to read.
     """
-    if attribute_name in API_ATTRIBUTES[api_version]:
-        pytest.skip(f"{attribute_name} is an attribute of this API version")
-    if attribute_name in UNAVAILABLE_ATTRIBUTES[api_version]:
-        pytest.skip(f"{attribute_name} is unavailable in this API version")
+    if attribute_name in API_ATTRIBUTES[bios_version]:
+        pytest.skip(f"{attribute_name} is an attribute of this BIOS version")
+    if attribute_name in UNAVAILABLE_ATTRIBUTES[bios_version]:
+        pytest.skip(f"{attribute_name} is unavailable in this BIOS version")
 
     response = _request(subrack_url, type="getattribute", param=attribute_name)
     assert set(response) == REJECTED_ATTRIBUTE_RESPONSE_KEYS, response
@@ -543,21 +543,21 @@ def test_rejected_attribute(
 # ----------------------------------------------------------------------
 
 
-def test_command_list(subrack_url: str, api_version: str) -> None:
+def test_command_list(subrack_url: str, bios_version: str) -> None:
     """
-    Test that the subrack lists exactly the commands of the API version.
+    Test that the subrack lists exactly the commands of the BIOS version.
 
     This also covers the commands that are never sent.
 
     :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
+    :param bios_version: the BIOS version under test.
     """
     response = _request_until_ok(
         subrack_url, type="command", param="list_commands", value=""
     )
     assert response["status"] == "OK", response
     listed = set(response["retvalue"])
-    expected = API_COMMANDS[api_version]
+    expected = API_COMMANDS[bios_version]
     assert listed == expected, (
         f"missing: {sorted(expected - listed)}, "
         f"unexpected: {sorted(listed - expected)}"
@@ -566,21 +566,21 @@ def test_command_list(subrack_url: str, api_version: str) -> None:
 
 @pytest.mark.parametrize("command_name", sorted(ALL_COMMANDS))
 def test_provided_command(
-    subrack_url: str, api_version: str, command_name: str
+    subrack_url: str, bios_version: str, command_name: str
 ) -> None:
     """
-    Test that a safe command of the API version runs.
+    Test that a safe command of the BIOS version runs.
 
     :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
+    :param bios_version: the BIOS version under test.
     :param command_name: the command to run.
     """
-    if command_name not in API_COMMANDS[api_version]:
-        pytest.skip(f"{command_name} is not a command of this API version")
+    if command_name not in API_COMMANDS[bios_version]:
+        pytest.skip(f"{command_name} is not a command of this BIOS version")
     if command_name not in SAFE_COMMANDS:
         pytest.skip(f"{command_name} is never sent: it changes the subrack")
-    if command_name in UNAVAILABLE_COMMANDS[api_version]:
-        pytest.skip(f"{command_name} is unavailable in this API version")
+    if command_name in UNAVAILABLE_COMMANDS[bios_version]:
+        pytest.skip(f"{command_name} is unavailable in this BIOS version")
     if command_name == "get_health_status":
         pytest.skip("get_health_status is tested by test_health_status")
 
@@ -591,7 +591,7 @@ def test_provided_command(
         value=SAFE_COMMANDS[command_name],
     )
     expected_keys = COMMAND_RESPONSE_KEYS | EXTRA_COMMAND_RESPONSE_KEYS[
-        api_version
+        bios_version
     ].get(command_name, frozenset())
     assert set(response) == expected_keys, response
     assert response["status"] == "OK", response
@@ -599,17 +599,17 @@ def test_provided_command(
 
 @pytest.mark.parametrize("command_name", sorted(ALL_COMMANDS))
 def test_rejected_command(
-    subrack_url: str, api_version: str, command_name: str
+    subrack_url: str, bios_version: str, command_name: str
 ) -> None:
     """
-    Test that a safe command of another API version is rejected.
+    Test that a safe command of another BIOS version is rejected.
 
     :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
+    :param bios_version: the BIOS version under test.
     :param command_name: the command to send.
     """
-    if command_name in API_COMMANDS[api_version]:
-        pytest.skip(f"{command_name} is a command of this API version")
+    if command_name in API_COMMANDS[bios_version]:
+        pytest.skip(f"{command_name} is a command of this BIOS version")
     if command_name not in SAFE_COMMANDS:
         pytest.skip(f"{command_name} is never sent: it changes the subrack")
 
@@ -627,12 +627,12 @@ def test_rejected_command(
     }
 
 
-def test_health_status(subrack_url: str, api_version: str) -> None:
+def test_health_status(subrack_url: str, bios_version: str) -> None:
     """
-    Test that the health status has exactly the keys of the API version.
+    Test that the health status has exactly the keys of the BIOS version.
 
     :param subrack_url: the URL of the web API.
-    :param api_version: the API version under test.
+    :param bios_version: the BIOS version under test.
     """
     response = _request_until_ok(
         subrack_url, type="command", param="get_health_status", value=""
@@ -640,7 +640,7 @@ def test_health_status(subrack_url: str, api_version: str) -> None:
     assert set(response) == COMMAND_RESPONSE_KEYS, response
     assert response["status"] == "OK", response
 
-    expected = _health_status_paths(HEALTH_STATUS_KEYS[api_version])
+    expected = _health_status_paths(HEALTH_STATUS_KEYS[bios_version])
     reported = _reported_paths(response["retvalue"], expected)
     assert reported == expected, (
         f"missing: {sorted(expected - reported)}, "

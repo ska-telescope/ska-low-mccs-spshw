@@ -3,10 +3,11 @@ Subrack simulator
 =================
 
 The subrack simulator stands in for the subrack management board (SMB) web API.
-It emulates API version ``1.6.0`` (the default) or ``1.8.0``,
-selected with the ``api_version`` argument,
-the ``SUBRACK_SIMULATOR_API_VERSION`` environment variable,
-or ``api_version`` in the Helm chart's ``simulators.subracks`` values.
+It emulates the API of SMM BIOS version ``1.6.0`` (the default) or ``1.8.0``,
+selected with the ``bios_version`` argument,
+the ``SUBRACK_SIMULATOR_BIOS_VERSION`` environment variable,
+or ``bios_version`` in the Helm chart's ``simulators.subracks`` values.
+These are BIOS versions, not the value of the ``api_version`` attribute.
 
 The tables below show which commands and attributes of the SMB web API the simulator provides.
 "API master" is the SMB web API before 1.8.0, which simulator version ``1.6.0`` emulates.
@@ -343,9 +344,9 @@ a BIOS older than 1.6.0 fails every test.
 Running against the simulator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Start a simulator, emulating API version ``1.6.0`` or ``1.8.0``::
+Start a simulator, emulating the API of BIOS version ``1.6.0`` or ``1.8.0``::
 
-    SUBRACK_SIMULATOR_API_VERSION=1.8.0 SUBRACK_SIMULATOR_PORT=8081 \
+    SUBRACK_SIMULATOR_BIOS_VERSION=1.8.0 SUBRACK_SIMULATOR_PORT=8081 \
         uv run subrackSimulator
 
 Then, in another terminal::

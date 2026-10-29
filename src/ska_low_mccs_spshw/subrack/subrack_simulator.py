@@ -120,9 +120,8 @@ class SubrackSimulator(SubrackProtocol):
 
         # The BIOS version is how clients tell which API they are talking
         # to, so board_info must report the emulated one.
-        board_info = copy.deepcopy(self._attribute_values["board_info"])
+        board_info = cast(dict, self._attribute_values["board_info"])
         board_info["SMM"]["bios"] = f"v{bios_version}"
-        self._attribute_values["board_info"] = board_info
 
         self._network_jitter_limits: tuple[int, int] = (0, 0)  # ms
         self._failing_attributes: set[str] = set()

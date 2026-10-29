@@ -311,7 +311,7 @@ REJECTED_ATTRIBUTE_RESPONSE_KEYS: Final = frozenset(
 """The API rejects an attribute it does not have with "retvalue", not "value"."""
 
 ATTEMPTS: Final = 3
-"""How many times to read an attribute that answers with an error."""
+"""How many times to send a request that answers ERROR or BUSY."""
 
 RETRY_INTERVAL: Final = 1.0
 """Seconds to wait between attempts."""
@@ -356,9 +356,7 @@ def _read_bios_version(subrack_url: str) -> str:
 
     :return: the key of the expectations, e.g. "1.8.0".
     """
-    response = _request(subrack_url, type="getattribute", param="board_info")
-    if response["status"] != "OK":
-        pytest.fail(f"Cannot read the subrack's board_info: {response}")
+    response = _request_ok(subrack_url, type="getattribute", param="board_info")
     bios = str(response["value"]["SMM"]["bios"])
     match = re.match(r"v?(\d+)\.(\d+)\.(\d+)", bios)
     if match is None:
@@ -370,7 +368,7 @@ def _read_bios_version(subrack_url: str) -> str:
         if tuple(int(part) for part in version.split(".")) <= bios_parts
     ]
     if not applicable:
-        pytest.fail(f"No expectations for BIOS version {bios}")
+        pytest.fail(f"Failed to find matching dataset for BIOS version {bios}")
     return max(applicable, key=lambda version: tuple(map(int, version.split("."))))
 
 
@@ -397,21 +395,28 @@ def _request(subrack_url: str, **params: str) -> dict[str, Any]:
     return response.json()
 
 
-def _request_until_ok(subrack_url: str, **params: str) -> dict[str, Any]:
+def _request_ok(subrack_url: str, **params: str) -> dict[str, Any]:
     """
-    Send a request, retrying while the subrack answers with an error.
+    Send a request, retrying a few times or until OK.
+
+    Usually most api requests are answered on the first try. If the
+    subrack is busy, it might return an error/busy message instead.
+    In that case we try again a few times (ATTEMPTS) with a delay
+    (RETRY_INTERVAL).
 
     :param subrack_url: the URL of the web API.
     :param params: the query parameters.
 
-    :return: the decoded JSON response of the last attempt.
+    :return: the decoded JSON response.
+
+    :raises Exception: pytest's failure, if no attempt is answered OK or STARTED.
     """
-    for _ in range(ATTEMPTS - 1):
+    for _ in range(ATTEMPTS):
         response = _request(subrack_url, **params)
-        if response.get("status") != "ERROR":
+        if response.get("status") in ["OK", "STARTED"]:
             return response
         time.sleep(RETRY_INTERVAL)
-    return _request(subrack_url, **params)
+    raise pytest.fail.Exception(f"No OK after {ATTEMPTS} attempts, got {response}")
 
 
 def _health_status_paths(keys: dict[str, Any], prefix: str = "") -> set[str]:
@@ -511,9 +516,8 @@ def test_provided_attribute(
     if attribute_name not in API_ATTRIBUTES[bios_version]:
         pytest.skip(f"{attribute_name} is not an attribute of this BIOS version")
 
-    response = _request_until_ok(subrack_url, type="getattribute", param=attribute_name)
+    response = _request_ok(subrack_url, type="getattribute", param=attribute_name)
     assert set(response) == ATTRIBUTE_RESPONSE_KEYS, response
-    assert response["status"] == "OK", response
 
 
 @pytest.mark.parametrize("attribute_name", sorted(ALL_ATTRIBUTES))
@@ -552,10 +556,7 @@ def test_command_list(subrack_url: str, bios_version: str) -> None:
     :param subrack_url: the URL of the web API.
     :param bios_version: the BIOS version under test.
     """
-    response = _request_until_ok(
-        subrack_url, type="command", param="list_commands", value=""
-    )
-    assert response["status"] == "OK", response
+    response = _request_ok(subrack_url, type="command", param="list_commands", value="")
     listed = set(response["retvalue"])
     expected = API_COMMANDS[bios_version]
     assert listed == expected, (
@@ -584,7 +585,7 @@ def test_provided_command(
     if command_name == "get_health_status":
         pytest.skip("get_health_status is tested by test_health_status")
 
-    response = _request_until_ok(
+    response = _request_ok(
         subrack_url,
         type="command",
         param=command_name,
@@ -594,7 +595,6 @@ def test_provided_command(
         bios_version
     ].get(command_name, frozenset())
     assert set(response) == expected_keys, response
-    assert response["status"] == "OK", response
 
 
 @pytest.mark.parametrize("command_name", sorted(ALL_COMMANDS))
@@ -634,11 +634,10 @@ def test_health_status(subrack_url: str, bios_version: str) -> None:
     :param subrack_url: the URL of the web API.
     :param bios_version: the BIOS version under test.
     """
-    response = _request_until_ok(
+    response = _request_ok(
         subrack_url, type="command", param="get_health_status", value=""
     )
     assert set(response) == COMMAND_RESPONSE_KEYS, response
-    assert response["status"] == "OK", response
 
     expected = _health_status_paths(HEALTH_STATUS_KEYS[bios_version])
     reported = _reported_paths(response["retvalue"], expected)

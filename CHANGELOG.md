@@ -3,6 +3,15 @@
 ## Unreleased
 
 * [THORN-755] Modified subrack simulator to support different api versions. Added a manual parity test that makes sure the simulator has the same attributes and commands as the actual api. Added some docs for the simulator.
+  * New in `1.8.0`:
+    * Commands: `get_pll_phase_offset`, `set_pll_phase_offset`, `get_pps_phase_window`, `set_pps_phase_window`.
+    * Attributes: `tpm_powers` replaces `tpm_currents`.
+    * Removed command: `set_power_supply_fan_speed`.
+    * `get_health_status` reports the new monitoring points (slot faults, min/max peak-hold values, PLL/PPS/REF status and counters, `BkplnPowerGood`).
+    * `command_completed` also returns `failed` and `info`.
+    * A failed attribute read returns `value: null`.
+  * New simulator methods: `bios_version` property, `simulate_attribute_failure(name, failing=True)`.
+  * Reading or writing an attribute not in the simulator, now returns `retvalue: ""`, like the real API.
 
 ## 16.0.3
 

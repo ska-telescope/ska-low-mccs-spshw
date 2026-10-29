@@ -321,7 +321,7 @@ The tables below show which commands and attributes of the SMB web API the simul
 Checking the simulator against the API
 --------------------------------------
 
-The tests in ``tests/functional/test_subrack_simultor_api_parity.py``
+The tests in ``tests/functional/test_subrack_simulator_api_parity.py``
 check the responses of a subrack web API against what the API is
 expected to provide. They do not know whether they are talking to a real
 subrack or to the simulator, so the same tests check that the simulator
@@ -350,7 +350,7 @@ Start a simulator, emulating API version ``1.6.0`` or ``1.8.0``::
 
 Then, in another terminal::
 
-    uv run pytest tests/functional/test_subrack_simultor_api_parity.py \
+    uv run pytest tests/functional/test_subrack_simulator_api_parity.py \
         --subrack-api=localhost:8081 --no-cov -rfs
 
 A failure is a difference between the simulator and the API, for
@@ -374,13 +374,41 @@ devcontainer, which cannot reach a tunnel opened on the host)::
 
 Then, in another terminal::
 
-    uv run pytest tests/functional/test_subrack_simultor_api_parity.py \
+    uv run pytest tests/functional/test_subrack_simulator_api_parity.py \
         --subrack-api=localhost:18081 -n 0 --no-cov -rfs
 
 ``-n 0`` runs the tests one at a time, for readable output; the tests
 send one request at a time anyway, because the subrack's web server can
 only answer one. ``--no-cov`` skips the coverage report, and ``-rfs``
 lists the failures and skipped tests, with reasons.
+
+.. note::
+
+   From API 1.8.0, every ``get_health_status`` call resets some of the
+   values it reports, so they only cover the time since the last call,
+   by any client:
+
+   * peak-hold values (``SMM.power_max``, ``slots.powers_max``,
+     ``slots.voltages_min``, ``slots.voltages_max``,
+     ``internal_voltages.V_POWERIN_MIN`` and ``V_POWERIN_MAX``) restart
+     from a fresh starting value;
+   * event counters (``plls.BoardApllUnlockCount``,
+     ``BoardDpllUnlockCount``, ``BoardSysclkEventCount``,
+     ``PPSFaultCount``, ``REFFaultCount`` and ``PPSPhaseOutliers``) have
+     what was reported taken away.
+
+   ``test_health_status`` calls ``get_health_status``, so on a subrack
+   that MCCS, or a dashboard, is polling, it takes part of their next
+   polling window: a PLL unlock, voltage dip or power peak that happens
+   before the test's call is reported to the test and missed by them.
+
+   Two calls less than about a second apart can also report the reset
+   value itself, before the next ADC conversion: ``voltages_min`` then
+   reads 16.64 V, and ``voltages_max`` and ``powers_max`` read 0, which
+   may raise out-of-range alarms.
+
+   None of this changes the hardware. To avoid it, run the tests against
+   a subrack that nothing else is monitoring.
 
 Reading the results
 ~~~~~~~~~~~~~~~~~~~

@@ -143,6 +143,15 @@ def _handle_setattribute(
 
     try:
         set_value = subrack.set_attribute(name, value)
+    except AttributeError as exception:
+        # The API answers an attribute it does not have with "retvalue",
+        # not "value", in every version.
+        return {
+            "status": HardwareClientResponseStatusCodes.ERROR.name,
+            "info": str(exception),
+            "attribute": name,
+            "retvalue": "",
+        }
     except Exception as exception:  # pylint: disable=broad-except
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong

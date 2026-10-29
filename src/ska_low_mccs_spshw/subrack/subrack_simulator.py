@@ -487,7 +487,6 @@ class SubrackSimulator(SubrackProtocol):
         try:
             phase_offset = int(arg)
         except ValueError as error:
-            # The API's message says floats are expected, but it parses ints.
             raise ValueError(f"Invalid parameter (exp: float, got {arg})") from error
         limit = 2 ** (PLL_PHASE_OFFSET_BITS - 1)
         if not -limit <= phase_offset < limit:
@@ -584,7 +583,7 @@ class SubrackSimulator(SubrackProtocol):
             if "subrack_pll_locked" in self._failing_attributes
             else self._attribute_values["subrack_pll_locked"]
         )
-        return self._health_status(
+        return self.HEALTH_STATUS(
             psu_currents=psu_currents,
             psu_voltages=psu_voltages,
             board_pll_locked=board_pll_locked,

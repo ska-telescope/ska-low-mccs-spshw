@@ -213,7 +213,7 @@ def test_setattribute_with_bad_name(client: TestClient, backend: Mock) -> None:
         "status": HardwareClientResponseStatusCodes.ERROR.name,
         "info": f"{bad_name} not present",
         "attribute": bad_name,
-        "value": "",
+        "retvalue": "",
     }
 
 

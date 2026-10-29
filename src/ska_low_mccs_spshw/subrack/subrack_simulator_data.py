@@ -185,7 +185,6 @@ DEFAULT_COMMANDS: Final = (
 
 
 def default_health_status(
-    *,
     psu_currents: list[float],
     psu_voltages: list[float],
     board_pll_locked: bool | None,
@@ -434,7 +433,7 @@ PPS_PHASE_WINDOW_MAX: Final = 120
 """The most samples the PPS phase can be averaged over."""
 
 
-def health_status_1_8_0(*, pps_phase_window: int, **kwargs: Any) -> dict[str, Any]:
+def health_status_1_8_0(pps_phase_window: int, **kwargs: Any) -> dict[str, Any]:
     """
     Return the health status reported by the subrack from API 1.8.0.
 

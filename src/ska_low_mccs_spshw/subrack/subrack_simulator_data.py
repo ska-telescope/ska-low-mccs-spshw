@@ -184,6 +184,7 @@ DEFAULT_COMMANDS: Final = (
 )
 
 
+# pylint: disable=too-many-arguments
 def default_health_status(
     psu_currents: list[float],
     psu_voltages: list[float],

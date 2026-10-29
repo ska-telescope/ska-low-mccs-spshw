@@ -28,7 +28,7 @@ Each threshold uses the ``<attribute>-><property>`` syntax, where ``<property>``
 
 To disable a threshold, set it to ``"Not specified"``. Note that the value can still be stuck in the Tango Database for a few minutes before it gets updated
 
-Thresholds can also be changed at runtime using device/attribute proxies, but these changes are lost on redeployment.
+Thresholds can also be changed at runtime using device/attribute proxies, but these changes will be overwritten after a redployment.
 
 .. code-block:: python
 

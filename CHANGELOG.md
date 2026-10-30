@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-759] Update MccsSubrack to support SMM 1.8.0 (note: prototype subrack does not support 1.8.0)
+  * Extra information exposed in subrackBoardInfo and healthStatus.
+  * SetPowerSupplyFanSpeed is rejected when not available (SMM version 1.8.0 does not support this.)
+  * tpmCurrents is derived when device interfacing with SMM 1.8.0
 * [THORN-772] Updated chart default thresholds for Subrack.MaxFanSpeed, added a docs page for users.
 * [THORN-755] Modified subrack simulator to support different api versions. Added a manual parity test that makes sure the simulator has the same attributes and commands as the actual api. Added some docs for the simulator.
   * New in `1.8.0`:

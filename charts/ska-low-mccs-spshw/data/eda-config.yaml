@@ -281,7 +281,7 @@ configuration:
       adcs_pll_status_adcs:
         code_push_event: true
         archive_period: 0
-      tile_beamformer_status:
+      dsp_tile_beamf:
         code_push_event: true
         archive_period: 0
       station_beamformer_status:
@@ -329,7 +329,7 @@ configuration:
       io_data_router_status_fpga1:
         code_push_event: true
         archive_period: 0
-      io_data_router_discarded_packets:
+      io_data_router_discarded_packets_fpgas:
         code_push_event: true
         archive_period: 0
       io_udp_interface_arp:

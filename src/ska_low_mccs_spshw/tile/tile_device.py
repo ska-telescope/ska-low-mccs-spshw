@@ -424,7 +424,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltages_vm_pll": "voltage_vm_pll_signal",
         "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
         "adcs_pll_status_adcs": "adc_pll_lock_status_signal",
-        "tile_beamformer_status": "tile_beamformer_status_signal",
+        "dsp_tile_beamf": "tile_beamformer_status_signal",
         "station_beamformer_status": "station_beamformer_status_signal",
         "fpga0_station_beamformer_error_count": (
             "fpga0_station_beamformer_error_count_signal"
@@ -448,7 +448,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "fpga1_linkup_loss_count": "fpga1_linkup_loss_count_signal",
         "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
         "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
-        "io_data_router_discarded_packets": "data_router_discarded_packets_signal",
+        "io_data_router_discarded_packets_fpgas": "data_router_discarded_packets_signal",
         "io_udp_interface_arp": "arp_signal",
         "io_udp_interface_status": "udp_status_signal",
         "io_ddr_interface_initialisation": "ddr_initialisation_signal",
@@ -1060,7 +1060,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "io_jesd_interface_link_status": [
                 "io",
                 "jesd_interface",
-                "io_jesd_interface_link_status",
+                "link_status",
             ],
             "io_jesd_interface_resync_count_fpga0": [
                 "io",
@@ -1143,12 +1143,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ],
             "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
             "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-            "io_data_router_discarded_packets": [
+            "io_data_router_discarded_packets_fpgas": [
                 "io",
                 "data_router",
                 "discarded_packets",
             ],
-            "tile_beamformer_status": ["dsp", "tile_beamf"],
+            "dsp_tile_beamf": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
             "fpga0_station_beamformer_error_count": [
                 "dsp",
@@ -1988,7 +1988,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return adc_pll_to_list(raw_value)
 
-    tile_beamformer_status = attribute_from_signal(
+    dsp_tile_beamf = attribute_from_signal(
         tile_beamformer_status_signal,
         dtype="DevBoolean",
         label="Tile Beamformer Status",
@@ -2291,7 +2291,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the number of discarded packets. "
         "Expected: 0 if no packets are discarded.",
     )
-    def io_data_router_discarded_packets(
+    def io_data_router_discarded_packets_fpgas(
         self: MccsTile, raw_value: dict[str, Any] | None
     ) -> str | None:
         """
@@ -2300,7 +2300,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no packets are discarded.
 
         :example:
-            >>> tile.io_data_router_discarded_packets
+            >>> tile.io_data_router_discarded_packets_fpgas
             '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
 
         :param raw_value: the raw attribute value emitted on the signal, or

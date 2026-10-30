@@ -272,7 +272,7 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "io_f2f_interface_pll_status_fpga1_count": lambda v: int(v[1]),
     "io_data_router_status_fpga0": int,
     "io_data_router_status_fpga1": int,
-    "data_router_discarded_packets": serialise_object,
+    "io_data_router_discarded_packets_fpgas": serialise_object,
     "io": serialise_object,
     "dsp": serialise_object,
     "voltages": serialise_object,
@@ -428,7 +428,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "lane_error_count",
         "FPGA1",
     ],
-    "io_jesd_interface_io_jesd_interface_link_status": [
+    "io_jesd_interface_link_status": [
         "io",
         "jesd_interface",
         "link_status",
@@ -500,8 +500,12 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "fpga1_linkup_loss_count": ["io", "udp_interface", "linkup_loss_count", "FPGA1"],
     "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
     "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-    "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
-    "tile_beamformer_status": ["dsp", "tile_beamf"],
+    "io_data_router_discarded_packets_fpgas": [
+        "io",
+        "data_router",
+        "discarded_packets",
+    ],
+    "dsp_tile_beamf": ["dsp", "tile_beamf"],
     "station_beamformer_status": ["dsp", "station_beamf", "status"],
     "fpga0_station_beamformer_error_count": [
         "dsp",

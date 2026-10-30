@@ -556,23 +556,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_jesd_interface_qpll_status_fpga1_count": (
             "io_jesd_interface_qpll_status_fpga1_count_signal"
         ),
-        "io_jesd_interface_resync_count_fpga0": "fpga0_resync_count_signal",
-        "io_jesd_interface_resync_count_fpga1": "fpga1_resync_count_signal",
-        "io_jesd_interface_link_status": "link_status_signal",
-        "io_jesd_interface_lane_error_count_fpga0": "fpga0_lane_error_count_signal",
-        "io_jesd_interface_lane_error_count_fpga1": "fpga1_lane_error_count_signal",
-        "timing_clock_managers_fpga0_count": "fpga0_clock_managers_count_signal",
-        "timing_clock_managers_fpga1_count": "fpga1_clock_managers_count_signal",
-        "timing_clock_managers_fpga0_status": "fpga0_clock_managers_status_signal",
-        "timing_clock_managers_fpga1_status": "fpga1_clock_managers_status_signal",
-        "timing_clocks_fpga0": "fpga0_clocks_signal",
-        "timing_clocks_fpga1": "fpga1_clocks_signal",
-        "adcs_sysref_counter": "adc_sysref_counter_signal",
-        "adcs_sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
-        "io_jesd_interface_qpll_status_fpga0_status": "fpga0_qpll_status_signal",
-        "io_jesd_interface_qpll_status_fpga1_status": "fpga1_qpll_status_signal",
-        "io_jesd_interface_qpll_status_fpga0_count": "fpga0_qpll_counter_signal",
-        "io_jesd_interface_qpll_status_fpga1_count": "fpga1_qpll_counter_signal",
         "io_f2f_interface_pll_status_fpga0_status": (
             "io_f2f_interface_pll_status_fpga0_status_signal"
         ),
@@ -581,7 +564,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
         "io_f2f_interface_pll_status_fpga0_count": (
             "io_f2f_interface_pll_status_fpga0_count_signal"
-            "io_f2f_interface_pll_status_fpga0_counter_signal"
         ),
         "io_f2f_interface_pll_status_fpga1_count": (
             "io_f2f_interface_pll_status_fpga1_count_signal"

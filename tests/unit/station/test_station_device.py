@@ -1955,7 +1955,7 @@ def test_tile_communication_lost_invalidates_caches(
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
         tile.staticTimeDelays = [float(i)] * 32
-        tile.boardTemperature = float(i)
+        tile.temperatures_board = float(i)
         tile.pllLocked = True
     mock_tile_device_proxies[-1].cspRounding = [5] * 384
 

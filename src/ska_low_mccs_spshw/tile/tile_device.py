@@ -425,17 +425,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
         "adcs_pll_status_adcs": "adc_pll_lock_status_signal",
         "dsp_tile_beamf": "tile_beamformer_status_signal",
-        "station_beamformer_status": "station_beamformer_status_signal",
-        "fpga0_station_beamformer_error_count": (
+        "dsp_station_beamf_status": "station_beamformer_status_signal",
+        "dsp_station_beamf_ddr_parity_error_count_fpga0": (
             "fpga0_station_beamformer_error_count_signal"
         ),
-        "fpga1_station_beamformer_error_count": (
+        "dsp_station_beamf_ddr_parity_error_count_fpga1": (
             "fpga1_station_beamformer_error_count_signal"
         ),
-        "fpga0_station_beamformer_flagged_count": (
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0": (
             "fpga0_station_beamformer_flagged_count_signal"
         ),
-        "fpga1_station_beamformer_flagged_count": (
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1": (
             "fpga1_station_beamformer_flagged_count_signal"
         ),
         "io_udp_interface_crc_error_count_fpga0": "fpga0_crc_error_count_signal",
@@ -1149,26 +1149,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "discarded_packets",
             ],
             "dsp_tile_beamf": ["dsp", "tile_beamf"],
-            "station_beamformer_status": ["dsp", "station_beamf", "status"],
-            "fpga0_station_beamformer_error_count": [
+            "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],
+            "dsp_station_beamf_ddr_parity_error_count_fpga0": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
                 "FPGA0",
             ],
-            "fpga1_station_beamformer_error_count": [
+            "dsp_station_beamf_ddr_parity_error_count_fpga1": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
                 "FPGA1",
             ],
-            "fpga0_station_beamformer_flagged_count": [
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0": [
                 "dsp",
                 "station_beamf",
                 "discarded_or_flagged_packet_count",
                 "FPGA0",
             ],
-            "fpga1_station_beamformer_flagged_count": [
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1": [
                 "dsp",
                 "station_beamf",
                 "discarded_or_flagged_packet_count",
@@ -1364,14 +1364,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "rfiBlankingEnabledAntennas",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
-                "fpga0_station_beamformer_flagged_count",
-                "fpga1_station_beamformer_flagged_count",
+                "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+                "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
             }
 
             if is_v1(self.HardwareVersion):
                 # Older tiles do not have ADC temperature sensors.
                 for idx in range(16):
-                    healthful_attrs.discard(f"temperatureADC{idx}")
+                    healthful_attrs.discard(f"temperatures_adc{idx}")
 
             if self.BiosVersion == "0.5.0":
                 # This monitoring point was introduced in 0.6.0.
@@ -1995,14 +1995,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Status of the tile beamformer. True if status OK.",
     )
 
-    station_beamformer_status = attribute_from_signal(
+    dsp_station_beamf_status = attribute_from_signal(
         station_beamformer_status_signal,
         dtype="DevBoolean",
         label="Station Beamformer Status",
         doc="Status of the Station beamformer. True if status OK.",
     )
 
-    fpga0_station_beamformer_error_count = attribute_from_signal(
+    dsp_station_beamf_ddr_parity_error_count_fpga0 = attribute_from_signal(
         fpga0_station_beamformer_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2013,7 +2013,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga1_station_beamformer_error_count = attribute_from_signal(
+    dsp_station_beamf_ddr_parity_error_count_fpga1 = attribute_from_signal(
         fpga1_station_beamformer_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2024,7 +2024,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga0_station_beamformer_flagged_count = attribute_from_signal(
+    dsp_station_beamf_discarded_or_flagged_packet_count_fpga0 = attribute_from_signal(
         fpga0_station_beamformer_flagged_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2035,7 +2035,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga1_station_beamformer_flagged_count = attribute_from_signal(
+    dsp_station_beamf_discarded_or_flagged_packet_count_fpga1 = attribute_from_signal(
         fpga1_station_beamformer_flagged_count_signal,
         dtype="DevShort",
         max_alarm=1,

@@ -446,9 +446,9 @@ class TileData:
                 )
             else:
                 if isinstance(expected_values[p], dict):
-                    if p == "voltage_alm":
+                    if p == "alarms_voltage_alm":
                         # The value being generated for
-                        # voltage_alm is 0.5 following mccs-1530 prompted by an
+                        # alarms_voltage_alm is 0.5 following mccs-1530 prompted by an
                         # issue in bios tracked by SPRTS-141. The value of 0.5 is
                         # not valid for this monitoring point. Here we are patching
                         # a valid default of 0 (int). This is a bit smelly, but it

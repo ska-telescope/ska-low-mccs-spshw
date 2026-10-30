@@ -17,11 +17,11 @@ ska-tango-devices:
 
       adcs_pll_status_adcs->min_alarm: 0
 
-      fpga0_station_beamformer_error_count->max_alarm: 1
-      fpga1_station_beamformer_error_count->max_alarm: 1
+      dsp_station_beamf_ddr_parity_error_count_fpga0->max_alarm: 1
+      dsp_station_beamf_ddr_parity_error_count_fpga1->max_alarm: 1
 
-      fpga0_station_beamformer_flagged_count->max_alarm: 1
-      fpga1_station_beamformer_flagged_count->max_alarm: 1
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga0->max_alarm: 1
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga1->max_alarm: 1
 
       io_udp_interface_crc_error_count_fpga0->max_alarm: 1
       io_udp_interface_crc_error_count_fpga1->max_alarm: 1
@@ -183,10 +183,10 @@ ska-tango-devices:
       powerDraw->max_alarm: 120.0
       powerDraw->min_alarm: 0.0
 
-      voltageAVDD3->max_alarm: 2.6
-      voltageAVDD3->max_warning: 2.57
-      voltageAVDD3->min_warning: 2.40
-      voltageAVDD3->min_alarm: 2.37
+      voltages_avdd3->max_alarm: 2.6
+      voltages_avdd3->max_warning: 2.57
+      voltages_avdd3->min_warning: 2.40
+      voltages_avdd3->min_alarm: 2.37
 
       voltages_ddr0_vref->max_alarm: 0.63
       voltages_ddr0_vref->min_alarm: 0.57
@@ -266,11 +266,11 @@ ska-tango-devices:
       voltages_vm_dvdd->max_alarm: 1.19
       voltages_vm_dvdd->min_alarm: 1.01
 
-      voltageVM_FE0->max_alarm: 3.78
-      voltageVM_FE0->min_alarm: 3.22
+      voltages_vm_fe0->max_alarm: 3.78
+      voltages_vm_fe0->min_alarm: 3.22
 
-      voltageVM_FE1->max_alarm: 3.78
-      voltageVM_FE1->min_alarm: 3.22
+      voltages_vm_fe1->max_alarm: 3.78
+      voltages_vm_fe1->min_alarm: 3.22
 
       voltages_vm_mgt0_aux->max_alarm: 1.94
       voltages_vm_mgt0_aux->min_alarm: 1.66
@@ -281,8 +281,8 @@ ska-tango-devices:
       voltages_vm_pll->max_alarm: 3.56
       voltages_vm_pll->min_alarm: 3.04
 
-      voltageVM_SW_AMP->max_alarm: 3.78
-      voltageVM_SW_AMP->min_alarm: 3.22
+      voltages_vm_sw_amp->max_alarm: 3.78
+      voltages_vm_sw_amp->min_alarm: 3.22
 
     MccsSubrack:
       backplaneTemperatures->max_alarm: 50.0

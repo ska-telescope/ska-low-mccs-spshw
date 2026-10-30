@@ -57,11 +57,11 @@ ska-tango-devices:
 
       adcs_pll_status_adcs->min_alarm: 0
 
-      fpga0_station_beamformer_error_count->max_alarm: 1
-      fpga1_station_beamformer_error_count->max_alarm: 1
+      dsp_station_beamf_ddr_parity_error_count_fpga0->max_alarm: 1
+      dsp_station_beamf_ddr_parity_error_count_fpga1->max_alarm: 1
 
-      fpga0_station_beamformer_flagged_count->max_alarm: 1
-      fpga1_station_beamformer_flagged_count->max_alarm: 1
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga0->max_alarm: 1
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga1->max_alarm: 1
 
       io_udp_interface_crc_error_count_fpga0->max_alarm: 1
       io_udp_interface_crc_error_count_fpga1->max_alarm: 1
@@ -206,10 +206,10 @@ ska-tango-devices:
       currents_fe0_mva->max_alarm: 2.62
       currents_fe1_mva->max_alarm: 2.62
 
-      voltageAVDD3->max_alarm: 2.6
-      voltageAVDD3->max_warning: 2.57
-      voltageAVDD3->min_warning: 2.40
-      voltageAVDD3->min_alarm: 2.37
+      voltages_avdd3->max_alarm: 2.6
+      voltages_avdd3->max_warning: 2.57
+      voltages_avdd3->min_warning: 2.40
+      voltages_avdd3->min_alarm: 2.37
 
       voltages_ddr0_vref->max_alarm: 0.63
       voltages_ddr0_vref->min_alarm: 0.57

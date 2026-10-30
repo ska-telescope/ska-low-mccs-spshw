@@ -216,7 +216,7 @@ def _mask_unpolled_dsp_fields(raw_value: Any) -> Any:
     Mask DSP subfields that the poller never propagates for non-last tiles.
 
     ``discarded_or_flagged_packet_count`` (exposed via
-    ``fpga0_station_beamformer_flagged_count``/``fpga1_...``) is only
+    ``dsp_station_beamf_discarded_or_flagged_packet_count_fpga0``/``fpga1_...``) is only
     populated by the poll logic when the tile is configured as the last
     tile in the beamforming chain. The tile under test here is not
     configured as last, so the ``dsp`` composite attribute always reads
@@ -506,14 +506,14 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "discarded_packets",
     ],
     "dsp_tile_beamf": ["dsp", "tile_beamf"],
-    "station_beamformer_status": ["dsp", "station_beamf", "status"],
-    "fpga0_station_beamformer_error_count": [
+    "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],
+    "dsp_station_beamf_ddr_parity_error_count_fpga0": [
         "dsp",
         "station_beamf",
         "ddr_parity_error_count",
         "FPGA0",
     ],
-    "fpga1_station_beamformer_error_count": [
+    "dsp_station_beamf_ddr_parity_error_count_fpga1": [
         "dsp",
         "station_beamf",
         "ddr_parity_error_count",
@@ -1135,8 +1135,8 @@ class TestMccsTile:
             "temperatures_adc13",  # Not updated in simulated hardware version
             "temperatures_adc14",  # Not updated in simulated hardware version
             "temperatures_adc15",  # Not updated in simulated hardware version
-            "fpga0_station_beamformer_flagged_count",  # Only valid for final Tile
-            "fpga1_station_beamformer_flagged_count",  # Only valid for final Tile
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",  # Only valid for final Tile
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",  # Only valid for final Tile
         ]
 
     @pytest.fixture(name="tpm_configuration_attributes")
@@ -2056,7 +2056,7 @@ class TestMccsTile:
             "fpga1_clock_managers_count",
             "io_jesd_interface_lane_error_count_fpga0",
             "io_jesd_interface_resync_count_fpga0",
-            "station_beamformer_status",
+            "dsp_station_beamf_status",
             "adcs_pll_status_adcs",
             "timing_pll_40g_status",
         ],
@@ -2844,7 +2844,7 @@ class TestMccsTile:
                 HealthState.DEGRADED,
             ),
             (
-                "fpga0_station_beamformer_error_count",
+                "dsp_station_beamf_ddr_parity_error_count_fpga0",
                 [
                     "dsp",
                     "station_beamf",

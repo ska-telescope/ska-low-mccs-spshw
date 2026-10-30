@@ -960,7 +960,7 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # Only available in specific bios versions.
     ] + [
-        f"temperatureADC{i}" for i in range(16)
+        f"temperatures_adc{i}" for i in range(16)
     ]  # Only available in > 2 Hardware versions
 
 

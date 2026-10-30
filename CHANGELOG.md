@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 17.0.0
 
 * [THORN-759] Update MccsSubrack to support SMM 1.8.0 (note: prototype subrack does not support 1.8.0)
   * Extra information exposed in subrackBoardInfo and healthStatus.

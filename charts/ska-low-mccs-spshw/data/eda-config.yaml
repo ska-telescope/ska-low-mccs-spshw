@@ -124,7 +124,7 @@ configuration:
       pllLockedSummary:
         code_push_event: true
         archive_period: 0
-      timing_pps_statusSummary:
+      ppsPresentSummary:
         code_push_event: true
         archive_period: 0
       clockPresentSummary:
@@ -576,7 +576,7 @@ configuration:
       ppsDelayCorrection:
         code_push_event: true
         archive_period: 0
-      timing_pps_status:
+      timing_pps_present:
         code_push_event: true
         archive_period: 0
       pllLocked:

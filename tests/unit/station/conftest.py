@@ -230,7 +230,7 @@ def mock_tile_builder_fixture(
     builder.add_attribute("temperatures_fpga1", 25.0)
     builder.add_attribute("sysrefPresent", True)
     builder.add_attribute("pllLocked", True)
-    builder.add_attribute("ppsPresent", True)
+    builder.add_attribute("timing_pps_present", True)
     builder.add_attribute("clockPresent", True)
     builder.add_attribute("testGeneratorActive", False)
     builder.add_attribute("isBeamformerRunning", False)

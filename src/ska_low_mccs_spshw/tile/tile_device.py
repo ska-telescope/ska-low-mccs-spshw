@@ -494,7 +494,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io": "io_signal",
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
-        "timing_pps_status": "ppsPresent_signal",
+        "timing_pps_present": "ppsPresent_signal",
         "timing_sync_time": "timing_sync_time_signal",
     }
 
@@ -880,7 +880,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
-            "timing_pps_status": ["timing", "pps", "status"],
+            "timing_pps_present": ["timing", "pps", "status"],
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
             "temperatures_board": ["temperatures", "board"],
@@ -1782,7 +1782,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
 
         emit_value = attribute_value
-        if attribute_name.lower() == "ppspresent" and attribute_value is False:
+        if attribute_name == "timing_pps_present" and attribute_value is False:
             # Signal ALARM quality directly rather than relying on
             # Tango's min_alarm, which isn't usable on a DevBoolean.
             emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
@@ -4755,7 +4755,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
-    timing_pps_status = attribute_from_signal(
+    timing_pps_present = attribute_from_signal(
         ppsPresent_signal,
         dtype="DevBoolean",
         label="PPS Present",

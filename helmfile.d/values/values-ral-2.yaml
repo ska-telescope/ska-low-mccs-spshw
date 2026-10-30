@@ -66,6 +66,12 @@ helm_values:
       MccsSubrack: # SPRTS-787
         low-mccs/subrack/stfc-ral-2-sr2:
           tpmPowers->max_alarm: 124.0
+
+          # override minimum alarm threshold as fan is broken
+          # this will fail multiple tests.
+          subrackMaxFanSpeeds->min_warning: "Not specified"
+          subrackMaxFanSpeeds->min_alarm: "Not specified"
+
     deviceServers:
       spshw:
         subrack-stfc-ral-2-sr2:

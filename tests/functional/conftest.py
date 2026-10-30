@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -74,6 +75,44 @@ def pytest_addoption(
             "run HW only tests"
         ),
     )
+    parser.addoption(
+        "--subrack-api",
+        action="store",
+        default=None,
+        help=(
+            "Run the subrack web API tests against the web API at HOST:PORT, "
+            "of a subrack or a subrack simulator"
+        ),
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """
+    Register the markers used by the functional tests.
+
+    :param config: the pytest config.
+    """
+    config.addinivalue_line(
+        "markers",
+        "subrack_api: subrack web API tests, only run with --subrack-api",
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """
+    Deselect the subrack web API tests unless they have a target.
+
+    :param config: the pytest config.
+    :param items: the collected tests.
+    """
+    if config.getoption("--subrack-api") is not None:
+        return
+    deselected = [item for item in items if item.get_closest_marker("subrack_api")]
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = [item for item in items if item not in deselected]
 
 
 @pytest.fixture(name="command_info")

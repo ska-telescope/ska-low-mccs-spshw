@@ -7,6 +7,7 @@ Deploy the subrack simulator/s.
         srmb_host: subrack-simulator-s8-1
         srmb_port: 8081
         pdu_trl: low-mccs/pdu/ci-1
+        bios_version: "1.8.0"  # optional; the simulator defaults to 1.6.0
 
 */}}
 {{- range $key, $spec := ((.Values.simulators).subracks)}}
@@ -57,4 +58,8 @@ spec:
         env:
           - name: SUBRACK_SIMULATOR_PORT
             value: {{$port | quote}}
+{{- with $spec.bios_version}}
+          - name: SUBRACK_SIMULATOR_BIOS_VERSION
+            value: {{. | quote}}
+{{- end}}
 {{- end}}

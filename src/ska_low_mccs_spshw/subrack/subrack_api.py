@@ -8,6 +8,7 @@
 """This module provides a HTTP server that acts as front end to a subrack."""
 from __future__ import annotations
 
+import dataclasses
 from typing import Any, Optional, Protocol
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
@@ -15,6 +16,23 @@ from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
+
+
+@dataclasses.dataclass(frozen=True)
+class CommandResult:
+    """
+    The result of a command whose response has more than a return value.
+
+    A backend's ``execute_command`` returns one of these instead of a bare
+    return value when the response needs other fields as well, such as the
+    "failed" field of ``command_completed`` from API 1.8.0.
+    """
+
+    retvalue: JsonSerializable
+    """The return value of the command."""
+
+    fields: dict[str, JsonSerializable] = dataclasses.field(default_factory=dict)
+    """Further fields of the response, which override the defaults."""
 
 
 class SubrackProtocol(Protocol):
@@ -25,6 +43,14 @@ class SubrackProtocol(Protocol):
     simulator must fulfil in order that the web server defined here can
     interact with it.
     """
+
+    @property
+    def bios_version(self: SubrackProtocol) -> str:
+        """
+        Return the SMM BIOS version of the subrack, e.g. "1.8.0".
+
+        :return: the SMM BIOS version.
+        """  # noqa: DAR202
 
     def execute_command(
         self: SubrackProtocol, name: str, argument: Optional[JsonSerializable]
@@ -74,6 +100,15 @@ def _handle_getattribute(
 
     try:
         value = subrack.get_attribute(name)
+    except AttributeError as exception:
+        # The API answers an attribute it does not have with "retvalue",
+        # not "value", in every version.
+        return {
+            "status": HardwareClientResponseStatusCodes.ERROR.name,
+            "info": str(exception),
+            "attribute": name,
+            "retvalue": "",
+        }
     except Exception as exception:  # pylint: disable=broad-except
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
@@ -81,7 +116,8 @@ def _handle_getattribute(
             "status": HardwareClientResponseStatusCodes.ERROR.name,
             "info": str(exception),
             "attribute": name,
-            "value": "",
+            # API 1.8.0 reports the value of a failed read as null
+            "value": None if subrack.bios_version == "1.8.0" else "",
         }
     return {
         "status": HardwareClientResponseStatusCodes.OK.name,
@@ -107,6 +143,15 @@ def _handle_setattribute(
 
     try:
         set_value = subrack.set_attribute(name, value)
+    except AttributeError as exception:
+        # The API answers an attribute it does not have with "retvalue",
+        # not "value", in every version.
+        return {
+            "status": HardwareClientResponseStatusCodes.ERROR.name,
+            "info": str(exception),
+            "attribute": name,
+            "retvalue": "",
+        }
     except Exception as exception:  # pylint: disable=broad-except
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
@@ -148,6 +193,14 @@ def _handle_command(
             "info": str(exception),
             "command": name,
             "retvalue": "",
+        }
+    if isinstance(return_value, CommandResult):
+        return {
+            "status": HardwareClientResponseStatusCodes.OK.name,
+            "info": "",
+            "command": name,
+            "retvalue": return_value.retvalue,
+            **return_value.fields,
         }
     return {
         "status": HardwareClientResponseStatusCodes.OK.name,

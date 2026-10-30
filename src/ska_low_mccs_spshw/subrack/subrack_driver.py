@@ -544,21 +544,6 @@ class SubrackDriver(
         :param task_callback: callback to be called when the status of
             the command changes
         """
-        # API 1.8.0 has no set_power_supply_fan_speed command, so don't send
-        # it. Until board_info has been read, the board's own error stands.
-        board_info = self._component_state["board_info"]
-        if board_info and self._bios_version(board_info) >= [1, 8, 0]:
-            if task_callback is not None:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result=(
-                        ResultCode.FAILED,
-                        "set_power_supply_fan_speed is not supported by subrack "
-                        f"API {board_info['SMM']['bios']}.",
-                    ),
-                )
-            return
-
         key = f"power_supply_fan_{fan_number}_speed"
         with self._write_lock:
             if key in self._commands_to_execute:
@@ -592,17 +577,6 @@ class SubrackDriver(
         with self._write_lock:
             self._attributes_to_write.update(kwargs)
 
-    @staticmethod
-    def _bios_version(board_info: dict) -> list[int]:
-        """
-        Return the BIOS version reported in the board info.
-
-        :param board_info: the board info reported by the subrack.
-
-        :return: the BIOS version, e.g. [1, 8, 0].
-        """
-        return [int(x) for x in board_info["SMM"]["bios"].lstrip("v").split(".")]
-
     def _check_bios_version(self: SubrackDriver) -> None:
         """Check that the api version is new enough to poll health_status."""
         if self._checked_bios:
@@ -610,7 +584,7 @@ class SubrackDriver(
             return
         board_info: dict = self._component_state["board_info"]
         if board_info:
-            if self._bios_version(board_info) >= [1, 6, 0]:
+            if SubrackData.bios_version(board_info) >= [1, 6, 0]:
                 self._poll_commands = True
             self._checked_bios = True
 
@@ -1025,7 +999,9 @@ class SubrackDriver(
         # whether currents must be derived, even on the first poll.
         board_info = values.get("board_info")
         if board_info:
-            self._derive_tpm_currents = self._bios_version(board_info) >= [1, 8, 0]
+            self._derive_tpm_currents = not SubrackData.supports_tpm_currents(
+                board_info
+            )
         if self._derive_tpm_currents and "tpm_powers" in values:
             values["tpm_currents"] = self._derive_currents(
                 values["tpm_powers"], values.get("tpm_voltages")

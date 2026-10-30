@@ -23,7 +23,7 @@ from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_control_model.faults import StateModelError
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
-from tango import AttrQuality, DevFailed
+from tango import AttrQuality, DevFailed, Except
 from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -584,7 +584,35 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         return task
 
-    @stb.long_running_commands.long_running_command
+    def is_SetPowerSupplyFanSpeed_allowed(  # pylint: disable=invalid-name
+        self: MccsSubrack,
+        request_type: Optional[stb.long_running_commands.LRCReqType] = None,
+    ) -> bool:
+        """
+        Return whether the subrack can set the power supply fan speed.
+
+        :param request_type: whether the command is being queued or executed.
+            Both are refused on the same grounds, so this is not read.
+
+        :return: True if the command is allowed.
+        """
+        board_info = self._hardware_attributes.get("subrackBoardInfo")
+        if board_info is None:
+            # The API version is unknown until board info has been read, so
+            # let the command through and leave any error to the board.
+            return True
+        if not SubrackData.supports_power_supply_fan_speed(board_info):
+            Except.throw_exception(
+                "CommandNotAllowed",
+                "SetPowerSupplyFanSpeed is not supported by subrack "
+                f"API {board_info['SMM']['bios']}.",
+                self.get_name(),
+            )
+        return True
+
+    @stb.long_running_commands.long_running_command(
+        fisallowed="is_SetPowerSupplyFanSpeed_allowed"
+    )
     @stb.validators.validate_json_args(schema=SetPowerSupplyFanSpeed_SCHEMA)
     def SetPowerSupplyFanSpeed(  # pylint: disable=invalid-name
         self: MccsSubrack,

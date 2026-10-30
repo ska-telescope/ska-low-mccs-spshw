@@ -233,7 +233,7 @@ class SubrackHealthRules(HealthRules):
         self: SubrackHealthRules,
         tpm_power_states: list[float],
         tpm_voltages: list[float],
-        tpm_currents: list[float],
+        tpm_currents: list[float] | None,
         tpm_present: list[bool],
         rule_str: str,
     ) -> tuple[bool, str]:
@@ -242,7 +242,8 @@ class SubrackHealthRules(HealthRules):
 
         :param tpm_power_states: List of the power states of the tpms.
         :param tpm_voltages: The voltages of the tpms.
-        :param tpm_currents: The currents of the tpms.
+        :param tpm_currents: The currents of the tpms, or None if they are
+            unavailable, in which case only the voltages are checked.
         :param tpm_present: List of whether a tpm is present.
         :param rule_str: The type of error threshold to be checking against.
 
@@ -250,6 +251,8 @@ class SubrackHealthRules(HealthRules):
         """
         has_failed = False
         report = ""
+        if tpm_currents is None:
+            tpm_currents = [None] * len(tpm_power_states)  # type: ignore[list-item]
         if (
             len(tpm_voltages) == 0
             or len(tpm_currents) == 0
@@ -262,8 +265,10 @@ class SubrackHealthRules(HealthRules):
                 f"{tpm_power_states=} is empty. ",
             )
         for i, power_state in enumerate(tpm_power_states):
-            if tpm_voltages[i] is None or tpm_currents[i] is None or not tpm_present[i]:
+            if tpm_voltages[i] is None or not tpm_present[i]:
                 continue  # may happen
+            # A missing current must not stop the voltage checks.
+            has_current = tpm_currents[i] is not None
             if power_state == PowerState.ON and (
                 tpm_voltages[i] > self._thresholds[f"{rule_str}tpm_voltage_on"]
             ):
@@ -272,8 +277,10 @@ class SubrackHealthRules(HealthRules):
                     f"TPM {i} ON voltage too high {tpm_voltages[i]} > "
                     f"{self._thresholds[f'{rule_str}tpm_voltage_on']}. "
                 )
-            if power_state == PowerState.ON and (
-                tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_on"]
+            if (
+                power_state == PowerState.ON
+                and has_current
+                and tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_on"]
             ):
                 has_failed = True
                 report += (
@@ -288,8 +295,10 @@ class SubrackHealthRules(HealthRules):
                     f"TPM {i} STANDBY voltage too high {tpm_voltages[i]} > "
                     f"{self._thresholds[f'{rule_str}tpm_voltage_standby']}. "
                 )
-            if power_state == PowerState.STANDBY and (
-                tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_standby"]
+            if (
+                power_state == PowerState.STANDBY
+                and has_current
+                and tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_standby"]
             ):
                 has_failed = True
                 report += (
@@ -297,7 +306,7 @@ class SubrackHealthRules(HealthRules):
                     f"{self._thresholds[f'{rule_str}tpm_current_standby']}. "
                 )
             if power_state in [PowerState.OFF, PowerState.NO_SUPPLY] and (
-                tpm_voltages[i] > 0 or tpm_currents[i] > 0
+                tpm_voltages[i] > 0 or (has_current and tpm_currents[i] > 0)
             ):
                 has_failed = True
                 report += (

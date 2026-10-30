@@ -656,18 +656,11 @@ def test_monitoring_and_control(
     )
 
     # API 1.8.0 has no set_power_supply_fan_speed command, so the command
-    # fails without reaching the board.
-    subrack_lrc_manager.run_command_with_checks(
-        "SetPowerSupplyFanSpeed",
-        json.dumps({"power_supply_fan_id": 1, "speed_percent": 99.0}),
-        ResultCode.QUEUED,
-    )
-    subrack_lrc_manager.assert_command_finished(
-        status="FAILED",
-        result_code=ResultCode.FAILED,
-        result_message_contains="not supported by subrack API v1.8.0",
-        timeout=5,
-    )
+    # is rejected before it is queued.
+    with pytest.raises(tango.DevFailed, match="not supported by subrack API v1.8.0"):
+        subrack_device.SetPowerSupplyFanSpeed(
+            json.dumps({"power_supply_fan_id": 1, "speed_percent": 99.0})
+        )
 
     fan_to_change = 2
     percent_to_set = 49.0

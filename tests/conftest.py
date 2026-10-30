@@ -70,7 +70,7 @@ def reset_attribute_configs_fixture() -> dict[str, Callable]:
         reset_attribute_configs["subrack"](subrack_device)
 
         # Reset a specific attribute (optional)
-        reset_attribute_configs["tile"](tile_device, "boardTemperature")
+        reset_attribute_configs["tile"](tile_device, "temperatures_board")
 
     :returns: a dictionary of callables to reset tile or subrack attribute configs.
     """

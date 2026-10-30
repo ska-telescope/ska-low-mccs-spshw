@@ -216,7 +216,7 @@ def _mask_unpolled_dsp_fields(raw_value: Any) -> Any:
     Mask DSP subfields that the poller never propagates for non-last tiles.
 
     ``discarded_or_flagged_packet_count`` (exposed via
-    ``fpga0_station_beamformer_flagged_count``/``fpga1_...``) is only
+    ``dsp_station_beamf_discarded_or_flagged_packet_count_fpga0``/``fpga1_...``) is only
     populated by the poll logic when the tile is configured as the last
     tile in the beamforming chain. The tile under test here is not
     configured as last, so the ``dsp`` composite attribute always reads
@@ -251,10 +251,10 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "io_udp_interface_decode_error_count_fpga1": udp_error_count_to_list,
     "io_jesd_interface_lane_error_count_fpga0": lane_error_to_array,
     "io_jesd_interface_lane_error_count_fpga1": lane_error_to_array,
-    "fpga0_clock_managers_count": clock_managers_count,
-    "fpga1_clock_managers_count": clock_managers_count,
-    "fpga0_clock_managers_status": clock_managers_status,
-    "fpga1_clock_managers_status": clock_managers_status,
+    "timing_clock_managers_fpga0_count": clock_managers_count,
+    "timing_clock_managers_fpga1_count": clock_managers_count,
+    "timing_clock_managers_fpga0_status": clock_managers_status,
+    "timing_clock_managers_fpga1_status": clock_managers_status,
     "timing_clocks_fpga0": clocks_to_list,
     "timing_clocks_fpga1": clocks_to_list,
     "adcs_sysref_counter_adcs": adc_to_list,
@@ -272,7 +272,7 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "io_f2f_interface_pll_status_fpga1_count": lambda v: int(v[1]),
     "io_data_router_status_fpga0": int,
     "io_data_router_status_fpga1": int,
-    "data_router_discarded_packets": serialise_object,
+    "io_data_router_discarded_packets_fpgas": serialise_object,
     "io": serialise_object,
     "dsp": serialise_object,
     "voltages": serialise_object,
@@ -280,13 +280,13 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "currents": serialise_object,
     "timing": serialise_object,
     "adcs": serialise_object,
-    "timing_pps_status": int,  # Bool alarms cause problems so this is an int signal.
+    "timing_pps_present": int,  # Bool alarms cause problems so this is an int signal.
 }
 
 # Mirrors MccsTile.attribute_monitoring_point_map (an instance attribute set
 # in init_device, so not importable directly). Keep in sync with that map.
 HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
-    "timing_pps_status": ["timing", "pps", "status"],
+    "timing_pps_present": ["timing", "pps", "status"],
     "temperatures_fpga0": ["temperatures", "FPGA0"],
     "temperatures_fpga1": ["temperatures", "FPGA1"],
     "temperatures_board": ["temperatures", "board"],
@@ -412,10 +412,10 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
     "timing_clocks_fpga0": ["timing", "clocks", "FPGA0"],
     "timing_clocks_fpga1": ["timing", "clocks", "FPGA1"],
-    "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
-    "fpga0_clock_managers_status": ["timing", "clock_managers", "FPGA0"],
-    "fpga1_clock_managers_count": ["timing", "clock_managers", "FPGA1"],
-    "fpga1_clock_managers_status": ["timing", "clock_managers", "FPGA1"],
+    "timing_clock_managers_fpga0_count": ["timing", "clock_managers", "FPGA0"],
+    "timing_clock_managers_fpga0_status": ["timing", "clock_managers", "FPGA0"],
+    "timing_clock_managers_fpga1_count": ["timing", "clock_managers", "FPGA1"],
+    "timing_clock_managers_fpga1_status": ["timing", "clock_managers", "FPGA1"],
     "io_jesd_interface_lane_error_count_fpga0": [
         "io",
         "jesd_interface",
@@ -428,7 +428,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "lane_error_count",
         "FPGA1",
     ],
-    "io_jesd_interface_io_jesd_interface_link_status": [
+    "io_jesd_interface_link_status": [
         "io",
         "jesd_interface",
         "link_status",
@@ -496,20 +496,34 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "decode_error_count",
         "FPGA1",
     ],
-    "fpga0_linkup_loss_count": ["io", "udp_interface", "linkup_loss_count", "FPGA0"],
-    "fpga1_linkup_loss_count": ["io", "udp_interface", "linkup_loss_count", "FPGA1"],
+    "io_udp_interface_linkup_loss_count_fpga0": [
+        "io",
+        "udp_interface",
+        "linkup_loss_count",
+        "FPGA0",
+    ],
+    "io_udp_interface_linkup_loss_count_fpga1": [
+        "io",
+        "udp_interface",
+        "linkup_loss_count",
+        "FPGA1",
+    ],
     "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
     "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-    "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
-    "tile_beamformer_status": ["dsp", "tile_beamf"],
-    "station_beamformer_status": ["dsp", "station_beamf", "status"],
-    "fpga0_station_beamformer_error_count": [
+    "io_data_router_discarded_packets_fpgas": [
+        "io",
+        "data_router",
+        "discarded_packets",
+    ],
+    "dsp_tile_beamf": ["dsp", "tile_beamf"],
+    "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],
+    "dsp_station_beamf_ddr_parity_error_count_fpga0": [
         "dsp",
         "station_beamf",
         "ddr_parity_error_count",
         "FPGA0",
     ],
-    "fpga1_station_beamformer_error_count": [
+    "dsp_station_beamf_ddr_parity_error_count_fpga1": [
         "dsp",
         "station_beamf",
         "ddr_parity_error_count",
@@ -1157,8 +1171,10 @@ class TestMccsTile:
             "temperatures_adc13",  # Not updated in simulated hardware version
             "temperatures_adc14",  # Not updated in simulated hardware version
             "temperatures_adc15",  # Not updated in simulated hardware version
-            "fpga0_station_beamformer_flagged_count",  # Only valid for final Tile
-            "fpga1_station_beamformer_flagged_count",  # Only valid for final Tile
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+            # Only valid for final Tile
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
+            # Only valid for final Tile
         ]
 
     @pytest.fixture(name="tpm_configuration_attributes")
@@ -2068,17 +2084,17 @@ class TestMccsTile:
             "adcPower",
             "preaduLevels",
             "tileProgrammingState",
-            "fpga0_linkup_loss_count",
+            "io_udp_interface_linkup_loss_count_fpga0",
             "timing_pll_count",
             "voltages_vm_sw_amp",
             "voltages_ddr0_vref",
             "currentTileBeamformerFrame",
             "io_f2f_interface_pll_status_fpga0_status",
-            "fpga0_clock_managers_status",
-            "fpga1_clock_managers_count",
+            "timing_clock_managers_fpga0_status",
+            "timing_clock_managers_fpga1_count",
             "io_jesd_interface_lane_error_count_fpga0",
             "io_jesd_interface_resync_count_fpga0",
-            "station_beamformer_status",
+            "dsp_station_beamf_status",
             "adcs_pll_status_adcs",
             "timing_pll_40g_status",
         ],
@@ -2141,7 +2157,7 @@ class TestMccsTile:
         ("attribute_name", "health_path", "write_value"),
         [
             (
-                "timing_pps_status",
+                "timing_pps_present",
                 ["timing", "pps", "status"],
                 False,
             ),
@@ -2353,13 +2369,13 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         on_tile_device.subscribe_event(
-            "timing_pps_status",
+            "timing_pps_present",
             EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
         change_event_callbacks["pps_present"].assert_change_event(Anything)
         assert (
-            on_tile_device.read_attribute("timing_pps_status").quality
+            on_tile_device.read_attribute("timing_pps_present").quality
             == AttrQuality.ATTR_VALID
         )
 
@@ -2375,7 +2391,7 @@ class TestMccsTile:
         change_event_callbacks["pps_present"].assert_change_event(Anything)
         time.sleep(1)  # Wait for attr to update.
         assert (
-            on_tile_device.read_attribute("timing_pps_status").quality
+            on_tile_device.read_attribute("timing_pps_present").quality
             == AttrQuality.ATTR_ALARM
         )
         assert on_tile_device.state() == DevState.ALARM
@@ -2391,7 +2407,7 @@ class TestMccsTile:
             DevState.OFF, lookahead=5, consume_nonmatches=True
         )
         assert (
-            on_tile_device.read_attribute("timing_pps_status").quality
+            on_tile_device.read_attribute("timing_pps_present").quality
             == AttrQuality.ATTR_INVALID
         )
         assert on_tile_device.state() == DevState.OFF
@@ -2824,7 +2840,7 @@ class TestMccsTile:
         ),
         [
             (
-                "timing_pps_status",
+                "timing_pps_present",
                 ["timing", "pps", "status"],
                 False,
                 None,
@@ -2941,7 +2957,7 @@ class TestMccsTile:
                 HealthState.DEGRADED,
             ),
             (
-                "fpga0_station_beamformer_error_count",
+                "dsp_station_beamf_ddr_parity_error_count_fpga0",
                 [
                     "dsp",
                     "station_beamf",
@@ -3130,7 +3146,7 @@ class TestMccsTile:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        attribute_name = "fpga0_ddr_reset_counter"
+        attribute_name = "io_ddr_interface_reset_counter_fpga0"
         backend_health_path = ["io", "ddr_interface", "reset_counter", "FPGA0"]
         backend_health_value = 2
 
@@ -5054,7 +5070,7 @@ class TestOldHealth:
             pytest.param(
                 TileData.DEFAULT_MONITORING_POINTS,
                 {
-                    "alarms": {"alarms_i2c_access_alm": 1},
+                    "alarms": {"I2C_access_alm": 1},
                     "adcs": {"pll_status": {"ADC0": (False, True)}},
                     "dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA1": 1}}},
                 },

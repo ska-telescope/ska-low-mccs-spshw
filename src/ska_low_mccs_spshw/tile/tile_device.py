@@ -430,18 +430,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltages_vm_pll": "voltage_vm_pll_signal",
         "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
         "adcs_pll_status_adcs": "adc_pll_lock_status_signal",
-        "tile_beamformer_status": "tile_beamformer_status_signal",
-        "station_beamformer_status": "station_beamformer_status_signal",
-        "fpga0_station_beamformer_error_count": (
+        "dsp_tile_beamf": "tile_beamformer_status_signal",
+        "dsp_station_beamf_status": "station_beamformer_status_signal",
+        "dsp_station_beamf_ddr_parity_error_count_fpga0": (
             "fpga0_station_beamformer_error_count_signal"
         ),
-        "fpga1_station_beamformer_error_count": (
+        "dsp_station_beamf_ddr_parity_error_count_fpga1": (
             "fpga1_station_beamformer_error_count_signal"
         ),
-        "fpga0_station_beamformer_flagged_count": (
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0": (
             "fpga0_station_beamformer_flagged_count_signal"
         ),
-        "fpga1_station_beamformer_flagged_count": (
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1": (
             "fpga1_station_beamformer_flagged_count_signal"
         ),
         "io_udp_interface_crc_error_count_fpga0": "fpga0_crc_error_count_signal",
@@ -450,11 +450,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_udp_interface_bip_error_count_fpga1": "fpga1_bip_error_count_signal",
         "io_udp_interface_decode_error_count_fpga0": "fpga0_decode_error_count_signal",
         "io_udp_interface_decode_error_count_fpga1": "fpga1_decode_error_count_signal",
-        "fpga0_linkup_loss_count": "fpga0_linkup_loss_count_signal",
-        "fpga1_linkup_loss_count": "fpga1_linkup_loss_count_signal",
+        "io_udp_interface_linkup_loss_count_fpga0": "fpga0_linkup_loss_count_signal",
+        "io_udp_interface_linkup_loss_count_fpga1": "fpga1_linkup_loss_count_signal",
         "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
         "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
-        "io_data_router_discarded_packets": "data_router_discarded_packets_signal",
+        "io_data_router_discarded_packets_fpgas": (
+            "data_router_discarded_packets_signal"
+        ),
         "io_udp_interface_arp": "arp_signal",
         "io_udp_interface_status": "udp_status_signal",
         "io_ddr_interface_initialisation": "ddr_initialisation_signal",
@@ -469,10 +471,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_jesd_interface_link_status": "link_status_signal",
         "io_jesd_interface_lane_error_count_fpga0": "fpga0_lane_error_count_signal",
         "io_jesd_interface_lane_error_count_fpga1": "fpga1_lane_error_count_signal",
-        "fpga0_clock_managers_count": "fpga0_clock_managers_count_signal",
-        "fpga1_clock_managers_count": "fpga1_clock_managers_count_signal",
-        "fpga0_clock_managers_status": "fpga0_clock_managers_status_signal",
-        "fpga1_clock_managers_status": "fpga1_clock_managers_status_signal",
+        "timing_clock_managers_fpga0_count": "fpga0_clock_managers_count_signal",
+        "timing_clock_managers_fpga1_count": "fpga1_clock_managers_count_signal",
+        "timing_clock_managers_fpga0_status": "fpga0_clock_managers_status_signal",
+        "timing_clock_managers_fpga1_status": "fpga1_clock_managers_status_signal",
         "timing_clocks_fpga0": "fpga0_clocks_signal",
         "timing_clocks_fpga1": "fpga1_clocks_signal",
         "adcs_sysref_counter_adcs": "adc_sysref_counter_signal",
@@ -481,8 +483,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io_jesd_interface_qpll_status_fpga1_status": "fpga1_qpll_status_signal",
         "io_jesd_interface_qpll_status_fpga0_count": "fpga0_qpll_counter_signal",
         "io_jesd_interface_qpll_status_fpga1_count": "fpga1_qpll_counter_signal",
-        "io_f2f_interface_pll_status_fpga0_status": "io_f2f_interface_pll_status_fpga0_signal",
-        "io_f2f_interface_pll_status_fpga1_status": "io_f2f_interface_pll_status_fpga1_signal",
+        "io_f2f_interface_pll_status_fpga0_status": (
+            "io_f2f_interface_pll_status_fpga0_signal"
+        ),
+        "io_f2f_interface_pll_status_fpga1_status": (
+            "io_f2f_interface_pll_status_fpga1_signal"
+        ),
         "io_f2f_interface_pll_status_fpga0_count": (
             "io_f2f_interface_pll_status_fpga0_counter_signal"
         ),
@@ -500,7 +506,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io": "io_signal",
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
-        "timing_pps_status": "ppsPresent_signal",
+        "timing_pps_present": "ppsPresent_signal",
         "timing_sync_time": "timing_sync_time_signal",
     }
 
@@ -535,11 +541,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "forty_gb_core_configurations": "forty_gb_core_configurations_signal",
         "adc_rms": "adc_power_signal",
         "ddr_write_size": "ddr_write_size_signal",
-        "alarms_i2c_access_alm": "I2C_access_alm_signal",
-        "alarms_temperature_alm": "temperature_alm_signal",
-        "alarms_voltage_alm": "voltage_alm_signal",
-        "alarms_sem_wd": "SEM_wd_signal",
-        "alarms_mcu_wd": "MCU_wd_signal",
+        "I2C_access_alm": "I2C_access_alm_signal",
+        "temperature_alm": "temperature_alm_signal",
+        "voltage_alm": "voltage_alm_signal",
+        "SEM_wd": "SEM_wd_signal",
+        "MCU_wd": "MCU_wd_signal",
         "dst_ip_40g_fpga1": "dstip40gfpga1_signal",
         "dst_ip_40g_fpga2": "dstip40gfpga2_signal",
         "tile_id": "logicalTileId_signal",
@@ -876,17 +882,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             sig._absolute_name_for(self): tango_attr_name
             for sig, tango_attr_name in MccsTile._ALARM_SIGNAL_ATTRIBUTES.items()
         }
-        # Mapping of alarm name to alarm_signal
+        # Mapping of TPM API alarm name to alarm_signal
         self.__alarm_attribute_map: dict[str, str] = {
-            "alarms_i2c_access_alm": "I2C_access_alm_signal",
-            "alarms_temperature_alm": "temperature_alm_signal",
-            "alarms_voltage_alm": "voltage_alm_signal",
-            "alarms_sem_wd": "SEM_wd_signal",
-            "alarms_mcu_wd": "MCU_wd_signal",
+            "I2C_access_alm": "I2C_access_alm_signal",
+            "temperature_alm": "temperature_alm_signal",
+            "voltage_alm": "voltage_alm_signal",
+            "SEM_wd": "SEM_wd_signal",
+            "MCU_wd": "MCU_wd_signal",
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
-            "timing_pps_status": ["timing", "pps", "status"],
+            "timing_pps_present": ["timing", "pps", "status"],
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
             "temperatures_board": ["temperatures", "board"],
@@ -1044,10 +1050,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_clocks_fpga1": ["timing", "clocks", "FPGA1"],
             # Extracting status and count in different attributes
             # by use of converters.
-            "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
-            "fpga0_clock_managers_status": ["timing", "clock_managers", "FPGA0"],
-            "fpga1_clock_managers_count": ["timing", "clock_managers", "FPGA1"],
-            "fpga1_clock_managers_status": ["timing", "clock_managers", "FPGA1"],
+            "timing_clock_managers_fpga0_count": ["timing", "clock_managers", "FPGA0"],
+            "timing_clock_managers_fpga0_status": ["timing", "clock_managers", "FPGA0"],
+            "timing_clock_managers_fpga1_count": ["timing", "clock_managers", "FPGA1"],
+            "timing_clock_managers_fpga1_status": ["timing", "clock_managers", "FPGA1"],
             # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
             # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
             # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
@@ -1066,7 +1072,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "io_jesd_interface_link_status": [
                 "io",
                 "jesd_interface",
-                "io_jesd_interface_link_status",
+                "link_status",
             ],
             "io_jesd_interface_resync_count_fpga0": [
                 "io",
@@ -1135,13 +1141,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "decode_error_count",
                 "FPGA1",
             ],
-            "fpga0_linkup_loss_count": [
+            "io_udp_interface_linkup_loss_count_fpga0": [
                 "io",
                 "udp_interface",
                 "linkup_loss_count",
                 "FPGA0",
             ],
-            "fpga1_linkup_loss_count": [
+            "io_udp_interface_linkup_loss_count_fpga1": [
                 "io",
                 "udp_interface",
                 "linkup_loss_count",
@@ -1149,32 +1155,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ],
             "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
             "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-            "io_data_router_discarded_packets": [
+            "io_data_router_discarded_packets_fpgas": [
                 "io",
                 "data_router",
                 "discarded_packets",
             ],
-            "tile_beamformer_status": ["dsp", "tile_beamf"],
-            "station_beamformer_status": ["dsp", "station_beamf", "status"],
-            "fpga0_station_beamformer_error_count": [
+            "dsp_tile_beamf": ["dsp", "tile_beamf"],
+            "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],
+            "dsp_station_beamf_ddr_parity_error_count_fpga0": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
                 "FPGA0",
             ],
-            "fpga1_station_beamformer_error_count": [
+            "dsp_station_beamf_ddr_parity_error_count_fpga1": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
                 "FPGA1",
             ],
-            "fpga0_station_beamformer_flagged_count": [
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0": [
                 "dsp",
                 "station_beamf",
                 "discarded_or_flagged_packet_count",
                 "FPGA0",
             ],
-            "fpga1_station_beamformer_flagged_count": [
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1": [
                 "dsp",
                 "station_beamf",
                 "discarded_or_flagged_packet_count",
@@ -1325,7 +1331,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             # Add signal-backed attributes
             healthful_attrs = set(MccsTile._HEALTH_SIGNAL_MAP.keys())
             # Add signal-backed alarm attributes
-            healthful_attrs |= self.__alarm_attribute_map.keys()
+            healthful_attrs |= {
+                "alarms_i2c_access_alm",
+                "alarms_temperature_alm",
+                "alarms_voltage_alm",
+                "alarms_sem_wd",
+                "alarms_mcu_wd",
+            }
             # The remaining attributes below were previously AttributeManager backed
             # pre-refactor (and so included via self._attribute_state which is removed)
             # now that they are signal backed they must be added explicitly.
@@ -1370,14 +1382,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "rfiBlankingEnabledAntennas",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
-                "fpga0_station_beamformer_flagged_count",
-                "fpga1_station_beamformer_flagged_count",
+                "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+                "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
             }
 
             if is_v1(self.HardwareVersion):
                 # Older tiles do not have ADC temperature sensors.
                 for idx in range(16):
-                    healthful_attrs.discard(f"temperatureADC{idx}")
+                    healthful_attrs.discard(f"temperatures_adc{idx}")
 
             if self.BiosVersion == "0.5.0":
                 # This monitoring point was introduced in 0.6.0.
@@ -1788,7 +1800,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
 
         emit_value = attribute_value
-        if attribute_name.lower() == "ppspresent" and attribute_value is False:
+        if attribute_name == "timing_pps_present" and attribute_value is False:
             # Signal ALARM quality directly rather than relying on
             # Tango's min_alarm, which isn't usable on a DevBoolean.
             emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
@@ -1994,21 +2006,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return adc_pll_to_list(raw_value)
 
-    tile_beamformer_status = attribute_from_signal(
+    dsp_tile_beamf = attribute_from_signal(
         tile_beamformer_status_signal,
         dtype="DevBoolean",
         label="Tile Beamformer Status",
         doc="Status of the tile beamformer. True if status OK.",
     )
 
-    station_beamformer_status = attribute_from_signal(
+    dsp_station_beamf_status = attribute_from_signal(
         station_beamformer_status_signal,
         dtype="DevBoolean",
         label="Station Beamformer Status",
         doc="Status of the Station beamformer. True if status OK.",
     )
 
-    fpga0_station_beamformer_error_count = attribute_from_signal(
+    dsp_station_beamf_ddr_parity_error_count_fpga0 = attribute_from_signal(
         fpga0_station_beamformer_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2019,7 +2031,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga1_station_beamformer_error_count = attribute_from_signal(
+    dsp_station_beamf_ddr_parity_error_count_fpga1 = attribute_from_signal(
         fpga1_station_beamformer_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2030,7 +2042,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga0_station_beamformer_flagged_count = attribute_from_signal(
+    dsp_station_beamf_discarded_or_flagged_packet_count_fpga0 = attribute_from_signal(
         fpga0_station_beamformer_flagged_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2041,7 +2053,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no parity errors detected.",
     )
 
-    fpga1_station_beamformer_flagged_count = attribute_from_signal(
+    dsp_station_beamf_discarded_or_flagged_packet_count_fpga1 = attribute_from_signal(
         fpga1_station_beamformer_flagged_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2206,7 +2218,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return None
         return udp_error_count_to_list(raw_value)
 
-    fpga0_linkup_loss_count = attribute_from_signal(
+    io_udp_interface_linkup_loss_count_fpga0 = attribute_from_signal(
         fpga0_linkup_loss_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2217,7 +2229,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: 0 if no link loss events are detected.",
     )
 
-    fpga1_linkup_loss_count = attribute_from_signal(
+    io_udp_interface_linkup_loss_count_fpga1 = attribute_from_signal(
         fpga1_linkup_loss_count_signal,
         dtype="DevShort",
         max_alarm=1,
@@ -2297,7 +2309,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the number of discarded packets. "
         "Expected: 0 if no packets are discarded.",
     )
-    def io_data_router_discarded_packets(
+    def io_data_router_discarded_packets_fpgas(
         self: MccsTile, raw_value: dict[str, Any] | None
     ) -> str | None:
         """
@@ -2306,7 +2318,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no packets are discarded.
 
         :example:
-            >>> tile.io_data_router_discarded_packets
+            >>> tile.io_data_router_discarded_packets_fpgas
             '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2527,7 +2539,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA0 PLL lock loss counter for C2C, JESD and DSP. "
         "Expected: `0` per interface if no lock loss events.",
     )
-    def fpga0_clock_managers_count(
+    def timing_clock_managers_fpga0_count(
         self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
     ) -> np.ndarray | None:
         """
@@ -2536,7 +2548,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `0` per interface if no lock loss events.
 
         :example:
-            >>> tile.fpga0_clock_managers_count
+            >>> tile.timing_clock_managers_fpga0_count
             [0, 0, 0]
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
@@ -2561,7 +2573,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA1 PLL lock loss counter for C2C, JESD and DSP. "
         "Expected: `0` per interface if no lock loss events.",
     )
-    def fpga1_clock_managers_count(
+    def timing_clock_managers_fpga1_count(
         self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
     ) -> np.ndarray | None:
         """
@@ -2570,7 +2582,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `0` per interface if no lock loss events.
 
         :example:
-            >>> tile.fpga1_clock_managers_count
+            >>> tile.timing_clock_managers_fpga1_count
             [0, 0, 0]
 
         3 rows → one for each MMCM type: ["C2C_MMCM", "JESD_MMCM", "DSP_MMCM"]
@@ -2595,7 +2607,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA0 PLL lock status C2C, JESD and DSP. "
         "Expected: `1` if MMCM clock locked `0` otherwise",
     )
-    def fpga0_clock_managers_status(
+    def timing_clock_managers_fpga0_status(
         self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
     ) -> np.ndarray | None:
         """
@@ -2604,7 +2616,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if MMCM clock locked `0` otherwise
 
         :example:
-            >>> tile.fpga0_clock_managers_status
+            >>> tile.timing_clock_managers_fpga0_status
             [0, 0, 0]
 
 
@@ -2630,7 +2642,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Return the FPGA1 PLL lock status C2C, JESD and DSP. "
         "Expected: `1` if MMCM clock locked `0` otherwise",
     )
-    def fpga1_clock_managers_status(
+    def timing_clock_managers_fpga1_status(
         self: MccsTile, raw_value: dict[str, tuple[bool, int]] | None
     ) -> np.ndarray | None:
         """
@@ -2639,7 +2651,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: `1` if MMCM clock locked `0` otherwise
 
         :example:
-            >>> tile.fpga1_clock_managers_status
+            >>> tile.timing_clock_managers_fpga1_status
             [0, 0, 0]
 
 
@@ -4503,8 +4515,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=10.0,
         max_alarm=95.0,
         unit="Celsius",
-        label="FPGA1 Temperature",
-        doc="Temperature of FPGA 1 in degrees Celsius.",
+        label="FPGA0 Temperature",
+        doc="Temperature of FPGA 0 in degrees Celsius.",
     )
 
     temperatures_fpga1 = attribute_from_signal(
@@ -4515,8 +4527,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=10.0,
         max_alarm=95.0,
         unit="Celsius",
-        label="FPGA2 Temperature",
-        doc="Temperature of FPGA 2 in degrees Celsius.",
+        label="FPGA1 Temperature",
+        doc="Temperature of FPGA 1 in degrees Celsius.",
     )
 
     fpgasUnixTime = attribute_from_signal(
@@ -4767,7 +4779,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
-    timing_pps_status = attribute_from_signal(
+    timing_pps_present = attribute_from_signal(
         ppsPresent_signal,
         dtype="DevBoolean",
         label="PPS Present",

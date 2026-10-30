@@ -523,7 +523,7 @@ def test_tile_invalidation_ordered_after_queued_events(
     )
     serialiser.queue_event(
         tile_fqdn,
-        "boardTemperature",
+        "temperatures_board",
         42.0,
         tango.AttrQuality.ATTR_VALID,
         callback=tile_proxy._on_attribute_change,
@@ -547,13 +547,13 @@ def test_tile_events_dropped_when_not_established(
         under test
     """
     station_component_manager._on_tile_attribute_change(
-        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+        0, "temperatures_board", 42.0, tango.AttrQuality.ATTR_VALID
     )
     assert np.isnan(station_component_manager._board_temperatures[0])
 
     _mark_tiles_established(station_component_manager, 1)
     station_component_manager._on_tile_attribute_change(
-        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+        0, "temperatures_board", 42.0, tango.AttrQuality.ATTR_VALID
     )
     assert station_component_manager._board_temperatures[0] == 42.0
 
@@ -2145,7 +2145,7 @@ def test_beamformer_flagged_count(
     for tile_id in range(last):
         station_component_manager._on_tile_attribute_change(
             tile_id,
-            "fpga0_station_beamformer_flagged_count",
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
             5,
             tango.AttrQuality.ATTR_VALID,
         )
@@ -2154,7 +2154,7 @@ def test_beamformer_flagged_count(
     # Final tile fpga0 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         5,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2163,7 +2163,7 @@ def test_beamformer_flagged_count(
     # Same value again — no duplicate callback.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         5,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2172,7 +2172,7 @@ def test_beamformer_flagged_count(
     # fpga0 back to zero (fpga1 still zero) → ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         0,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2181,7 +2181,7 @@ def test_beamformer_flagged_count(
     # fpga1 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         3,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2190,7 +2190,7 @@ def test_beamformer_flagged_count(
     # Both zero → ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         0,
         tango.AttrQuality.ATTR_VALID,
     )

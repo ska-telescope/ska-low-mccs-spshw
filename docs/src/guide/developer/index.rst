@@ -9,3 +9,4 @@ This guide is for people developing ``ska-low-mccs-spshw`` itself.
 
    deploy
    merging
+   subrack_simulator

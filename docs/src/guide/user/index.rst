@@ -11,3 +11,4 @@ This guide is for people operating or interacting with
    overview
    spsstation
    power_distribution
+   attribute_alarm_ranges

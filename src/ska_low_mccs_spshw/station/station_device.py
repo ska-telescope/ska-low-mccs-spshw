@@ -105,6 +105,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     LMCDaqTRL = device_property(dtype=str, default_value="")
     BandpassDaqTRL = device_property(dtype=str, default_value="")
+    CalibrationDaqTRL = device_property(dtype=str, default_value="")
     WRENTRL = device_property(dtype=str, default_value="")
 
     AntennaConfigURI = device_property(
@@ -113,7 +114,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     )
     StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
     BandpassIntegrationTime = device_property(dtype=float, default_value=5.0)
-    OnWorkaroundFlag = device_property(dtype=bool, default_value=False)
 
     # Feature flags for WREN device. When WRENHealthCheckFailOnTimeout is True,
     # the device will wait until WREN is ok during initialisation. If WREN
@@ -195,6 +195,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
             f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
+            f"\tCalibrationDaqTRL: {self.CalibrationDaqTRL}\n"
             f"\tWRENTRL: '{self.WRENTRL}'\n"
             f"\tWRENHealthCheckFailOnTimeout: {self.WRENHealthCheckFailOnTimeout}\n"
             f"\tWRENHealthCheckTimeout: {self.WRENHealthCheckTimeout}\n"
@@ -208,7 +209,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
             f"\tParentTRL: {self.ParentTRL}\n"
-            f"\tOnWorkaroundFlag: {self.OnWorkaroundFlag}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -310,6 +310,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             # It appears the test context inputs a space into empty strings.
             self.LMCDaqTRL if self.LMCDaqTRL != " " else "",
             self.BandpassDaqTRL if self.BandpassDaqTRL != " " else "",
+            self.CalibrationDaqTRL if self.CalibrationDaqTRL != " " else "",
             self.WRENTRL if self.WRENTRL != " " else "",
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
@@ -328,7 +329,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_model.subrack_health_changed,
             self._health_model.wren_health_changed,
             tile_group,
-            self.OnWorkaroundFlag,
             event_serialiser=self._event_serialiser,
         )
 
@@ -942,28 +942,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         self.LMCDaqTRL = value
         self.component_manager._lmc_daq_trl = value
-
-    @attribute(
-        dtype=bool,
-        label="OnWorkaround",
-        doc="Report the status of the `On` workaround.",
-    )
-    def OnWorkaround(self: SpsStation) -> bool:  # noqa: F811
-        """
-        Report the status of the OnWorkaroundFlag.
-
-        :return: Return the current status of the OnWorkaroundFlag.
-        """
-        return self.OnWorkaroundFlag
-
-    @OnWorkaround.write  # type: ignore[no-redef]
-    def OnWorkaround(self: SpsStation, value: bool) -> None:
-        """
-        Set the status of the OnWorkaroundFlag.
-
-        :param value: The new status of the OnWorkaroundFlag.
-        """
-        self.OnWorkaroundFlag = value
 
     @attribute(
         dtype=str,
@@ -1941,6 +1919,20 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.test_list
 
     @attribute(
+        dtype=("DevShort",),
+        max_dim_x=32,
+    )
+    def testResults(self: SpsStation) -> list[int]:
+        """
+        Get the last result of each self-check test, in testList order.
+
+        Values correspond to TestResult: PASSED=0, FAILED=1, ERROR=2, NOT_RUN=3.
+
+        :return: list of TestResult integer values, one per test.
+        """
+        return self.component_manager.last_test_results
+
+    @attribute(
         dtype="DevString",
         label="CSP SPEAD Format",
         doc="Gets the SPEAD format currently in use. (AAVS or SKA)",
@@ -2598,6 +2590,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :param argin: json dictionary with optional keywords:
 
             * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
+            * data_type - (string) Data type to configure (omit for all).
             * payload_length - (int) SPEAD payload length for channel data
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
@@ -2628,9 +2621,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dst_ip = params.get("destination_ip", None)
         src_port = params.get("source_port", self.DEFAULT_CSP_SRC_PORT)
         dst_port = params.get("destination_port", self.DEFAULT_CSP_DST_PORT)
+        data_type = params.get("data_type", None)
 
         return self.component_manager.set_lmc_download(
-            mode, payload_length, dst_ip, src_port, dst_port
+            mode=mode,
+            data_type=data_type,
+            payload_length=payload_length,
+            dst_ip=dst_ip,
+            src_port=src_port,
+            dst_port=dst_port,
         )
 
     @command(

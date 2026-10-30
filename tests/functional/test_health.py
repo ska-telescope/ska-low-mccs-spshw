@@ -192,11 +192,11 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @pytest.fixture(name="attribute_read_info")
-def attribute_read_fixture() -> dict[str, Any]:
+def attribute_read_fixture() -> dict[tuple[str, str], Any]:
     """
-    Fixture to store attribute values.
+    Fixture to store attribute values, keyed by (device name, attribute name).
 
-    :returns: Empty list.
+    :returns: Empty dict.
     """
     return {}
 
@@ -282,6 +282,11 @@ def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProx
         station_proxy.get_property("LMCDaqTRL")["LMCDaqTRL"][0],
         station_proxy.get_property("BandpassDaqTRL")["BandpassDaqTRL"][0],
     ]
+    calibration_daq_trl = station_proxy.get_property("CalibrationDaqTRL").get(
+        "CalibrationDaqTRL", []
+    )
+    if calibration_daq_trl and calibration_daq_trl[0]:
+        daqs_fqdns.append(calibration_daq_trl[0])
     return {
         "Tiles": [tango.DeviceProxy(tile_fqdn) for tile_fqdn in tiles_fqdns],
         "Subracks": [
@@ -791,7 +796,7 @@ def set_station_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
 @when("all attributes are read on a Tile")
 def read_all_tile_attributes(
     station_devices: dict[str, tango.DeviceProxy],
-    attribute_read_info: dict[str, Any],
+    attribute_read_info: dict[tuple[str, str], Any],
     excluded_tile_attributes: list[str],
 ) -> None:
     """
@@ -838,21 +843,30 @@ def read_all_tile_attributes(
             if attr in all_excluded_tile_attributes:
                 continue
             try:
-                attribute_read_info[attr] = getattr(tile, attr, None)
+                value = getattr(tile, attr, None)
             except tango.DevFailed as df:
                 print(f"Exeption raised when reading {attr}: {df}")
-                attribute_read_info[attr] = None
+                value = None
+            # Keyed by (device, attribute), not just attribute: a plain
+            # attribute-name key would let one tile's read silently
+            # overwrite another's for the same attribute, hiding which
+            # device (if any) actually failed and masking a bad read on
+            # an earlier tile behind a good one on a later tile.
+            attribute_read_info[(tile.dev_name(), attr)] = value
 
 
 @then("a value is returned for each")
-def check_attribute_read_success(attribute_read_info: dict[str, Any]) -> None:
+def check_attribute_read_success(
+    attribute_read_info: dict[tuple[str, str], Any]
+) -> None:
     """
     Assert that all attribute reads were successful.
 
-    :param attribute_read_info: A dict of values returned by an attribute read.
+    :param attribute_read_info: A dict of values returned by an attribute read,
+        keyed by (device name, attribute name).
     """
     failed_attrs = [
-        attr for attr, attr_value in attribute_read_info.items() if attr_value is None
+        key for key, attr_value in attribute_read_info.items() if attr_value is None
     ]
     assert not failed_attrs, f"Error reading attribute(s): {failed_attrs}"
 

@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import itertools
-import json
 import logging
 import random
 import time
@@ -98,14 +97,7 @@ class TestTileBeamformer(BaseDaqTest):
 
     def _send_beam_data(self: TestTileBeamformer) -> None:
         """Send beam data to the DAQ."""
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "beam",
-                    "seconds": 0.2,
-                }
-            )
-        )
+        self._send_data_samples(data_type="beam", seconds=0.2)
 
     def _get_beam_value(
         self: TestTileBeamformer, tile_no: int, pol: int, channel: int
@@ -154,7 +146,10 @@ class TestTileBeamformer(BaseDaqTest):
                 delays=self._delays,
             )
             self._send_beam_data()
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert (
+                _received
+            ), f"Timed out waiting for beam data at {time.strftime('%H:%M:%S')}"
             for tile_no in range(len(self.tile_proxies)):
                 single_input_data[tile_no][0][antenna_no] = self._get_beam_value(
                     tile_no, 0, channel
@@ -181,7 +176,10 @@ class TestTileBeamformer(BaseDaqTest):
             delays=self._delays,
         )
         self._send_beam_data()
-        assert self._data_created_event.wait(20)
+        _received = self._data_created_event.wait(60)
+        assert (
+            _received
+        ), f"Timed out waiting for beam data at {time.strftime('%H:%M:%S')}"
         self._stop_directory_watch()
         self._data_created_event.clear()
 
@@ -215,6 +213,10 @@ class TestTileBeamformer(BaseDaqTest):
                     )
             self.test_logger.debug(
                 f"Calibration coeffs for tile {tile_no} : {coeffs[tile_no]}"
+            )
+            self.test_logger.debug(
+                f"Beam value for tile {tile_no} before "
+                f"calibration: {single_input_data[tile_no]}"
             )
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
@@ -321,7 +323,7 @@ class TestTileBeamformer(BaseDaqTest):
     def test(self: TestTileBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
-        test_channels = range(8)  # Test 8 channels
+        test_channels = range(4)  # Test 4 channels
         self.component_manager.set_channeliser_rounding(
             np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
         )

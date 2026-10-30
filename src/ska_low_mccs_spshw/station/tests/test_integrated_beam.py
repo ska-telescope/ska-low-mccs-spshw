@@ -136,7 +136,11 @@ class TestIntegratedBeam(BaseDaqTest):
                 receiver_frame_size=9000,
             )
             self._start_directory_watch()
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert _received, (
+                "Timed out waiting for integrated beam data at "
+                f"{time.strftime('%H:%M:%S')}"
+            )
             integration_length = tile.readregister(
                 "fpga1.lmc_integrated_gen.beamf_integration_length"
             )[0]

@@ -38,7 +38,7 @@ include .make-uv/make/python-uv.mk
 # PYTHON_VARS_BEFORE_PYTEST = timeout --foreground -k 120 -s INT 4800	# 1hr 20min t/o with 2min grace
 # PYTHON_VARS_BEFORE_K8S_PYTEST = timeout --foreground -k 120 -s INT 4800
 
-K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional/
+K8S_TEST_RUNNER_PYTEST_TARGET ?= tests/functional/
 
 python-lint: mypy
 
@@ -192,7 +192,7 @@ k8s-do-test:
 	exit $$EXIT_CODE
 
 telmodel-deps:
-	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel jsonschema jsonschema-specifications fqdn
+	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel-client jsonschema jsonschema-specifications fqdn
 
 k8s-pre-install-chart: telmodel-deps
 k8s-pre-uninstall-chart: telmodel-deps

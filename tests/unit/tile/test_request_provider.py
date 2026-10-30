@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module contains the tests for the custum AttributeManagers."""
+"""This module contains the tests for the TileRequestProvider."""
 from __future__ import annotations
 
 import unittest
@@ -60,7 +60,7 @@ def tile_request_provider_fixture(
 
 
 class TestRequestProvider:
-    """Test the base `AttributeManager` behaviour."""
+    """Test the `TileRequestProvider` behaviour."""
 
     def test_commands_take_precedence(
         self: TestRequestProvider,

@@ -68,6 +68,12 @@ __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
+# Change events are registered with detect=True (by attribute_from_signal), so
+# abs_change must be non-zero (Tango treats 0 as "Not specified"). Use a value
+# below the resolution of every attribute type, so that any change in value
+# generates an event; only exact repeats of the same value are suppressed.
+MIN_ABS_CHANGE = 1e-300
+
 
 def merge(d: dict[str, Any], u: dict[str, Any]) -> None:
     """
@@ -778,7 +784,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "type": "object",
         "properties": {
             "ddr_start_byte_address": {"type": "integer", "minimum": 0},
-            "max_ddr_byte_size": {"type": "integer"},
+            "max_ddr_byte_size": {"type": ["integer", "null"]},
             "mode": {"type": "string"},
         },
     }
@@ -1942,7 +1948,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     temperatures_board = attribute_from_signal(
         board_temperature_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         min_value=15.0,
         max_value=70.0,
@@ -1961,7 +1967,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=16,
         max_dim_y=2,
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="ADC PLL Lock Status",
         doc="Return the pll status of all 16 ADCs.",
@@ -2006,7 +2012,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_station_beamformer_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Station Beamformer Error Count",
         doc="The station beamformer error count for FPGA0. "
@@ -2017,7 +2023,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_station_beamformer_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Station Beamformer Error Count",
         doc="The station beamformer error count for FPGA1. "
@@ -2028,7 +2034,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_station_beamformer_flagged_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Station Beamformer Flagged Count",
         doc="The station beamformer flagged count for FPGA0. "
@@ -2039,7 +2045,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_station_beamformer_flagged_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Station Beamformer Flagged Count",
         doc="the station beamformer flagged count for FPGA1. "
@@ -2050,7 +2056,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_crc_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 CRC Error Count",
         doc="The CRC error count for FPGA0. "
@@ -2061,7 +2067,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_crc_error_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 CRC Error Count",
         doc="The CRC error count for FPGA1. "
@@ -2073,7 +2079,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 BIP Error Count",
         doc="Return the BIP error count for FPGA0. "
@@ -2105,7 +2111,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 BIP Error Count",
         doc="Return the bip error count for FPGA1. "
@@ -2137,7 +2143,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Decode Error Count",
         doc="Return the decode error count for FPGA0. "
@@ -2171,7 +2177,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Decode Error Count",
         doc="Return the decode error count for FPGA1. "
@@ -2204,7 +2210,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_linkup_loss_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Linkup Loss Count",
         doc="Return the linkup loss count for FPGA0. "
@@ -2215,7 +2221,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_linkup_loss_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Linkup Loss Count",
         doc="Return the linkup loss count for FPGA1. "
@@ -2226,7 +2232,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         io_data_router_status_fpga0_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 IO Data Router Status",
         doc="Return the status of the data router for FPGA0. "
@@ -2257,7 +2263,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         io_data_router_status_fpga1_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 IO Data Router Status",
         doc="Return the status of the data router for FPGA1. "
@@ -2342,7 +2348,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_ddr_reset_counter_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 DDR Reset Counter",
         doc="Return the DDR reset count for FPGA0. "
@@ -2353,7 +2359,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_ddr_reset_counter_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 DDR Reset Counter",
         doc="Return the DDR reset count for FPGA1. "
@@ -2365,7 +2371,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_alarm=1,
         min_alarm=-1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 IO F2F Interface Soft Error Count",
         doc="Return the FPGA0 F2F interface soft error count. "
@@ -2377,7 +2383,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_alarm=1,
         min_alarm=-1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 IO F2F Interface Soft Error Count",
         doc="Return the FPGA1 F2F interface soft error count. "
@@ -2389,7 +2395,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_alarm=1,
         min_alarm=-1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 IO F2F Interface Hard Error Count",
         doc="Return the FPGA0 F2F interface hard error count. "
@@ -2403,7 +2409,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_alarm=1,
         min_alarm=-1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 IO F2F Interface Hard Error Count",
         doc="Return the FPGA1 F2F interface hard error count. "
@@ -2416,7 +2422,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_resync_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Resync Count",
         doc="Return the resync count for FPGA0. "
@@ -2427,7 +2433,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_resync_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Resync Count",
         doc="Return the resync count for FPGA1. "
@@ -2448,7 +2454,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Lane Error Count",
         doc="Return the error count per lane, per core for FPGA0. "
@@ -2482,7 +2488,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Lane Error Count",
         doc="Return the error count per lane, per core for FPGA1. "
@@ -2515,7 +2521,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=3,  # fpga
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Clock Managers Count Signal",
         doc="Return the FPGA0 PLL lock loss counter for C2C, JESD and DSP. "
@@ -2549,7 +2555,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Clock Managers Count Signal",
         doc="Return the FPGA1 PLL lock loss counter for C2C, JESD and DSP. "
@@ -2583,7 +2589,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Clock Managers Status",
         doc="Return the FPGA0 PLL lock status C2C, JESD and DSP. "
@@ -2618,7 +2624,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Clock Managers Status",
         doc="Return the FPGA1 PLL lock status C2C, JESD and DSP. "
@@ -2653,7 +2659,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 Clocks",
         doc="Return the status of clocks for the interfaces of FPGA0. "
@@ -2688,7 +2694,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 Clocks",
         doc="Return the status of clocks for the interfaces of FPGA1. "
@@ -2724,7 +2730,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
         min_alarm=0,  # SYSREF not present
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="ADC SysRef Counter",
         doc="Return the sysref_counter of all ADCs. "
@@ -2759,7 +2765,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
         min_alarm=0,  # requirements not met
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="ADC SysRef Timing Requirements",
         doc="Return the sysref_timing_requirements of all ADCs. "
@@ -2793,7 +2799,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_qpll_status_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 QPLL Status",
         doc="Return the QPLL lock status for FPGA0. Expected: `1` if QPLL locked.",
@@ -2825,7 +2831,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_qpll_status_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 QPLL Status",
         doc="Return the QPLL lock status for FPGA1. Expected: `1` if QPLL locked.",
@@ -2857,7 +2863,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga0_qpll_counter_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 QPLL Counter",
         doc="Return the QPLL lock loss counter for FPGA0. "
@@ -2891,7 +2897,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpga1_qpll_counter_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 QPLL Counter",
         doc="Return the QPLL lock loss counter for FPGA1. "
@@ -2925,7 +2931,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         io_f2f_interface_pll_status_fpga0_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
@@ -2960,7 +2966,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         io_f2f_interface_pll_status_fpga1_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
@@ -2995,7 +3001,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         io_f2f_interface_pll_status_fpga0_counter_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA0 IO F2F Interface PLL Status Counter",
         doc="Return the FPGA0 F2F PLL lock loss counter. "
@@ -3029,7 +3035,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         io_f2f_interface_pll_status_fpga1_counter_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="FPGA1 IO F2F Interface PLL Status Counter",
         doc="Return the FPGA1 F2F PLL lock loss counter. "
@@ -3065,7 +3071,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         max_value=2,
         min_value=-1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Timing PLL Lock Status",
         doc="Return the PLL lock status and lock loss counter. "
@@ -3096,7 +3102,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         timing_pll_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Timing PLL Count",
         doc="Return the PLL lock loss counter. "
@@ -3129,7 +3135,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         timing_pll_40g_lock_status_signal,
         dtype="DevShort",
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
@@ -3163,7 +3169,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         timing_pll_40g_count_signal,
         dtype="DevShort",
         max_alarm=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Timing PLL 40G Count",
         doc="Return the PLL 40G lock loss counter. "
@@ -3195,7 +3201,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         timing_sync_time_signal,
         min_alarm=0,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Timing Sync Time",
         doc="Return the sync time status. "
@@ -3309,7 +3315,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc0_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3321,7 +3327,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc1_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3333,7 +3339,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc2_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3345,7 +3351,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc3_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3357,7 +3363,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc4_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3369,7 +3375,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc5_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3381,7 +3387,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc6_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3393,7 +3399,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc7_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3405,7 +3411,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc8_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3417,7 +3423,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc9_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3429,7 +3435,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc10_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3441,7 +3447,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc11_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3453,7 +3459,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc12_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3465,7 +3471,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc13_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3477,7 +3483,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc14_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3489,7 +3495,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         temperature_adc15_signal,
         dtype="DevFloat",
         unit="Celsius",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=90.0,
         min_alarm=10.0,
@@ -3599,7 +3605,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="I2C Access Alarm",
         doc="Return the I2C alarm reading.",
@@ -3611,7 +3617,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Temperature Alarm",
         doc="Return the Temperature alarm reading. "
@@ -3626,7 +3632,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Voltage Alarm",
         doc="Return the Voltage alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
@@ -3638,7 +3644,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="SEMwd Alarm",
         doc="Return the SEMwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
@@ -3650,7 +3656,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="MCUwd Alarm",
         doc="Return the MCUwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
@@ -3676,7 +3682,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         cspDestinationPort_signal,
         dtype="DevLong",
         write_to_signal=True,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="CSP Destination Port",
         doc="The port of the CSP destination",
@@ -3708,7 +3714,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         memorized=True,
         hw_memorized=True,
         write_to_signal=True,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Simulation Mode",
         doc="Report the simulation mode of the device.",
@@ -3737,7 +3743,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         memorized=True,
         hw_memorized=True,
         write_to_signal=True,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Test Mode",
         doc="The test mode.",
@@ -3763,7 +3769,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     logicalTileId = attribute_from_signal(
         logicalTileId_signal,
         dtype="DevShort",
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         min_value=0,
         max_value=15,
@@ -3794,7 +3800,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         stationId_signal,
         dtype="DevShort",
         write_to_signal=True,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Station ID",
         doc="The ID of the station to which this tile is assigned",
@@ -4125,7 +4131,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="Firmware Name",
-        description="The name of the firmware bitfile in use.",
+        description="The name of the firmware bitfile in use."
+        "This is deprecated in favour or tile_info attribute."
+        "If this reports an empty string use tile_info.",
     )
     def firmwareName(self: MccsTile) -> str:
         """
@@ -4133,7 +4141,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: firmware name
         """
-        return self.component_manager.firmware_name
+        return (
+            self.component_manager.firmware_name
+            or "Cache not available check tile_info"
+        )
 
     testGeneratorActive = attribute_from_signal(
         testGeneratorActive_signal,
@@ -4487,7 +4498,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     temperatures_fpga0 = attribute_from_signal(  # noqa: N815
         fpga0_temperature_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         min_alarm=10.0,
         max_alarm=95.0,
@@ -4499,7 +4510,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     temperatures_fpga1 = attribute_from_signal(
         fpga1_temperature_signal,
         dtype="DevFloat",
-        abs_change=0.2,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.2,
         min_alarm=10.0,
         max_alarm=95.0,
@@ -4512,7 +4523,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         fpgas_time_signal,
         dtype=("DevLong",),
         max_dim_x=2,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         fisallowed="_check_initialised_for_write",
         label="FPGAs UNIX Time",
@@ -4544,7 +4555,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         antennaIds_signal,
         dtype=("DevShort",),
         max_dim_x=16,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         write_to_signal=True,
         label="Antenna IDs",
@@ -4558,13 +4569,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param antenna_ids: the antenna IDs
         """
+        # This is a software cache and has no hardware
+        # readback. Therefore we can push signal directly.
         self.antennaIds_signal = list(antenna_ids)
         self._antenna_ids = list(antenna_ids)
 
     fortyGbDestinationIps = attribute_from_signal(
         forty_gb_destination_ips_signal,
         dtype=("DevString",),
-        max_dim_x=16,
+        max_dim_x=32,
         label="40Gb Destination IPs",
         doc="The destination IPs for all 40Gb ports on the tile",
     )
@@ -4572,8 +4585,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     fortyGbDestinationPorts = attribute_from_signal(
         forty_gb_destination_ports_signal,
         dtype=("DevLong",),
-        max_dim_x=16,
-        abs_change=1,
+        max_dim_x=32,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="40Gn Destination Ports",
         doc="The destination ports for all 40Gb ports on the tile",
@@ -4619,7 +4632,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         adc_power_signal,
         dtype=("DevDouble",),
         max_dim_x=32,
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         unit="Watt",
         label="ACD Power",
@@ -4629,7 +4642,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currentTileBeamformerFrame = attribute_from_signal(
         current_tile_beamformer_frame_signal,
         dtype="DevLong64",
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Current Tile Beamformer Frame",
         doc=(
@@ -4672,7 +4685,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currentFrame = attribute_from_signal(
         fpga_current_frame_signal,
         dtype="DevLong",
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Current Frame",
         doc=(
@@ -4698,7 +4711,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     phaseTerminalCount = attribute_from_signal(
         phaseTerminalCount_signal,
         dtype="DevLong",
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         fisallowed="_check_initialised_for_write",
         label="Phase Terminal Count",
@@ -4713,12 +4726,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param value: the phase terminal count
         """
         self.component_manager.set_phase_terminal_count(value)
-        self.phaseTerminalCount_signal = value
 
     ppsDelay = attribute_from_signal(
         pps_delay_signal,
         dtype="DevLong",
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="PPS Delay",
         doc="The delay between PPS and 10 MHz clock, in 1.25ns units.",
@@ -4728,7 +4740,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ppsDrift_signal,
         dtype="DevLong",
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         max_alarm=10,
         max_warning=4,
         label="PPS Drift",
@@ -4739,7 +4751,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ppsDelayCorrection_signal,
         dtype="DevLong",
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         label="PPS Delay Correction",
         doc="Return the correction made to the pps delay, in 1.25ns units.",
     )
@@ -4774,7 +4786,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevLong",),
         max_dim_x=512,
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         fisallowed="_check_initialised_for_write",
         label="Channeliser Rounding",
         doc="Channeliser rounding. "
@@ -4791,14 +4803,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             or a list of 512 values. Range 0 (no truncation) to 7
         """
         self.component_manager.set_channeliser_truncation(truncation)
-        self.channeliserRounding_signal = truncation
 
     staticTimeDelays = attribute_from_signal(
         staticTimeDelays_signal,
         dtype=("DevDouble",),
         max_dim_x=32,
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         fisallowed="_check_initialised_for_write",
         label="Static Time Delays",
         doc="Get static time delay correction. "
@@ -4816,14 +4827,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
              to correct for static delay mismatches, e.g. cable length.
         """
         self.component_manager.set_static_delays(delays)
-        self.staticTimeDelays_signal = delays
 
     cspRounding = attribute_from_signal(
         cspRounding_signal,
         dtype=("DevLong",),
         max_dim_x=384,
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         fisallowed="_check_initialised_for_write",
         label="CSP Rounding",
         doc="CSP formatter rounding. "
@@ -4841,14 +4851,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param rounding: list of up to 384 values in the range 0-7.
             Current hardware supports only a single value, thus oly 1st value is used
         """
-        if self.component_manager.set_csp_rounding(rounding):
-            self.cspRounding_signal = rounding
+        self.component_manager.set_csp_rounding(rounding)
 
     preaduLevels = attribute_from_signal(
         preaduLevels_signal,
         dtype=(float,),
         max_dim_x=32,
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         fisallowed="_check_initialised_for_write",
         label="Pre-ADU Levels",
@@ -4864,14 +4873,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param levels: attenuator level of preADU channels, one per input channel, in dB
         """
         self.component_manager.set_preadu_levels(np.array(levels))
-        self.preaduLevels_signal = levels
 
     @attribute_from_signal(
         beamformerTable_signal,
         dtype=("DevLong",),
         max_dim_x=336,
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         label="Beamformer Table",
         doc="Get beamformer region table."
         "Bidimensional array of one row for each 8 channels, with elements:\n"
@@ -4915,7 +4923,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevLong",),
         max_dim_x=384,
         archive_abs_change=1,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         label="Beamformer Regions",
         doc="Get beamformer region table. "
         "Bidimensional array of one row for each 8 channels, with elements:\n"
@@ -5269,6 +5277,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA1
         """
         self.component_manager.src_ip_40g_fpga1 = argin
+        # This is a software cache, use fortyGbCoreConfigurations
+        # for values drived from hardware.
         self.srcip40gfpga1_signal = argin
 
     @attribute_from_signal(
@@ -5302,6 +5312,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA2
         """
         self.component_manager.src_ip_40g_fpga2 = argin
+        # This is a software cache, use fortyGbCoreConfigurations
+        # for values drived from hardware.
         self.srcip40gfpga2_signal = argin
 
     rfiCount = attribute_from_signal(
@@ -5309,7 +5321,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevLong",),),
         max_dim_x=2,  # pol
         max_dim_y=16,  # antenna
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="RFI Count",
         doc="Return the RFI count per antenna/pol.",
@@ -5327,7 +5339,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currents_fe0_mva = attribute_from_signal(  #
         current_fe0_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
@@ -5339,7 +5351,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     currents_fe1_mva = attribute_from_signal(
         current_fe1_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.60,
@@ -5351,7 +5363,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_avdd3 = attribute_from_signal(
         voltage_avdd3_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=2.62,
         max_warning=2.57,
@@ -5365,7 +5377,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_ddr0_vref = attribute_from_signal(
         voltage_vref_ddr0_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
@@ -5377,7 +5389,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_ddr1_vref = attribute_from_signal(
         voltage_vref_ddr1_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
@@ -5389,7 +5401,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_man_1v2 = attribute_from_signal(
         voltage_man1v2_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.26,
         min_alarm=1.14,
@@ -5401,7 +5413,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_mgt_avcc = attribute_from_signal(
         voltage_mgt_avcc_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.97,
         min_alarm=0.83,
@@ -5413,7 +5425,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_mgt_avtt = attribute_from_signal(
         voltage_mgt_avtt_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.26,
         min_alarm=1.104,
@@ -5425,7 +5437,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_mon_5v0 = attribute_from_signal(
         voltage_mon5v0_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=5.19,
         min_alarm=4.69,
@@ -5437,7 +5449,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_mon_3v3 = attribute_from_signal(
         voltage_mon3v3_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.88,
         min_alarm=3.51,
@@ -5449,7 +5461,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_mon_1v8 = attribute_from_signal(
         voltage_mon1v8_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=2.10,
         min_alarm=1.90,
@@ -5461,7 +5473,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_sw_avdd1 = attribute_from_signal(
         voltage_sw_avdd1_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.16,
         min_alarm=1.04,
@@ -5473,7 +5485,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_sw_avdd2 = attribute_from_signal(
         voltage_sw_avdd2_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=2.42,
         min_alarm=2.18,
@@ -5485,7 +5497,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vin = attribute_from_signal(
         voltage_vin_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=12.6,
         min_alarm=11.4,
@@ -5497,7 +5509,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp0 = attribute_from_signal(
         voltage_vm_agp0_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5509,7 +5521,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp1 = attribute_from_signal(
         voltage_vm_agp1_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5521,7 +5533,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp2 = attribute_from_signal(
         voltage_vm_agp2_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5533,7 +5545,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp3 = attribute_from_signal(
         voltage_vm_agp3_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5545,7 +5557,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp4 = attribute_from_signal(
         voltage_vm_agp4_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5557,7 +5569,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp5 = attribute_from_signal(
         voltage_vm_agp5_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5569,7 +5581,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp6 = attribute_from_signal(
         voltage_vm_agp6_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5581,7 +5593,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_agp7 = attribute_from_signal(
         voltage_vm_agp7_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.99,
         min_alarm=0.84,
@@ -5593,7 +5605,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_clk0b = attribute_from_signal(
         voltage_vm_clk0b_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
@@ -5605,7 +5617,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_clk1b = attribute_from_signal(
         voltage_vm_clk1b_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
@@ -5617,7 +5629,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_ddr0_vtt = attribute_from_signal(
         voltage_vm_ddr0_vtt_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.65,
         min_alarm=0.55,
@@ -5629,7 +5641,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_ddr1_vdd = attribute_from_signal(
         voltage_vm_ddr1_vdd_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.30,
         min_alarm=1.10,
@@ -5641,7 +5653,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_ddr1_vtt = attribute_from_signal(
         voltage_vm_ddr1_vtt_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=0.65,
         min_alarm=0.55,
@@ -5653,7 +5665,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_drvdd = attribute_from_signal(
         voltage_vm_drvdd_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.89,
         min_alarm=1.71,
@@ -5665,7 +5677,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_dvdd = attribute_from_signal(
         voltage_vm_dvdd_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.19,
         min_alarm=1.01,
@@ -5677,7 +5689,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_fe0 = attribute_from_signal(
         voltage_vm_fe0_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
@@ -5689,7 +5701,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_fe1 = attribute_from_signal(
         voltage_vm_fe1_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
@@ -5701,7 +5713,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_mgt0_aux = attribute_from_signal(
         voltage_vm_mgt0_aux_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.94,
         min_alarm=1.66,
@@ -5713,7 +5725,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_mgt1_aux = attribute_from_signal(
         voltage_vm_mgt1_aux_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=1.94,
         min_alarm=1.66,
@@ -5725,7 +5737,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_pll = attribute_from_signal(
         voltage_vm_pll_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
@@ -5737,7 +5749,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     voltages_vm_sw_amp = attribute_from_signal(
         voltage_vm_sw_amp_signal,
         dtype="DevFloat",
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
         max_alarm=3.78,
         min_alarm=3.22,
@@ -5757,7 +5769,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         rfiBlankingEnabledAntennas_signal,
         dtype=("DevLong",),
         max_dim_x=16,
-        abs_change=1,
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="RFI Blanking-enabled Antennas",
         doc="Get the list of antennas for broadband RFI blanking is currently enabled.",
@@ -5766,7 +5778,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     broadbandRfiFactor = attribute_from_signal(
         broadbandRfiFactor_signal,
         dtype="DevFloat",
-        abs_change=0.00000001,  # Below resolution of DevFloat
+        abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.00000001,  # Below resolution of DevFloat
         label="Broadband RFI Factor",
         doc="Get the RFI factor for broadband RFI detection."
@@ -5841,7 +5853,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         currentDraw_signal,
         dtype="DevFloat",
         max_alarm=10.53,
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         unit="Ampere",
         label="Subrack Current",
         doc="Get the Tile current as measured by the subrack.",
@@ -5851,7 +5863,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         powerDraw_signal,
         dtype="DevFloat",
         max_alarm=120.0,
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         unit="Watt",
         label="Subrack Power",
         doc="Get the Tile power as measured by the subrack.",
@@ -5862,7 +5874,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevFloat",
         min_alarm=11.4,
         max_alarm=12.6,
-        abs_change=0.1,
+        abs_change=MIN_ABS_CHANGE,
         write_to_signal=True,
         unit="Volt",
         label="Subrack Voltage",
@@ -6271,7 +6283,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "gateway_ip": item.get("gateway_ip", None),
         }
 
-    @command(dtype_in="DevString", dtype_out="DevString")
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevString",
+        fisallowed="_is_programmed",
+    )
     @stb.validators.validate_json_args(schema=Get40GCoreConfiguration_SCHEMA)
     def Get40GCoreConfiguration(
         self: MccsTile, core_id: int = -1, arp_table_entry: int = 0
@@ -6286,7 +6302,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param core_id: (int) core id
         :param arp_table_entry: (int) ARP table entry ID to use
 
-        :return: the configuration is a json string describilg a list (possibly empty)
+        :return: the configuration is a json string describing a list (possibly empty)
                  Each list entry comprising:
                  core_id, arp_table_entry, source_mac, source_ip, source_port,
                  destination_ip, destination_port, netmask, gateway_ip
@@ -6321,6 +6337,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def SetLmcDownload(
         self: MccsTile,
         mode: str,
+        data_type: str | None = None,
         payload_length: int = 1024,
         destination_ip: str = "10.0.10.1",
         source_port: Optional[int] = 0xF0D0,
@@ -6334,6 +6351,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         A json dictionary with optional keywords:
 
         :param mode: (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
+        :param data_type: (string) Data type to configure. Omit for all.
         :param payload_length: (int) SPEAD payload length for channel data
         :param destination_ip: (string) Destination IP.
         :param source_port: (int) Source port for integrated data streams
@@ -6354,6 +6372,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         result_codes, messages = self.component_manager.set_lmc_download(
             mode=mode,
+            data_type=data_type,
             payload_length=payload_length,
             dst_ip=destination_ip,
             src_port=source_port,
@@ -7470,6 +7489,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 inputs = inputs | (1 << channel)
         self.component_manager.test_generator_input_select(inputs)
         self.component_manager.test_generator_active = active
+        # This is a software cache, there is no method on the tpm-api to
+        # read back.
         self.testGeneratorActive_signal = active
         return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 

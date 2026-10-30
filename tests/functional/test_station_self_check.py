@@ -8,11 +8,12 @@
 """
 This file contains a test for the SpsStation.SelfCheck() method.
 
-Depending on your exact deployment the individual tests may or may not be run.
-This test just checks that anything which can run passes.
+Every self-check test must pass. The only exceptions are the tests in
+EXPECTED_NOT_RUN_TESTS, which always report NOT_RUN.
 """
 from __future__ import annotations
 
+import enum
 import time
 from typing import Any, Generator
 
@@ -28,6 +29,24 @@ from tests.test_tools import (
     execute_lrc_to_completion,
     wait_for_lrc_result,
 )
+
+
+class SelfCheckResult(enum.IntEnum):
+    """
+    Values of the SpsStation testResults attribute.
+
+    This copies ska_low_mccs_spshw.station.tests.TestResult, because the
+    functional test runner does not install ska_low_mccs_spshw.
+    """
+
+    PASSED = 0
+    FAILED = 1
+    ERROR = 2
+    NOT_RUN = 3
+
+
+# Self-check tests that always report NOT_RUN, so a NOT_RUN from them is expected.
+EXPECTED_NOT_RUN_TESTS = {"TestIntegratedBeam"}  # MCCS-2311
 
 
 @pytest.fixture(name="command_info")
@@ -180,3 +199,21 @@ def check_self_check_result(station: tango.DeviceProxy, command_info: dict) -> N
         print(station.testlogs)
         print(station.testreport)
         pytest.fail("Self Check did not succeed.")
+
+    # SelfCheck reports OK when tests do not run, so check each test result.
+    print(station.testreport)
+    test_results = {
+        test_name: SelfCheckResult(result)
+        for test_name, result in zip(station.testList, station.testResults)
+    }
+    unexpected_results = {
+        test_name: result.name
+        for test_name, result in test_results.items()
+        if result != SelfCheckResult.PASSED
+        and not (
+            result == SelfCheckResult.NOT_RUN and test_name in EXPECTED_NOT_RUN_TESTS
+        )
+    }
+    if unexpected_results:
+        print(station.testlogs)
+        pytest.fail(f"Self Check tests did not pass: {unexpected_results}")

@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import json
+import time
 from copy import copy
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
@@ -99,7 +100,7 @@ class TestAntennaBuffer(BaseDaqTest):
         for tile_id in tile_ids:
             tiles.append(self.tile_proxies[tile_id])
 
-        daq_config = {
+        daq_config: dict[str, Any] = {
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "nof_tiles": len(tiles),
@@ -143,7 +144,11 @@ class TestAntennaBuffer(BaseDaqTest):
             self._read_antenna_buffer(
                 tiles=tiles,
             )
-            assert self._data_created_event.wait(20)
+            _received = self._data_created_event.wait(60)
+            assert _received, (
+                "Timed out waiting for antenna buffer data at "
+                f"{time.strftime('%H:%M:%S')}"
+            )
             self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
@@ -178,8 +183,8 @@ class TestAntennaBuffer(BaseDaqTest):
                 json.dumps(
                     {
                         "mode": mode,
-                        "DDR_start_address": ddr_start_byte_address,
-                        "max_DDR_byte_size": max_ddr_byte_size,
+                        "ddr_start_byte_address": ddr_start_byte_address,
+                        "max_ddr_byte_size": max_ddr_byte_size,
                     }
                 )
             )
@@ -268,15 +273,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
         self.test_logger.info("Sending raw data samples (testing)")
-        self.component_manager.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": "raw",
-                    "seconds": 1,
-                    "sync": sync,
-                }
-            )
-        )
+        self._send_data_samples(data_type="raw", seconds=1, sync=sync)
 
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
         """Check that DAQ data is as expected.

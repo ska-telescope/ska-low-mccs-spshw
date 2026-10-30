@@ -542,11 +542,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "forty_gb_core_configurations": "forty_gb_core_configurations_signal",
         "adc_rms": "adc_power_signal",
         "ddr_write_size": "ddr_write_size_signal",
-        "alarms_i2c_access_alm": "I2C_access_alm_signal",
-        "alarms_temperature_alm": "temperature_alm_signal",
-        "alarms_voltage_alm": "voltage_alm_signal",
-        "alarms_sem_wd": "SEM_wd_signal",
-        "alarms_mcu_wd": "MCU_wd_signal",
+        "I2C_access_alm": "I2C_access_alm_signal",
+        "temperature_alm": "temperature_alm_signal",
+        "voltage_alm": "voltage_alm_signal",
+        "SEM_wd": "SEM_wd_signal",
+        "MCU_wd": "MCU_wd_signal",
         "dst_ip_40g_fpga1": "dstip40gfpga1_signal",
         "dst_ip_40g_fpga2": "dstip40gfpga2_signal",
         "tile_id": "logicalTileId_signal",
@@ -881,11 +881,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
         # Mapping of TPM API alarm name to alarm_signal
         self.__alarm_attribute_map: dict[str, str] = {
-            "alarms_i2c_access_alm": "I2C_access_alm_signal",
-            "alarms_temperature_alm": "temperature_alm_signal",
-            "alarms_voltage_alm": "voltage_alm_signal",
-            "alarms_sem_wd": "SEM_wd_signal",
-            "alarms_mcu_wd": "MCU_wd_signal",
+            "I2C_access_alm": "I2C_access_alm_signal",
+            "temperature_alm": "temperature_alm_signal",
+            "voltage_alm": "voltage_alm_signal",
+            "SEM_wd": "SEM_wd_signal",
+            "MCU_wd": "MCU_wd_signal",
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {

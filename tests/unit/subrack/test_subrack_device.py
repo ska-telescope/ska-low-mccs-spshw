@@ -156,7 +156,7 @@ def subrack_simulator_fixture(
     :return: a subrack simulator.
     """
     return SubrackSimulator(
-        api_version="1.8.0",
+        bios_version="1.8.0",
         **subrack_simulator_config_for(subrack_simulator_config, "1.8.0"),
     )
 

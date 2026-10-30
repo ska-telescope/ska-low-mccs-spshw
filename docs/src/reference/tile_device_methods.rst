@@ -625,7 +625,7 @@ Health monitoring
 
 The following attributes are used to monitor board health status. 
 
-  * *boardTemperature*: Temperature measured at mid-board, in degrees Celsius.
+  * *temperatures_board*: Temperature measured at mid-board, in degrees Celsius.
 
   * *temperatures_fpga0*: Temperature of the FPGA1 die, in degrees Celsius.
 
@@ -635,7 +635,7 @@ The following attributes are used to monitor board health status.
 
   * *pllLocked*: Report if ADC clock PLL is in locked state.
 
-  * *ppsPresent*: Report if PPS signal is present at the TPM input.
+  * *timing_pps_present*: Report if PPS signal is present at the TPM input.
 
   * *sysrefPresent*: Report if SYSREF signal is present at the FPGA.
 

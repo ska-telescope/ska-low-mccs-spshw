@@ -90,7 +90,7 @@ class MccsTile {
   +adcPower()
   +always_executed_hook()
   +antennaIds()
-  +boardTemperature()
+  +temperatures_board()
   +checkPendingDataRequests()
   +cspDestinationIp()
   +cspDestinationMac()

@@ -86,8 +86,8 @@ _FINAL_TILE_ATTRIBUTES = frozenset(
         "beamformertable",
         "beamformerregions",
         "csprounding",
-        "fpga0_station_beamformer_flagged_count",
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
     }
 )
 
@@ -103,19 +103,19 @@ _CACHED_TILE_ATTRIBUTES = (
     "tileProgrammingState",
     "dstip40gfpga1",
     "dstip40gfpga2",
-    "boardTemperature",
-    "fpga1Temperature",
-    "fpga2Temperature",
+    "temperatures_board",
+    "temperatures_fpga0",
+    "temperatures_fpga1",
     "pllLocked",
-    "ppsPresent",
+    "timing_pps_present",
     "testGeneratorActive",
     "isBeamformerRunning",
     "channeliserRounding",
     "beamformerTable",
     "beamformerRegions",
     "cspRounding",
-    "fpga0_station_beamformer_flagged_count",
-    "fpga1_station_beamformer_flagged_count",
+    "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+    "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
 )
 
 
@@ -182,9 +182,13 @@ class _TileProxy(DeviceComponentManager):
             "pointingDelays": self._on_attribute_change,
             "dstip40gfpga1": self._on_attribute_change,
             "dstip40gfpga2": self._on_attribute_change,
-            "fpga0_station_beamformer_flagged_count": self._on_attribute_change,
-            "fpga1_station_beamformer_flagged_count": self._on_attribute_change,
-            "boardTemperature": self._on_attribute_change,
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0": (
+                self._on_attribute_change
+            ),
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1": (
+                self._on_attribute_change
+            ),
+            "temperatures_board": self._on_attribute_change,
             "temperatures_fpga0": self._on_attribute_change,
             "temperatures_fpga1": self._on_attribute_change,
             # ================================================================
@@ -195,7 +199,7 @@ class _TileProxy(DeviceComponentManager):
             # "sysrefPresent": self._on_attribute_change,
             # ================================================================
             "pllLocked": self._on_attribute_change,
-            "ppsPresent": self._on_attribute_change,
+            "timing_pps_present": self._on_attribute_change,
             "testGeneratorActive": self._on_attribute_change,
             "isBeamformerRunning": self._on_attribute_change,
             "channeliserRounding": self._on_attribute_change,
@@ -1517,15 +1521,15 @@ class SpsStationComponentManager(
             case "dstip40gfpga2":
                 ip1, _ = self._tile_dst_ips.get(logical_tile_id, ("", ""))
                 self._tile_dst_ips[logical_tile_id] = (ip1, "")
-            case "boardtemperature":
+            case "temperatures_board":
                 self._board_temperatures[logical_tile_id] = np.nan
-            case "fpga1temperature":
+            case "temperatures_fpga0":
                 self._fpga1_temperatures[logical_tile_id] = np.nan
-            case "fpga2temperature":
+            case "temperatures_fpga1":
                 self._fpga2_temperatures[logical_tile_id] = np.nan
             case "plllocked":
                 self._pll_locked[logical_tile_id] = None
-            case "ppspresent":
+            case "timing_pps_present":
                 self._pps_present[logical_tile_id] = None
             case "testgeneratoractive":
                 self._test_generator_active[logical_tile_id] = None
@@ -1547,9 +1551,9 @@ class SpsStationComponentManager(
                 # Only the reported value: the configured value written back
                 # to the tiles is kept in self._desired_csp_rounding.
                 self._csp_rounding = [INVALID_FINAL_TILE_VALUE] * 384
-            case "fpga0_station_beamformer_flagged_count":
+            case "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0":
                 self._final_tile_fpga0_flagged_count = None
-            case "fpga1_station_beamformer_flagged_count":
+            case "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1":
                 self._final_tile_fpga1_flagged_count = None
             case _:
                 return False
@@ -1579,7 +1583,9 @@ class SpsStationComponentManager(
                     "tileProgrammingState": self._tile_programming_state
                 },
                 "plllocked": lambda: {"pllLockedSummary": self.pll_locked_summary()},
-                "ppspresent": lambda: {"ppsPresentSummary": self.pps_present_summary()},
+                "timing_pps_present": lambda: {
+                    "ppsPresentSummary": self.pps_present_summary()
+                },
                 "isbeamformerrunning": lambda: {
                     "isBeamformerRunning": self.is_beamformer_running
                 },
@@ -1601,8 +1607,8 @@ class SpsStationComponentManager(
         if names & {"dstip40gfpga1", "dstip40gfpga2"}:
             self._validate_beamformer_daisy_chain()
         if names & {
-            "fpga0_station_beamformer_flagged_count",
-            "fpga1_station_beamformer_flagged_count",
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         }:
             self._update_beamformer_flagged_count_health()
 
@@ -1733,22 +1739,22 @@ class SpsStationComponentManager(
                     f"{attribute_value}"
                 )
                 self._validate_beamformer_daisy_chain()
-            case "fpga0_station_beamformer_flagged_count":
+            case "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0":
                 if logical_tile_id == self._number_of_tiles - 1:
                     self._final_tile_fpga0_flagged_count = int(attribute_value)
                     self._update_beamformer_flagged_count_health()
-            case "fpga1_station_beamformer_flagged_count":
+            case "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1":
                 if logical_tile_id == self._number_of_tiles - 1:
                     self._final_tile_fpga1_flagged_count = int(attribute_value)
                     self._update_beamformer_flagged_count_health()
             case "ppsdelaycorrection":
                 self._pps_delay_corrections[logical_tile_id] = attribute_value
                 self._pps_delay_corrections_reported.add(logical_tile_id)
-            case "boardtemperature":
+            case "temperatures_board":
                 self._board_temperatures[logical_tile_id] = attribute_value
-            case "fpga1temperature":
+            case "temperatures_fpga0":
                 self._fpga1_temperatures[logical_tile_id] = attribute_value
-            case "fpga2temperature":
+            case "temperatures_fpga1":
                 self._fpga2_temperatures[logical_tile_id] = attribute_value
             case "plllocked":
                 self._pll_locked[logical_tile_id] = bool(attribute_value)
@@ -1756,7 +1762,7 @@ class SpsStationComponentManager(
                     self._component_state_callback(
                         pllLockedSummary=self.pll_locked_summary()
                     )
-            case "ppspresent":
+            case "timing_pps_present":
                 self._pps_present[logical_tile_id] = bool(attribute_value)
                 if self._component_state_callback:
                     self._component_state_callback(
@@ -3956,7 +3962,7 @@ class SpsStationComponentManager(
         :return: minimum, average and maximum of board temperatures
         """
         # self._board_temperatures is kept current by
-        # _on_tile_attribute_change's "boardtemperature" case, so no live
+        # _on_tile_attribute_change's "temperatures_board" case, so no live
         # per-tile read is needed here.
         board_temperatures = self._board_temperatures[
             ~np.isnan(self._board_temperatures)
@@ -3979,7 +3985,7 @@ class SpsStationComponentManager(
         :return: minimum, average and maximum of FPGAs temperatures
         """
         # self._fpga1_temperatures/_fpga2_temperatures are kept current by
-        # _on_tile_attribute_change's "fpga1temperature"/"fpga2temperature"
+        # _on_tile_attribute_change's "temperatures_fpga0"/"temperatures_fpga1"
         # cases, so no live per-tile read is needed here.
         fpga_1_temperatures = self._fpga1_temperatures[
             ~np.isnan(self._fpga1_temperatures)
@@ -4040,7 +4046,7 @@ class SpsStationComponentManager(
         :return: TRUE if PPS is present in all tiles
         """
         # self._pps_present is kept current by _on_tile_attribute_change's
-        # "ppspresent" case, so no live per-tile read is needed here.
+        # "timing_pps_present" case, so no live per-tile read is needed here.
         return all(self._pps_present)
 
     def clock_present_summary(self: SpsStationComponentManager) -> bool:

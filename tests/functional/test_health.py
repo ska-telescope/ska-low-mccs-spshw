@@ -190,7 +190,7 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "timing_pll_40g_count",  # This is only available in specific bios versions
         # (the simulator is configured to be on a version > 0.6.0 hence
         # this attibute has value None and is never updated)
-    ] + [f"temperatureADC{i}" for i in range(16)]
+    ] + [f"temperatures_adc{i}" for i in range(16)]
 
 
 @pytest.fixture(name="station_name")
@@ -565,7 +565,7 @@ def tile_health_params_adjusted_fixture(
             tile_device.healthModelParams = json.dumps(new_board_params)
         else:
             change_alarms(
-                tile_device, "boardTemperature", min_alarm="100", max_alarm="170"
+                tile_device, "temperatures_board", min_alarm="100", max_alarm="170"
             )
 
     yield
@@ -678,7 +678,7 @@ def set_subrack_health_params(
     for subrack in station_devices["Subracks"]:
         change_alarms(
             subrack,
-            "boardTemperatures",
+            "temperatures_board",
             min_alarm="110",
             min_warning="120",
             max_warning="160",
@@ -751,8 +751,8 @@ def read_all_tile_attributes(
             # These are documented by the API as do not use unless final tile.
             # They are therefore INVALID for all tiles except final tile.
             tile_excluded_attributes = excluded_tile_attributes + [
-                "fpga0_station_beamformer_flagged_count",
-                "fpga1_station_beamformer_flagged_count",
+                "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+                "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
             ]
         if tile.useAttributesForHealth:
             all_excluded_tile_attributes = tile_excluded_attributes + [

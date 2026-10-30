@@ -801,7 +801,7 @@ class TestMccsTileTpmDriver:
         )
         tile_subs.append(
             tile_device.subscribe_event(
-                "ppsPresent",
+                "timing_pps_present",
                 tango.EventType.CHANGE_EVENT,
                 change_event_callbacks["pps_present"],
             )
@@ -811,14 +811,14 @@ class TestMccsTileTpmDriver:
             True, lookahead=2, consume_nonmatches=True
         )
         assert (
-            tile_device.read_attribute("ppspresent").quality
+            tile_device.read_attribute("timing_pps_present").quality
             == tango.AttrQuality.ATTR_VALID
         )
         tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
 
         change_event_callbacks["pps_present"].assert_change_event(False)
         assert (
-            tile_device.read_attribute("ppspresent").quality
+            tile_device.read_attribute("timing_pps_present").quality
             == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM
@@ -907,7 +907,7 @@ class TestMccsTileTpmDriver:
                 96.0,
             ),
             (
-                "ppsPresent",
+                "timing_pps_present",
                 TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
                 False,
             ),

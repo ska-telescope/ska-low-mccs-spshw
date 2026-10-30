@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+* [THORN-757] Rename `MccsTile` Tango attributes used for monitoring TPM health, using the convention of the full TPM API path with the leading category (`temperatures_`, `voltages_`, `currents_`, `alarms_`, `adcs_`, `timing_`, `io_`, `dsp_`). The mapping of attributes to monitoring points is in the MccsTile health page of the documentation.
+  * `src/ska_low_mccs_spshw/tile/tile_device.py`:
+    * Renamed the attributes, and updated the signal maps, `attribute_monitoring_point_map` and the attributes excluded from health to match.
+    * FPGA numbering now follows the TPM API: `fpga1Temperature` -> `temperatures_fpga0`, `fpga2Temperature` -> `temperatures_fpga1`.
+  * `src/ska_low_mccs_spshw/station/station_component_manager.py`: `_TileProxy` subscriptions and the `SpsStation` tile attribute caches now use the new temperature, PPS and beamformer flagged count names.
+  * `charts/ska-low-mccs-spshw/values.yaml`: renamed the `MccsTile` alarm and warning threshold properties. 
+  * `charts/ska-low-mccs-spshw/data/eda-config.yaml`:
+    * Renamed `MccsTile` attributes with updated names.
+    * Corrected entries left outdated by [THORN-656]: `fpga0_data_router_status` and `fpga1_data_router_status`, and `f2f_soft_errors`, `f2f_hard_errors`, `f2f_pll_lock_status` and `f2f_pll_counter`, which are now split per FPGA.
+    * Removed `lane_status`, which no longer exists.
+  * `tests/unit/charts/test_eda_config.py`: new unit test that every `MccsTile` attribute in the EDA config exists on the device.
+  * `tests/data/default_values.yaml`
+    * renamed the threshold properties to match `values.yaml`.
+    * deleted deprecated `voltageMon`
+  * `tests/test_tools.py`: updated `TileWrapper` read-only attributes to the new names, replaced entries that no longer existed with their per-FPGA attributes, and removed `lane_status`.
+  * `tests/unit`, `tests/integration` and `tests/functional`: updated to the new attribute names, including the attributes excluded from bulk attribute reads.
+  * `docs/src/reference/tile_health.rst`, `docs/src/reference/tile_device_methods.rst`, `docs/src/api/tile/tile_device_class_diagram.uml`: updated to the new attribute names.
 * [THORN-802] MccsPrototypeSubrack exposes every SMM monitoring point that the SPS thresholds give a limit or an expected value for.
   * 14 new attributes have limits in the chart and feed health.
     * SMM `boardPower`, `boardMaxPower` and `boardPllTemperature`.

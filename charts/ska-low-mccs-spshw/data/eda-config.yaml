@@ -124,7 +124,7 @@ configuration:
       pllLockedSummary:
         code_push_event: true
         archive_period: 0
-      timing_pps_statusSummary:
+      ppsPresentSummary:
         code_push_event: true
         archive_period: 0
       clockPresentSummary:
@@ -281,22 +281,22 @@ configuration:
       adcs_pll_status_adcs:
         code_push_event: true
         archive_period: 0
-      tile_beamformer_status:
+      dsp_tile_beamf:
         code_push_event: true
         archive_period: 0
-      station_beamformer_status:
+      dsp_station_beamf_status:
         code_push_event: true
         archive_period: 0
-      fpga0_station_beamformer_error_count:
+      dsp_station_beamf_ddr_parity_error_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_station_beamformer_error_count:
+      dsp_station_beamf_ddr_parity_error_count_fpga1:
         code_push_event: true
         archive_period: 0
-      fpga0_station_beamformer_flagged_count:
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_station_beamformer_flagged_count:
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga1:
         code_push_event: true
         archive_period: 0
       io_udp_interface_crc_error_count_fpga0:
@@ -317,10 +317,10 @@ configuration:
       io_udp_interface_decode_error_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga0_linkup_loss_count:
+      io_udp_interface_linkup_loss_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga1_linkup_loss_count:
+      io_udp_interface_linkup_loss_count_fpga1:
         code_push_event: true
         archive_period: 0
       io_data_router_status_fpga0:
@@ -329,7 +329,7 @@ configuration:
       io_data_router_status_fpga1:
         code_push_event: true
         archive_period: 0
-      io_data_router_discarded_packets:
+      io_data_router_discarded_packets_fpgas:
         code_push_event: true
         archive_period: 0
       io_udp_interface_arp:
@@ -374,16 +374,16 @@ configuration:
       io_jesd_interface_lane_error_count_fpga0:
         code_push_event: true
         archive_period: 0
-      fpga0_clock_managers_count:
+      timing_clock_managers_fpga0_count:
         code_push_event: true
         archive_period: 0
-      fpga0_clock_managers_status:
+      timing_clock_managers_fpga0_status:
         code_push_event: true
         archive_period: 0
-      fpga1_clock_managers_count:
+      timing_clock_managers_fpga1_count:
         code_push_event: true
         archive_period: 0
-      fpga1_clock_managers_status:
+      timing_clock_managers_fpga1_status:
         code_push_event: true
         archive_period: 0
       timing_clocks_fpga0:
@@ -576,7 +576,7 @@ configuration:
       ppsDelayCorrection:
         code_push_event: true
         archive_period: 0
-      timing_pps_status:
+      timing_pps_present:
         code_push_event: true
         archive_period: 0
       pllLocked:

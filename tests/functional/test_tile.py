@@ -331,13 +331,13 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
     :param first_tile: tile device under test.
     """
     try:
-        assert first_tile.data_router_discarded_packets == json.dumps(
+        assert first_tile.io_data_router_discarded_packets_fpgas == json.dumps(
             {"FPGA0": [0, 0], "FPGA1": [0, 0]}
         )
     except Exception:  # pylint: disable=broad-except
         # Allow time to in case of first read.
         time.sleep(10)
-        assert first_tile.data_router_discarded_packets == json.dumps(
+        assert first_tile.io_data_router_discarded_packets_fpgas == json.dumps(
             {"FPGA0": [0, 0], "FPGA1": [0, 0]}
         )
 
@@ -857,14 +857,15 @@ def tile_dropped_packets_stays_0(
     time.sleep(5)
     while timeout < 30:
         if (
-            first_tile.data_router_discarded_packets
+            first_tile.io_data_router_discarded_packets_fpgas
             == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
         ):
             break
         time.sleep(1)
         timeout = timeout + 1
     assert (
-        first_tile.data_router_discarded_packets == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+        first_tile.io_data_router_discarded_packets_fpgas
+        == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
     )
 
 
@@ -873,7 +874,9 @@ def tile_overheats(
     tile_device: tango.DeviceProxy, request: pytest.FixtureRequest
 ) -> queue.SimpleQueue:
     """
-    Simulate an overheat by subscribing to temperature_alm then driving to UNPROGRAMMED.
+    Simulate an overheat.
+
+    Achieved by subscribing to alarms_temperature_alm then driving to UNPROGRAMMED.
 
     TileWrapper.set_state(UNPROGRAMMED) handles switching to ENGINEERING mode, lowering
     the board alarm threshold to 30°C, restoring adminMode, and waiting for the
@@ -882,11 +885,11 @@ def tile_overheats(
     :param tile_device: tile device under test.
     :param request: pytest fixture request (used to register cleanup).
 
-    :return: a queue that will receive temperature_alm change events.
+    :return: a queue that will receive alarms_temperature_alm change events.
     """
     _queue: queue.SimpleQueue[tango.EventData] = queue.SimpleQueue()
     sub_id = tile_device.subscribe_event(
-        "temperature_alm",
+        "alarms_temperature_alm",
         tango.EventType.CHANGE_EVENT,
         _queue.put,
     )
@@ -913,7 +916,8 @@ def verify_overheat_condition(
     Verify overheat produces an ALARM quality event, NotProgrammed state, FAILED health.
 
     :param tile_device: tile device under test.
-    :param temperature_alm_event_queue: queue receiving temperature_alm change events.
+    :param temperature_alm_event_queue:
+        queue receiving alarms_temperature_alm change events.
     """
     deadline = time.time() + 60.0
     alarm_received = False
@@ -925,7 +929,9 @@ def verify_overheat_condition(
                 break
         except queue.Empty:
             break
-    assert alarm_received, "temperature_alm never received an ATTR_ALARM quality event"
+    assert (
+        alarm_received
+    ), "alarms_temperature_alm never received an ATTR_ALARM quality event"
 
     AttributeWaiter(timeout=60).wait_for_value(
         tile_device, "tileProgrammingState", "NotProgrammed", lookahead=5
@@ -935,9 +941,9 @@ def verify_overheat_condition(
     )
     deadline = time.time() + 10
     while time.time() < deadline:
-        if "temperature_alm" in tile_device.healthReport:
+        if "alarms_temperature_alm" in tile_device.healthReport:
             break
-    assert "temperature_alm" in tile_device.healthReport
+    assert "alarms_temperature_alm" in tile_device.healthReport
 
 
 @then("the expected CPLD attributes are VALID")
@@ -964,7 +970,7 @@ def verify_cpld_attribute_qualities(tile_device: tango.DeviceProxy) -> None:
     ]
     invalid_attrs = [
         "temperatures_fpga0",
-        "timing_pps_status",
+        "timing_pps_present",
         "io_jesd_interface_qpll_status_fpga0_status",
     ]
     acceptable_valid_qualities = (

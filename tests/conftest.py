@@ -62,7 +62,7 @@ def change_alarms_fixture() -> Iterator[Callable[..., None]]:
     its deployment gave it.
 
     Example usage:
-        change_alarms(tile_device, "boardTemperature", min_alarm="100")
+        change_alarms(tile_device, "temperatures_board", min_alarm="100")
 
     :yields: a function that takes a device, an attribute name and the alarm
         properties to set, such as ``max_alarm="170"``.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-772] Updated chart default thresholds for Subrack.MaxFanSpeed, added a docs page for users.
 * [THORN-755] Modified subrack simulator to support different api versions. Added a manual parity test that makes sure the simulator has the same attributes and commands as the actual api. Added some docs for the simulator.
   * New in `1.8.0`:
     * Commands: `get_pll_phase_offset`, `set_pll_phase_offset`, `get_pps_phase_window`, `set_pps_phase_window`.

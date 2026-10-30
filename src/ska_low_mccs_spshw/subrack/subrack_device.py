@@ -22,6 +22,7 @@ from numpy.typing import NDArray
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_control_model.faults import StateModelError
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
+from ska_tango_base.long_running_commands import LRCReqType
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 from tango import AttrQuality, DevFailed, Except
 from tango.server import attribute, device_property
@@ -586,7 +587,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def is_SetPowerSupplyFanSpeed_allowed(  # pylint: disable=invalid-name
         self: MccsSubrack,
-        request_type: Optional[stb.long_running_commands.LRCReqType] = None,
+        request_type: Optional[LRCReqType] = None,
     ) -> bool:
         """
         Return whether the subrack can set the power supply fan speed.

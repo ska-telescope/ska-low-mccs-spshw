@@ -87,7 +87,8 @@ The full map, as of this writing, is:
    :header: "Tango attribute", "TPM monitoring point path"
    :widths: 30, 40
 
-   "``timing_pps_present``", "``timing -> pps -> status``"
+   "``timing_pps_present``", "``timing -> pps -> present``"
+   "``timing_pps_period``", "``timing -> pps -> period``"
    "``temperatures_fpga0``", "``temperatures -> FPGA0``"
    "``temperatures_fpga1``", "``temperatures -> FPGA1``"
    "``temperatures_board``", "``temperatures -> board``"

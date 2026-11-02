@@ -690,6 +690,9 @@ class SubrackDriver(
 
         if self._tick > self._max_tick:
             poll_request.add_getattributes(
+                # Read board_info first, so that poll() can skip
+                # tpm_currents when the BIOS no longer supports it.
+                "board_info",
                 "tpm_present",
                 "tpm_on_off",
                 "backplane_temperatures",
@@ -708,7 +711,6 @@ class SubrackDriver(
                 "tpm_powers",
                 # "tpm_temperatures",
                 "tpm_voltages",
-                "board_info",
             )
             if not self._derive_tpm_currents:
                 poll_request.add_getattributes("tpm_currents")
@@ -873,6 +875,12 @@ class SubrackDriver(
                             "returned from set_attribute (check client)."
                         )
         for attribute in poll_request.getattributes:
+            # From API 1.8.0 reading tpm_currents fails, so skip it if the
+            # board_info read earlier in this poll shows it is unsupported.
+            if attribute == "tpm_currents" and not SubrackData.supports_tpm_currents(
+                poll_response.query_responses.get("board_info")
+            ):
+                continue
             attribute_response = self._client.get_attribute(attribute)
             match attribute_response["status"]:
                 case HardwareClientResponseStatusCodes.OK.name:

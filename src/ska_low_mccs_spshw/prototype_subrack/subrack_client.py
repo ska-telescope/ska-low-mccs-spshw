@@ -35,6 +35,7 @@ from ska_low_mccs_common.component import (
 )
 from ska_tango_base.poller import Poller, PollModel
 
+from ..subrack.subrack_data import SubrackData
 from .constants import (
     BATCH_ATTRIBUTES,
     COMMAND_POLL_INTERVAL,
@@ -42,6 +43,7 @@ from .constants import (
     HEALTH_STATUS_KEY,
     ClientCommand,
     HttpError,
+    ReadKey,
     RequestError,
 )
 from .derived_values import DerivedValues
@@ -140,6 +142,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
     stands.
 
     :py:class:`~.derived_values.DerivedValues` supplies the computed values.
+    The client keeps the last board info it read, because the BIOS version in
+    it decides what the client asks the board for. From API 1.8.0 the board
+    does not report ``tpm_currents``, so they are derived instead.
 
     Every callback runs on the one polling thread, so they never overlap.
     Stopping the poller does not block, so a poll already in flight still
@@ -177,8 +182,22 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         self._stopped_callback = stopped_callback
 
         # The values that are computed rather than read. It owns all state
-        # that spans polls.
+        # that spans polls, apart from the board info.
         self._derived = derived
+
+        # The last board info read, or None until a poll reads it. It is set
+        # on the polling thread and read from Tango threads, which is safe
+        # because it is only ever replaced, never changed in place.
+        self._board_info: Optional[dict] = None
+
+    @property
+    def board_info(self: Subrack) -> Optional[dict]:
+        """
+        Return the last board info read from the board.
+
+        :return: the board info, or ``None`` until a poll has read it.
+        """
+        return self._board_info
 
     # ----------------
     # PollModel hooks
@@ -187,9 +206,13 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         """
         Return the hardware read keys that the next poll should fetch.
 
-        :return: every batched attribute.
+        :return: every batched attribute that the board reports.
         """
-        return BATCH_ATTRIBUTES
+        if SubrackData.supports_tpm_currents(self._board_info):
+            return BATCH_ATTRIBUTES
+        return tuple(
+            key for key in BATCH_ATTRIBUTES if key != ReadKey.TPM_CURRENTS.value
+        )
 
     def poll(self: Subrack, poll_request: tuple[str, ...]) -> SubrackPollResponse:
         """
@@ -215,7 +238,14 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 ", ".join(not_read),
             )
 
-        self._derived.apply(values)
+        # A failed or busy read must not forget the version already known.
+        board_info = values.get(ReadKey.BOARD_INFO.value)
+        if isinstance(board_info, dict) and board_info:
+            self._board_info = board_info
+        self._derived.apply(
+            values,
+            derive_tpm_currents=not SubrackData.supports_tpm_currents(self._board_info),
+        )
 
         return SubrackPollResponse(values=values, timestamp=time.time())
 
@@ -241,10 +271,13 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         Give a poll failure to the error callback.
 
         The caches of values that span polls are cleared, because a board we
-        cannot reach has no known fan history and no known sample window.
+        cannot reach has no known fan history and no known sample window. The
+        board info is cleared too, because the board can come back with other
+        firmware.
 
         :param exception: the exception raised by the poll.
         """
+        self._board_info = None
         self._derived.clear()
         self._error_callback(exception)
 
@@ -431,6 +464,15 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             )
             status = response["status"]
             if status == _OK:
+                # From API 1.8.0 the board also reports whether the command
+                # failed, for example a slot that could not switch.
+                if response.get("retvalue") and response.get("failed"):
+                    return (
+                        BoardCommandStatus.FAILED,
+                        f"Command '{name}' failed on the board. "
+                        f"{response.get('info') or 'No details.'}",
+                        None,
+                    )
                 if response.get("retvalue"):
                     return (
                         BoardCommandStatus.COMPLETED,

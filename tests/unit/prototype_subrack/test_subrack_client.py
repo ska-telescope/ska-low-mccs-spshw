@@ -22,10 +22,14 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
+from ska_low_mccs_common.component import (
+    HardwareClientResponseStatusCodes,
+    WebHardwareClient,
+)
 
 from ska_low_mccs_spshw.prototype_subrack import (
     BoardCommandStatus,
+    DerivedValues,
     HttpError,
     RequestError,
     Subrack,
@@ -38,6 +42,11 @@ from ska_low_mccs_spshw.prototype_subrack.constants import (
     COMMAND_TIMEOUT,
     HEALTH_STATUS_KEY,
 )
+from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
+from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
+    SubrackServerContextManager,
+)
+from tests.test_tools import subrack_simulator_config_for
 
 from .conftest import FakeHardwareClient, make_subrack
 
@@ -649,32 +658,44 @@ class TestErrorBranches:
         assert len(completions) == 3, "it should have waited through both busy replies"
 
     @pytest.mark.parametrize(
-        ("status", "info"),
+        ("status", "retvalue", "info"),
         [
-            (HardwareClientResponseStatusCodes.ERROR.name, "board fault"),
-            ("NOT_A_REAL_STATUS", "who knows"),
+            (HardwareClientResponseStatusCodes.ERROR.name, "", "board fault"),
+            ("NOT_A_REAL_STATUS", "", "who knows"),
             # These two are the board going unreachable part way through the
             # handshake. They take their own branch of the wait, and must end
             # it the same way as an error the board reported.
-            (HardwareClientResponseStatusCodes.HTTP_ERROR.name, "500 Server Error"),
+            (
+                HardwareClientResponseStatusCodes.HTTP_ERROR.name,
+                "",
+                "500 Server Error",
+            ),
             (
                 HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
+                "",
                 "connection refused",
             ),
+            # From API 1.8.0 a finished command can report that it failed, with
+            # or without a reason.
+            (HardwareClientResponseStatusCodes.OK.name, True, "TPM 3 did not power on"),
+            (HardwareClientResponseStatusCodes.OK.name, True, ""),
         ],
     )
+    # pylint: disable-next=too-many-arguments
     def test_an_error_while_awaiting_completion_fails_with_its_details(
         self: TestErrorBranches,
         faked_subrack: Subrack,
         fake_client: FakeHardwareClient,
         status: str,
+        retvalue: Any,
         info: str,
     ) -> None:
         """
         An error from ``command_completed`` must fail with what the board said.
 
         The status and the detail the board reported both reach the caller, and
-        the wait ends at once rather than running to the timeout.
+        the wait ends at once rather than running to the timeout. A board that
+        gave no detail is reported as giving none.
 
         The abort event is what the wait sleeps on, so a stub for it drives the
         loop with no clock at all. It allows one probe and then asks to abort,
@@ -684,6 +705,7 @@ class TestErrorBranches:
         :param faked_subrack: the client under test.
         :param fake_client: the fake hardware client.
         :param status: the status the board reports while completing.
+        :param retvalue: whether the board reports the command as finished.
         :param info: the detail the board reports with it.
         """
         abort = mock.Mock()
@@ -703,7 +725,8 @@ class TestErrorBranches:
                 "status": status,
                 "info": info,
                 "command": "command_completed",
-                "retvalue": "",
+                "retvalue": retvalue,
+                "failed": bool(retvalue),
             },
         )
 
@@ -712,7 +735,7 @@ class TestErrorBranches:
         )
 
         assert result == BoardCommandStatus.FAILED
-        assert info in message, message
+        assert (info or "No details.") in message, message
         assert abort.wait.call_count == 1, "the wait should end on the first probe"
 
 
@@ -862,7 +885,7 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
         :param logger: a logger.
         :param derived: a stand-in for the computed values.
         """
-        derived.apply.side_effect = lambda values: values.update({"computed": 42})
+        derived.apply.side_effect = lambda values, **_: values.update({"computed": 42})
         subrack = make_subrack(fake_client, logger, derived)
 
         response = subrack.poll(subrack.get_request())
@@ -871,6 +894,149 @@ class TestDerivedValuesWiring:  # pylint: disable=too-few-public-methods
         (values,) = derived.apply.call_args.args
         assert values is response.values, "the response dropped what they wrote into"
         assert response.values["computed"] == 42
+        # The board info is not known yet, so the board reports TPM currents.
+        assert derived.apply.call_args.kwargs == {"derive_tpm_currents": False}
+
+
+def _board_info_response(bios: str) -> dict[str, Any]:
+    """
+    Return a board info read that reports a BIOS version.
+
+    :param bios: the BIOS version, as the board reports it.
+
+    :return: the response to the board info read.
+    """
+    return {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "",
+        "attribute": "board_info",
+        "value": {"SMM": {"bios": bios}},
+    }
+
+
+class TestTheBiosVersion:
+    """
+    Tests of what the client does differently for each SMM BIOS version.
+
+    From API 1.8.0 the board does not report ``tpm_currents``, so the client
+    stops asking for them and has them derived instead. The client learns the
+    version from the board info that every poll reads.
+    """
+
+    @pytest.mark.parametrize(
+        ("bios", "reads_tpm_currents"),
+        [("v1.6.0", True), ("v1.8.0", False)],
+        ids=["1.6.0", "1.8.0"],
+    )
+    # pylint: disable-next=too-many-arguments
+    def test_the_board_info_decides_whether_tpm_currents_are_read(
+        self: TestTheBiosVersion,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+        derived: mock.Mock,
+        bios: str,
+        reads_tpm_currents: bool,
+    ) -> None:
+        """
+        TPM currents must be read until a board info read says otherwise.
+
+        The first poll asks for them, because the version is not known yet.
+        The derived values are told to derive them in that same poll, because
+        the board info arrives in it. A later board info read that fails must
+        not forget the version.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
+        :param bios: the BIOS version the board reports.
+        :param reads_tpm_currents: whether the board reports TPM currents.
+        """
+        fake_client.attribute_responses["board_info"] = _board_info_response(bios)
+        subrack = make_subrack(fake_client, logger, derived)
+        assert "tpm_currents" in subrack.get_request()
+
+        subrack.poll(subrack.get_request())
+
+        assert subrack.board_info == {"SMM": {"bios": bios}}
+        assert derived.apply.call_args.kwargs == {
+            "derive_tpm_currents": not reads_tpm_currents
+        }
+        assert ("tpm_currents" in subrack.get_request()) == reads_tpm_currents
+
+        fake_client.attribute_responses["board_info"] = dict(
+            _board_info_response(bios),
+            status=HardwareClientResponseStatusCodes.ERROR.name,
+            value=None,
+        )
+        subrack.poll(subrack.get_request())
+
+        assert subrack.board_info == {"SMM": {"bios": bios}}
+        assert derived.apply.call_args.kwargs == {
+            "derive_tpm_currents": not reads_tpm_currents
+        }
+
+    def test_a_failed_poll_forgets_the_board_info(
+        self: TestTheBiosVersion,
+        fake_client: FakeHardwareClient,
+        logger: logging.Logger,
+        derived: mock.Mock,
+    ) -> None:
+        """
+        A board that cannot be reached must be asked for TPM currents again.
+
+        It can come back with other firmware, so its version is not known
+        until the next board info read.
+
+        :param fake_client: the fake hardware client.
+        :param logger: a logger.
+        :param derived: a stand-in for the computed values.
+        """
+        fake_client.attribute_responses["board_info"] = _board_info_response("v1.8.0")
+        subrack = make_subrack(fake_client, logger, derived)
+        subrack.poll(subrack.get_request())
+
+        subrack.poll_failed(RequestError("gone"))
+
+        assert subrack.board_info is None
+        assert "tpm_currents" in subrack.get_request()
+
+    def test_against_a_1_8_0_simulator(
+        self: TestTheBiosVersion,
+        subrack_simulator_config: dict[str, Any],
+        logger: logging.Logger,
+    ) -> None:
+        """
+        A 1.8.0 board must give derived TPM currents and complete its commands.
+
+        The first poll still asks for ``tpm_currents``, which the board answers
+        with an error. The derived value replaces it in that same poll. After
+        that the client no longer asks.
+
+        :param subrack_simulator_config: the simulator configuration.
+        :param logger: a logger.
+        """
+        simulator = SubrackSimulator(
+            bios_version="1.8.0",
+            **subrack_simulator_config_for(subrack_simulator_config, "1.8.0"),
+        )
+        with SubrackServerContextManager(simulator) as (host, port):
+            subrack = make_subrack(
+                WebHardwareClient(host, port), logger, DerivedValues(logger)
+            )
+            for _ in range(2):
+                values = subrack.poll(subrack.get_request()).values
+                assert values["tpm_currents"] == pytest.approx(
+                    [
+                        power / voltage
+                        for power, voltage in zip(
+                            values["tpm_powers"], values["tpm_voltages"]
+                        )
+                    ]
+                )
+            assert "tpm_currents" not in subrack.get_request()
+
+            (status, message, _) = subrack.run_board_command("turn_on_tpm", "5")
+            assert status == BoardCommandStatus.COMPLETED, message
 
 
 class TestABusyBoard:

@@ -94,7 +94,7 @@ _FINAL_TILE_ATTRIBUTES = frozenset(
 # Tile attributes whose station-side caches are invalidated when
 # communication with that tile is lost.
 _CACHED_TILE_ATTRIBUTES = (
-    "ppsDelay",
+    "timing_pps_delay",
     "ppsDelayCorrection",
     "staticTimeDelays",
     "adcPower",
@@ -174,7 +174,7 @@ class _TileProxy(DeviceComponentManager):
             "adcPower": self._on_attribute_change,
             "staticTimeDelays": self._on_attribute_change,
             "preaduLevels": self._on_attribute_change,
-            "ppsDelay": self._on_attribute_change,
+            "timing_pps_delay": self._on_attribute_change,
             "ppsDelayCorrection": self._on_attribute_change,
             "tileProgrammingState": self._on_attribute_change,
             "beamformerTable": self._on_attribute_change,
@@ -811,7 +811,7 @@ class SpsStationComponentManager(
             "adcPower",
             "staticTimeDelays",
             "preaduLevels",
-            "ppsDelay",
+            "timing_pps_delay",
             "tileProgrammingState",
         ]
 
@@ -1494,7 +1494,7 @@ class SpsStationComponentManager(
             # Only the final tile's value is used.
             return False
         match attribute_name:
-            case "ppsdelay":
+            case "timing_pps_delay":
                 self._pps_delays_reported.discard(logical_tile_id)
             case "ppsdelaycorrection":
                 self._pps_delay_corrections_reported.discard(logical_tile_id)
@@ -1602,7 +1602,7 @@ class SpsStationComponentManager(
             for name, state in publishers.items():
                 if name in names:
                     self._component_state_callback(**state())
-        if names & {"ppsdelay", "tileprogrammingstate"}:
+        if names & {"timing_pps_delay", "tileprogrammingstate"}:
             self._fire_pps_delay_spread()
         if names & {"dstip40gfpga1", "dstip40gfpga2"}:
             self._validate_beamformer_daisy_chain()
@@ -1648,7 +1648,7 @@ class SpsStationComponentManager(
                 )
                 if self._component_state_callback:
                     self._component_state_callback(preaduLevels=self.preadu_levels)
-            case "ppsdelay":
+            case "timing_pps_delay":
                 # Cache the value regardless of tile state so that when the
                 # tile later becomes Synchronised the value is available.
                 self._pps_delays[logical_tile_id] = attribute_value
@@ -3538,7 +3538,7 @@ class SpsStationComponentManager(
         :return: Array of one value per tile, in nanoseconds
         """
         # self._pps_delays is kept current by _on_tile_attribute_change's
-        # "ppsdelay" case on every subscribed change event, so no live
+        # "timing_pps_delay" case on every subscribed change event, so no live
         # per-tile read is needed here.
         return copy.deepcopy(self._pps_delays)
 
@@ -4010,7 +4010,7 @@ class SpsStationComponentManager(
         :return: minimum, average and maximum of PPS delays
         """
         # self._pps_delays/_pps_delays_reported are kept current by
-        # _on_tile_attribute_change's "ppsdelay" case, so no live per-tile
+        # _on_tile_attribute_change's "timing_pps_delay" case, so no live per-tile
         # read is needed here.
         pps_delays = [self._pps_delays[i] for i in self._pps_delays_reported]
         if len(pps_delays) == 0:

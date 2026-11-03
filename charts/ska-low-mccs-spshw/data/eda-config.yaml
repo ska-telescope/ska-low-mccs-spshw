@@ -567,10 +567,10 @@ configuration:
       phaseTerminalCount:
         code_push_event: true
         archive_period: 0
-      ppsDelay:
+      timing_pps_delay:
         code_push_event: true
         archive_period: 0
-      ppsDrift:
+      timing_pps_drift:
         code_push_event: true
         archive_period: 0
       ppsDelayCorrection:

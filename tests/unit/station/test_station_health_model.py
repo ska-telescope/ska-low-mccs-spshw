@@ -608,7 +608,7 @@ class TestSpsStationHealthModel:
                 "Health is OK.",
                 6,
                 HealthState.DEGRADED,
-                "Difference in ppsDelay between Tiles has exceeded 4 samples. "
+                "Difference in timing_pps_delay between Tiles has exceeded 4 samples. "
                 "ppsDelaySpread: 6",
                 id="All devices healthy, expect OK, then pps drifts" "expect DEGRADED",
             ),
@@ -627,7 +627,7 @@ class TestSpsStationHealthModel:
                 "Health is OK.",
                 10,
                 HealthState.FAILED,
-                "Difference in ppsDelay between Tiles has exceeded 9 samples. "
+                "Difference in timing_pps_delay between Tiles has exceeded 9 samples. "
                 "ppsDelaySpread: 10",
                 id="All devices healthy, expect OK, then pps drifts" "expect FAILED",
             ),

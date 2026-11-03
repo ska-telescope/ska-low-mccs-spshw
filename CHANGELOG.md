@@ -6,6 +6,9 @@
   * `src/ska_low_mccs_spshw/tile/tile_device.py`:
     * Renamed the attributes, and updated the signal maps, `attribute_monitoring_point_map` and the attributes excluded from health to match.
     * FPGA numbering now follows the TPM API: `fpga1Temperature` -> `temperatures_fpga0`, `fpga2Temperature` -> `temperatures_fpga1`.
+    * Renamed `ppsDelay` -> `timing_pps_delay` and `ppsDrift` -> `timing_pps_drift`. Note `timing_pps_drift` is not a TPM monitoring point: it is computed by the component manager as the change in `timing_pps_delay` since the TPM was last initialised (or the device was started).
+    * Corrected the `ppsDrift_signal` type from `list[int]` to `int`, matching the `DevLong` attribute.
+  * `src/ska_low_mccs_spshw/station/station_health_rules.py`: pps delay spread health reports now refer to `timing_pps_delay`.
   * `src/ska_low_mccs_spshw/station/station_component_manager.py`: `_TileProxy` subscriptions and the `SpsStation` tile attribute caches now use the new temperature, PPS and beamformer flagged count names.
   * `charts/ska-low-mccs-spshw/values.yaml`: renamed the `MccsTile` alarm and warning threshold properties. 
   * `charts/ska-low-mccs-spshw/data/eda-config.yaml`:

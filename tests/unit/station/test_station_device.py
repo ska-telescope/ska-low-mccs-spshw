@@ -1465,7 +1465,7 @@ def test_beamformerRegions(
         ),
         pytest.param(
             "ppsDelaySummary",
-            "ppsDelay",
+            "timing_pps_delay",
             lambda i: i,
             lambda n: [0, (n - 1) / 2, n - 1],
             lambda i: 2 * i,
@@ -1702,7 +1702,7 @@ def _summary(values: list[float]) -> list[float]:
         ),
         pytest.param(
             "ppsDelaySummary",
-            "ppsDelay",
+            "timing_pps_delay",
             lambda i: i,
             3,
             lambda n: _summary([float(i) for i in range(n)]),

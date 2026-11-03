@@ -221,7 +221,7 @@ def mock_tile_builder_fixture(
     builder.add_attribute("preaduLevels", np.array([22.0] * 32))
     builder.add_attribute("adcPower", np.array([17.0] * 32))
     builder.add_attribute("staticTimeDelays", np.array([0] * 32))
-    builder.add_attribute("ppsDelay", 0)
+    builder.add_attribute("timing_pps_delay", 0)
     builder.add_attribute("ppsDelayCorrection", 0)
     builder.add_attribute("cspRounding", np.array([2] * 384))
     builder.add_attribute("channeliserRounding", np.array([3] * 512))

@@ -113,7 +113,7 @@ class MccsTile {
   +logicalTileId()
   +phaseTerminalCount()
   +power_changed()
-  +ppsDelay()
+  +timing_pps_delay()
   +simulationMode()
   +stationId()
   +testMode()

@@ -33,7 +33,7 @@ attributes:
     indexes:
       - [1, 1]      # pdu id
       - [1, 24, 1]  # port
-      - [1, 1]      # sensor type
+      - [14, 14]    # sensor type onOff, which reports on(7) or off(8)
     dtype: enum
     enum_labels: [
         open(0),
@@ -66,7 +66,7 @@ attributes:
         critical(28),
         selfTest(29),
     ]
-    description: The operating sensor state.
+    description: The state of the outlet onOff sensor, which is on(7) or off(8).
 
   - name: pduPort{1}Current
     oid: [PDU2-MIB, measurementsOutletSensorValue]

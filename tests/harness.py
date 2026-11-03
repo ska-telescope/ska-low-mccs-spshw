@@ -451,6 +451,8 @@ class SpsTangoTestHarness:
         max_fan_rpm_delta: int = 25,
         device_name: str | None = None,
         define_parent_trl: bool = False,
+        pdu_trl: str | None = None,
+        pdu_ports: list[int] | None = None,
     ) -> None:
         """
         Add a prototype subrack Tango device to the test harness.
@@ -477,6 +479,10 @@ class SpsTangoTestHarness:
             ``MccsSubrack``.
         :param define_parent_trl: True to make the SPS station the parent
             that the device inherits its modes from.
+        :param pdu_trl: The TRL of the PDU that feeds the subrack. Defaults to
+            None, in which case the device follows no PDU.
+        :param pdu_ports: The PDU ports that feed the subrack. Defaults to
+            None, in which case the device follows no PDU.
         """
         port: Callable[[dict[str, Any]], int] | int  # for the type checker
 
@@ -491,11 +497,15 @@ class SpsTangoTestHarness:
         else:
             (host, port) = address
 
-        optional_properties = {}
+        optional_properties: dict[str, Any] = {}
         if define_parent_trl:
             optional_properties.update(
                 {"ParentTRL": get_sps_station_name(self._station_label)}
             )
+        if pdu_trl is not None:
+            optional_properties["PduTrl"] = pdu_trl
+        if pdu_ports is not None:
+            optional_properties["PduPorts"] = pdu_ports
 
         self._tango_test_harness.add_device(
             device_name

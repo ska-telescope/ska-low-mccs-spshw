@@ -37,7 +37,7 @@ from ska_tango_base.executor import TaskExecutor
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
-from ska_low_mccs_spshw.prototype_subrack import BoardCommandStatus
+from ska_low_mccs_spshw.prototype_subrack import CommandOutcome
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
 )
@@ -281,7 +281,7 @@ def reset_device_fixture(
     """
     subrack.reset_mock()
     subrack.run_board_command.return_value = (
-        BoardCommandStatus.COMPLETED,
+        CommandOutcome.COMPLETED,
         "The command completed.",
         None,
     )
@@ -351,9 +351,9 @@ def test_a_command_sends_one_board_command(  # pylint: disable=too-many-argument
 @pytest.mark.parametrize(
     "outcome",
     [
-        BoardCommandStatus.COMPLETED,
-        BoardCommandStatus.FAILED,
-        BoardCommandStatus.ABORTED,
+        CommandOutcome.COMPLETED,
+        CommandOutcome.FAILED,
+        CommandOutcome.ABORTED,
     ],
     ids=["completed", "failed", "aborted"],
 )
@@ -362,7 +362,7 @@ def test_a_board_command_wakes_the_poller(
     lrc: LRCManager,
     subrack: mock.Mock,
     poller_factory: mock.Mock,
-    outcome: BoardCommandStatus,
+    outcome: CommandOutcome,
 ) -> None:
     """
     Test that a board command makes the next poll run now, however it ends.
@@ -389,9 +389,9 @@ def test_a_board_command_wakes_the_poller(
 @pytest.mark.parametrize(
     ("outcome", "status", "result_code"),
     [
-        (BoardCommandStatus.COMPLETED, "COMPLETED", ResultCode.OK),
-        (BoardCommandStatus.FAILED, "FAILED", ResultCode.FAILED),
-        (BoardCommandStatus.ABORTED, "ABORTED", ResultCode.ABORTED),
+        (CommandOutcome.COMPLETED, "COMPLETED", ResultCode.OK),
+        (CommandOutcome.FAILED, "FAILED", ResultCode.FAILED),
+        (CommandOutcome.ABORTED, "ABORTED", ResultCode.ABORTED),
     ],
     ids=["completed", "failed", "aborted"],
 )
@@ -399,7 +399,7 @@ def test_every_outcome_ends_the_command(  # pylint: disable=too-many-arguments
     online_device: tango.DeviceProxy,
     lrc: LRCManager,
     subrack: mock.Mock,
-    outcome: BoardCommandStatus,
+    outcome: CommandOutcome,
     status: str,
     result_code: ResultCode,
 ) -> None:

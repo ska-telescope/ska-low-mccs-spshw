@@ -28,7 +28,7 @@ from ska_low_mccs_common.component import (
 )
 
 from ska_low_mccs_spshw.prototype_subrack import (
-    BoardCommandStatus,
+    CommandOutcome,
     DerivedValues,
     HttpError,
     RequestError,
@@ -137,7 +137,7 @@ class TestAgainstSimulator:
         _next_poll(responses)
 
         (status, message, _) = simulated_subrack.run_board_command("turn_on_tpm", "5")
-        assert status == BoardCommandStatus.COMPLETED, message
+        assert status == CommandOutcome.COMPLETED, message
 
         # Polling must survive the command.
         assert _next_poll(responses).values["tpm_present"] is not None
@@ -500,7 +500,7 @@ class TestErrorBranches:
 
         (status_out, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
 
-        assert status_out == BoardCommandStatus.FAILED
+        assert status_out == CommandOutcome.FAILED
         assert "did not accept" in message
 
     def test_command_transport_failure_is_reported(
@@ -529,7 +529,7 @@ class TestErrorBranches:
 
         (status, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
 
-        assert status == BoardCommandStatus.FAILED
+        assert status == CommandOutcome.FAILED
         assert "Connection refused" in message
 
     def test_command_abort(
@@ -569,7 +569,7 @@ class TestErrorBranches:
             "turn_on_tpms", "", abort_event
         )
 
-        assert status == BoardCommandStatus.ABORTED
+        assert status == CommandOutcome.ABORTED
 
     def test_aborting_tells_the_board_to_abort(
         self: TestErrorBranches,
@@ -651,7 +651,7 @@ class TestErrorBranches:
             "turn_on_tpms", "", abort
         )
 
-        assert result == BoardCommandStatus.COMPLETED, message
+        assert result == CommandOutcome.COMPLETED, message
         completions = [
             c for c in fake_client.command_calls if c[0] == "command_completed"
         ]
@@ -734,7 +734,7 @@ class TestErrorBranches:
             "turn_on_tpms", "", abort
         )
 
-        assert result == BoardCommandStatus.FAILED
+        assert result == CommandOutcome.FAILED
         assert (info or "No details.") in message, message
         assert abort.wait.call_count == 1, "the wait should end on the first probe"
 
@@ -1037,7 +1037,7 @@ class TestTheBiosVersion:
             assert "tpm_currents" not in subrack.get_request()
 
             (status, message, _) = subrack.run_board_command("turn_on_tpm", "5")
-            assert status == BoardCommandStatus.COMPLETED, message
+            assert status == CommandOutcome.COMPLETED, message
 
 
 class TestABusyBoard:
@@ -1162,7 +1162,7 @@ class TestCommandsThatDoNotRunToPlan:
             "set_fan_mode", "1,1"
         )
 
-        assert result == BoardCommandStatus.COMPLETED, message
+        assert result == CommandOutcome.COMPLETED, message
         assert value == "1", "the caller should get what the board returned"
         assert "command_completed" not in [
             name for (name, _) in fake_client.command_calls
@@ -1208,7 +1208,7 @@ class TestCommandsThatDoNotRunToPlan:
 
         (result, _, _) = subrack.run_board_command("turn_on_tpms", "", abort_event)
 
-        assert result == BoardCommandStatus.ABORTED, "the command is abandoned anyway"
+        assert result == CommandOutcome.ABORTED, "the command is abandoned anyway"
         complaining.error.assert_called_once()
         assert "the board is not listening" in str(complaining.error.call_args)
 
@@ -1252,7 +1252,7 @@ class TestCommandsThatDoNotRunToPlan:
             "turn_on_tpms", "", abort
         )
 
-        assert result == BoardCommandStatus.COMPLETED, message
+        assert result == CommandOutcome.COMPLETED, message
         completions = [
             c for c in fake_client.command_calls if c[0] == "command_completed"
         ]
@@ -1300,7 +1300,7 @@ class TestCommandsThatDoNotRunToPlan:
             "turn_on_tpms", "", abort
         )
 
-        assert result == BoardCommandStatus.FAILED
+        assert result == CommandOutcome.FAILED
         assert "Timed out" in message, message
         # The deadline is checked before the first wait, so nothing slept.
         abort.wait.assert_not_called()

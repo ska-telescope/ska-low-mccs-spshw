@@ -23,7 +23,7 @@ from ska_control_model import PowerState
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
 
 from ..subrack.subrack_data import SubrackData
-from .constants import HEALTH_STATUS_KEY, DerivedKey, ReadKey
+from .constants import HEALTH_STATUS_KEY, PDU_MAX_PORTS, DerivedKey, ReadKey
 
 __all__ = [
     "ALL_SIGNALS",
@@ -101,8 +101,9 @@ TPM_POWER_STATE_SIGNALS: Final[tuple[str, ...]] = tuple(
     f"_tpm{bay}_power_state" for bay in range(1, SubrackData.TPM_BAY_COUNT + 1)
 )
 
-# Every signal this device emits, so that a lost board can invalidate all
-# of them.
+# Every signal this device emits from the board, so that a lost board can
+# invalidate all of them. The PDU port states come from the PDU, so a lost
+# board leaves them alone.
 ALL_SIGNALS: Final[tuple[str, ...]] = tuple(READ_KEY_TO_SIGNAL.values()) + tuple(
     HEALTH_PATH_TO_SIGNAL
 )
@@ -260,6 +261,11 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     # Signal for the health recorder
     # ------------------------------
     _health_report: AttrSignal[str] = AttrSignal[str]()
+
+    # -----------------------------
+    # Signal for the PDU port states
+    # -----------------------------
+    _pdu_port_states: AttrSignal[list[int]] = AttrSignal[list[int]]()
 
     # ---------------------------
     # Attributes for board reads
@@ -820,5 +826,21 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         doc=(
             "The reasons for the current health, one on each line, or "
             "'Health is OK.'."
+        ),
+    )
+
+    # ---------------------------------
+    # Attribute for the PDU port states
+    # ---------------------------------
+    # This is (int,) rather than (PowerState,) because of pytango issue 483,
+    # which prevents an enumerated spectrum attribute from working.
+    pduPortStates = attribute_from_signal(
+        _pdu_port_states,
+        dtype=(int,),
+        max_dim_x=PDU_MAX_PORTS,
+        label="PDU Port States",
+        doc=(
+            "The power state of each PDU port that feeds the subrack, in the "
+            "order of the PduPorts property, as PowerState values."
         ),
     )

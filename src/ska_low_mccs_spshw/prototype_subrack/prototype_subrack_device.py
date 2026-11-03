@@ -14,12 +14,15 @@ and no driver between the device and the board. A
 :py:class:`~ska_low_mccs_common.HealthRecorder` turns the quality of the
 device's own attributes into its health.
 
-The board commands live in :py:class:`~.prototype_subrack_commands.SubrackCommands`,
-which the device mixes in. The device supplies the subrack that those commands
-run through, and the poller that reads it.
+The commands live in :py:class:`~.prototype_subrack_commands.SubrackCommands`,
+which the device mixes in. The device supplies the subrack that the board
+commands run through, and the poller that reads it. It also supplies the
+:py:class:`~.pdu_link.PduLink` that ``On`` and ``Off`` switch the PDU ports
+through.
 """
 from __future__ import annotations
 
+import enum
 import sys
 import time
 from typing import Any, Final, Optional, cast
@@ -28,6 +31,7 @@ from ska_control_model import AdminMode, HealthState, PowerState
 from ska_low_mccs_common import HealthRecorder, MccsBaseInterface
 from ska_low_mccs_common.component import WebHardwareClient
 from ska_tango_base.base import ControlLevel
+from ska_tango_base.callback_scheduler import CallbackScheduler
 from tango import AttrQuality, DevState
 from tango.server import device_property
 
@@ -36,6 +40,7 @@ from utils import walk
 from ..subrack.subrack_data import SubrackData
 from .constants import HEALTH_NO_VALUE_REASON, HEALTH_STATUS_KEY, ReadKey, RequestError
 from .derived_values import DerivedValues
+from .pdu_link import PduLink
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
     HEALTH_ATTRIBUTES,
@@ -59,7 +64,20 @@ _CONTROL_LEVELS: Final[dict[AdminMode, ControlLevel]] = {
 }
 
 
-# pylint: disable=too-many-ancestors
+class _PollOutcome(enum.Enum):
+    """What one poll found out about the board."""
+
+    OK = enum.auto()
+    """The board answered."""
+
+    UNREACHABLE = enum.auto()
+    """The request never reached the board."""
+
+    BOARD_ERROR = enum.auto()
+    """The board answered with an error."""
+
+
+# pylint: disable=too-many-ancestors, too-many-instance-attributes
 class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface):
     """
     A Tango device that monitors and commands an SPS subrack management board.
@@ -84,6 +102,11 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     not accept ``UNKNOWN``. Whether the device can poll the subrack shows in
     the state, not the health. A device that cannot poll invalidates every
     attribute, and so its health fails through them.
+
+    When ``PduTrl`` and ``PduPorts`` are both set, the device follows those PDU
+    ports through a :py:class:`~.pdu_link.PduLink`. Every port off makes the
+    state ``OFF``, whatever the poll found. The device reads the link on each
+    poll, so the state still changes only on a poll.
     """
 
     # ----------
@@ -96,6 +119,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     MaxFanRpmDelta = device_property(dtype=int, default_value=25)
     AttributeFilterType = device_property(dtype=str, default_value="none")
     AttributeFilterMaxSamples = device_property(dtype=int, default_value=5)
+    PduTrl = device_property(dtype=str, default_value="")
+    PduPorts = device_property(dtype=(int,), default_value=[])
 
     # --------------
     # Initialisation
@@ -103,12 +128,17 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _poller: Optional[SubrackPoller] = None
     _subrack: Optional[Subrack] = None
     _health_recorder: Optional[HealthRecorder] = None
+    _pdu_link: Optional[PduLink] = None
+    _callback_scheduler: Optional[CallbackScheduler] = None
     _tpm_power_states: list[PowerState]
+    _pdu_port_states_cache: Optional[list[PowerState]]
+    _evaluated_state: DevState
     _web_hardware_client_factory: type[WebHardwareClient]
     _derived_values_factory: type[DerivedValues]
     _subrack_factory: type[Subrack]
     _subrack_poller_factory: type[SubrackPoller]
     _health_recorder_factory: type[HealthRecorder]
+    _pdu_link_factory: type[PduLink]
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -119,14 +149,19 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         :py:meth:`disassemble` reclaims the running poller before this builds
         its replacement.
 
-        Both the poller and the subrack are dropped before anything is built,
-        so a failure part way through leaves each as ``None`` rather than the
-        reclaimed one. A reclaimed poller would accept ``start_polling`` and
-        then never poll, and a reclaimed subrack would accept a command and
-        reach a board the device no longer monitors.
+        The poller, the subrack and the PDU link are dropped before anything
+        is built, so a failure part way through leaves each as ``None`` rather
+        than the reclaimed one. A reclaimed poller would accept
+        ``start_polling`` and then never poll, and a reclaimed subrack would
+        accept a command and reach a board the device no longer monitors.
+
+        The PDU link is built only when ``PduTrl`` and ``PduPorts`` are both
+        set. Without it the device follows no PDU, and refuses ``On`` and
+        ``Off``.
         """
         self._poller = None
         self._subrack = None
+        self._pdu_link = None
 
         client = self._web_hardware_client_factory(self.SubrackIp, self.SubrackPort)
         derived = self._derived_values_factory(
@@ -147,6 +182,14 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._poller = self._subrack_poller_factory(
             self._subrack, self.UpdateRate, self.logger
         )
+        if self.PduTrl and self.PduPorts:
+            assert self._callback_scheduler is not None  # for the type checker
+            self._pdu_link = self._pdu_link_factory(
+                self.PduTrl,
+                list(self.PduPorts),
+                self._callback_scheduler,
+                self.logger,
+            )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
         """Reclaim the poller's thread, if there is one to reclaim."""
@@ -168,6 +211,21 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             )
         return self._subrack
 
+    @property
+    def pdu_link(self: MccsPrototypeSubrack) -> PduLink:
+        """
+        Return the link to the PDU that feeds the subrack.
+
+        :raises ValueError: if the device has no PDU to follow.
+
+        :return: the PDU link.
+        """
+        if self._pdu_link is None:
+            raise ValueError(
+                "The subrack has no PDU, because PduTrl or PduPorts is not set."
+            )
+        return self._pdu_link
+
     def init_device(self: MccsPrototypeSubrack) -> None:
         """Initialise the device, building the client and the poller."""
         super().init_device()
@@ -177,7 +235,13 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         for signal_name in TPM_POWER_STATE_SIGNALS:
             self._emit(signal_name, PowerState.UNKNOWN, time.time())
+        self._pdu_port_states_cache = None
+        self._evaluated_state = DevState.UNKNOWN
 
+        # Built before assembly, because the PDU link subscribes through it.
+        self._callback_scheduler = CallbackScheduler(
+            name=f"{self.get_name()}-callbacks", logger=self.logger
+        )
         self.assemble()
 
         self._health_recorder = self._health_recorder_factory(
@@ -215,11 +279,15 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self.init_completed()
 
     def delete_device(self: MccsPrototypeSubrack) -> None:
-        """Delete the device, reclaiming the polling and health threads."""
+        """Delete the device, reclaiming the polling, health and callback threads."""
         self.disassemble()
         if self._health_recorder is not None:
             self._health_recorder.cleanup()
             self._health_recorder = None
+        # Shutting the scheduler down also ends the PDU link's subscriptions.
+        if self._callback_scheduler is not None:
+            self._callback_scheduler.shutdown()
+            self._callback_scheduler = None
         super().delete_device()
 
     # ----------------
@@ -261,6 +329,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             # UNKNOWN until a poll succeeds, because nothing has been read from
             # the board yet.
             self.component_unknown()
+            self._evaluated_state = DevState.UNKNOWN
             self._poller.start_polling()
             self.logger.info("Starting polling the subrack.")
 
@@ -312,7 +381,14 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 self._emit(signal_name, values[key], timestamp)
         if HEALTH_STATUS_KEY in values:
             self._emit_health_status(values[HEALTH_STATUS_KEY], timestamp)
-        if ReadKey.TPM_ON_OFF.value in values:
+
+        # Read once, so the TPM power states and the state agree.
+        pdu_power = self._pdu_power()
+        if pdu_power == PowerState.OFF:
+            self._update_tpm_power_states(
+                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT, timestamp
+            )
+        elif ReadKey.TPM_ON_OFF.value in values:
             tpm_on_off = values[ReadKey.TPM_ON_OFF.value]
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
@@ -322,9 +398,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 ],
                 timestamp,
             )
-
-        self.component_on()
-        self.component_no_fault()
+        self._emit_pdu_port_states(timestamp)
+        self._apply_state(_PollOutcome.OK, pdu_power)
         self.logger.debug("Poll succeeded")
 
     def _poll_failed(self: MccsPrototypeSubrack, exception: Exception) -> None:
@@ -332,21 +407,30 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         Invalidate every attribute after a failed poll.
 
         A request that never reached the board leaves the subrack in an unknown
-        state. So does a board error before any poll has succeeded, because
-        nothing has been read to say the subrack is there at all. A board error
-        after that is the subrack itself failing.
+        state. A board that answered with an error is the subrack itself
+        failing. :py:meth:`_apply_state` decides what each gives.
 
         :param exception: the exception raised by the poll.
         """
         self._invalidate_all()
+        timestamp = time.time()
+        pdu_power = self._pdu_power()
         self._update_tpm_power_states(
-            [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
+            [
+                PowerState.NO_SUPPLY
+                if pdu_power == PowerState.OFF
+                else PowerState.UNKNOWN
+            ]
+            * SubrackData.TPM_BAY_COUNT,
+            timestamp,
         )
-        # TODO: Jank to be removed when we upgrade ska-tango-base.
-        if isinstance(exception, RequestError) or self.get_state() == DevState.UNKNOWN:
-            self.component_unknown()
-        else:
-            self.component_fault()
+        self._emit_pdu_port_states(timestamp)
+        self._apply_state(
+            _PollOutcome.UNREACHABLE
+            if isinstance(exception, RequestError)
+            else _PollOutcome.BOARD_ERROR,
+            pdu_power,
+        )
         self.logger.warning(f"Poll failed with {type(exception).__name__}. {exception}")
 
     def _polling_stopped(self: MccsPrototypeSubrack) -> None:
@@ -362,8 +446,62 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._update_tpm_power_states(
             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
         )
+        self._pdu_port_states_cache = None
+        self._emit("_pdu_port_states", None, time.time())
         self.component_disconnected()
         self.logger.info("Stopped polling the subrack.")
+
+    # ----------------
+    # State
+    # ----------------
+    def _pdu_power(self: MccsPrototypeSubrack) -> Optional[PowerState]:
+        """
+        Return the power state the PDU ports give the subrack.
+
+        :return: the combined power state of the PDU ports, or ``None`` when
+            the device follows no PDU.
+        """
+        return None if self._pdu_link is None else self._pdu_link.power_state
+
+    def _apply_state(
+        self: MccsPrototypeSubrack,
+        outcome: _PollOutcome,
+        pdu_power: Optional[PowerState],
+    ) -> None:
+        """
+        Set the state from what a poll found and from the PDU power.
+
+        Called only from the poll callbacks, so the state changes only on the
+        poll thread and needs no lock.
+
+        Every PDU port off makes the subrack ``OFF``, whatever the poll found.
+        Otherwise the poll decides. A board that answers is ``ON``. A board
+        error is ``FAULT``, but only if the state was already ``ON`` or
+        ``FAULT``. From ``UNKNOWN`` or ``OFF`` nothing has been read to say the
+        subrack is there at all, and the operational state model has no
+        transition into ``FAULT`` from either of them. So in that case it gives
+        ``UNKNOWN``, the same as a request that never reached the board.
+
+        :param outcome: what the poll found out about the board.
+        :param pdu_power: the combined power state of the PDU ports, or
+            ``None`` when the device follows no PDU.
+        """
+        if pdu_power == PowerState.OFF:
+            self.component_off()
+            self._evaluated_state = DevState.OFF
+        elif outcome == _PollOutcome.OK:
+            self.component_on()
+            self.component_no_fault()
+            self._evaluated_state = DevState.ON
+        elif outcome == _PollOutcome.BOARD_ERROR and self._evaluated_state in (
+            DevState.ON,
+            DevState.FAULT,
+        ):
+            self.component_fault()
+            self._evaluated_state = DevState.FAULT
+        else:
+            self.component_unknown()
+            self._evaluated_state = DevState.UNKNOWN
 
     # ----------------
     # Health
@@ -469,6 +607,24 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 self._tpm_power_states[bay] = power_state
                 self._emit(TPM_POWER_STATE_SIGNALS[bay], power_state, timestamp)
 
+    def _emit_pdu_port_states(self: MccsPrototypeSubrack, timestamp: float) -> None:
+        """
+        Emit the PDU port states, if they changed since they were last emitted.
+
+        Only a change is emitted, the same as for the TPM power states. Every
+        caller runs on the polling thread, so no lock is needed for the cache.
+
+        :param timestamp: the wall clock time to emit the states with.
+        """
+        if self._pdu_link is None:
+            return
+        port_states = self._pdu_link.port_states
+        if port_states != self._pdu_port_states_cache:
+            self._pdu_port_states_cache = port_states
+            self._emit(
+                "_pdu_port_states", [int(state) for state in port_states], timestamp
+            )
+
     def _invalidate_all(self: MccsPrototypeSubrack) -> None:
         """Mark every attribute invalid, so no stale value is readable."""
         for signal_name in ALL_SIGNALS:
@@ -486,6 +642,7 @@ def subrack_factory(  # pylint: disable=too-many-arguments
     subrack: type[Subrack] = Subrack,
     subrack_poller: type[SubrackPoller] = SubrackPoller,
     health_recorder: type[HealthRecorder] = HealthRecorder,
+    pdu_link: type[PduLink] = PduLink,
     class_name: str = "MccsPrototypeSubrack",
 ) -> type[MccsPrototypeSubrack]:
     """
@@ -501,6 +658,8 @@ def subrack_factory(  # pylint: disable=too-many-arguments
         and a logger.
     :param health_recorder: builds the health recorder, from the device name,
         a logger, the health attributes and the device's health callbacks.
+    :param pdu_link: builds the PDU link, from the PDU TRL, the PDU ports, the
+        device's callback scheduler and a logger.
     :param class_name: the Tango class name to serve the device under. Pass
         ``MccsSubrack`` to stand the device in for the old subrack, so that the
         Tango DB rows for the device do not change.
@@ -516,6 +675,7 @@ def subrack_factory(  # pylint: disable=too-many-arguments
             "_subrack_factory": subrack,
             "_subrack_poller_factory": subrack_poller,
             "_health_recorder_factory": health_recorder,
+            "_pdu_link_factory": pdu_link,
         },
     )
 

@@ -146,6 +146,28 @@ class PduComponentManager(SNMPComponentManager):
         super().stop_communicating()
         if self._power_marshaller_trl:
             self.marshaller_proxy.stop_communicating()
+        self._forget_values()
+
+    def poll_failed(self: PduComponentManager, exception: Exception) -> None:
+        """
+        Forget every attribute value when a poll fails.
+
+        :param exception: the exception that was raised by the poll.
+        """
+        super().poll_failed(exception)
+        self._forget_values()
+
+    def _forget_values(self: PduComponentManager) -> None:
+        """
+        Forget every attribute value, so that nothing stale is reported.
+
+        Each value goes to ``None``, which the device reports as an error
+        event. Only a change is pushed, so this also makes the next good poll
+        push every value again. Each attribute is also marked as never polled,
+        so the next poll reads them all, including the ones read only once.
+        """
+        self._last_polled = dict.fromkeys(self._last_polled, float("-inf"))
+        self._update_component_state(**dict.fromkeys(self._attributes, None))
 
     def schedule_power(
         self: PduComponentManager,

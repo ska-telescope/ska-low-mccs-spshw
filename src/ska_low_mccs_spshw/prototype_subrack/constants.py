@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, auto
 from typing import Final
 
 __all__ = [
@@ -17,12 +17,16 @@ __all__ = [
     "COMMAND_POLL_INTERVAL",
     "COMMAND_TIMEOUT",
     "ClientCommand",
+    "CommandOutcome",
     "DerivedKey",
     "FILTERED_ATTRIBUTES",
     "HEALTH_NO_VALUE_REASON",
     "HEALTH_STATUS_KEY",
     "HttpError",
     "MIN_PWM_DUTY_FRACTION",
+    "PDU_ABORT_CHECK_INTERVAL",
+    "PDU_COMMAND_TIMEOUT",
+    "PDU_MAX_PORTS",
     "PSU_DEAD_VOLTAGE_THRESHOLD",
     "PSU_MAX_POWER",
     "PSU_NAMES",
@@ -67,6 +71,18 @@ class ReadKey(str, Enum):
     TPM_CURRENTS = "tpm_currents"
     TPM_POWERS = "tpm_powers"
     TPM_VOLTAGES = "tpm_voltages"
+
+
+class CommandOutcome(Enum):
+    """
+    The outcome of a command the device runs on the board or on the PDU.
+
+    Each outcome maps to one terminal task status.
+    """
+
+    COMPLETED = auto()
+    FAILED = auto()
+    ABORTED = auto()
 
 
 class DerivedKey(str, Enum):
@@ -133,6 +149,19 @@ COMMAND_TIMEOUT: Final = 30.0
 
 COMMAND_POLL_INTERVAL: Final = 0.1
 """How long, in seconds, between ``command_completed`` probes."""
+
+PDU_COMMAND_TIMEOUT: Final = 30.0
+"""How long, in seconds, ``On`` and ``Off`` wait for the PDU ports to switch."""
+
+PDU_MAX_PORTS: Final = 24
+"""The most switched ports a PDU in the device definitions has."""
+
+PDU_ABORT_CHECK_INTERVAL: Final = 0.1
+"""The longest time, in seconds, between abort checks while a PDU wait runs.
+
+A port change ends the wait at once. Nothing signals an abort to the wait, so
+it looks at the abort event at this interval.
+"""
 
 PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
 """The power supplies the health status reports on."""

@@ -367,7 +367,8 @@ def station_delays_corrected(
 
         while time.monotonic() < deadline:
             if all(
-                tile.read_attribute("ppsDelay").quality == tango.AttrQuality.ATTR_VALID
+                tile.read_attribute("timing_pps_delay").quality
+                == tango.AttrQuality.ATTR_VALID
                 for tile in tiles
             ):
                 return

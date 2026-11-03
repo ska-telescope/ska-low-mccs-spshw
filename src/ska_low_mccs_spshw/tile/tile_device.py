@@ -324,7 +324,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     firmwareVersion_signal: AttrSignal[str] = AttrSignal[str]()
     antennaIds_signal: AttrSignal[list[int]] = AttrSignal[list[int]](stored=True)
     coreCommunicationStatus_signal: AttrSignal[str] = AttrSignal[str]()
-    ppsDrift_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    ppsDrift_signal: AttrSignal[int] = AttrSignal[int]()
     ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
     ppsPresent_signal: AttrSignal[bool] = AttrSignal[bool]()
     pllLocked_signal: AttrSignal[bool] = AttrSignal[bool]()
@@ -1358,7 +1358,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 "phaseTerminalCount",
                 "pllLocked",
                 "ppsDelayCorrection",
-                "ppsDrift",
+                "timing_pps_drift",
                 "preaduLevels",
                 # "rfiBlankingEnabledAntennas",
                 "rfiCount",
@@ -4739,7 +4739,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_phase_terminal_count(value)
 
-    ppsDelay = attribute_from_signal(
+    timing_pps_delay = attribute_from_signal(
         pps_delay_signal,
         dtype="DevLong",
         abs_change=MIN_ABS_CHANGE,
@@ -4748,7 +4748,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="The delay between PPS and 10 MHz clock, in 1.25ns units.",
     )
 
-    ppsDrift = attribute_from_signal(
+    timing_pps_drift = attribute_from_signal(
         ppsDrift_signal,
         dtype="DevLong",
         archive_abs_change=1,
@@ -4756,7 +4756,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=10,
         max_warning=4,
         label="PPS Drift",
-        doc="Return the observed drift in the ppsDelay of this Tile, in 1.25ns units.",
+        doc=(
+            "Return the observed drift in the timing_pps_delay of this Tile,"
+            "in 1.25ns units."
+        ),
     )
 
     ppsDelayCorrection = attribute_from_signal(

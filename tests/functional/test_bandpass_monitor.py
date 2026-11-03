@@ -307,7 +307,7 @@ def station_in_synchronised_state(
     # THORN-681: The changes to parallelise writes
     # sped up the initialise routing by ~5 seconds.
     # This meant that the initialise routine had
-    # finished before the tile had polled the ppsDelay.
+    # finished before the tile had polled the timing_pps_delay.
     # we give a 4 second deadline for this to be read.
     deadline = time.time() + 4
     while time.time() < deadline:

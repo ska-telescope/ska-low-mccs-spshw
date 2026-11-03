@@ -92,8 +92,8 @@ ska-tango-devices:
 
       timing_sync_time->min_alarm: 0
 
-      ppsDrift->max_alarm: 10
-      ppsDrift->max_warning: 4
+      timing_pps_drift->max_alarm: 10
+      timing_pps_drift->max_warning: 4
 
       temperatures_adc0->max_alarm: 90.0
       temperatures_adc0->min_alarm: 10.0

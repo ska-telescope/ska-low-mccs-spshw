@@ -2437,7 +2437,7 @@ class TestMccsTile:
                 None,
             ),
             ("currentFrame", 0, None),
-            ("ppsDelay", 12, None),
+            ("timing_pps_delay", 12, None),
             # TODO Tests fail as np.ndarray is returned.
             (
                 "channeliserRounding",

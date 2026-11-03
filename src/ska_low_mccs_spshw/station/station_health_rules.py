@@ -123,7 +123,7 @@ class SpsStationHealthRules(HealthRules):
                 ):
                     result = True
                     msg = (
-                        "Difference in ppsDelay between Tiles has exceeded "
+                        "Difference in timing_pps_delay between Tiles has exceeded "
                         f"{self._thresholds['pps_delta_failed']} samples. "
                         f"ppsDelaySpread: {station_state['pps_delay_spread']}"
                     )
@@ -192,7 +192,7 @@ class SpsStationHealthRules(HealthRules):
                 ):
                     result = True
                     msg = (
-                        "Difference in ppsDelay between Tiles has exceeded "
+                        "Difference in timing_pps_delay between Tiles has exceeded "
                         f"{self._thresholds['pps_delta_degraded']} samples. "
                         f"ppsDelaySpread: {station_state['pps_delay_spread']}"
                     )

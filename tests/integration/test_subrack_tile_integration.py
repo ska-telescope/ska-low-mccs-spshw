@@ -881,7 +881,7 @@ class TestMccsTileTpmDriver:
         final_corrections = tile_device.ppsDelayCorrection
 
         assert np.array_equal(final_corrections, tile_under_test_pps_delay)
-        # assert tile_device.ppsDelay == tile_under_test_pps_delay
+        # assert tile_device.timing_pps_delay == tile_under_test_pps_delay
         for sub_id in tile_subs:
             tile_device.unsubscribe_event(sub_id)
         for sub_id in subrack_subs:

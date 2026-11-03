@@ -95,7 +95,7 @@ as *RW*.
   * *runningBeams*: Bool array with 48 elements. Each element is True if the corresponding
     beam (hardware beam) is running.
 
-  * *ppsDelay*: delay between PPS and 10 MHz clock in 200 MHz cycles
+  * *timing_pps_delay*: delay between PPS and 10 MHz clock in 200 MHz cycles
 
   * *fpgaTime*: Time of the TPM second counter. String in UTC format, with seconds 
     component always integer. Time is synchronised to

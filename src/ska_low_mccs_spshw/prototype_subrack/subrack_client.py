@@ -26,7 +26,6 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum, auto
 from typing import Any, Optional, cast
 
 from ska_low_mccs_common.component import (
@@ -42,6 +41,7 @@ from .constants import (
     COMMAND_TIMEOUT,
     HEALTH_STATUS_KEY,
     ClientCommand,
+    CommandOutcome,
     HttpError,
     ReadKey,
     RequestError,
@@ -49,7 +49,6 @@ from .constants import (
 from .derived_values import DerivedValues
 
 __all__ = [
-    "BoardCommandStatus",
     "Subrack",
     "SubrackPoller",
     "SubrackPollResponse",
@@ -77,14 +76,6 @@ def _details(response: Any) -> str:
     :return: the detail the board gave, or a stand-in when it gave none.
     """
     return str(response.get("info", "No details."))
-
-
-class BoardCommandStatus(Enum):
-    """The outcome of a board command run by :py:meth:`Subrack.run_board_command`."""
-
-    COMPLETED = auto()
-    FAILED = auto()
-    ABORTED = auto()
 
 
 @dataclass
@@ -283,7 +274,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         name: str,
         args: str = "",
         abort_event: Optional[threading.Event] = None,
-    ) -> tuple[BoardCommandStatus, str, Any]:
+    ) -> tuple[CommandOutcome, str, Any]:
         """
         Run one SMB board command and handle the asynchronous handshake.
 
@@ -308,18 +299,18 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             return self._await_command_completion(name, abort_event)
         if status == _BUSY or retvalue == "FAILED":
             return (
-                BoardCommandStatus.FAILED,
+                CommandOutcome.FAILED,
                 f"The board did not accept command '{name}'. It is busy.",
                 None,
             )
         if status == _OK:
             return (
-                BoardCommandStatus.COMPLETED,
+                CommandOutcome.COMPLETED,
                 "The command completed.",
                 retvalue,
             )
         return (
-            BoardCommandStatus.FAILED,
+            CommandOutcome.FAILED,
             f"Command '{name}' failed with status '{status}'. " f"{_details(response)}",
             None,
         )
@@ -461,7 +452,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
     def _await_command_completion(
         self: Subrack, name: str, abort_event: Optional[threading.Event]
-    ) -> tuple[BoardCommandStatus, str, Any]:
+    ) -> tuple[CommandOutcome, str, Any]:
         """
         Probe ``command_completed`` until the board command finishes.
 
@@ -476,7 +467,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             # Wait between probes, waking at once if an abort is requested.
             if abort.wait(COMMAND_POLL_INTERVAL):
                 self._abort_board_command()
-                return (BoardCommandStatus.ABORTED, "The command was aborted.", None)
+                return (CommandOutcome.ABORTED, "The command was aborted.", None)
 
             response = self._client.execute_command(
                 ClientCommand.COMMAND_COMPLETED.value
@@ -487,32 +478,32 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 # failed, for example a slot that could not switch.
                 if response.get("retvalue") and response.get("failed"):
                     return (
-                        BoardCommandStatus.FAILED,
+                        CommandOutcome.FAILED,
                         f"Command '{name}' failed on the board. "
                         f"{response.get('info') or 'No details.'}",
                         None,
                     )
                 if response.get("retvalue"):
                     return (
-                        BoardCommandStatus.COMPLETED,
+                        CommandOutcome.COMPLETED,
                         "The command completed.",
                         None,
                     )
             elif status in _TRANSPORT_ERRORS:
-                return (BoardCommandStatus.FAILED, str(response["info"]), None)
+                return (CommandOutcome.FAILED, str(response["info"]), None)
             elif status not in _BOARD_BUSY:
                 # Anything else is the board reporting a problem, or a status
                 # the client does not know. Waiting would discard the reason
                 # and blame the timeout for something that will never finish.
                 return (
-                    BoardCommandStatus.FAILED,
+                    CommandOutcome.FAILED,
                     f"Command '{name}' failed while completing, with status "
                     f"'{status}'. {_details(response)}",
                     None,
                 )
 
         return (
-            BoardCommandStatus.FAILED,
+            CommandOutcome.FAILED,
             "Timed out waiting for the command to complete.",
             None,
         )

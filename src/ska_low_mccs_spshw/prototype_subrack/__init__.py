@@ -9,10 +9,11 @@
 
 
 __all__ = [
-    "BoardCommandStatus",
+    "CommandOutcome",
     "DerivedValues",
     "HttpError",
     "MccsPrototypeSubrack",
+    "PduLink",
     "RequestError",
     "Subrack",
     "SubrackCommands",
@@ -20,13 +21,9 @@ __all__ = [
     "SubrackPollResponse",
 ]
 
-from .constants import HttpError, RequestError
+from .constants import CommandOutcome, HttpError, RequestError
 from .derived_values import DerivedValues
+from .pdu_link import PduLink
 from .prototype_subrack_commands import SubrackCommands
 from .prototype_subrack_device import MccsPrototypeSubrack
-from .subrack_client import (
-    BoardCommandStatus,
-    Subrack,
-    SubrackPoller,
-    SubrackPollResponse,
-)
+from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse

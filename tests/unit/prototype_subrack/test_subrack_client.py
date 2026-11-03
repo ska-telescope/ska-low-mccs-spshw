@@ -957,6 +957,8 @@ class TestTheBiosVersion:
 
         subrack.poll(subrack.get_request())
 
+        assert fake_client.attribute_calls[0] == "board_info"
+        assert ("tpm_currents" in fake_client.attribute_calls) == reads_tpm_currents
         assert subrack.board_info == {"SMM": {"bios": bios}}
         assert derived.apply.call_args.kwargs == {
             "derive_tpm_currents": not reads_tpm_currents
@@ -1008,9 +1010,8 @@ class TestTheBiosVersion:
         """
         A 1.8.0 board must give derived TPM currents and complete its commands.
 
-        The first poll still asks for ``tpm_currents``, which the board answers
-        with an error. The derived value replaces it in that same poll. After
-        that the client no longer asks.
+        Every poll reads the board info before ``tpm_currents``, so even the
+        first poll does not ask for them. The derived value replaces them.
 
         :param subrack_simulator_config: the simulator configuration.
         :param logger: a logger.

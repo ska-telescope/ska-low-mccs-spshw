@@ -208,11 +208,7 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
 
         :return: every batched attribute that the board reports.
         """
-        if SubrackData.supports_tpm_currents(self._board_info):
-            return BATCH_ATTRIBUTES
-        return tuple(
-            key for key in BATCH_ATTRIBUTES if key != ReadKey.TPM_CURRENTS.value
-        )
+        return tuple(key for key in BATCH_ATTRIBUTES if self._reports(key))
 
     def poll(self: Subrack, poll_request: tuple[str, ...]) -> SubrackPollResponse:
         """
@@ -230,7 +226,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         values.update(self._fetch_health())
 
         not_read = [
-            key for key in (*poll_request, HEALTH_STATUS_KEY) if key not in values
+            key
+            for key in (*poll_request, HEALTH_STATUS_KEY)
+            if key not in values and self._reports(key)
         ]
         if not_read:
             self._logger.debug(
@@ -238,13 +236,9 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
                 ", ".join(not_read),
             )
 
-        # A failed or busy read must not forget the version already known.
-        board_info = values.get(ReadKey.BOARD_INFO.value)
-        if isinstance(board_info, dict) and board_info:
-            self._board_info = board_info
         self._derived.apply(
             values,
-            derive_tpm_currents=not SubrackData.supports_tpm_currents(self._board_info),
+            derive_tpm_currents=not self._reports(ReadKey.TPM_CURRENTS.value),
         )
 
         return SubrackPollResponse(values=values, timestamp=time.time())
@@ -347,6 +341,20 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
             raise HttpError(str(response["info"]))
         raise RequestError(str(response["info"]))
 
+    def _reports(self: Subrack, key: str) -> bool:
+        """
+        Return whether the board reports a hardware read key.
+
+        :param key: the hardware read key.
+
+        :return: whether the board reports the key, as far as the board info
+            read so far tells. Until a board info read, it is assumed that
+            the board reports every key.
+        """
+        return key != ReadKey.TPM_CURRENTS.value or SubrackData.supports_tpm_currents(
+            self._board_info
+        )
+
     def _fetch_attributes(self: Subrack, keys: tuple[str, ...]) -> dict[str, Any]:
         """
         Read the given hardware attributes from the subrack over HTTP.
@@ -362,10 +370,21 @@ class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):
         """
         values: dict[str, Any] = {}
         for key in keys:
+            if not self._reports(key):
+                continue
             response = self._client.get_attribute(key)
             status = response["status"]
             if status == _OK:
-                values[key] = response["value"]
+                value = response["value"]
+                values[key] = value
+                # A failed or busy read must not forget the version already
+                # known.
+                if (
+                    key == ReadKey.BOARD_INFO.value
+                    and isinstance(value, dict)
+                    and value
+                ):
+                    self._board_info = value
             elif status in _IN_BAND_ERRORS:
                 values[key] = None
                 self._logger.warning(

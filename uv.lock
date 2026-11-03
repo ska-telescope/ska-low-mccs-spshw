@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.10.*"
 
 [[package]]
@@ -2067,6 +2067,7 @@ dependencies = [
     { name = "ska-ser-snmp" },
     { name = "ska-tango-base" },
     { name = "ska-telmodel-client" },
+    { name = "snmpsim" },
     { name = "tabulate" },
     { name = "types-icalendar" },
     { name = "types-pytz" },
@@ -2166,6 +2167,7 @@ requires-dist = [
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
     { name = "ska-tango-base", specifier = ">=1.6.1,<2.0.0" },
     { name = "ska-telmodel-client", specifier = ">=1.31.0,<2.0.0" },
+    { name = "snmpsim", specifier = ">=1.2.0,<1.2.1" },
     { name = "tabulate", specifier = ">=0.9.0,<1.0.0" },
     { name = "types-icalendar", specifier = ">=6.3.1.20250521,<7.0.0" },
     { name = "types-pytz", specifier = ">=2025.2.0.20250516,<2026.0.0" },
@@ -2383,6 +2385,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372, upload-time = "2024-02-25T23:20:04.057Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235, upload-time = "2024-02-25T23:20:01.196Z" },
+]
+
+[[package]]
+name = "snmpsim"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pysnmp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bc/3a/541f64948e4c644c6111bfb2053d6f5f2769c15797bcb3069533eed54c0e/snmpsim-1.2.0.tar.gz", hash = "sha256:26ae376b70188009fd58b2f306545df6dd8fdf20c67859bdf046b7d7360d2f9f", size = 244392, upload-time = "2025-11-19T10:09:14.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/a7/e1a1c53459f6131a21b5632025b28a7d0edb9bff520cefaace6ef1673e0d/snmpsim-1.2.0-py3-none-any.whl", hash = "sha256:f59aee14528b35396d77653b0af0fa31cf8adce461c9f08ed9812ec0e9b737e9", size = 226442, upload-time = "2025-11-19T10:09:12.719Z" },
 ]
 
 [[package]]

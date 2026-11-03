@@ -11,6 +11,13 @@ platform:
 # For example,
 #
 helm_values:
+  # The simulator for the simulated PDU in local_telmodel/ci-1.yaml. The shared
+  # pdus template does not create it yet.
+  simulators:
+    pdus:
+      ci-1:
+        host: pdu-simulator-ci-1
+        model: ENLOGIC
   # Null ParentTRL given by platform spec, currently the only place to do this.
   ska-low-mccs-daq:
     ska-tango-devices:

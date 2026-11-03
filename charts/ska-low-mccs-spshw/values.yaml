@@ -37,6 +37,11 @@ simulators: {} # e.g.
   #     srmb_host: subrack-simulator-s8-1
   #     srmb_port: 8081
   #     bios_version: "1.8.0"  # optional; the simulator defaults to 1.6.0
+  # pdus:
+  #   ci-1:
+  #     host: pdu-simulator-ci-1
+  #     model: ENLOGIC
+  #     port: 161  # optional; the Service defaults to the SNMP port
 
 pgadmin4:
   enabled: false

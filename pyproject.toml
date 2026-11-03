@@ -45,7 +45,8 @@ dependencies = [
     "pyqt5 >= 5.15.11, <6.0.0",
     "netifaces-binary >= 0.11.0, <1.0.0",
     "recommonmark >= 0.7.1, <1.0.0",
-    "ska-ser-snmp >= 0.6.1, <1.0.0"
+    "ska-ser-snmp >= 0.6.1, <1.0.0",
+    "snmpsim >= 1.2.0, <1.2.1"
 ]
 
 name = "ska-low-mccs-spshw"
@@ -127,6 +128,7 @@ SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 MccsPrototypeSubrack = "ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device:main"
 subrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
+pduSimulator = "ska_low_mccs_spshw.pdu.pdu_simulator:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
 MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"
 PowerMarshaller = "ska_low_mccs_spshw.power_marshaller.power_marshaller_device:main"

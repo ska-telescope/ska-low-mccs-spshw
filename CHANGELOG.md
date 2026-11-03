@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with site details replaced, and a variation module that switches an outlet when its control object is written. Run it with the `pduSimulator` command, or in a test with `PduSimulatorContextManager`.
+  * The chart deploys one simulator pod for each entry in `simulators.pdus`, behind a UDP Service on port 161. CI now has the simulated PDU `low-mccs/pdu/ci-1`, which subrack `sr1` already names.
+  * Fixed the Enlogic `pduPort{N}Current` OIDs, which read nothing on a real PDU because they used the wrong index.
+  * Removed the old `PduSimulator` Tango device, which could not run.
+  * New dependency: `snmpsim` 1.2.0, pinned because later versions need a newer pysnmp than ska-ser-snmp 0.6 allows.
 * [THORN-772] Updated chart default thresholds for Subrack.MaxFanSpeed, added a docs page for users.
 * [THORN-755] Modified subrack simulator to support different api versions. Added a manual parity test that makes sure the simulator has the same attributes and commands as the actual api. Added some docs for the simulator.
   * New in `1.8.0`:

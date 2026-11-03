@@ -1,0 +1,72 @@
+{{- /*
+Deploy the PDU simulator/s.
+
+  simulators:
+    pdus:
+      "ci-1":
+        host: pdu-simulator-ci-1
+        model: ENLOGIC
+        port: 161  # optional; the Service defaults to the SNMP port
+
+Each simulator runs in its own pod. The Service listens on the SNMP port and
+sends to the container's port 1610, so the container needs no root and
+MccsPdu keeps its default Port.
+*/}}
+{{- range $key, $spec := ((.Values.simulators).pdus)}}
+{{- $host := $spec.host}}
+{{- $port := $spec.port | default 161}}
+{{- $container_port := 1610}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{$host}}
+  namespace: {{$.Release.Namespace}}
+  labels:
+    component: {{$host}}
+spec:
+  ports:
+  - name: snmp
+    port: {{$port}}
+    targetPort: {{$container_port}}
+    protocol: UDP
+  type: ClusterIP
+  selector:
+    component: {{$host}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{$host}}
+  namespace: {{$.Release.Namespace}}
+  labels:
+    component: {{$host}}
+spec:
+  selector:
+    matchLabels:
+      component: {{$host}}
+  serviceName: {{$host}}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: {{$host}}
+    spec:
+      containers:
+      - name: {{$host}}
+{{- with $.Values.image}}
+        image: {{.registry}}/{{.name}}:{{.tag | default $.Chart.AppVersion}}
+{{- end}}
+        imagePullPolicy: IfNotPresent
+        command:
+          - "pduSimulator"
+        ports:
+          - name: snmp
+            containerPort: {{$container_port}}
+            protocol: UDP
+        env:
+          - name: PDU_SIMULATOR_MODEL
+            value: {{$spec.model | quote}}
+          - name: PDU_SIMULATOR_PORT
+            value: {{$container_port | quote}}
+{{- end}}

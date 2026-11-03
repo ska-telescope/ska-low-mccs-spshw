@@ -530,6 +530,8 @@ class SpsTangoTestHarness:
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.MccsPdu",
         define_parent_trl: bool = False,
+        port: int | None = None,
+        update_rate: float | None = None,
     ) -> None:
         """
         Add a pdu Tango device to the test harness.
@@ -543,12 +545,20 @@ class SpsTangoTestHarness:
             for example with a patched subclass.
         :param define_parent_trl: True if we want to define the parentTRL.
             you may want to disable for unittests.
+        :param port: the SNMP port of the pdu. Defaults to None, in which
+            case the device default is used.
+        :param update_rate: How often to poll the pdu, in seconds. Defaults
+            to None, in which case the device default is used.
         """
-        optional_properties = {}
+        optional_properties: dict[str, Any] = {}
         if define_parent_trl:
             optional_properties.update(
                 {"ParentTRL": get_sps_station_name(self._station_label)}
             )
+        if port is not None:
+            optional_properties["Port"] = port
+        if update_rate is not None:
+            optional_properties["UpdateRate"] = update_rate
 
         self._tango_test_harness.add_device(
             get_pdu_name(),

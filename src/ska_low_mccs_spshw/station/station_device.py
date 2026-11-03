@@ -267,7 +267,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
-
         self.init_completed()
 
     def _init_state_model(self: SpsStation) -> None:
@@ -309,6 +308,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model.health_params = (
             self._health_thresholds | self._health_model.health_params
         )
+
+        self._setup_change_and_archive_events()
+
+        # pylint: disable=attribute-defined-outside-init
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
+        # pylint: disable=attribute-defined-outside-init
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
+
+    def _setup_change_and_archive_events(self: SpsStation) -> None:
         self.set_change_event("healthState", True, False)
         self.set_change_event("xPolBandpass", True, False)
         self.set_change_event("yPolBandpass", True, False)
@@ -328,7 +336,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("ppsPresentSummary", True, False)
         self.set_change_event("isBeamformerRunning", True, False)
         self.set_change_event("pointingDelays", True, False)
-
         self.set_archive_event("xPolBandpass", False)
         self.set_archive_event("yPolBandpass", False)
         self.set_archive_event("antennaInfo", True, True)
@@ -347,11 +354,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("ppsPresentSummary", False)
         self.set_archive_event("isBeamformerRunning", False)
         self.set_archive_event("pointingDelays", True, True)
-
-        # pylint: disable=attribute-defined-outside-init
-        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
-        # pylint: disable=attribute-defined-outside-init
-        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
 
     def delete_device(self: SpsStation) -> None:
         """Do any necessary cleanup."""

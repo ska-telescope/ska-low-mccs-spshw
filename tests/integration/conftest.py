@@ -223,7 +223,7 @@ def patched_tile_device_class_fixture(
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
             "temperatures_board": ["temperatures", "board"],
-            "timing_pps_present": ["timing", "pps", "status"],
+            "timing_pps_present": ["timing", "pps", "present"],
         }
 
         def init_device(self) -> None:

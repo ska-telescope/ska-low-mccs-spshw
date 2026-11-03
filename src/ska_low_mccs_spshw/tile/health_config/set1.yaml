@@ -229,7 +229,8 @@ tpm_monitoring_points:
         JESD_MMCM: !!python/tuple [True, 0]
         DSP_MMCM: !!python/tuple [True, 0]
     pps:
-      status: True
+      present: True
+      period: True
     pll: !!python/tuple [True, 0]
     pll_40g: !!python/tuple [True, 0]
     sync_time: True

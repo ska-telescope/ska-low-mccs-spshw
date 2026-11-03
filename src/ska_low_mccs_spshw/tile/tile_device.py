@@ -894,7 +894,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
-            "timing_pps_present": ["timing", "pps", "status"],
+            "timing_pps_present": ["timing", "pps", "present"],
+            "timing_pps_period": ["timing", "pps", "period"],
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
             "temperatures_board": ["temperatures", "board"],

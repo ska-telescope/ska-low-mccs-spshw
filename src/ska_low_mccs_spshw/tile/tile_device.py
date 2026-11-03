@@ -429,7 +429,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "voltages_vm_mgt1_aux": "voltage_vm_mgt1_aux_signal",
         "voltages_vm_pll": "voltage_vm_pll_signal",
         "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
-        "adcs_pll_status_adcs": "adc_pll_lock_status_signal",
+        "adcs_pll_status": "adc_pll_lock_status_signal",
         "dsp_tile_beamf": "tile_beamformer_status_signal",
         "dsp_station_beamf_status": "station_beamformer_status_signal",
         "dsp_station_beamf_ddr_parity_error_count_fpga0": (
@@ -477,8 +477,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "timing_clock_managers_fpga1_status": "fpga1_clock_managers_status_signal",
         "timing_clocks_fpga0": "fpga0_clocks_signal",
         "timing_clocks_fpga1": "fpga1_clocks_signal",
-        "adcs_sysref_counter_adcs": "adc_sysref_counter_signal",
-        "adcs_sysref_timing_requirements_adcs": "adc_sysref_timing_requirements_signal",
+        "adcs_sysref_counter": "adc_sysref_counter_signal",
+        "adcs_sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
         "io_jesd_interface_qpll_status_fpga0_status": "fpga0_qpll_status_signal",
         "io_jesd_interface_qpll_status_fpga1_status": "fpga1_qpll_status_signal",
         "io_jesd_interface_qpll_status_fpga0_count": "fpga0_qpll_counter_signal",
@@ -955,7 +955,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "voltages_vm_mgt1_aux": ["voltages", "VM_MGT1_AUX"],
             "voltages_vm_pll": ["voltages", "VM_PLL"],
             "voltages_vm_sw_amp": ["voltages", "VM_SW_AMP"],
-            "adcs_pll_status_adcs": ["adcs", "pll_status"],
+            "adcs_pll_status": ["adcs", "pll_status"],
             # qpll_status is a tuple, extracting status and
             # conuter in different attributes
             "io_jesd_interface_qpll_status_fpga0_status": [
@@ -1041,11 +1041,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "timing_pll_40g_status": ["timing", "pll_40g"],
             "timing_pll_40g_count": ["timing", "pll_40g"],
             "timing_sync_time": ["timing", "sync_time"],
-            "adcs_sysref_timing_requirements_adcs": [
+            "adcs_sysref_timing_requirements": [
                 "adcs",
                 "sysref_timing_requirements",
             ],
-            "adcs_sysref_counter_adcs": ["adcs", "sysref_counter"],
+            "adcs_sysref_counter": ["adcs", "sysref_counter"],
             "timing_clocks_fpga0": ["timing", "clocks", "FPGA0"],
             "timing_clocks_fpga1": ["timing", "clocks", "FPGA1"],
             # Extracting status and count in different attributes
@@ -1984,7 +1984,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         label="ADC PLL Lock Status",
         doc="Return the pll status of all 16 ADCs.",
     )
-    def adcs_pll_status_adcs(
+    def adcs_pll_status(
         self: MccsTile, raw_value: dict[str, tuple[bool, bool]] | None
     ) -> np.ndarray | None:
         """
@@ -2178,7 +2178,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param raw_value: the raw attribute value emitted on the signal, or
             ``None`` when the value is being invalidated.
 
-        :return: the decode error count per FPGA.
+        :return: the decode error count for FPGA0.
         """
         if raw_value is None:
             return None
@@ -2212,7 +2212,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param raw_value: the raw attribute value emitted on the signal, or
             ``None`` when the value is being invalidated.
 
-        :return: the decode error count per FPGA.
+        :return: the decode error count for FPGA1.
         """
         if raw_value is None:
             return None
@@ -2423,7 +2423,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=-1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 IO F2F Interface Hard Error Count",
+        label="FPGA1 IO F2F Interface Hard Error Count",
         doc="Return the FPGA1 F2F interface hard error count. "
         "Expected: 0 if no hard errors detected in FPGA-to-FPGA interface. "
         "Hard errors require the interface to be reset. This likely means "
@@ -2749,7 +2749,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: `1` if SYSREF counter is incrementing (SYSREF is present), "
         "`0` if not present.",
     )
-    def adcs_sysref_counter_adcs(
+    def adcs_sysref_counter(
         self: MccsTile, raw_value: dict[str, bool] | None
     ) -> list[int] | None:
         """
@@ -2759,7 +2759,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         `0` if not present.
 
         :example:
-            >>> tile.adcs_sysref_counter_adcs
+            >>> tile.adcs_sysref_counter
             [1] * 16
 
         :param raw_value: the raw attribute value emitted on the signal, or
@@ -2784,7 +2784,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "Expected: `1` if setup and hold requirements for SYSREF are met, "
         "else return `0`.",
     )
-    def adcs_sysref_timing_requirements_adcs(
+    def adcs_sysref_timing_requirements(
         self: MccsTile, raw_value: dict[str, bool] | None
     ) -> list[int] | None:
         """
@@ -2794,7 +2794,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         else return `0`.
 
         :example:
-            >>> tile.adcs_sysref_timing_requirements_adcs
+            >>> tile.adcs_sysref_timing_requirements
             [1] * 16
 
         :param raw_value: the raw attribute value emitted on the signal, or

@@ -1803,7 +1803,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
 
         emit_value = attribute_value
-        if attribute_name == "timing_pps_present" and attribute_value is False:
+        if (
+            attribute_name in ("timing_pps_present", "timing_pps_period")
+            and attribute_value is False
+        ):
             # Signal ALARM quality directly rather than relying on
             # Tango's min_alarm, which isn't usable on a DevBoolean.
             emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)

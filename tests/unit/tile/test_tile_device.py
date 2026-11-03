@@ -286,7 +286,8 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
 # Mirrors MccsTile.attribute_monitoring_point_map (an instance attribute set
 # in init_device, so not importable directly). Keep in sync with that map.
 HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
-    "timing_pps_present": ["timing", "pps", "status"],
+    "timing_pps_present": ["timing", "pps", "present"],
+    "timing_pps_period": ["timing", "pps", "period"],
     "temperatures_fpga0": ["temperatures", "FPGA0"],
     "temperatures_fpga1": ["temperatures", "FPGA1"],
     "temperatures_board": ["temperatures", "board"],
@@ -2158,7 +2159,7 @@ class TestMccsTile:
         [
             (
                 "timing_pps_present",
-                ["timing", "pps", "status"],
+                ["timing", "pps", "present"],
                 False,
             ),
             (
@@ -2384,7 +2385,7 @@ class TestMccsTile:
         )
         set_nested_value(
             tile_simulator._tile_health_structure,
-            ["timing", "pps", "status"],
+            ["timing", "pps", "present"],
             False,
         )
 
@@ -2841,7 +2842,7 @@ class TestMccsTile:
         [
             (
                 "timing_pps_present",
-                ["timing", "pps", "status"],
+                ["timing", "pps", "present"],
                 False,
                 None,
                 None,

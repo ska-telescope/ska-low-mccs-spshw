@@ -278,7 +278,7 @@ configuration:
       temperatures_board:
         code_push_event: true
         archive_period: 0
-      adcs_pll_status_adcs:
+      adcs_pll_status:
         code_push_event: true
         archive_period: 0
       dsp_tile_beamf:
@@ -392,10 +392,10 @@ configuration:
       timing_clocks_fpga1:
         code_push_event: true
         archive_period: 0
-      adcs_sysref_counter_adcs:
+      adcs_sysref_counter:
         code_push_event: true
         archive_period: 0
-      adcs_sysref_timing_requirements_adcs:
+      adcs_sysref_timing_requirements:
         code_push_event: true
         archive_period: 0
       io_jesd_interface_qpll_status_fpga0_status:
@@ -415,6 +415,7 @@ configuration:
         archive_period: 0
       io_f2f_interface_pll_status_fpga1_status:
         code_push_event: true
+        archive_period: 0
       io_f2f_interface_pll_status_fpga0_count:
         code_push_event: true
         archive_period: 0

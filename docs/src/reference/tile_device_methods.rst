@@ -627,9 +627,9 @@ The following attributes are used to monitor board health status.
 
   * *temperatures_board*: Temperature measured at mid-board, in degrees Celsius.
 
-  * *temperatures_fpga0*: Temperature of the FPGA1 die, in degrees Celsius.
+  * *temperatures_fpga0*: Temperature of the FPGA0 die, in degrees Celsius.
 
-  * *temperatures_fpga1*: Temperature of the FPGA2 die, in degrees Celsius.
+  * *temperatures_fpga1*: Temperature of the FPGA1 die, in degrees Celsius.
 
   * *clockPresent*: Report if 10 MHz clock signal is present at the TPM input.
 

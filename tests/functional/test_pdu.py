@@ -25,7 +25,6 @@ from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from ska_low_mccs_spshw.pdu.pdu_simulator import PduSimulatorContextManager
 from tests.harness import SpsTangoTestHarness
 
 # What the simulated PDU reports as its system description.
@@ -57,6 +56,11 @@ def pdu_device_fixture(
             pytest.skip("The deployment exports no PDU device.")
         yield exported_pdus[0]
         return
+
+    # Deferred, as in the harness, because a true context runs these tests from
+    # a pod that does not have ska_low_mccs_spshw installed.
+    # pylint: disable-next=import-outside-toplevel
+    from ska_low_mccs_spshw.pdu.pdu_simulator import PduSimulatorContextManager
 
     with PduSimulatorContextManager("ENLOGIC") as (host, port):
         harness = SpsTangoTestHarness()

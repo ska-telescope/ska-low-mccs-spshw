@@ -155,9 +155,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         ``start_polling`` and then never poll, and a reclaimed subrack would
         accept a command and reach a board the device no longer monitors.
 
-        The PDU link is built only when ``PduTrl`` and ``PduPorts`` are both
-        set. Without it the device follows no PDU, and refuses ``On`` and
-        ``Off``.
+        The PDU link is not built here. :py:meth:`change_control_level` builds
+        it the first time full control is asked for.
         """
         self._poller = None
         self._subrack = None
@@ -182,14 +181,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._poller = self._subrack_poller_factory(
             self._subrack, self.UpdateRate, self.logger
         )
-        if self.PduTrl and self.PduPorts:
-            assert self._callback_scheduler is not None  # for the type checker
-            self._pdu_link = self._pdu_link_factory(
-                self.PduTrl,
-                list(self.PduPorts),
-                self._callback_scheduler,
-                self.logger,
-            )
 
     def disassemble(self: MccsPrototypeSubrack) -> None:
         """Reclaim the poller's thread, if there is one to reclaim."""
@@ -222,7 +213,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         """
         if self._pdu_link is None:
             raise ValueError(
-                "The subrack has no PDU, because PduTrl or PduPorts is not set."
+                "The subrack has no PDU link. The link needs PduTrl and PduPorts, "
+                "and is built when the device goes online."
             )
         return self._pdu_link
 
@@ -330,8 +322,29 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             # the board yet.
             self.component_unknown()
             self._evaluated_state = DevState.UNKNOWN
+            self._connect_pdu()
             self._poller.start_polling()
             self.logger.info("Starting polling the subrack.")
+
+    def _connect_pdu(self: MccsPrototypeSubrack) -> None:
+        """
+        Build the PDU link, the first time full control is asked for.
+
+        The link is built only when ``PduTrl`` and ``PduPorts`` are both set.
+        Without it the device follows no PDU, and refuses ``On`` and ``Off``.
+        The link reaches the PDU device as it is built, so it is not built in
+        :py:meth:`assemble`, where the PDU device may not be running yet.
+        Once built, it lasts until the scheduler is shut down.
+        """
+        if self._pdu_link is not None or not (self.PduTrl and self.PduPorts):
+            return
+        assert self._callback_scheduler is not None  # for the type checker
+        self._pdu_link = self._pdu_link_factory(
+            self.PduTrl,
+            list(self.PduPorts),
+            self._callback_scheduler,
+            self.logger,
+        )
 
     def wake_poller(self: MccsPrototypeSubrack) -> None:
         """

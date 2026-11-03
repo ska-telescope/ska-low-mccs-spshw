@@ -117,9 +117,13 @@ class PduLink:
         self._logger = logger
         self._port_states = dict.fromkeys(ports, PowerState.UNKNOWN)
 
+        # A proxy rather than the TRL, because the scheduler resolves a short TRL
+        # through the Tango database, which a test context does not have. It
+        # reads the full TRL from the proxy instead, and builds its own proxy.
+        proxy = tango.DeviceProxy(pdu_trl)
         for port in self._port_states:
             callback_scheduler.register_event_callback(
-                pdu_trl,
+                proxy,
                 f"pduPort{port}State",
                 tango.EventType.CHANGE_EVENT,
                 functools.partial(self._port_event, port),

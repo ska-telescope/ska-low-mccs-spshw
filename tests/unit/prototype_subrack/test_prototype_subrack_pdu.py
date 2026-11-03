@@ -350,20 +350,29 @@ def _tpm_power_states(device: tango.DeviceProxy) -> list[PowerState]:
 # ---------------------------------
 # Assembly and the link's lifecycle
 # ---------------------------------
-def test_assembles_a_pdu_link_from_its_properties(
+def test_builds_a_pdu_link_when_full_control_is_asked_for(
     subrack_device: tango.DeviceProxy,
+    no_pdu_device: tango.DeviceProxy,
     pdu_link_factory: mock.Mock,
     no_pdu_link_factory: mock.Mock,
 ) -> None:
     """
-    Test that the link is built from PduTrl and PduPorts, and only when both are set.
+    Test that the link is built the first time the device goes online, and once.
 
-    The link subscribes through the device's own callback scheduler.
+    It is built from PduTrl and PduPorts, and only when both are set. It
+    subscribes through the device's own callback scheduler.
 
-    :param subrack_device: the device under test.
+    :param subrack_device: the device under test, offline.
+    :param no_pdu_device: the device that has no PDU, online.
     :param pdu_link_factory: the PDU link factory of the device with a PDU.
     :param no_pdu_link_factory: the PDU link factory of the device without one.
     """
+    pdu_link_factory.assert_not_called()
+
+    subrack_device.adminMode = AdminMode.ONLINE
+    subrack_device.adminMode = AdminMode.OFFLINE
+    subrack_device.adminMode = AdminMode.ONLINE
+
     pdu_link_factory.assert_called_once()
     (trl, ports, callback_scheduler, _logger) = pdu_link_factory.call_args.args
     assert trl == PDU_TRL
@@ -381,9 +390,13 @@ def test_init_builds_a_new_link_on_a_new_scheduler(
 
     Shutting the old scheduler down is what ends the old link's subscriptions.
 
+    adminMode is memorized, so the device goes online again as it initialises,
+    and that builds the new link.
+
     :param subrack_device: the device under test.
     :param pdu_link_factory: the PDU link factory.
     """
+    subrack_device.adminMode = AdminMode.ONLINE
     with mock.patch.object(CallbackScheduler, "shutdown", autospec=True) as shutdown:
         subrack_device.Init()
 
@@ -730,14 +743,39 @@ def test_a_device_without_a_pdu_refuses_power_commands(
 
 
 @pytest.mark.parametrize("command", ["On", "Off"])
-def test_an_offline_device_refuses_power_commands(
+def test_a_device_never_online_refuses_power_commands(
     subrack_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
     pdu_link: mock.Mock,
     command: str,
 ) -> None:
     """
-    Test that On and Off are refused while the device is offline.
+    Test that On and Off are refused by a device that has not been online.
+
+    The link is built when the device first goes online, so before that the
+    command has nothing to switch the ports through.
+
+    :param subrack_device: the device under test, offline.
+    :param pdu_link: the mocked PDU link.
+    :param command: the command to run.
+    """
+    assert subrack_device.state() == DevState.DISABLE
+
+    with pytest.raises(tango.DevFailed, match="no PDU link"):
+        subrack_device.command_inout(command)
+
+    pdu_link.set_ports.assert_not_called()
+
+
+@pytest.mark.parametrize("command", ["On", "Off"])
+def test_an_offline_device_refuses_power_commands(  # pylint: disable=too-many-arguments
+    subrack_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    pdu_link: mock.Mock,
+    polling_stopped: Callable[[], None],
+    command: str,
+) -> None:
+    """
+    Test that On and Off are refused while the device is offline again.
 
     The base class refuses both in ``DISABLE``, which is where an offline
     device sits. It queues the command, and then rejects it when it would
@@ -746,8 +784,12 @@ def test_an_offline_device_refuses_power_commands(
     :param subrack_device: the device under test, offline.
     :param change_event_callbacks: the callbacks to subscribe with.
     :param pdu_link: the mocked PDU link.
+    :param polling_stopped: tells the device that polling has stopped.
     :param command: the command to run.
     """
+    subrack_device.adminMode = AdminMode.ONLINE
+    subrack_device.adminMode = AdminMode.OFFLINE
+    polling_stopped()
     assert subrack_device.state() == DevState.DISABLE
     lrc = LRCManager(subrack_device, change_event_callbacks)
 

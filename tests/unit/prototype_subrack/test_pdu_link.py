@@ -98,15 +98,28 @@ def commands_fixture() -> Iterator[dict[str, mock.Mock]]:
         yield commands
 
 
+@pytest.fixture(name="proxy")
+def proxy_fixture() -> Iterator[mock.Mock]:
+    """
+    Replace the PDU proxy the link subscribes through.
+
+    :yields: the factory that builds the proxy, whose return value is the proxy.
+    """
+    with mock.patch("tango.DeviceProxy") as proxy_factory:
+        yield proxy_factory
+
+
 @pytest.fixture(name="link")
 def link_fixture(
     scheduler: mock.Mock,
+    proxy: mock.Mock,
     commands: dict[str, mock.Mock],
 ) -> PduLink:
     """
     Return a PDU link, which subscribes as it is built.
 
     :param scheduler: the mock scheduler the link registers with.
+    :param proxy: the factory of the PDU proxy the link subscribes through.
     :param commands: the mock command proxies the link builds.
 
     :return: the link under test.
@@ -126,9 +139,8 @@ def _callback(scheduler: mock.Mock, attribute_name: str) -> Callable[[Any], None
     :return: the callback.
     """
     for call in reversed(scheduler.register_event_callback.call_args_list):
-        (trl, name, event_type, callback) = call.args
+        (_device, name, event_type, callback) = call.args
         if name == attribute_name:
-            assert trl == PDU_TRL
             assert event_type == tango.EventType.CHANGE_EVENT
             return callback
     raise AssertionError(f"Nothing subscribed to {attribute_name}.")
@@ -199,17 +211,22 @@ def test_combined_power_state(
     assert combined_power_state(port_states) == expected
 
 
-def test_subscribes_to_each_port(link: PduLink, scheduler: mock.Mock) -> None:
+def test_subscribes_to_each_port(
+    link: PduLink, scheduler: mock.Mock, proxy: mock.Mock
+) -> None:
     """
     Test that the link subscribes once to each port, and to nothing else.
 
+    Each subscription goes through one proxy to the PDU.
+
     :param link: the link under test.
     :param scheduler: the mock scheduler the link registered with.
+    :param proxy: the factory of the PDU proxy the link subscribes through.
     """
-    subscribed = [
-        call.args[1] for call in scheduler.register_event_callback.call_args_list
-    ]
-    assert subscribed == ["pduPort3State", "pduPort8State"]
+    proxy.assert_called_once_with(PDU_TRL)
+    calls = scheduler.register_event_callback.call_args_list
+    assert [call.args[0] for call in calls] == [proxy.return_value] * 2
+    assert [call.args[1] for call in calls] == ["pduPort3State", "pduPort8State"]
     assert link.port_states == [PowerState.UNKNOWN, PowerState.UNKNOWN]
 
 

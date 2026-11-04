@@ -156,6 +156,20 @@ def pdu_link_fixture() -> mock.Mock:
     return mock.Mock(name="pdu_link")
 
 
+@pytest.fixture(name="smm_socket", scope="module")
+def smm_socket_fixture() -> Iterator[mock.Mock]:
+    """
+    Replace the socket module that ``Off`` probes the SMM through.
+
+    :py:func:`reset_device_fixture` makes every probe time out, so the SMM
+    leaves the network at once unless a test says otherwise.
+
+    :yields: the mock socket module.
+    """
+    with mock.patch(f"{COMMANDS_MODULE}.socket") as smm_socket:
+        yield smm_socket
+
+
 @pytest.fixture(name="device_context", scope="module")
 def device_context_fixture(
     subrack_factory: mock.Mock,
@@ -165,8 +179,8 @@ def device_context_fixture(
     """
     Run one prototype subrack device for the whole module.
 
-    The SMM shutdown wait is patched to nothing, so ``Off`` does not wait for
-    an SMM that does not exist.
+    The SMM shutdown wait and the pause between SMM probes are patched short,
+    so ``Off`` does not wait for an SMM that does not exist.
 
     :param subrack_factory: builds the subrack client the device holds.
     :param poller_factory: builds the poller the device holds.
@@ -205,7 +219,11 @@ def device_context_fixture(
             {},
         ),
     )
-    with mock.patch(f"{COMMANDS_MODULE}.SMM_SHUTDOWN_TIME", 0.0), harness as context:
+    with (
+        mock.patch(f"{COMMANDS_MODULE}.SMM_SHUTDOWN_TIME", 0.0),
+        mock.patch(f"{COMMANDS_MODULE}.SMM_PROBE_INTERVAL", 0.01),
+        harness as context,
+    ):
         yield context
 
 
@@ -291,9 +309,10 @@ def reset_device_fixture(
     subrack: mock.Mock,
     subrack_factory: mock.Mock,
     pdu_link: mock.Mock,
+    smm_socket: mock.Mock,
 ) -> None:
     """
-    Put the device, its subrack and its PDU link back to a known state.
+    Put the device, its subrack, its PDU link and the SMM probes back.
 
     This is what a fresh context gives for free, and what a shared one has to
     do by hand.
@@ -308,6 +327,7 @@ def reset_device_fixture(
     :param subrack: the subrack client the device holds.
     :param subrack_factory: the factory, which carries the poll callbacks.
     :param pdu_link: the PDU link the device holds.
+    :param smm_socket: the socket module that ``Off`` probes the SMM through.
     """
     subrack.reset_mock(side_effect=True)
     subrack.run_board_command.return_value = (
@@ -322,6 +342,8 @@ def reset_device_fixture(
     pdu_link.power_state = PowerState.UNKNOWN
     pdu_link.set_ports.return_value = (ResultCode.OK, "The PDU accepted every port.")
     pdu_link.wait_for.return_value = (CommandOutcome.COMPLETED, "What the PDU did.")
+    smm_socket.reset_mock()
+    smm_socket.create_connection.side_effect = TimeoutError("timed out")
     subrack_device.adminMode = AdminMode.OFFLINE
     with tango.EnsureOmniThread():
         subrack_factory.call_args.kwargs["stopped_callback"]()
@@ -752,28 +774,108 @@ def test_off_switches_the_ports_when_the_smm_refuses_the_shutdown(
     pdu_link.set_ports.assert_called_once_with(False)
 
 
+def _accept_and_abort(
+    _name: str, _args: str, abort_event: threading.Event
+) -> tuple[CommandOutcome, str, None]:
+    """
+    Accept the shutdown, and ask for an abort.
+
+    :param _name: the board command.
+    :param _args: the board command argument string.
+    :param abort_event: the abort event of the task.
+
+    :return: what the board answers.
+    """
+    abort_event.set()
+    return (CommandOutcome.COMPLETED, "The command completed.", None)
+
+
+def test_off_waits_for_the_smm_to_leave_the_network(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    pdu_link: mock.Mock,
+    smm_socket: mock.Mock,
+) -> None:
+    """
+    Test that Off probes the SMM until it stops answering, then switches off.
+
+    A refused connection means the SMM network is still up, so only the
+    timeout ends the wait.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param pdu_link: the mocked PDU link.
+    :param smm_socket: the socket module that Off probes the SMM through.
+    """
+    smm_socket.create_connection.side_effect = [
+        mock.MagicMock(),
+        ConnectionRefusedError(),
+        TimeoutError("timed out"),
+    ]
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(status="COMPLETED")
+    assert (
+        smm_socket.create_connection.call_args_list
+        == [mock.call((BOARD_HOST, BOARD_PORT), timeout=mock.ANY)] * 3
+    )
+    pdu_link.set_ports.assert_called_once_with(False)
+
+
+def test_off_switches_the_ports_when_the_smm_never_leaves_the_network(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    pdu_link: mock.Mock,
+    smm_socket: mock.Mock,
+) -> None:
+    """
+    Test that Off still removes power from an SMM that keeps answering.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param pdu_link: the mocked PDU link.
+    :param smm_socket: the socket module that Off probes the SMM through.
+    """
+    smm_socket.create_connection.side_effect = None
+
+    with mock.patch(f"{COMMANDS_MODULE}.SMM_LEAVE_NETWORK_TIMEOUT", 0.05):
+        lrc.run_command("Off")
+        lrc.assert_command_finished(status="COMPLETED")
+
+    assert smm_socket.create_connection.call_count > 1
+    pdu_link.set_ports.assert_called_once_with(False)
+
+
 @pytest.mark.parametrize(
-    "board_answer",
+    ("board_answer", "probe"),
     [
         pytest.param(
             [(CommandOutcome.ABORTED, "The command was aborted.", None)],
+            TimeoutError("timed out"),
             id="during_the_command",
         ),
-        # The board accepts the shutdown, and the abort comes during the wait
-        # after it. Event.set returns None, so the lambda returns the answer.
         pytest.param(
-            lambda *_args, abort_event: abort_event.set()
-            or (CommandOutcome.COMPLETED, "The command completed.", None),
-            id="during_the_wait",
+            _accept_and_abort,
+            ConnectionRefusedError(),
+            id="while_the_smm_leaves_the_network",
+        ),
+        pytest.param(
+            _accept_and_abort,
+            TimeoutError("timed out"),
+            id="during_the_shutdown_wait",
         ),
     ],
 )
+# pylint: disable-next=too-many-arguments
 def test_an_abort_during_the_shutdown_leaves_the_ports_on(
     online_device: tango.DeviceProxy,
     lrc: LRCManager,
     subrack: mock.Mock,
     pdu_link: mock.Mock,
+    smm_socket: mock.Mock,
     board_answer: Any,
+    probe: Exception,
 ) -> None:
     """
     Test that an abort before the ports switch ends Off as aborted.
@@ -785,9 +887,12 @@ def test_an_abort_during_the_shutdown_leaves_the_ports_on(
     :param lrc: the long running command manager for the device under test.
     :param subrack: the mocked subrack client.
     :param pdu_link: the mocked PDU link.
+    :param smm_socket: the socket module that Off probes the SMM through.
     :param board_answer: the side effect that gives what the board answers.
+    :param probe: what each probe of the SMM raises.
     """
     subrack.run_board_command.side_effect = board_answer
+    smm_socket.create_connection.side_effect = probe
 
     lrc.run_command("Off")
 

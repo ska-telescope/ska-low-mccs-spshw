@@ -34,7 +34,9 @@ from __future__ import annotations
 
 import importlib.resources
 import json
+import socket
 import threading
+import time
 from typing import Any, Final, Optional
 
 import ska_tango_base as stb
@@ -45,6 +47,8 @@ from tango import DevState, Except
 from ..subrack.subrack_data import FanMode, SubrackData
 from .constants import (
     PDU_COMMAND_TIMEOUT,
+    SMM_LEAVE_NETWORK_TIMEOUT,
+    SMM_PROBE_INTERVAL,
     SMM_SHUTDOWN_TIME,
     ClientCommand,
     CommandOutcome,
@@ -138,6 +142,12 @@ class SubrackCommands(LRCMixin):
 
     _commanded_state: Optional[DevState]
     """The commanded state, which ``BaseInterface`` declares as a signal."""
+
+    SubrackIp: str
+    """The address of the SMM, which the device declares as a property."""
+
+    SubrackPort: int
+    """The port of the SMM web server, which the device declares as a property."""
 
     # ----------------------------------
     # Command schemas
@@ -540,9 +550,9 @@ class SubrackCommands(LRCMixin):
         ``poweroff_subrack`` switches off the TPMs, the backplane and the fans,
         and then shuts down the SMM. The PSUs stay on, because the PDU ports
         switch off next, and a PSU that the SMM switched off needs a slow power
-        cycle to come back. The board answers before it shuts down, and then
-        gives no sign that the shutdown is complete. So this waits for
-        ``SMM_SHUTDOWN_TIME``.
+        cycle to come back. The board answers before it shuts down. This then
+        waits for the SMM to leave the network, and then waits
+        ``SMM_SHUTDOWN_TIME`` more for the rest of the shutdown.
 
         A board that does not accept the command is logged, and the ports
         still switch off. So ``Off`` removes power from a board that has
@@ -565,4 +575,43 @@ class SubrackCommands(LRCMixin):
                 f"off without a shutdown. {message}"
             )
             return True
+        if not self._wait_for_smm_to_leave_network(abort_event):
+            return False
         return not abort_event.wait(SMM_SHUTDOWN_TIME)
+
+    def _wait_for_smm_to_leave_network(
+        self: SubrackCommands, abort_event: threading.Event
+    ) -> bool:
+        """
+        Wait until the SMM stops answering on the network.
+
+        Each probe opens a TCP connection to the SMM web server. A refused
+        connection means that the web server has stopped but the SMM network is
+        still up, so the wait goes on. Any other error, such as a timeout or no
+        route to the SMM, means that the SMM network is down.
+
+        An SMM that still answers after ``SMM_LEAVE_NETWORK_TIMEOUT`` is logged,
+        and the ports still switch off.
+
+        :param abort_event: an event that requests an abort when set.
+
+        :return: false if the command was aborted, otherwise true.
+        """
+        address = (self.SubrackIp, self.SubrackPort)
+        deadline = time.monotonic() + SMM_LEAVE_NETWORK_TIMEOUT
+        while time.monotonic() < deadline:
+            try:
+                with socket.create_connection(address, timeout=SMM_PROBE_INTERVAL):
+                    pass
+            except ConnectionRefusedError:
+                pass
+            except OSError as error:
+                self.logger.info(f"The SMM has left the network. {error!r}")
+                return True
+            if abort_event.wait(SMM_PROBE_INTERVAL):
+                return False
+        self.logger.warning(
+            f"The SMM still answers after {SMM_LEAVE_NETWORK_TIMEOUT}s, so the PDU "
+            "ports switch off anyway."
+        )
+        return True

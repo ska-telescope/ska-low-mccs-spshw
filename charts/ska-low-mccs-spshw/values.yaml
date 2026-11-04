@@ -82,7 +82,7 @@ ska-tango-devices:
       io_udp_interface_linkup_loss_count_fpga1->max_alarm: 1
 
       io_data_router_status_fpga0->max_alarm: 1
-      io_data_router_status_fpga0->max_alarm: 1
+      io_data_router_status_fpga1->max_alarm: 1
 
       io_ddr_interface_reset_counter_fpga0->max_alarm: 1
       io_ddr_interface_reset_counter_fpga1->max_alarm: 1

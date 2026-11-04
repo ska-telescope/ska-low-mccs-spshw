@@ -131,8 +131,10 @@ The WREN power state is logged but not used.
 
 - ``On``: does nothing if all tiles are already initialised or synchronised. Otherwise it waits for the WREN (if one is configured), turns on the subracks, sets the tile source IPs and the global reference time, and turns on the tiles 0.25 s apart. It then initialises the tiles and the station, waits for the ARP table, routes data and checks synchronisation.
 - ``Standby``: makes sure the subracks are ``ON``, then turns the tiles off 0.25 s apart and waits (up to 60 s) for every tile to report ``OFF``.
-- ``Off``: always rejected. MCCS can't switch the subracks' PDUs from here, so
-  ``STANDBY`` is the lowest state the station can be commanded to.
+- ``Off``: sends ``Off`` to every subrack and waits for each result. A
+  prototype subrack switches off its PDU ports, which also removes power from
+  its TPMs. The station goes ``OFF`` when the subrack and tile power states
+  report it.
 
 .. figure:: images/sps_station_on_sequence.png
   :alt: A graph of the power on command sequence in the SpsStation.

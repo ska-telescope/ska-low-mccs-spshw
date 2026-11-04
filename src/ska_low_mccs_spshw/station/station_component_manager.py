@@ -2189,46 +2189,39 @@ class SpsStationComponentManager(
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
-        Turn off this station.
+        Turn off this station by turning off its subracks.
+
+        A subrack turns off through its PDU ports, which also removes power
+        from its TPMs. So the tiles need no command of their own.
+
+        The command ends when every subrack finishes its own ``Off``. The
+        station state follows later, from the subrack and tile power events.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
         if task_callback:
-            task_callback(
-                status=TaskStatus.REJECTED,
-                result=(
-                    ResultCode.REJECTED,
-                    "MCCS has no control over subrack PDUs. "
-                    "Unable to drive to the OFF state."
-                    "Try Standby to turn off all TPMs.",
-                ),
-            )
-        # The following is commented out because
-        # MCCS has no control over subrack PDUs, meaning
-        # the lowest drivable state for spsStation is STANDBY.
-        # There is already a method Standby() that does this.
-        # message: str = ""
-        # if task_callback:
-        #     task_callback(status=TaskStatus.IN_PROGRESS)
-        # results = [proxy.off() for proxy in self._subrack_proxies.values()]
-        # # Never mind tiles, turning off subracks suffices
-        # # TODO: Here we need to monitor Tiles. This will eventually
-        # # use the mechanism described in MCCS-945, but until that is implemented
-        # # we might instead just poll these devices' longRunngCommandAttribute.
-        # # For the moment, however, we just submit the subservient devices' commands
-        # # for execution and forget about them.
-        # if all(
-        #     result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
-        #     for (result, _) in results
-        # ):
-        #     task_status = TaskStatus.COMPLETED
-        #     result_code = ResultCode.OK
-        #     message = "Off Command Completed"
-        # else:
-        #     task_status = TaskStatus.FAILED
-        #     result_code = ResultCode.FAILED
-        #     message = "Off Command Failed"
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        off_commands = MccsCompositeCommandProxy(self.logger, task_abort_event)
+        for subrack_trl in self._subrack_proxies:
+            off_commands += MccsCommandProxy(subrack_trl, "Off", self.logger)
+        # A prototype subrack shuts its SMM down before it switches its PDU
+        # ports, so its Off takes about a minute.
+        result_code, message = off_commands(
+            command_evaluator=CompositeCommandResultEvaluator(), timeout=120
+        )
+
+        if result_code == ResultCode.OK:
+            task_status = TaskStatus.COMPLETED
+            message = "Off Command Completed"
+        elif result_code == ResultCode.ABORTED:
+            self.logger.error(f"Off aborted: {message}")
+            task_status = TaskStatus.ABORTED
+        else:
+            self.logger.error(f"Off failed: {message}")
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def standby(

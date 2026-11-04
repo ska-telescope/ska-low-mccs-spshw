@@ -256,17 +256,40 @@ def daq_device_fixture(
     yield test_context.get_daq_device()
 
 
+@pytest.mark.parametrize(
+    ("subrack_result", "expected_status"),
+    [
+        pytest.param(ResultCode.OK, "COMPLETED", id="subracks_off"),
+        pytest.param(ResultCode.FAILED, "FAILED", id="subrack_off_fails"),
+        pytest.param(ResultCode.ABORTED, "ABORTED", id="subrack_off_aborted"),
+    ],
+)
+@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCompositeCommandProxy")
+@patch("ska_low_mccs_spshw.station.station_component_manager.MccsCommandProxy")
 def test_Off(
+    mock_command_cls: unittest.mock.Mock,
+    mock_composite_cls: unittest.mock.Mock,
     station_device: DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    subrack_result: ResultCode,
+    expected_status: str,
 ) -> None:
     """
     Test our ability to turn the SPS station device off.
 
+    :param mock_command_cls: a patched MccsCommandProxy class.
+    :param mock_composite_cls: a patched MccsCompositeCommandProxy class.
     :param station_device: the SPS station Tango device under test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param subrack_result: the combined result of the subrack Off commands.
+    :param expected_status: the task status the station Off ends with.
     """
+    mock_composite = MagicMock()
+    mock_composite_cls.return_value = mock_composite
+    mock_composite.__iadd__.return_value = mock_composite
+    mock_composite.return_value = (subrack_result, "subrack Off result")
+
     # First let's check the initial state
     assert station_device.adminMode == AdminMode.OFFLINE
 
@@ -288,15 +311,10 @@ def test_Off(
     station_lrc_manager.run_command_with_checks(
         "Off", expected_status=ResultCode.QUEUED
     )
-    # SpsStation.Off() is not implemented and will simply be rejected
     station_lrc_manager.assert_command_finished(
-        "REJECTED",
-        result_message_contains=(
-            "MCCS has no control over subrack PDUs. "
-            "Unable to drive to the OFF state."
-            "Try Standby to turn off all TPMs."
-        ),
+        expected_status, result_code=subrack_result
     )
+    mock_command_cls.assert_called_once_with(get_subrack_name(1), "Off", ANY)
 
     change_event_callbacks["state"].assert_not_called()
 
@@ -375,17 +393,20 @@ def test_On(
 
     # It's already on, so let's turn it off before we turn it on again.
     station_lrc_manager = LRCManager(station_device, change_event_callbacks)
-    station_lrc_manager.run_command_with_checks(
-        "Off", expected_status=ResultCode.QUEUED
-    )
-    station_lrc_manager.assert_command_finished(
-        "REJECTED",
-        result_message_contains=(
-            "MCCS has no control over subrack PDUs. "
-            "Unable to drive to the OFF state."
-            "Try Standby to turn off all TPMs."
-        ),
-    )
+    with patch(
+        "ska_low_mccs_spshw.station.station_component_manager."
+        "MccsCompositeCommandProxy"
+    ) as mock_composite_cls:
+        mock_composite = MagicMock()
+        mock_composite_cls.return_value = mock_composite
+        mock_composite.__iadd__.return_value = mock_composite
+        mock_composite.return_value = (ResultCode.OK, "subracks off")
+        station_lrc_manager.run_command_with_checks(
+            "Off", expected_status=ResultCode.QUEUED
+        )
+        station_lrc_manager.assert_command_finished(
+            "COMPLETED", result_code=ResultCode.OK
+        )
 
     change_event_callbacks["state"].assert_not_called()
 

@@ -272,7 +272,8 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "io_f2f_interface_pll_status_fpga1_count": lambda v: int(v[1]),
     "io_data_router_status_fpga0": int,
     "io_data_router_status_fpga1": int,
-    "io_data_router_discarded_packets_fpgas": serialise_object,
+    "io_data_router_discarded_packets_fpga0": serialise_object,
+    "io_data_router_discarded_packets_fpga1": serialise_object,
     "io": serialise_object,
     "dsp": serialise_object,
     "voltages": serialise_object,
@@ -510,10 +511,17 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     ],
     "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
     "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-    "io_data_router_discarded_packets_fpgas": [
+    "io_data_router_discarded_packets_fpga0": [
         "io",
         "data_router",
         "discarded_packets",
+        "FPGA0",
+    ],
+    "io_data_router_discarded_packets_fpga1": [
+        "io",
+        "data_router",
+        "discarded_packets",
+        "FPGA1",
     ],
     "dsp_tile_beamf": ["dsp", "tile_beamf"],
     "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],

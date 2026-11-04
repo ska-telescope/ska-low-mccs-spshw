@@ -1150,8 +1150,12 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
         ("io_data_router_status_fpga0", "io_data_router_status_fpga0"),
         ("io_data_router_status_fpga1", "io_data_router_status_fpga1"),
         (
-            "io_data_router_discarded_packets_fpgas",
-            "io_data_router_discarded_packets_fpgas",
+            "io_data_router_discarded_packets_fpga0",
+            "io_data_router_discarded_packets_fpga0",
+        ),
+        (
+            "io_data_router_discarded_packets_fpga1",
+            "io_data_router_discarded_packets_fpga1",
         ),
         ("io_udp_interface_arp", "io_udp_interface_arp"),
         ("io_udp_interface_status", "io_udp_interface_status"),

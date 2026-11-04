@@ -503,9 +503,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
         "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
         "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
-        "io_data_router_discarded_packets_fpgas": (
-            "io_data_router_discarded_packets_fpgas_signal"
-        ),
         "io_udp_interface_arp": "io_udp_interface_arp_signal",
         "io_udp_interface_status": "io_udp_interface_status_signal",
         "io_ddr_interface_initialisation": "io_ddr_interface_initialisation_signal",
@@ -514,6 +511,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
         "io_ddr_interface_reset_counter_fpga1": (
             "io_ddr_interface_reset_counter_fpga1_signal"
+        "io_data_router_discarded_packets_fpga0": (
+            "data_router_discarded_packets_fpga0_signal"
+        ),
+        "io_data_router_discarded_packets_fpga1": (
+            "data_router_discarded_packets_fpga1_signal"
         ),
         "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0_signal",
         "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1_signal",
@@ -1224,10 +1226,17 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ],
             "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
             "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-            "io_data_router_discarded_packets_fpgas": [
+            "io_data_router_discarded_packets_fpga0": [
                 "io",
                 "data_router",
                 "discarded_packets",
+                "FPGA0",
+            ],
+            "io_data_router_discarded_packets_fpga1": [
+                "io",
+                "data_router",
+                "discarded_packets",
+                "FPGA1",
             ],
             "dsp_tile_beamf": ["dsp", "tile_beamf"],
             "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],
@@ -2377,11 +2386,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute_from_signal(
         io_data_router_discarded_packets_fpgas_signal,
         dtype="DevString",
-        label="Data Router Discarded Packets",
+        label="Data Router Discarded Packets for FPGA0",
         doc="Return the number of discarded packets. "
         "Expected: 0 if no packets are discarded.",
     )
-    def io_data_router_discarded_packets_fpgas(
+    def io_data_router_discarded_packets_fpga0(
         self: MccsTile, raw_value: dict[str, Any] | None
     ) -> str | None:
         """
@@ -2390,16 +2399,42 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         Expected: 0 if no packets are discarded.
 
         :example:
-            >>> tile.io_data_router_discarded_packets_fpgas
-            '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+            >>> tile.io_data_router_discarded_packets_fpga0
+            '[0, 0]'
 
         :param raw_value: the raw attribute value emitted on the signal, or
             ``None`` when the value is being invalidated.
 
         :return: the number of discarded packets.
         """
-        # NOTE: This is not implemented in ska-low-sps-tpm-api. it will
-        # always return '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'.
+        if raw_value is None:
+            return None
+        return serialise_object(raw_value)
+
+    @attribute_from_signal(
+        data_router_discarded_packets_fpga1_signal,
+        dtype="DevString",
+        label="Data Router Discarded Packets for FPGA1",
+        doc="Return the number of discarded packets. "
+        "Expected: 0 if no packets are discarded.",
+    )
+    def io_data_router_discarded_packets_fpga1(
+        self: MccsTile, raw_value: dict[str, Any] | None
+    ) -> str | None:
+        """
+        Return the number of discarded packets.
+
+        Expected: 0 if no packets are discarded.
+
+        :example:
+            >>> tile.io_data_router_discarded_packets_fpga1
+            '[0, 0]'
+
+        :param raw_value: the raw attribute value emitted on the signal, or
+            ``None`` when the value is being invalidated.
+
+        :return: the number of discarded packets.
+        """
         if raw_value is None:
             return None
         return serialise_object(raw_value)

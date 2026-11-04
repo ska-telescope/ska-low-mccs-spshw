@@ -5215,9 +5215,9 @@ def test_update_attribute_callback_only_emits_polled_health_subgroup() -> None:
         "sysref_timing_requirements": {adc: True for adc in adc_names},
     }
     subgroup_signals = {
-        "pll_status": "adc_pll_lock_status_signal",
-        "sysref_counter": "adc_sysref_counter_signal",
-        "sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
+        "pll_status": "adcs_pll_status_signal",
+        "sysref_counter": "adcs_sysref_counter_signal",
+        "sysref_timing_requirements": "adcs_sysref_timing_requirements_signal",
     }
 
     for subgroup, values in subgroups.items():

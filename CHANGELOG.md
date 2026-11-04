@@ -1,8 +1,12 @@
 # Version History
 
+## Unreleased
+
+* [THORN-759] MccsPrototypeSubrack gets the same support as current subrack for SMM 1.8.0. It derives tpmCurrents and rejects SetPowerSupplyFanSpeed on SMM 1.8.0. A board command fails when command_completed reports that it failed.
+
 ## 17.0.0
 
-* [THORN-759] Update MccsSubrack to support SMM 1.8.0 (note: prototype subrack does not support 1.8.0)
+* [THORN-759] Update MccsSubrack to support SMM 1.8.0
   * Extra information exposed in subrackBoardInfo and healthStatus.
   * SetPowerSupplyFanSpeed is rejected when not available (SMM version 1.8.0 does not support this.)
   * tpmCurrents is derived when device interfacing with SMM 1.8.0

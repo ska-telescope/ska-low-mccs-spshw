@@ -9,6 +9,10 @@ On another port, delaying every request by 400 ms::
 
     PYTHONPATH=src python scripts/subrack_simulator.py --port 8090 --jitter 400
 
+Emulating the web API of SMM BIOS 1.8.0 rather than 1.6.0::
+
+    PYTHONPATH=src python scripts/subrack_simulator.py --bios-version 1.8.0
+
 The delay applies to each attribute read and to each command, so a poll sweep
 of nineteen reads takes nineteen times this. Use it to hold the client's lock
 long enough that a command issued during a sweep has to wait for it.
@@ -22,6 +26,7 @@ import argparse
 import uvicorn.config
 
 from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
+from ska_low_mccs_spshw.subrack.subrack_simulator_data import SUPPORTED_BIOS_VERSIONS
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import run_server_forever
 
 DEFAULT_PORT = 8081
@@ -60,6 +65,15 @@ def _parse_args() -> argparse.Namespace:
         help="delay every request by this many milliseconds (default 0)",
     )
     parser.add_argument(
+        "--bios-version",
+        choices=SUPPORTED_BIOS_VERSIONS,
+        default=SUPPORTED_BIOS_VERSIONS[0],
+        help=(
+            "the SMM BIOS version whose web API to emulate "
+            f"(default {SUPPORTED_BIOS_VERSIONS[0]})"
+        ),
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="log every request, rather than warnings only",
@@ -74,7 +88,8 @@ def main() -> None:
     if not args.verbose:
         _quieten()
 
-    simulator = SubrackSimulator()
+    simulator = SubrackSimulator(bios_version=args.bios_version)
+    print(f"Emulating SMM BIOS {args.bios_version}.", flush=True)
     if args.jitter:
         simulator.network_jitter_limits = (args.jitter, args.jitter + 1)
         print(f"Delaying every request by {args.jitter} ms.", flush=True)

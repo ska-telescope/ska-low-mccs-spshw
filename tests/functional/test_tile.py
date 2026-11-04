@@ -331,15 +331,13 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
     :param first_tile: tile device under test.
     """
     try:
-        assert first_tile.io_data_router_discarded_packets_fpgas == json.dumps(
-            {"FPGA0": [0, 0], "FPGA1": [0, 0]}
-        )
+        assert first_tile.io_data_router_discarded_packets_fpga0 == json.dumps([0, 0])
+        assert first_tile.io_data_router_discarded_packets_fpga1 == json.dumps([0, 0])
     except Exception:  # pylint: disable=broad-except
         # Allow time to in case of first read.
         time.sleep(10)
-        assert first_tile.io_data_router_discarded_packets_fpgas == json.dumps(
-            {"FPGA0": [0, 0], "FPGA1": [0, 0]}
-        )
+        assert first_tile.io_data_router_discarded_packets_fpga0 == json.dumps([0, 0])
+        assert first_tile.io_data_router_discarded_packets_fpga1 == json.dumps([0, 0])
 
 
 @given("the Tile is in a defined synchronised state", target_fixture="defined_state")
@@ -857,16 +855,14 @@ def tile_dropped_packets_stays_0(
     time.sleep(5)
     while timeout < 30:
         if (
-            first_tile.io_data_router_discarded_packets_fpgas
-            == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+            first_tile.io_data_router_discarded_packets_fpga0 == "[0, 0]"
+            and first_tile.io_data_router_discarded_packets_fpga1 == "[0, 0]"
         ):
             break
         time.sleep(1)
         timeout = timeout + 1
-    assert (
-        first_tile.io_data_router_discarded_packets_fpgas
-        == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
-    )
+    assert first_tile.io_data_router_discarded_packets_fpga0 == "[0, 0]"
+    assert first_tile.io_data_router_discarded_packets_fpga1 == "[0, 0]"
 
 
 @when("the Tile overheats", target_fixture="temperature_alm_event_queue")

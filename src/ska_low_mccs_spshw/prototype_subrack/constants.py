@@ -32,6 +32,7 @@ __all__ = [
     "PSU_NAMES",
     "ReadKey",
     "RequestError",
+    "SMM_SHUTDOWN_TIME",
 ]
 
 
@@ -111,6 +112,7 @@ class ClientCommand(str, Enum):
     SET_SUBRACK_FAN_SPEED = "set_subrack_fan_speed"
     SET_FAN_MODE = "set_fan_mode"
     SET_POWER_SUPPLY_FAN_SPEED = "set_power_supply_fan_speed"
+    POWEROFF_SUBRACK = "poweroff_subrack"
 
     # The asynchronous handshake. A caller runs a command and waits for it
     # through :py:meth:`~.subrack_client.Subrack.run_board_command`, which is
@@ -152,6 +154,12 @@ COMMAND_POLL_INTERVAL: Final = 0.1
 
 PDU_COMMAND_TIMEOUT: Final = 30.0
 """How long, in seconds, ``On`` and ``Off`` wait for the PDU ports to switch."""
+
+SMM_SHUTDOWN_TIME: Final = 30.0
+"""How long, in seconds, ``Off`` waits for the SMM to shut down.
+
+There's no real way to tell when the SMM has shut down, so this is a guess.
+"""
 
 PDU_MAX_PORTS: Final = 24
 """The most switched ports a PDU in the device definitions has."""

@@ -20,8 +20,9 @@ part way through a command gets ``BUSY`` from the board, and changes nothing.
 
 ``On`` and ``Off`` are long running commands too. Each task switches every PDU
 port that feeds the subrack, then waits until the PDU reports every port in the
-target state. The device state follows on the next poll, because the device
-state changes only on a poll.
+target state. Before ``Off`` switches the ports, it shuts the SMM down with
+``poweroff_subrack``, unless the ports are already off. The device state
+follows on the next poll, because the device state changes only on a poll.
 
 The mixin inherits :py:class:`~ska_tango_base.long_running_commands.LRCMixin`,
 because the ``long_running_command`` decorator needs the task executor and the
@@ -42,7 +43,12 @@ from ska_tango_base.long_running_commands import LRCMixin, LRCReqType
 from tango import DevState, Except
 
 from ..subrack.subrack_data import FanMode, SubrackData
-from .constants import PDU_COMMAND_TIMEOUT, ClientCommand, CommandOutcome
+from .constants import (
+    PDU_COMMAND_TIMEOUT,
+    SMM_SHUTDOWN_TIME,
+    ClientCommand,
+    CommandOutcome,
+)
 from .pdu_link import PduLink
 from .subrack_client import Subrack
 
@@ -368,9 +374,9 @@ class SubrackCommands(LRCMixin):
         self: SubrackCommands,
     ) -> stb.type_hints.TaskFunctionType:
         """
-        Switch off every PDU port that feeds the subrack.
+        Shut the SMM down, then switch off every PDU port that feeds the subrack.
 
-        :return: the task that switches the ports.
+        :return: the task that shuts the SMM down and switches the ports.
         """
         return self._power_task(PowerState.OFF)
 
@@ -489,6 +495,9 @@ class SubrackCommands(LRCMixin):
         """
         pdu_link = self.pdu_link
         on = target == PowerState.ON
+        # Off shuts the SMM down first, so the PDU does not cut power to a
+        # running board.
+        subrack = None if on else self.subrack
 
         def task(
             task_callback: stb.type_hints.TaskCallbackType,
@@ -496,6 +505,14 @@ class SubrackCommands(LRCMixin):
         ) -> None:
             task_callback(status=TaskStatus.IN_PROGRESS)
             self._commanded_state = DevState.ON if on else DevState.OFF
+            if subrack is not None and pdu_link.power_state != PowerState.OFF:
+                if not self._shut_down_smm(subrack, task_abort_event):
+                    self._report_outcome(
+                        task_callback,
+                        CommandOutcome.ABORTED,
+                        "The command was aborted before the PDU ports switched off.",
+                    )
+                    return
             self.logger.info(f"Switching the PDU ports {target.name}...")
             (result_code, message) = pdu_link.set_ports(on)
             if result_code != ResultCode.OK:
@@ -513,3 +530,39 @@ class SubrackCommands(LRCMixin):
             self.logger.info(message)
 
         return task
+
+    def _shut_down_smm(
+        self: SubrackCommands, subrack: Subrack, abort_event: threading.Event
+    ) -> bool:
+        """
+        Shut the SMM down, then wait for the shutdown to finish.
+
+        ``poweroff_subrack`` switches off the TPMs, the backplane and the fans,
+        and then shuts down the SMM. The PSUs stay on, because the PDU ports
+        switch off next, and a PSU that the SMM switched off needs a slow power
+        cycle to come back. The board answers before it shuts down, and then
+        gives no sign that the shutdown is complete. So this waits for
+        ``SMM_SHUTDOWN_TIME``.
+
+        A board that does not accept the command is logged, and the ports
+        still switch off. So ``Off`` removes power from a board that has
+        stopped answering.
+
+        :param subrack: the client to send the command through.
+        :param abort_event: an event that requests an abort when set.
+
+        :return: false if the command was aborted, otherwise true.
+        """
+        self.logger.info("Shutting the SMM down before the PDU ports switch off...")
+        (outcome, message, _) = subrack.run_board_command(
+            ClientCommand.POWEROFF_SUBRACK.value, "false", abort_event=abort_event
+        )
+        if outcome == CommandOutcome.ABORTED:
+            return False
+        if outcome == CommandOutcome.FAILED:
+            self.logger.warning(
+                "The SMM did not accept poweroff_subrack, so the PDU ports switch "
+                f"off without a shutdown. {message}"
+            )
+            return True
+        return not abort_event.wait(SMM_SHUTDOWN_TIME)

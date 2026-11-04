@@ -9,20 +9,23 @@
 """
 Tests of the prototype subrack Tango device, against a mocked subrack.
 
-The hardware client, the computed values, the subrack, the poller and the
-health recorder are all injected through the device module's
-:py:func:`subrack_factory`, and all five are mocks. So no board is reached, no
+The hardware client, the computed values, the subrack, the poller, the
+health recorder, the PDU link and the callback scheduler are all injected
+through the device module's :py:func:`subrack_factory`, and all seven are
+mocks. So no board is reached, no
 thread is started, and nothing is waited for. A test supplies the device with
 a :py:class:`SubrackPollResponse`, or with a verdict from the health recorder,
-and asserts what the device does with it. That leaves only the device's own
-code under test.
+and asserts what the device does with it. A test sets what the PDU link
+reports too. That leaves only the device's own code under test.
 
-Two fixtures cover each of the poller and the health recorder, because a mock
-with a ``side_effect`` bypasses its ``return_value`` and so cannot report what
-it handed back. ``poller_factory`` is the factory, for asserting how a poller
-was built. ``pollers`` is what it built, in order, for asserting what became of
-each one. ``health_recorder_factory`` and ``health_recorders`` do the same for
-the health recorder.
+Two fixtures cover each of the poller, the health recorder and the callback
+scheduler, because a mock with a ``side_effect`` bypasses its ``return_value``
+and so cannot report what it handed back. ``poller_factory`` is the factory,
+for asserting how a poller was built. ``pollers`` is what it built, in order,
+for asserting what became of each one. ``health_recorder_factory`` and
+``health_recorders`` do the same for the health recorder, and
+``callback_scheduler_factory`` and ``callback_schedulers`` do the same for the
+callback scheduler.
 """
 
 from __future__ import annotations
@@ -69,6 +72,8 @@ FILTER_MAX_SAMPLES = 7
 MAX_FAN_ERRORS = 3
 MAX_FAN_RPM_DELTA = 21
 TIMESTAMP = 1700000000.0
+PDU_TRL = "low-mccs/pdu/a-fake-pdu"
+PDU_PORTS = [3, 8]
 
 # The health info the base device starts with, before any health report.
 BASE_HEALTH_INFO = ("Device implementation has not provided a health report",)
@@ -306,13 +311,78 @@ def health_recorder_factory_fixture(health_recorders: list[mock.Mock]) -> mock.M
     return mock.Mock(name="health_recorder_factory", side_effect=build)
 
 
+@pytest.fixture(name="pdu_link")
+def pdu_link_fixture() -> mock.Mock:
+    """
+    Return the PDU link the device holds.
+
+    Both ports start unknown, as on a real link. An unknown PDU leaves the
+    state to the poll, so a test that does not set the link sees no effect.
+
+    :return: a mock of the PDU link.
+    """
+    link = mock.Mock(name="pdu_link")
+    link.port_states = [PowerState.UNKNOWN, PowerState.UNKNOWN]
+    link.power_state = PowerState.UNKNOWN
+    return link
+
+
+@pytest.fixture(name="pdu_link_factory")
+def pdu_link_factory_fixture(pdu_link: mock.Mock) -> mock.Mock:
+    """
+    Return the PDU link factory to inject into the device.
+
+    :param pdu_link: the PDU link it should return.
+
+    :return: the factory.
+    """
+    return mock.Mock(name="pdu_link_factory", return_value=pdu_link)
+
+
+@pytest.fixture(name="callback_schedulers")
+def callback_schedulers_fixture() -> list[mock.Mock]:
+    """
+    Return the list that collects every callback scheduler the device builds.
+
+    :return: the callback schedulers built so far, in order.
+    """
+    return []
+
+
+@pytest.fixture(name="callback_scheduler_factory")
+def callback_scheduler_factory_fixture(
+    callback_schedulers: list[mock.Mock],
+) -> mock.Mock:
+    """
+    Return the callback scheduler factory to inject into the device.
+
+    The scheduler it returns starts no thread. The PDU link is mocked too, so
+    nothing registers with it.
+
+    :param callback_schedulers: the list to collect the schedulers in.
+
+    :return: the factory.
+    """
+
+    def build(*_args: Any, **_kwargs: Any) -> mock.Mock:
+        callback_schedulers.append(
+            mock.Mock(name=f"scheduler{len(callback_schedulers)}")
+        )
+        return callback_schedulers[-1]
+
+    return mock.Mock(name="callback_scheduler_factory", side_effect=build)
+
+
 @pytest.fixture(name="device_class")
+# pylint: disable-next=too-many-arguments
 def device_class_fixture(
     client_factory: mock.Mock,
     derived_factory: mock.Mock,
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
     health_recorder_factory: mock.Mock,
+    pdu_link_factory: mock.Mock,
+    callback_scheduler_factory: mock.Mock,
 ) -> type:
     """
     Return the device class with everything below it mocked out.
@@ -326,6 +396,8 @@ def device_class_fixture(
     :param subrack_factory: the subrack factory to inject.
     :param poller_factory: the poller factory to inject.
     :param health_recorder_factory: the health recorder factory to inject.
+    :param pdu_link_factory: the PDU link factory to inject.
+    :param callback_scheduler_factory: the callback scheduler factory to inject.
 
     :return: the device class to serve.
     """
@@ -335,6 +407,8 @@ def device_class_fixture(
         subrack=subrack_factory,
         subrack_poller=poller_factory,
         health_recorder=health_recorder_factory,
+        pdu_link=pdu_link_factory,
+        callback_scheduler=callback_scheduler_factory,
     )
 
 
@@ -440,6 +514,8 @@ def device_context_fixture(device_class: type) -> Iterator[SpsTangoTestHarnessCo
         filter_max_samples=FILTER_MAX_SAMPLES,
         max_fan_errors=MAX_FAN_ERRORS,
         max_fan_rpm_delta=MAX_FAN_RPM_DELTA,
+        pdu_trl=PDU_TRL,
+        pdu_ports=PDU_PORTS,
     )
     with harness as context:
         yield context
@@ -875,11 +951,14 @@ def test_recovers_after_a_failed_poll(
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
 
 
+# pylint: disable-next=too-many-arguments
 def test_init_reclaims_the_poller_and_builds_another(
     online_device: tango.DeviceProxy,
     poll_succeeded: Callable[..., None],
     pollers: list[mock.Mock],
     health_recorders: list[mock.Mock],
+    callback_schedulers: list[mock.Mock],
+    pdu_link_factory: mock.Mock,
 ) -> None:
     """
     Test that re-initialising reclaims the old poller and health recorder.
@@ -890,7 +969,8 @@ def test_init_reclaims_the_poller_and_builds_another(
     recorder before ``init_device`` builds their replacements. Nothing else
     covers it, so without this a re-init leaks a polling thread that keeps
     polling the board, and a recorder thread that stays subscribed to the
-    device.
+    device. The same goes for the callback scheduler, whose shutdown ends the
+    old PDU link's subscriptions.
 
     What each piece is built from is covered by
     :py:func:`test_assembles_from_its_properties`, so this asserts only that
@@ -901,6 +981,9 @@ def test_init_reclaims_the_poller_and_builds_another(
     :param pollers: every poller the device has built, in order.
     :param health_recorders: every health recorder the device has built, in
         order.
+    :param callback_schedulers: every callback scheduler the device has built,
+        in order.
+    :param pdu_link_factory: the injected PDU link factory.
     """
     online_device.Init()
 
@@ -920,6 +1003,17 @@ def test_init_reclaims_the_poller_and_builds_another(
     second.start_polling.assert_called_once_with()
     poll_succeeded()
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
+
+    assert len(callback_schedulers) == 2, "Init did not build a second scheduler"
+    (first_scheduler, second_scheduler) = callback_schedulers
+    first_scheduler.shutdown.assert_called_once_with()
+    second_scheduler.shutdown.assert_not_called()
+
+    # Going online again builds a new PDU link on the new scheduler.
+    assert [call.args[2] for call in pdu_link_factory.call_args_list] == [
+        first_scheduler,
+        second_scheduler,
+    ]
 
 
 def test_board_error_before_any_poll_stays_unknown(
@@ -1031,3 +1125,217 @@ def test_reports_the_recorders_verdict(
     change_event_callbacks["healthInfo"].assert_change_event(tuple(health_info))
     # The report is emitted before the health, so it is already readable.
     assert subscribed_device.healthReport == ("\n".join(health_info) or "Health is OK.")
+
+
+# ---------------------------------
+# The PDU that feeds the subrack
+# ---------------------------------
+def test_builds_the_pdu_link_the_first_time_it_goes_online(
+    subrack_device: tango.DeviceProxy,
+    callback_schedulers: list[mock.Mock],
+    pdu_link_factory: mock.Mock,
+) -> None:
+    """
+    Test that the PDU link is built when the device first goes online, and once.
+
+    :param subrack_device: the device under test, offline.
+    :param callback_schedulers: every callback scheduler the device has built,
+        in order.
+    :param pdu_link_factory: the injected PDU link factory.
+    """
+    pdu_link_factory.assert_not_called()
+
+    subrack_device.adminMode = AdminMode.ONLINE
+    subrack_device.adminMode = AdminMode.OFFLINE
+    subrack_device.adminMode = AdminMode.ONLINE
+
+    pdu_link_factory.assert_called_once_with(
+        PDU_TRL, PDU_PORTS, callback_schedulers[0], mock.ANY
+    )
+
+
+@pytest.mark.parametrize(
+    ("pdu_power", "poll", "expected"),
+    [
+        pytest.param(PowerState.OFF, None, DevState.OFF, id="off"),
+        pytest.param(
+            PowerState.OFF,
+            RequestError("Connection refused"),
+            DevState.OFF,
+            id="off-unreachable",
+        ),
+        pytest.param(
+            PowerState.OFF,
+            HttpError("500 Server Error"),
+            DevState.OFF,
+            id="off-board-error",
+        ),
+        pytest.param(PowerState.ON, None, DevState.ON, id="on"),
+    ],
+)
+# pylint: disable-next=too-many-arguments
+def test_the_pdu_and_the_poll_decide_the_state(
+    online_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    pdu_link: mock.Mock,
+    poll_succeeded: Callable[..., None],
+    poll_failed: Callable[[Exception], None],
+    pdu_power: PowerState,
+    poll: Exception | None,
+    expected: DevState,
+) -> None:
+    """
+    Test that a PDU that is off gives OFF, and otherwise the poll decides.
+
+    An unknown PDU also leaves the state to the poll. Every other test in
+    this module covers that, because the mocked link starts unknown.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param change_event_callbacks: the callbacks subscribed to the device.
+    :param pdu_link: the mocked PDU link.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
+    :param pdu_power: the combined power state of the PDU ports.
+    :param poll: the exception the poll fails with, or None for a poll that
+        succeeds.
+    :param expected: the state the device should reach.
+    """
+    pdu_link.power_state = pdu_power
+
+    if poll is None:
+        poll_succeeded()
+    else:
+        poll_failed(poll)
+
+    change_event_callbacks["state"].assert_change_event(expected)
+
+
+def test_the_pdu_going_off_clears_a_fault(
+    online_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    pdu_link: mock.Mock,
+    poll_succeeded: Callable[..., None],
+    poll_failed: Callable[[Exception], None],
+) -> None:
+    """
+    Test that a faulted subrack goes OFF when its PDU goes off, and back ON.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param change_event_callbacks: the callbacks subscribed to the device.
+    :param pdu_link: the mocked PDU link.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
+    """
+    poll_succeeded()
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    poll_failed(HttpError("500 Server Error"))
+    change_event_callbacks["state"].assert_change_event(DevState.FAULT)
+
+    pdu_link.power_state = PowerState.OFF
+    poll_failed(RequestError("Connection refused"))
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+    pdu_link.power_state = PowerState.ON
+    poll_succeeded()
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+
+def test_a_board_error_after_off_is_unknown(
+    online_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    pdu_link: mock.Mock,
+    poll_succeeded: Callable[..., None],
+    poll_failed: Callable[[Exception], None],
+) -> None:
+    """
+    Test that a board error straight after OFF gives UNKNOWN, not FAULT.
+
+    The operational state model has no transition from OFF into FAULT, so
+    reporting one would raise. Nothing has been read since the power came
+    back, so UNKNOWN is also what the device knows.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param change_event_callbacks: the callbacks subscribed to the device.
+    :param pdu_link: the mocked PDU link.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
+    """
+    pdu_link.power_state = PowerState.OFF
+    poll_succeeded()
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+    pdu_link.power_state = PowerState.UNKNOWN
+    poll_failed(HttpError("500 Server Error"))
+
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+
+
+def test_tpms_have_no_supply_while_the_pdu_is_off(
+    online_device: tango.DeviceProxy,
+    pdu_link: mock.Mock,
+    poll_succeeded: Callable[..., None],
+    poll_failed: Callable[[Exception], None],
+) -> None:
+    """
+    Test that every TPM reports NO_SUPPLY while the PDU is off.
+
+    This is what ``MccsSubrack`` reports when its power is off.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param pdu_link: the mocked PDU link.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
+    """
+
+    def tpm_power_states() -> list[PowerState]:
+        return [
+            online_device.read_attribute(f"tpm{bay}PowerState").value
+            for bay in range(1, len(TPM_ON_OFF) + 1)
+        ]
+
+    no_supply = [PowerState.NO_SUPPLY] * len(TPM_ON_OFF)
+    pdu_link.power_state = PowerState.OFF
+    poll_failed(RequestError("Connection refused"))
+    assert tpm_power_states() == no_supply
+
+    # A board that still answers does not override the PDU.
+    poll_succeeded()
+    assert tpm_power_states() == no_supply
+
+    pdu_link.power_state = PowerState.ON
+    poll_succeeded()
+    assert tpm_power_states() == TPM_POWER_STATES
+
+
+def test_pdu_port_states_follow_the_link(
+    online_device: tango.DeviceProxy,
+    pdu_link: mock.Mock,
+    poll_succeeded: Callable[..., None],
+    poll_failed: Callable[[Exception], None],
+    polling_stopped: Callable[[], None],
+) -> None:
+    """
+    Test that pduPortStates reports the link, and survives a failed poll.
+
+    The PDU port states come from the PDU, so a lost board leaves them. Only
+    going offline invalidates them.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param pdu_link: the mocked PDU link.
+    :param poll_succeeded: supplies a successful poll response.
+    :param poll_failed: supplies a failed poll.
+    :param polling_stopped: tells the device that polling has stopped.
+    """
+    pdu_link.port_states = [PowerState.ON, PowerState.OFF]
+    poll_succeeded()
+    _assert_reads(online_device, "pduPortStates", [PowerState.ON, PowerState.OFF])
+
+    poll_failed(RequestError("Connection refused"))
+    _assert_reads(online_device, "pduPortStates", [PowerState.ON, PowerState.OFF])
+
+    online_device.adminMode = AdminMode.OFFLINE
+    polling_stopped()
+    assert (
+        online_device.read_attribute("pduPortStates").quality
+        == tango.AttrQuality.ATTR_INVALID
+    )

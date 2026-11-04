@@ -139,6 +139,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _subrack_poller_factory: type[SubrackPoller]
     _health_recorder_factory: type[HealthRecorder]
     _pdu_link_factory: type[PduLink]
+    _callback_scheduler_factory: type[CallbackScheduler]
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -231,7 +232,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._evaluated_state = DevState.UNKNOWN
 
         # Built before assembly, because the PDU link subscribes through it.
-        self._callback_scheduler = CallbackScheduler(
+        self._callback_scheduler = self._callback_scheduler_factory(
             name=f"{self.get_name()}-callbacks", logger=self.logger
         )
         self.assemble()
@@ -656,6 +657,7 @@ def subrack_factory(  # pylint: disable=too-many-arguments
     subrack_poller: type[SubrackPoller] = SubrackPoller,
     health_recorder: type[HealthRecorder] = HealthRecorder,
     pdu_link: type[PduLink] = PduLink,
+    callback_scheduler: type[CallbackScheduler] = CallbackScheduler,
     class_name: str = "MccsPrototypeSubrack",
 ) -> type[MccsPrototypeSubrack]:
     """
@@ -673,6 +675,8 @@ def subrack_factory(  # pylint: disable=too-many-arguments
         a logger, the health attributes and the device's health callbacks.
     :param pdu_link: builds the PDU link, from the PDU TRL, the PDU ports, the
         device's callback scheduler and a logger.
+    :param callback_scheduler: builds the callback scheduler that the PDU link
+        subscribes through, from a name and a logger.
     :param class_name: the Tango class name to serve the device under. Pass
         ``MccsSubrack`` to stand the device in for the old subrack, so that the
         Tango DB rows for the device do not change.
@@ -689,6 +693,7 @@ def subrack_factory(  # pylint: disable=too-many-arguments
             "_subrack_poller_factory": subrack_poller,
             "_health_recorder_factory": health_recorder,
             "_pdu_link_factory": pdu_link,
+            "_callback_scheduler_factory": callback_scheduler,
         },
     )
 

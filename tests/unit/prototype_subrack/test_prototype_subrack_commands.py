@@ -6,12 +6,13 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-Tests of the prototype subrack board commands, against a mocked subrack.
+Tests of the prototype subrack commands, against a mocked subrack and PDU link.
 
-The subrack and the poller are injected through the device module's
-:py:func:`subrack_factory`, and both are mocks. So no board is reached and no
-thread polls. A test says what the subrack client reports and asserts what the
-command did with it, which leaves only the command code under test.
+The subrack, the poller and the PDU link are injected through the device
+module's :py:func:`subrack_factory`, and all three are mocks. So no board or
+PDU is reached and no thread polls. A test says what the subrack client and
+the PDU link report, and asserts what the command did with it, which leaves
+only the command code under test.
 
 The hardware client and the computed values are left real, because the mocked
 subrack means nothing ever calls them.
@@ -32,12 +33,13 @@ from unittest import mock
 
 import pytest
 import tango
-from ska_control_model import AdminMode, ResultCode
+from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
 from ska_low_mccs_spshw.prototype_subrack import CommandOutcome
+from ska_low_mccs_spshw.prototype_subrack.constants import PDU_COMMAND_TIMEOUT
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
 )
@@ -47,11 +49,16 @@ from tests.test_tools import LRCManager
 # TODO: gc.disable() works around a hang during garbage collection.
 gc.disable()
 
+COMMANDS_MODULE = "ska_low_mccs_spshw.prototype_subrack.prototype_subrack_commands"
+
 SUBRACK_ID = 1
-# A second device in the same context, which assembles with no subrack.
+# A second device in the same context, which assembles with no subrack and has
+# no PDU.
 UNASSEMBLED_SUBRACK_ID = 2
 BOARD_HOST = "a-fake-board"
 BOARD_PORT = 8081
+PDU_TRL = "low-mccs/pdu/a-fake-pdu"
+PDU_PORTS = [3, 8]
 
 # How long to wait for a command's change events. Every board command is
 # mocked, so this only covers the task executor handing the task to a thread.
@@ -136,16 +143,34 @@ def poller_factory_fixture() -> mock.Mock:
     return mock.Mock(name="poller_factory")
 
 
+@pytest.fixture(name="pdu_link", scope="module")
+def pdu_link_fixture() -> mock.Mock:
+    """
+    Return the PDU link the device is built around, built once.
+
+    The device binds this object when it first goes online, so it cannot be
+    replaced per test. :py:func:`reset_device_fixture` resets it instead.
+
+    :return: a mock of the PDU link.
+    """
+    return mock.Mock(name="pdu_link")
+
+
 @pytest.fixture(name="device_context", scope="module")
 def device_context_fixture(
     subrack_factory: mock.Mock,
     poller_factory: mock.Mock,
+    pdu_link: mock.Mock,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Run one prototype subrack device for the whole module.
 
+    The SMM shutdown wait is patched to nothing, so ``Off`` does not wait for
+    an SMM that does not exist.
+
     :param subrack_factory: builds the subrack client the device holds.
     :param poller_factory: builds the poller the device holds.
+    :param pdu_link: the PDU link the device holds.
 
     :yields: the running test harness context.
     """
@@ -156,7 +181,10 @@ def device_context_fixture(
         device_class=device_class_factory(
             subrack=subrack_factory,
             subrack_poller=poller_factory,
+            pdu_link=mock.Mock(name="pdu_link_factory", return_value=pdu_link),
         ),
+        pdu_trl=PDU_TRL,
+        pdu_ports=PDU_PORTS,
     )
     # A second device whose subrack factory supplies nothing, so it assembles
     # with no subrack. It stands in for an assembly that failed part way
@@ -177,7 +205,7 @@ def device_context_fixture(
             {},
         ),
     )
-    with harness as context:
+    with mock.patch(f"{COMMANDS_MODULE}.SMM_SHUTDOWN_TIME", 0.0), harness as context:
         yield context
 
 
@@ -262,9 +290,10 @@ def reset_device_fixture(
     subrack_device: tango.DeviceProxy,
     subrack: mock.Mock,
     subrack_factory: mock.Mock,
+    pdu_link: mock.Mock,
 ) -> None:
     """
-    Put the device and its subrack back to a known state before each test.
+    Put the device, its subrack and its PDU link back to a known state.
 
     This is what a fresh context gives for free, and what a shared one has to
     do by hand.
@@ -278,8 +307,9 @@ def reset_device_fixture(
     :param subrack_device: the device under test.
     :param subrack: the subrack client the device holds.
     :param subrack_factory: the factory, which carries the poll callbacks.
+    :param pdu_link: the PDU link the device holds.
     """
-    subrack.reset_mock()
+    subrack.reset_mock(side_effect=True)
     subrack.run_board_command.return_value = (
         CommandOutcome.COMPLETED,
         "The command completed.",
@@ -288,6 +318,10 @@ def reset_device_fixture(
     # No board info has been read, so every command is let through to the
     # board. A test that sets it has it put back here.
     subrack.board_info = None
+    pdu_link.reset_mock()
+    pdu_link.power_state = PowerState.UNKNOWN
+    pdu_link.set_ports.return_value = (ResultCode.OK, "The PDU accepted every port.")
+    pdu_link.wait_for.return_value = (CommandOutcome.COMPLETED, "What the PDU did.")
     subrack_device.adminMode = AdminMode.OFFLINE
     with tango.EnsureOmniThread():
         subrack_factory.call_args.kwargs["stopped_callback"]()
@@ -617,3 +651,190 @@ def test_set_power_supply_fan_speed_needs_an_api_that_has_it(
         ):
             online_device.SetPowerSupplyFanSpeed(argument)
         subrack.run_board_command.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("command", "target", "shutdown"),
+    [
+        ("On", PowerState.ON, []),
+        (
+            "Off",
+            PowerState.OFF,
+            [mock.call("poweroff_subrack", "false", abort_event=mock.ANY)],
+        ),
+    ],
+    ids=["On", "Off"],
+)
+# pylint: disable-next=too-many-arguments
+def test_a_power_command_switches_every_port_and_waits(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    subrack: mock.Mock,
+    pdu_link: mock.Mock,
+    command: str,
+    target: PowerState,
+    shutdown: list[Any],
+) -> None:
+    """
+    Test that On and Off switch the ports, then wait for them to reach the target.
+
+    Only Off shuts the SMM down first.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param subrack: the mocked subrack client.
+    :param pdu_link: the mocked PDU link.
+    :param command: the command to run.
+    :param target: the power state the command switches the ports to.
+    :param shutdown: the board commands it should send first.
+    """
+    lrc.run_command(command)
+
+    lrc.assert_command_finished(
+        status="COMPLETED",
+        result_code=ResultCode.OK,
+        result_message="What the PDU did.",
+    )
+    assert subrack.run_board_command.call_args_list == shutdown
+    pdu_link.set_ports.assert_called_once_with(target == PowerState.ON)
+    pdu_link.wait_for.assert_called_once_with(
+        target, PDU_COMMAND_TIMEOUT, abort_event=mock.ANY
+    )
+    assert online_device.commandedState == target.name
+
+
+def test_off_does_not_shut_down_an_smm_that_has_no_power(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    subrack: mock.Mock,
+    pdu_link: mock.Mock,
+) -> None:
+    """
+    Test that Off sends no shutdown while the PDU ports are already off.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param subrack: the mocked subrack client.
+    :param pdu_link: the mocked PDU link.
+    """
+    pdu_link.power_state = PowerState.OFF
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(status="COMPLETED")
+    subrack.run_board_command.assert_not_called()
+    pdu_link.set_ports.assert_called_once_with(False)
+
+
+def test_off_switches_the_ports_when_the_smm_refuses_the_shutdown(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    subrack: mock.Mock,
+    pdu_link: mock.Mock,
+) -> None:
+    """
+    Test that Off still removes power from a board that refuses the shutdown.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param subrack: the mocked subrack client.
+    :param pdu_link: the mocked PDU link.
+    """
+    subrack.run_board_command.return_value = (
+        CommandOutcome.FAILED,
+        "The board did not answer.",
+        None,
+    )
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(status="COMPLETED")
+    pdu_link.set_ports.assert_called_once_with(False)
+
+
+@pytest.mark.parametrize(
+    "board_answer",
+    [
+        pytest.param(
+            [(CommandOutcome.ABORTED, "The command was aborted.", None)],
+            id="during_the_command",
+        ),
+        # The board accepts the shutdown, and the abort comes during the wait
+        # after it. Event.set returns None, so the lambda returns the answer.
+        pytest.param(
+            lambda *_args, abort_event: abort_event.set()
+            or (CommandOutcome.COMPLETED, "The command completed.", None),
+            id="during_the_wait",
+        ),
+    ],
+)
+def test_an_abort_during_the_shutdown_leaves_the_ports_on(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    subrack: mock.Mock,
+    pdu_link: mock.Mock,
+    board_answer: Any,
+) -> None:
+    """
+    Test that an abort before the ports switch ends Off as aborted.
+
+    That the ports are never switched also shows that Off shuts the SMM down
+    before it switches the ports.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param subrack: the mocked subrack client.
+    :param pdu_link: the mocked PDU link.
+    :param board_answer: the side effect that gives what the board answers.
+    """
+    subrack.run_board_command.side_effect = board_answer
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(
+        status="ABORTED",
+        result_code=ResultCode.ABORTED,
+        result_message_contains="before the PDU ports switched off",
+    )
+    pdu_link.set_ports.assert_not_called()
+
+
+def test_a_pdu_that_refuses_fails_the_command(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    pdu_link: mock.Mock,
+) -> None:
+    """
+    Test that a PDU that refuses a port fails the command without a wait.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param pdu_link: the mocked PDU link.
+    """
+    pdu_link.set_ports.return_value = (ResultCode.FAILED, "The PDU refused.")
+
+    lrc.run_command("On")
+
+    lrc.assert_command_finished(
+        status="FAILED",
+        result_code=ResultCode.FAILED,
+        result_message_contains="Could not switch the PDU ports ON.",
+    )
+    pdu_link.wait_for.assert_not_called()
+
+
+@pytest.mark.parametrize("command", ["On", "Off"])
+def test_a_device_without_a_pdu_refuses_power_commands(
+    unassembled_device: tango.DeviceProxy, command: str
+) -> None:
+    """
+    Test that a device with no PDU refuses On and Off rather than accepting them.
+
+    The device has neither ``PduTrl`` nor ``PduPorts``, so going online builds
+    no PDU link, and each task factory finds none.
+
+    :param unassembled_device: a device with no subrack and no PDU, online.
+    :param command: the command to run.
+    """
+    with pytest.raises(tango.DevFailed, match="no PDU link"):
+        unassembled_device.command_inout(command)

@@ -241,8 +241,8 @@ def test_a_port_event_changes_only_its_port(
 @pytest.mark.parametrize(
     "event",
     [
-        # MccsPdu pushes an invalid value for each port when it loses contact
-        # with its PDU, and an invalid value reads as None.
+        # MccsPdu gives an invalid value for a port it has no value for, and
+        # an invalid value reads as None.
         pytest.param(_event(None), id="invalid"),
         # The scheduler gives an error event while the PDU device is down.
         pytest.param(mock.Mock(err=True, attr_value=None), id="error"),

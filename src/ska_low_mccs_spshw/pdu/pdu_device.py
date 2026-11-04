@@ -10,14 +10,13 @@ from __future__ import annotations  # allow forward references in type hints
 
 import importlib.resources
 import sys
-import time
 from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_low_mccs_common import MccsBaseDevice
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
-from tango import AttrDataFormat, Attribute, AttrQuality, CmdArgType
+from tango import Attribute
 from tango.server import attribute, command, device_property
 
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
@@ -211,10 +210,6 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        A value of ``None`` means the component manager has no value for that
-        attribute, because it lost contact with the PDU. It is pushed with
-        ``ATTR_INVALID`` quality, so a subscriber gets no value.
-
         :param fault: whether the component has faulted or not
         :param power: unused in this implementation
         :param kwargs: state change parameters.
@@ -225,41 +220,12 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
                 # update health_state which is an attribute in the base class
                 # change and archive events are pushed there
                 self._update_health_state(health)
-        lost = [name for name, value in kwargs.items() if value is None]
-        for name in lost:
-            del kwargs[name]
         # update base class for power and/or fault
         super()._component_state_changed(**kwargs)
 
         for attribute_name, value in kwargs.items():
             info_msg = f"Updating {attribute_name}, {value}"
             self.logger.info(info_msg)
-
-        if lost:
-            timestamp = time.time()
-            for name in lost:
-                placeholder = self._invalid_placeholder(name)
-                for push in (self.push_change_event, self.push_archive_event):
-                    push(name, placeholder, timestamp, AttrQuality.ATTR_INVALID)
-            self.logger.info(f"No values for {', '.join(lost)}")
-
-    def _invalid_placeholder(self: MccsPdu, name: str) -> Any:
-        """
-        Return a value that an invalid push of one attribute can carry.
-
-        Tango drops the value of an ``ATTR_INVALID`` push, but pytango still
-        converts it to the attribute type first, so it must fit that type.
-
-        :param name: the attribute to push.
-
-        :return: a value of the attribute's type.
-        """
-        attr = self.get_device_attr().get_attr_by_name(name)
-        if attr.get_data_format() != AttrDataFormat.SCALAR:
-            return []
-        if attr.get_data_type() == CmdArgType.DevString:
-            return ""
-        return 0
 
     def _health_changed(self: MccsPdu, health: HealthState) -> None:
         """

@@ -186,10 +186,6 @@ def test_the_device_follows_a_lost_pdu_and_its_return(
     """
     Test that the device leaves ON when the PDU stops answering, and comes back.
 
-    The PDU answers again before the test ends. A poll against a PDU that does
-    not answer blocks for several SNMP timeouts, and that would hold up the
-    device server's shutdown beyond what the test context allows.
-
     :param online_device: the PDU device, online.
     :param simulator: the running simulator.
     :param change_event_callbacks: the callbacks subscribed to the device.

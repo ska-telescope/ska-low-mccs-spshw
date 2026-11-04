@@ -832,8 +832,6 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     # ---------------------------------
     # Attribute for the PDU port states
     # ---------------------------------
-    # This is (int,) rather than (PowerState,) because of pytango issue 483,
-    # which prevents an enumerated spectrum attribute from working.
     pduPortStates = attribute_from_signal(
         _pdu_port_states,
         dtype=(int,),

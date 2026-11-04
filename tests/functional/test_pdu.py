@@ -6,322 +6,211 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-This file contains a test for the pdu functional tests.
+This file contains the functional tests of the PDU device.
 
-Depending on your exact deployment the individual tests may or may not be run.
-This test just checks that anything which can run passes.
+With ``--true-context`` the tests use the PDU device the deployment exports.
+Without it they start a PDU simulator and a PDU device to talk to it.
+
+A scenario that switches a port runs only against a simulated PDU. It skips
+against a real one, because a real PDU powers real equipment.
 """
 from __future__ import annotations
 
-import time
-from typing import Any
+from typing import Iterator
 
 import pytest
 import tango
-from pytest_bdd import given, scenario, then, when
+from pytest_bdd import given, parsers, scenario, then, when
 from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import get_pdu_name, get_subrack_name
+from tests.harness import SpsTangoTestHarness
 
+# What the simulated PDU reports as its system description.
+SIMULATED_DESCRIPTION = "Simulated Enlogic PDU"
 
-@pytest.fixture(name="subrack_device")
-def subrack_device_fixture(
-    subrack_id: int,
-) -> tango.DeviceProxy:
-    """
-    Return the subrack device under test.
-
-    :param subrack_id: ID of the subrack Tango device.
-
-    :return: the subrack Tango device under test.
-    """
-    return tango.DeviceProxy(get_subrack_name(subrack_id))
+# Long enough for the PDU device to queue a write, send it at its next poll,
+# and read the port state back.
+EVENT_TIMEOUT = 30.0
 
 
 @pytest.fixture(name="pdu_device")
 def pdu_device_fixture(
-    true_context: bool, exported_pdus: list[str]
-) -> tango.DeviceProxy:
+    true_context: bool, exported_pdus: list[tango.DeviceProxy]
+) -> Iterator[tango.DeviceProxy]:
     """
-    Return the pdu device under test.
+    Return the PDU device under test.
 
-    :param true_context: True if we are running in a true context.
-    :param exported_pdus: A list containing the ``tango.DeviceProxy``
-        of the exported pdus. Or Empty list if no devices exported.
+    In a true context this is a PDU device the deployment exports. Otherwise
+    it is a PDU device in a test harness, talking to a PDU simulator.
 
-    :return: the pdu Tango device under test.
+    :param true_context: whether to test against an existing Tango
+        deployment.
+    :param exported_pdus: the PDU devices the deployment exports, if any.
+
+    :yields: the PDU device under test.
     """
     if true_context:
-        if len(exported_pdus) == 0:
-            pytest.skip("The PDU device is not an exported device. Unable to run test.")
-        return tango.DeviceProxy(exported_pdus[-1])
-    return tango.DeviceProxy(get_pdu_name())
+        if not exported_pdus:
+            pytest.skip("The deployment exports no PDU device.")
+        yield exported_pdus[0]
+        return
+
+    # Deferred, as in the harness, because a true context runs these tests from
+    # a pod that does not have ska_low_mccs_spshw installed.
+    # pylint: disable-next=import-outside-toplevel
+    from ska_low_mccs_spshw.pdu.pdu_simulator import PduSimulatorContextManager
+
+    with PduSimulatorContextManager("ENLOGIC") as (host, port):
+        harness = SpsTangoTestHarness()
+        harness.add_pdu_device("ENLOGIC", host, "private", port=port)
+        with harness as context:
+            yield context.get_pdu_device()
 
 
-@pytest.fixture(name="pdu_port", scope="module")
-def pdu_port_fixture() -> int:
+@pytest.fixture(name="pdu_callbacks")
+def pdu_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
-    Return the pdu port to be used.
+    Return the change event callbacks the PDU steps subscribe with.
 
-    :return: the pdu port to be used.
+    :return: a group of change event callbacks.
     """
-    return 1
+    return MockTangoEventCallbackGroup(
+        "state", "port_state", timeout=EVENT_TIMEOUT, assert_no_error=False
+    )
 
 
-@pytest.fixture(name="command_info")
-def command_info_fixture() -> dict[str, Any]:
-    """
-    Fixture to store command ID.
-
-    :returns: Empty dictionary.
-    """
-    return {}
+@scenario("features/pdu.feature", "Monitor the PDU")
+def test_monitor_the_pdu() -> None:
+    """Run a test scenario that reads what the PDU reports."""
 
 
-@scenario("features/pdu.feature", "Pdu turns ports ON")
-def test_pdu_port_on_test(
-    stations_devices_exported: list[tango.DeviceProxy],
-    exported_pdus: list[tango.DeviceProxy],
-) -> None:
-    """
-    Run a test scenario that tests turning on the pdu port.
-
-    :param stations_devices_exported: Fixture containing ``tango.DeviceProxy``
-        to all station devices.
-    :param exported_pdus: the pdus exported in the database.
-    """
-    for device in stations_devices_exported:
-        device.adminmode = AdminMode.ONLINE
-    for pdu in exported_pdus:
-        pdu.adminmode = AdminMode.ONLINE
+@scenario("features/pdu.feature", "Switch a PDU port on")
+def test_switch_a_pdu_port_on() -> None:
+    """Run a test scenario that switches a PDU port on."""
 
 
-@scenario("features/pdu.feature", "Pdu turns ports OFF")
-def test_pdu_port_off_test(
-    stations_devices_exported: list[tango.DeviceProxy],
-    exported_pdus: list[tango.DeviceProxy],
-) -> None:
-    """
-    Run a test scenario that tests turning off the pdu port.
-
-    :param stations_devices_exported: Fixture containing ``tango.DeviceProxy``
-        to all station devices.
-    :param exported_pdus: the pdus exported in the database.
-    """
-    for device in stations_devices_exported:
-        device.adminmode = AdminMode.ONLINE
-    for pdu in exported_pdus:
-        pdu.adminmode = AdminMode.ONLINE
+@scenario("features/pdu.feature", "Switch a PDU port off")
+def test_switch_a_pdu_port_off() -> None:
+    """Run a test scenario that switches a PDU port off."""
 
 
-@given("an SPS deployment against HW")
-def check_against_hardware(hw_context: bool) -> None:
-    """
-    Skip the test if not against HW.
-
-    :param hw_context: whether or not the current context is against real HW.
-    """
-    if not hw_context:
-        pytest.skip("This test requires real HW.")
-
-
-@given("a PDU that is online and ON")
-def check_pdu_is_online_and_on(
+@given("a PDU that is online and on")
+def pdu_online_and_on(
     pdu_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
+    pdu_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Check that the pdu is online and on.
+    Put the PDU device online, and wait until it communicates with its PDU.
 
-    :param pdu_device: the pdu Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
+    The device is ``ON`` while it communicates with its PDU.
+
+    :param pdu_device: the PDU device under test.
+    :param pdu_callbacks: the change event callbacks to subscribe with.
     """
-    admin_mode = pdu_device.adminMode
-    assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.ENGINEERING]
-
     pdu_device.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["pdu_state"],
+        "state", tango.EventType.CHANGE_EVENT, pdu_callbacks["state"]
     )
-
-    # Test can run in ONLINE or ENGINEERING admin mode,
-    # so we only need to act if the admin mode is OFFLINE
-    if admin_mode == AdminMode.OFFLINE:
-        change_event_callbacks.assert_change_event("pdu_state", tango.DevState.DISABLE)
+    if pdu_device.adminMode == AdminMode.OFFLINE:
         pdu_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks.assert_change_event("pdu_state", tango.DevState.UNKNOWN)
-
-    change_event_callbacks.assert_change_event(
-        "pdu_state",
-        OneOf(tango.DevState.OFF, tango.DevState.ON),
+    pdu_callbacks["state"].assert_change_event(
+        tango.DevState.ON, lookahead=4, consume_nonmatches=True
     )
-    state = pdu_device.state()
 
-    if state == tango.DevState.OFF:
-        pdu_device.On()
 
-        change_event_callbacks.assert_change_event(
-            "pdu_state",
-            tango.DevState.ON,
+@given("the PDU is simulated")
+def pdu_is_simulated(pdu_device: tango.DeviceProxy) -> None:
+    """
+    Skip the scenario unless the PDU is a simulator.
+
+    :param pdu_device: the PDU device under test.
+    """
+    description = pdu_device.systemDescription
+    if description != SIMULATED_DESCRIPTION:
+        pytest.skip(
+            "Switching ports needs a simulated PDU, and this PDU reports "
+            f"'{description}'."
         )
 
-    assert pdu_device.state() == tango.DevState.ON
 
-
-@given("a subrack that is online and ON")
-def check_subrack_is_online_and_on(
-    subrack_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
+@given(parsers.parse("PDU port {port:d} is {power}"))
+def pdu_port_is(
+    pdu_device: tango.DeviceProxy,
+    pdu_callbacks: MockTangoEventCallbackGroup,
+    port: int,
+    power: str,
 ) -> None:
     """
-    Check that the subrack is online and on.
+    Switch the port, if it is not already in the given state.
 
-    :param subrack_device: the subrack Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
+    :param pdu_device: the PDU device under test.
+    :param pdu_callbacks: the change event callbacks to subscribe with.
+    :param port: the port to set up.
+    :param power: ``on`` or ``off``.
     """
-    admin_mode = subrack_device.adminMode
-    assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.ENGINEERING]
-
-    subrack_device.subscribe_event(
-        "state",
+    on = power == "on"
+    pdu_device.subscribe_event(
+        f"pduPort{port}State",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_state"],
+        pdu_callbacks["port_state"],
     )
-
-    # Test can run in ONLINE or ENGINEERING admin mode,
-    # so we only need to act if the admin mode is OFFLINE
-    if admin_mode == AdminMode.OFFLINE:
-        change_event_callbacks.assert_change_event(
-            "subrack_state", tango.DevState.DISABLE
-        )
-        subrack_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks.assert_change_event(
-            "subrack_state", tango.DevState.UNKNOWN
-        )
-
-    change_event_callbacks.assert_change_event(
-        "subrack_state",
-        OneOf(tango.DevState.OFF, tango.DevState.ON),
-    )
-    state = subrack_device.state()
-
-    if state == tango.DevState.OFF:
-        subrack_device.On()
-
-        change_event_callbacks.assert_change_event(
-            "subrack_state",
-            tango.DevState.ON,
-        )
-
-    assert subrack_device.state() == tango.DevState.ON
+    # The subscription reads the current state.
+    pdu_callbacks["port_state"].assert_change_event(OneOf(True, False))
+    if pdu_device.read_attribute(f"pduPort{port}State").value != on:
+        pdu_device.command_inout("pduPortOn" if on else "pduPortOff", port)
+        pdu_callbacks["port_state"].assert_change_event(on)
 
 
-@given("all the PDU ports are OFF")
-def assert_pdu_ports_are_off(
-    pdu_device: tango.DeviceProxy,
+@when(parsers.parse("I switch PDU port {port:d} {power}"))
+def switch_pdu_port(pdu_device: tango.DeviceProxy, port: int, power: str) -> None:
+    """
+    Switch a PDU port on or off.
+
+    :param pdu_device: the PDU device under test.
+    :param port: the port to switch.
+    :param power: ``on`` or ``off``.
+    """
+    pdu_device.command_inout("pduPortOn" if power == "on" else "pduPortOff", port)
+
+
+@then("the PDU reports its model and its number of ports")
+def pdu_reports_its_model(pdu_device: tango.DeviceProxy) -> None:
+    """
+    Check that the PDU reports a model and a number of ports.
+
+    :param pdu_device: the PDU device under test.
+    """
+    assert pdu_device.pduModel
+    assert pdu_device.pduNumberOfPorts > 0
+
+
+@then("the PDU reports the state of each port")
+def pdu_reports_each_port_state(pdu_device: tango.DeviceProxy) -> None:
+    """
+    Check that every port the PDU device has reads a state.
+
+    :param pdu_device: the PDU device under test.
+    """
+    names = [
+        name
+        for name in pdu_device.get_attribute_list()
+        if name.startswith("pduPort") and name.endswith("State")
+    ]
+    assert names, "The PDU device has no port state attributes."
+    unread = [name for name in names if pdu_device.read_attribute(name).value is None]
+    assert not unread, f"These ports report no state: {unread}"
+
+
+@then(parsers.parse("PDU port {port:d} reports that it is {power}"))
+def pdu_port_reports(
+    pdu_callbacks: MockTangoEventCallbackGroup, port: int, power: str
 ) -> None:
     """
-    Make sure the pdu ports are off.
+    Check that the port reports the state it was switched to.
 
-    :param pdu_device: the pdu Tango device under test.
+    :param pdu_callbacks: the change event callbacks subscribed to the port.
+    :param port: the port that was switched.
+    :param power: ``on`` or ``off``.
     """
-    port_state = pdu_device.outlet1State
-    if port_state == 0:
-        return
-    pdu_device.outlet1Command(0)
-    # pdu_device.outlet1Command = 0
-    for i in range(5):
-        port_state = pdu_device.outlet1State
-        if port_state == 0:
-            return
-        time.sleep(1)
-    assert False, "Pdu port 1 not in correct state"
-
-
-@given("all the PDU ports are ON")
-def assert_pdu_ports_are_on(
-    pdu_device: tango.DeviceProxy,
-) -> None:
-    """
-    Make sure the pdu ports are on.
-
-    :param pdu_device: the pdu Tango device under test.
-    """
-    port_state = pdu_device.outlet1State
-    if port_state == 1:
-        return
-    pdu_device.outlet1Command(1)
-    # pdu_device.outlet1Command = 1
-    for i in range(5):
-        port_state = pdu_device.outlet1State
-        if port_state == 1:
-            return
-        time.sleep(1)
-    assert False, "Pdu port 1 not in correct state"
-
-
-@when("subrack commands pdu turn ON port")
-def subrack_commands_pdu_port_on(
-    subrack_device: tango.DeviceProxy,
-    pdu_port: int,
-) -> None:
-    """
-    Subrack commands the pdu to turn on port.
-
-    :param subrack_device: the subrack Tango device under test.
-    :param pdu_port: the pdu port to power on and off
-    """
-    subrack_device.PowerPduPortOn(pdu_port)
-
-
-@when("subrack commands pdu turn OFF port")
-def subrack_commands_pdu_port_off(
-    subrack_device: tango.DeviceProxy,
-    pdu_port: int,
-) -> None:
-    """
-    Subrack commands the pdu to turn off port.
-
-    :param subrack_device: the subrack Tango device under test.
-    :param pdu_port: the pdu port to power on and off
-    """
-    subrack_device.PowerPduPortOff(pdu_port)
-
-
-@then("the PDU port turns ON")
-def pdu_port_turns_on(
-    pdu_device: tango.DeviceProxy,
-) -> None:
-    """
-    PDU port turns on.
-
-    :param pdu_device: the subrack Tango device under test.
-    """
-    for i in range(5):
-        port_state = pdu_device.outlet1State
-        if port_state == 1:
-            return
-        time.sleep(1)
-    assert False, "Pdu port 1 not in correct state"
-
-
-@then("the PDU port turns OFF")
-def pdu_port_turns_off(
-    pdu_device: tango.DeviceProxy,
-) -> None:
-    """
-    PDU port turns off.
-
-    :param pdu_device: the subrack Tango device under test.
-    """
-    for i in range(5):
-        port_state = pdu_device.outlet1State
-        if port_state == 0:
-            return
-        time.sleep(1)
-    assert False, "Pdu port 1 not in correct state"
+    pdu_callbacks["port_state"].assert_change_event(power == "on")

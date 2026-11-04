@@ -1,4 +1,13 @@
 platform:
+  sps_facilities:
+    ci:
+      sps_cabinets:
+        "1":
+          pdu:
+            model: ENLOGIC
+            host: pdu-simulator-ci-1
+            v2_community: private
+            simulated: true
   stations:
     ci-1:
       id: 1

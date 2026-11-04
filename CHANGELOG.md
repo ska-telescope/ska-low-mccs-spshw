@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with a variation module that switches an outlet when its control object is written.
 * [THORN-759] MccsPrototypeSubrack gets the same support as current subrack for SMM 1.8.0. It derives tpmCurrents and rejects SetPowerSupplyFanSpeed on SMM 1.8.0. A board command fails when command_completed reports that it failed.
 * [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with site details replaced, and a variation module that switches an outlet when its control object is written. Run it with the `pduSimulator` command, or in a test with `PduSimulatorContextManager`.
   * The chart deploys one simulator pod for each entry in `simulators.pdus`, behind a UDP Service on port 161. CI now has the simulated PDU `low-mccs/pdu/ci-1`, which subrack `sr1` already names.

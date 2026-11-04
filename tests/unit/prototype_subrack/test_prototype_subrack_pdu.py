@@ -21,6 +21,7 @@ has neither ``PduTrl`` nor ``PduPorts``.
 from __future__ import annotations
 
 import gc
+import threading
 from typing import Callable, Iterator
 from unittest import mock
 
@@ -39,6 +40,8 @@ from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
 from ska_low_mccs_spshw.prototype_subrack.subrack_client import SubrackPollResponse
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import LRCManager
+
+COMMANDS_MODULE = "ska_low_mccs_spshw.prototype_subrack.prototype_subrack_commands"
 
 # TODO: gc.disable() works around a hang during garbage collection.
 gc.disable()
@@ -69,6 +72,28 @@ def subrack_factory_fixture() -> mock.Mock:
     :return: the factory.
     """
     return mock.Mock(name="subrack_factory")
+
+
+@pytest.fixture(name="board", autouse=True)
+def board_fixture(subrack_factory: mock.Mock) -> Iterator[mock.Mock]:
+    """
+    Return the subrack client the device holds, set up to accept a shutdown.
+
+    The shutdown wait is patched to nothing, so ``Off`` does not wait for an
+    SMM that does not exist.
+
+    :param subrack_factory: the injected subrack factory.
+
+    :yields: the mocked subrack client.
+    """
+    board = subrack_factory.return_value
+    board.run_board_command.return_value = (
+        CommandOutcome.COMPLETED,
+        "The command completed.",
+        None,
+    )
+    with mock.patch(f"{COMMANDS_MODULE}.SMM_SHUTDOWN_TIME", 0.0):
+        yield board
 
 
 @pytest.fixture(name="poller_factory")
@@ -639,6 +664,7 @@ def test_a_power_command_switches_every_port_and_waits(
     lrc: LRCManager,
     online_device: tango.DeviceProxy,
     pdu_link: mock.Mock,
+    board: mock.Mock,
     command: str,
     on: bool,
     target: PowerState,
@@ -647,14 +673,21 @@ def test_a_power_command_switches_every_port_and_waits(
     """
     Test that On and Off switch the ports, then wait for them to reach the target.
 
+    Only Off shuts the SMM down first.
+
     :param lrc: the long running command manager for the device under test.
     :param online_device: the device under test, online.
     :param pdu_link: the mocked PDU link.
+    :param board: the mocked subrack client.
     :param command: the command to run.
     :param on: whether the command switches the ports on.
     :param target: the power state the command waits for.
     :param commanded_state: what commandedState should read afterwards.
     """
+    calls = mock.Mock()
+    calls.attach_mock(board.run_board_command, "run_board_command")
+    calls.attach_mock(pdu_link.set_ports, "set_ports")
+
     lrc.run_command(command)
 
     lrc.assert_command_finished(
@@ -663,11 +696,111 @@ def test_a_power_command_switches_every_port_and_waits(
         result_message="What the PDU did.",
         timeout=EVENT_TIMEOUT,
     )
-    pdu_link.set_ports.assert_called_once_with(on)
+    shutdown = [
+        mock.call.run_board_command("poweroff_subrack", "false", abort_event=mock.ANY)
+    ]
+    assert calls.mock_calls == [*([] if on else shutdown), mock.call.set_ports(on)]
     pdu_link.wait_for.assert_called_once_with(
         target, PDU_COMMAND_TIMEOUT, abort_event=mock.ANY
     )
     assert online_device.commandedState == commanded_state
+
+
+def test_off_does_not_shut_down_an_smm_that_has_no_power(
+    lrc: LRCManager, pdu_link: mock.Mock, board: mock.Mock
+) -> None:
+    """
+    Test that Off sends no shutdown while the PDU ports are already off.
+
+    :param lrc: the long running command manager for the device under test.
+    :param pdu_link: the mocked PDU link.
+    :param board: the mocked subrack client.
+    """
+    pdu_link.power_state = PowerState.OFF
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(status="COMPLETED", timeout=EVENT_TIMEOUT)
+    board.run_board_command.assert_not_called()
+    pdu_link.set_ports.assert_called_once_with(False)
+
+
+def test_off_switches_the_ports_when_the_smm_refuses_the_shutdown(
+    lrc: LRCManager, pdu_link: mock.Mock, board: mock.Mock
+) -> None:
+    """
+    Test that Off still removes power from a board that refuses the shutdown.
+
+    :param lrc: the long running command manager for the device under test.
+    :param pdu_link: the mocked PDU link.
+    :param board: the mocked subrack client.
+    """
+    board.run_board_command.return_value = (
+        CommandOutcome.FAILED,
+        "The board did not answer.",
+        None,
+    )
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(status="COMPLETED", timeout=EVENT_TIMEOUT)
+    pdu_link.set_ports.assert_called_once_with(False)
+
+
+def _abort_while_shutting_down(
+    name: str, args: str, abort_event: threading.Event
+) -> tuple[CommandOutcome, str, None]:
+    """
+    Accept the shutdown, and ask for an abort before the shutdown wait.
+
+    :param name: the board command.
+    :param args: the board command argument string.
+    :param abort_event: the abort event of the task.
+
+    :return: what the board answers.
+    """
+    abort_event.set()
+    return (CommandOutcome.COMPLETED, "The command completed.", None)
+
+
+@pytest.mark.parametrize(
+    "board_answer",
+    [
+        pytest.param(
+            (CommandOutcome.ABORTED, "The command was aborted.", None),
+            id="during_the_command",
+        ),
+        pytest.param(_abort_while_shutting_down, id="during_the_wait"),
+    ],
+)
+def test_an_abort_during_the_shutdown_leaves_the_ports_on(
+    lrc: LRCManager,
+    pdu_link: mock.Mock,
+    board: mock.Mock,
+    board_answer: tuple[CommandOutcome, str, None] | Callable,
+) -> None:
+    """
+    Test that an abort before the ports switch ends Off as aborted.
+
+    :param lrc: the long running command manager for the device under test.
+    :param pdu_link: the mocked PDU link.
+    :param board: the mocked subrack client.
+    :param board_answer: what the board answers, or a callable that answers.
+    """
+    if callable(board_answer):
+        board.run_board_command.side_effect = board_answer
+    else:
+        board.run_board_command.return_value = board_answer
+
+    lrc.run_command("Off")
+
+    lrc.assert_command_finished(
+        status="ABORTED",
+        result_code=ResultCode.ABORTED,
+        result_message_contains="before the PDU ports switched off",
+        timeout=EVENT_TIMEOUT,
+    )
+    pdu_link.set_ports.assert_not_called()
 
 
 @pytest.mark.parametrize(

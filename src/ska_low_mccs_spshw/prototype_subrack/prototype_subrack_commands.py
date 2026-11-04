@@ -34,8 +34,9 @@ from typing import Any, Final, Optional
 import ska_tango_base as stb
 from ska_control_model import AdminMode, ResultCode, TaskStatus
 from ska_tango_base.long_running_commands import LRCMixin, LRCReqType
+from tango import Except
 
-from ..subrack.subrack_data import FanMode
+from ..subrack.subrack_data import FanMode, SubrackData
 from .constants import ClientCommand
 from .subrack_client import BoardCommandStatus, Subrack
 
@@ -155,6 +156,36 @@ class SubrackCommands(LRCMixin):
         """
         return self._admin_mode in (AdminMode.ONLINE, AdminMode.ENGINEERING)
 
+    def is_SetPowerSupplyFanSpeed_allowed(  # pylint: disable=invalid-name
+        self: SubrackCommands, request_type: Optional[LRCReqType] = None
+    ) -> bool:
+        """
+        Return whether the power supply fan speed may be set now.
+
+        API 1.8.0 has no ``set_power_supply_fan_speed`` command, so the command
+        is refused with a reason, the same as on ``MccsSubrack``. Until the
+        board info has been read the API version is unknown, so the command is
+        let through and the board decides.
+
+        :param request_type: whether the command is being queued or executed.
+            Both are refused on the same grounds, so this is not read.
+
+        :return: whether the command may run.
+        """
+        if not self.is_board_command_allowed(request_type):
+            return False
+        board_info = self.subrack.board_info
+        if board_info is not None and not SubrackData.supports_power_supply_fan_speed(
+            board_info
+        ):
+            Except.throw_exception(
+                "CommandNotAllowed",
+                "SetPowerSupplyFanSpeed is not supported by subrack "
+                f"API {board_info['SMM']['bios']}.",
+                self.get_name(),
+            )
+        return True
+
     # ----------------------------------
     # Stopping the board commands
     # ----------------------------------
@@ -273,7 +304,7 @@ class SubrackCommands(LRCMixin):
         )
 
     @stb.long_running_commands.long_running_command(
-        fisallowed="is_board_command_allowed"
+        fisallowed="is_SetPowerSupplyFanSpeed_allowed"
     )
     @stb.validators.validate_json_args(schema="SetPowerSupplyFanSpeed_SCHEMA")
     def SetPowerSupplyFanSpeed(

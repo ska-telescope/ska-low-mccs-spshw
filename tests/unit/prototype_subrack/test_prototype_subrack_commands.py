@@ -285,6 +285,9 @@ def reset_device_fixture(
         "The command completed.",
         None,
     )
+    # No board info has been read, so every command is let through to the
+    # board. A test that sets it has it put back here.
+    subrack.board_info = None
     subrack_device.adminMode = AdminMode.OFFLINE
     with tango.EnsureOmniThread():
         subrack_factory.call_args.kwargs["stopped_callback"]()
@@ -575,3 +578,42 @@ def test_a_command_the_subrack_cannot_do_is_rejected(
     assert result_code == ResultCode.REJECTED
     assert message
     subrack.run_board_command.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("bios", "supported"),
+    [("v1.6.0", True), ("v1.8.0", False)],
+    ids=["1.6.0", "1.8.0"],
+)
+def test_set_power_supply_fan_speed_needs_an_api_that_has_it(
+    online_device: tango.DeviceProxy,
+    lrc: LRCManager,
+    subrack: mock.Mock,
+    bios: str,
+    supported: bool,
+) -> None:
+    """
+    Test that SetPowerSupplyFanSpeed is rejected when the board lacks it.
+
+    API 1.8.0 has no ``set_power_supply_fan_speed`` command, so the command is
+    rejected before it is queued, the same as on ``MccsSubrack``.
+
+    :param online_device: the device under test, online.
+    :param lrc: the long running command manager for the device under test.
+    :param subrack: the mocked subrack client.
+    :param bios: the BIOS version the board reports.
+    :param supported: whether that version has the command.
+    """
+    subrack.board_info = {"SMM": {"bios": bios}}
+    argument = json.dumps({"power_supply_fan_id": 1, "speed_percent": 50})
+
+    if supported:
+        lrc.run_command("SetPowerSupplyFanSpeed", argument)
+        lrc.assert_command_finished(status="COMPLETED", result_code=ResultCode.OK)
+        subrack.run_board_command.assert_called_once()
+    else:
+        with pytest.raises(
+            tango.DevFailed, match="not supported by subrack API v1.8.0"
+        ):
+            online_device.SetPowerSupplyFanSpeed(argument)
+        subrack.run_board_command.assert_not_called()

@@ -52,15 +52,6 @@ def _event(value: Any) -> mock.Mock:
     return mock.Mock(err=False, attr_value=mock.Mock(value=value))
 
 
-def _error_event() -> mock.Mock:
-    """
-    Return a change event that reports an error.
-
-    :return: the event.
-    """
-    return mock.Mock(err=True, attr_value=None)
-
-
 @pytest.fixture(name="scheduler")
 def scheduler_fixture() -> mock.Mock:
     """
@@ -254,7 +245,7 @@ def test_a_port_event_changes_only_its_port(
         # with its PDU, and an invalid value reads as None.
         pytest.param(_event(None), id="invalid"),
         # The scheduler gives an error event while the PDU device is down.
-        pytest.param(_error_event(), id="error"),
+        pytest.param(mock.Mock(err=True, attr_value=None), id="error"),
     ],
 )
 def test_no_value_makes_its_port_unknown(

@@ -32,6 +32,8 @@ __all__ = [
     "PSU_NAMES",
     "ReadKey",
     "RequestError",
+    "SMM_LEAVE_NETWORK_TIMEOUT",
+    "SMM_PROBE_INTERVAL",
     "SMM_SHUTDOWN_TIME",
 ]
 
@@ -156,9 +158,19 @@ PDU_COMMAND_TIMEOUT: Final = 30.0
 """How long, in seconds, ``On`` and ``Off`` wait for the PDU ports to switch."""
 
 SMM_SHUTDOWN_TIME: Final = 30.0
-"""How long, in seconds, ``Off`` waits for the SMM to shut down.
+"""How long, in seconds, ``Off`` waits after the SMM leaves the network.
 
-There's no real way to tell when the SMM has shut down, so this is a guess.
+The SMM takes its network down before it unmounts its filesystems and cuts its
+own supply. This wait covers those last steps.
+"""
+
+SMM_LEAVE_NETWORK_TIMEOUT: Final = 60.0
+"""How long, in seconds, ``Off`` waits for the SMM to leave the network."""
+
+SMM_PROBE_INTERVAL: Final = 1.0
+"""How long, in seconds, a connection probe of the SMM waits for an answer.
+
+It is also the pause between probes.
 """
 
 PDU_MAX_PORTS: Final = 24

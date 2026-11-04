@@ -1155,59 +1155,49 @@ def test_builds_the_pdu_link_the_first_time_it_goes_online(
 
 
 @pytest.mark.parametrize(
-    ("pdu_power", "poll", "expected"),
+    ("poll", "expected"),
     [
-        pytest.param(PowerState.OFF, None, DevState.OFF, id="off"),
+        pytest.param(None, DevState.ON, id="board-answers"),
         pytest.param(
-            PowerState.OFF,
-            RequestError("Connection refused"),
-            DevState.OFF,
-            id="off-unreachable",
+            RequestError("Connection refused"), DevState.OFF, id="unreachable"
         ),
-        pytest.param(
-            PowerState.OFF,
-            HttpError("500 Server Error"),
-            DevState.OFF,
-            id="off-board-error",
-        ),
-        pytest.param(PowerState.ON, None, DevState.ON, id="on"),
+        # The board answered, so it has power. Nothing has been read yet, so
+        # it is UNKNOWN rather than FAULT.
+        pytest.param(HttpError("500 Server Error"), DevState.UNKNOWN, id="board-error"),
     ],
 )
 # pylint: disable-next=too-many-arguments
-def test_the_pdu_and_the_poll_decide_the_state(
+def test_the_pdu_decides_only_when_the_board_does_not_answer(
     online_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
     pdu_link: mock.Mock,
     poll_succeeded: Callable[..., None],
     poll_failed: Callable[[Exception], None],
-    pdu_power: PowerState,
     poll: Exception | None,
     expected: DevState,
 ) -> None:
     """
-    Test that a PDU that is off gives OFF, and otherwise the poll decides.
+    Test that the poll wins over a PDU that is off.
 
-    An unknown PDU also leaves the state to the poll. Every other test in
-    this module covers that, because the mocked link starts unknown.
+    Only a request that never reached the board gives OFF. An unknown PDU
+    leaves the state to the poll in every case. Every other test in this
+    module covers that, because the mocked link starts unknown.
 
     :param online_device: the device under test, online and not yet polled.
-    :param change_event_callbacks: the callbacks subscribed to the device.
     :param pdu_link: the mocked PDU link.
     :param poll_succeeded: supplies a successful poll response.
     :param poll_failed: supplies a failed poll.
-    :param pdu_power: the combined power state of the PDU ports.
     :param poll: the exception the poll fails with, or None for a poll that
         succeeds.
     :param expected: the state the device should reach.
     """
-    pdu_link.power_state = pdu_power
+    pdu_link.power_state = PowerState.OFF
 
     if poll is None:
         poll_succeeded()
     else:
         poll_failed(poll)
 
-    change_event_callbacks["state"].assert_change_event(expected)
+    assert online_device.state() == expected
 
 
 def test_the_pdu_going_off_clears_a_fault(
@@ -1244,7 +1234,6 @@ def test_a_board_error_after_off_is_unknown(
     online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
     pdu_link: mock.Mock,
-    poll_succeeded: Callable[..., None],
     poll_failed: Callable[[Exception], None],
 ) -> None:
     """
@@ -1257,14 +1246,12 @@ def test_a_board_error_after_off_is_unknown(
     :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
     :param pdu_link: the mocked PDU link.
-    :param poll_succeeded: supplies a successful poll response.
     :param poll_failed: supplies a failed poll.
     """
     pdu_link.power_state = PowerState.OFF
-    poll_succeeded()
+    poll_failed(RequestError("Connection refused"))
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-    pdu_link.power_state = PowerState.UNKNOWN
     poll_failed(HttpError("500 Server Error"))
 
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
@@ -1279,7 +1266,8 @@ def test_tpms_have_no_supply_while_the_pdu_is_off(
     """
     Test that every TPM reports NO_SUPPLY while the PDU is off.
 
-    This is what ``MccsSubrack`` reports when its power is off.
+    This is what ``MccsSubrack`` reports when its power is off. A board that
+    answers wins over the PDU, so its TPM on off flags give the states.
 
     :param online_device: the device under test, online and not yet polled.
     :param pdu_link: the mocked PDU link.
@@ -1298,11 +1286,6 @@ def test_tpms_have_no_supply_while_the_pdu_is_off(
     poll_failed(RequestError("Connection refused"))
     assert tpm_power_states() == no_supply
 
-    # A board that still answers does not override the PDU.
-    poll_succeeded()
-    assert tpm_power_states() == no_supply
-
-    pdu_link.power_state = PowerState.ON
     poll_succeeded()
     assert tpm_power_states() == TPM_POWER_STATES
 

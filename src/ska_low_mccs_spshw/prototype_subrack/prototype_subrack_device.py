@@ -76,6 +76,9 @@ class _PollOutcome(enum.Enum):
     BOARD_ERROR = enum.auto()
     """The board answered with an error."""
 
+    UNPOWERED = enum.auto()
+    """The request never reached the board, and every PDU port is off."""
+
 
 # pylint: disable=too-many-ancestors, too-many-instance-attributes
 class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface):
@@ -104,9 +107,10 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     attribute, and so its health fails through them.
 
     When ``PduTrl`` and ``PduPorts`` are both set, the device follows those PDU
-    ports through a :py:class:`~.pdu_link.PduLink`. Every port off makes the
-    state ``OFF``, whatever the poll found. The device reads the link on each
-    poll, so the state still changes only on a poll.
+    ports through a :py:class:`~.pdu_link.PduLink`. The poll always wins over
+    the PDU. Only a request that never reached the board, while every port is
+    off, makes the state ``OFF``. The device reads the link on each poll, so
+    the state still changes only on a poll.
     """
 
     # ----------
@@ -396,13 +400,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         if HEALTH_STATUS_KEY in values:
             self._emit_health_status(values[HEALTH_STATUS_KEY], timestamp)
 
-        # Read once, so the TPM power states and the state agree.
-        pdu_power = self._pdu_power()
-        if pdu_power == PowerState.OFF:
-            self._update_tpm_power_states(
-                [PowerState.NO_SUPPLY] * SubrackData.TPM_BAY_COUNT, timestamp
-            )
-        elif ReadKey.TPM_ON_OFF.value in values:
+        if ReadKey.TPM_ON_OFF.value in values:
             tpm_on_off = values[ReadKey.TPM_ON_OFF.value]
             self._update_tpm_power_states(
                 [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
@@ -413,7 +411,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 timestamp,
             )
         self._emit_pdu_port_states(timestamp)
-        self._apply_state(_PollOutcome.OK, pdu_power)
+        self._apply_state(_PollOutcome.OK)
         self.logger.debug("Poll succeeded")
 
     def _poll_failed(self: MccsPrototypeSubrack, exception: Exception) -> None:
@@ -421,30 +419,33 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         Invalidate every attribute after a failed poll.
 
         A request that never reached the board leaves the subrack in an unknown
-        state. A board that answered with an error is the subrack itself
-        failing. :py:meth:`_apply_state` decides what each gives.
+        state, unless every PDU port is off. A board that answered with an error
+        is the subrack itself failing, and it has power whatever the PDU says.
+        :py:meth:`_apply_state` decides what each gives.
 
         :param exception: the exception raised by the poll.
         """
         self._invalidate_all()
         timestamp = time.time()
-        pdu_power = self._pdu_power()
+        if not isinstance(exception, RequestError):
+            outcome = _PollOutcome.BOARD_ERROR
+        elif (
+            self._pdu_link is not None and self._pdu_link.power_state == PowerState.OFF
+        ):
+            outcome = _PollOutcome.UNPOWERED
+        else:
+            outcome = _PollOutcome.UNREACHABLE
         self._update_tpm_power_states(
             [
                 PowerState.NO_SUPPLY
-                if pdu_power == PowerState.OFF
+                if outcome == _PollOutcome.UNPOWERED
                 else PowerState.UNKNOWN
             ]
             * SubrackData.TPM_BAY_COUNT,
             timestamp,
         )
         self._emit_pdu_port_states(timestamp)
-        self._apply_state(
-            _PollOutcome.UNREACHABLE
-            if isinstance(exception, RequestError)
-            else _PollOutcome.BOARD_ERROR,
-            pdu_power,
-        )
+        self._apply_state(outcome)
         self.logger.warning(f"Poll failed with {type(exception).__name__}. {exception}")
 
     def _polling_stopped(self: MccsPrototypeSubrack) -> None:
@@ -468,45 +469,30 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     # ----------------
     # State
     # ----------------
-    def _pdu_power(self: MccsPrototypeSubrack) -> Optional[PowerState]:
+    def _apply_state(self: MccsPrototypeSubrack, outcome: _PollOutcome) -> None:
         """
-        Return the power state the PDU ports give the subrack.
-
-        :return: the combined power state of the PDU ports, or ``None`` when
-            the device follows no PDU.
-        """
-        return None if self._pdu_link is None else self._pdu_link.power_state
-
-    def _apply_state(
-        self: MccsPrototypeSubrack,
-        outcome: _PollOutcome,
-        pdu_power: Optional[PowerState],
-    ) -> None:
-        """
-        Set the state from what a poll found and from the PDU power.
+        Set the state from what a poll found.
 
         Called only from the poll callbacks, so the state changes only on the
         poll thread and needs no lock.
 
-        Every PDU port off makes the subrack ``OFF``, whatever the poll found.
-        Otherwise the poll decides. A board that answers is ``ON``. A board
-        error is ``FAULT``, but only if the state was already ``ON`` or
-        ``FAULT``. From ``UNKNOWN`` or ``OFF`` nothing has been read to say the
-        subrack is there at all, and the operational state model has no
-        transition into ``FAULT`` from either of them. So in that case it gives
-        ``UNKNOWN``, the same as a request that never reached the board.
+        A board that answers is ``ON``. A board that cannot be reached while
+        every PDU port is off is ``OFF``. A board error is ``FAULT``, but only
+        if the state was already ``ON`` or ``FAULT``. From ``UNKNOWN`` or
+        ``OFF`` nothing has been read to say the subrack is there at all, and
+        the operational state model has no transition into ``FAULT`` from
+        either of them. So in that case it gives ``UNKNOWN``, the same as a
+        request that never reached the board.
 
         :param outcome: what the poll found out about the board.
-        :param pdu_power: the combined power state of the PDU ports, or
-            ``None`` when the device follows no PDU.
         """
-        if pdu_power == PowerState.OFF:
-            self.component_off()
-            self._evaluated_state = DevState.OFF
-        elif outcome == _PollOutcome.OK:
+        if outcome == _PollOutcome.OK:
             self.component_on()
             self.component_no_fault()
             self._evaluated_state = DevState.ON
+        elif outcome == _PollOutcome.UNPOWERED:
+            self.component_off()
+            self._evaluated_state = DevState.OFF
         elif outcome == _PollOutcome.BOARD_ERROR and self._evaluated_state in (
             DevState.ON,
             DevState.FAULT,

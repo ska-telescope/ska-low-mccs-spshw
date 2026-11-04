@@ -87,9 +87,10 @@ class PduLink:
     The scheduler retries the PDU proxy, so a PDU that is down when the link is
     built is tolerated. The subscriptions last as long as the scheduler does.
 
-    ``MccsPdu`` pushes an invalid value for each port when it loses contact
-    with its PDU, and pushes every value again when contact comes back. So the
-    events alone keep the port states current, and the link never reads them.
+    The link never reads the ports, so it knows only what the events say.
+    ``MccsPdu`` pushes no event when it loses contact with its PDU, so a port
+    can keep a stale state then. The device trusts its own poll over the PDU,
+    so a stale state matters only while the board does not answer.
 
     The scheduler has one worker thread, so it is the only writer of the port
     states. Each update replaces the whole dictionary, so a reader on another
@@ -215,9 +216,10 @@ class PduLink:
         """
         Take the new state of one port from its change event.
 
-        An invalid value, which ``MccsPdu`` pushes when it has no value, reads
-        as ``None`` and so makes the port ``UNKNOWN``. So does an error event,
-        such as one the scheduler gives while the PDU device is down.
+        An invalid value, which ``MccsPdu`` gives for a port it has no value
+        for, reads as ``None`` and so makes the port ``UNKNOWN``. So does an
+        error event, such as one the scheduler gives while the PDU device is
+        down.
 
         :param port: the port the event is for.
         :param event: the change event.

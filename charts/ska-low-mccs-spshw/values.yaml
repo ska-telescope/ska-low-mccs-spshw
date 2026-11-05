@@ -314,67 +314,150 @@ ska-tango-devices:
       voltageVM_SW_AMP->min_alarm: 3.22
 
     MccsSubrack:
-      backplaneTemperatures->max_alarm: 50.0
-      backplaneTemperatures->max_warning: 45.0
-      backplaneTemperatures->min_warning: 15.0
-      backplaneTemperatures->min_alarm: 10.0
+      backplaneTemperatures->max_alarm: 65
+      backplaneTemperatures->max_warning: 55
+      backplaneTemperatures->min_warning: 10
+      backplaneTemperatures->min_alarm: 5
 
       subrackMaxFanSpeeds->max_alarm: 9750
       subrackMaxFanSpeeds->max_warning: 8125
       subrackMaxFanSpeeds->min_warning: 4875
       subrackMaxFanSpeeds->min_alarm: 1625
 
-      boardTemperatures->max_alarm: 50.0
-      boardTemperatures->max_warning: 45.0
-      boardTemperatures->min_warning: 15.0
-      boardTemperatures->min_alarm: 10.0
+      boardTemperatures->max_alarm: 58
+      boardTemperatures->max_warning: 48
+      boardTemperatures->min_warning: 10
+      boardTemperatures->min_alarm: 5
 
-      powerSupplyPowers->max_alarm: 600.0
-      powerSupplyPowers->max_warning: 550.0
+      powerSupplyPowers->max_alarm: 1200
+      powerSupplyPowers->max_warning: 620
+      powerSupplyPowers->min_warning: "Not specified"
+      powerSupplyPowers->min_alarm: "Not specified"
 
       powerSupplyVoltages->max_alarm: 12.6
+      powerSupplyVoltages->max_warning: 12.24
+      powerSupplyVoltages->min_warning: 11.76
       powerSupplyVoltages->min_alarm: 11.4
 
-      internalVoltages1V1->max_alarm: 1.13
-      internalVoltages1V1->min_alarm: 1.07
+      internalVoltages1V1->max_alarm: 1.55
+      internalVoltages1V1->max_warning: 1.134
+      internalVoltages1V1->min_warning: 1.064
+      internalVoltages1V1->min_alarm: 0.969
 
-      internalVoltages1V5->max_alarm: 1.54
-      internalVoltages1V5->min_alarm: 1.46
+      internalVoltages1V5->max_alarm: 2
+      internalVoltages1V5->max_warning: 1.54
+      internalVoltages1V5->min_warning: 1.456
+      internalVoltages1V5->min_alarm: 1.377
 
-      internalVoltages2V5->max_alarm: 2.62
-      internalVoltages2V5->min_alarm: 2.38
+      internalVoltages2V5->max_alarm: 2.725
+      internalVoltages2V5->max_warning: 2.61
+      internalVoltages2V5->min_warning: 2.43
+      internalVoltages2V5->min_alarm: 2.25
 
-      internalVoltages2V8->max_alarm: 2.94
-      internalVoltages2V8->min_alarm: 2.66
+      internalVoltages2V8->max_alarm: 3.6
+      internalVoltages2V8->max_warning: 2.97
+      internalVoltages2V8->min_warning: 2.71
+      internalVoltages2V8->min_alarm: 2.594
 
-      internalVoltages3V->max_alarm: 3.15
-      internalVoltages3V->min_alarm: 2.85
+      internalVoltages3V->max_alarm: 3.4
+      internalVoltages3V->max_warning: 3.1
+      internalVoltages3V->min_warning: 2.89
+      internalVoltages3V->min_alarm: 2.698
 
-      internalVoltages3V3->max_alarm: 3.46
-      internalVoltages3V3->min_alarm: 3.13
+      internalVoltages3V3->max_alarm: 3.6
+      internalVoltages3V3->max_warning: 3.44
+      internalVoltages3V3->min_warning: 3.23
+      internalVoltages3V3->min_alarm: 2.375
 
-      internalVoltages5V->max_alarm: 5.25
-      internalVoltages5V->min_alarm: 4.75
+      internalVoltages5V->max_alarm: 5.5
+      internalVoltages5V->max_warning: 5.21
+      internalVoltages5V->min_warning: 4.86
+      internalVoltages5V->min_alarm: 4.6
 
-      internalVoltagesARM->max_alarm: 1.42
-      internalVoltagesARM->min_alarm: 1.28
+      internalVoltagesARM->max_alarm: 1.6
+      internalVoltagesARM->max_warning: 1.434
+      internalVoltagesARM->min_warning: 1.254
+      internalVoltagesARM->min_alarm: 1.166
 
-      internalVoltagesCORE->max_alarm: 1.24
-      internalVoltagesCORE->min_alarm: 1.16
+      internalVoltagesCORE->max_alarm: 1.32
+      internalVoltagesCORE->max_warning: 1.264
+      internalVoltagesCORE->min_warning: 1.154
+      internalVoltagesCORE->min_alarm: 1.088
 
-      internalVoltagesDDR->max_alarm: 1.39
-      internalVoltagesDDR->min_alarm: 1.31
+      internalVoltagesDDR->max_alarm: 1.75
+      internalVoltagesDDR->max_warning: 1.447
+      internalVoltagesDDR->min_warning: 1.265
+      internalVoltagesDDR->min_alarm: 1.171
 
-      internalVoltagesPOWERIN->max_alarm: 12.60
-      internalVoltagesPOWERIN->min_alarm: 11.40
+      internalVoltagesPOWERIN->max_alarm: 12.6
+      internalVoltagesPOWERIN->max_warning: 12.26
+      internalVoltagesPOWERIN->min_warning: 11.58
+      internalVoltagesPOWERIN->min_alarm: 11.4
 
-      internalVoltagesSOC->max_alarm: 1.39
-      internalVoltagesSOC->min_alarm: 1.31
+      internalVoltagesSOC->max_alarm: 1.6
+      internalVoltagesSOC->max_warning: 1.397
+      internalVoltagesSOC->min_warning: 1.299
+      internalVoltagesSOC->min_alarm: 1.182
 
       tpmVoltages->max_alarm: 12.6
+      tpmVoltages->max_warning: 12.26
+      tpmVoltages->min_warning: 11.58
       tpmVoltages->min_alarm: 11.4
 
-      tpmPowers->max_alarm: 120.0
+      tpmPowers->max_alarm: 130
+      tpmPowers->max_warning: 125
+      tpmPowers->min_warning: "Not specified"
+      tpmPowers->min_alarm: "Not specified"
+
+      subrackFanSpeeds->max_alarm: 7150
+      subrackFanSpeeds->max_warning: "Not specified"
+      subrackFanSpeeds->min_warning: "Not specified"
+      subrackFanSpeeds->min_alarm: "Not specified"
+
+      subrackFanSpeedsPercent->max_alarm: "Not specified"
+      subrackFanSpeedsPercent->max_warning: 90
+      subrackFanSpeedsPercent->min_warning: 20
+      subrackFanSpeedsPercent->min_alarm: "Not specified"
+
+      psu1PowerIn->max_alarm: 1345
+      psu1PowerIn->max_warning: 676
+      psu1PowerIn->min_warning: "Not specified"
+      psu1PowerIn->min_alarm: "Not specified"
+
+      psu1PowerOut->max_alarm: 1200
+      psu1PowerOut->max_warning: 620
+      psu1PowerOut->min_warning: "Not specified"
+      psu1PowerOut->min_alarm: "Not specified"
+
+      psu1VoltageIn->max_alarm: 305
+      psu1VoltageIn->max_warning: 253
+      psu1VoltageIn->min_warning: 207
+      psu1VoltageIn->min_alarm: 90
+
+      psu1VoltageOut->max_alarm: 12.6
+      psu1VoltageOut->max_warning: 12.24
+      psu1VoltageOut->min_warning: 11.76
+      psu1VoltageOut->min_alarm: 11.4
+
+      psu2PowerIn->max_alarm: 1345
+      psu2PowerIn->max_warning: 676
+      psu2PowerIn->min_warning: "Not specified"
+      psu2PowerIn->min_alarm: "Not specified"
+
+      psu2PowerOut->max_alarm: 1200
+      psu2PowerOut->max_warning: 620
+      psu2PowerOut->min_warning: "Not specified"
+      psu2PowerOut->min_alarm: "Not specified"
+
+      psu2VoltageIn->max_alarm: 305
+      psu2VoltageIn->max_warning: 253
+      psu2VoltageIn->min_warning: 207
+      psu2VoltageIn->min_alarm: 90
+
+      psu2VoltageOut->max_alarm: 12.6
+      psu2VoltageOut->max_warning: 12.24
+      psu2VoltageOut->min_warning: 11.76
+      psu2VoltageOut->min_alarm: 11.4
 
   # devices:
   #   MccsTile:

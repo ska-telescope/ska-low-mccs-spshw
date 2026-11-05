@@ -28,8 +28,20 @@ __all__ = [
     "acquire_timeout",
     "abort_task_on_exception",
     "HealthConfigLoader",
+    "LockTimeoutError",
 ]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
+
+
+class LockTimeoutError(TimeoutError):
+    """
+    Raised when a lock could not be acquired in time.
+
+    Distinct from other TimeoutErrors (e.g. socket timeouts talking to
+    hardware): this means another thread is busy, not that the hardware
+    is unreachable.
+    """
+
 
 _FrameInfo = namedtuple("_FrameInfo", ["frame", "filename", "lineno", "function"])
 
@@ -73,6 +85,7 @@ def _iterate_stack() -> Iterator[_FrameInfo]:
         frame = frame.f_back
 
 
+# pylint: disable=too-many-instance-attributes
 class LogLock:
     """A logging lock."""
 
@@ -200,14 +213,15 @@ def acquire_timeout(
 
     :yields: a context manager
 
-    :raises TimeoutError: if raise_exception is True and the lock isn't acquired
+    :raises LockTimeoutError: if raise_exception is True and the lock
+        isn't acquired
     """
     if isinstance(lock, LogLock):
         acquired = lock.acquire(timeout=timeout, context=context)
     else:
         acquired = lock.acquire(timeout=timeout)
     if raise_exception and not acquired:
-        raise TimeoutError(f"lock not acquired in {timeout:.3f}s")
+        raise LockTimeoutError(f"lock not acquired in {timeout:.3f}s")
     try:
         yield acquired
     finally:

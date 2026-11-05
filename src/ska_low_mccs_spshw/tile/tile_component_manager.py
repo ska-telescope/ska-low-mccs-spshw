@@ -2693,6 +2693,13 @@ class TileComponentManager(
                     self._request_provider.desire_configuration_read()
                 except Exception as e:
                     self.logger.error(f"Failed to connect to TPM {e}")
+                    # Don't leave a half-connected tpm (e.g. plugins not
+                    # loaded): it looks connected and blocks reconnection.
+                    try:
+                        self.tile.disconnect()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    self.tile.tpm = None
                     self._last_known_connected = False
                     self.__update_tpm_status()
                     raise ConnectionError("Failed in connect to TPM") from e

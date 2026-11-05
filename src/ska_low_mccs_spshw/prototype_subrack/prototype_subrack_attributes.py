@@ -117,6 +117,8 @@ HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
     "boardTemperatures",
     "powerSupplyPowers",
     "powerSupplyVoltages",
+    "subrackFanSpeeds",
+    "subrackFanSpeedsPercent",
     "subrackMaxFanSpeeds",
     "tpmPowers",
     "tpmVoltages",

@@ -103,6 +103,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _poller: Optional[SubrackPoller] = None
     _subrack: Optional[Subrack] = None
     _health_recorder: Optional[HealthRecorder] = None
+    _health: Optional[HealthState] = None
     _tpm_power_states: list[PowerState]
     _web_hardware_client_factory: type[WebHardwareClient]
     _derived_values_factory: type[DerivedValues]
@@ -180,6 +181,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         self.assemble()
 
+        # Cleared so the first health after an Init() is logged.
+        self._health = None
         self._health_recorder = self._health_recorder_factory(
             self.get_name(),
             self.logger,
@@ -374,7 +377,9 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         """
         Report the health that the attribute qualities give.
 
-        Called on the health recorder's event thread.
+        Called on the health recorder's event thread. It logs the health
+        only when the health state changes, because the reasons hold the
+        attribute values and change on every poll.
 
         :param health: the health the attribute qualities give.
         :param health_report: the recorder's reasons, one on each line.

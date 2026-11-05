@@ -1964,7 +1964,6 @@ class TileComponentManager(
         station_id = self._with_hardware_lock(self.tile.get_station_id)
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
         firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
-        firmware_version = self.firmware_version
         self.refresh_tile_info()
         # ===========================================================================
 
@@ -1984,12 +1983,17 @@ class TileComponentManager(
         forty_gb_destination_ports: list[int] = []
         forty_gb_cores: list[dict] = []
         preadu_levels = None
+        firmware_version = None
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
         pps_delay_correction = None
         is_station_beam_flagging_enabled = None
         if is_programmed:
+            # tpm-api.get_firmware_list reads FPGA
+            # register without checking programmed state,
+            # so we must check first.
+            firmware_version = self.firmware_version
             _csp_rounding_value = self._with_hardware_lock(self.tile.get_csp_rounding)
             csp_rounding = [_csp_rounding_value] * 384
             channeliser_rounding = self.channeliser_truncation
@@ -2129,12 +2133,16 @@ class TileComponentManager(
         Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware version (major.minor)
+
+        :raises ValueError: if we are attempting to read on a unprogrammed TPM.
         """
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
+            if not self.tile.is_programmed():
+                raise ValueError("Cannot read firmware version on unprogrammed TPM.")
             _firmware_list = self.tile.get_firmware_list()[0]
             return (
                 "Ver."

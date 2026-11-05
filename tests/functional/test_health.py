@@ -35,45 +35,24 @@ RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
     "features/health.feature",
     "Failed when tile monitoring point is out of bounds",
 )
-def test_failed_when_tile_monitoring_point_is_out_of_bounds(
-    station_devices: dict[str, tango.DeviceProxy],
-    reset_attribute_configs: dict[str, Callable],
-) -> None:
+def test_failed_when_tile_monitoring_point_is_out_of_bounds() -> None:
     """
-    Reset Tile health parameters to defaults.
+    Run the scenario for the tile monitoring point test.
 
-    Any code in this scenario method is run at the *end* of the
-    scenario.
-
-    :param station_devices: dictionary of proxies with device name as a key.
-    :param reset_attribute_configs: fixture providing reset functions.
+    The step fixtures change the thresholds back.
     """
-    for tile in station_devices["Tiles"]:
-        if not tile.useAttributesForHealth:
-            tile.healthModelParams = "{}"
-        else:
-            reset_attribute_configs["tile"](tile)
 
 
 @scenario(
     "features/health.feature",
     "Failed when subrack monitoring point is out of bounds",
 )
-def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
-    station_devices: dict[str, tango.DeviceProxy],
-    reset_attribute_configs: dict[str, Callable],
-) -> None:
+def test_failed_when_subrack_monitoring_point_is_out_of_bounds() -> None:
     """
-    Reset Subrack health parameters to defaults.
+    Run the scenario for the subrack monitoring point test.
 
-    Any code in this scenario method is run at the *end* of the
-    scenario.
-
-    :param station_devices: dictionary of proxies with device name as a key.
-    :param reset_attribute_configs: fixture providing reset functions.
+    The step fixtures change the thresholds back.
     """
-    for subrack in station_devices["Subracks"]:
-        reset_attribute_configs["subrack"](subrack)
 
 
 @scenario(
@@ -97,20 +76,15 @@ def test_failed_when_subrack_power_monitoring_point_is_out_of_bounds() -> None:
 )
 def test_health_changes_when_healththresholds_changes(
     station_devices: dict[str, tango.DeviceProxy],
-    reset_attribute_configs: dict[str, Callable],
 ) -> None:
     """
-    Reset Subrack health parameters to defaults.
+    Reset the Station health thresholds to defaults.
 
     Any code in this scenario method is run at the *end* of the
-    scenario.
+    scenario. The step fixtures change the subrack thresholds back.
 
     :param station_devices: dictionary of proxies with device name as a key.
-    :param reset_attribute_configs: fixture providing reset functions.
     """
-    for subrack in station_devices["Subracks"]:
-        reset_attribute_configs["subrack"](subrack)
-
     new_health_params = {
         "subracks": [1, 1, 1],
     }
@@ -400,25 +374,13 @@ def station_delays_corrected(
 def station_online(
     station_devices: dict[str, list[tango.DeviceProxy]],
     get_device_online: Callable,
-    station_name: str,
-    reset_attribute_configs: dict[str, Callable],
 ) -> None:
     """
     Put a station ONLINE.
 
     :param station_devices: A fixture with the station devices.
     :param get_device_online: a fixture to call to bring a device ONLINE
-    :param station_name: the name of the station under test.
-    :param reset_attribute_configs: Functions to reset attribute configs.
     """
-    if station_name == "stfc-ral-2":
-        # We reset attr configs here so that we can be reasonably sure we'll
-        # be using the defaults.
-        # This can be removed once the health tests are cleaning up properly.
-        for subrack in station_devices["Subracks"]:
-            reset_attribute_configs["subrack"](subrack)
-        for tile in station_devices["Tiles"]:
-            reset_attribute_configs["tile"](tile)
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:
@@ -427,21 +389,6 @@ def station_online(
         get_device_online(daq)
     for station in station_devices["Station"]:
         get_device_online(station)
-
-
-@given("the subracks thresholds are normal")
-def set_subrack_thresholds(
-    station_devices: dict[str, list[tango.DeviceProxy]],
-    reset_attribute_configs: dict[str, Callable],
-) -> None:
-    """
-    Set subracks thresholds to default values from values.yaml.
-
-    :param station_devices: A fixture with the station devices.
-    :param reset_attribute_configs: fixture providing reset functions.
-    """
-    for subrack in station_devices["Subracks"]:
-        reset_attribute_configs["subrack"](subrack)
 
 
 @given("the Station has been commanded to turn On")
@@ -598,13 +545,14 @@ def device_verify_attribute(
 @pytest.fixture(name="tile_health_params_adjusted")
 def tile_health_params_adjusted_fixture(
     station_devices: dict[str, tango.DeviceProxy],
-    reset_attribute_configs: dict[str, Callable],
+    change_alarms: Callable[..., None],
 ) -> Generator:
     """
     Adjust tile board temperature thresholds and reset on teardown.
 
     :param station_devices: dictionary of device proxies.
-    :param reset_attribute_configs: fixture providing reset functions.
+    :param change_alarms: changes alarm thresholds, and changes them back
+        after the test.
 
     :yields: control back to the test.
     """
@@ -616,10 +564,9 @@ def tile_health_params_adjusted_fixture(
         if not tile_device.useAttributesForHealth:
             tile_device.healthModelParams = json.dumps(new_board_params)
         else:
-            conf = tile_device.get_attribute_config("boardTemperature")
-            conf.alarms.min_alarm = "100"
-            conf.alarms.max_alarm = "170"
-            tile_device.set_attribute_config(conf)
+            change_alarms(
+                tile_device, "boardTemperature", min_alarm="100", max_alarm="170"
+            )
 
     yield
 
@@ -627,8 +574,6 @@ def tile_health_params_adjusted_fixture(
     for tile_device in tile_devices:
         if not tile_device.useAttributesForHealth:
             tile_device.healthModelParams = "{}"
-        else:
-            reset_attribute_configs["tile"](tile_device)
 
 
 @when("the Tiles board temperature thresholds are adjusted")
@@ -643,34 +588,6 @@ def set_tile_health_params(
     :param tile_health_params_adjusted: fixture that adjusts and cleans up.
     """
     pass
-
-
-@pytest.fixture(name="subrack_health_params_adjusted")
-def subrack_health_params_adjusted_fixture(
-    station_devices: dict[str, tango.DeviceProxy],
-    reset_attribute_configs: dict[str, Callable],
-) -> Generator:
-    """
-    Adjust subrack board temperature thresholds and reset on teardown.
-
-    :param station_devices: dictionary of device proxies.
-    :param reset_attribute_configs: fixture providing reset functions.
-
-    :yields: control back to the test.
-    """
-    for subrack in station_devices["Subracks"]:
-        conf = subrack.get_attribute_config("boardTemperatures")
-        conf.alarms.min_alarm = "110"
-        conf.alarms.min_warning = "120"
-        conf.alarms.max_alarm = "170"
-        conf.alarms.max_warning = "160"
-        subrack.set_attribute_config(conf)
-
-    yield
-
-    # Cleanup: Reset to defaults
-    for subrack in station_devices["Subracks"]:
-        reset_attribute_configs["subrack"](subrack)
 
 
 @pytest.fixture(name="tile_subrack_power_thresholds_exceeded")
@@ -748,16 +665,25 @@ def tile_subrack_power_thresholds_exceeded_fixture(
 @when("the Subracks board temperature thresholds are adjusted")
 @given("the Subracks board temperature thresholds are adjusted")
 def set_subrack_health_params(
-    subrack_health_params_adjusted: None,
+    station_devices: dict[str, tango.DeviceProxy],
+    change_alarms: Callable[..., None],
 ) -> None:
     """
     Set the board temperature thresholds of the Subrack.
 
-    Uses fixture to ensure cleanup after test.
-
-    :param subrack_health_params_adjusted: fixture that adjusts and cleans up.
+    :param station_devices: dictionary of device proxies.
+    :param change_alarms: changes alarm thresholds, and changes them back
+        after the test.
     """
-    pass
+    for subrack in station_devices["Subracks"]:
+        change_alarms(
+            subrack,
+            "boardTemperatures",
+            min_alarm="110",
+            min_warning="120",
+            max_warning="160",
+            max_alarm="170",
+        )
 
 
 @when("the Tiles subrack power thresholds are exceeded")

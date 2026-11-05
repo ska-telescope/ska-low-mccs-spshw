@@ -362,8 +362,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 "cpldPllLocked",
                 "powerSupplyCurrents",
                 "powerSupplyFanSpeeds",
-                "subrackFanSpeeds",
-                "subrackFanSpeedsPercent",
                 "subrackFanModes",
                 "subrackPllLocked",
                 "subrackTimestamp",

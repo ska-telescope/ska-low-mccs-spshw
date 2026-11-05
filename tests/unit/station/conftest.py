@@ -513,7 +513,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             argin_dict = json.loads(argin)
             device = argin_dict["device"]
             health = HealthState(argin_dict["health"])
-            self._health_rollup.health_changed(source=device, health=health)
+            self._rollup_health_changed(source=device, health=health)
 
         @command()
         def MockCalibrationDataReceived(

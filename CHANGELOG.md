@@ -2,12 +2,10 @@
 
 ## 17.1.0
 
-* [SKB-1660] Update ska-low-mccs-common to 4.10.1. HealthRecorder now calls its health callback on every monitored attribute event, so Tango change detection decides which events to push.
-* [SKB-1660] Tile and Subrack push healthState and healthReport on every health evaluation, with the same timestamp. Tango change detection drops repeated values, but the first push after a new subscription always reaches the client.
-* [SKB-1660] Subrack pushes healthReport change and archive events.
-* [SKB-1660] Tile no longer logs health and intermediate health changes. Tile writes its intermediate health attributes again after power OFF, even when the health is unchanged.
-* [SKB-1660] SpsStation builds its healthReport with the ska-control-model 1.4.0 health_report helper. The report now lists only the sources that are not OK, by name.
-* [SKB-1660] SpsStation pushes healthReport change and archive events with the same timestamp as healthState.
+* [SKB-1660] Update ska-low-mccs-common to 4.10.1. HealthRecorder now calls its health callback on every monitored attribute event, and Tango change detection decides which events to push. A new subscriber can get one repeat of the current value.
+* [SKB-1660] Tile, Subrack and SpsStation push healthState and healthReport with the same timestamp. Subrack and SpsStation now push healthReport change and archive events.
+* [SKB-1660] SpsStation builds its healthReport with the ska-control-model 1.4.0 health_report helper. The report lists only the sources that are not OK, by name.
+* [SKB-1660] Tile no longer logs health changes, and restores its intermediate health attributes after power OFF.
 * [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with a variation module that switches an outlet when its control object is written.
 * [THORN-759] MccsPrototypeSubrack gets the same support as current subrack for SMM 1.8.0. It derives tpmCurrents and rejects SetPowerSupplyFanSpeed on SMM 1.8.0. A board command fails when command_completed reports that it failed.
 

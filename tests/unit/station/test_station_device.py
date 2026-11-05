@@ -2467,15 +2467,11 @@ def test_health_events_share_timestamp(
     station_device.MockSubdeviceHealth(
         json.dumps({"device": tile_trl, "health": HealthState.FAILED})
     )
-    # Tango does not apply change detection to the first push after a
-    # subscription, so a repeat of the subscribed value can come first.
     state_event = change_event_callbacks["health_state"].assert_change_event(
-        HealthState.FAILED, lookahead=2, consume_nonmatches=True
+        HealthState.FAILED
     )["call_args"][0]
     report_event = change_event_callbacks["health_report"].assert_change_event(
-        json.dumps({"tiles": {tile_trl: "FAILED"}}),
-        lookahead=2,
-        consume_nonmatches=True,
+        json.dumps({"tiles": {tile_trl: "FAILED"}})
     )["call_args"][0]
     assert state_event.attr_value.time.totime() == (
         report_event.attr_value.time.totime()

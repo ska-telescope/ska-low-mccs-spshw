@@ -1000,6 +1000,7 @@ class TileComponentManager(
                 f"(timeout=={max_poll_time} [s])."
             )
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
+            self.tile.disconnect()
             self.tile.cleanup()
         else:
             self.tile.disconnect()
@@ -1699,7 +1700,6 @@ class TileComponentManager(
                             "Global reference time specifed, starting acquisition"
                         )
                         self._start_acquisition()
-                self.__update_tpm_status()
 
     @abort_task_on_exception
     @check_communicating
@@ -2714,7 +2714,6 @@ class TileComponentManager(
             self._last_known_connected = True
             self.__update_tpm_status()
             self._handle_power_on_if_pending()
-        self.logger.error("end of connect")
 
     def __update_tpm_status(self: TileComponentManager) -> None:
         """Update the TpmStatus."""

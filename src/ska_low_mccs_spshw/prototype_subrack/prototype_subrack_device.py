@@ -390,6 +390,13 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             case _:
                 health_info = health_report.splitlines()
 
+        if health_info:
+            self.logger.warning(
+                "Health is %s. %s", health.name, ". ".join(health_info) + "."
+            )
+        else:
+            self.logger.info("Health is OK.")
+
         # Emitted first, so the report is already readable when a client hears
         # of the new health.
         self._emit(

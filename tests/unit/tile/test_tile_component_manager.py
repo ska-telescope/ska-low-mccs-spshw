@@ -681,9 +681,14 @@ class TestTileComponentManager:
         lrc = unittest.mock.Mock(spec=TileLRCRequest)
         tile_component_manager.active_request = lrc
 
-        with unittest.mock.patch.object(
-            tile_component_manager, "update_fault_state"
-        ) as update_fault_state:
+        with (
+            unittest.mock.patch.object(
+                tile_component_manager, "update_fault_state"
+            ) as update_fault_state,
+            unittest.mock.patch.object(
+                provider, "desire_connection"
+            ) as desire_connection,
+        ):
             tile_component_manager.poll_failed(
                 LockTimeoutError("lock not acquired in 6.000s")
             )
@@ -691,8 +696,9 @@ class TestTileComponentManager:
         update_fault_state.assert_not_called()
         lrc.notify_failed.assert_called_once()
         assert tile_component_manager.active_request is None
-        # No reconnect requested.
-        assert provider.get_request(TpmStatus.UNKNOWN) != "CONNECT"
+        # No reconnect requested. (Note: get_request(UNKNOWN) can't be used
+        # to check this, as CONNECT is a routine poll in the UNKNOWN state.)
+        desire_connection.assert_not_called()
 
     def test_update_fault_state_without_lock_leaves_fault_unchanged(
         self: TestTileComponentManager,
@@ -706,11 +712,12 @@ class TestTileComponentManager:
         tile_component_manager.power_state = PowerState.ON
         tile_component_manager.fault_state = False
 
-        with self._lock_held_by_other_thread(
-            tile_component_manager
-        ), unittest.mock.patch.object(
-            tile_component_manager, "_is_connected"
-        ) as is_connected:
+        with (
+            self._lock_held_by_other_thread(tile_component_manager),
+            unittest.mock.patch.object(
+                tile_component_manager, "_is_connected"
+            ) as is_connected,
+        ):
             tile_component_manager.update_fault_state(poll_success=False)
 
         is_connected.assert_not_called()
@@ -728,9 +735,10 @@ class TestTileComponentManager:
         tile_component_manager._last_known_connected = True
         mock_tile = unittest.mock.MagicMock()
 
-        with self._lock_held_by_other_thread(
-            tile_component_manager
-        ), unittest.mock.patch.object(tile_component_manager, "tile", mock_tile):
+        with (
+            self._lock_held_by_other_thread(tile_component_manager),
+            unittest.mock.patch.object(tile_component_manager, "tile", mock_tile),
+        ):
             assert tile_component_manager._is_connected(raise_exception=False)
             with pytest.raises(LockTimeoutError):
                 tile_component_manager._is_connected(raise_exception=True)
@@ -856,7 +864,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             assert not tile_component_manager._component_state["fault"]
 
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=5
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=6
         )
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
@@ -3993,7 +4001,7 @@ class TestDynamicSimulator:
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-            lookahead=5,
+            lookahead=6,
             consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)

@@ -6,6 +6,7 @@
 * [SKB-1660] Tile and Subrack push healthState and healthReport on every health evaluation, with the same timestamp. Tango change detection drops repeated values, but the first push after a new subscription always reaches the client.
 * [SKB-1660] Subrack pushes healthReport change and archive events.
 * [SKB-1660] Tile no longer logs health and intermediate health changes. Tile writes its intermediate health attributes again after power OFF, even when the health is unchanged.
+* [SKB-1660] SpsStation builds its healthReport with the ska-control-model 1.4.0 health_report helper. The report now lists only the sources that are not OK, by name.
 * [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with a variation module that switches an outlet when its control object is written.
 * [THORN-759] MccsPrototypeSubrack gets the same support as current subrack for SMM 1.8.0. It derives tpmCurrents and rejects SetPowerSupplyFanSpeed on SMM 1.8.0. A board command fails when command_completed reports that it failed.
 

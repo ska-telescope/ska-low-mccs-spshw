@@ -33,7 +33,7 @@ from ska_control_model import (
     PowerState,
     ResultCode,
 )
-from ska_control_model.health_rollup import HealthRollup, HealthSummary
+from ska_control_model.health_rollup import HealthRollup, HealthSummary, health_report
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.faults import CmdNotAllowedError
 from ska_tango_base.long_running_commands import LRCReqType
@@ -155,6 +155,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_report: str = ""
+        self._health_summary: HealthSummary = {}
         # Need to dynamically define the health rollup members based on deployment.
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
@@ -485,7 +486,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Redefine the health rollup members and thresholds.
 
         Redefines the health rollup following a change in subdevice thresholds.
-        This pulls the old/current healths from the health report, instantiates
+        This pulls the old/current healths from the health summary, instantiates
         a new health_rollup instance and restores those healthstates.
         """
 
@@ -514,8 +515,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             return _flatten(d)
 
         # Pull out the old healthstates.
-        old_report = json.loads(self._health_report)
-        old_subdevice_healths = _flatten_dict(old_report)
+        old_subdevice_healths = _flatten_dict(self._health_summary)
         old_online = self._health_rollup.online
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
@@ -845,7 +845,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :param health_summary: the new health summary
         """
-        self._health_report = json.dumps(health_summary)
+        self._health_summary = health_summary
+        self._health_report = json.dumps(health_report(health_summary))
 
     # ----------
     # Attributes

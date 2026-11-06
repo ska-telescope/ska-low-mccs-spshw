@@ -568,11 +568,20 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         """
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
             self._emit(signal_name, walk(health_status, path), timestamp)
-        for signal_name, paths in HEALTH_PATHS_TO_SPECTRUM_SIGNAL.items():
-            values = [walk(health_status, path) for path in paths]
-            # Tango cannot report one element as unknown, so the whole
-            # spectrum is.
-            self._emit(signal_name, None if None in values else values, timestamp)
+        for signal_name, spectrum in HEALTH_PATHS_TO_SPECTRUM_SIGNAL.items():
+            # A board that does not report the point at all, such as a 1.6.0
+            # board for the peak hold values, leaves the attribute invalid.
+            if walk(health_status, spectrum.paths[0][:-1]) is None:
+                self._emit(signal_name, None, timestamp)
+                continue
+            # The board reports None for an element it has no reading for,
+            # such as a TPM bay that is powered off.
+            values = [walk(health_status, path) for path in spectrum.paths]
+            self._emit(
+                signal_name,
+                [spectrum.fill if value is None else value for value in values],
+                timestamp,
+            )
 
     def _update_tpm_power_states(
         self: MccsPrototypeSubrack,

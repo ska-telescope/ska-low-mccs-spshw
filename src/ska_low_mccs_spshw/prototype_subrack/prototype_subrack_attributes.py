@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -28,11 +29,14 @@ from .constants import HEALTH_STATUS_KEY, DerivedKey, ReadKey
 __all__ = [
     "ALL_SIGNALS",
     "HEALTH_ATTRIBUTES",
+    "HEALTH_ATTRIBUTES_FROM_1_8_0",
     "HEALTH_PATH_TO_SIGNAL",
+    "HEALTH_PATHS_TO_SPECTRUM_SIGNAL",
     "READ_KEY_TO_SIGNAL",
     "VALUE_CONVERTERS",
     "TPM_POWER_STATE_SIGNALS",
     "SubrackAttributes",
+    "health_attributes",
 ]
 
 
@@ -91,6 +95,70 @@ HEALTH_PATH_TO_SIGNAL: Final[dict[str, tuple[str, ...]]] = {
     "_psu2_voltage_in": ("psus", "voltage_in", "PSU2"),
     "_psu1_voltage_out": ("psus", "voltage_out", "PSU1"),
     "_psu2_voltage_out": ("psus", "voltage_out", "PSU2"),
+    "_internal_voltages_powerin_min": ("internal_voltages", "V_POWERIN_MIN"),
+    "_internal_voltages_powerin_max": ("internal_voltages", "V_POWERIN_MAX"),
+    "_backplane_power_good": ("internal_voltages", "BkplnPowerGood"),
+    "_board_apll_unlock_count": ("plls", "BoardApllUnlockCount"),
+    "_board_dpll_unlock_count": ("plls", "BoardDpllUnlockCount"),
+    "_board_sysclk_event_count": ("plls", "BoardSysclkEventCount"),
+    "_pll_source": ("plls", "PllSource"),
+    "_pps_present": ("plls", "PPS"),
+    "_pps_fault_count": ("plls", "PPSFaultCount"),
+    "_pps_phase": ("plls", "PPSPhase"),
+    "_pps_phase_stdev": ("plls", "PPSPhaseStdev"),
+    "_pps_phase_outliers": ("plls", "PPSPhaseOutliers"),
+    "_ref_present": ("plls", "REF"),
+    "_ref_fault_count": ("plls", "REFFaultCount"),
+    "_cpld_pings": ("pings", "pings_CPLD"),
+    "_board_power": ("SMM", "power"),
+    "_board_max_power": ("SMM", "power_max"),
+    "_board_pll_temperature": ("temperatures", "SMM_PLL"),
+}
+
+
+def _each(
+    group: str, point: str, names: tuple[str, ...]
+) -> tuple[tuple[str, ...], ...]:
+    """
+    Return the health status path of one monitoring point for each name.
+
+    :param group: the outermost key, such as ``slots``.
+    :param point: the monitoring point within the group, such as ``faults``.
+    :param names: the innermost keys, one for each element.
+
+    :return: one path for each name, in the order given.
+    """
+    return tuple((group, point, name) for name in names)
+
+
+_PSUS: Final = ("PSU1", "PSU2")
+_SLOTS: Final = tuple(f"SLOT{n}" for n in range(1, SubrackData.TPM_BAY_COUNT + 1))
+
+# Spectrum signal name to the health status path of each of its elements.
+HEALTH_PATHS_TO_SPECTRUM_SIGNAL: Final[dict[str, tuple[tuple[str, ...], ...]]] = {
+    "_power_supply_fan_speeds_rpm": _each("psus", "fan_speed", _PSUS),
+    "_power_supply_fet_temperatures": _each("psus", "temp_fet", _PSUS),
+    "_power_supply_inlet_temperatures": _each("psus", "temp_inlet", _PSUS),
+    "_power_supply_busy": _each("psus", "busy", _PSUS),
+    "_power_supply_off": _each("psus", "off", _PSUS),
+    "_power_supply_power_good": _each("psus", "pwr_gd", _PSUS),
+    "_power_supply_cml_faults": _each("psus", "cml_fault", _PSUS),
+    "_power_supply_fan_faults": _each("psus", "fan_fault", _PSUS),
+    "_power_supply_input_faults": _each("psus", "input_fault", _PSUS),
+    "_power_supply_iout_faults": _each("psus", "iout_fault", _PSUS),
+    "_power_supply_iout_oc_faults": _each("psus", "iout_oc_fault", _PSUS),
+    "_power_supply_temp_faults": _each("psus", "temp_fault", _PSUS),
+    "_power_supply_vin_uv_faults": _each("psus", "vin_uv_fault", _PSUS),
+    "_power_supply_vout_faults": _each("psus", "vout_fault", _PSUS),
+    "_power_supply_vout_ov_faults": _each("psus", "vout_ov_fault", _PSUS),
+    "_power_supply_other_faults": _each("psus", "other", _PSUS),
+    "_power_supply_unknown_faults": _each("psus", "unknown", _PSUS),
+    "_tpm_min_voltages": _each("slots", "voltages_min", _SLOTS),
+    "_tpm_max_voltages": _each("slots", "voltages_max", _SLOTS),
+    "_tpm_max_powers": _each("slots", "powers_max", _SLOTS),
+    "_tpm_faults": _each("slots", "faults", _SLOTS),
+    "_tpm_pings": _each("slots", "pings", _SLOTS),
+    "_tpm_singlewire": _each("slots", "singlewire", _SLOTS),
 }
 
 # The signal for each bay's TPM power state, in bay order. These are derived
@@ -103,15 +171,16 @@ TPM_POWER_STATE_SIGNALS: Final[tuple[str, ...]] = tuple(
 
 # Every signal this device emits, so that a lost board can invalidate all
 # of them.
-ALL_SIGNALS: Final[tuple[str, ...]] = tuple(READ_KEY_TO_SIGNAL.values()) + tuple(
-    HEALTH_PATH_TO_SIGNAL
+ALL_SIGNALS: Final[tuple[str, ...]] = (
+    tuple(READ_KEY_TO_SIGNAL.values())
+    + tuple(HEALTH_PATH_TO_SIGNAL)
+    + tuple(HEALTH_PATHS_TO_SPECTRUM_SIGNAL)
 )
 
 
 # The attributes whose quality decides the health of the device. The health
 # recorder subscribes to these. The others are left out because their quality
 # says nothing about the subrack, or because they have no alarm thresholds.
-# This is the same set that MccsSubrack uses.
 HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
     "backplaneTemperatures",
     "boardTemperatures",
@@ -145,7 +214,51 @@ HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
     "psu2VoltageIn",
     "psu1VoltageOut",
     "psu2VoltageOut",
+    "internalVoltagesPOWERINMIN",
+    "internalVoltagesPOWERINMAX",
+    "boardApllUnlockCount",
+    "boardDpllUnlockCount",
+    "boardSysclkEventCount",
+    "boardPower",
+    "boardMaxPower",
+    "boardPllTemperature",
+    "powerSupplyFanSpeedsRpm",
+    "powerSupplyFetTemperatures",
+    "powerSupplyInletTemperatures",
+    "tpmMinVoltages",
+    "tpmMaxVoltages",
+    "tpmMaxPowers",
 )
+
+# The health attributes that only API 1.8.0 and later report. An older board
+# leaves their points out of the health status, so they would always be
+# invalid, and an invalid attribute fails the health.
+HEALTH_ATTRIBUTES_FROM_1_8_0: Final[tuple[str, ...]] = (
+    "internalVoltagesPOWERINMIN",
+    "internalVoltagesPOWERINMAX",
+    "boardApllUnlockCount",
+    "boardDpllUnlockCount",
+    "boardSysclkEventCount",
+    "tpmMinVoltages",
+    "tpmMaxVoltages",
+    "tpmMaxPowers",
+)
+
+
+def health_attributes(board_info: dict) -> list[str]:
+    """
+    Return the health attributes that a board with this board info reports.
+
+    :param board_info: the board info that the subrack reported.
+
+    :return: the attributes whose quality decides the health, in the order of
+        ``HEALTH_ATTRIBUTES``.
+    """
+    if SubrackData.bios_version(board_info) >= [1, 8, 0]:
+        return list(HEALTH_ATTRIBUTES)
+    return [
+        name for name in HEALTH_ATTRIBUTES if name not in HEALTH_ATTRIBUTES_FROM_1_8_0
+    ]
 
 
 def _as_spectrum(value: Any) -> list[Any]:
@@ -256,6 +369,49 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
     _psu_dead_count: AttrSignal[int] = AttrSignal[int]()
     _psu1_load: AttrSignal[float] = AttrSignal[float]()
     _psu2_load: AttrSignal[float] = AttrSignal[float]()
+    _internal_voltages_powerin_min: AttrSignal[float] = AttrSignal[float]()
+    _internal_voltages_powerin_max: AttrSignal[float] = AttrSignal[float]()
+    _backplane_power_good: AttrSignal[bool] = AttrSignal[bool]()
+    _board_apll_unlock_count: AttrSignal[int] = AttrSignal[int]()
+    _board_dpll_unlock_count: AttrSignal[int] = AttrSignal[int]()
+    _board_sysclk_event_count: AttrSignal[int] = AttrSignal[int]()
+    _pll_source: AttrSignal[str] = AttrSignal[str]()
+    _pps_present: AttrSignal[bool] = AttrSignal[bool]()
+    _pps_fault_count: AttrSignal[int] = AttrSignal[int]()
+    _pps_phase: AttrSignal[float] = AttrSignal[float]()
+    _pps_phase_stdev: AttrSignal[float] = AttrSignal[float]()
+    _pps_phase_outliers: AttrSignal[int] = AttrSignal[int]()
+    _ref_present: AttrSignal[bool] = AttrSignal[bool]()
+    _ref_fault_count: AttrSignal[int] = AttrSignal[int]()
+    _cpld_pings: AttrSignal[bool] = AttrSignal[bool]()
+    _board_power: AttrSignal[float] = AttrSignal[float]()
+    _board_max_power: AttrSignal[float] = AttrSignal[float]()
+    _board_pll_temperature: AttrSignal[float] = AttrSignal[float]()
+    _power_supply_fan_speeds_rpm: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    _power_supply_fet_temperatures: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    _power_supply_inlet_temperatures: AttrSignal[list[float]] = AttrSignal[
+        list[float]
+    ]()
+    _power_supply_busy: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_off: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_power_good: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_cml_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_fan_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_input_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_iout_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_iout_oc_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_temp_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_vin_uv_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_vout_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_vout_ov_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_other_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _power_supply_unknown_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _tpm_min_voltages: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    _tpm_max_voltages: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    _tpm_max_powers: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    _tpm_faults: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _tpm_pings: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
+    _tpm_singlewire: AttrSignal[list[bool]] = AttrSignal[list[bool]]()
     _health_status: AttrSignal[str] = AttrSignal[str]()
 
     # ------------------------------
@@ -803,6 +959,373 @@ class SubrackAttributes:  # pylint: disable=too-few-public-methods
         abs_change=0.001,
         archive_abs_change=0.001,
         doc="The load on PSU2, as a fraction of its maximum power.",
+    )
+
+    internalVoltagesPOWERINMIN = attribute_from_signal(
+        _internal_voltages_powerin_min,
+        dtype="DevDouble",
+        label="V_POWERIN_MIN",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Lowest input supply voltage since the last poll, in Volts.",
+    )
+
+    internalVoltagesPOWERINMAX = attribute_from_signal(
+        _internal_voltages_powerin_max,
+        dtype="DevDouble",
+        label="V_POWERIN_MAX",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Highest input supply voltage since the last poll, in Volts.",
+    )
+
+    backplanePowerGood = attribute_from_signal(
+        _backplane_power_good,
+        dtype=bool,
+        label="Backplane power good",
+        doc="Whether the backplane reports its power as good.",
+    )
+
+    boardApllUnlockCount = attribute_from_signal(
+        _board_apll_unlock_count,
+        dtype="DevLong",
+        label="Board APLL unlock count",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="How many times the board APLL has lost lock.",
+    )
+
+    boardDpllUnlockCount = attribute_from_signal(
+        _board_dpll_unlock_count,
+        dtype="DevLong",
+        label="Board DPLL unlock count",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="How many times the board DPLL has lost lock.",
+    )
+
+    boardSysclkEventCount = attribute_from_signal(
+        _board_sysclk_event_count,
+        dtype="DevLong",
+        label="Board SYSCLK event count",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="How many SYSCLK events the board has counted.",
+    )
+
+    pllSource = attribute_from_signal(
+        _pll_source,
+        dtype=str,
+        label="PLL source",
+        doc="The reference that the board PLL locks to.",
+    )
+
+    ppsPresent = attribute_from_signal(
+        _pps_present,
+        dtype=bool,
+        label="PPS present",
+        doc="Whether the board detects the PPS input.",
+    )
+
+    ppsFaultCount = attribute_from_signal(
+        _pps_fault_count,
+        dtype="DevLong",
+        label="PPS fault count",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="How many PPS faults the board has counted since the last poll.",
+    )
+
+    ppsPhase = attribute_from_signal(
+        _pps_phase,
+        dtype="DevDouble",
+        label="PPS phase",
+        unit="ps",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Mean PPS phase over the PPS phase window, in picoseconds.",
+    )
+
+    ppsPhaseStdev = attribute_from_signal(
+        _pps_phase_stdev,
+        dtype="DevDouble",
+        label="PPS phase standard deviation",
+        unit="ps",
+        abs_change=1,
+        archive_abs_change=1,
+        doc=(
+            "Standard deviation of the PPS phase over the PPS phase window, in "
+            "picoseconds. It is invalid when the window holds one sample."
+        ),
+    )
+
+    ppsPhaseOutliers = attribute_from_signal(
+        _pps_phase_outliers,
+        dtype="DevLong",
+        label="PPS phase outliers",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="How many PPS phase samples the board counted as outliers.",
+    )
+
+    refPresent = attribute_from_signal(
+        _ref_present,
+        dtype=bool,
+        label="REF present",
+        doc="Whether the board detects the reference clock input.",
+    )
+
+    refFaultCount = attribute_from_signal(
+        _ref_fault_count,
+        dtype="DevLong",
+        label="REF fault count",
+        abs_change=1,
+        archive_abs_change=1,
+        doc=(
+            "How many reference clock faults the board has counted since the "
+            "last poll."
+        ),
+    )
+
+    cpldPings = attribute_from_signal(
+        _cpld_pings,
+        dtype=bool,
+        label="CPLD pings",
+        doc="Whether the CPLD answers a ping.",
+    )
+
+    boardPower = attribute_from_signal(
+        _board_power,
+        dtype="DevDouble",
+        label="Board power",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Management board power in Watts.",
+    )
+
+    boardMaxPower = attribute_from_signal(
+        _board_max_power,
+        dtype="DevDouble",
+        label="Board max power",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Highest management board power since the last poll, in Watts.",
+    )
+
+    boardPllTemperature = attribute_from_signal(
+        _board_pll_temperature,
+        dtype="DevDouble",
+        label="Board PLL temperature",
+        unit="Celsius",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Management board PLL temperature in degrees Celsius.",
+    )
+
+    powerSupplyFanSpeedsRpm = attribute_from_signal(
+        _power_supply_fan_speeds_rpm,
+        dtype=("DevDouble",),
+        max_dim_x=len(_PSUS),
+        label="power supply fan speeds",
+        unit="rpm",
+        abs_change=1,
+        archive_abs_change=1,
+        doc="Power supply fan speeds in RPM.",
+    )
+
+    powerSupplyFetTemperatures = attribute_from_signal(
+        _power_supply_fet_temperatures,
+        dtype=("DevDouble",),
+        max_dim_x=len(_PSUS),
+        label="power supply FET temperatures",
+        unit="Celsius",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Power supply FET temperatures in degrees Celsius.",
+    )
+
+    powerSupplyInletTemperatures = attribute_from_signal(
+        _power_supply_inlet_temperatures,
+        dtype=("DevDouble",),
+        max_dim_x=len(_PSUS),
+        label="power supply inlet temperatures",
+        unit="Celsius",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Power supply inlet temperatures in degrees Celsius.",
+    )
+
+    powerSupplyBusy = attribute_from_signal(
+        _power_supply_busy,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply busy",
+        doc="Whether each power supply reports that it is busy.",
+    )
+
+    powerSupplyOff = attribute_from_signal(
+        _power_supply_off,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply off",
+        doc="Whether each power supply reports that it is off.",
+    )
+
+    powerSupplyPowerGood = attribute_from_signal(
+        _power_supply_power_good,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply power good",
+        doc="Whether each power supply reports its power as good.",
+    )
+
+    powerSupplyCmlFaults = attribute_from_signal(
+        _power_supply_cml_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply CML faults",
+        doc="Whether each power supply reports a communication, memory or logic fault.",
+    )
+
+    powerSupplyFanFaults = attribute_from_signal(
+        _power_supply_fan_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply fan faults",
+        doc="Whether each power supply reports a fan fault.",
+    )
+
+    powerSupplyInputFaults = attribute_from_signal(
+        _power_supply_input_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply input faults",
+        doc="Whether each power supply reports an input fault.",
+    )
+
+    powerSupplyIoutFaults = attribute_from_signal(
+        _power_supply_iout_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply output current faults",
+        doc="Whether each power supply reports an output current fault.",
+    )
+
+    powerSupplyIoutOcFaults = attribute_from_signal(
+        _power_supply_iout_oc_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply output overcurrent faults",
+        doc="Whether each power supply reports an output overcurrent fault.",
+    )
+
+    powerSupplyTempFaults = attribute_from_signal(
+        _power_supply_temp_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply temperature faults",
+        doc="Whether each power supply reports a temperature fault.",
+    )
+
+    powerSupplyVinUvFaults = attribute_from_signal(
+        _power_supply_vin_uv_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply input undervoltage faults",
+        doc="Whether each power supply reports an input undervoltage fault.",
+    )
+
+    powerSupplyVoutFaults = attribute_from_signal(
+        _power_supply_vout_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply output voltage faults",
+        doc="Whether each power supply reports an output voltage fault.",
+    )
+
+    powerSupplyVoutOvFaults = attribute_from_signal(
+        _power_supply_vout_ov_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply output overvoltage faults",
+        doc="Whether each power supply reports an output overvoltage fault.",
+    )
+
+    powerSupplyOtherFaults = attribute_from_signal(
+        _power_supply_other_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply other faults",
+        doc="Whether each power supply reports a fault of another kind.",
+    )
+
+    powerSupplyUnknownFaults = attribute_from_signal(
+        _power_supply_unknown_faults,
+        dtype=(bool,),
+        max_dim_x=len(_PSUS),
+        label="power supply unknown faults",
+        doc="Whether each power supply reports a fault of an unknown kind.",
+    )
+
+    tpmMinVoltages = attribute_from_signal(
+        _tpm_min_voltages,
+        dtype=("DevDouble",),
+        max_dim_x=SubrackData.TPM_BAY_COUNT,
+        label="TPM min voltages",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Lowest voltage of each TPM bay since the last poll, in Volts.",
+    )
+
+    tpmMaxVoltages = attribute_from_signal(
+        _tpm_max_voltages,
+        dtype=("DevDouble",),
+        max_dim_x=SubrackData.TPM_BAY_COUNT,
+        label="TPM max voltages",
+        unit="Volt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Highest voltage of each TPM bay since the last poll, in Volts.",
+    )
+
+    tpmMaxPowers = attribute_from_signal(
+        _tpm_max_powers,
+        dtype=("DevDouble",),
+        max_dim_x=SubrackData.TPM_BAY_COUNT,
+        label="TPM max powers",
+        unit="Watt",
+        abs_change=0.1,
+        archive_abs_change=0.1,
+        doc="Highest power of each TPM bay since the last poll, in Watts.",
+    )
+
+    tpmFaults = attribute_from_signal(
+        _tpm_faults,
+        dtype=(bool,),
+        max_dim_x=SubrackData.TPM_BAY_COUNT,
+        label="TPM faults",
+        doc="Whether each TPM bay reports a fault.",
+    )
+
+    tpmPings = attribute_from_signal(
+        _tpm_pings,
+        dtype=(bool,),
+        max_dim_x=SubrackData.TPM_BAY_COUNT,
+        label="TPM pings",
+        doc="Whether the TPM in each bay answers a ping.",
+    )
+
+    tpmSinglewire = attribute_from_signal(
+        _tpm_singlewire,
+        dtype=(bool,),
+        max_dim_x=SubrackData.TPM_BAY_COUNT,
+        label="TPM singlewire",
+        doc="The singlewire status the board reports for each TPM bay.",
     )
 
     healthStatus = attribute_from_signal(

@@ -40,12 +40,13 @@ from .constants import HEALTH_NO_VALUE_REASON, HEALTH_STATUS_KEY, ReadKey, Reque
 from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
-    HEALTH_ATTRIBUTES,
     HEALTH_PATH_TO_SIGNAL,
+    HEALTH_PATHS_TO_SPECTRUM_SIGNAL,
     READ_KEY_TO_SIGNAL,
     TPM_POWER_STATE_SIGNALS,
     VALUE_CONVERTERS,
     SubrackAttributes,
+    health_attributes,
 )
 from .prototype_subrack_commands import SubrackCommands
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
@@ -88,7 +89,7 @@ def cabinet_position(subrack_ip: str) -> Optional[int]:
     return (last_octet // 16) % 4
 
 
-# pylint: disable=too-many-ancestors
+# pylint: disable=too-many-ancestors, too-many-instance-attributes
 class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface):
     """
     A Tango device that monitors and commands an SPS subrack management board.
@@ -107,7 +108,10 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
     Health reflects only the hardware. It comes from the
     :py:class:`~ska_low_mccs_common.HealthRecorder`, which subscribes to the
-    attributes in ``HEALTH_ATTRIBUTES``. An attribute in warning
+    health attributes that the board reports. The BIOS version decides which
+    those are, so the recorder is built after the first poll that reads the
+    board info, and rebuilt when the board comes back with other firmware.
+    Until then the base device reports ``FAILED``. An attribute in warning
     makes the device ``DEGRADED``, and one in alarm makes it ``FAILED``. An
     invalid attribute also makes it ``FAILED``, because ``report_health`` does
     not accept ``UNKNOWN``. Whether the device can poll the subrack shows in
@@ -132,6 +136,7 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _poller: Optional[SubrackPoller] = None
     _subrack: Optional[Subrack] = None
     _health_recorder: Optional[HealthRecorder] = None
+    _health_attributes: Optional[list[str]] = None
     _health: Optional[HealthState] = None
     _tpm_power_states: list[PowerState]
     _web_hardware_client_factory: type[WebHardwareClient]
@@ -212,13 +217,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         # Cleared so the first health after an Init() is logged.
         self._health = None
-        self._health_recorder = self._health_recorder_factory(
-            self.get_name(),
-            self.logger,
-            attributes=list(HEALTH_ATTRIBUTES),
-            health_callback=self._health_changed,
-            attr_conf_callback=self._attribute_config_changed,
-        )
 
         # The parent can pass on its admin mode before the poller exists, and
         # then the poller never starts. So the admin mode is applied again here.
@@ -358,11 +356,50 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 timestamp,
             )
 
+        # After the emits, so a new recorder subscribes to this poll's values.
+        self._update_health_recorder()
+
         self.component_on()
         self.component_no_fault()
         self.logger.debug("Poll succeeded")
         if board_came_up:
             self._set_fan_speeds()
+
+    def _update_health_recorder(self: MccsPrototypeSubrack) -> None:
+        """
+        Build the health recorder for the health attributes the board reports.
+
+        Called on the polling thread after each good poll. Only this thread
+        builds or replaces the recorder, and ``delete_device`` joins it before
+        it cleans the recorder up, so no lock is needed.
+
+        The board info is read on every poll, and a failed poll clears it. So a
+        board that comes back with other firmware gets a new recorder, for the
+        attributes that the new firmware reports.
+        """
+        board_info = self.subrack.board_info
+        if board_info is None:
+            # The board was too busy to give its board info. The next poll
+            # tries again.
+            return
+        attributes = health_attributes(board_info)
+        if self._health_recorder is not None:
+            if attributes == self._health_attributes:
+                return
+            self.logger.info(
+                "Rebuilding the health recorder, because the board now runs "
+                "BIOS %s.",
+                board_info["SMM"]["bios"],
+            )
+            self._health_recorder.cleanup()
+        self._health_attributes = attributes
+        self._health_recorder = self._health_recorder_factory(
+            self.get_name(),
+            self.logger,
+            attributes=attributes,
+            health_callback=self._health_changed,
+            attr_conf_callback=self._attribute_config_changed,
+        )
 
     def _set_fan_speeds(self: MccsPrototypeSubrack) -> None:
         """
@@ -531,6 +568,11 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         """
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
             self._emit(signal_name, walk(health_status, path), timestamp)
+        for signal_name, paths in HEALTH_PATHS_TO_SPECTRUM_SIGNAL.items():
+            values = [walk(health_status, path) for path in paths]
+            # Tango cannot report one element as unknown, so the whole
+            # spectrum is.
+            self._emit(signal_name, None if None in values else values, timestamp)
 
     def _update_tpm_power_states(
         self: MccsPrototypeSubrack,

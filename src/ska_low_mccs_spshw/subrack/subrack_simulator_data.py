@@ -218,11 +218,16 @@ def default_health_status(
         return {f"SLOT{slot}": value for slot, value in enumerate(values, start=1)}
 
     return {
+        "SMM": {
+            "power": 20.0,
+            "power_max": 20.0,
+        },
         "temperatures": {
             "SMM1": 40,
             "SMM2": 41,
             "BKPLN1": 39,
             "BKPLN2": 41,
+            "SMM_PLL": 45,
         },
         "plls": {
             "BoardPllLock": board_pll_locked,
@@ -306,9 +311,10 @@ def default_health_status(
                 "PSU1": 300,
                 "PSU2": 300,
             },
+            # In rpm, inside the range that the SPS thresholds give.
             "fan_speed": {
-                "PSU1": 90.0,
-                "PSU2": 100.0,
+                "PSU1": 15000.0,
+                "PSU2": 15500.0,
             },
             "temp_inlet": {
                 "PSU1": 20,
@@ -346,6 +352,7 @@ def default_health_status(
                 "SLOT7": True,
                 "SLOT8": True,
             },
+            "singlewire": _per_slot([True] * len(tpm_present)),
         },
         "internal_voltages": {
             "V_POWERIN": 12.0,

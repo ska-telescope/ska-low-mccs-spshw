@@ -8,6 +8,7 @@
   * The subrack power-on callback no longer connects to the TPM from the event thread. It asks the polling loop to reconnect, and initialisation runs from there once connected.
   * A failed connect now disconnects fully, so a half-connected TPM (e.g. plugins not loaded) no longer blocks the next reconnect.
   * `firmware_version` is no longer read from an unprogrammed TPM.
+  * New `PollLockStarvationTimeout` property. If every poll is skipped because the hardware lock is busy for longer than this many seconds, report FAULT.
 
 ## 17.1.0
 

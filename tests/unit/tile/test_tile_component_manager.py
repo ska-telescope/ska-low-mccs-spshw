@@ -44,7 +44,7 @@ from ska_low_mccs_spshw.tile import (
     TpmStatus,
 )
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
-from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest
+from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
 from ska_low_mccs_spshw.tile.utils import LockTimeoutError
 from time_utils import str_from_float_epoch_utc_time
 
@@ -699,6 +699,55 @@ class TestTileComponentManager:
         # No reconnect requested. (Note: get_request(UNKNOWN) can't be used
         # to check this, as CONNECT is a routine poll in the UNKNOWN state.)
         desire_connection.assert_not_called()
+
+    def test_persistent_lock_timeout_reports_fault(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test polls starved of the lock for too long report a fault.
+
+        Also check the fault is cleared once a poll gets the lock again.
+
+        :param tile_component_manager: the tile component manager under test
+        """
+        tile_component_manager._request_provider = TileRequestProvider(
+            unittest.mock.Mock()
+        )
+        tile_component_manager._lock_starvation_timeout = 10.0
+        tile_component_manager.fault_state = False
+        busy = LockTimeoutError("lock not acquired in 6.000s")
+
+        with (
+            unittest.mock.patch(
+                "ska_low_mccs_spshw.tile.tile_component_manager.time.monotonic"
+            ) as monotonic,
+            unittest.mock.patch.object(
+                tile_component_manager, "_update_component_state"
+            ) as update_component_state,
+        ):
+            # First skipped poll starts the clock; within the limit, no fault.
+            monotonic.return_value = 100.0
+            tile_component_manager.poll_failed(busy)
+            monotonic.return_value = 109.0
+            tile_component_manager.poll_failed(busy)
+            assert tile_component_manager.fault_state is False
+            update_component_state.assert_not_called()
+
+            # Past the limit: fault reported once.
+            monotonic.return_value = 111.0
+            tile_component_manager.poll_failed(busy)
+            assert tile_component_manager.fault_state is True
+            update_component_state.assert_called_once_with(fault=True)
+
+            # A successful poll resets the clock and clears the fault
+            # (provided subrack agrees the TPM is ON).
+            tile_component_manager._subrack_says_tpm_power = PowerState.ON
+            tile_component_manager.poll_succeeded(
+                TileResponse("dummy", None, publish=False)
+            )
+            assert tile_component_manager._lock_busy_since is None
+            assert tile_component_manager.fault_state is False
 
     def test_update_fault_state_without_lock_leaves_fault_unchanged(
         self: TestTileComponentManager,

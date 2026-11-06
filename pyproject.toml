@@ -8,9 +8,9 @@ dependencies = [
     "PyYAML >= 6.0.1, <7.0.0",
     "requests >= 2.31.0, <3.0.0",
     "scipy >= 1.11.2, <2.0.0",
-    "ska-control-model[health_rollup] >= 1.2.0, <2.0.0",
+    "ska-control-model[health_rollup] >= 1.4.0, <2.0.0",
     "ska-tango-base >= 1.6.1, < 2.0.0",
-    "ska-low-mccs-common>=4.9.1",
+    "ska-low-mccs-common>=4.10.1",
     "ska-low-mccs-daq >= 9.0.0, <10.0.0",
     "ska-telmodel-client>=1.31.0,<2.0.0",
     "ska-ser-skuid >= 6.0.0, <7.0.0",
@@ -50,7 +50,7 @@ dependencies = [
 ]
 
 name = "ska-low-mccs-spshw"
-version = "17.0.0"
+version = "17.1.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = [{name = "MCCS team"}]

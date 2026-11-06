@@ -113,6 +113,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "lrc_executing",
         "lrc_queue",
         "health_state",
+        "health_report",
         "state",
         "outsideTemperature",
         "track_lrc_command",
@@ -2425,6 +2426,56 @@ def test_health(
     )
     change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
     assert station_device.healthState == HealthState.OK
+
+
+def test_health_events_share_timestamp(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test that one health update gives the same timestamp to both health events.
+
+    :param station_device: The station device to use.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    tile_trl = get_tile_name(1)
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.subscribe_event(
+        "healthReport",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_report"],
+    )
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.OK, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["health_report"].assert_change_event(
+        json.dumps({}), lookahead=30, consume_nonmatches=True
+    )
+
+    station_device.MockSubdeviceHealth(
+        json.dumps({"device": tile_trl, "health": HealthState.FAILED})
+    )
+    state_event = change_event_callbacks["health_state"].assert_change_event(
+        HealthState.FAILED
+    )["call_args"][0]
+    report_event = change_event_callbacks["health_report"].assert_change_event(
+        json.dumps({"tiles": {tile_trl: "FAILED"}})
+    )["call_args"][0]
+    assert state_event.attr_value.time.totime() == (
+        report_event.attr_value.time.totime()
+    )
 
 
 def test_programing_state_health_rollup(

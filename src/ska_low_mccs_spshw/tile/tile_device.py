@@ -16,6 +16,7 @@ import os.path
 import re
 import sys
 import threading
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce, wraps
@@ -811,7 +812,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # runs, and then clobbers whatever state those callbacks set.
         # Initialise values in ``init_device`` instead.
 
-        self._health_state: HealthState
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]]
         self._antenna_ids: list[int]
@@ -824,7 +824,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.db_configuration_fault: tuple[bool | None, str]
         self.component_manager_fault: bool | None
         self.power_state: PowerState | None
-        self._intermediate_healths: dict[str, HealthState]
         self._intermediate_attrs: dict[str, list[str]]
         super().__init__(*args, **kwargs)
 
@@ -861,16 +860,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.db_configuration_fault = (None, "No information gathered")
         self.component_manager_fault = None
         self.power_state = None
-        self._intermediate_healths = {
-            "temperatures": HealthState.UNKNOWN,
-            "currents": HealthState.UNKNOWN,
-            "dsp": HealthState.UNKNOWN,
-            "voltages": HealthState.UNKNOWN,
-            "io": HealthState.UNKNOWN,
-            "timing": HealthState.UNKNOWN,
-            "adcs": HealthState.UNKNOWN,
-            "alarms": HealthState.UNKNOWN,
-        }
         # Pre-compute absolute signal names for alarm handling in notify_emission.
         self._alarm_signal_map: dict[str, str] = {
             sig._absolute_name_for(self): tango_attr_name
@@ -1213,19 +1202,26 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile, health: HealthState, health_report: str
     ) -> None:
         """
-        Handle change in health from new health Model.
+        Handle an evaluation of this device's health.
 
-        :param health: the new health value
+        The HealthRecorder calls this hook on every event from a monitored
+        attribute. It writes the health report and the health state every
+        time, and Tango change detection suppresses repeated values.
+
+        :param health: the evaluated health value
         :param health_report: the health report
         """
         if self._stopping:
             return
         if self.UseAttributesForHealth:
-            self.healthReport_signal = health_report
-
-            if self._health_state != health:
-                self.logger.info(f"Health changed ==> {health=}, {health_report=}")
-                self._health_state = health
+            # Give both events one timestamp, so that a client can pair them.
+            timestamp = time.time()
+            self.healthReport_signal = (
+                health_report,
+                timestamp,
+                tango.AttrQuality.ATTR_VALID,
+            )
+            self._health_state = (health, timestamp, tango.AttrQuality.ATTR_VALID)
 
     def _intermediate_health_changed(
         self: MccsTile,
@@ -1236,12 +1232,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
 
         if self.UseAttributesForHealth:
-            if self._intermediate_healths[group] != health:
-                self.logger.info(
-                    "Intermediate Health changed ==> " f"{group=} {health=}"
-                )
-                self._intermediate_healths[group] = health
-                setattr(self, self._INTERMEDIATE_HEALTH_SIGNAL_MAP[group], health)
+            setattr(self, self._INTERMEDIATE_HEALTH_SIGNAL_MAP[group], health)
 
     def _attr_conf_changed(self: MccsTile, attribute_name: str) -> None:
         """

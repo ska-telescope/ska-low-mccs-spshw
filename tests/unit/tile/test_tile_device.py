@@ -1608,7 +1608,8 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
-        change_event_callbacks["health_state"].assert_not_called()
+        # Tango does not apply change detection to the first push after a
+        # subscription, so the next health evaluation can repeat this value.
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -1632,7 +1633,9 @@ class TestMccsTile:
             tango.AttrQuality.ATTR_VALID,
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
-        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        change_event_callbacks["health_state"].assert_change_event(
+            HealthState.OK, lookahead=2, consume_nonmatches=True
+        )
         change_event_callbacks["health_state"].assert_not_called()
         assert tile_device.healthState == HealthState.OK
         time.sleep(time_to_poll_attributes)
@@ -2991,7 +2994,8 @@ class TestMccsTile:
             change_event_callbacks["health_state"],
         )
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
-        change_event_callbacks["health_state"].assert_not_called()
+        # Tango does not apply change detection to the first push after a
+        # subscription, so the next health evaluation can repeat this value.
 
         # Store original config for cleanup
         original_attribute_config = on_tile_device.get_attribute_config(
@@ -3023,7 +3027,7 @@ class TestMccsTile:
             # Expect a change event.
             if resulting_health != HealthState.OK:
                 change_event_callbacks["health_state"].assert_change_event(
-                    resulting_health
+                    resulting_health, lookahead=2, consume_nonmatches=True
                 )
 
             assert on_tile_device.healthState == resulting_health
@@ -3066,7 +3070,8 @@ class TestMccsTile:
             change_event_callbacks["health_state"],
         )
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
-        change_event_callbacks["health_state"].assert_not_called()
+        # Tango does not apply change detection to the first push after a
+        # subscription, so the next health evaluation can repeat this value.
 
         original_max_alarm = on_tile_device.get_attribute_config(
             attribute_name
@@ -3082,7 +3087,7 @@ class TestMccsTile:
                 backend_health_value,
             )
             change_event_callbacks["health_state"].assert_change_event(
-                HealthState.FAILED
+                HealthState.FAILED, lookahead=2, consume_nonmatches=True
             )
 
             on_tile_device.adminMode = AdminMode.OFFLINE

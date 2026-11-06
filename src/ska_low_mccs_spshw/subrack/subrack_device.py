@@ -14,6 +14,7 @@ import importlib
 import json
 import sys
 import threading
+import time
 from typing import Any, Final, Optional
 
 import numpy as np
@@ -219,7 +220,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         super().__init__(*args, **kwargs)
 
         self._health_model: SubrackHealthModel
-        self._health_state: HealthState
         self._stopping = False
         self._health_recorder: HealthRecorder | None
         self._health_report = ""
@@ -308,18 +308,29 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self: MccsSubrack, health: HealthState, health_report: str
     ) -> None:
         """
-        Handle change in health from new health Model.
+        Handle an evaluation of this device's health.
 
-        :param health: the new health value
+        The HealthRecorder calls this hook on every event from a monitored
+        attribute. It pushes the health report and the health state every
+        time, and Tango change detection suppresses repeated values.
+
+        :param health: the evaluated health value
         :param health_report: the health report
         """
         if self._stopping:
             return
 
         if self.UseAttributesForHealth:
+            # Give both events one timestamp, so that a client can pair them.
+            timestamp = time.time()
             self._health_report = health_report
-            if self._health_state != health:
-                self._health_state = health
+            self.push_change_event(
+                "healthReport", health_report, timestamp, AttrQuality.ATTR_VALID
+            )
+            self.push_archive_event(
+                "healthReport", health_report, timestamp, AttrQuality.ATTR_VALID
+            )
+            self._health_state = (health, timestamp, AttrQuality.ATTR_VALID)
 
     def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
         """
@@ -387,6 +398,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_model = SubrackHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
+        self.set_change_event("healthReport", True, True)
+        self.set_archive_event("healthReport", True, True)
 
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
         """

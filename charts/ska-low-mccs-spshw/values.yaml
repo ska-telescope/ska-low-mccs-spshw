@@ -459,6 +459,84 @@ ska-tango-devices:
       psu2VoltageOut->min_warning: 11.76
       psu2VoltageOut->min_alarm: 11.4
 
+      boardPower->max_alarm: 47
+      boardPower->max_warning: 42
+      boardPower->min_warning: "Not specified"
+      boardPower->min_alarm: "Not specified"
+
+      boardMaxPower->max_alarm: 47
+      boardMaxPower->max_warning: 42
+      boardMaxPower->min_warning: "Not specified"
+      boardMaxPower->min_alarm: "Not specified"
+
+      boardPllTemperature->max_alarm: 70
+      boardPllTemperature->max_warning: 60
+      boardPllTemperature->min_warning: 10
+      boardPllTemperature->min_alarm: 5
+
+      powerSupplyFanSpeedsRpm->max_alarm: 29700
+      powerSupplyFanSpeedsRpm->max_warning: 27000
+      powerSupplyFanSpeedsRpm->min_warning: 4200
+      powerSupplyFanSpeedsRpm->min_alarm: 3600
+
+      powerSupplyFetTemperatures->max_alarm: 115
+      powerSupplyFetTemperatures->max_warning: "Not specified"
+      powerSupplyFetTemperatures->min_warning: "Not specified"
+      powerSupplyFetTemperatures->min_alarm: "Not specified"
+
+      powerSupplyInletTemperatures->max_alarm: 65
+      powerSupplyInletTemperatures->max_warning: 40
+      powerSupplyInletTemperatures->min_warning: -5
+      powerSupplyInletTemperatures->min_alarm: -5
+
+      # ---------------------------------------------------------------
+      # SMM API 1.8.0 only. A 1.6.0 board does not report these points, so
+      # they do not feed its health.
+      # ---------------------------------------------------------------
+      internalVoltagesPOWERINMIN->max_alarm: 12.6
+      internalVoltagesPOWERINMIN->max_warning: 12.26
+      internalVoltagesPOWERINMIN->min_warning: 11.58
+      internalVoltagesPOWERINMIN->min_alarm: 11.4
+
+      internalVoltagesPOWERINMAX->max_alarm: 12.6
+      internalVoltagesPOWERINMAX->max_warning: 12.26
+      internalVoltagesPOWERINMAX->min_warning: 11.58
+      internalVoltagesPOWERINMAX->min_alarm: 11.4
+
+      # The thresholds allow a count of 0 only. Tango limits are inclusive, so
+      # a limit of 1 flags any count above 0.
+      boardApllUnlockCount->max_alarm: 1
+      boardApllUnlockCount->max_warning: "Not specified"
+      boardApllUnlockCount->min_warning: "Not specified"
+      boardApllUnlockCount->min_alarm: "Not specified"
+
+      boardDpllUnlockCount->max_alarm: "Not specified"
+      boardDpllUnlockCount->max_warning: 1
+      boardDpllUnlockCount->min_warning: "Not specified"
+      boardDpllUnlockCount->min_alarm: "Not specified"
+
+      boardSysclkEventCount->max_alarm: 1
+      boardSysclkEventCount->max_warning: "Not specified"
+      boardSysclkEventCount->min_warning: "Not specified"
+      boardSysclkEventCount->min_alarm: "Not specified"
+
+      tpmMinVoltages->max_alarm: 12.6
+      tpmMinVoltages->max_warning: 12.26
+      tpmMinVoltages->min_warning: 11.58
+      tpmMinVoltages->min_alarm: 11.4
+
+      tpmMaxVoltages->max_alarm: 12.6
+      tpmMaxVoltages->max_warning: 12.26
+      tpmMaxVoltages->min_warning: 11.58
+      tpmMaxVoltages->min_alarm: 11.4
+
+      # The lower limits are left out, as for tpmPowers, because an empty or
+      # powered off bay draws no power.
+      tpmMaxPowers->max_alarm: 130
+      tpmMaxPowers->max_warning: 125
+      tpmMaxPowers->min_warning: "Not specified"
+      tpmMaxPowers->min_alarm: "Not specified"
+
   # devices:
   #   MccsTile:
   #     low-mccs/tile/s8-1-tpm01:

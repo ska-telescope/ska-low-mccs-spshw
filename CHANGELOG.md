@@ -8,7 +8,6 @@
   * The subrack power-on callback no longer connects to the TPM from the event thread. It asks the polling loop to reconnect, and initialisation runs from there once connected.
   * A failed connect now disconnects fully, so a half-connected TPM (e.g. plugins not loaded) no longer blocks the next reconnect.
   * `firmware_version` is no longer read from an unprogrammed TPM.
-  * `LogLock` now records the outermost holder correctly on re-entrant acquires.
 
 ## 17.1.0
 

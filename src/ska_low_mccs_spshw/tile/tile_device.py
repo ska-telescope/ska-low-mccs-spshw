@@ -2026,8 +2026,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Station Beamformer Error Count",
-        doc="The station beamformer error count for FPGA0. "
+        label="FPGA0 Station Beamformer DDR Parity Error Count",
+        doc="The station beamformer DDR parity error count for FPGA0. "
         "Expected: 0 if no parity errors detected.",
     )
 
@@ -2037,8 +2037,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Station Beamformer Error Count",
-        doc="The station beamformer error count for FPGA1. "
+        label="FPGA1 Station Beamformer DDR Parity Error Count",
+        doc="The station beamformer DDR parity error count for FPGA1. "
         "Expected: 0 if no parity errors detected.",
     )
 
@@ -2048,9 +2048,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Station Beamformer Flagged Count",
-        doc="The station beamformer flagged count for FPGA0. "
-        "Expected: 0 if no parity errors detected.",
+        label="FPGA0 Station Beamformer Discarded/Flagged Packet Count",
+        doc="The station beamformer discarded or flagged packet count for FPGA0. "
+        "Expected: 0 if no packets discarded or flagged.",
     )
 
     dsp_station_beamf_discarded_or_flagged_packet_count_fpga1 = attribute_from_signal(
@@ -2059,9 +2059,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Station Beamformer Flagged Count",
-        doc="the station beamformer flagged count for FPGA1. "
-        "Expected: 0 if no parity errors detected.",
+        label="FPGA1 Station Beamformer Discarded/Flagged Packet Count",
+        doc="The station beamformer discarded or flagged packet count for FPGA1. "
+        "Expected: 0 if no packets discarded or flagged.",
     )
 
     io_udp_interface_crc_error_count_fpga0 = attribute_from_signal(
@@ -2070,8 +2070,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 CRC Error Count",
-        doc="The CRC error count for FPGA0. "
+        label="FPGA0 UDP CRC Error Count",
+        doc="The UDP CRC error count for FPGA0. "
         "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
 
@@ -2081,8 +2081,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 CRC Error Count",
-        doc="The CRC error count for FPGA1. "
+        label="FPGA1 UDP CRC Error Count",
+        doc="The UDP CRC error count for FPGA1. "
         "Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.",
     )
 
@@ -2093,8 +2093,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 BIP Error Count",
-        doc="Return the BIP error count for FPGA0. "
+        label="FPGA0 UDP BIP Error Count",
+        doc="Return the UDP BIP error count for FPGA0. "
         "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
     def io_udp_interface_bip_error_count_fpga0(
@@ -2125,8 +2125,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 BIP Error Count",
-        doc="Return the bip error count for FPGA1. "
+        label="FPGA1 UDP BIP Error Count",
+        doc="Return the UDP BIP error count for FPGA1. "
         "Expected: 0 if no bit-interleaved parity (BIP) errors detected.",
     )
     def io_udp_interface_bip_error_count_fpga1(
@@ -2157,8 +2157,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Decode Error Count",
-        doc="Return the decode error count for FPGA0. "
+        label="FPGA0 UDP Decode Error Count",
+        doc="Return the UDP decode error count for FPGA0. "
         "Expected: 0 if errors have not been detected.",
     )
     def io_udp_interface_decode_error_count_fpga0(
@@ -2191,8 +2191,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Decode Error Count",
-        doc="Return the decode error count for FPGA1. "
+        label="FPGA1 UDP Decode Error Count",
+        doc="Return the UDP decode error count for FPGA1. "
         "Expected: 0 if errors have not been detected.",
     )
     def io_udp_interface_decode_error_count_fpga1(
@@ -2224,8 +2224,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Linkup Loss Count",
-        doc="Return the linkup loss count for FPGA0. "
+        label="FPGA0 UDP Linkup Loss Count",
+        doc="Return the UDP linkup loss count for FPGA0. "
         "Expected: 0 if no link loss events are detected.",
     )
 
@@ -2235,8 +2235,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Linkup Loss Count",
-        doc="Return the linkup loss count for FPGA1. "
+        label="FPGA1 UDP Linkup Loss Count",
+        doc="Return the UDP linkup loss count for FPGA1. "
         "Expected: 0 if no link loss events are detected.",
     )
 
@@ -2335,8 +2335,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     io_udp_interface_arp = attribute_from_signal(
         arp_signal,
         dtype="DevBoolean",
-        label="ARP",
-        doc="Return the ARP status. "
+        label="UDP ARP Status",
+        doc="Return the UDP ARP status. "
         "Expected: `True` if table entries are valid and resolved.",
     )
 
@@ -2436,8 +2436,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Resync Count",
-        doc="Return the resync count for FPGA0. "
+        label="FPGA0 JESD Resync Count",
+        doc="Return the JESD resync count for FPGA0. "
         "Expected: 0 if no resync events have ocurred.",
     )
 
@@ -2447,15 +2447,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Resync Count",
-        doc="Return the resync count for FPGA1. "
+        label="FPGA1 JESD Resync Count",
+        doc="Return the JESD resync count for FPGA1. "
         "Expected: 0 if no resync events have ocurred.",
     )
 
     io_jesd_interface_link_status = attribute_from_signal(
         link_status_signal,
         dtype="DevBoolean",
-        label="Link Status",
+        label="JESD Link Status",
         doc="Return the JESD link status. "
         "Expected: `True` if link up and synchronised.",
     )
@@ -2468,8 +2468,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Lane Error Count",
-        doc="Return the error count per lane, per core for FPGA0. "
+        label="FPGA0 JESD Lane Error Count",
+        doc="Return the JESD error count per lane, per core for FPGA0. "
         "Expected: 0 for all lanes.",
     )
     def io_jesd_interface_lane_error_count_fpga0(
@@ -2502,8 +2502,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Lane Error Count",
-        doc="Return the error count per lane, per core for FPGA1. "
+        label="FPGA1 JESD Lane Error Count",
+        doc="Return the JESD error count per lane, per core for FPGA1. "
         "Expected: 0 for all lanes.",
     )
     def io_jesd_interface_lane_error_count_fpga1(
@@ -2535,7 +2535,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Clock Managers Count Signal",
+        label="FPGA0 Clock Managers Lock Loss Count",
         doc="Return the FPGA0 PLL lock loss counter for C2C, JESD and DSP. "
         "Expected: `0` per interface if no lock loss events.",
     )
@@ -2569,7 +2569,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Clock Managers Count Signal",
+        label="FPGA1 Clock Managers Lock Loss Count",
         doc="Return the FPGA1 PLL lock loss counter for C2C, JESD and DSP. "
         "Expected: `0` per interface if no lock loss events.",
     )
@@ -2673,7 +2673,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 Clocks",
+        label="FPGA0 Interface Clocks Status",
         doc="Return the status of clocks for the interfaces of FPGA0. "
         "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
@@ -2708,7 +2708,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 Clocks",
+        label="FPGA1 Interface Clocks Status",
         doc="Return the status of clocks for the interfaces of FPGA1. "
         "Expected: `1` per interface if status is OK. `0` if not OK.",
     )
@@ -2813,8 +2813,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 QPLL Status",
-        doc="Return the QPLL lock status for FPGA0. Expected: `1` if QPLL locked.",
+        label="FPGA0 JESD QPLL Lock Status",
+        doc="Return the JESD QPLL lock status for FPGA0. "
+        "Expected: `1` if QPLL locked.",
     )
     def io_jesd_interface_qpll_status_fpga0_status(
         self: MccsTile, raw_value: list[int] | None
@@ -2845,8 +2846,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 QPLL Status",
-        doc="Return the QPLL lock status for FPGA1. Expected: `1` if QPLL locked.",
+        label="FPGA1 JESD QPLL Lock Status",
+        doc="Return the JESD QPLL lock status for FPGA1. "
+        "Expected: `1` if QPLL locked.",
     )
     def io_jesd_interface_qpll_status_fpga1_status(
         self: MccsTile, raw_value: list[int] | None
@@ -2877,8 +2879,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 QPLL Counter",
-        doc="Return the QPLL lock loss counter for FPGA0. "
+        label="FPGA0 JESD QPLL Lock Loss Count",
+        doc="Return the JESD QPLL lock loss counter for FPGA0. "
         "Expected: `0` if no lock loss events detected.",
     )
     def io_jesd_interface_qpll_status_fpga0_count(
@@ -2911,8 +2913,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 QPLL Counter",
-        doc="Return the QPLL lock loss counter for FPGA1. "
+        label="FPGA1 JESD QPLL Lock Loss Count",
+        doc="Return the JESD QPLL lock loss counter for FPGA1. "
         "Expected: `0` if no lock loss events detected.",
     )
     def io_jesd_interface_qpll_status_fpga1_count(
@@ -2947,7 +2949,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
-        label="FPGA0 IO F2F Interface PLL Status",
+        label="FPGA0 F2F PLL Lock Status",
         doc="Return the FPGA0 F2F PLL lock status. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
@@ -2982,7 +2984,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_value=2,
         min_value=-1,
         archive_abs_change=1,
-        label="FPGA1 IO F2F Interface PLL Status",
+        label="FPGA1 F2F PLL Lock Status",
         doc="Return the FPGA1 F2F PLL lock status. "
         "Expected: `1` if PLL locked, `0` otherwise.",
     )
@@ -3015,7 +3017,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA0 IO F2F Interface PLL Status Counter",
+        label="FPGA0 F2F PLL Lock Loss Count",
         doc="Return the FPGA0 F2F PLL lock loss counter. "
         "Expected: `0` if no PLL lock loss events detected.",
     )
@@ -3049,7 +3051,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="FPGA1 IO F2F Interface PLL Status Counter",
+        label="FPGA1 F2F PLL Lock Loss Count",
         doc="Return the FPGA1 F2F PLL lock loss counter. "
         "Expected: `0` if no PLL lock loss events detected.",
     )
@@ -3658,8 +3660,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="SEMwd Alarm",
-        doc="Return the SEMwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
+        label="SEM Watchdog Alarm",
+        doc="Return the SEM watchdog alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
     alarms_mcu_wd = attribute_from_signal(
@@ -3670,8 +3672,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
-        label="MCUwd Alarm",
-        doc="Return the MCUwd alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
+        label="MCU Watchdog Alarm",
+        doc="Return the MCU watchdog alarm reading. 0 -> OK 1 -> WARN 2 -> ALARM",
     )
 
     cspDestinationIp = attribute_from_signal(
@@ -5396,7 +5398,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
-        label="Vref voltage for DDR0 Voltage",
+        label="DDR0 Vref Voltage",
         unit="Volt",
         doc="Vref voltage for DDR0 in Volts.",
     )
@@ -5408,7 +5410,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.63,
         min_alarm=0.57,
-        label="Vref voltage for DDR1 Voltage",
+        label="DDR1 Vref Voltage",
         unit="Volt",
         doc="Vref voltage for DDR1 in Volts.",
     )
@@ -5432,9 +5434,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=0.97,
         min_alarm=0.83,
-        label="FPGA MGT AV Voltage",
+        label="FPGA MGT AVCC Voltage",
         unit="Volt",
-        doc="FPGA MGT AV voltage in Volts.",
+        doc="FPGA MGT AVCC voltage in Volts.",
     )
 
     voltages_mgt_avtt = attribute_from_signal(
@@ -5660,9 +5662,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=1.30,
         min_alarm=1.10,
-        label="DDR4 Voltage",
+        label="DDR1 VDD Voltage",
         unit="Volt",
-        doc="DDR4 voltage in Volts.",
+        doc="DDR1 VDD voltage in Volts.",
     )
 
     voltages_vm_ddr1_vtt = attribute_from_signal(
@@ -5756,9 +5758,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         archive_abs_change=0.1,
         max_alarm=3.56,
         min_alarm=3.04,
-        label="ANALOG PLL Voltage",
+        label="Analog PLL Voltage",
         unit="Volt",
-        doc="ANALOG PLL voltage in Volts.",
+        doc="Analog PLL voltage in Volts.",
     )
 
     voltages_vm_sw_amp = attribute_from_signal(

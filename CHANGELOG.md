@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-802] MccsPrototypeSubrack sets every backplane fan to MANUAL each time it can read the board again. The speed is 85% at cabinet position 3 and 70% at other positions. The cabinet position comes from the last octet of SubrackIp. A host name gives no position, so the fans of a simulator are not set.
+
 ## 17.1.0
 
 * [SKB-1660] Update ska-low-mccs-common to 4.10.1. HealthRecorder now calls its health callback on every monitored attribute event, and Tango change detection decides which events to push. A new subscriber can get one repeat of the current value.

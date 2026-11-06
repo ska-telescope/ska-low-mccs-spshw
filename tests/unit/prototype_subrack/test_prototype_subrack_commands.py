@@ -27,6 +27,7 @@ from __future__ import annotations
 import gc
 import json
 import threading
+import time
 from typing import Any, Iterator
 from unittest import mock
 
@@ -39,8 +40,12 @@ from tango import DevState
 
 from ska_low_mccs_spshw.prototype_subrack import BoardCommandStatus
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
+    cabinet_position,
+)
+from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
 )
+from ska_low_mccs_spshw.prototype_subrack.subrack_client import SubrackPollResponse
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import LRCManager
 
@@ -50,7 +55,8 @@ gc.disable()
 SUBRACK_ID = 1
 # A second device in the same context, which assembles with no subrack.
 UNASSEMBLED_SUBRACK_ID = 2
-BOARD_HOST = "a-fake-board"
+# An IP address at cabinet position 3, which runs its fans at 85%.
+BOARD_HOST = "10.0.10.49"
 BOARD_PORT = 8081
 
 # How long to wait for a command's change events. Every board command is
@@ -617,3 +623,80 @@ def test_set_power_supply_fan_speed_needs_an_api_that_has_it(
         ):
             online_device.SetPowerSupplyFanSpeed(argument)
         subrack.run_board_command.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("subrack_ip", "position"),
+    [
+        ("10.0.10.1", 0),
+        ("10.0.10.17", 1),
+        ("10.0.10.33", 2),
+        ("10.0.10.49", 3),
+        ("10.0.10.65", 0),
+        ("10.0.10.113", 3),
+        ("subrack-simulator-s8-1", None),
+        ("localhost", None),
+    ],
+)
+def test_cabinet_position_comes_from_the_ip_address(
+    subrack_ip: str, position: int | None
+) -> None:
+    """
+    Test that the cabinet position comes from the last octet of the address.
+
+    A host name gives no position, so a simulator gets none.
+
+    :param subrack_ip: the subrack address.
+    :param position: the cabinet position it should give.
+    """
+    assert cabinet_position(subrack_ip) == position
+
+
+# Kept last in the module, because the fan commands push lrcFinished events
+# that the module's shared ``lrc`` callbacks would otherwise see.
+def test_a_board_that_comes_up_gets_its_fan_speeds(
+    online_device: tango.DeviceProxy,
+    subrack: mock.Mock,
+    subrack_factory: mock.Mock,
+) -> None:
+    """
+    Test that the first good poll queues the fan commands, and later ones do not.
+
+    The device is at cabinet position 3, so each fan goes to MANUAL at 85%.
+    A second good poll finds the device already ON, so it queues nothing. The
+    task executor runs one task at a time in order, so a sentinel command that
+    runs straight after the fan commands shows that nothing came in between.
+
+    :param online_device: the device under test, online.
+    :param subrack: the mocked subrack client.
+    :param subrack_factory: the factory, which carries the poll callbacks.
+    """
+    sentinel_ran = threading.Event()
+
+    def run_board_command(
+        name: str, args: str, abort_event: threading.Event
+    ) -> tuple[BoardCommandStatus, str, None]:
+        if name == "turn_on_tpms":
+            sentinel_ran.set()
+        return (BoardCommandStatus.COMPLETED, "The command completed.", None)
+
+    subrack.run_board_command.side_effect = run_board_command
+    data_callback = subrack_factory.call_args.kwargs["data_callback"]
+    try:
+        with tango.EnsureOmniThread():
+            data_callback(SubrackPollResponse(timestamp=time.time()))
+            assert online_device.state() == DevState.ON
+            data_callback(SubrackPollResponse(timestamp=time.time()))
+        online_device.PowerUpTpms()
+        assert sentinel_ran.wait(COMMAND_TIMEOUT)
+    finally:
+        subrack.run_board_command.side_effect = None
+
+    expected = []
+    for fan_id in range(1, 5):
+        expected.append(mock.call("set_fan_mode", f"{fan_id},0", abort_event=mock.ANY))
+        expected.append(
+            mock.call("set_subrack_fan_speed", f"{fan_id},85", abort_event=mock.ANY)
+        )
+    expected.append(mock.call("turn_on_tpms", "", abort_event=mock.ANY))
+    assert subrack.run_board_command.call_args_list == expected

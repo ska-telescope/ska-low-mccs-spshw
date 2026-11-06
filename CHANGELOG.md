@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-802] MccsPrototypeSubrack sets every backplane fan to MANUAL each time it can read the board again. The speed is 85% at cabinet position 3 and 70% at other positions. The cabinet position comes from the last octet of SubrackIp. A host name gives no position, so the fans of a simulator are not set.
 * [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with a variation module that switches an outlet when its control object is written.
 * [THORN-759] MccsPrototypeSubrack gets the same support as current subrack for SMM 1.8.0. It derives tpmCurrents and rejects SetPowerSupplyFanSpeed on SMM 1.8.0. A board command fails when command_completed reports that it failed.
 

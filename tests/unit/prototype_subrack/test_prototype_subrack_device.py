@@ -813,22 +813,105 @@ def test_missing_health_status_invalidates_only_its_attributes(
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
 
 
-def test_one_missing_element_invalidates_its_spectrum(
+def _with_no_reading(points: dict[tuple[str, str], str]) -> dict[str, Any]:
+    """
+    Return the poll values with some elements reported as ``None``.
+
+    :param points: the slot to blank, keyed by the group and point it is in.
+
+    :return: the poll values, with a copy of the health status.
+    """
+    health_status = json.loads(json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]))
+    for (group, point), name in points.items():
+        health_status[group][point][name] = None
+    return {**POLL_VALUES, HEALTH_STATUS_KEY: health_status}
+
+
+def test_an_element_with_no_reading_takes_the_fill(
     online_device: tango.DeviceProxy,
     poll_succeeded: Callable[..., None],
 ) -> None:
     """
-    Test that a spectrum with one element missing is invalid as a whole.
+    Test that an element the board reports as None takes the spectrum's fill.
 
-    Tango has no way to report one element as unknown, so the device reports
-    the whole spectrum as invalid rather than invent a value for the element.
-    API 1.6.0 reports no ``voltages_min`` at all, which is the same case.
+    The board has no reading for a TPM bay that is powered off. A float
+    element becomes NaN and a flag becomes False, and the rest of the spectrum
+    keeps its values.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    poll_succeeded(
+        values=_with_no_reading(
+            {("slots", "voltages_min"): "SLOT5", ("slots", "pings"): "SLOT2"}
+        )
+    )
+
+    voltages = online_device.read_attribute("tpmMinVoltages")
+    assert voltages.quality == tango.AttrQuality.ATTR_VALID
+    expected = list(EXPECTED["tpmMinVoltages"])
+    expected[4] = float("nan")
+    assert list(voltages.value) == pytest.approx(expected, nan_ok=True)
+
+    pings = online_device.read_attribute("tpmPings")
+    assert pings.quality == tango.AttrQuality.ATTR_VALID
+    expected_pings = list(EXPECTED["tpmPings"])
+    expected_pings[1] = False
+    assert list(pings.value) == expected_pings
+
+
+def test_an_element_with_no_reading_does_not_alarm(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that a NaN element does not put its attribute in alarm.
+
+    This is what lets a station with some TPMs powered off stay healthy. The
+    limits are the ones the chart gives ``tpmMinVoltages``.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    config = online_device.get_attribute_config("tpmMinVoltages")
+    config.alarms.min_alarm = "11.4"
+    config.alarms.max_alarm = "12.6"
+    config.alarms.min_warning = "11.58"
+    config.alarms.max_warning = "12.26"
+    online_device.set_attribute_config(config)
+
+    # A control, to show that the limits apply. A reading below min_alarm
+    # alarms.
+    low = json.loads(json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]))
+    low["slots"]["voltages_min"]["SLOT5"] = 10.0
+    poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: low})
+    assert (
+        online_device.read_attribute("tpmMinVoltages").quality
+        == tango.AttrQuality.ATTR_ALARM
+    )
+
+    poll_succeeded(values=_with_no_reading({("slots", "voltages_min"): "SLOT5"}))
+
+    assert (
+        online_device.read_attribute("tpmMinVoltages").quality
+        == tango.AttrQuality.ATTR_VALID
+    )
+
+
+def test_a_point_the_board_omits_is_invalid(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that a spectrum whose point is absent from the health status is invalid.
+
+    API 1.6.0 reports no ``voltages_min`` at all, so there is nothing to fill.
 
     :param online_device: the device under test, online and not yet polled.
     :param poll_succeeded: supplies a successful poll response.
     """
     health_status = json.loads(json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]))
-    del health_status["slots"]["voltages_min"]["SLOT5"]
+    del health_status["slots"]["voltages_min"]
 
     poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: health_status})
 

@@ -16,6 +16,13 @@
     * TPM slot `tpmFaults`, `tpmPings` and `tpmSinglewire`.
   * An element that the board reports as None, such as a powered off TPM bay, reads as NaN or False, so it does not fail the health. A point the board omits entirely reads as invalid. The health recorder is built after the first poll that reads the board info, and rebuilt when the BIOS version changes, because API 1.6.0 has no peak hold values or PLL counters and those attributes do not feed its health. The simulator now reports SMM power, the SMM PLL temperature, slot singlewire status and PSU fan speeds in rpm.
 * [THORN-802] MccsPrototypeSubrack sets every backplane fan to MANUAL each time it can read the board again. The speed is 85% at cabinet position 3 and 70% at other positions. The cabinet position comes from the last octet of SubrackIp. A host name gives no position, so the fans of a simulator are not set.
+* [SKB-1579] Fix MccsTile concurrency and reconnection issues seen under CPU contention.
+  * New `LockTimeoutError` (a subclass of `TimeoutError`) is raised when the hardware lock cannot be acquired. A lock timeout during a poll or connect now counts as "hardware busy". It no longer triggers a reconnect or a fault re-evaluation. A long running command that cannot get the lock is marked failed.
+  * `update_fault_state` and `_is_connected` no longer block when the hardware lock is held by another thread. They keep the last known state.
+  * The subrack power-on callback no longer connects to the TPM from the event thread. It asks the polling loop to reconnect, and initialisation runs from there once connected.
+  * A failed connect now disconnects fully, so a half-connected TPM (e.g. plugins not loaded) no longer blocks the next reconnect.
+  * `firmware_version` is no longer read from an unprogrammed TPM.
+  * New `PollLockStarvationTimeout` property. If every poll is skipped because the hardware lock is busy for longer than this many seconds, report FAULT.
 
 ## 17.1.0
 

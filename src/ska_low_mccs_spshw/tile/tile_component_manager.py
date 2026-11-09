@@ -60,7 +60,7 @@ from .tile_poll_management import (
 from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .tile_time import TileTime
 from .tpm_status import TpmStatus
-from .utils import LogLock, abort_task_on_exception, acquire_timeout
+from .utils import LockTimeoutError, LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
 
@@ -235,6 +235,7 @@ class TileComponentManager(
         default_lock_timeout: float = 0.4,
         poll_timeout: float = 6.0,
         power_callback_timeout: float = 6.0,
+        lock_starvation_timeout: float = 120.0,
     ) -> None:
         """
         Initialise a new instance.
@@ -282,6 +283,9 @@ class TileComponentManager(
             before giving up.
         :param power_callback_timeout: max time for power callback to wait
             for hardware serialisation lock to determine if initialisation is required.
+        :param lock_starvation_timeout: if polls are continuously skipped
+            because the hardware serialisation lock is busy for longer than
+            this many seconds, report the component as faulty.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
@@ -321,6 +325,9 @@ class TileComponentManager(
         self._fpgas_time: list[int] = []
         self._pending_data_requests = False
         self._tile_time = TileTime(0)
+        # Set by the subrack ON callback; consumed by the polling thread
+        # once connected, to initialise the TPM if needed.
+        self._power_on_pending = False
         self._nof_blocks: int = 0
         self._firmware_list: List[dict[str, Any]] = []
         self._station_id = station_id
@@ -341,6 +348,11 @@ class TileComponentManager(
         self._initialise_executing: bool = False
         self._poll_timeout: float = poll_timeout
         self._power_callback_timeout: float = power_callback_timeout
+        self._lock_starvation_timeout: float = lock_starvation_timeout
+        # Monotonic time of the first poll in the current unbroken run of
+        # polls skipped due to LockTimeoutError. None when the last poll
+        # managed to claim the lock.
+        self._lock_busy_since: float | None = None
         self._polling_stopped_event = threading.Event()
         self._polling_stopped_event.set()  # not polling initially
 
@@ -474,13 +486,22 @@ class TileComponentManager(
             case "CONNECT":
                 try:
                     self.ping()
+                    # Already connected: still finish handling any
+                    # subrack power-on event received since last time.
+                    self._handle_power_on_if_pending()
                     request = TileRequest(
                         "global_status_alarms",
                         self.tile.check_global_status_alarms,
                         publish=True,
                     )
-                    # pylint: disable=broad-except
-                except Exception as e:
+                except LockTimeoutError as e:
+                    # The hardware lock is busy (e.g. a slow command from
+                    # another thread). That says nothing about the
+                    # connection, so retry the connection check next poll.
+                    self.logger.warning(f"Hardware busy, deferring connect: {e}")
+                    self._request_provider.desire_connection()
+                    return None
+                except Exception as e:  # pylint: disable=broad-except
                     # polling attempt was unsuccessful
                     self.logger.warning(f"Connection to tpm lost! : {e}")
                     request = TileRequest("connect", self.connect)
@@ -712,6 +733,23 @@ class TileComponentManager(
 
         :param exception: exception code raised from poll.
         """
+        if isinstance(exception, LockTimeoutError):
+            # Another thread holds the hardware lock. The TPM may be slow,
+            # but nothing here says it is disconnected or faulty, so don't
+            # trigger a reconnect or re-evaluate the fault state. Published
+            # attributes keep their last value and go stale if this persists.
+            self.logger.warning(f"Hardware busy, poll skipped: {exception}")
+            if isinstance(self.active_request, TileLRCRequest):
+                self.active_request.notify_failed(
+                    f"Hardware busy, command not executed: {exception}"
+                )
+            self.active_request = None
+            self._check_lock_starvation()
+            return
+
+        # The poll got past the lock, so the lock is not being starved.
+        self._lock_busy_since = None
+
         # TODO: would be great to formalise and document the exceptions raised
         # from the ska_low_sps_tpm_api.Tile. That way it will allow use to
         # handle exceptions better.
@@ -753,6 +791,39 @@ class TileComponentManager(
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
+    def _check_lock_starvation(self: TileComponentManager) -> None:
+        """
+        Report a fault if polls have been starved of the hardware lock too long.
+
+        A single skipped poll is fine (e.g. a long command is running), but
+        if every poll is skipped for longer than ``lock_starvation_timeout``,
+        something is most likely stuck holding the lock, and none of our
+        attributes are being updated. The fault is cleared by the next
+        successful poll (see :py:meth:`update_fault_state`).
+        """
+        now = time.monotonic()
+        if self._lock_busy_since is None:
+            self._lock_busy_since = now
+            return
+
+        busy_for = now - self._lock_busy_since
+        if busy_for < self._lock_starvation_timeout or self.fault_state:
+            # Not starved for long enough yet, or already reporting a fault.
+            return
+
+        lock = self._hardware_lock
+        held_by = lock.last_acquired_by
+        if lock.last_acquired_context:
+            held_by += f" ({lock.last_acquired_context})"
+        self.logger.error(
+            f"Polling has been unable to claim the hardware lock for "
+            f"{busy_for:.1f}s (limit {self._lock_starvation_timeout:.1f}s). "
+            f"Lock held for {time.time() - lock.last_acquired_at:.1f}s "
+            f"by {held_by}. Reporting FAULT."
+        )
+        self.fault_state = True
+        self._update_component_state(fault=True)
+
     def update_fault_state(
         self: TileComponentManager,
         poll_success: bool,
@@ -777,7 +848,11 @@ class TileComponentManager(
                 self._hardware_lock,
                 self._default_lock_timeout,
                 raise_exception=False,
-            ):
+            ) as acquired:
+                if not acquired:
+                    # Can't check the hardware without the lock; another
+                    # thread is using it, so leave the fault state as is.
+                    return
                 self._last_known_connected = self._is_connected(raise_exception=False)
 
             if not self._last_known_connected:
@@ -810,7 +885,9 @@ class TileComponentManager(
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_completed()
         self.active_request = None
+        self._lock_busy_since = None
 
+        # Also clears any fault raised by _check_lock_starvation.
         self.update_fault_state(poll_success=True)
 
         # Publish all responses to TANGO interface.
@@ -970,10 +1047,9 @@ class TileComponentManager(
                 "Failed waiting for final poll to terminate "
                 f"(timeout=={max_poll_time} [s])."
             )
+        self.tile.disconnect()
         if isinstance(self.tile, TileSimulator | DynamicTileSimulator):
             self.tile.cleanup()
-        else:
-            self.tile.disconnect()
 
         # Dereference by one, to help with garbage collection.
         self.tile = None  # type: ignore[assignment]
@@ -1121,14 +1197,19 @@ class TileComponentManager(
         """
         Check the communication with CPLD.
 
-        :param raise_exception: if True, raise an exception if not connected.
-        :return: True if connected, else False.
+        :param raise_exception: if True, raise an exception if the hardware
+            lock can't be acquired.
+        :return: True if connected, else False. If the lock can't be
+            acquired and raise_exception is False, the last known
+            connection state, since the hardware can't be checked safely.
         """
         with acquire_timeout(
             self._hardware_lock,
             self._default_lock_timeout,
             raise_exception=raise_exception,
-        ):
+        ) as acquired:
+            if not acquired:
+                return self._last_known_connected
             try:
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
                 return True
@@ -1173,55 +1254,57 @@ class TileComponentManager(
         self.power_state = event_value
 
         if event_value == PowerState.ON:
-            # Connect if not already.
-            with acquire_timeout(
-                self._hardware_lock, self._power_callback_timeout, raise_exception=True
+            # Don't touch the hardware from this (event) thread: a slow connect
+            # here would hold the hardware lock and starve the polling loop.
+            # Instead ask the polling loop to (re)connect, and remember that
+            # this power-on still needs handling once connected
+            # (see _handle_power_on_if_pending).
+            self._power_on_pending = True
+            if self._request_provider is not None:
+                self._request_provider.desire_connection()
+        else:
+            self._power_on_pending = False
+
+    def _handle_power_on_if_pending(self: TileComponentManager) -> None:
+        """
+        Finish handling a subrack power-on event once connected.
+
+        Called from the polling thread once communication with the TPM
+        has been confirmed. Only acts if the subrack has reported the TPM
+        turning ON since this was last handled, so ordinary reconnects
+        don't trigger an initialise.
+        """
+        if not self._power_on_pending:
+            return
+        self._power_on_pending = False
+
+        self._tile_time.set_reference_time(self._fpga_reference_time)
+
+        if self._tpm_status in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+            return
+
+        with self._initialise_lock:
+            if (
+                self._request_provider
+                and not (
+                    isinstance(self.active_request, TileLRCRequest)
+                    and self.active_request.name.lower() != "initialise"
+                )
+                and not self._request_provider.initialise_queued
             ):
-                self._last_known_connected = self._is_connected()
-                # Connect if not already.
-                if not self._last_known_connected or self.tile.tpm is None:
-                    try:
-                        self.connect()
-                        self._last_known_connected = True
-                    except Exception:  # pylint: disable=broad-except
-                        self.logger.error(
-                            "Subrack callback failed to connect to hardware."
-                        )
-                else:
-                    self.__update_tpm_status()
-
-            self._tile_time.set_reference_time(self._fpga_reference_time)
-
-            # Attempt reinitialisation if connected
-            # and not already initialised/ing.
-            if self._last_known_connected and self._tpm_status not in [
-                TpmStatus.INITIALISED,
-                TpmStatus.SYNCHRONISED,
-            ]:
-                with self._initialise_lock:
-                    if (
-                        self._request_provider
-                        and not (
-                            isinstance(self.active_request, TileLRCRequest)
-                            and self.active_request.name.lower() != "initialise"
-                        )
-                        and not self._request_provider.initialise_queued
-                    ):
-                        request = TileLRCRequest(
-                            name="initialise",
-                            command_object=self._execute_initialise,
-                            task_callback=None,
-                            force_reprogramming=False,
-                            pps_delay_correction=self._pps_delay_correction,
-                        )
-                        self.logger.info(
-                            "Subrack has registered that the TPM has power "
-                            "but is not yet initialised or synchronised. "
-                            "Initialising."
-                        )
-                        assert self._request_provider is not None
-
-                        self._request_provider.enqueue_lrc(request, priority=0)
+                request = TileLRCRequest(
+                    name="initialise",
+                    command_object=self._execute_initialise,
+                    task_callback=None,
+                    force_reprogramming=False,
+                    pps_delay_correction=self._pps_delay_correction,
+                )
+                self.logger.info(
+                    "Subrack has registered that the TPM has power "
+                    "but is not yet initialised or synchronised. "
+                    "Initialising."
+                )
+                self._request_provider.enqueue_lrc(request, priority=0)
 
     def _subrack_says_state_changed(
         self: TileComponentManager,
@@ -1663,7 +1746,6 @@ class TileComponentManager(
                             "Global reference time specifed, starting acquisition"
                         )
                         self._start_acquisition()
-                self.__update_tpm_status()
 
     @abort_task_on_exception
     @check_communicating
@@ -1928,7 +2010,6 @@ class TileComponentManager(
         station_id = self._with_hardware_lock(self.tile.get_station_id)
         tile_id = self._with_hardware_lock(self.tile.get_tile_id)
         firmware_thresholds = self._with_hardware_lock(self.read_firmware_thresholds)
-        firmware_version = self.firmware_version
         self.refresh_tile_info()
         # ===========================================================================
 
@@ -1948,12 +2029,17 @@ class TileComponentManager(
         forty_gb_destination_ports: list[int] = []
         forty_gb_cores: list[dict] = []
         preadu_levels = None
+        firmware_version = None
 
         # To avoid accessing FPGA registers when not programmed, we
         # only read these attributes if the TPM is programmed. SKB-1089.
         pps_delay_correction = None
         is_station_beam_flagging_enabled = None
         if is_programmed:
+            # tpm-api.get_firmware_list reads FPGA
+            # register without checking programmed state,
+            # so we must check first.
+            firmware_version = self.firmware_version
             _csp_rounding_value = self._with_hardware_lock(self.tile.get_csp_rounding)
             csp_rounding = [_csp_rounding_value] * 384
             channeliser_rounding = self.channeliser_truncation
@@ -2093,12 +2179,16 @@ class TileComponentManager(
         Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware version (major.minor)
+
+        :raises ValueError: if we are attempting to read on a unprogrammed TPM.
         """
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
+            if not self.tile.is_programmed():
+                raise ValueError("Cannot read firmware version on unprogrammed TPM.")
             _firmware_list = self.tile.get_firmware_list()[0]
             return (
                 "Ver."
@@ -2657,10 +2747,19 @@ class TileComponentManager(
                     self._request_provider.desire_configuration_read()
                 except Exception as e:
                     self.logger.error(f"Failed to connect to TPM {e}")
+                    # Don't leave a half-connected tpm (e.g. plugins not
+                    # loaded): it looks connected and blocks reconnection.
+                    try:
+                        self.tile.disconnect()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    self.tile.tpm = None
+                    self._last_known_connected = False
                     self.__update_tpm_status()
                     raise ConnectionError("Failed in connect to TPM") from e
+            self._last_known_connected = True
             self.__update_tpm_status()
-        self.logger.error("end of connect")
+            self._handle_power_on_if_pending()
 
     def __update_tpm_status(self: TileComponentManager) -> None:
         """Update the TpmStatus."""

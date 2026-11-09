@@ -408,7 +408,7 @@ class TileRequestProvider:
             self.initialise_queued = True
 
         if wipe_time is None:
-            wipe_time = time.time() + 60
+            wipe_time = time.time() + 120
         self._lrc_queue.put((priority, next(self._command_counter), wipe_time, request))
 
     def cleanup(self) -> None:

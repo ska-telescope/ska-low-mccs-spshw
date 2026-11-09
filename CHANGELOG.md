@@ -2,7 +2,19 @@
 
 ## Unreleased
 
-* [THORN-802] MccsPrototypeSubrack exposes every SMM monitoring point that the SPS thresholds give a limit or an expected value for. 14 new attributes have limits in the chart and feed health. 27 more report the PSU, slot, PLL, PPS, REF and CPLD status values. An element that the board reports as None, such as a powered off TPM bay, reads as NaN or False, so it does not fail the health. A point the board omits entirely reads as invalid. The health recorder is built after the first poll that reads the board info, and rebuilt when the BIOS version changes, because API 1.6.0 has no peak hold values or PLL counters and those attributes do not feed its health. The simulator now reports SMM power, the SMM PLL temperature, slot singlewire status and PSU fan speeds in rpm.
+* [THORN-802] MccsPrototypeSubrack exposes every SMM monitoring point that the SPS thresholds give a limit or an expected value for.
+  * 14 new attributes have limits in the chart and feed health.
+    * SMM `boardPower`, `boardMaxPower` and `boardPllTemperature`.
+    * PLL counters `boardApllUnlockCount`, `boardDpllUnlockCount` and `boardSysclkEventCount`.
+    * PSU `powerSupplyFanSpeedsRpm`, `powerSupplyFetTemperatures` and `powerSupplyInletTemperatures`.
+    * Peak hold values `internalVoltagesPOWERINMIN`, `internalVoltagesPOWERINMAX`, `tpmMinVoltages`, `tpmMaxVoltages` and `tpmMaxPowers`.
+  * 27 new attributes report status values and do not feed health.
+    * PLL, PPS and REF `pllSource`, `ppsPresent`, `ppsFaultCount`, `ppsPhase`, `ppsPhaseStdev`, `ppsPhaseOutliers`, `refPresent` and `refFaultCount`.
+    * SMM `backplanePowerGood` and `cpldPings`.
+    * PSU `powerSupplyBusy`, `powerSupplyOff` and `powerSupplyPowerGood`.
+    * PSU faults `powerSupplyCmlFaults`, `powerSupplyFanFaults`, `powerSupplyInputFaults`, `powerSupplyIoutFaults`, `powerSupplyIoutOcFaults`, `powerSupplyTempFaults`, `powerSupplyVinUvFaults`, `powerSupplyVoutFaults`, `powerSupplyVoutOvFaults`, `powerSupplyOtherFaults` and `powerSupplyUnknownFaults`.
+    * TPM slot `tpmFaults`, `tpmPings` and `tpmSinglewire`.
+  * An element that the board reports as None, such as a powered off TPM bay, reads as NaN or False, so it does not fail the health. A point the board omits entirely reads as invalid. The health recorder is built after the first poll that reads the board info, and rebuilt when the BIOS version changes, because API 1.6.0 has no peak hold values or PLL counters and those attributes do not feed its health. The simulator now reports SMM power, the SMM PLL temperature, slot singlewire status and PSU fan speeds in rpm.
 * [THORN-802] MccsPrototypeSubrack sets every backplane fan to MANUAL each time it can read the board again. The speed is 85% at cabinet position 3 and 70% at other positions. The cabinet position comes from the last octet of SubrackIp. A host name gives no position, so the fans of a simulator are not set.
 
 ## 17.1.0

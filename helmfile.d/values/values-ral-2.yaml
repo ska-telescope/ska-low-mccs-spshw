@@ -1,6 +1,8 @@
 defaults:
   logging_level_default: 5
-
+  device_packing:
+    tiles: 4
+  
 subarrays:  # 2 subarrays, no defaults overridden
   "1": {}
     # enabled: false  # for example

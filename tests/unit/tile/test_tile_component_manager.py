@@ -43,9 +43,10 @@ from ska_low_mccs_spshw.tile import (
     TileSimulator,
     TpmStatus,
 )
+from ska_low_mccs_spshw.tile import utils as tile_utils
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
 from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
-from ska_low_mccs_spshw.tile.utils import LockTimeoutError
+from ska_low_mccs_spshw.tile.utils import LockTimeoutError, thread_run_delay_s
 from time_utils import str_from_float_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -4145,3 +4146,32 @@ def test_tile_simulator_routes_lmc_data_types_independently(
     tile_simulator.set_lmc_download("10g", dst_ip="lmc-daq", dst_port=4660)
     tile_simulator.send_channelised_data()
     spead_data_simulator.set_destination_ip.assert_called_with("lmc-daq", 4660)
+
+
+def test_thread_run_delay_s_reads_schedstat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test thread_run_delay_s returns a non-negative float on Linux.
+
+    :param monkeypatch: pytest monkeypatch fixture
+    """
+    monkeypatch.setattr(tile_utils, "_SCHEDSTAT_AVAILABLE", True)
+    delay = thread_run_delay_s()
+    if delay is None:
+        pytest.skip("schedstat not available on this system")
+    assert delay >= 0.0
+
+
+def test_thread_run_delay_s_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test thread_run_delay_s returns None, and stops retrying, without schedstat.
+
+    :param monkeypatch: pytest monkeypatch fixture
+    """
+    monkeypatch.setattr(tile_utils, "_SCHEDSTAT_AVAILABLE", True)
+    with unittest.mock.patch("builtins.open", side_effect=OSError) as mock_open:
+        assert thread_run_delay_s() is None
+        assert thread_run_delay_s() is None
+    # Only tried once; the failure is cached.
+    mock_open.assert_called_once()

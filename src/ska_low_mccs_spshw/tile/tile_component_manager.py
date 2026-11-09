@@ -705,7 +705,8 @@ class TileComponentManager(
         self.active_request = poll_request
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_in_progress()
-        # Claim lock before we attempt a request.
+        # Claim lock before we attempt a request. If the poll holds it for
+        # long, LogLock warns with a breakdown of where the time went.
         with acquire_timeout(
             self._hardware_lock,
             self._poll_timeout,

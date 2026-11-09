@@ -16,12 +16,10 @@ from __future__ import annotations
 import enum
 import logging
 import os
-from importlib.resources import files
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 import pytest
 import tango
-import yaml
 from _pytest.python_api import ApproxBase
 
 from tests.harness import get_bandpass_daq_name, get_lmc_daq_name
@@ -54,101 +52,38 @@ def db_temperature_thresholds_fixture() -> dict[str, tango.StdStringVector]:
     return {}
 
 
-@pytest.fixture(name="reset_attribute_configs")
-def reset_attribute_configs_fixture() -> dict[str, Callable]:
+@pytest.fixture(name="change_alarms")
+def change_alarms_fixture() -> Iterator[Callable[..., None]]:
     """
-    Fixture that provides a function to reset attribute configs to defaults.
+    Change attribute alarm thresholds, and change them back after the test.
 
-    Default values are taken from values.yaml classProperties.
-    Supports Tile and Subrack.
+    The first change to an attribute reads its configuration. The teardown
+    writes that configuration back, so the device keeps the thresholds that
+    its deployment gave it.
 
     Example usage:
-        # Reset all attributes for a tile device
-        reset_attribute_configs["tile"](tile_device)
+        change_alarms(tile_device, "boardTemperature", min_alarm="100")
 
-        # Reset all attributes for a subrack device
-        reset_attribute_configs["subrack"](subrack_device)
-
-        # Reset a specific attribute (optional)
-        reset_attribute_configs["tile"](tile_device, "boardTemperature")
-
-    :returns: a dictionary of callables to reset tile or subrack attribute configs.
+    :yields: a function that takes a device, an attribute name and the alarm
+        properties to set, such as ``max_alarm="170"``.
     """
-    # Load default values from packaged data file
-    data_package = files("tests.data")
-    values_yaml_content = (data_package / "default_values.yaml").read_text(
-        encoding="utf-8"
-    )
-    values_data = yaml.safe_load(values_yaml_content)
+    originals: dict[tuple[str, str], tuple[tango.DeviceProxy, Any]] = {}
 
-    # Extract class properties
-    class_properties = values_data["ska-tango-devices"]["classProperties"]
-    tile_props = class_properties["MccsTile"]
-    subrack_props = class_properties["MccsSubrack"]
-
-    def _apply_alarm_config(
-        device: tango.DeviceProxy, attribute_name: str, props: dict[str, Any]
+    def _change_alarms(
+        device: tango.DeviceProxy, attribute_name: str, **alarms: str
     ) -> None:
-        """
-        Apply alarm configuration from properties to a device attribute.
-
-        :param device: The device proxy.
-        :param attribute_name: The attribute name.
-        :param props: The properties dictionary from values.yaml.
-        """
+        key = (device.dev_name(), attribute_name)
+        if key not in originals:
+            originals[key] = (device, device.get_attribute_config(attribute_name))
         conf = device.get_attribute_config(attribute_name)
-
-        # Check for alarm properties in format "attributeName->alarm_type"
-        prop_prefix = f"{attribute_name}->"
-        if f"{prop_prefix}min_alarm" in props:
-            conf.alarms.min_alarm = str(props[f"{prop_prefix}min_alarm"])
-        if f"{prop_prefix}min_warning" in props:
-            conf.alarms.min_warning = str(props[f"{prop_prefix}min_warning"])
-        if f"{prop_prefix}max_warning" in props:
-            conf.alarms.max_warning = str(props[f"{prop_prefix}max_warning"])
-        if f"{prop_prefix}max_alarm" in props:
-            conf.alarms.max_alarm = str(props[f"{prop_prefix}max_alarm"])
-
+        for name, value in alarms.items():
+            setattr(conf.alarms, name, value)
         device.set_attribute_config(conf)
 
-    def _reset_device_attributes(
-        device: tango.DeviceProxy,
-        props: dict[str, Any],
-        attribute_name: str | None = None,
-    ) -> None:
-        """
-        Reset device attribute configs to default values from values.yaml.
+    yield _change_alarms
 
-        :param device: The device proxy to reset.
-        :param props: The properties dictionary from values.yaml for this device class.
-        :param attribute_name: Specific attribute to reset, or None for all.
-        """
-        if attribute_name:
-            # Reset specific attribute
-            _apply_alarm_config(device, attribute_name, props)
-        else:
-            # Reset all attributes that have alarm configs in values.yaml
-            attributes_to_reset = set()
-            for key in props.keys():
-                if "->" in key:
-                    attr_name = key.split("->")[0]
-                    attributes_to_reset.add(attr_name)
-
-            for attr_name in attributes_to_reset:
-                try:
-                    _apply_alarm_config(device, attr_name, props)
-                except tango.DevFailed:
-                    # Attribute might not exist on this device, skip it
-                    pass
-
-    return {
-        "tile": lambda device, attr=None: _reset_device_attributes(
-            device, tile_props, attr
-        ),
-        "subrack": lambda device, attr=None: _reset_device_attributes(
-            device, subrack_props, attr
-        ),
-    }
+    for device, conf in originals.values():
+        device.set_attribute_config(conf)
 
 
 @pytest.fixture(name="db_voltage_thresholds", scope="module")
@@ -276,11 +211,16 @@ def health_status_fixture() -> dict[str, Any]:
         subrack simulator is configured.
     """
     return {
+        "SMM": {
+            "power": 20.0,
+            "power_max": 20.0,
+        },
         "temperatures": {
             "SMM1": 40,
             "SMM2": 41,
             "BKPLN1": 39,
             "BKPLN2": 41,
+            "SMM_PLL": 45,
         },
         "plls": {
             "BoardPllLock": True,
@@ -365,8 +305,8 @@ def health_status_fixture() -> dict[str, Any]:
                 "PSU2": 300,
             },
             "fan_speed": {
-                "PSU1": 90.0,
-                "PSU2": 100.0,
+                "PSU1": 15000.0,
+                "PSU2": 15500.0,
             },
             "temp_inlet": {
                 "PSU1": 20,
@@ -431,6 +371,16 @@ def health_status_fixture() -> dict[str, Any]:
                 "SLOT7": True,
                 "SLOT8": True,
             },
+            "singlewire": {
+                "SLOT1": True,
+                "SLOT2": True,
+                "SLOT3": True,
+                "SLOT4": True,
+                "SLOT5": True,
+                "SLOT6": True,
+                "SLOT7": True,
+                "SLOT8": True,
+            },
         },
         "internal_voltages": {
             "V_POWERIN": 12.0,
@@ -454,10 +404,10 @@ def health_status_fixture() -> dict[str, Any]:
                 "FAN4": 1,
             },
             "pwm_duty": {
-                "FAN1": 95,
-                "FAN2": 96,
-                "FAN3": 97,
-                "FAN4": 98,
+                "FAN1": 70,
+                "FAN2": 71,
+                "FAN3": 72,
+                "FAN4": 73,
             },
             "mode": {
                 "FAN1": FanMode.AUTO,

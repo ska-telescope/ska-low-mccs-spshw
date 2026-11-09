@@ -294,9 +294,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
-        if self.component_manager.pdu_proxy:
-            self.component_manager.pdu_proxy.cleanup()
-
         self._stopping = True
         if self._health_recorder is not None:
             self._health_recorder.cleanup()
@@ -373,8 +370,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 "cpldPllLocked",
                 "powerSupplyCurrents",
                 "powerSupplyFanSpeeds",
-                "subrackFanSpeeds",
-                "subrackFanSpeedsPercent",
                 "subrackFanModes",
                 "subrackPllLocked",
                 "subrackTimestamp",
@@ -1232,10 +1227,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=("DevFloat",),
         max_dim_x=4,
         abs_change=0.1,
-        max_alarm=9750,  # 150%
-        max_warning=8125,  # 125%
-        min_alarm=1625,  # 25%
-        min_warning=4875,  # 75%
         label="Estimated Max Fan Speed",
         unit="RPM",
         doc="Expected Fan Speeds at 100% pwm duty.",
@@ -1579,8 +1570,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1PowerIn = attribute_from_signal(  # noqa: N815
         psu1_power_in_signal,
         dtype="DevDouble",
-        max_alarm=600.0,
-        max_warning=575.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Input Power",
@@ -1591,8 +1580,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2PowerIn = attribute_from_signal(  # noqa: N815
         psu2_power_in_signal,
         dtype="DevDouble",
-        max_alarm=600.0,
-        max_warning=575.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Input Power",
@@ -1603,8 +1590,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1PowerOut = attribute_from_signal(  # noqa: N815
         psu1_power_out_signal,
         dtype="DevDouble",
-        max_alarm=1140.0,
-        max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Output Power",
@@ -1615,8 +1600,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2PowerOut = attribute_from_signal(  # noqa: N815
         psu2_power_out_signal,
         dtype="DevDouble",
-        max_alarm=1140.0,
-        max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Output Power",
@@ -1627,10 +1610,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1VoltageIn = attribute_from_signal(  # noqa: N815
         psu1_voltage_in_signal,
         dtype="DevDouble",
-        max_alarm=253.00,
-        max_warning=240.0,
-        min_warning=215.0,
-        min_alarm=207.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Input Voltage",
@@ -1641,10 +1620,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2VoltageIn = attribute_from_signal(  # noqa: N815
         psu2_voltage_in_signal,
         dtype="DevDouble",
-        max_alarm=253.00,
-        max_warning=240.0,
-        min_warning=215.0,
-        min_alarm=207.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Input Voltage",
@@ -1655,10 +1630,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1VoltageOut = attribute_from_signal(  # noqa: N815
         psu1_voltage_out_signal,
         dtype="DevDouble",
-        max_alarm=14.0,
-        max_warning=13.0,
-        min_warning=11.0,
-        min_alarm=10.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Output Voltage",
@@ -1669,10 +1640,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2VoltageOut = attribute_from_signal(  # noqa: N815
         psu2_voltage_out_signal,
         dtype="DevDouble",
-        max_alarm=14.0,
-        max_warning=13.0,
-        min_warning=11.0,
-        min_alarm=10.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Output Voltage",
@@ -1683,8 +1650,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psuDeadCount = attribute_from_signal(  # noqa: N815
         psu_dead_count_signal,
         dtype="DevShort",
-        max_warning=1,
-        max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
         label="Dead PSU Count",
@@ -1838,7 +1803,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
-        max_alarm=120.0,
         abs_change=0.1,
         label="TPM Powers",
         unit="Watt",
@@ -1880,8 +1844,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
-        min_alarm=11.4,
-        max_alarm=12.6,
         abs_change=0.1,
         label="TPM Voltages",
         unit="Volt",

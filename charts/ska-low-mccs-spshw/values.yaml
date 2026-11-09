@@ -324,6 +324,11 @@ ska-tango-devices:
       subrackMaxFanSpeeds->min_warning: 4875
       subrackMaxFanSpeeds->min_alarm: 1625
 
+      psuDeadCount->max_alarm: 2
+      psuDeadCount->max_warning: 1
+      psuDeadCount->min_warning: "Not specified"
+      psuDeadCount->min_alarm: "Not specified"
+
       boardTemperatures->max_alarm: 58
       boardTemperatures->max_warning: 48
       boardTemperatures->min_warning: 10

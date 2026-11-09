@@ -503,13 +503,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             case _:
                 health_info = health_report.splitlines()
 
-        if health_info:
-            self.logger.warning(
-                "Health is %s. %s", health.name, ". ".join(health_info) + "."
-            )
-        else:
-            self.logger.info("Health is OK.")
-
         # Emitted first, so the report is already readable when a client hears
         # of the new health.
         self._emit(
@@ -569,17 +562,19 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
             self._emit(signal_name, walk(health_status, path), timestamp)
         for signal_name, spectrum in HEALTH_PATHS_TO_SPECTRUM_SIGNAL.items():
+            group, point, names, fill = spectrum
             # A board that does not report the point at all, such as a 1.6.0
             # board for the peak hold values, leaves the attribute invalid.
-            if walk(health_status, spectrum.paths[0][:-1]) is None:
+            readings = walk(health_status, (group, point))
+            if readings is None:
                 self._emit(signal_name, None, timestamp)
                 continue
             # The board reports None for an element it has no reading for,
             # such as a TPM bay that is powered off.
-            values = [walk(health_status, path) for path in spectrum.paths]
+            values = [readings.get(name) for name in names]
             self._emit(
                 signal_name,
-                [spectrum.fill if value is None else value for value in values],
+                [fill if value is None else value for value in values],
                 timestamp,
             )
 

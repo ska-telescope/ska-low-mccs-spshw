@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import math
-from typing import Any, Final, NamedTuple
+from typing import Any, Final
 
 from ska_control_model import PowerState
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
@@ -33,7 +33,6 @@ __all__ = [
     "HEALTH_ATTRIBUTES_FROM_1_8_0",
     "HEALTH_PATH_TO_SIGNAL",
     "HEALTH_PATHS_TO_SPECTRUM_SIGNAL",
-    "SpectrumPaths",
     "READ_KEY_TO_SIGNAL",
     "VALUE_CONVERTERS",
     "TPM_POWER_STATE_SIGNALS",
@@ -118,71 +117,45 @@ HEALTH_PATH_TO_SIGNAL: Final[dict[str, tuple[str, ...]]] = {
 }
 
 
-class SpectrumPaths(NamedTuple):
-    """Where a spectrum signal finds its elements in the health status."""
-
-    paths: tuple[tuple[str, ...], ...]
-    """The health status path of each element, in element order."""
-
-    fill: Any
-    """
-    The value of an element that the board reports as ``None``.
-
-    The board has no reading for a TPM bay that is powered off, and Tango
-    cannot hold ``None`` in a spectrum.
-    """
-
-
-# The fill for an element with no reading. Tango never alarms on NaN, so a bay
-# that is off does not fail the health. There is no NaN for a bool, so a flag
-# with no reading is False.
+# The fill for an element that the board reports as None, such as a TPM bay
+# that is powered off, because Tango cannot hold None in a spectrum. Tango never
+# alarms on NaN, so a bay that is off does not fail the health. There is no NaN
+# for a bool, so a flag with no reading is False.
 _NO_READING: Final = math.nan
 _NO_FLAG: Final = False
-
-
-def _each(group: str, point: str, names: tuple[str, ...], fill: Any) -> SpectrumPaths:
-    """
-    Return the health status path of one monitoring point for each name.
-
-    :param group: the outermost key, such as ``slots``.
-    :param point: the monitoring point within the group, such as ``faults``.
-    :param names: the innermost keys, one for each element.
-    :param fill: the value of an element that the board reports as ``None``.
-
-    :return: one path for each name, in the order given, with the fill.
-    """
-    return SpectrumPaths(tuple((group, point, name) for name in names), fill)
-
 
 _PSUS: Final = ("PSU1", "PSU2")
 _SLOTS: Final = tuple(f"SLOT{n}" for n in range(1, SubrackData.TPM_BAY_COUNT + 1))
 
-# Spectrum signal name to the health status path of each of its elements, and
-# the fill for an element with no reading.
-HEALTH_PATHS_TO_SPECTRUM_SIGNAL: Final[dict[str, SpectrumPaths]] = {
-    "_power_supply_fan_speeds_rpm": _each("psus", "fan_speed", _PSUS, _NO_READING),
-    "_power_supply_fet_temperatures": _each("psus", "temp_fet", _PSUS, _NO_READING),
-    "_power_supply_inlet_temperatures": _each("psus", "temp_inlet", _PSUS, _NO_READING),
-    "_power_supply_busy": _each("psus", "busy", _PSUS, _NO_FLAG),
-    "_power_supply_off": _each("psus", "off", _PSUS, _NO_FLAG),
-    "_power_supply_power_good": _each("psus", "pwr_gd", _PSUS, _NO_FLAG),
-    "_power_supply_cml_faults": _each("psus", "cml_fault", _PSUS, _NO_FLAG),
-    "_power_supply_fan_faults": _each("psus", "fan_fault", _PSUS, _NO_FLAG),
-    "_power_supply_input_faults": _each("psus", "input_fault", _PSUS, _NO_FLAG),
-    "_power_supply_iout_faults": _each("psus", "iout_fault", _PSUS, _NO_FLAG),
-    "_power_supply_iout_oc_faults": _each("psus", "iout_oc_fault", _PSUS, _NO_FLAG),
-    "_power_supply_temp_faults": _each("psus", "temp_fault", _PSUS, _NO_FLAG),
-    "_power_supply_vin_uv_faults": _each("psus", "vin_uv_fault", _PSUS, _NO_FLAG),
-    "_power_supply_vout_faults": _each("psus", "vout_fault", _PSUS, _NO_FLAG),
-    "_power_supply_vout_ov_faults": _each("psus", "vout_ov_fault", _PSUS, _NO_FLAG),
-    "_power_supply_other_faults": _each("psus", "other", _PSUS, _NO_FLAG),
-    "_power_supply_unknown_faults": _each("psus", "unknown", _PSUS, _NO_FLAG),
-    "_tpm_min_voltages": _each("slots", "voltages_min", _SLOTS, _NO_READING),
-    "_tpm_max_voltages": _each("slots", "voltages_max", _SLOTS, _NO_READING),
-    "_tpm_max_powers": _each("slots", "powers_max", _SLOTS, _NO_READING),
-    "_tpm_faults": _each("slots", "faults", _SLOTS, _NO_FLAG),
-    "_tpm_pings": _each("slots", "pings", _SLOTS, _NO_FLAG),
-    "_tpm_singlewire": _each("slots", "singlewire", _SLOTS, _NO_FLAG),
+# Spectrum signal name to the group and monitoring point in the health status,
+# the innermost key of each element in element order, and the fill for an
+# element with no reading.
+HEALTH_PATHS_TO_SPECTRUM_SIGNAL: Final[
+    dict[str, tuple[str, str, tuple[str, ...], Any]]
+] = {
+    "_power_supply_fan_speeds_rpm": ("psus", "fan_speed", _PSUS, _NO_READING),
+    "_power_supply_fet_temperatures": ("psus", "temp_fet", _PSUS, _NO_READING),
+    "_power_supply_inlet_temperatures": ("psus", "temp_inlet", _PSUS, _NO_READING),
+    "_power_supply_busy": ("psus", "busy", _PSUS, _NO_FLAG),
+    "_power_supply_off": ("psus", "off", _PSUS, _NO_FLAG),
+    "_power_supply_power_good": ("psus", "pwr_gd", _PSUS, _NO_FLAG),
+    "_power_supply_cml_faults": ("psus", "cml_fault", _PSUS, _NO_FLAG),
+    "_power_supply_fan_faults": ("psus", "fan_fault", _PSUS, _NO_FLAG),
+    "_power_supply_input_faults": ("psus", "input_fault", _PSUS, _NO_FLAG),
+    "_power_supply_iout_faults": ("psus", "iout_fault", _PSUS, _NO_FLAG),
+    "_power_supply_iout_oc_faults": ("psus", "iout_oc_fault", _PSUS, _NO_FLAG),
+    "_power_supply_temp_faults": ("psus", "temp_fault", _PSUS, _NO_FLAG),
+    "_power_supply_vin_uv_faults": ("psus", "vin_uv_fault", _PSUS, _NO_FLAG),
+    "_power_supply_vout_faults": ("psus", "vout_fault", _PSUS, _NO_FLAG),
+    "_power_supply_vout_ov_faults": ("psus", "vout_ov_fault", _PSUS, _NO_FLAG),
+    "_power_supply_other_faults": ("psus", "other", _PSUS, _NO_FLAG),
+    "_power_supply_unknown_faults": ("psus", "unknown", _PSUS, _NO_FLAG),
+    "_tpm_min_voltages": ("slots", "voltages_min", _SLOTS, _NO_READING),
+    "_tpm_max_voltages": ("slots", "voltages_max", _SLOTS, _NO_READING),
+    "_tpm_max_powers": ("slots", "powers_max", _SLOTS, _NO_READING),
+    "_tpm_faults": ("slots", "faults", _SLOTS, _NO_FLAG),
+    "_tpm_pings": ("slots", "pings", _SLOTS, _NO_FLAG),
+    "_tpm_singlewire": ("slots", "singlewire", _SLOTS, _NO_FLAG),
 }
 
 # The signal for each bay's TPM power state, in bay order. These are derived
@@ -202,10 +175,8 @@ ALL_SIGNALS: Final[tuple[str, ...]] = (
 )
 
 
-# The attributes whose quality decides the health of the device. The health
-# recorder subscribes to these. The others are left out because their quality
-# says nothing about the subrack, or because they have no alarm thresholds.
-HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
+# The health attributes that every supported API reports.
+_HEALTH_ATTRIBUTES_BEFORE_1_8_0: Final[tuple[str, ...]] = (
     "backplaneTemperatures",
     "boardTemperatures",
     "powerSupplyPowers",
@@ -238,20 +209,12 @@ HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
     "psu2VoltageIn",
     "psu1VoltageOut",
     "psu2VoltageOut",
-    "internalVoltagesPOWERINMIN",
-    "internalVoltagesPOWERINMAX",
-    "boardApllUnlockCount",
-    "boardDpllUnlockCount",
-    "boardSysclkEventCount",
     "boardPower",
     "boardMaxPower",
     "boardPllTemperature",
     "powerSupplyFanSpeedsRpm",
     "powerSupplyFetTemperatures",
     "powerSupplyInletTemperatures",
-    "tpmMinVoltages",
-    "tpmMaxVoltages",
-    "tpmMaxPowers",
 )
 
 # The health attributes that only API 1.8.0 and later report. An older board
@@ -268,6 +231,13 @@ HEALTH_ATTRIBUTES_FROM_1_8_0: Final[tuple[str, ...]] = (
     "tpmMaxPowers",
 )
 
+# The attributes whose quality decides the health of the device. The health
+# recorder subscribes to these. The others are left out because their quality
+# says nothing about the subrack, or because they have no alarm thresholds.
+HEALTH_ATTRIBUTES: Final[tuple[str, ...]] = (
+    _HEALTH_ATTRIBUTES_BEFORE_1_8_0 + HEALTH_ATTRIBUTES_FROM_1_8_0
+)
+
 
 def health_attributes(board_info: dict) -> list[str]:
     """
@@ -280,9 +250,7 @@ def health_attributes(board_info: dict) -> list[str]:
     """
     if SubrackData.bios_version(board_info) >= [1, 8, 0]:
         return list(HEALTH_ATTRIBUTES)
-    return [
-        name for name in HEALTH_ATTRIBUTES if name not in HEALTH_ATTRIBUTES_FROM_1_8_0
-    ]
+    return list(_HEALTH_ATTRIBUTES_BEFORE_1_8_0)
 
 
 def _as_spectrum(value: Any) -> list[Any]:

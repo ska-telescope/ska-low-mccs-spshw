@@ -1696,12 +1696,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
-    @attribute(dtype=str, label="PDU Health", doc="The current health of the PDU.")
-    def pduHealth(self: MccsSubrack) -> str | None:
+    @attribute(
+        dtype=HealthState, label="PDU Health", doc="The current health of the PDU."
+    )
+    def pduHealth(self: MccsSubrack) -> HealthState | None:
         """
         Handle a Tango attribute read of the pdu health.
 
-        :return: the pdu health
+        :return: the pdu health, or None if no PDU is configured.
         """
         return self.component_manager.pdu_health_state()
 

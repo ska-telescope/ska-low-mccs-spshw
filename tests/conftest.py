@@ -211,11 +211,16 @@ def health_status_fixture() -> dict[str, Any]:
         subrack simulator is configured.
     """
     return {
+        "SMM": {
+            "power": 20.0,
+            "power_max": 20.0,
+        },
         "temperatures": {
             "SMM1": 40,
             "SMM2": 41,
             "BKPLN1": 39,
             "BKPLN2": 41,
+            "SMM_PLL": 45,
         },
         "plls": {
             "BoardPllLock": True,
@@ -300,8 +305,8 @@ def health_status_fixture() -> dict[str, Any]:
                 "PSU2": 300,
             },
             "fan_speed": {
-                "PSU1": 90.0,
-                "PSU2": 100.0,
+                "PSU1": 15000.0,
+                "PSU2": 15500.0,
             },
             "temp_inlet": {
                 "PSU1": 20,
@@ -366,6 +371,16 @@ def health_status_fixture() -> dict[str, Any]:
                 "SLOT7": True,
                 "SLOT8": True,
             },
+            "singlewire": {
+                "SLOT1": True,
+                "SLOT2": True,
+                "SLOT3": True,
+                "SLOT4": True,
+                "SLOT5": True,
+                "SLOT6": True,
+                "SLOT7": True,
+                "SLOT8": True,
+            },
         },
         "internal_voltages": {
             "V_POWERIN": 12.0,
@@ -389,10 +404,10 @@ def health_status_fixture() -> dict[str, Any]:
                 "FAN4": 1,
             },
             "pwm_duty": {
-                "FAN1": 95,
-                "FAN2": 96,
-                "FAN3": 97,
-                "FAN4": 98,
+                "FAN1": 70,
+                "FAN2": 71,
+                "FAN3": 72,
+                "FAN4": 73,
             },
             "mode": {
                 "FAN1": FanMode.AUTO,

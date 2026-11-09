@@ -73,16 +73,16 @@ DEFAULT_ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
     },
     "subrack_fan_speeds_percent": {
         "length": 4,
-        "default": [95.0, 96.0, 97.0, 98.0],
+        "default": [70.0, 71.0, 72.0, 73.0],
         "writable": False,
     },
     "subrack_fan_speeds": {
         "length": 4,
         "default": [
-            0.95 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-            0.96 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-            0.97 * SubrackData.MAX_SUBRACK_FAN_SPEED,
-            0.98 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+            0.70 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+            0.71 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+            0.72 * SubrackData.MAX_SUBRACK_FAN_SPEED,
+            0.73 * SubrackData.MAX_SUBRACK_FAN_SPEED,
         ],
         "writable": False,
     },
@@ -376,10 +376,10 @@ def default_health_status(
                 "FAN4": 1,
             },
             "pwm_duty": {
-                "FAN1": 95,
-                "FAN2": 96,
-                "FAN3": 97,
-                "FAN4": 98,
+                "FAN1": 70,
+                "FAN2": 71,
+                "FAN3": 72,
+                "FAN4": 73,
             },
             "mode": {
                 "FAN1": FanMode.AUTO,

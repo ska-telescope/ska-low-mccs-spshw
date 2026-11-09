@@ -646,6 +646,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=float,
         default_value=6.0,
     )
+    PollLockStarvationTimeout = device_property(
+        doc=(
+            "If every poll is skipped because the hardware lock is busy "
+            "for longer than this many seconds, report FAULT."
+        ),
+        dtype=float,
+        default_value=120.0,
+    )
     VerifyEvents = device_property(dtype=bool, default_value=True)
     UseAttributesForHealth = device_property(
         doc="Use the attribute quality factor in health. ADR-115.",
@@ -1377,6 +1385,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             default_lock_timeout=self.DefaultLockTimeout,
             poll_timeout=self.PollLockTimeout,
             power_callback_timeout=self.PowerCallbackLockTimeout,
+            lock_starvation_timeout=self.PollLockStarvationTimeout,
         )
 
     # ----------

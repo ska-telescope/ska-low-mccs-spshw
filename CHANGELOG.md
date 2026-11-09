@@ -1,5 +1,15 @@
 # Version History
 
+## Unreleased
+
+* [SKB-1579] Fix MccsTile concurrency and reconnection issues seen under CPU contention.
+  * New `LockTimeoutError` (a subclass of `TimeoutError`) is raised when the hardware lock cannot be acquired. A lock timeout during a poll or connect now counts as "hardware busy". It no longer triggers a reconnect or a fault re-evaluation. A long running command that cannot get the lock is marked failed.
+  * `update_fault_state` and `_is_connected` no longer block when the hardware lock is held by another thread. They keep the last known state.
+  * The subrack power-on callback no longer connects to the TPM from the event thread. It asks the polling loop to reconnect, and initialisation runs from there once connected.
+  * A failed connect now disconnects fully, so a half-connected TPM (e.g. plugins not loaded) no longer blocks the next reconnect.
+  * `firmware_version` is no longer read from an unprogrammed TPM.
+  * New `PollLockStarvationTimeout` property. If every poll is skipped because the hardware lock is busy for longer than this many seconds, report FAULT.
+
 ## 17.1.0
 
 * [SKB-1660] Update ska-low-mccs-common to 4.10.1. HealthRecorder now calls its health callback on every monitored attribute event, and Tango change detection decides which events to push. A new subscriber can get one repeat of the current value.

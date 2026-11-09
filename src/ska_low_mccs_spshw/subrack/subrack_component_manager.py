@@ -85,6 +85,19 @@ class _PowerMarshallerProxy(DeviceComponentManager):
         input_str = json.dumps(input_dict)
         self._proxy._device.SchedulePower(input_str)
 
+    def cleanup(self: _PowerMarshallerProxy) -> None:
+        """
+        Stop the connection task, then clean up.
+
+        The connection task retries subscription for up to 120 seconds when
+        the device is not there. Abort cancels the retry, so the executor
+        shutdown does not wait for it, and the task never logs through a
+        device that has been deleted.
+        """
+        if self._proxy is not None:
+            self._proxy.abort()
+        super().cleanup()
+
 
 class _PDUProxy(DeviceComponentManager):
     """A proxy to a PDU, for a subrack to use."""
@@ -114,6 +127,19 @@ class _PDUProxy(DeviceComponentManager):
             communication_state_callback,
             component_state_callback,
         )
+
+    def cleanup(self: _PDUProxy) -> None:
+        """
+        Stop the connection task, then clean up.
+
+        The connection task retries subscription for up to 120 seconds when
+        the device is not there. Abort cancels the retry, so the executor
+        shutdown does not wait for it, and the task never logs through a
+        device that has been deleted.
+        """
+        if self._proxy is not None:
+            self._proxy.abort()
+        super().cleanup()
 
     def _get_health_state(self: _PDUProxy) -> str:
         """
@@ -409,6 +435,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         super().stop_communicating()
         if self._communication_manager is not None:
             self._communication_manager.stop_communicating()
+
+    def cleanup(self: SubrackComponentManager) -> None:
+        """Stop the threads of the upstream proxies and the subrack."""
+        try:
+            for proxy in self.proxy_map.values():
+                proxy.cleanup()
+        finally:
+            super().cleanup()
 
     def _device_communication_state_changed(
         self: SubrackComponentManager,

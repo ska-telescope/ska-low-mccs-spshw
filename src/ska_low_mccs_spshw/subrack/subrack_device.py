@@ -294,9 +294,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
-        if self.component_manager.pdu_proxy:
-            self.component_manager.pdu_proxy.cleanup()
-
         self._stopping = True
         if self._health_recorder is not None:
             self._health_recorder.cleanup()

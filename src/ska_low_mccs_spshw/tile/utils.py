@@ -29,6 +29,7 @@ __all__ = [
     "abort_task_on_exception",
     "HealthConfigLoader",
     "LockTimeoutError",
+    "thread_run_delay_s",
 ]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
@@ -41,6 +42,39 @@ class LockTimeoutError(TimeoutError):
     hardware): this means another thread is busy, not that the hardware
     is unreachable.
     """
+
+
+# Set False after the first failed read of schedstat, so polls on systems
+# without it (non-Linux, no /proc, schedstats disabled) don't retry every time.
+_SCHEDSTAT_AVAILABLE = True
+
+
+def thread_run_delay_s() -> float | None:
+    """
+    Return the calling thread's cumulative run-queue delay, in seconds.
+
+    This is the time the thread was runnable but waiting for a CPU, taken from
+    the second field of ``/proc/self/task/<tid>/schedstat``. Comparing two
+    readings shows how much of an interval was lost to CPU contention on the
+    node, as opposed to the thread running (CPU time) or being blocked
+    (waiting for the GIL, or on I/O).
+
+    :return: the cumulative run-queue delay in seconds, or None if it can't
+        be read on this system.
+    """
+    global _SCHEDSTAT_AVAILABLE  # pylint: disable=global-statement
+    if not _SCHEDSTAT_AVAILABLE:
+        return None
+    try:
+        with open(
+            f"/proc/self/task/{threading.get_native_id()}/schedstat",
+            encoding="ascii",
+        ) as schedstat:
+            # Fields: time on CPU (ns), time waiting on run queue (ns), timeslices
+            return int(schedstat.read().split()[1]) / 1e9
+    except (OSError, IndexError, ValueError):
+        _SCHEDSTAT_AVAILABLE = False
+        return None
 
 
 _FrameInfo = namedtuple("_FrameInfo", ["frame", "filename", "lineno", "function"])
@@ -85,7 +119,6 @@ def _iterate_stack() -> Iterator[_FrameInfo]:
         frame = frame.f_back
 
 
-# pylint: disable=too-many-instance-attributes
 class LogLock:
     """A logging lock."""
 

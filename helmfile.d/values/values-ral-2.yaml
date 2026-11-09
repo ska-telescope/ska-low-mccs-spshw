@@ -1,6 +1,8 @@
 defaults:
   logging_level_default: 5
-
+  device_packing:
+    tiles: 4
+  
 subarrays:  # 2 subarrays, no defaults overridden
   "1": {}
     # enabled: false  # for example
@@ -25,6 +27,11 @@ subarraybeams:  # 6 subarraybeams, no defaults overridden
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
   ska-tango-devices:
+    deviceServerTypes:
+      spshw:
+        resources:
+          limits:
+            cpu: 800m
     devices:
       SpsStation:
         low-mccs/spsstation/stfc-ral-2:

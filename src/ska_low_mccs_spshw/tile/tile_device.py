@@ -64,6 +64,7 @@ from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
 from .tile_health_recorder import TileHealthRecorder
 from .tpm_status import TpmStatus
+from .utils import start_gil_latency_probe
 
 __all__ = ["MccsTile", "main"]
 
@@ -734,6 +735,16 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=float,
         default_value=120.0,
     )
+    GilProbePeriod = device_property(
+        doc=(
+            "Period in seconds of the process-wide GIL latency probe, which "
+            "logs GIL_PROBE when threads wait long for the GIL. "
+            "0 disables it. Shared by all devices in the process; the first "
+            "device to start sets the period."
+        ),
+        dtype=float,
+        default_value=0.01,
+    )
     VerifyEvents = device_property(dtype=bool, default_value=True)
     UseAttributesForHealth = device_property(
         doc="Use the attribute quality factor in health. ADR-115.",
@@ -1266,6 +1277,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._intermediate_attrs[path[0]].append(attr.lower())
 
         super().init_device()  # Must be before we try to use the logger.
+
+        start_gil_latency_probe(self.logger, self.GilProbePeriod)
 
         self.db_firmware_thresholds = FirmwareThresholds()
         self.hw_firmware_thresholds = FirmwareThresholds()

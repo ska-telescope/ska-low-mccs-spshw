@@ -27,11 +27,6 @@ subarraybeams:  # 6 subarraybeams, no defaults overridden
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
   ska-tango-devices:
-    deviceServerTypes:
-      spshw:
-        resources:
-          limits:
-            cpu: 800m
     devices:
       SpsStation:
         low-mccs/spsstation/stfc-ral-2:

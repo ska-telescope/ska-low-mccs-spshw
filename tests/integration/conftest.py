@@ -220,10 +220,10 @@ def patched_tile_device_class_fixture(
         """
 
         HEALTH_ATTRIBUTE_TO_SIMULATOR_MAP = {
-            "fpga1Temperature": ["temperatures", "FPGA0"],
-            "fpga2Temperature": ["temperatures", "FPGA1"],
-            "boardTemperature": ["temperatures", "board"],
-            "ppsPresent": ["timing", "pps", "status"],
+            "temperatures_fpga0": ["temperatures", "FPGA0"],
+            "temperatures_fpga1": ["temperatures", "FPGA1"],
+            "temperatures_board": ["temperatures", "board"],
+            "timing_pps_present": ["timing", "pps", "status"],
         }
 
         def init_device(self) -> None:

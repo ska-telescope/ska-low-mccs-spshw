@@ -1449,7 +1449,7 @@ def test_beamformerRegions(
         ),
         pytest.param(
             "boardTemperaturesSummary",
-            "boardTemperature",
+            "temperatures_board",
             lambda i: i,
             lambda n: [0, (n - 1) / 2, n - 1],
             lambda i: 2 * i,
@@ -1457,7 +1457,7 @@ def test_beamformerRegions(
         ),
         pytest.param(
             "fpgaTemperaturesSummary",
-            "fpgaTemperature",
+            "temperatures_fpga",
             lambda i: 2 * i,
             lambda n: [0, (2 * (n - 1)) / 2, 2 * (n - 1)],
             lambda i: i,
@@ -1465,7 +1465,7 @@ def test_beamformerRegions(
         ),
         pytest.param(
             "ppsDelaySummary",
-            "ppsDelay",
+            "timing_pps_delay",
             lambda i: i,
             lambda n: [0, (n - 1) / 2, n - 1],
             lambda i: 2 * i,
@@ -1481,7 +1481,7 @@ def test_beamformerRegions(
         ),
         pytest.param(
             "ppsPresentSummary",
-            "ppsPresent",
+            "timing_pps_present",
             lambda i: not i % 2 == 0,
             lambda _: False,
             lambda _: True,
@@ -1543,9 +1543,9 @@ def test_station_tile_attributes(
     station_device.unsubscribe_event(sub_id)
 
     for i, tile in enumerate(mock_tile_device_proxies):
-        if tile_attribute_name == "fpgaTemperature":
-            setattr(tile, "fpga1Temperature", init_tile_attribute_values(i))
-            setattr(tile, "fpga2Temperature", init_tile_attribute_values(i))
+        if tile_attribute_name == "temperatures_fpga":
+            setattr(tile, "temperatures_fpga0", init_tile_attribute_values(i))
+            setattr(tile, "temperatures_fpga1", init_tile_attribute_values(i))
         else:
             setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
 
@@ -1553,9 +1553,9 @@ def test_station_tile_attributes(
         station_device, attribute_name, init_expected_value(num_tiles)
     )
     for i, tile in enumerate(mock_tile_device_proxies):
-        if tile_attribute_name == "fpgaTemperature":
-            setattr(tile, "fpga1Temperature", final_tile_attribute_values(i))
-            setattr(tile, "fpga2Temperature", final_tile_attribute_values(i))
+        if tile_attribute_name == "temperatures_fpga":
+            setattr(tile, "temperatures_fpga0", final_tile_attribute_values(i))
+            setattr(tile, "temperatures_fpga1", final_tile_attribute_values(i))
         else:
             setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
     assert wait_for_attribute_value(
@@ -1683,7 +1683,7 @@ def _summary(values: list[float]) -> list[float]:
         ),
         pytest.param(
             "boardTemperaturesSummary",
-            "boardTemperature",
+            "temperatures_board",
             float,
             3,
             lambda n: _summary([float(i) for i in range(n)]),
@@ -1692,17 +1692,17 @@ def _summary(values: list[float]) -> list[float]:
         ),
         pytest.param(
             "fpgaTemperaturesSummary",
-            "fpga1Temperature",
+            "temperatures_fpga0",
             float,
             0,
-            # fpga2Temperature is 25.0 on every tile, and stays valid.
+            # temperatures_fpga1 is 25.0 on every tile, and stays valid.
             lambda n: _summary([float(i) for i in range(n)] + [25.0] * n),
             lambda n: _summary([float(i) for i in range(1, n)] + [25.0] * n),
             id="fpgaTemperaturesSummary",
         ),
         pytest.param(
             "ppsDelaySummary",
-            "ppsDelay",
+            "timing_pps_delay",
             lambda i: i,
             3,
             lambda n: _summary([float(i) for i in range(n)]),
@@ -1720,7 +1720,7 @@ def _summary(values: list[float]) -> list[float]:
         ),
         pytest.param(
             "ppsPresentSummary",
-            "ppsPresent",
+            "timing_pps_present",
             lambda _: True,
             2,
             lambda _: True,
@@ -1818,7 +1818,7 @@ def test_station_invalid_tile_attribute(
     ["attribute_name", "tile_attribute_name"],
     [
         pytest.param("pllLockedSummary", "pllLocked", id="pllLockedSummary"),
-        pytest.param("ppsPresentSummary", "ppsPresent", id="ppsPresentSummary"),
+        pytest.param("ppsPresentSummary", "timing_pps_present", id="ppsPresentSummary"),
         pytest.param(
             "isBeamformerRunning", "isBeamformerRunning", id="isBeamformerRunning"
         ),
@@ -1959,7 +1959,7 @@ def test_tile_communication_lost_invalidates_caches(
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
         tile.staticTimeDelays = [float(i)] * 32
-        tile.boardTemperature = float(i)
+        tile.temperatures_board = float(i)
         tile.pllLocked = True
     mock_tile_device_proxies[-1].cspRounding = [5] * 384
 

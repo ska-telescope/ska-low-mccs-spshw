@@ -801,7 +801,7 @@ class TestMccsTileTpmDriver:
         )
         tile_subs.append(
             tile_device.subscribe_event(
-                "ppsPresent",
+                "timing_pps_present",
                 tango.EventType.CHANGE_EVENT,
                 change_event_callbacks["pps_present"],
             )
@@ -811,14 +811,14 @@ class TestMccsTileTpmDriver:
             True, lookahead=2, consume_nonmatches=True
         )
         assert (
-            tile_device.read_attribute("ppspresent").quality
+            tile_device.read_attribute("timing_pps_present").quality
             == tango.AttrQuality.ATTR_VALID
         )
         tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
 
         change_event_callbacks["pps_present"].assert_change_event(False)
         assert (
-            tile_device.read_attribute("ppspresent").quality
+            tile_device.read_attribute("timing_pps_present").quality
             == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM
@@ -881,7 +881,7 @@ class TestMccsTileTpmDriver:
         final_corrections = tile_device.ppsDelayCorrection
 
         assert np.array_equal(final_corrections, tile_under_test_pps_delay)
-        # assert tile_device.ppsDelay == tile_under_test_pps_delay
+        # assert tile_device.timing_pps_delay == tile_under_test_pps_delay
         for sub_id in tile_subs:
             tile_device.unsubscribe_event(sub_id)
         for sub_id in subrack_subs:
@@ -892,22 +892,22 @@ class TestMccsTileTpmDriver:
         ("attribute", "initial_value", "alarm_value"),
         [
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 99.0,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 99.0,
             ),
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 96.0,
             ),
             (
-                "ppsPresent",
+                "timing_pps_present",
                 TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
                 False,
             ),
@@ -1013,17 +1013,17 @@ class TestMccsTileTpmDriver:
         ("attribute", "initial_value", "alarm_value"),
         [
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 97.0,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 97.0,
             ),
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 96.0,
             ),
@@ -1141,17 +1141,17 @@ class TestMccsTileTpmDriver:
         ("attribute", "initial_value", "threshold_method"),
         [
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
-                "fpga1TemperatureThresholds",
+                "temperatures_fpga0Thresholds",
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 "fpga2TemperatureThresholds",
             ),
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 "boardTemperatureThresholds",
             ),

@@ -523,7 +523,7 @@ def test_tile_invalidation_ordered_after_queued_events(
     )
     serialiser.queue_event(
         tile_fqdn,
-        "boardTemperature",
+        "temperatures_board",
         42.0,
         tango.AttrQuality.ATTR_VALID,
         callback=tile_proxy._on_attribute_change,
@@ -547,13 +547,13 @@ def test_tile_events_dropped_when_not_established(
         under test
     """
     station_component_manager._on_tile_attribute_change(
-        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+        0, "temperatures_board", 42.0, tango.AttrQuality.ATTR_VALID
     )
     assert np.isnan(station_component_manager._board_temperatures[0])
 
     _mark_tiles_established(station_component_manager, 1)
     station_component_manager._on_tile_attribute_change(
-        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+        0, "temperatures_board", 42.0, tango.AttrQuality.ATTR_VALID
     )
     assert station_component_manager._board_temperatures[0] == 42.0
 
@@ -1640,13 +1640,13 @@ def test_pps_delay_spread(
     assert station_component_manager._number_of_tiles >= 4  # Test assumes 4 tiles.
 
     for idx, tile in enumerate(mock_tiles):
-        tile.ppsDelay = 12 + idx  # 12, 13, 14, 15 — distinct from tile indices
+        tile.timing_pps_delay = 12 + idx  # 12, 13, 14, 15 — distinct from tile indices
         tile.tileProgrammingState = "Unprogrammed"
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    # Wait for ppsDelay subscription callbacks to populate _pps_delays[0-n].
+    # Wait for timing_pps_delay subscription callbacks to populate _pps_delays[0-n].
     total_slots = 16
     expected_delays = [12 + i for i in range(num_tiles)] + [0] * (
         total_slots - num_tiles
@@ -1654,7 +1654,7 @@ def test_pps_delay_spread(
     deadline = time.time() + 5.0
     while station_component_manager._pps_delays != expected_delays:
         assert time.time() < deadline, (
-            f"Timed out waiting for ppsDelay callbacks: "
+            f"Timed out waiting for timing_pps_delay callbacks: "
             f"{station_component_manager._pps_delays}"
         )
         time.sleep(0.01)
@@ -1683,7 +1683,7 @@ def test_pps_delay_spread(
     for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
-            attribute_name="ppsDelay",
+            attribute_name="timing_pps_delay",
             attribute_value=0,
             attribute_quality=tango.AttrQuality.ATTR_VALID,
         )
@@ -1692,7 +1692,7 @@ def test_pps_delay_spread(
     # Change one tile and verify the spread is computed correctly (4 - 0 == 4).
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=1,
-        attribute_name="ppsDelay",
+        attribute_name="timing_pps_delay",
         attribute_value=4,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
@@ -1702,16 +1702,16 @@ def test_pps_delay_spread(
     for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
-            attribute_name="ppsDelay",
+            attribute_name="timing_pps_delay",
             attribute_value=4,
             attribute_quality=tango.AttrQuality.ATTR_VALID,
         )
     assert station_component_manager._pps_delay_spread == 0
 
-    # Set 1 Tile to ppsDelay of 16 for a delta of 12.
+    # Set 1 Tile to timing_pps_delay of 16 for a delta of 12.
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=3,
-        attribute_name="ppsDelay",
+        attribute_name="timing_pps_delay",
         attribute_value=16,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
@@ -2145,7 +2145,7 @@ def test_beamformer_flagged_count(
     for tile_id in range(last):
         station_component_manager._on_tile_attribute_change(
             tile_id,
-            "fpga0_station_beamformer_flagged_count",
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
             5,
             tango.AttrQuality.ATTR_VALID,
         )
@@ -2154,7 +2154,7 @@ def test_beamformer_flagged_count(
     # Final tile fpga0 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         5,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2163,7 +2163,7 @@ def test_beamformer_flagged_count(
     # Same value again — no duplicate callback.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         5,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2172,7 +2172,7 @@ def test_beamformer_flagged_count(
     # fpga0 back to zero (fpga1 still zero) → ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         0,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2181,7 +2181,7 @@ def test_beamformer_flagged_count(
     # fpga1 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         3,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2190,7 +2190,7 @@ def test_beamformer_flagged_count(
     # Both zero → ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         0,
         tango.AttrQuality.ATTR_VALID,
     )

@@ -216,7 +216,7 @@ def _mask_unpolled_dsp_fields(raw_value: Any) -> Any:
     Mask DSP subfields that the poller never propagates for non-last tiles.
 
     ``discarded_or_flagged_packet_count`` (exposed via
-    ``fpga0_station_beamformer_flagged_count``/``fpga1_...``) is only
+    ``dsp_station_beamf_discarded_or_flagged_packet_count_fpga0``/``fpga1_...``) is only
     populated by the poll logic when the tile is configured as the last
     tile in the beamforming chain. The tile under test here is not
     configured as last, so the ``dsp`` composite attribute always reads
@@ -244,35 +244,35 @@ def _mask_unpolled_dsp_fields(raw_value: Any) -> Any:
 # actually exposed on the Tango attribute. Attributes not listed here are
 # exposed unconverted (identity transform).
 HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
-    "adc_pll_lock_status": adc_pll_to_list,
-    "fpga0_bip_error_count": udp_error_count_to_list,
-    "fpga1_bip_error_count": udp_error_count_to_list,
-    "fpga0_decode_error_count": udp_error_count_to_list,
-    "fpga1_decode_error_count": udp_error_count_to_list,
-    "fpga0_lane_error_count": lane_error_to_array,
-    "fpga1_lane_error_count": lane_error_to_array,
-    "fpga0_clock_managers_count": clock_managers_count,
-    "fpga1_clock_managers_count": clock_managers_count,
-    "fpga0_clock_managers_status": clock_managers_status,
-    "fpga1_clock_managers_status": clock_managers_status,
-    "fpga0_clocks": clocks_to_list,
-    "fpga1_clocks": clocks_to_list,
-    "adc_sysref_counter": adc_to_list,
-    "adc_sysref_timing_requirements": adc_to_list,
-    "fpga0_qpll_status": lambda v: int(v[0]),
-    "fpga1_qpll_status": lambda v: int(v[0]),
-    "timing_pll_lock_status": lambda v: int(v[0]),
-    "timing_pll_40g_lock_status": lambda v: int(v[0]),
-    "io_f2f_interface_pll_status_fpga0": lambda v: int(v[0]),
-    "io_f2f_interface_pll_status_fpga1": lambda v: int(v[0]),
-    "fpga0_qpll_counter": lambda v: int(v[1]),
-    "fpga1_qpll_counter": lambda v: int(v[1]),
+    "adcs_pll_status": adc_pll_to_list,
+    "io_udp_interface_bip_error_count_fpga0": udp_error_count_to_list,
+    "io_udp_interface_bip_error_count_fpga1": udp_error_count_to_list,
+    "io_udp_interface_decode_error_count_fpga0": udp_error_count_to_list,
+    "io_udp_interface_decode_error_count_fpga1": udp_error_count_to_list,
+    "io_jesd_interface_lane_error_count_fpga0": lane_error_to_array,
+    "io_jesd_interface_lane_error_count_fpga1": lane_error_to_array,
+    "timing_clock_managers_fpga0_count": clock_managers_count,
+    "timing_clock_managers_fpga1_count": clock_managers_count,
+    "timing_clock_managers_fpga0_status": clock_managers_status,
+    "timing_clock_managers_fpga1_status": clock_managers_status,
+    "timing_clocks_fpga0": clocks_to_list,
+    "timing_clocks_fpga1": clocks_to_list,
+    "adcs_sysref_counter": adc_to_list,
+    "adcs_sysref_timing_requirements": adc_to_list,
+    "io_jesd_interface_qpll_status_fpga0_status": lambda v: int(v[0]),
+    "io_jesd_interface_qpll_status_fpga1_status": lambda v: int(v[0]),
+    "timing_pll_status": lambda v: int(v[0]),
+    "timing_pll_40g_status": lambda v: int(v[0]),
+    "io_f2f_interface_pll_status_fpga0_status": lambda v: int(v[0]),
+    "io_f2f_interface_pll_status_fpga1_status": lambda v: int(v[0]),
+    "io_jesd_interface_qpll_status_fpga0_count": lambda v: int(v[1]),
+    "io_jesd_interface_qpll_status_fpga1_count": lambda v: int(v[1]),
     "timing_pll_count": lambda v: int(v[1]),
-    "io_f2f_interface_pll_status_fpga0_counter": lambda v: int(v[1]),
-    "io_f2f_interface_pll_status_fpga1_counter": lambda v: int(v[1]),
+    "io_f2f_interface_pll_status_fpga0_count": lambda v: int(v[1]),
+    "io_f2f_interface_pll_status_fpga1_count": lambda v: int(v[1]),
     "io_data_router_status_fpga0": int,
     "io_data_router_status_fpga1": int,
-    "data_router_discarded_packets": serialise_object,
+    "io_data_router_discarded_packets_fpgas": serialise_object,
     "io": serialise_object,
     "dsp": serialise_object,
     "voltages": serialise_object,
@@ -280,16 +280,16 @@ HEALTH_ATTRIBUTE_CONVERTERS: dict[str, Callable[[Any], Any]] = {
     "currents": serialise_object,
     "timing": serialise_object,
     "adcs": serialise_object,
-    "ppsPresent": int,  # Bool alarms cause problems so this is an int signal.
+    "timing_pps_present": int,  # Bool alarms cause problems so this is an int signal.
 }
 
 # Mirrors MccsTile.attribute_monitoring_point_map (an instance attribute set
 # in init_device, so not importable directly). Keep in sync with that map.
 HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
-    "ppsPresent": ["timing", "pps", "status"],
-    "fpga1Temperature": ["temperatures", "FPGA0"],
-    "fpga2Temperature": ["temperatures", "FPGA1"],
-    "boardTemperature": ["temperatures", "board"],
+    "timing_pps_present": ["timing", "pps", "status"],
+    "temperatures_fpga0": ["temperatures", "FPGA0"],
+    "temperatures_fpga1": ["temperatures", "FPGA1"],
+    "temperatures_board": ["temperatures", "board"],
     "io": ["io"],
     "dsp": ["dsp"],
     "voltages": ["voltages"],
@@ -297,65 +297,85 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
     "adcs": ["adcs"],
     "timing": ["timing"],
     "currents": ["currents"],
-    "currentFE0": ["currents", "FE0_mVA"],
-    "currentFE1": ["currents", "FE1_mVA"],
-    "voltageAVDD3": ["voltages", "AVDD3"],
-    "voltageVrefDDR0": ["voltages", "DDR0_VREF"],
-    "voltageVrefDDR1": ["voltages", "DDR1_VREF"],
-    "voltageMan1V2": ["voltages", "MAN_1V2"],
-    "voltageMGT_AVCC": ["voltages", "MGT_AVCC"],
-    "voltageMGT_AVTT": ["voltages", "MGT_AVTT"],
-    "voltageMon5V0": ["voltages", "MON_5V0"],
-    "voltageMon3V3": ["voltages", "MON_3V3"],
-    "voltageMon1V8": ["voltages", "MON_1V8"],
-    "voltageSW_AVDD1": ["voltages", "SW_AVDD1"],
-    "voltageSW_AVDD2": ["voltages", "SW_AVDD2"],
-    "voltageVIN": ["voltages", "VIN"],
-    "voltageVM_AGP0": ["voltages", "VM_AGP0"],
-    "voltageVM_AGP1": ["voltages", "VM_AGP1"],
-    "voltageVM_AGP2": ["voltages", "VM_AGP2"],
-    "voltageVM_AGP3": ["voltages", "VM_AGP3"],
-    "voltageVM_AGP4": ["voltages", "VM_AGP4"],
-    "voltageVM_AGP5": ["voltages", "VM_AGP5"],
-    "voltageVM_AGP6": ["voltages", "VM_AGP6"],
-    "voltageVM_AGP7": ["voltages", "VM_AGP7"],
-    "voltageVM_CLK0B": ["voltages", "VM_CLK0B"],
-    "voltageVM_CLK1B": ["voltages", "VM_CLK1B"],
-    "voltageVM_DDR0_VTT": ["voltages", "VM_DDR0_VTT"],
-    "voltageVM_DDR1_VDD": ["voltages", "VM_DDR1_VDD"],
-    "voltageVM_DDR1_VTT": ["voltages", "VM_DDR1_VTT"],
-    "voltageVM_DRVDD": ["voltages", "VM_DRVDD"],
-    "voltageVM_DVDD": ["voltages", "VM_DVDD"],
-    "voltageVM_FE0": ["voltages", "VM_FE0"],
-    "voltageVM_FE1": ["voltages", "VM_FE1"],
-    "voltageVM_MGT0_AUX": ["voltages", "VM_MGT0_AUX"],
-    "voltageVM_MGT1_AUX": ["voltages", "VM_MGT1_AUX"],
-    "voltageVM_PLL": ["voltages", "VM_PLL"],
-    "voltageVM_SW_AMP": ["voltages", "VM_SW_AMP"],
-    "adc_pll_lock_status": ["adcs", "pll_status"],
-    "fpga0_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA0"],
-    "fpga0_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA0"],
-    "fpga1_qpll_status": ["io", "jesd_interface", "qpll_status", "FPGA1"],
-    "fpga1_qpll_counter": ["io", "jesd_interface", "qpll_status", "FPGA1"],
-    "io_f2f_interface_pll_status_fpga0": [
+    "currents_fe0_mva": ["currents", "FE0_mVA"],
+    "currents_fe1_mva": ["currents", "FE1_mVA"],
+    "voltages_avdd3": ["voltages", "AVDD3"],
+    "voltages_ddr0_vref": ["voltages", "DDR0_VREF"],
+    "voltages_ddr1_vref": ["voltages", "DDR1_VREF"],
+    "voltages_man_1v2": ["voltages", "MAN_1V2"],
+    "voltages_mgt_avcc": ["voltages", "MGT_AVCC"],
+    "voltages_mgt_avtt": ["voltages", "MGT_AVTT"],
+    "voltages_mon_5v0": ["voltages", "MON_5V0"],
+    "voltages_mon_3v3": ["voltages", "MON_3V3"],
+    "voltages_mon_1v8": ["voltages", "MON_1V8"],
+    "voltages_sw_avdd1": ["voltages", "SW_AVDD1"],
+    "voltages_sw_avdd2": ["voltages", "SW_AVDD2"],
+    "voltages_vin": ["voltages", "VIN"],
+    "voltages_vm_agp0": ["voltages", "VM_AGP0"],
+    "voltages_vm_agp1": ["voltages", "VM_AGP1"],
+    "voltages_vm_agp2": ["voltages", "VM_AGP2"],
+    "voltages_vm_agp3": ["voltages", "VM_AGP3"],
+    "voltages_vm_agp4": ["voltages", "VM_AGP4"],
+    "voltages_vm_agp5": ["voltages", "VM_AGP5"],
+    "voltages_vm_agp6": ["voltages", "VM_AGP6"],
+    "voltages_vm_agp7": ["voltages", "VM_AGP7"],
+    "voltages_vm_clk0b": ["voltages", "VM_CLK0B"],
+    "voltages_vm_clk1b": ["voltages", "VM_CLK1B"],
+    "voltages_vm_ddr0_vtt": ["voltages", "VM_DDR0_VTT"],
+    "voltages_vm_ddr1_vdd": ["voltages", "VM_DDR1_VDD"],
+    "voltages_vm_ddr1_vtt": ["voltages", "VM_DDR1_VTT"],
+    "voltages_vm_drvdd": ["voltages", "VM_DRVDD"],
+    "voltages_vm_dvdd": ["voltages", "VM_DVDD"],
+    "voltages_vm_fe0": ["voltages", "VM_FE0"],
+    "voltages_vm_fe1": ["voltages", "VM_FE1"],
+    "voltages_vm_mgt0_aux": ["voltages", "VM_MGT0_AUX"],
+    "voltages_vm_mgt1_aux": ["voltages", "VM_MGT1_AUX"],
+    "voltages_vm_pll": ["voltages", "VM_PLL"],
+    "voltages_vm_sw_amp": ["voltages", "VM_SW_AMP"],
+    "adcs_pll_status": ["adcs", "pll_status"],
+    "io_jesd_interface_qpll_status_fpga0_status": [
+        "io",
+        "jesd_interface",
+        "qpll_status",
+        "FPGA0",
+    ],
+    "io_jesd_interface_qpll_status_fpga0_count": [
+        "io",
+        "jesd_interface",
+        "qpll_status",
+        "FPGA0",
+    ],
+    "io_jesd_interface_qpll_status_fpga1_status": [
+        "io",
+        "jesd_interface",
+        "qpll_status",
+        "FPGA1",
+    ],
+    "io_jesd_interface_qpll_status_fpga1_count": [
+        "io",
+        "jesd_interface",
+        "qpll_status",
+        "FPGA1",
+    ],
+    "io_f2f_interface_pll_status_fpga0_status": [
         "io",
         "f2f_interface",
         "pll_status",
         "FPGA0",
     ],
-    "io_f2f_interface_pll_status_fpga0_counter": [
+    "io_f2f_interface_pll_status_fpga0_count": [
         "io",
         "f2f_interface",
         "pll_status",
         "FPGA0",
     ],
-    "io_f2f_interface_pll_status_fpga1": [
+    "io_f2f_interface_pll_status_fpga1_status": [
         "io",
         "f2f_interface",
         "pll_status",
         "FPGA1",
     ],
-    "io_f2f_interface_pll_status_fpga1_counter": [
+    "io_f2f_interface_pll_status_fpga1_count": [
         "io",
         "f2f_interface",
         "pll_status",
@@ -385,57 +405,125 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
         "hard_error",
         "FPGA1",
     ],
-    "timing_pll_lock_status": ["timing", "pll"],
+    "timing_pll_status": ["timing", "pll"],
     "timing_pll_count": ["timing", "pll"],
-    "timing_pll_40g_lock_status": ["timing", "pll_40g"],
-    "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
-    "adc_sysref_counter": ["adcs", "sysref_counter"],
-    "fpga0_clocks": ["timing", "clocks", "FPGA0"],
-    "fpga1_clocks": ["timing", "clocks", "FPGA1"],
-    "fpga0_clock_managers_count": ["timing", "clock_managers", "FPGA0"],
-    "fpga0_clock_managers_status": ["timing", "clock_managers", "FPGA0"],
-    "fpga1_clock_managers_count": ["timing", "clock_managers", "FPGA1"],
-    "fpga1_clock_managers_status": ["timing", "clock_managers", "FPGA1"],
-    "fpga0_lane_error_count": [
+    "timing_pll_40g_status": ["timing", "pll_40g"],
+    "adcs_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
+    "adcs_sysref_counter": ["adcs", "sysref_counter"],
+    "timing_clocks_fpga0": ["timing", "clocks", "FPGA0"],
+    "timing_clocks_fpga1": ["timing", "clocks", "FPGA1"],
+    "timing_clock_managers_fpga0_count": ["timing", "clock_managers", "FPGA0"],
+    "timing_clock_managers_fpga0_status": ["timing", "clock_managers", "FPGA0"],
+    "timing_clock_managers_fpga1_count": ["timing", "clock_managers", "FPGA1"],
+    "timing_clock_managers_fpga1_status": ["timing", "clock_managers", "FPGA1"],
+    "io_jesd_interface_lane_error_count_fpga0": [
         "io",
         "jesd_interface",
         "lane_error_count",
         "FPGA0",
     ],
-    "fpga1_lane_error_count": [
+    "io_jesd_interface_lane_error_count_fpga1": [
         "io",
         "jesd_interface",
         "lane_error_count",
         "FPGA1",
     ],
-    "link_status": ["io", "jesd_interface", "link_status"],
-    "fpga0_resync_count": ["io", "jesd_interface", "resync_count", "FPGA0"],
-    "fpga1_resync_count": ["io", "jesd_interface", "resync_count", "FPGA1"],
-    "ddr_initialisation": ["io", "ddr_interface", "initialisation"],
-    "fpga0_ddr_reset_counter": ["io", "ddr_interface", "reset_counter", "FPGA0"],
-    "fpga1_ddr_reset_counter": ["io", "ddr_interface", "reset_counter", "FPGA1"],
-    "arp": ["io", "udp_interface", "arp"],
-    "udp_status": ["io", "udp_interface", "status"],
-    "fpga0_crc_error_count": ["io", "udp_interface", "crc_error_count", "FPGA0"],
-    "fpga1_crc_error_count": ["io", "udp_interface", "crc_error_count", "FPGA1"],
-    "fpga0_bip_error_count": ["io", "udp_interface", "bip_error_count", "FPGA0"],
-    "fpga0_decode_error_count": ["io", "udp_interface", "decode_error_count", "FPGA0"],
-    "fpga1_bip_error_count": ["io", "udp_interface", "bip_error_count", "FPGA1"],
-    "fpga1_decode_error_count": ["io", "udp_interface", "decode_error_count", "FPGA1"],
-    "fpga0_linkup_loss_count": ["io", "udp_interface", "linkup_loss_count", "FPGA0"],
-    "fpga1_linkup_loss_count": ["io", "udp_interface", "linkup_loss_count", "FPGA1"],
+    "io_jesd_interface_link_status": [
+        "io",
+        "jesd_interface",
+        "link_status",
+    ],
+    "io_jesd_interface_resync_count_fpga0": [
+        "io",
+        "jesd_interface",
+        "resync_count",
+        "FPGA0",
+    ],
+    "io_jesd_interface_resync_count_fpga1": [
+        "io",
+        "jesd_interface",
+        "resync_count",
+        "FPGA1",
+    ],
+    "io_ddr_interface_initialisation": ["io", "ddr_interface", "initialisation"],
+    "io_ddr_interface_reset_counter_fpga0": [
+        "io",
+        "ddr_interface",
+        "reset_counter",
+        "FPGA0",
+    ],
+    "io_ddr_interface_reset_counter_fpga1": [
+        "io",
+        "ddr_interface",
+        "reset_counter",
+        "FPGA1",
+    ],
+    "io_udp_interface_arp": ["io", "udp_interface", "arp"],
+    "io_udp_interface_status": ["io", "udp_interface", "status"],
+    "io_udp_interface_crc_error_count_fpga0": [
+        "io",
+        "udp_interface",
+        "crc_error_count",
+        "FPGA0",
+    ],
+    "io_udp_interface_crc_error_count_fpga1": [
+        "io",
+        "udp_interface",
+        "crc_error_count",
+        "FPGA1",
+    ],
+    "io_udp_interface_bip_error_count_fpga0": [
+        "io",
+        "udp_interface",
+        "bip_error_count",
+        "FPGA0",
+    ],
+    "io_udp_interface_decode_error_count_fpga0": [
+        "io",
+        "udp_interface",
+        "decode_error_count",
+        "FPGA0",
+    ],
+    "io_udp_interface_bip_error_count_fpga1": [
+        "io",
+        "udp_interface",
+        "bip_error_count",
+        "FPGA1",
+    ],
+    "io_udp_interface_decode_error_count_fpga1": [
+        "io",
+        "udp_interface",
+        "decode_error_count",
+        "FPGA1",
+    ],
+    "io_udp_interface_linkup_loss_count_fpga0": [
+        "io",
+        "udp_interface",
+        "linkup_loss_count",
+        "FPGA0",
+    ],
+    "io_udp_interface_linkup_loss_count_fpga1": [
+        "io",
+        "udp_interface",
+        "linkup_loss_count",
+        "FPGA1",
+    ],
     "io_data_router_status_fpga0": ["io", "data_router", "status", "FPGA0"],
     "io_data_router_status_fpga1": ["io", "data_router", "status", "FPGA1"],
-    "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
-    "tile_beamformer_status": ["dsp", "tile_beamf"],
-    "station_beamformer_status": ["dsp", "station_beamf", "status"],
-    "fpga0_station_beamformer_error_count": [
+    "io_data_router_discarded_packets_fpgas": [
+        "io",
+        "data_router",
+        "discarded_packets",
+    ],
+    "dsp_tile_beamf": ["dsp", "tile_beamf"],
+    "dsp_station_beamf_status": ["dsp", "station_beamf", "status"],
+    "dsp_station_beamf_ddr_parity_error_count_fpga0": [
         "dsp",
         "station_beamf",
         "ddr_parity_error_count",
         "FPGA0",
     ],
-    "fpga1_station_beamformer_error_count": [
+    "dsp_station_beamf_ddr_parity_error_count_fpga1": [
         "dsp",
         "station_beamf",
         "ddr_parity_error_count",
@@ -444,7 +532,7 @@ HEALTH_ATTRIBUTE_PATHS: dict[str, list[str]] = {
 }
 
 # HEALTH_ATTRIBUTE_PATHS intentionally omits:
-# - temperatureADC0..15: not populated for the simulated (v1) hardware
+# - temperatures_adc0..15: not populated for the simulated (v1) hardware
 #   version used by this test harness (see `null_value_attributes` fixture).
 # - timing_pll_40g_count: not populated for the simulated bios version used
 #   by this test harness (see `null_value_attributes` fixture).
@@ -1067,24 +1155,26 @@ class TestMccsTile:
         """
         return [
             "timing_pll_40g_count",  # Not updated in simulated bios version
-            "temperatureADC0",  # Not updated in simulated hardware version
-            "temperatureADC1",  # Not updated in simulated hardware version
-            "temperatureADC2",  # Not updated in simulated hardware version
-            "temperatureADC3",  # Not updated in simulated hardware version
-            "temperatureADC4",  # Not updated in simulated hardware version
-            "temperatureADC5",  # Not updated in simulated hardware version
-            "temperatureADC6",  # Not updated in simulated hardware version
-            "temperatureADC7",  # Not updated in simulated hardware version
-            "temperatureADC8",  # Not updated in simulated hardware version
-            "temperatureADC9",  # Not updated in simulated hardware version
-            "temperatureADC10",  # Not updated in simulated hardware version
-            "temperatureADC11",  # Not updated in simulated hardware version
-            "temperatureADC12",  # Not updated in simulated hardware version
-            "temperatureADC13",  # Not updated in simulated hardware version
-            "temperatureADC14",  # Not updated in simulated hardware version
-            "temperatureADC15",  # Not updated in simulated hardware version
-            "fpga0_station_beamformer_flagged_count",  # Only valid for final Tile
-            "fpga1_station_beamformer_flagged_count",  # Only valid for final Tile
+            "temperatures_adc0",  # Not updated in simulated hardware version
+            "temperatures_adc1",  # Not updated in simulated hardware version
+            "temperatures_adc2",  # Not updated in simulated hardware version
+            "temperatures_adc3",  # Not updated in simulated hardware version
+            "temperatures_adc4",  # Not updated in simulated hardware version
+            "temperatures_adc5",  # Not updated in simulated hardware version
+            "temperatures_adc6",  # Not updated in simulated hardware version
+            "temperatures_adc7",  # Not updated in simulated hardware version
+            "temperatures_adc8",  # Not updated in simulated hardware version
+            "temperatures_adc9",  # Not updated in simulated hardware version
+            "temperatures_adc10",  # Not updated in simulated hardware version
+            "temperatures_adc11",  # Not updated in simulated hardware version
+            "temperatures_adc12",  # Not updated in simulated hardware version
+            "temperatures_adc13",  # Not updated in simulated hardware version
+            "temperatures_adc14",  # Not updated in simulated hardware version
+            "temperatures_adc15",  # Not updated in simulated hardware version
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+            # Only valid for final Tile
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
+            # Only valid for final Tile
         ]
 
     @pytest.fixture(name="tpm_configuration_attributes")
@@ -1713,7 +1803,7 @@ class TestMccsTile:
         assert tile_device.healthState == HealthState.OK
 
         tile_device.subscribe_event(
-            "fpga0_clocks",
+            "timing_clocks_fpga0",
             EventType.CHANGE_EVENT,
             change_event_callbacks["fpga0_clock"],
         )
@@ -1729,7 +1819,7 @@ class TestMccsTile:
 
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
-                if attr in ["fpga0_clocks", "voltageVrefDDR1"]:
+                if attr in ["timing_clocks_fpga0", "voltages_ddr1_vref"]:
                     try:
                         assert (
                             tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
@@ -1993,23 +2083,23 @@ class TestMccsTile:
     @pytest.mark.parametrize(
         "attribute_name",
         [
-            "boardTemperature",
+            "temperatures_board",
             "adcPower",
             "preaduLevels",
             "tileProgrammingState",
-            "fpga0_linkup_loss_count",
+            "io_udp_interface_linkup_loss_count_fpga0",
             "timing_pll_count",
-            "voltageVM_SW_AMP",
-            "voltageVrefDDR0",
+            "voltages_vm_sw_amp",
+            "voltages_ddr0_vref",
             "currentTileBeamformerFrame",
-            "io_f2f_interface_pll_status_fpga0",
-            "fpga0_clock_managers_status",
-            "fpga1_clock_managers_count",
-            "fpga0_lane_error_count",
-            "fpga0_resync_count",
-            "station_beamformer_status",
-            "adc_pll_lock_status",
-            "timing_pll_40g_lock_status",
+            "io_f2f_interface_pll_status_fpga0_status",
+            "timing_clock_managers_fpga0_status",
+            "timing_clock_managers_fpga1_count",
+            "io_jesd_interface_lane_error_count_fpga0",
+            "io_jesd_interface_resync_count_fpga0",
+            "dsp_station_beamf_status",
+            "adcs_pll_status",
+            "timing_pll_40g_status",
         ],
     )
     def test_archive(
@@ -2070,22 +2160,22 @@ class TestMccsTile:
         ("attribute_name", "health_path", "write_value"),
         [
             (
-                "ppsPresent",
+                "timing_pps_present",
                 ["timing", "pps", "status"],
                 False,
             ),
             (
-                "io_f2f_interface_pll_status_fpga0",
+                "io_f2f_interface_pll_status_fpga0_status",
                 ["io", "f2f_interface", "pll_status", "FPGA0"],
                 (False, 0),
             ),
             (
-                "io_f2f_interface_pll_status_fpga0_counter",
+                "io_f2f_interface_pll_status_fpga0_count",
                 ["io", "f2f_interface", "pll_status", "FPGA0"],
                 (True, 1),
             ),
             (
-                "fpga0_qpll_counter",
+                "io_jesd_interface_qpll_status_fpga0_count",
                 ["io", "jesd_interface", "qpll_status", "FPGA0"],
                 (True, 1),
             ),
@@ -2282,13 +2372,13 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         on_tile_device.subscribe_event(
-            "ppsPresent",
+            "timing_pps_present",
             EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
         change_event_callbacks["pps_present"].assert_change_event(Anything)
         assert (
-            on_tile_device.read_attribute("ppsPresent").quality
+            on_tile_device.read_attribute("timing_pps_present").quality
             == AttrQuality.ATTR_VALID
         )
 
@@ -2304,7 +2394,7 @@ class TestMccsTile:
         change_event_callbacks["pps_present"].assert_change_event(Anything)
         time.sleep(1)  # Wait for attr to update.
         assert (
-            on_tile_device.read_attribute("ppsPresent").quality
+            on_tile_device.read_attribute("timing_pps_present").quality
             == AttrQuality.ATTR_ALARM
         )
         assert on_tile_device.state() == DevState.ALARM
@@ -2320,7 +2410,7 @@ class TestMccsTile:
             DevState.OFF, lookahead=5, consume_nonmatches=True
         )
         assert (
-            on_tile_device.read_attribute("ppsPresent").quality
+            on_tile_device.read_attribute("timing_pps_present").quality
             == AttrQuality.ATTR_INVALID
         )
         assert on_tile_device.state() == DevState.OFF
@@ -2329,17 +2419,17 @@ class TestMccsTile:
         ("attribute", "initial_value", "write_value"),
         [
             (
-                "boardTemperature",
+                "temperatures_board",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
                 None,
             ),
             (
-                "fpga1Temperature",
+                "temperatures_fpga0",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
                 None,
             ),
             (
-                "fpga2Temperature",
+                "temperatures_fpga1",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
                 None,
             ),
@@ -2350,7 +2440,7 @@ class TestMccsTile:
                 None,
             ),
             ("currentFrame", 0, None),
-            ("ppsDelay", 12, None),
+            ("timing_pps_delay", 12, None),
             # TODO Tests fail as np.ndarray is returned.
             (
                 "channeliserRounding",
@@ -2473,7 +2563,7 @@ class TestMccsTile:
         ),
         [
             (
-                "voltageMon5V0",
+                "voltages_mon_5v0",
                 TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
                 None,
                 True,
@@ -2753,7 +2843,7 @@ class TestMccsTile:
         ),
         [
             (
-                "ppsPresent",
+                "timing_pps_present",
                 ["timing", "pps", "status"],
                 False,
                 None,
@@ -2763,7 +2853,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_ddr_reset_counter",
+                "io_ddr_interface_reset_counter_fpga0",
                 [
                     "io",
                     "ddr_interface",
@@ -2778,7 +2868,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "currentFE0",
+                "currents_fe0_mva",
                 ["currents", "FE0_mVA"],
                 2.62,
                 2.62,
@@ -2788,7 +2878,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_lane_error_count",
+                "io_jesd_interface_lane_error_count_fpga0",
                 [
                     "io",
                     "jesd_interface",
@@ -2824,7 +2914,7 @@ class TestMccsTile:
                 HealthState.OK,
             ),
             (
-                "fpga0_lane_error_count",
+                "io_jesd_interface_lane_error_count_fpga0",
                 [
                     "io",
                     "jesd_interface",
@@ -2860,7 +2950,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "currentFE0",
+                "currents_fe0_mva",
                 ["currents", "FE0_mVA"],
                 2.61,
                 2.62,
@@ -2870,7 +2960,7 @@ class TestMccsTile:
                 HealthState.DEGRADED,
             ),
             (
-                "fpga0_station_beamformer_error_count",
+                "dsp_station_beamf_ddr_parity_error_count_fpga0",
                 [
                     "dsp",
                     "station_beamf",
@@ -2885,7 +2975,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "adc_pll_lock_status",
+                "adcs_pll_status",
                 ["adcs", "pll_status"],
                 {
                     "ADC0": (True, True),
@@ -2912,7 +3002,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_qpll_status",
+                "io_jesd_interface_qpll_status_fpga0_status",
                 ["io", "jesd_interface", "qpll_status", "FPGA0"],
                 (False, 0),
                 None,
@@ -2922,7 +3012,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_qpll_counter",
+                "io_jesd_interface_qpll_status_fpga0_count",
                 ["io", "jesd_interface", "qpll_status", "FPGA0"],
                 (True, 2),
                 1,
@@ -2932,7 +3022,7 @@ class TestMccsTile:
                 HealthState.FAILED,
             ),
             (
-                "fpga0_clocks",
+                "timing_clocks_fpga0",
                 ["timing", "clocks", "FPGA0"],
                 {"JESD": 1, "DDR": 1, "UDP": 1},
                 None,
@@ -2942,7 +3032,7 @@ class TestMccsTile:
                 HealthState.OK,
             ),
             (
-                "fpga0_clocks",
+                "timing_clocks_fpga0",
                 ["timing", "clocks", "FPGA0"],
                 {"JESD": 1, "DDR": 0, "UDP": 1},
                 None,
@@ -3060,7 +3150,7 @@ class TestMccsTile:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        attribute_name = "fpga0_ddr_reset_counter"
+        attribute_name = "io_ddr_interface_reset_counter_fpga0"
         backend_health_path = ["io", "ddr_interface", "reset_counter", "FPGA0"]
         backend_health_value = 2
 
@@ -4227,7 +4317,7 @@ class TestMccsTileCommands:
         on_tile_device.adminMode = AdminMode.ENGINEERING
         time.sleep(1)
         on_tile_device.subscribe_event(
-            "temperature_alm",
+            "alarms_temperature_alm",
             EventType.CHANGE_EVENT,
             change_event_callbacks["alarms"],
         )
@@ -5130,9 +5220,9 @@ def test_update_attribute_callback_only_emits_polled_health_subgroup() -> None:
         "sysref_timing_requirements": {adc: True for adc in adc_names},
     }
     subgroup_signals = {
-        "pll_status": "adc_pll_lock_status_signal",
-        "sysref_counter": "adc_sysref_counter_signal",
-        "sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
+        "pll_status": "adcs_pll_status_signal",
+        "sysref_counter": "adcs_sysref_counter_signal",
+        "sysref_timing_requirements": "adcs_sysref_timing_requirements_signal",
     }
 
     for subgroup, values in subgroups.items():

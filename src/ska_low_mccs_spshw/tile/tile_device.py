@@ -169,135 +169,167 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Using stored=True here allows us to read back the last
     # emitted value from the signal directly in code where reading the
     # attribute self.attr would return a `tango._tango.Attribute` object.
-    board_temperature_signal: AttrSignal[float] = AttrSignal[float]()
-    fpga0_temperature_signal: AttrSignal[float] = AttrSignal[float]()
-    fpga1_temperature_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc0_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc1_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc2_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc3_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc4_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc5_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc6_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc7_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc8_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc9_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc10_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc11_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc12_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc13_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc14_signal: AttrSignal[float] = AttrSignal[float]()
-    temperature_adc15_signal: AttrSignal[float] = AttrSignal[float]()
-    current_fe0_signal: AttrSignal[float] = AttrSignal[float]()
-    current_fe1_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_avdd3_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vref_ddr0_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vref_ddr1_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_man1v2_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_mgt_avcc_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_mgt_avtt_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_mon5v0_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_mon3v3_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_mon1v8_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_sw_avdd1_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_sw_avdd2_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vin_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp0_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp1_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp2_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp3_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp4_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp5_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp6_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_agp7_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_clk0b_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_clk1b_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_ddr0_vtt_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_ddr1_vdd_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_ddr1_vtt_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_drvdd_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_dvdd_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_fe0_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_fe1_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_mgt0_aux_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_mgt1_aux_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_pll_signal: AttrSignal[float] = AttrSignal[float]()
-    voltage_vm_sw_amp_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_board_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_fpga0_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_fpga1_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc0_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc1_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc2_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc3_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc4_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc5_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc6_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc7_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc8_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc9_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc10_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc11_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc12_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc13_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc14_signal: AttrSignal[float] = AttrSignal[float]()
+    temperatures_adc15_signal: AttrSignal[float] = AttrSignal[float]()
+    currents_fe0_mva_signal: AttrSignal[float] = AttrSignal[float]()
+    currents_fe1_mva_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_avdd3_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_ddr0_vref_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_ddr1_vref_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_man_1v2_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_mgt_avcc_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_mgt_avtt_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_mon_5v0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_mon_3v3_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_mon_1v8_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_sw_avdd1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_sw_avdd2_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vin_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp2_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp3_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp4_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp5_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp6_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_agp7_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_clk0b_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_clk1b_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_ddr0_vtt_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_ddr1_vdd_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_ddr1_vtt_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_drvdd_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_dvdd_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_fe0_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_fe1_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_mgt0_aux_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_mgt1_aux_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_pll_signal: AttrSignal[float] = AttrSignal[float]()
+    voltages_vm_sw_amp_signal: AttrSignal[float] = AttrSignal[float]()
 
-    is_programmed_signal: AttrSignal[bool] = AttrSignal[bool]()
-    is_beamformer_running_signal: AttrSignal[bool] = AttrSignal[bool]()
+    isProgrammed_signal: AttrSignal[bool] = AttrSignal[bool]()
+    isBeamformerRunning_signal: AttrSignal[bool] = AttrSignal[bool]()
     testGeneratorActive_signal: AttrSignal[bool] = AttrSignal[bool]()
-    pps_delay_signal: AttrSignal[int] = AttrSignal[int]()
-    pending_data_requests_signal: AttrSignal[bool] = AttrSignal[bool]()
-    current_tile_beamformer_frame_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga_reference_time_signal: AttrSignal[str] = AttrSignal[str]()
-    fpgas_time_signal: AttrSignal[list] = AttrSignal[list]()
-    fpga_time_signal: AttrSignal[str] = AttrSignal[str]()
-    fpga_current_frame_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga_frame_time_signal: AttrSignal[str] = AttrSignal[str]()
+    timing_pps_delay_signal: AttrSignal[int] = AttrSignal[int]()
+    pendingDataRequests_signal: AttrSignal[bool] = AttrSignal[bool]()
+    currentTileBeamformerFrame_signal: AttrSignal[int] = AttrSignal[int]()
+    fpgaReferenceTime_signal: AttrSignal[str] = AttrSignal[str]()
+    fpgasUnixTime_signal: AttrSignal[list] = AttrSignal[list]()
+    fpgaTime_signal: AttrSignal[str] = AttrSignal[str]()
+    currentFrame_signal: AttrSignal[int] = AttrSignal[int]()
+    fpgaFrameTime_signal: AttrSignal[str] = AttrSignal[str]()
     tile_info_signal: AttrSignal[dict] = AttrSignal[dict]()
-    forty_gb_destination_ips_signal: AttrSignal[list] = AttrSignal[list]()
-    forty_gb_destination_ports_signal: AttrSignal[list] = AttrSignal[list]()
-    forty_gb_core_configurations_signal: AttrSignal[list] = AttrSignal[list]()
-    adc_pll_lock_status_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
-    adc_power_signal: AttrSignal[list[float]] = AttrSignal[list[float]]()
-    tile_beamformer_status_signal: AttrSignal[bool] = AttrSignal[bool]()
-    station_beamformer_status_signal: AttrSignal[bool] = AttrSignal[bool]()
-    fpga0_station_beamformer_error_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_station_beamformer_error_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga0_station_beamformer_flagged_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_station_beamformer_flagged_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga0_crc_error_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_crc_error_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga0_bip_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga1_bip_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga0_decode_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga1_decode_error_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga0_linkup_loss_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_linkup_loss_count_signal: AttrSignal[int] = AttrSignal[int]()
+    fortyGbDestinationIps_signal: AttrSignal[list] = AttrSignal[list]()
+    fortyGbDestinationPorts_signal: AttrSignal[list] = AttrSignal[list]()
+    fortyGbCoreConfigurations_signal: AttrSignal[list] = AttrSignal[list]()
+    adcs_pll_status_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
+    adcPower_signal: AttrSignal[list[float]] = AttrSignal[list[float]]()
+    dsp_tile_beamf_signal: AttrSignal[bool] = AttrSignal[bool]()
+    dsp_station_beamf_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    dsp_station_beamf_ddr_parity_error_count_fpga0_signal: AttrSignal[int] = AttrSignal[
+        int
+    ]()
+    dsp_station_beamf_ddr_parity_error_count_fpga1_signal: AttrSignal[int] = AttrSignal[
+        int
+    ]()
+    dsp_station_beamf_discarded_or_flagged_packet_count_fpga0_signal: AttrSignal[
+        int
+    ] = AttrSignal[int]()
+    dsp_station_beamf_discarded_or_flagged_packet_count_fpga1_signal: AttrSignal[
+        int
+    ] = AttrSignal[int]()
+    io_udp_interface_crc_error_count_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_udp_interface_crc_error_count_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
+    io_udp_interface_bip_error_count_fpga0_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    io_udp_interface_bip_error_count_fpga1_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    io_udp_interface_decode_error_count_fpga0_signal: AttrSignal[
+        list[int]
+    ] = AttrSignal[list[int]]()
+    io_udp_interface_decode_error_count_fpga1_signal: AttrSignal[
+        list[int]
+    ] = AttrSignal[list[int]]()
+    io_udp_interface_linkup_loss_count_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_udp_interface_linkup_loss_count_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
     io_data_router_status_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
     io_data_router_status_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
-    data_router_discarded_packets_signal: AttrSignal[str] = AttrSignal[str]()
-    arp_signal: AttrSignal[bool] = AttrSignal[bool]()
-    udp_status_signal: AttrSignal[bool] = AttrSignal[bool]()
-    ddr_initialisation_signal: AttrSignal[bool] = AttrSignal[bool]()
-    fpga0_ddr_reset_counter_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_ddr_reset_counter_signal: AttrSignal[int] = AttrSignal[int]()
+    io_data_router_discarded_packets_fpgas_signal: AttrSignal[str] = AttrSignal[str]()
+    io_udp_interface_arp_signal: AttrSignal[bool] = AttrSignal[bool]()
+    io_udp_interface_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    io_ddr_interface_initialisation_signal: AttrSignal[bool] = AttrSignal[bool]()
+    io_ddr_interface_reset_counter_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_ddr_interface_reset_counter_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
     io_f2f_interface_soft_error_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
     io_f2f_interface_soft_error_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
     io_f2f_interface_hard_error_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
     io_f2f_interface_hard_error_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga0_resync_count_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_resync_count_signal: AttrSignal[int] = AttrSignal[int]()
-    link_status_signal: AttrSignal[bool] = AttrSignal[bool]()
-    fpga0_lane_error_count_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
-    fpga1_lane_error_count_signal: AttrSignal[list[list]] = AttrSignal[list[list]]()
-    fpga0_clock_managers_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga1_clock_managers_count_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga0_clock_managers_status_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga1_clock_managers_status_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    ddr_write_size_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga0_clocks_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    fpga1_clocks_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    adc_sysref_counter_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    adc_sysref_timing_requirements_signal: AttrSignal[list[int]] = AttrSignal[
+    io_jesd_interface_resync_count_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
+    io_jesd_interface_resync_count_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
+    io_jesd_interface_link_status_signal: AttrSignal[bool] = AttrSignal[bool]()
+    io_jesd_interface_lane_error_count_fpga0_signal: AttrSignal[
+        list[list]
+    ] = AttrSignal[list[list]]()
+    io_jesd_interface_lane_error_count_fpga1_signal: AttrSignal[
+        list[list]
+    ] = AttrSignal[list[list]]()
+    timing_clock_managers_fpga0_count_signal: AttrSignal[list[int]] = AttrSignal[
         list[int]
     ]()
-    fpga0_qpll_status_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_qpll_status_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga0_qpll_counter_signal: AttrSignal[int] = AttrSignal[int]()
-    fpga1_qpll_counter_signal: AttrSignal[int] = AttrSignal[int]()
-    io_f2f_interface_pll_status_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
-    io_f2f_interface_pll_status_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
-    io_f2f_interface_pll_status_fpga0_counter_signal: AttrSignal[int] = AttrSignal[
+    timing_clock_managers_fpga1_count_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    timing_clock_managers_fpga0_status_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    timing_clock_managers_fpga1_status_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    ddr_write_size_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_clocks_fpga0_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    timing_clocks_fpga1_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    adcs_sysref_counter_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
+    adcs_sysref_timing_requirements_signal: AttrSignal[list[int]] = AttrSignal[
+        list[int]
+    ]()
+    io_jesd_interface_qpll_status_fpga0_status_signal: AttrSignal[int] = AttrSignal[
         int
     ]()
-    io_f2f_interface_pll_status_fpga1_counter_signal: AttrSignal[int] = AttrSignal[
+    io_jesd_interface_qpll_status_fpga1_status_signal: AttrSignal[int] = AttrSignal[
         int
     ]()
-    timing_pll_lock_status_signal: AttrSignal[int] = AttrSignal[int]()
+    io_jesd_interface_qpll_status_fpga0_count_signal: AttrSignal[int] = AttrSignal[
+        int
+    ]()
+    io_jesd_interface_qpll_status_fpga1_count_signal: AttrSignal[int] = AttrSignal[
+        int
+    ]()
+    io_f2f_interface_pll_status_fpga0_status_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_pll_status_fpga1_status_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_pll_status_fpga0_count_signal: AttrSignal[int] = AttrSignal[int]()
+    io_f2f_interface_pll_status_fpga1_count_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_pll_status_signal: AttrSignal[int] = AttrSignal[int]()
     timing_pll_count_signal: AttrSignal[int] = AttrSignal[int]()
-    timing_pll_40g_lock_status_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_pll_40g_status_signal: AttrSignal[int] = AttrSignal[int]()
     timing_pll_40g_count_signal: AttrSignal[int] = AttrSignal[int]()
     voltages_signal: AttrSignal[str] = AttrSignal[str]()
     temperatures_signal: AttrSignal[str] = AttrSignal[str]()
@@ -306,11 +338,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     io_signal: AttrSignal[str] = AttrSignal[str]()
     dsp_signal: AttrSignal[str] = AttrSignal[str]()
     adcs_signal: AttrSignal[str] = AttrSignal[str]()
-    I2C_access_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
-    temperature_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
-    voltage_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
-    SEM_wd_signal: AttrSignal[int] = AttrSignal[int](stored=True)
-    MCU_wd_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    alarms_i2c_access_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    alarms_temperature_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    alarms_voltage_alm_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    alarms_sem_wd_signal: AttrSignal[int] = AttrSignal[int](stored=True)
+    alarms_mcu_wd_signal: AttrSignal[int] = AttrSignal[int](stored=True)
     cspDestinationIp_signal: AttrSignal[str] = AttrSignal[str]()
     cspDestinationMac_signal: AttrSignal[str] = AttrSignal[str]()
     cspDestinationPort_signal: AttrSignal[int] = AttrSignal[int]()
@@ -325,9 +357,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     firmwareVersion_signal: AttrSignal[str] = AttrSignal[str]()
     antennaIds_signal: AttrSignal[list[int]] = AttrSignal[list[int]](stored=True)
     coreCommunicationStatus_signal: AttrSignal[str] = AttrSignal[str]()
-    ppsDrift_signal: AttrSignal[int] = AttrSignal[int]()
+    timing_pps_drift_signal: AttrSignal[int] = AttrSignal[int]()
     ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
-    ppsPresent_signal: AttrSignal[bool] = AttrSignal[bool]()
+    timing_pps_present_signal: AttrSignal[bool] = AttrSignal[bool]()
     pllLocked_signal: AttrSignal[bool] = AttrSignal[bool]()
     beamformerTable_signal: AttrSignal[list[list[int]]] = AttrSignal[list[list[int]]]()
     beamformerRegions_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
@@ -368,138 +400,178 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Maps each signal-backed attribute that needs alarm shutdown handling
     # to its Tango attribute name.
     _ALARM_SIGNAL_ATTRIBUTES: dict[AttrSignal, str] = {
-        board_temperature_signal: "temperatures_board",
-        fpga0_temperature_signal: "temperatures_fpga0",
-        fpga1_temperature_signal: "temperatures_fpga1",
+        temperatures_board_signal: "temperatures_board",
+        temperatures_fpga0_signal: "temperatures_fpga0",
+        temperatures_fpga1_signal: "temperatures_fpga1",
     }
 
     # Maps each health-monitoring attribute name to its signal attribute name,
     # used by update_tile_health_attributes to route updates generically.
     _HEALTH_SIGNAL_MAP: dict[str, str] = {
-        "temperatures_board": "board_temperature_signal",
-        "temperatures_fpga0": "fpga0_temperature_signal",
-        "temperatures_fpga1": "fpga1_temperature_signal",
-        "temperatures_adc0": "temperature_adc0_signal",
-        "temperatures_adc1": "temperature_adc1_signal",
-        "temperatures_adc2": "temperature_adc2_signal",
-        "temperatures_adc3": "temperature_adc3_signal",
-        "temperatures_adc4": "temperature_adc4_signal",
-        "temperatures_adc5": "temperature_adc5_signal",
-        "temperatures_adc6": "temperature_adc6_signal",
-        "temperatures_adc7": "temperature_adc7_signal",
-        "temperatures_adc8": "temperature_adc8_signal",
-        "temperatures_adc9": "temperature_adc9_signal",
-        "temperatures_adc10": "temperature_adc10_signal",
-        "temperatures_adc11": "temperature_adc11_signal",
-        "temperatures_adc12": "temperature_adc12_signal",
-        "temperatures_adc13": "temperature_adc13_signal",
-        "temperatures_adc14": "temperature_adc14_signal",
-        "temperatures_adc15": "temperature_adc15_signal",
-        "currents_fe0_mva": "current_fe0_signal",
-        "currents_fe1_mva": "current_fe1_signal",
-        "voltages_avdd3": "voltage_avdd3_signal",
-        "voltages_ddr0_vref": "voltage_vref_ddr0_signal",
-        "voltages_ddr1_vref": "voltage_vref_ddr1_signal",
-        "voltages_man_1v2": "voltage_man1v2_signal",
-        "voltages_mgt_avcc": "voltage_mgt_avcc_signal",
-        "voltages_mgt_avtt": "voltage_mgt_avtt_signal",
-        "voltages_mon_5v0": "voltage_mon5v0_signal",
-        "voltages_mon_3v3": "voltage_mon3v3_signal",
-        "voltages_mon_1v8": "voltage_mon1v8_signal",
-        "voltages_sw_avdd1": "voltage_sw_avdd1_signal",
-        "voltages_sw_avdd2": "voltage_sw_avdd2_signal",
-        "voltages_vin": "voltage_vin_signal",
-        "voltages_vm_agp0": "voltage_vm_agp0_signal",
-        "voltages_vm_agp1": "voltage_vm_agp1_signal",
-        "voltages_vm_agp2": "voltage_vm_agp2_signal",
-        "voltages_vm_agp3": "voltage_vm_agp3_signal",
-        "voltages_vm_agp4": "voltage_vm_agp4_signal",
-        "voltages_vm_agp5": "voltage_vm_agp5_signal",
-        "voltages_vm_agp6": "voltage_vm_agp6_signal",
-        "voltages_vm_agp7": "voltage_vm_agp7_signal",
-        "voltages_vm_clk0b": "voltage_vm_clk0b_signal",
-        "voltages_vm_clk1b": "voltage_vm_clk1b_signal",
-        "voltages_vm_ddr0_vtt": "voltage_vm_ddr0_vtt_signal",
-        "voltages_vm_ddr1_vdd": "voltage_vm_ddr1_vdd_signal",
-        "voltages_vm_ddr1_vtt": "voltage_vm_ddr1_vtt_signal",
-        "voltages_vm_drvdd": "voltage_vm_drvdd_signal",
-        "voltages_vm_dvdd": "voltage_vm_dvdd_signal",
-        "voltages_vm_fe0": "voltage_vm_fe0_signal",
-        "voltages_vm_fe1": "voltage_vm_fe1_signal",
-        "voltages_vm_mgt0_aux": "voltage_vm_mgt0_aux_signal",
-        "voltages_vm_mgt1_aux": "voltage_vm_mgt1_aux_signal",
-        "voltages_vm_pll": "voltage_vm_pll_signal",
-        "voltages_vm_sw_amp": "voltage_vm_sw_amp_signal",
-        "adcs_pll_status": "adc_pll_lock_status_signal",
-        "dsp_tile_beamf": "tile_beamformer_status_signal",
-        "dsp_station_beamf_status": "station_beamformer_status_signal",
+        "temperatures_board": "temperatures_board_signal",
+        "temperatures_fpga0": "temperatures_fpga0_signal",
+        "temperatures_fpga1": "temperatures_fpga1_signal",
+        "temperatures_adc0": "temperatures_adc0_signal",
+        "temperatures_adc1": "temperatures_adc1_signal",
+        "temperatures_adc2": "temperatures_adc2_signal",
+        "temperatures_adc3": "temperatures_adc3_signal",
+        "temperatures_adc4": "temperatures_adc4_signal",
+        "temperatures_adc5": "temperatures_adc5_signal",
+        "temperatures_adc6": "temperatures_adc6_signal",
+        "temperatures_adc7": "temperatures_adc7_signal",
+        "temperatures_adc8": "temperatures_adc8_signal",
+        "temperatures_adc9": "temperatures_adc9_signal",
+        "temperatures_adc10": "temperatures_adc10_signal",
+        "temperatures_adc11": "temperatures_adc11_signal",
+        "temperatures_adc12": "temperatures_adc12_signal",
+        "temperatures_adc13": "temperatures_adc13_signal",
+        "temperatures_adc14": "temperatures_adc14_signal",
+        "temperatures_adc15": "temperatures_adc15_signal",
+        "currents_fe0_mva": "currents_fe0_mva_signal",
+        "currents_fe1_mva": "currents_fe1_mva_signal",
+        "voltages_avdd3": "voltages_avdd3_signal",
+        "voltages_ddr0_vref": "voltages_ddr0_vref_signal",
+        "voltages_ddr1_vref": "voltages_ddr1_vref_signal",
+        "voltages_man_1v2": "voltages_man_1v2_signal",
+        "voltages_mgt_avcc": "voltages_mgt_avcc_signal",
+        "voltages_mgt_avtt": "voltages_mgt_avtt_signal",
+        "voltages_mon_5v0": "voltages_mon_5v0_signal",
+        "voltages_mon_3v3": "voltages_mon_3v3_signal",
+        "voltages_mon_1v8": "voltages_mon_1v8_signal",
+        "voltages_sw_avdd1": "voltages_sw_avdd1_signal",
+        "voltages_sw_avdd2": "voltages_sw_avdd2_signal",
+        "voltages_vin": "voltages_vin_signal",
+        "voltages_vm_agp0": "voltages_vm_agp0_signal",
+        "voltages_vm_agp1": "voltages_vm_agp1_signal",
+        "voltages_vm_agp2": "voltages_vm_agp2_signal",
+        "voltages_vm_agp3": "voltages_vm_agp3_signal",
+        "voltages_vm_agp4": "voltages_vm_agp4_signal",
+        "voltages_vm_agp5": "voltages_vm_agp5_signal",
+        "voltages_vm_agp6": "voltages_vm_agp6_signal",
+        "voltages_vm_agp7": "voltages_vm_agp7_signal",
+        "voltages_vm_clk0b": "voltages_vm_clk0b_signal",
+        "voltages_vm_clk1b": "voltages_vm_clk1b_signal",
+        "voltages_vm_ddr0_vtt": "voltages_vm_ddr0_vtt_signal",
+        "voltages_vm_ddr1_vdd": "voltages_vm_ddr1_vdd_signal",
+        "voltages_vm_ddr1_vtt": "voltages_vm_ddr1_vtt_signal",
+        "voltages_vm_drvdd": "voltages_vm_drvdd_signal",
+        "voltages_vm_dvdd": "voltages_vm_dvdd_signal",
+        "voltages_vm_fe0": "voltages_vm_fe0_signal",
+        "voltages_vm_fe1": "voltages_vm_fe1_signal",
+        "voltages_vm_mgt0_aux": "voltages_vm_mgt0_aux_signal",
+        "voltages_vm_mgt1_aux": "voltages_vm_mgt1_aux_signal",
+        "voltages_vm_pll": "voltages_vm_pll_signal",
+        "voltages_vm_sw_amp": "voltages_vm_sw_amp_signal",
+        "adcs_pll_status": "adcs_pll_status_signal",
+        "dsp_tile_beamf": "dsp_tile_beamf_signal",
+        "dsp_station_beamf_status": "dsp_station_beamf_status_signal",
         "dsp_station_beamf_ddr_parity_error_count_fpga0": (
-            "fpga0_station_beamformer_error_count_signal"
+            "dsp_station_beamf_ddr_parity_error_count_fpga0_signal"
         ),
         "dsp_station_beamf_ddr_parity_error_count_fpga1": (
-            "fpga1_station_beamformer_error_count_signal"
+            "dsp_station_beamf_ddr_parity_error_count_fpga1_signal"
         ),
         "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0": (
-            "fpga0_station_beamformer_flagged_count_signal"
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0_signal"
         ),
         "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1": (
-            "fpga1_station_beamformer_flagged_count_signal"
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1_signal"
         ),
-        "io_udp_interface_crc_error_count_fpga0": "fpga0_crc_error_count_signal",
-        "io_udp_interface_crc_error_count_fpga1": "fpga1_crc_error_count_signal",
-        "io_udp_interface_bip_error_count_fpga0": "fpga0_bip_error_count_signal",
-        "io_udp_interface_bip_error_count_fpga1": "fpga1_bip_error_count_signal",
-        "io_udp_interface_decode_error_count_fpga0": "fpga0_decode_error_count_signal",
-        "io_udp_interface_decode_error_count_fpga1": "fpga1_decode_error_count_signal",
-        "io_udp_interface_linkup_loss_count_fpga0": "fpga0_linkup_loss_count_signal",
-        "io_udp_interface_linkup_loss_count_fpga1": "fpga1_linkup_loss_count_signal",
+        "io_udp_interface_crc_error_count_fpga0": (
+            "io_udp_interface_crc_error_count_fpga0_signal"
+        ),
+        "io_udp_interface_crc_error_count_fpga1": (
+            "io_udp_interface_crc_error_count_fpga1_signal"
+        ),
+        "io_udp_interface_bip_error_count_fpga0": (
+            "io_udp_interface_bip_error_count_fpga0_signal"
+        ),
+        "io_udp_interface_bip_error_count_fpga1": (
+            "io_udp_interface_bip_error_count_fpga1_signal"
+        ),
+        "io_udp_interface_decode_error_count_fpga0": (
+            "io_udp_interface_decode_error_count_fpga0_signal"
+        ),
+        "io_udp_interface_decode_error_count_fpga1": (
+            "io_udp_interface_decode_error_count_fpga1_signal"
+        ),
+        "io_udp_interface_linkup_loss_count_fpga0": (
+            "io_udp_interface_linkup_loss_count_fpga0_signal"
+        ),
+        "io_udp_interface_linkup_loss_count_fpga1": (
+            "io_udp_interface_linkup_loss_count_fpga1_signal"
+        ),
         "io_data_router_status_fpga0": "io_data_router_status_fpga0_signal",
         "io_data_router_status_fpga1": "io_data_router_status_fpga1_signal",
         "io_data_router_discarded_packets_fpgas": (
-            "data_router_discarded_packets_signal"
+            "io_data_router_discarded_packets_fpgas_signal"
         ),
-        "io_udp_interface_arp": "arp_signal",
-        "io_udp_interface_status": "udp_status_signal",
-        "io_ddr_interface_initialisation": "ddr_initialisation_signal",
-        "io_ddr_interface_reset_counter_fpga0": "fpga0_ddr_reset_counter_signal",
-        "io_ddr_interface_reset_counter_fpga1": "fpga1_ddr_reset_counter_signal",
+        "io_udp_interface_arp": "io_udp_interface_arp_signal",
+        "io_udp_interface_status": "io_udp_interface_status_signal",
+        "io_ddr_interface_initialisation": "io_ddr_interface_initialisation_signal",
+        "io_ddr_interface_reset_counter_fpga0": (
+            "io_ddr_interface_reset_counter_fpga0_signal"
+        ),
+        "io_ddr_interface_reset_counter_fpga1": (
+            "io_ddr_interface_reset_counter_fpga1_signal"
+        ),
         "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0_signal",
         "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1_signal",
         "io_f2f_interface_hard_error_fpga0": "io_f2f_interface_hard_error_fpga0_signal",
         "io_f2f_interface_hard_error_fpga1": "io_f2f_interface_hard_error_fpga1_signal",
-        "io_jesd_interface_resync_count_fpga0": "fpga0_resync_count_signal",
-        "io_jesd_interface_resync_count_fpga1": "fpga1_resync_count_signal",
-        "io_jesd_interface_link_status": "link_status_signal",
-        "io_jesd_interface_lane_error_count_fpga0": "fpga0_lane_error_count_signal",
-        "io_jesd_interface_lane_error_count_fpga1": "fpga1_lane_error_count_signal",
-        "timing_clock_managers_fpga0_count": "fpga0_clock_managers_count_signal",
-        "timing_clock_managers_fpga1_count": "fpga1_clock_managers_count_signal",
-        "timing_clock_managers_fpga0_status": "fpga0_clock_managers_status_signal",
-        "timing_clock_managers_fpga1_status": "fpga1_clock_managers_status_signal",
-        "timing_clocks_fpga0": "fpga0_clocks_signal",
-        "timing_clocks_fpga1": "fpga1_clocks_signal",
-        "adcs_sysref_counter": "adc_sysref_counter_signal",
-        "adcs_sysref_timing_requirements": "adc_sysref_timing_requirements_signal",
-        "io_jesd_interface_qpll_status_fpga0_status": "fpga0_qpll_status_signal",
-        "io_jesd_interface_qpll_status_fpga1_status": "fpga1_qpll_status_signal",
-        "io_jesd_interface_qpll_status_fpga0_count": "fpga0_qpll_counter_signal",
-        "io_jesd_interface_qpll_status_fpga1_count": "fpga1_qpll_counter_signal",
+        "io_jesd_interface_resync_count_fpga0": (
+            "io_jesd_interface_resync_count_fpga0_signal"
+        ),
+        "io_jesd_interface_resync_count_fpga1": (
+            "io_jesd_interface_resync_count_fpga1_signal"
+        ),
+        "io_jesd_interface_link_status": "io_jesd_interface_link_status_signal",
+        "io_jesd_interface_lane_error_count_fpga0": (
+            "io_jesd_interface_lane_error_count_fpga0_signal"
+        ),
+        "io_jesd_interface_lane_error_count_fpga1": (
+            "io_jesd_interface_lane_error_count_fpga1_signal"
+        ),
+        "timing_clock_managers_fpga0_count": "timing_clock_managers_fpga0_count_signal",
+        "timing_clock_managers_fpga1_count": "timing_clock_managers_fpga1_count_signal",
+        "timing_clock_managers_fpga0_status": (
+            "timing_clock_managers_fpga0_status_signal"
+        ),
+        "timing_clock_managers_fpga1_status": (
+            "timing_clock_managers_fpga1_status_signal"
+        ),
+        "timing_clocks_fpga0": "timing_clocks_fpga0_signal",
+        "timing_clocks_fpga1": "timing_clocks_fpga1_signal",
+        "adcs_sysref_counter": "adcs_sysref_counter_signal",
+        "adcs_sysref_timing_requirements": "adcs_sysref_timing_requirements_signal",
+        "io_jesd_interface_qpll_status_fpga0_status": (
+            "io_jesd_interface_qpll_status_fpga0_status_signal"
+        ),
+        "io_jesd_interface_qpll_status_fpga1_status": (
+            "io_jesd_interface_qpll_status_fpga1_status_signal"
+        ),
+        "io_jesd_interface_qpll_status_fpga0_count": (
+            "io_jesd_interface_qpll_status_fpga0_count_signal"
+        ),
+        "io_jesd_interface_qpll_status_fpga1_count": (
+            "io_jesd_interface_qpll_status_fpga1_count_signal"
+        ),
         "io_f2f_interface_pll_status_fpga0_status": (
-            "io_f2f_interface_pll_status_fpga0_signal"
+            "io_f2f_interface_pll_status_fpga0_status_signal"
         ),
         "io_f2f_interface_pll_status_fpga1_status": (
-            "io_f2f_interface_pll_status_fpga1_signal"
+            "io_f2f_interface_pll_status_fpga1_status_signal"
         ),
         "io_f2f_interface_pll_status_fpga0_count": (
-            "io_f2f_interface_pll_status_fpga0_counter_signal"
+            "io_f2f_interface_pll_status_fpga0_count_signal"
         ),
         "io_f2f_interface_pll_status_fpga1_count": (
-            "io_f2f_interface_pll_status_fpga1_counter_signal"
+            "io_f2f_interface_pll_status_fpga1_count_signal"
         ),
-        "timing_pll_status": "timing_pll_lock_status_signal",
+        "timing_pll_status": "timing_pll_status_signal",
         "timing_pll_count": "timing_pll_count_signal",
         "timing_pll_40g_count": "timing_pll_40g_count_signal",
-        "timing_pll_40g_status": "timing_pll_40g_lock_status_signal",
+        "timing_pll_40g_status": "timing_pll_40g_status_signal",
         "voltages": "voltages_signal",
         "temperatures": "temperatures_signal",
         "currents": "currents_signal",
@@ -507,7 +579,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "io": "io_signal",
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
-        "timing_pps_present": "ppsPresent_signal",
+        "timing_pps_present": "timing_pps_present_signal",
         "timing_sync_time": "timing_sync_time_signal",
     }
 
@@ -526,27 +598,27 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # TileComponentManager kwarg name to its signal attribute name, used by
     # _update_attribute_callback to route updates generically.
     _GENERIC_SIGNAL_MAP: dict[str, str] = {
-        "is_programmed": "is_programmed_signal",
-        "beamformer_running": "is_beamformer_running_signal",
-        "pps_delay": "pps_delay_signal",
-        "pending_data_requests": "pending_data_requests_signal",
-        "tile_beamformer_frame": "current_tile_beamformer_frame_signal",
-        "fpga_reference_time": "fpga_reference_time_signal",
-        "fpgas_time": "fpgas_time_signal",
-        "fpga_time": "fpga_time_signal",
-        "fpga_current_frame": "fpga_current_frame_signal",
-        "fpga_frame_time": "fpga_frame_time_signal",
+        "is_programmed": "isProgrammed_signal",
+        "beamformer_running": "isBeamformerRunning_signal",
+        "pps_delay": "timing_pps_delay_signal",
+        "pending_data_requests": "pendingDataRequests_signal",
+        "tile_beamformer_frame": "currentTileBeamformerFrame_signal",
+        "fpga_reference_time": "fpgaReferenceTime_signal",
+        "fpgas_time": "fpgasUnixTime_signal",
+        "fpga_time": "fpgaTime_signal",
+        "fpga_current_frame": "currentFrame_signal",
+        "fpga_frame_time": "fpgaFrameTime_signal",
         "tile_info": "tile_info_signal",
-        "forty_gb_destination_ips": "forty_gb_destination_ips_signal",
-        "forty_gb_destination_ports": "forty_gb_destination_ports_signal",
-        "forty_gb_core_configurations": "forty_gb_core_configurations_signal",
-        "adc_rms": "adc_power_signal",
+        "forty_gb_destination_ips": "fortyGbDestinationIps_signal",
+        "forty_gb_destination_ports": "fortyGbDestinationPorts_signal",
+        "forty_gb_core_configurations": "fortyGbCoreConfigurations_signal",
+        "adc_rms": "adcPower_signal",
         "ddr_write_size": "ddr_write_size_signal",
-        "I2C_access_alm": "I2C_access_alm_signal",
-        "temperature_alm": "temperature_alm_signal",
-        "voltage_alm": "voltage_alm_signal",
-        "SEM_wd": "SEM_wd_signal",
-        "MCU_wd": "MCU_wd_signal",
+        "I2C_access_alm": "alarms_i2c_access_alm_signal",
+        "temperature_alm": "alarms_temperature_alm_signal",
+        "voltage_alm": "alarms_voltage_alm_signal",
+        "SEM_wd": "alarms_sem_wd_signal",
+        "MCU_wd": "alarms_mcu_wd_signal",
         "dst_ip_40g_fpga1": "dstip40gfpga1_signal",
         "dst_ip_40g_fpga2": "dstip40gfpga2_signal",
         "tile_id": "logicalTileId_signal",
@@ -554,7 +626,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "station_id": "stationId_signal",
         "firmware_version": "firmwareVersion_signal",
         "core_communication": "coreCommunicationStatus_signal",
-        "pps_drift": "ppsDrift_signal",
+        "pps_drift": "timing_pps_drift_signal",
         "pps_delay_correction": "ppsDelayCorrection_signal",
         "pll_locked": "pllLocked_signal",
         "beamformer_table": "beamformerTable_signal",
@@ -881,11 +953,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
         # Mapping of TPM API alarm name to alarm_signal
         self.__alarm_attribute_map: dict[str, str] = {
-            "I2C_access_alm": "I2C_access_alm_signal",
-            "temperature_alm": "temperature_alm_signal",
-            "voltage_alm": "voltage_alm_signal",
-            "SEM_wd": "SEM_wd_signal",
-            "MCU_wd": "MCU_wd_signal",
+            "I2C_access_alm": "alarms_i2c_access_alm_signal",
+            "temperature_alm": "alarms_temperature_alm_signal",
+            "voltage_alm": "alarms_voltage_alm_signal",
+            "SEM_wd": "alarms_sem_wd_signal",
+            "MCU_wd": "alarms_mcu_wd_signal",
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
@@ -1958,7 +2030,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # Attributes
     # ----------
     temperatures_board = attribute_from_signal(
-        board_temperature_signal,
+        temperatures_board_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -1974,7 +2046,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     @attribute_from_signal(
-        adc_pll_lock_status_signal,
+        adcs_pll_status_signal,
         dtype=(("DevShort",),),
         max_dim_x=16,
         max_dim_y=2,
@@ -2007,21 +2079,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return adc_pll_to_list(raw_value)
 
     dsp_tile_beamf = attribute_from_signal(
-        tile_beamformer_status_signal,
+        dsp_tile_beamf_signal,
         dtype="DevBoolean",
         label="Tile Beamformer Status",
         doc="Status of the tile beamformer. True if status OK.",
     )
 
     dsp_station_beamf_status = attribute_from_signal(
-        station_beamformer_status_signal,
+        dsp_station_beamf_status_signal,
         dtype="DevBoolean",
         label="Station Beamformer Status",
         doc="Status of the Station beamformer. True if status OK.",
     )
 
     dsp_station_beamf_ddr_parity_error_count_fpga0 = attribute_from_signal(
-        fpga0_station_beamformer_error_count_signal,
+        dsp_station_beamf_ddr_parity_error_count_fpga0_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2032,7 +2104,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     dsp_station_beamf_ddr_parity_error_count_fpga1 = attribute_from_signal(
-        fpga1_station_beamformer_error_count_signal,
+        dsp_station_beamf_ddr_parity_error_count_fpga1_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2043,7 +2115,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     dsp_station_beamf_discarded_or_flagged_packet_count_fpga0 = attribute_from_signal(
-        fpga0_station_beamformer_flagged_count_signal,
+        dsp_station_beamf_discarded_or_flagged_packet_count_fpga0_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2054,7 +2126,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     dsp_station_beamf_discarded_or_flagged_packet_count_fpga1 = attribute_from_signal(
-        fpga1_station_beamformer_flagged_count_signal,
+        dsp_station_beamf_discarded_or_flagged_packet_count_fpga1_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2065,7 +2137,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_udp_interface_crc_error_count_fpga0 = attribute_from_signal(
-        fpga0_crc_error_count_signal,
+        io_udp_interface_crc_error_count_fpga0_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2076,7 +2148,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_udp_interface_crc_error_count_fpga1 = attribute_from_signal(
-        fpga1_crc_error_count_signal,
+        io_udp_interface_crc_error_count_fpga1_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2087,7 +2159,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     @attribute_from_signal(
-        fpga0_bip_error_count_signal,
+        io_udp_interface_bip_error_count_fpga0_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
@@ -2119,7 +2191,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return udp_error_count_to_list(raw_value)
 
     @attribute_from_signal(
-        fpga1_bip_error_count_signal,
+        io_udp_interface_bip_error_count_fpga1_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
@@ -2151,7 +2223,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return udp_error_count_to_list(raw_value)
 
     @attribute_from_signal(
-        fpga0_decode_error_count_signal,
+        io_udp_interface_decode_error_count_fpga0_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
@@ -2185,7 +2257,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return udp_error_count_to_list(raw_value)
 
     @attribute_from_signal(
-        fpga1_decode_error_count_signal,
+        io_udp_interface_decode_error_count_fpga1_signal,
         dtype=("DevShort",),
         max_dim_x=4,
         max_alarm=1,
@@ -2219,7 +2291,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return udp_error_count_to_list(raw_value)
 
     io_udp_interface_linkup_loss_count_fpga0 = attribute_from_signal(
-        fpga0_linkup_loss_count_signal,
+        io_udp_interface_linkup_loss_count_fpga0_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2230,7 +2302,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_udp_interface_linkup_loss_count_fpga1 = attribute_from_signal(
-        fpga1_linkup_loss_count_signal,
+        io_udp_interface_linkup_loss_count_fpga1_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2303,7 +2375,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value)
 
     @attribute_from_signal(
-        data_router_discarded_packets_signal,
+        io_data_router_discarded_packets_fpgas_signal,
         dtype="DevString",
         label="Data Router Discarded Packets",
         doc="Return the number of discarded packets. "
@@ -2333,7 +2405,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return serialise_object(raw_value)
 
     io_udp_interface_arp = attribute_from_signal(
-        arp_signal,
+        io_udp_interface_arp_signal,
         dtype="DevBoolean",
         label="UDP ARP Status",
         doc="Return the UDP ARP status. "
@@ -2341,7 +2413,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_udp_interface_status = attribute_from_signal(
-        udp_status_signal,
+        io_udp_interface_status_signal,
         dtype="DevBoolean",
         label="UDP Status",
         doc="Return the UDP status. "
@@ -2349,7 +2421,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_ddr_interface_initialisation = attribute_from_signal(
-        ddr_initialisation_signal,
+        io_ddr_interface_initialisation_signal,
         dtype="DevBoolean",
         label="DDR Initialisation Status",
         doc="Return the DDR initialisation status. "
@@ -2357,7 +2429,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_ddr_interface_reset_counter_fpga0 = attribute_from_signal(
-        fpga0_ddr_reset_counter_signal,
+        io_ddr_interface_reset_counter_fpga0_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2368,7 +2440,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_ddr_interface_reset_counter_fpga1 = attribute_from_signal(
-        fpga1_ddr_reset_counter_signal,
+        io_ddr_interface_reset_counter_fpga1_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2431,7 +2503,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_jesd_interface_resync_count_fpga0 = attribute_from_signal(
-        fpga0_resync_count_signal,
+        io_jesd_interface_resync_count_fpga0_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2442,7 +2514,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_jesd_interface_resync_count_fpga1 = attribute_from_signal(
-        fpga1_resync_count_signal,
+        io_jesd_interface_resync_count_fpga1_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2453,7 +2525,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     io_jesd_interface_link_status = attribute_from_signal(
-        link_status_signal,
+        io_jesd_interface_link_status_signal,
         dtype="DevBoolean",
         label="JESD Link Status",
         doc="Return the JESD link status. "
@@ -2461,7 +2533,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     @attribute_from_signal(
-        fpga0_lane_error_count_signal,
+        io_jesd_interface_lane_error_count_fpga0_signal,
         dtype=(("DevShort",),),
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
@@ -2495,7 +2567,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return lane_error_to_array(raw_value)
 
     @attribute_from_signal(
-        fpga1_lane_error_count_signal,
+        io_jesd_interface_lane_error_count_fpga1_signal,
         dtype=(("DevShort",),),
         max_dim_x=8,  # lane
         max_dim_y=2,  # core
@@ -2529,7 +2601,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return lane_error_to_array(raw_value)
 
     @attribute_from_signal(
-        fpga0_clock_managers_count_signal,
+        timing_clock_managers_fpga0_count_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # fpga
         max_alarm=1,
@@ -2563,7 +2635,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return clock_managers_count(raw_value)
 
     @attribute_from_signal(
-        fpga1_clock_managers_count_signal,
+        timing_clock_managers_fpga1_count_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         max_alarm=1,
@@ -2597,7 +2669,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return clock_managers_count(raw_value)
 
     @attribute_from_signal(
-        fpga0_clock_managers_status_signal,
+        timing_clock_managers_fpga0_status_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         min_alarm=0,
@@ -2632,7 +2704,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return clock_managers_status(raw_value)
 
     @attribute_from_signal(
-        fpga1_clock_managers_status_signal,
+        timing_clock_managers_fpga1_status_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clock_managers
         min_alarm=0,
@@ -2667,7 +2739,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return clock_managers_status(raw_value)
 
     @attribute_from_signal(
-        fpga0_clocks_signal,
+        timing_clocks_fpga0_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
         min_alarm=0,
@@ -2702,7 +2774,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return clocks_to_list(raw_value)
 
     @attribute_from_signal(
-        fpga1_clocks_signal,
+        timing_clocks_fpga1_signal,
         dtype=("DevShort",),
         max_dim_x=3,  # clocks
         min_alarm=0,
@@ -2738,7 +2810,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return clocks_to_list(raw_value)
 
     @attribute_from_signal(
-        adc_sysref_counter_signal,
+        adcs_sysref_counter_signal,
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
         min_alarm=0,  # SYSREF not present
@@ -2773,7 +2845,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return adc_to_list(raw_value)
 
     @attribute_from_signal(
-        adc_sysref_timing_requirements_signal,
+        adcs_sysref_timing_requirements_signal,
         dtype=("DevShort",),
         max_dim_x=16,  # ADC Channels
         min_alarm=0,  # requirements not met
@@ -2808,7 +2880,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return adc_to_list(raw_value)
 
     @attribute_from_signal(
-        fpga0_qpll_status_signal,
+        io_jesd_interface_qpll_status_fpga0_status_signal,
         dtype="DevShort",
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
@@ -2841,7 +2913,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[0])
 
     @attribute_from_signal(
-        fpga1_qpll_status_signal,
+        io_jesd_interface_qpll_status_fpga1_status_signal,
         dtype="DevShort",
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
@@ -2874,7 +2946,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[0])
 
     @attribute_from_signal(
-        fpga0_qpll_counter_signal,
+        io_jesd_interface_qpll_status_fpga0_count_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2908,7 +2980,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[1])
 
     @attribute_from_signal(
-        fpga1_qpll_counter_signal,
+        io_jesd_interface_qpll_status_fpga1_count_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -2942,7 +3014,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[1])
 
     @attribute_from_signal(
-        io_f2f_interface_pll_status_fpga0_signal,
+        io_f2f_interface_pll_status_fpga0_status_signal,
         dtype="DevShort",
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
@@ -2977,7 +3049,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[0])
 
     @attribute_from_signal(
-        io_f2f_interface_pll_status_fpga1_signal,
+        io_f2f_interface_pll_status_fpga1_status_signal,
         dtype="DevShort",
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
@@ -3012,7 +3084,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[0])
 
     @attribute_from_signal(
-        io_f2f_interface_pll_status_fpga0_counter_signal,
+        io_f2f_interface_pll_status_fpga0_count_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -3046,7 +3118,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[1])
 
     @attribute_from_signal(
-        io_f2f_interface_pll_status_fpga1_counter_signal,
+        io_f2f_interface_pll_status_fpga1_count_signal,
         dtype="DevShort",
         max_alarm=1,
         abs_change=MIN_ABS_CHANGE,
@@ -3080,7 +3152,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[1])
 
     @attribute_from_signal(
-        timing_pll_lock_status_signal,
+        timing_pll_status_signal,
         dtype="DevShort",
         min_alarm=0,
         max_value=2,
@@ -3146,7 +3218,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value[1])
 
     @attribute_from_signal(
-        timing_pll_40g_lock_status_signal,
+        timing_pll_40g_status_signal,
         dtype="DevShort",
         min_alarm=0,
         abs_change=MIN_ABS_CHANGE,
@@ -3326,7 +3398,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc0 = attribute_from_signal(
-        temperature_adc0_signal,
+        temperatures_adc0_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3338,7 +3410,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc1 = attribute_from_signal(
-        temperature_adc1_signal,
+        temperatures_adc1_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3350,7 +3422,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc2 = attribute_from_signal(
-        temperature_adc2_signal,
+        temperatures_adc2_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3362,7 +3434,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc3 = attribute_from_signal(
-        temperature_adc3_signal,
+        temperatures_adc3_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3374,7 +3446,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc4 = attribute_from_signal(
-        temperature_adc4_signal,
+        temperatures_adc4_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3386,7 +3458,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc5 = attribute_from_signal(
-        temperature_adc5_signal,
+        temperatures_adc5_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3398,7 +3470,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc6 = attribute_from_signal(
-        temperature_adc6_signal,
+        temperatures_adc6_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3410,7 +3482,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc7 = attribute_from_signal(
-        temperature_adc7_signal,
+        temperatures_adc7_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3422,7 +3494,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc8 = attribute_from_signal(
-        temperature_adc8_signal,
+        temperatures_adc8_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3434,7 +3506,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc9 = attribute_from_signal(
-        temperature_adc9_signal,
+        temperatures_adc9_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3446,7 +3518,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc10 = attribute_from_signal(
-        temperature_adc10_signal,
+        temperatures_adc10_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3458,7 +3530,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc11 = attribute_from_signal(
-        temperature_adc11_signal,
+        temperatures_adc11_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3470,7 +3542,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc12 = attribute_from_signal(
-        temperature_adc12_signal,
+        temperatures_adc12_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3482,7 +3554,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc13 = attribute_from_signal(
-        temperature_adc13_signal,
+        temperatures_adc13_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3494,7 +3566,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc14 = attribute_from_signal(
-        temperature_adc14_signal,
+        temperatures_adc14_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3506,7 +3578,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_adc15 = attribute_from_signal(
-        temperature_adc15_signal,
+        temperatures_adc15_signal,
         dtype="DevFloat",
         unit="Celsius",
         abs_change=MIN_ABS_CHANGE,
@@ -3614,7 +3686,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return serialise_object(raw_value)
 
     alarms_i2c_access_alm = attribute_from_signal(
-        I2C_access_alm_signal,
+        alarms_i2c_access_alm_signal,
         write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
@@ -3626,7 +3698,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     alarms_temperature_alm = attribute_from_signal(
-        temperature_alm_signal,
+        alarms_temperature_alm_signal,
         write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
@@ -3641,7 +3713,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     alarms_voltage_alm = attribute_from_signal(
-        voltage_alm_signal,
+        alarms_voltage_alm_signal,
         write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
@@ -3653,7 +3725,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     alarms_sem_wd = attribute_from_signal(
-        SEM_wd_signal,
+        alarms_sem_wd_signal,
         write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
@@ -3665,7 +3737,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     alarms_mcu_wd = attribute_from_signal(
-        MCU_wd_signal,
+        alarms_mcu_wd_signal,
         write_to_signal=True,
         dtype="DevShort",
         max_warning=1,
@@ -4372,7 +4444,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     isProgrammed = attribute_from_signal(
-        is_programmed_signal,
+        isProgrammed_signal,
         dtype="DevBoolean",
         label="Is Programmed",
         doc="Whether or not the board is programmed.",
@@ -4510,7 +4582,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return False
 
     temperatures_fpga0 = attribute_from_signal(  # noqa: N815
-        fpga0_temperature_signal,
+        temperatures_fpga0_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -4522,7 +4594,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     temperatures_fpga1 = attribute_from_signal(
-        fpga1_temperature_signal,
+        temperatures_fpga1_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.2,
@@ -4534,7 +4606,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     fpgasUnixTime = attribute_from_signal(
-        fpgas_time_signal,
+        fpgasUnixTime_signal,
         dtype=("DevLong",),
         max_dim_x=2,
         abs_change=MIN_ABS_CHANGE,
@@ -4545,21 +4617,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     fpgaTime = attribute_from_signal(
-        fpga_time_signal,
+        fpgaTime_signal,
         dtype="DevString",
         label="FPGAs UTC Time",
         doc="The FPGA internal time, in UTC format",
     )
 
     fpgaReferenceTime = attribute_from_signal(
-        fpga_reference_time_signal,
+        fpgaReferenceTime_signal,
         dtype="DevString",
         label="FPGA Reference Time",
         doc="The FPGA synchronization timestamp, in UTC format",
     )
 
     fpgaFrameTime = attribute_from_signal(
-        fpga_frame_time_signal,
+        fpgaFrameTime_signal,
         dtype="DevString",
         label="FPGA Frame Time",
         doc="The FPGA frame timestamp, in UTC format",
@@ -4589,7 +4661,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids = list(antenna_ids)
 
     fortyGbDestinationIps = attribute_from_signal(
-        forty_gb_destination_ips_signal,
+        fortyGbDestinationIps_signal,
         dtype=("DevString",),
         max_dim_x=32,
         label="40Gb Destination IPs",
@@ -4597,7 +4669,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     fortyGbDestinationPorts = attribute_from_signal(
-        forty_gb_destination_ports_signal,
+        fortyGbDestinationPorts_signal,
         dtype=("DevLong",),
         max_dim_x=32,
         abs_change=MIN_ABS_CHANGE,
@@ -4607,7 +4679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     @attribute_from_signal(
-        forty_gb_core_configurations_signal,
+        fortyGbCoreConfigurations_signal,
         dtype="DevString",
         label="Forty GB Core Configurations",
     )
@@ -4643,7 +4715,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return json.dumps([self._format_40g_core_config(c) for c in core_configs])
 
     adcPower = attribute_from_signal(
-        adc_power_signal,
+        adcPower_signal,
         dtype=("DevDouble",),
         max_dim_x=32,
         abs_change=MIN_ABS_CHANGE,
@@ -4654,7 +4726,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     currentTileBeamformerFrame = attribute_from_signal(
-        current_tile_beamformer_frame_signal,
+        currentTileBeamformerFrame_signal,
         dtype="DevLong64",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
@@ -4697,7 +4769,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return serialise_object(raw_value)
 
     currentFrame = attribute_from_signal(
-        fpga_current_frame_signal,
+        currentFrame_signal,
         dtype="DevLong",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
@@ -4709,14 +4781,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     pendingDataRequests = attribute_from_signal(
-        pending_data_requests_signal,
+        pendingDataRequests_signal,
         dtype="DevBoolean",
         label="Pending Data Requests",
         doc="Whether there are data requests pending.",
     )
 
     isBeamformerRunning = attribute_from_signal(
-        is_beamformer_running_signal,
+        isBeamformerRunning_signal,
         dtype="DevBoolean",
         label="Is Beamformer Running",
         doc="Whether the beamformer is running.",
@@ -4742,7 +4814,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.set_phase_terminal_count(value)
 
     timing_pps_delay = attribute_from_signal(
-        pps_delay_signal,
+        timing_pps_delay_signal,
         dtype="DevLong",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
@@ -4751,7 +4823,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     timing_pps_drift = attribute_from_signal(
-        ppsDrift_signal,
+        timing_pps_drift_signal,
         dtype="DevLong",
         archive_abs_change=1,
         abs_change=MIN_ABS_CHANGE,
@@ -4785,7 +4857,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
     timing_pps_present = attribute_from_signal(
-        ppsPresent_signal,
+        timing_pps_present_signal,
         dtype="DevBoolean",
         label="PPS Present",
         doc="Report if PPS signal is present at the TPM input.",
@@ -5354,7 +5426,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     currents_fe0_mva = attribute_from_signal(  #
-        current_fe0_signal,
+        currents_fe0_mva_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5366,7 +5438,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     currents_fe1_mva = attribute_from_signal(
-        current_fe1_signal,
+        currents_fe1_mva_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5378,7 +5450,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_avdd3 = attribute_from_signal(
-        voltage_avdd3_signal,
+        voltages_avdd3_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5392,7 +5464,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_ddr0_vref = attribute_from_signal(
-        voltage_vref_ddr0_signal,
+        voltages_ddr0_vref_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5404,7 +5476,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_ddr1_vref = attribute_from_signal(
-        voltage_vref_ddr1_signal,
+        voltages_ddr1_vref_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5416,7 +5488,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_man_1v2 = attribute_from_signal(
-        voltage_man1v2_signal,
+        voltages_man_1v2_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5428,7 +5500,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_mgt_avcc = attribute_from_signal(
-        voltage_mgt_avcc_signal,
+        voltages_mgt_avcc_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5440,7 +5512,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_mgt_avtt = attribute_from_signal(
-        voltage_mgt_avtt_signal,
+        voltages_mgt_avtt_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5452,7 +5524,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_mon_5v0 = attribute_from_signal(
-        voltage_mon5v0_signal,
+        voltages_mon_5v0_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5464,7 +5536,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_mon_3v3 = attribute_from_signal(
-        voltage_mon3v3_signal,
+        voltages_mon_3v3_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5476,7 +5548,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_mon_1v8 = attribute_from_signal(
-        voltage_mon1v8_signal,
+        voltages_mon_1v8_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5488,7 +5560,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_sw_avdd1 = attribute_from_signal(
-        voltage_sw_avdd1_signal,
+        voltages_sw_avdd1_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5500,7 +5572,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_sw_avdd2 = attribute_from_signal(
-        voltage_sw_avdd2_signal,
+        voltages_sw_avdd2_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5512,7 +5584,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vin = attribute_from_signal(
-        voltage_vin_signal,
+        voltages_vin_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5524,7 +5596,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp0 = attribute_from_signal(
-        voltage_vm_agp0_signal,
+        voltages_vm_agp0_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5536,7 +5608,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp1 = attribute_from_signal(
-        voltage_vm_agp1_signal,
+        voltages_vm_agp1_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5548,7 +5620,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp2 = attribute_from_signal(
-        voltage_vm_agp2_signal,
+        voltages_vm_agp2_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5560,7 +5632,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp3 = attribute_from_signal(
-        voltage_vm_agp3_signal,
+        voltages_vm_agp3_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5572,7 +5644,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp4 = attribute_from_signal(
-        voltage_vm_agp4_signal,
+        voltages_vm_agp4_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5584,7 +5656,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp5 = attribute_from_signal(
-        voltage_vm_agp5_signal,
+        voltages_vm_agp5_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5596,7 +5668,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp6 = attribute_from_signal(
-        voltage_vm_agp6_signal,
+        voltages_vm_agp6_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5608,7 +5680,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_agp7 = attribute_from_signal(
-        voltage_vm_agp7_signal,
+        voltages_vm_agp7_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5620,7 +5692,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_clk0b = attribute_from_signal(
-        voltage_vm_clk0b_signal,
+        voltages_vm_clk0b_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5632,7 +5704,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_clk1b = attribute_from_signal(
-        voltage_vm_clk1b_signal,
+        voltages_vm_clk1b_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5644,7 +5716,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_ddr0_vtt = attribute_from_signal(
-        voltage_vm_ddr0_vtt_signal,
+        voltages_vm_ddr0_vtt_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5656,7 +5728,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_ddr1_vdd = attribute_from_signal(
-        voltage_vm_ddr1_vdd_signal,
+        voltages_vm_ddr1_vdd_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5668,7 +5740,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_ddr1_vtt = attribute_from_signal(
-        voltage_vm_ddr1_vtt_signal,
+        voltages_vm_ddr1_vtt_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5680,7 +5752,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_drvdd = attribute_from_signal(
-        voltage_vm_drvdd_signal,
+        voltages_vm_drvdd_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5692,7 +5764,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_dvdd = attribute_from_signal(
-        voltage_vm_dvdd_signal,
+        voltages_vm_dvdd_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5704,7 +5776,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_fe0 = attribute_from_signal(
-        voltage_vm_fe0_signal,
+        voltages_vm_fe0_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5716,7 +5788,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_fe1 = attribute_from_signal(
-        voltage_vm_fe1_signal,
+        voltages_vm_fe1_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5728,7 +5800,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_mgt0_aux = attribute_from_signal(
-        voltage_vm_mgt0_aux_signal,
+        voltages_vm_mgt0_aux_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5740,7 +5812,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_mgt1_aux = attribute_from_signal(
-        voltage_vm_mgt1_aux_signal,
+        voltages_vm_mgt1_aux_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5752,7 +5824,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_pll = attribute_from_signal(
-        voltage_vm_pll_signal,
+        voltages_vm_pll_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,
@@ -5764,7 +5836,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     voltages_vm_sw_amp = attribute_from_signal(
-        voltage_vm_sw_amp_signal,
+        voltages_vm_sw_amp_signal,
         dtype="DevFloat",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=0.1,

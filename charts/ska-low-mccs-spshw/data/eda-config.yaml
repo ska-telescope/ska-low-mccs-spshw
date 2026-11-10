@@ -392,17 +392,10 @@ configuration:
       timing_clocks_fpga1:
         code_push_event: true
         archive_period: 0
-<<<<<<< HEAD
       adcs_sysref_counter:
         code_push_event: true
         archive_period: 0
       adcs_sysref_timing_requirements:
-=======
-      adcs_sysref_counter_adcs:
-        code_push_event: true
-        archive_period: 0
-      adcs_sysref_timing_requirements_adcs:
->>>>>>> 15442a841 (THORN-757: rename 'adcs' attributes on Tile and config)
         code_push_event: true
         archive_period: 0
       io_jesd_interface_qpll_status_fpga0_status:

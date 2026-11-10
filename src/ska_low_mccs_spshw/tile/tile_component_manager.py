@@ -4923,11 +4923,12 @@ class TileComponentManager(
 
         :return: pointing delays for all beams as (48, 32) ndarray.
         """
+        pointing_delays = self.tile.get_all_pointing_delays()
         delays = np.full((_MAX_BEAMS, 32), np.nan)
 
-        for beam in range(_MAX_BEAMS):
+        for beam, beam_delays in enumerate(pointing_delays):
             try:
-                delays[beam] = np.array(self.tile.get_pointing_delay(beam)).reshape(-1)
+                delays[beam] = np.array(beam_delays).reshape(-1)
             except PluginError:
                 self.logger.debug(
                     f"Beam {beam} not supported by this TPM's firmware/BIOS"

@@ -679,7 +679,7 @@ def set_subrack_health_params(
     for subrack in station_devices["Subracks"]:
         change_alarms(
             subrack,
-            "temperatures_board",
+            "boardTemperatures",
             min_alarm="110",
             min_warning="120",
             max_warning="160",

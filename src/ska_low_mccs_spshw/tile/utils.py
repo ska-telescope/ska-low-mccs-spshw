@@ -27,9 +27,7 @@ from yaml.nodes import SequenceNode
 __all__ = [
     "acquire_timeout",
     "abort_task_on_exception",
-    "GilLatencyProbe",
     "HealthConfigLoader",
-    "start_gil_latency_probe",
     "LockTimeoutError",
     "thread_run_delay_s",
 ]
@@ -77,181 +75,6 @@ def thread_run_delay_s() -> float | None:
     except (OSError, IndexError, ValueError):
         _SCHEDSTAT_AVAILABLE = False
         return None
-
-
-class GilLatencyProbe:
-    """
-    Measure how long a thread waits for the GIL after its I/O completes.
-
-    A daemon thread repeatedly sleeps for ``period`` and measures how late it
-    wakes. Sleeping releases the GIL and waking needs it back, so this wait is
-    the same one every I/O-bound thread (e.g. a poll waiting for a TPM reply)
-    pays on each I/O. The thread does no work of its own, so its lateness has
-    only two causes:
-
-    * run-queue delay: no CPU was available (node contention or CFS
-      throttling against the container CPU limit). Read from schedstat.
-    * GIL wait: another thread in this process was running Python. This is
-      the lateness that the run-queue delay does not account for.
-
-    Results are collected over ``window`` seconds. A window is only logged,
-    as a ``GIL_PROBE`` warning, if one wake was later than ``threshold``, so
-    an idle process logs nothing.
-
-    The GIL is shared by every device in the process, so only one probe per
-    process is needed: see :py:func:`start_gil_latency_probe`.
-    """
-
-    def __init__(
-        self: GilLatencyProbe,
-        logger: Logger,
-        period: float = 0.01,
-        window: float = 1.0,
-        threshold: float = 0.02,
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param logger: logger to report slow windows to.
-        :param period: how long each sleep lasts, in seconds. Each wake takes
-            the GIL briefly, so a very short period adds GIL contention.
-        :param window: how long results are collected before they are
-            reported, in seconds.
-        :param threshold: log a window if any wake in it was later than
-            this, in seconds. The default switch interval is 5 ms, so a
-            single GIL handoff can be that late without anything being wrong.
-        """
-        self._logger = logger
-        self._period = period
-        self._window = window
-        self._threshold = threshold
-        self._stop_event = threading.Event()
-        self._thread: threading.Thread | None = None
-
-    def start(self: GilLatencyProbe) -> None:
-        """Start the probe thread, if it is not already running."""
-        if self._thread is not None and self._thread.is_alive():
-            return
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run, name="GIL probe", daemon=True)
-        self._thread.start()
-
-    def stop(self: GilLatencyProbe, timeout: float | None = None) -> None:
-        """
-        Stop the probe thread.
-
-        :param timeout: how long to wait for the thread to exit, in seconds.
-        """
-        self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join(timeout)
-
-    def _run(self: GilLatencyProbe) -> None:
-        window_start = time.perf_counter()
-        runq_start = thread_run_delay_s()
-        samples = 0
-        late_total = 0.0
-        late_max = 0.0
-        while True:
-            before = time.perf_counter()
-            # Event.wait releases the GIL while waiting; it must get the GIL
-            # back before perf_counter below can run. That wait is what we
-            # measure.
-            if self._stop_event.wait(self._period):
-                return
-            now = time.perf_counter()
-            late = max(now - before - self._period, 0.0)
-            samples += 1
-            late_total += late
-            late_max = max(late_max, late)
-
-            if now - window_start < self._window:
-                continue
-            runq_end = thread_run_delay_s()
-            if late_max > self._threshold:
-                self._report(
-                    now - window_start,
-                    samples,
-                    late_total,
-                    late_max,
-                    (
-                        None
-                        if runq_start is None or runq_end is None
-                        else runq_end - runq_start
-                    ),
-                )
-            window_start = now
-            runq_start = runq_end
-            samples = 0
-            late_total = 0.0
-            late_max = 0.0
-
-    # pylint: disable=too-many-arguments
-    def _report(
-        self: GilLatencyProbe,
-        window: float,
-        samples: int,
-        late_total: float,
-        late_max: float,
-        runqueue: float | None,
-    ) -> None:
-        """
-        Log a slow window.
-
-        :param window: actual length of the window, in seconds.
-        :param samples: number of wakes in the window.
-        :param late_total: total lateness of all wakes in the window.
-        :param late_max: lateness of the latest wake in the window.
-        :param runqueue: run-queue delay of the probe thread over the
-            window, or None if unavailable on this system.
-        """
-        if runqueue is None:
-            runqueue_str = "n/a"
-            gil_str = "n/a"
-        else:
-            runqueue_str = f"{runqueue:.3f}"
-            # Run-queue delay can only happen while late, so this is the
-            # part of the lateness spent waiting for the GIL (plus a few
-            # microseconds of timer slack per wake).
-            gil_str = f"{max(late_total - runqueue, 0.0):.3f}"
-        self._logger.warning(
-            f"GIL_PROBE window={window:.3f} samples={samples} "
-            f"late_max={late_max:.3f} late_total={late_total:.3f} "
-            f"runqueue={runqueue_str} gil={gil_str}"
-        )
-
-
-_gil_probe: GilLatencyProbe | None = None
-_gil_probe_lock = threading.Lock()
-
-
-def start_gil_latency_probe(
-    logger: Logger, period: float = 0.01
-) -> GilLatencyProbe | None:
-    """
-    Start the process-wide GIL latency probe, if not already started.
-
-    Every device in a device server process shares one GIL, so the first
-    device to call this starts the probe and later calls do nothing. The probe
-    keeps running until the process exits, since other devices still rely
-    on it after one device is deleted.
-
-    :param logger: logger the probe reports to. Only the first caller's
-        logger is used.
-    :param period: how long each probe sleep lasts, in seconds. 0 or less
-        disables the probe.
-
-    :return: the running probe, or None if disabled.
-    """
-    global _gil_probe  # pylint: disable=global-statement
-    if period <= 0:
-        return None
-    with _gil_probe_lock:
-        if _gil_probe is None:
-            _gil_probe = GilLatencyProbe(logger, period=period)
-            _gil_probe.start()
-            logger.info(f"Started process-wide GIL latency probe, period {period}s")
-        return _gil_probe
 
 
 _FrameInfo = namedtuple("_FrameInfo", ["frame", "filename", "lineno", "function"])
@@ -307,6 +130,11 @@ class LogLock:
         self.last_acquired_by = ""
         self.last_acquired_context = ""
         self._timeout_warning = timeout_warning
+        # Snapshots taken when the lock is acquired, so a slow release can
+        # report where the time spent holding the lock went.
+        self._lock_wait = 0.0
+        self._cpu_at_acquire = 0.0
+        self._runq_at_acquire: float | None = None
 
     def acquire(
         self, blocking: bool = True, timeout: float = -1, context: str = ""
@@ -338,6 +166,9 @@ class LogLock:
             self.last_acquired_at = time.time()
             self.last_acquired_by = caller
             self.last_acquired_context = context
+            self._lock_wait = acquire_time
+            self._cpu_at_acquire = time.thread_time()
+            self._runq_at_acquire = thread_run_delay_s()
             # self.log.debug(
             #     f"lock {self.name} acquired after {acquire_time:.3f}s by {caller}"
             # )
@@ -386,9 +217,47 @@ class LogLock:
                 f" ({self.last_acquired_context})" if self.last_acquired_context else ""
             )
             self.log.warning(
-                f"lock {self.name} held for {elapsed:.3f}s by {caller}{context}"
+                f"lock {self.name} held for {elapsed:.3f}s by {caller}{context} "
+                f"{self._timing_breakdown(elapsed)}"
             )
         self.lock.release()
+
+    def _timing_breakdown(self, elapsed: float) -> str:
+        """
+        Split the time the lock was held, to classify the cause of slowness.
+
+        Must be called from the thread holding the lock, since CPU time and
+        run-queue delay are measured per thread. The time held is split into:
+
+        * ``cpu``: time this thread was running. If this dominates, the
+          operation itself is CPU-heavy.
+        * ``runqueue``: time this thread was runnable but waiting for a CPU.
+          If this dominates, the node is short of CPU (node-level contention).
+        * ``blocked``: the rest. Time the thread was blocked, either waiting
+          for the GIL (other threads in this process were busy) or on TPM
+          network I/O. Compare against an idle single-register read to tell
+          them apart.
+
+        Large ``runqueue`` and ``blocked`` together suggest the thread holding
+        the GIL was descheduled, stalling the whole process.
+
+        :param elapsed: wall time the lock was held, in seconds.
+
+        :return: the breakdown, formatted as ``key=value`` pairs.
+        """
+        cpu = time.thread_time() - self._cpu_at_acquire
+        runq_end = thread_run_delay_s()
+        if self._runq_at_acquire is None or runq_end is None:
+            runqueue_str = "n/a"
+            blocked = elapsed - cpu
+        else:
+            runqueue = runq_end - self._runq_at_acquire
+            runqueue_str = f"{runqueue:.3f}"
+            blocked = elapsed - cpu - runqueue
+        return (
+            f"cpu={cpu:.3f} runqueue={runqueue_str} blocked={blocked:.3f} "
+            f"lock_wait={self._lock_wait:.3f}"
+        )
 
     def __enter__(self) -> bool:
         return self.acquire()

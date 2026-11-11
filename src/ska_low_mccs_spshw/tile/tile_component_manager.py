@@ -60,13 +60,7 @@ from .tile_poll_management import (
 from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .tile_time import TileTime
 from .tpm_status import TpmStatus
-from .utils import (
-    LockTimeoutError,
-    LogLock,
-    abort_task_on_exception,
-    acquire_timeout,
-    thread_run_delay_s,
-)
+from .utils import LockTimeoutError, LogLock, abort_task_on_exception, acquire_timeout
 
 __all__ = ["TileComponentManager"]
 
@@ -711,87 +705,21 @@ class TileComponentManager(
         self.active_request = poll_request
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_in_progress()
-        # Claim lock before we attempt a request.
-        wait_start = time.perf_counter()
+        # Claim lock before we attempt a request. If the poll holds it for
+        # long, LogLock warns with a breakdown of where the time went.
         with acquire_timeout(
             self._hardware_lock,
             self._poll_timeout,
             raise_exception=True,
             context=f"{poll_request.name} kwargs={poll_request._kwargs}",
         ):
-            # Snapshot timers once the lock is held, so the breakdown below
-            # covers only the time this poll kept the lock.
-            wall_start = time.perf_counter()
-            cpu_start = time.thread_time()
-            runq_start = thread_run_delay_s()
-            try:
-                result = poll_request()
-                self._last_known_connected = True
-            finally:
-                # Measured in a finally so polls that raise are still reported.
-                self._log_poll_timing(
-                    poll_request.name,
-                    lock_wait=wall_start - wait_start,
-                    wall=time.perf_counter() - wall_start,
-                    cpu=time.thread_time() - cpu_start,
-                    runq_start=runq_start,
-                )
+            result = poll_request()
+            self._last_known_connected = True
 
         return TileResponse(
             poll_request.name,
             result,
             poll_request.publish,
-        )
-
-    def _log_poll_timing(
-        self: TileComponentManager,
-        name: str | None,
-        lock_wait: float,
-        wall: float,
-        cpu: float,
-        runq_start: float | None,
-    ) -> None:
-        """
-        Log where a slow poll's time went, to classify the cause of slowness.
-
-        A poll is slow if it held the hardware lock for longer than half the
-        default lock timeout, the same threshold LogLock warns at.
-
-        The time the poll held the hardware lock (``wall``) is split into:
-
-        * ``cpu``: time this thread was running. If this dominates, the
-          request itself is CPU-heavy.
-        * ``runqueue``: time this thread was runnable but waiting for a CPU.
-          If this dominates, the node is short of CPU (node-level contention).
-        * ``blocked``: the rest. Time the thread was blocked, either waiting
-          for the GIL (other threads in this process were busy) or on TPM
-          network I/O. Compare against an idle single-register read to tell
-          them apart.
-
-        Large ``runqueue`` and ``blocked`` together suggest the thread holding
-        the GIL was descheduled, stalling the whole process.
-
-        :param name: name of the poll request.
-        :param lock_wait: time spent waiting to claim the hardware lock.
-        :param wall: wall time the hardware lock was held.
-        :param cpu: CPU time used by this thread while holding the lock.
-        :param runq_start: run-queue delay reading taken when the lock was
-            claimed, or None if unavailable on this system.
-        """
-        if wall <= self._default_lock_timeout / 2:
-            return
-        runq_end = thread_run_delay_s()
-        if runq_start is None or runq_end is None:
-            runqueue_str = "n/a"
-            blocked = wall - cpu
-        else:
-            runqueue = runq_end - runq_start
-            runqueue_str = f"{runqueue:.3f}"
-            blocked = wall - cpu - runqueue
-        self.logger.warning(
-            f"POLL_TIMING tile={self._tile_id} request={name} "
-            f"wall={wall:.3f} cpu={cpu:.3f} runqueue={runqueue_str} "
-            f"blocked={blocked:.3f} lock_wait={lock_wait:.3f}"
         )
 
     def poll_failed(self: TileComponentManager, exception: Exception) -> None:

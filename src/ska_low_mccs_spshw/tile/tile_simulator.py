@@ -1298,15 +1298,6 @@ class TileSimulator:
         self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
 
-    @property
-    def spead_ska_format_supported(self) -> bool:
-        """
-        Check if new (SKA) format for CSP SPEAD header is supported.
-
-        :return: True if new (SKA) format for CSP SPEAD header is supported
-        """
-        return True
-
     @check_mocked_overheating
     @connected
     def erase_fpgas(self: TileSimulator) -> None:

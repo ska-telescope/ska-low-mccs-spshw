@@ -2487,14 +2487,13 @@ class TileComponentManager(
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
             if acquired:
-                if self.tile.spead_ska_format_supported:
-                    try:
-                        self.tile.set_spead_format(hw_spead_format)
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                elif hw_spead_format:
-                    self.logger.error("SKA SPEAD format not supported in firmware")
+                try:
+                    self.tile.set_spead_format(hw_spead_format)
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(
+                        f"TileComponentManager: Tile access failed: {e}"
+                    )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 

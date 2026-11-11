@@ -1,0 +1,10 @@
+ingress:
+  enabled: true
+  hostname: k8s.stfc.skao.int
+  nginx: true
+tangogql:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 600m
+      memory: 512Mi

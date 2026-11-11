@@ -1,0 +1,4 @@
+skuid:
+  config:
+    generator_id: mvp01
+  use_pv: false

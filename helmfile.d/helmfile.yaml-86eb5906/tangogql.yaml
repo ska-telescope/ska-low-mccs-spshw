@@ -1,0 +1,13 @@
+global:
+  cluster_domain: stfc-ral-k8s.skao.int
+  minikube: false
+  ska-tango-devices:
+    waitForDatabaseDS: false
+  tango_host: databaseds.skaffold.svc.stfc-ral-k8s.skao.int:10000
+  telmodel:
+    - datasets:
+        - stfc-ral.yaml
+        - stations/stfc-ral-4.yaml
+      source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?ac5a9b1e5fe2a990b0cabeaae999390b3ebebb85#tmdata/stfc-ral
+ska-tango-base:
+  enabled: false

@@ -273,7 +273,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     io_udp_interface_linkup_loss_count_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
     io_data_router_status_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
     io_data_router_status_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
-    io_data_router_discarded_packets_fpgas_signal: AttrSignal[str] = AttrSignal[str]()
+    io_data_router_discarded_packets_fpga0_signal: AttrSignal[str] = AttrSignal[str]()
+    io_data_router_discarded_packets_fpga1_signal: AttrSignal[str] = AttrSignal[str]()
     io_udp_interface_arp_signal: AttrSignal[bool] = AttrSignal[bool]()
     io_udp_interface_status_signal: AttrSignal[bool] = AttrSignal[bool]()
     io_ddr_interface_initialisation_signal: AttrSignal[bool] = AttrSignal[bool]()
@@ -511,11 +512,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ),
         "io_ddr_interface_reset_counter_fpga1": (
             "io_ddr_interface_reset_counter_fpga1_signal"
+        ),
         "io_data_router_discarded_packets_fpga0": (
-            "data_router_discarded_packets_fpga0_signal"
+            "io_data_router_discarded_packets_fpga0_signal"
         ),
         "io_data_router_discarded_packets_fpga1": (
-            "data_router_discarded_packets_fpga1_signal"
+            "io_data_router_discarded_packets_fpga1_signal"
         ),
         "io_f2f_interface_soft_error_fpga0": "io_f2f_interface_soft_error_fpga0_signal",
         "io_f2f_interface_soft_error_fpga1": "io_f2f_interface_soft_error_fpga1_signal",
@@ -2384,7 +2386,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return int(raw_value)
 
     @attribute_from_signal(
-        io_data_router_discarded_packets_fpgas_signal,
+        io_data_router_discarded_packets_fpga0_signal,
         dtype="DevString",
         label="Data Router Discarded Packets for FPGA0",
         doc="Return the number of discarded packets. "
@@ -2412,7 +2414,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return serialise_object(raw_value)
 
     @attribute_from_signal(
-        data_router_discarded_packets_fpga1_signal,
+        io_data_router_discarded_packets_fpga1_signal,
         dtype="DevString",
         label="Data Router Discarded Packets for FPGA1",
         doc="Return the number of discarded packets. "

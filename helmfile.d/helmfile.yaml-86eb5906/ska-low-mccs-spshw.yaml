@@ -1,0 +1,807 @@
+global:
+  cluster_domain: stfc-ral-k8s.skao.int
+  minikube: false
+  ska-tango-devices:
+    waitForDatabaseDS: false
+  tango_host: databaseds.skaffold.svc.stfc-ral-k8s.skao.int:10000
+  telmodel:
+    - datasets:
+        - stfc-ral.yaml
+        - stations/stfc-ral-4.yaml
+      source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?ac5a9b1e5fe2a990b0cabeaae999390b3ebebb85#tmdata/stfc-ral
+ska-low-mccs-daq:
+  bandpassLoadBalancer:
+    enabled: false
+  ska-tango-devices:
+    deviceDefaults:
+      MccsDaqReceiver:
+        ConsumersToStart: DaqModes.INTEGRATED_CHANNEL_DATA
+        Port: 50051
+        SkuidUrl: http://ska-ser-skuid-ska-ser-skuid-svc:9870/
+    deviceServers:
+      daq:
+        daq-stfc-ral-4:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: kube-system/ral-sps@sdn1
+          devices:
+            MccsDaqReceiver:
+              - low-mccs/daqreceiver/stfc-ral-4
+          runtimeClassName: nvidia
+          volumes:
+            daq-data:
+              claim: daq-data
+              mountPath: /product
+        daq-stfc-ral-4-bandpass:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: kube-system/ral-sps@sdn1
+          devices:
+            MccsDaqReceiver:
+              - low-mccs/daqreceiver/stfc-ral-4-bandpass
+        daq-stfc-ral-4-calibration:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: kube-system/ral-sps@sdn1
+          devices:
+            MccsDaqReceiver:
+              - low-mccs/daqreceiver/stfc-ral-4-calibration
+          runtimeClassName: nvidia
+          volumes:
+            daq-data:
+              claim: daq-data
+              mountPath: /product
+    devices:
+      MccsDaqReceiver:
+        low-mccs/daqreceiver/stfc-ral-4:
+          DaqId: 4
+          Host: daqrx-stfc-ral-4
+          NumberOfTiles: 8
+          ParentTRL: low-mccs/spsstation/stfc-ral-4
+          ReceiverInterface: sdn1
+          StationID: 4
+          StationName: stfc-ral-4
+        low-mccs/daqreceiver/stfc-ral-4-bandpass:
+          BandpassDaq: true
+          DaqId: 4
+          Host: daqrx-stfc-ral-4-bandpass
+          NumberOfTiles: 8
+          ParentTRL: low-mccs/spsstation/stfc-ral-4
+          ReceiverInterface: sdn1
+          StationID: 4
+          StationName: stfc-ral-4
+        low-mccs/daqreceiver/stfc-ral-4-calibration:
+          DaqId: 4
+          Host: daqrx-stfc-ral-4-calibration
+          NumberOfTiles: 8
+          ParentTRL: low-mccs/spsstation/stfc-ral-4
+          ReceiverInterface: sdn1
+          StationID: 4
+          StationName: stfc-ral-4
+  storage:
+    daq-data:
+      size: 250Mi
+      storage_class: nfss1
+ska-tango-devices:
+  deviceDefaults:
+    MccsSubrack:
+      SubrackPort: 8081
+    MccsTile:
+      AntennasPerTile: 16
+  deviceServers:
+    spshw:
+      spsstation-stfc-ral-4:
+        devices:
+          SpsStation:
+            - low-mccs/spsstation/stfc-ral-4
+        volumes:
+          daq-data:
+            claim: daq-data
+            mountPath: /product
+      subrack-stfc-ral-4-sr4:
+        devices:
+          MccsSubrack:
+            - low-mccs/subrack/stfc-ral-4-sr4
+      tpms-stfc-ral-4-tpm25:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm25
+      tpms-stfc-ral-4-tpm26:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm26
+      tpms-stfc-ral-4-tpm27:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm27
+      tpms-stfc-ral-4-tpm28:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm28
+      tpms-stfc-ral-4-tpm29:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm29
+      tpms-stfc-ral-4-tpm30:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm30
+      tpms-stfc-ral-4-tpm31:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm31
+      tpms-stfc-ral-4-tpm32:
+        devices:
+          MccsTile:
+            - low-mccs/tile/stfc-ral-4-tpm32
+  devices:
+    MccsSubrack:
+      low-mccs/subrack/stfc-ral-4-sr4:
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        SimulatedPDU: true
+        SubrackIp: 10.132.0.74
+        SubrackPort: 8081
+    MccsTile:
+      low-mccs/tile/stfc-ral-2-tpm25:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        PreAduFitted:
+          - true
+          - true
+      low-mccs/tile/stfc-ral-4-tpm25:
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 1
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 0
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.81
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm26:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 2
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 1
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.82
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm27:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 3
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 2
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.83
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm28:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 4
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 3
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.84
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm29:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 5
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 4
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.85
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm30:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 6
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 5
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.86
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm31:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 7
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 6
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.87
+        TpmVersion: tpm_v1_6
+      low-mccs/tile/stfc-ral-4-tpm32:
+        BiosVersion: 0.6.0
+        HardwareVersion: v1.6.7a
+        ParentTRL: low-mccs/spsstation/stfc-ral-4
+        PreAduFitted:
+          - true
+          - true
+        PreaduAttenuation:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StaticDelays:
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+          - 0
+        StationId: 4
+        SubrackBay: 8
+        SubrackFQDN: low-mccs/subrack/stfc-ral-4-sr4
+        TileId: 7
+        TpmCpldPort: 10000
+        TpmIp: 10.132.0.88
+        TpmVersion: tpm_v1_6
+    SpsStation:
+      low-mccs/spsstation/stfc-ral-4:
+        AntennaConfigURI:
+          - gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?ac5a9b1e5fe2a990b0cabeaae999390b3ebebb85#tmdata/stfc-ral
+          - stations/stfc-ral-4.yaml
+        BandpassDaqTRL: low-mccs/daqreceiver/stfc-ral-4-bandpass
+        CalibrationDaqTRL: low-mccs/daqreceiver/stfc-ral-4-calibration
+        CspRounding: 3
+        LMCDaqTRL: low-mccs/daqreceiver/stfc-ral-4
+        ParentTRL: ""
+        SdnFirstInterface: 10.130.3.49/21
+        SdnGateway: 10.130.7.254
+        StartBandpassesInInitialise: true
+        StationId: 4
+        SubrackFQDNs:
+          - low-mccs/subrack/stfc-ral-4-sr4
+        TileFQDNs:
+          - low-mccs/tile/stfc-ral-4-tpm25
+          - low-mccs/tile/stfc-ral-4-tpm26
+          - low-mccs/tile/stfc-ral-4-tpm27
+          - low-mccs/tile/stfc-ral-4-tpm28
+          - low-mccs/tile/stfc-ral-4-tpm29
+          - low-mccs/tile/stfc-ral-4-tpm30
+          - low-mccs/tile/stfc-ral-4-tpm31
+          - low-mccs/tile/stfc-ral-4-tpm32

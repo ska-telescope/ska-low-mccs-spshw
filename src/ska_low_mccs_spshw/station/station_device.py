@@ -1269,9 +1269,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Return whether all TPMs are correctly daisy-chained for beamforming.
 
-        True once every tile has reported destination IPs that match the expected
-        daisy-chain topology (each tile pointing to the next tile's source IPs,
-        final tile pointing at the CSP ingest address).
+        True once every tile is ON, ONLINE and initialised, has reported
+        destination IPs that match the expected daisy-chain topology (each
+        tile pointing to the next tile's source IPs), and, while the
+        beamformer is running, every tile but the first is receiving data
+        from the previous tile.
 
         :return: True if the daisy chain is correctly configured.
         """

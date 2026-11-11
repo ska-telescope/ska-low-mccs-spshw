@@ -23,6 +23,7 @@ import numpy as np
 import pytest
 import tango
 from ska_control_model import (
+    AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
@@ -2066,17 +2067,132 @@ def test_pointing_delays_with_unsupported_beams_still_publishes(
     callbacks["component_state"].assert_call(pointingdelays=expected_call)
 
 
+# Fixture uses IPv4Interface("10.0.0.152/16").
+_SDN_BASE = ipaddress.IPv4Address("10.0.0.152")
+
+
+def _push_tile_attribute(
+    station_component_manager: SpsStationComponentManager,
+    tile_id: int,
+    attribute_name: str,
+    attribute_value: Any,
+    attribute_quality: tango.AttrQuality = tango.AttrQuality.ATTR_VALID,
+) -> None:
+    """
+    Push a tile attribute change event to the station.
+
+    :param station_component_manager: the SPS station component manager
+    :param tile_id: the logical id of the tile.
+    :param attribute_name: the name of the tile attribute.
+    :param attribute_value: the new value of the attribute.
+    :param attribute_quality: the quality of the attribute.
+    """
+    station_component_manager._on_tile_attribute_change(
+        tile_id, attribute_name, attribute_value, attribute_quality
+    )
+
+
+def _set_dst_ips(
+    station_component_manager: SpsStationComponentManager,
+    tile_id: int,
+    fpga1: str,
+    fpga2: str,
+) -> None:
+    """
+    Push a tile's beamformer destination IPs to the station.
+
+    :param station_component_manager: the SPS station component manager
+    :param tile_id: the logical id of the tile.
+    :param fpga1: the destination IP of the tile's first 40G core.
+    :param fpga2: the destination IP of the tile's second 40G core.
+    """
+    _push_tile_attribute(station_component_manager, tile_id, "dstip40gfpga1", fpga1)
+    _push_tile_attribute(station_component_manager, tile_id, "dstip40gfpga2", fpga2)
+
+
+def _set_tile_power(
+    station_component_manager: SpsStationComponentManager,
+    tile_id: int,
+    power: PowerState,
+) -> None:
+    """
+    Push a tile's power state to the station.
+
+    :param station_component_manager: the SPS station component manager
+    :param tile_id: the logical id of the tile.
+    :param power: the new power state of the tile.
+    """
+    fqdn = list(station_component_manager._tile_proxies)[tile_id]
+    station_component_manager._tile_state_changed(fqdn, power=power)
+
+
+def _make_daisy_chain_valid(
+    station_component_manager: SpsStationComponentManager, num_tiles: int
+) -> None:
+    """
+    Bring every stage of the beamformer daisy chain to valid.
+
+    Tiles are ON, ONLINE and Synchronised, with correct destination IPs.
+    The beamformer is not running, so the receiving check is skipped.
+
+    :param station_component_manager: the SPS station component manager
+    :param num_tiles: the number of tiles in the station.
+    """
+    _mark_tiles_established(station_component_manager, num_tiles)
+    for tile_id in range(num_tiles):
+        _set_tile_power(station_component_manager, tile_id, PowerState.ON)
+        _push_tile_attribute(
+            station_component_manager, tile_id, "adminMode", AdminMode.ONLINE
+        )
+        _push_tile_attribute(
+            station_component_manager, tile_id, "tileProgrammingState", "Synchronised"
+        )
+    # Tiles within the chain send to each other; last tile is ignored.
+    for tile_id in range(num_tiles - 1):
+        _set_dst_ips(
+            station_component_manager,
+            tile_id,
+            str(_SDN_BASE + 2 * tile_id + 2),
+            str(_SDN_BASE + 2 * tile_id + 3),
+        )
+
+
+@pytest.mark.parametrize(
+    ("attribute_name", "attribute_value", "valid"),
+    [
+        pytest.param("power", PowerState.OFF, False, id="tile off"),
+        pytest.param("power", PowerState.UNKNOWN, False, id="tile power unknown"),
+        pytest.param("adminMode", AdminMode.OFFLINE, False, id="tile offline"),
+        pytest.param("adminMode", None, False, id="tile admin mode unknown"),
+        pytest.param(
+            "tileProgrammingState", "Programmed", False, id="tile not initialised"
+        ),
+        pytest.param(
+            "tileProgrammingState", None, False, id="tile programming state unknown"
+        ),
+        pytest.param("dstip40gfpga1", "1.2.3.4", False, id="tile wrong dst ip"),
+        pytest.param("dstip40gfpga1", None, None, id="tile dst ips unknown"),
+    ],
+)
 def test_beamformer_daisy_chain(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
     num_tiles: int,
+    attribute_name: str,
+    attribute_value: Any,
+    expected_validity: bool | None,
 ) -> None:
     """
-    Test that the station validates beamformer daisy-chain routing.
+    Test that the station validates the beamformer daisy chain.
 
     Verifies that the component manager emits beamformerDaisyChainValid=True
-    once all tiles report the expected destination IPs, and flips to False when
-    a tile reports a wrong IP.
+    once all tiles are ON, ONLINE and initialised, and every tile but the
+    last reports the expected destination IPs (the beamformer is not
+    running, so the receiving stage is skipped). It then emits the
+    expected result when a tile's reading changes, and True again once
+    the chain is restored.
+
+    A value of None stands for an INVALID reading.
 
     Calls _on_tile_attribute_change directly without start_communicating() to
     avoid race conditions with background Tango subscription event threads.
@@ -2084,36 +2200,93 @@ def test_beamformer_daisy_chain(
     :param station_component_manager: the SPS station component manager under test
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
+    :param attribute_name: the tile attribute to change, or "power".
+    :param attribute_value: the new value of the attribute.
+    :param expected_validity: the expected result of the validation.
     """
-    _mark_tiles_established(station_component_manager, num_tiles)
-    # Fixture uses IPv4Interface("10.0.0.152/16").
-    sdn_base = ipaddress.IPv4Address("10.0.0.152")
-    last = num_tiles - 1
+    _make_daisy_chain_valid(station_component_manager, num_tiles)
+    callbacks["component_state"].assert_call(
+        beamformerDaisyChainValid=True,
+        lookahead=10 * num_tiles,
+        consume_nonmatches=True,
+    )
 
-    def set_dst_ips(tile_id: int, fpga1: str, fpga2: str) -> None:
-        station_component_manager._on_tile_attribute_change(
-            tile_id, "dstip40gfpga1", fpga1, tango.AttrQuality.ATTR_VALID
+    if attribute_name == "power":
+        _set_tile_power(station_component_manager, 2, attribute_value)
+    elif attribute_value is None:
+        _push_tile_attribute(
+            station_component_manager,
+            2,
+            attribute_name,
+            None,
+            tango.AttrQuality.ATTR_INVALID,
         )
-        station_component_manager._on_tile_attribute_change(
-            tile_id, "dstip40gfpga2", fpga2, tango.AttrQuality.ATTR_VALID
+    else:
+        _push_tile_attribute(
+            station_component_manager, 2, attribute_name, attribute_value
         )
+    # A power change also publishes the tile and station power.
+    callbacks["component_state"].assert_call(
+        beamformerDaisyChainValid=expected_validity,
+        lookahead=5,
+        consume_nonmatches=True,
+    )
 
-    # Tiles within the chain send to each other; last tile is ignored.
-    for tile_id in range(last):
-        set_dst_ips(
+    _make_daisy_chain_valid(station_component_manager, num_tiles)
+    callbacks["component_state"].assert_call(
+        beamformerDaisyChainValid=True,
+        lookahead=10 * num_tiles,
+        consume_nonmatches=True,
+    )
+
+
+def test_beamformer_daisy_chain_receiving(
+    station_component_manager: SpsStationComponentManager,
+    num_tiles: int,
+) -> None:
+    """
+    Test that, while beamforming, every tile but the first must be receiving.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param num_tiles: number of TPMs in the test.
+    """
+
+    def set_rx_received(tile_id: int, rx_received: int) -> None:
+        _push_tile_attribute(
+            station_component_manager,
             tile_id,
-            str(sdn_base + 2 * tile_id + 2),
-            str(sdn_base + 2 * tile_id + 3),
+            "fortyGPacketCount",
+            json.dumps(
+                {
+                    "FPGA0": {
+                        "rx_received": rx_received,
+                        "rx_forwarded": 0,
+                        "tx_transmitted": 1000,
+                    }
+                }
+            ),
         )
-    callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)
 
-    # Oh no someone broke it.
-    set_dst_ips(1, "1.2.3.4", str(sdn_base + 2 * 1 + 3))
-    callbacks["component_state"].assert_call(beamformerDaisyChainValid=False)
+    _make_daisy_chain_valid(station_component_manager, num_tiles)
+    for tile_id in range(num_tiles):
+        _push_tile_attribute(
+            station_component_manager, tile_id, "isBeamformerRunning", True
+        )
+    # No packet counts reported yet.
+    assert station_component_manager.beamformer_daisy_chain_valid is False
 
-    # Yay they fixed it.
-    set_dst_ips(1, str(sdn_base + 2 * 1 + 2), str(sdn_base + 2 * 1 + 3))
-    callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)
+    # The first tile has no previous tile to receive from.
+    set_rx_received(0, 0)
+    for tile_id in range(1, num_tiles):
+        set_rx_received(tile_id, 1234)
+    assert station_component_manager.beamformer_daisy_chain_valid is True
+
+    set_rx_received(2, 0)
+    assert station_component_manager.beamformer_daisy_chain_valid is False
+
+    # Nothing is expected to flow once the beamformer stops.
+    _push_tile_attribute(station_component_manager, 0, "isBeamformerRunning", False)
+    assert station_component_manager.beamformer_daisy_chain_valid is True
 
 
 def test_beamformer_flagged_count(

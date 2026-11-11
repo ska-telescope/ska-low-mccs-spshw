@@ -28,6 +28,7 @@ import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
 from ska_control_model import (
+    AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
@@ -94,6 +95,8 @@ _FINAL_TILE_ATTRIBUTES = frozenset(
 # Tile attributes whose station-side caches are invalidated when
 # communication with that tile is lost.
 _CACHED_TILE_ATTRIBUTES = (
+    "adminMode",
+    "fortyGPacketCount",
     "ppsDelay",
     "ppsDelayCorrection",
     "staticTimeDelays",
@@ -182,6 +185,7 @@ class _TileProxy(DeviceComponentManager):
             "pointingDelays": self._on_attribute_change,
             "dstip40gfpga1": self._on_attribute_change,
             "dstip40gfpga2": self._on_attribute_change,
+            "fortyGPacketCount": self._on_attribute_change,
             "fpga0_station_beamformer_flagged_count": self._on_attribute_change,
             "fpga1_station_beamformer_flagged_count": self._on_attribute_change,
             "boardTemperature": self._on_attribute_change,
@@ -204,6 +208,16 @@ class _TileProxy(DeviceComponentManager):
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
         self._attribute_changed_callback(self._logical_tile_id, *args, **kwargs)
+
+    def _device_admin_mode_changed(
+        self: _TileProxy,
+        event_name: str,
+        event_value: AdminMode,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        super()._device_admin_mode_changed(event_name, event_value, event_quality)
+        # Also pass it on, as the beamformer daisy chain needs all tiles ONLINE.
+        self._on_attribute_change(event_name, event_value, event_quality)
 
     def _device_state_changed(
         self: _TileProxy,
@@ -677,6 +691,9 @@ class SpsStationComponentManager(
         self._hw_pointing_delays: dict[int, np.ndarray] = {}
         self._pointing_delays_received: set[int] = set()
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
+        # None until the tile has reported, or when its reading is INVALID.
+        self._tile_admin_modes: dict[int, AdminMode | None] = {}
+        self._tile_40g_packet_counts: dict[int, dict[str, Any] | None] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
         # None when the final tile's count is INVALID.
         self._final_tile_fpga0_flagged_count: Optional[int] = 0
@@ -692,6 +709,8 @@ class SpsStationComponentManager(
             )
             self._hw_pointing_delays[logical_tile_id] = np.full((48, 32), np.nan)
             self._tile_dst_ips[logical_tile_id] = ("", "")
+            self._tile_admin_modes[logical_tile_id] = None
+            self._tile_40g_packet_counts[logical_tile_id] = None
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
@@ -1517,6 +1536,10 @@ class SpsStationComponentManager(
             case "dstip40gfpga2":
                 ip1, _ = self._tile_dst_ips.get(logical_tile_id, ("", ""))
                 self._tile_dst_ips[logical_tile_id] = (ip1, "")
+            case "adminmode":
+                self._tile_admin_modes[logical_tile_id] = None
+            case "fortygpacketcount":
+                self._tile_40g_packet_counts[logical_tile_id] = None
             case "boardtemperature":
                 self._board_temperatures[logical_tile_id] = np.nan
             case "fpga1temperature":
@@ -1598,7 +1621,14 @@ class SpsStationComponentManager(
                     self._component_state_callback(**state())
         if names & {"ppsdelay", "tileprogrammingstate"}:
             self._fire_pps_delay_spread()
-        if names & {"dstip40gfpga1", "dstip40gfpga2"}:
+        if names & {
+            "adminmode",
+            "tileprogrammingstate",
+            "dstip40gfpga1",
+            "dstip40gfpga2",
+            "isbeamformerrunning",
+            "fortygpacketcount",
+        }:
             self._validate_beamformer_daisy_chain()
         if names & {
             "fpga0_station_beamformer_flagged_count",
@@ -1669,6 +1699,7 @@ class SpsStationComponentManager(
                     )
                 # Re-compute spread: the Synchronised set may have changed.
                 self._fire_pps_delay_spread()
+                self._validate_beamformer_daisy_chain()
 
             case "beamformertable":
                 if logical_tile_id == len(self._tile_proxies) - 1:
@@ -1733,6 +1764,21 @@ class SpsStationComponentManager(
                     f"{attribute_value}"
                 )
                 self._validate_beamformer_daisy_chain()
+            case "adminmode":
+                self._tile_admin_modes[logical_tile_id] = AdminMode(attribute_value)
+                self._validate_beamformer_daisy_chain()
+            case "fortygpacketcount":
+                try:
+                    self._tile_40g_packet_counts[logical_tile_id] = json.loads(
+                        attribute_value
+                    )
+                except (TypeError, ValueError) as e:
+                    self.logger.error(
+                        f"Unable to parse fortyGPacketCount of tile "
+                        f"{logical_tile_id}: {repr(e)}"
+                    )
+                    self._tile_40g_packet_counts[logical_tile_id] = None
+                self._validate_beamformer_daisy_chain()
             case "fpga0_station_beamformer_flagged_count":
                 if logical_tile_id == self._number_of_tiles - 1:
                     self._final_tile_fpga0_flagged_count = int(attribute_value)
@@ -1770,6 +1816,7 @@ class SpsStationComponentManager(
                     self._component_state_callback(
                         isBeamformerRunning=self.is_beamformer_running
                     )
+                self._validate_beamformer_daisy_chain()
             case "channeliserrounding":
                 try:
                     self._channeliser_roundings[logical_tile_id, :] = attribute_value
@@ -1796,7 +1843,83 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
     ) -> None:
         """
-        Validate the station beamformer daisy chain configuration.
+        Validate the station beamformer daisy chain, publishing any change.
+
+        The chain is checked in stages, each of which relies on the ones
+        before it:
+
+        1. every tile is ON;
+        2. every tile is ONLINE (or ENGINEERING);
+        3. every tile is initialised;
+        4. the tiles' beamformer destination IPs form the chain;
+        5. while the beamformer is running, every tile but the first is
+           receiving data from the previous tile.
+
+        The result is True if every stage passes, otherwise the result of
+        the first stage that does not: False if it failed, or None if it
+        cannot yet be verified.
+        """
+        for check in (
+            self._check_daisy_chain_tiles_on,
+            self._check_daisy_chain_tiles_online,
+            self._check_daisy_chain_tiles_initialised,
+            self._validate_beamformer_daisy_chain_ips,
+            self._check_daisy_chain_tiles_receiving,
+        ):
+            valid = check()
+            if not valid:
+                break
+
+        if valid == self._beamformer_daisy_chain_valid:
+            return
+        self._beamformer_daisy_chain_valid = valid
+        if self._component_state_callback:
+            self._component_state_callback(beamformerDaisyChainValid=valid)
+
+    def _check_daisy_chain_tiles_on(
+        self: SpsStationComponentManager,
+    ) -> bool:
+        """
+        Check that every tile in the daisy chain is ON.
+
+        :return: True if every tile is ON, False if not.
+        """
+        power_states = list(self._tile_power_states.values())
+        return all(power == PowerState.ON for power in power_states)
+
+    def _check_daisy_chain_tiles_online(
+        self: SpsStationComponentManager,
+    ) -> bool:
+        """
+        Check that every tile in the daisy chain is ONLINE (or ENGINEERING).
+
+        :return: True if every tile is ONLINE, False if not.
+        """
+        admin_modes = list(self._tile_admin_modes.values())
+        return all(
+            admin_mode in (AdminMode.ONLINE, AdminMode.ENGINEERING)
+            for admin_mode in admin_modes
+        )
+
+    def _check_daisy_chain_tiles_initialised(
+        self: SpsStationComponentManager,
+    ) -> bool:
+        """
+        Check that every tile in the daisy chain is initialised.
+
+        :return: True if every tile is Initialised or Synchronised, False if
+            not.
+        """
+        return all(
+            programming_state in ("Initialised", "Synchronised")
+            for programming_state in self._tile_programming_state
+        )
+
+    def _validate_beamformer_daisy_chain_ips(
+        self: SpsStationComponentManager,
+    ) -> bool | None:
+        """
+        Validate the beamformer destination IPs of the daisy chain.
 
         Check whether non-last tiles have their beamformer destination IPs
         configured to form a correct daisy chain.
@@ -1804,17 +1927,17 @@ class SpsStationComponentManager(
         For every tile except the last the expected destinations are the source
         IPs of the next tile.  The last tile's destination IPs are not validated
         (it is free to point wherever the operator configures).  If any checked
-        tile's IPs are empty or not yet known the check is deferred, and any
-        previous result is withdrawn (reported as None) since it can no
-        longer be verified.
+        tile's IPs are empty or not yet known the check is deferred, since it
+        cannot yet be verified.
+
+        :return: True if the destination IPs form the chain, False if they
+            do not, or None if they are not yet known.
         """
-        valid: Optional[bool]
         last = self._number_of_tiles - 1
         for tile_id in range(last):
             ip1, ip2 = self._tile_dst_ips.get(tile_id, ("", ""))
             if not ip1 or not ip2:
-                valid = None
-                break
+                return None
             exp1 = str(self._sdn_first_address + 2 * tile_id + 2)
             exp2 = str(self._sdn_first_address + 2 * tile_id + 3)
             if ip1 != exp1 or ip2 != exp2:
@@ -1822,15 +1945,35 @@ class SpsStationComponentManager(
                     f"Tile {tile_id} has incorrect beamformer destination IPs: "
                     f"Expected ({exp1}, {exp2}), got ({ip1}, {ip2})"
                 )
-                valid = False
-                break
-        else:
-            valid = True
-        if valid == self._beamformer_daisy_chain_valid:
-            return
-        self._beamformer_daisy_chain_valid = valid
-        if self._component_state_callback:
-            self._component_state_callback(beamformerDaisyChainValid=valid)
+                return False
+        return True
+
+    def _check_daisy_chain_tiles_receiving(
+        self: SpsStationComponentManager,
+    ) -> bool:
+        """
+        Check that every tile but the first receives data from the previous tile.
+
+        A tile is receiving if any of its active 40G cores has received
+        packets. This is only checked while the station beamformer is
+        running, as no data flows along the chain otherwise.
+
+        :return: True if every tile is receiving (or the beamformer is not
+            running), False if not.
+        """
+        if not self.is_beamformer_running:
+            return True
+        # Tile 0 starts the chain, so has no previous tile to receive from.
+        for tile_id in range(1, self._number_of_tiles):
+            packet_counts = self._tile_40g_packet_counts[tile_id]
+            if packet_counts is None:
+                return False
+            receiving = any(
+                core.get("rx_received", 0) > 0 for core in packet_counts.values()
+            )
+            if not receiving:
+                return False
+        return True
 
     def _update_beamformer_flagged_count_health(
         self: SpsStationComponentManager,
@@ -1892,6 +2035,7 @@ class SpsStationComponentManager(
                     self._component_state_callback(device_name=fqdn, power=power)
 
                 self._evaluate_power_state()
+            self._validate_beamformer_daisy_chain()
 
         if health is not None:
             # Old health model.
@@ -3557,7 +3701,7 @@ class SpsStationComponentManager(
         """
         Return whether the station beamformer daisy chain is correctly configured.
 
-        None until all non-last tiles have reported their destination IPs.
+        None until every stage of the daisy chain can be verified.
 
         :return: True if correctly configured, False if misconfigured, None if unknown.
         """

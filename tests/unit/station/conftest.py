@@ -241,6 +241,7 @@ def mock_tile_builder_fixture(
     builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
     builder.add_attribute("dstip40gfpga1", "")
     builder.add_attribute("dstip40gfpga2", "")
+    builder.add_attribute("fortyGPacketCount", "{}")
     builder.add_attribute("fpga0_station_beamformer_flagged_count", 0)
     builder.add_attribute("fpga1_station_beamformer_flagged_count", 0)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)

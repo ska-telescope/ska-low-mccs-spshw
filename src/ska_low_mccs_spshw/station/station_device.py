@@ -226,7 +226,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # This needs to be after the __init__ otherwise the correct values
         # won't be setup to allow signalling of changes.
         # NOTE: This is actually from the ska-tango-base::base::BaseInterface
-        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_state = HealthState.UNKNOWN
 
     def init_device(self: SpsStation) -> None:
         """Initialise the device."""

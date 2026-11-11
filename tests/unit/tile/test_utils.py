@@ -9,10 +9,11 @@
 import logging
 import threading
 import time
+import unittest.mock
 
 import pytest
 
-from ska_low_mccs_spshw.tile.utils import LogLock
+from ska_low_mccs_spshw.tile.utils import LogLock, acquire_timeout
 
 
 @pytest.fixture(name="logger")
@@ -65,3 +66,42 @@ def test_loglock_multiple_threads(logger: logging.Logger) -> None:
         thread.join()
 
     assert sum(results) == 1, "Only one thread should acquire the lock at a time"
+
+
+@pytest.mark.parametrize(("threshold", "expect_log"), [(0.0, True), (1000.0, False)])
+def test_loglock_slow_release_logs_timing(
+    threshold: float, expect_log: bool
+) -> None:
+    """
+    Test holding the lock past the threshold warns with a timing breakdown.
+
+    :param threshold: the lock's warning threshold, in seconds.
+    :param expect_log: whether a "held for" warning is expected.
+    """
+    logger = unittest.mock.Mock()
+    lock = LogLock("test_lock", logger, timeout_warning=threshold)
+
+    with lock:
+        time.sleep(0.01)
+
+    if not expect_log:
+        logger.warning.assert_not_called()
+        return
+    logger.warning.assert_called_once()
+    message = logger.warning.call_args.args[0]
+    assert "lock test_lock held for" in message
+    for field in ("cpu=", "runqueue=", "blocked=", "lock_wait="):
+        assert field in message
+
+
+def test_loglock_slow_release_logs_timing_on_exception() -> None:
+    """Test a slow hold that raises is still reported with its timing."""
+    logger = unittest.mock.Mock()
+    lock = LogLock("test_lock", logger, timeout_warning=0.0)
+
+    with pytest.raises(ConnectionError), acquire_timeout(lock, 1.0, context="dummy"):
+        raise ConnectionError("boom")
+
+    message = logger.warning.call_args.args[0]
+    assert "(dummy)" in message
+    assert "cpu=" in message

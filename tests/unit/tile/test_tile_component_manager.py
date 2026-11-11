@@ -46,11 +46,7 @@ from ska_low_mccs_spshw.tile import (
 )
 from ska_low_mccs_spshw.tile import utils as tile_utils
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
-from ska_low_mccs_spshw.tile.tile_poll_management import (
-    TileLRCRequest,
-    TileRequest,
-    TileResponse,
-)
+from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
 from ska_low_mccs_spshw.tile.utils import LockTimeoutError, thread_run_delay_s
 from time_utils import str_from_float_epoch_utc_time
 
@@ -754,76 +750,6 @@ class TestTileComponentManager:
             )
             assert tile_component_manager._lock_busy_since is None
             assert tile_component_manager.fault_state is False
-
-    @pytest.mark.parametrize(
-        ("threshold", "expect_log"), [(0.0, True), (1000.0, False)]
-    )
-    def test_poll_logs_timing_when_slow(
-        self: TestTileComponentManager,
-        tile_component_manager: TileComponentManager,
-        threshold: float,
-        expect_log: bool,
-    ) -> None:
-        """
-        Test a poll holding the lock past the threshold logs POLL_TIMING.
-
-        :param tile_component_manager: the tile component manager under test
-        :param threshold: the default lock timeout to configure; slow polls
-            are those holding the lock for more than half of it.
-        :param expect_log: whether a POLL_TIMING line is expected
-        """
-        tile_component_manager._default_lock_timeout = threshold
-        request = TileRequest("dummy", lambda: 42, publish=False)
-
-        with unittest.mock.patch.object(tile_component_manager, "logger") as logger:
-            response = tile_component_manager.poll(request)
-
-        assert response.data == 42
-        timing_logs = [
-            call.args[0]
-            for call in logger.warning.call_args_list
-            if call.args and str(call.args[0]).startswith("POLL_TIMING")
-        ]
-        if not expect_log:
-            assert not timing_logs
-            return
-        assert len(timing_logs) == 1
-        for field in (
-            f"tile={tile_component_manager._tile_id}",
-            "request=dummy",
-            "wall=",
-            "cpu=",
-            "runqueue=",
-            "blocked=",
-            "lock_wait=",
-        ):
-            assert field in timing_logs[0]
-
-    def test_poll_logs_timing_when_request_raises(
-        self: TestTileComponentManager,
-        tile_component_manager: TileComponentManager,
-    ) -> None:
-        """
-        Test a poll that raises is still timed.
-
-        :param tile_component_manager: the tile component manager under test
-        """
-        tile_component_manager._default_lock_timeout = 0.0
-
-        def _raise() -> None:
-            raise ConnectionError("boom")
-
-        request = TileRequest("dummy", _raise, publish=False)
-        with (
-            unittest.mock.patch.object(tile_component_manager, "logger") as logger,
-            pytest.raises(ConnectionError),
-        ):
-            tile_component_manager.poll(request)
-
-        assert any(
-            str(call.args[0]).startswith("POLL_TIMING")
-            for call in logger.warning.call_args_list
-        )
 
     def test_update_fault_state_without_lock_leaves_fault_unchanged(
         self: TestTileComponentManager,

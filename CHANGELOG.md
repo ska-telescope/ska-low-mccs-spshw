@@ -52,7 +52,8 @@
   * A failed connect now disconnects fully, so a half-connected TPM (e.g. plugins not loaded) no longer blocks the next reconnect.
   * `firmware_version` is no longer read from an unprogrammed TPM.
   * New `PollLockStarvationTimeout` property. If every poll is skipped because the hardware lock is busy for longer than this many seconds, report FAULT.
-  * A poll that holds the hardware lock for longer than half `DefaultLockTimeout` logs a `POLL_TIMING` line splitting its time into CPU, run-queue (node CPU contention) and blocked (GIL or TPM I/O) time.
+  * The "lock held for" warning, logged when the hardware lock is held for longer than half `DefaultLockTimeout`, now splits the time into CPU, run-queue (node CPU contention), blocked (GIL or TPM I/O) and lock-wait time.
+  * Bump tpm-api 5.0.1 -> 5.1.0. Optimisation to polled method, decrease CPU demand and increase speed.
 
 ## 17.1.0
 

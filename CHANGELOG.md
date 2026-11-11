@@ -2,6 +2,9 @@
 
 ## 18.0.0
 
+* [THORN-757] bump TPM API to 5.0.1.
+  * timing_pps_present: previously mapped to status now maps to present
+  * timing_pps_period introduced as new monitoring point from TPM API
 * [THORN-791] MccsSubrack `pduHealth` is now a `HealthState` enum, not a string. Reading it used to fail with "TypeError: can't translate python object to C char*", because the PDU's `healthState` enum was passed to a string attribute.
 * [THORN-757] Rename `MccsTile` Tango attributes used for monitoring TPM health, using the convention of the full TPM API path with the leading category (`temperatures_`, `voltages_`, `currents_`, `alarms_`, `adcs_`, `timing_`, `io_`, `dsp_`). The mapping of attributes to monitoring points is in the MccsTile health page of the documentation.
   * `src/ska_low_mccs_spshw/tile/tile_device.py`:

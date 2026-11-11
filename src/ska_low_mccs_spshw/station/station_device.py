@@ -264,7 +264,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
             f"\tParentTRL: {self.ParentTRL}\n"
-            f"\tOnWorkaroundFlag: {self.OnWorkaroundFlag}\n"
             f"\tHealthThresholds: {self.HealthThresholds}\n"
         )
         self.logger.info(

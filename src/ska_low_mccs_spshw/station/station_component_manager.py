@@ -2245,9 +2245,7 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code, message = self._turn_on_subracks(
-                task_callback, task_abort_event
-            )
+            result_code, message = self._turn_on_subracks(task_abort_event)
         if result_code != ResultCode.OK:
             if task_callback:
                 task_callback(
@@ -2367,9 +2365,7 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.info("Starting on sequence on subracks")
-            result_code, failure_step = self._turn_on_subracks(
-                task_callback, task_abort_event
-            )
+            result_code, failure_step = self._turn_on_subracks(task_abort_event)
         if result_code == ResultCode.OK:
             self.logger.info("Subracks now on")
 
@@ -2641,13 +2637,11 @@ class SpsStationComponentManager(
     @check_communicating
     def _turn_on_subracks(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[ResultCode, str]:
         """
         Turn on subracks if not already on.
 
-        :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :return: a result code and message
         """

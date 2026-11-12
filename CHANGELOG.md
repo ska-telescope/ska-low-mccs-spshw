@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-802] Updated thresholds for every TPM attribute which the new SPS thresholds give. No new attrbutes have thresholds, but many have been updated.
 * [THORN-757] Rename `MccsTile` Tango attributes used for monitoring TPM health, using the convention of the full TPM API path with the leading category (`temperatures_`, `voltages_`, `currents_`, `alarms_`, `adcs_`, `timing_`, `io_`, `dsp_`). The mapping of attributes to monitoring points is in the MccsTile health page of the documentation.
   * `src/ska_low_mccs_spshw/tile/tile_device.py`:
     * Renamed the attributes, and updated the signal maps, `attribute_monitoring_point_map` and the attributes excluded from health to match.

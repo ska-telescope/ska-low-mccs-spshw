@@ -69,9 +69,7 @@ def test_loglock_multiple_threads(logger: logging.Logger) -> None:
 
 
 @pytest.mark.parametrize(("threshold", "expect_log"), [(0.0, True), (1000.0, False)])
-def test_loglock_slow_release_logs_timing(
-    threshold: float, expect_log: bool
-) -> None:
+def test_loglock_slow_release_logs_timing(threshold: float, expect_log: bool) -> None:
     """
     Test holding the lock past the threshold warns with a timing breakdown.
 
@@ -95,7 +93,11 @@ def test_loglock_slow_release_logs_timing(
 
 
 def test_loglock_slow_release_logs_timing_on_exception() -> None:
-    """Test a slow hold that raises is still reported with its timing."""
+    """
+    Test a slow hold that raises is still reported with its timing.
+
+    :raises ConnectionError: mocked exception.
+    """
     logger = unittest.mock.Mock()
     lock = LogLock("test_lock", logger, timeout_warning=0.0)
 

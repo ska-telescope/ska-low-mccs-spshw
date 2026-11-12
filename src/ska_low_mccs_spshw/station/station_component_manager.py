@@ -2137,40 +2137,6 @@ class SpsStationComponentManager(
             )
             self._update_component_state(power=evaluated_power_state)
 
-    def set_power_state(
-        self: SpsStationComponentManager,
-        power_state: PowerState,
-        fqdn: Optional[str] = None,
-    ) -> None:
-        """
-        Set the power_state of the component.
-
-        :TODO: Power state should be set in the component mananger and then
-            the device updated. Current design sets the component power state
-            from the device component_state_changed callback. This should be
-            corrected
-
-        :param power_state: the value of PowerState to be set.
-        :param fqdn: the fqdn of the component's device.
-
-        :raises ValueError: fqdn not found
-        """
-        # Note: this setter was, prior to V0.13 of the base classes, in
-        # MccsComponentManager.update_component_power_mode
-        with self._power_state_lock:
-            if fqdn is None:
-                # pylint: disable-next=attribute-defined-outside-init
-                self.power_state = power_state
-            elif fqdn in self._subrack_proxies:
-                self._subrack_proxies[fqdn]._power_state = power_state
-            elif fqdn in self._tile_proxies:
-                self._tile_proxies[fqdn]._power_state = power_state
-            else:
-                raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to subrack "
-                    "or tile"
-                )
-
     def off(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,

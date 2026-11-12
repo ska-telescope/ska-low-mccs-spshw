@@ -47,6 +47,7 @@ dependencies = [
     "recommonmark >= 0.7.1, <1.0.0",
     "ska-ser-snmp >= 0.6.1, <1.0.0",
     "snmpsim >= 1.2.0, <1.2.1",
+    "types-jsonschema>=4.26.0.20261006",
 ]
 
 name = "ska-low-mccs-spshw"

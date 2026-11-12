@@ -53,6 +53,7 @@
   * `firmware_version` is no longer read from an unprogrammed TPM.
   * New `PollLockStarvationTimeout` property. If every poll is skipped because the hardware lock is busy for longer than this many seconds, report FAULT.
   * The "lock held for" warning, logged when the hardware lock is held for longer than half `DefaultLockTimeout`, now splits the time into CPU, run-queue (node CPU contention), blocked (GIL or TPM I/O) and lock-wait time.
+  * JSON command arguments no longer re-check their schema against the JSON Schema metaschema on every call. This was holding the GIL long enough to delay polling when commands were called at a high rate. Stopgap until ska-tango-base caches its validators.
   * Bump tpm-api 5.0.1 -> 5.1.0. Optimisation to polled method, decrease CPU demand and increase speed.
 
 ## 17.1.0

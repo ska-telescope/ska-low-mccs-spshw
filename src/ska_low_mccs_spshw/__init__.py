@@ -37,7 +37,7 @@ import os
 
 import tango.server
 
-from . import json_validation
+# from . import json_validation
 from .pdu import MccsPdu
 from .power_marshaller import PowerMarshaller
 from .prototype_subrack import MccsPrototypeSubrack
@@ -51,7 +51,7 @@ __version__ = version_info["version"]
 
 # Stopgap: stop @validate_json_args re-checking each schema on every command
 # call. Remove once ska-tango-base caches its validators.
-json_validation.install()
+# json_validation.install()
 
 SUBRACK_IMPLEMENTATION_ENV_VAR = "MCCS_SUBRACK_IMPLEMENTATION"
 """The environment variable that selects the subrack implementation."""

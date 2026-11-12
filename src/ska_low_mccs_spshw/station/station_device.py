@@ -199,7 +199,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._frame_wrap_timer_stop_event = threading.Event()
         self._frame_wrap_timer_lock = threading.Lock()
 
-        self._health_state = HealthState.UNKNOWN
         self._health_report: str = ""
         self._health_summary: HealthSummary = {}
         self._health_timestamp: float
@@ -298,7 +297,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._obs_state_model = SpsStationObsStateModel(
             self.logger, self._update_obs_state
         )
-        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self.set_change_event("healthReport", True, True)
         self.set_archive_event("healthReport", True, True)
         self._health_timestamp = time.time()

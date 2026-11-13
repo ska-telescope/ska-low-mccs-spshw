@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-802] Updated thresholds for every TPM attribute which the new SPS thresholds give. No new attrbutes have thresholds, but many have been updated.
+
 ## 18.0.0
 
 * [THORN-757] bump TPM API to 5.0.1.

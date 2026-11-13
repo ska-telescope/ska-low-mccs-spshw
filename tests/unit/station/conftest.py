@@ -45,6 +45,26 @@ def sdn_first_interface_fixture() -> str:
     return "10.0.0.152/25"
 
 
+@pytest.fixture(name="csp_ingest_ip", scope="session")
+def csp_ingest_ip_fixture() -> str:
+    """
+    Return the IP address CSP ingests this station's beams on.
+
+    :return: the CSP ingest IP address.
+    """
+    return "10.0.1.10"
+
+
+@pytest.fixture(name="csp_ingest_port", scope="session")
+def csp_ingest_port_fixture() -> int:
+    """
+    Return the port CSP ingests this station's beams on.
+
+    :return: the CSP ingest port.
+    """
+    return 4660
+
+
 @pytest.fixture(name="mock_subrack_device_proxy")
 def mock_subrack_device_proxy_fixture() -> unittest.mock.Mock:
     """
@@ -239,9 +259,8 @@ def mock_tile_builder_fixture(
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
     builder.add_attribute("tileProgrammingState", "Unknown")
     builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
-    builder.add_attribute("dstip40gfpga1", "")
-    builder.add_attribute("dstip40gfpga2", "")
     builder.add_attribute("fortyGPacketCount", "{}")
+    builder.add_attribute("fortyGbCoreConfigurations", "[]")
     builder.add_attribute("fpga0_station_beamformer_flagged_count", 0)
     builder.add_attribute("fpga1_station_beamformer_flagged_count", 0)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
@@ -391,36 +410,86 @@ def num_tiles_fixture() -> int:
     return 4
 
 
+@pytest.fixture(name="beamformer_routes")
+def beamformer_routes_fixture(
+    num_tiles: int,
+    sdn_first_interface: str,
+    csp_ingest_ip: str,
+    csp_ingest_port: int,
+) -> list[list[dict[str, Any]]]:
+    """
+    Get the 40G core configurations of each tile with the expected beam routes.
+
+    Each tile sends the station beam to the next tile, and the last tile to
+    CSP ingest, on ARP table entry 0 of each core and, for the second
+    beamformer chain, on ARP table entry 1.
+
+    :param num_tiles: the number of tiles in the station.
+    :param sdn_first_interface: CIDR interface string for the SDN block.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    :param csp_ingest_port: the port CSP ingests station beams on.
+
+    :return: the 40G core configurations of each tile, indexed by logical
+        tile id.
+    """
+    sdn_base = ipaddress.ip_interface(sdn_first_interface).ip
+    # The station's default destination port for the beamformer chain.
+    destination_port = 4660
+    tile_routes = []
+    for tile_id in range(num_tiles):
+        routes = []
+        for core_id in range(2):
+            if tile_id == num_tiles - 1:
+                entry_routes = {
+                    0: (csp_ingest_ip, csp_ingest_port),
+                    1: (csp_ingest_ip, csp_ingest_port),
+                }
+            else:
+                next_tile_ip = str(sdn_base + 2 * tile_id + 2 + core_id)
+                entry_routes = {
+                    0: (next_tile_ip, destination_port),
+                    1: (next_tile_ip, destination_port + 2),
+                }
+            for arp_table_entry, (ip, port) in entry_routes.items():
+                routes.append(
+                    {
+                        "core_id": core_id,
+                        "arp_table_entry": arp_table_entry,
+                        "destination_ip": ip,
+                        "destination_port": port,
+                    }
+                )
+        tile_routes.append(routes)
+    return tile_routes
+
+
 @pytest.fixture(name="mock_tile_device_proxies")
 def mock_tile_device_proxies_fixture(
     mock_tile_builder: Callable[..., unittest.mock.Mock],
     num_tiles: int,
     station_id: int,
-    sdn_first_interface: str,
+    beamformer_routes: list[list[dict[str, Any]]],
 ) -> list[unittest.mock.Mock]:
     """
     Fixture that provides a list of mock MccsTile devices.
 
-    Non-last tiles are pre-configured with the correct beamformer dst IPs so that
-    _validate_beamformer_daisy_chain validates immediately on subscription.
+    Every tile is pre-configured with the expected beamformer routes so that
+    _validate_beamformer_daisy_chain and _validate_tile_data_routing validate
+    immediately on subscription.
 
     :param mock_tile_builder: builder for mock Tiles
     :param num_tiles: the number of tiles to make mocks of
     :param station_id: the stationID fixture used to populate the
         device_property
-    :param sdn_first_interface: CIDR interface string for the SDN block.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
 
     :return: a list of mock MccsTile devices.
     """
-    sdn_base = ipaddress.ip_interface(sdn_first_interface).ip
     mocks = []
     for i in range(num_tiles):
         mock = mock_tile_builder(TileId=[i + 1], StationID=[station_id])
-        if i < num_tiles - 1:
-            mock.configure_mock(
-                dstip40gfpga1=str(sdn_base + 2 * i + 2),
-                dstip40gfpga2=str(sdn_base + 2 * i + 3),
-            )
+        mock.configure_mock(fortyGbCoreConfigurations=json.dumps(beamformer_routes[i]))
         mocks.append(mock)
     return mocks
 
@@ -583,23 +652,22 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             )
 
         @command(dtype_in="DevString")
-        def MockTileDstIpChange(self: PatchedSpsStationDevice, argin: str) -> None:
+        def MockTileFortyGbCoreConfigurationsChange(
+            self: PatchedSpsStationDevice, argin: str
+        ) -> None:
             """
-            Mock a tile reporting its beamformer destination IPs.
+            Mock a tile reporting its 40G core configurations.
 
-            :param argin: JSON with tile_id, fpga1_ip, fpga2_ip.
+            :param argin: JSON with tile_id and value, the core
+                configurations.
             """
             args = json.loads(argin)
-            for attr, key in (
-                ("dstip40gfpga1", "fpga1_ip"),
-                ("dstip40gfpga2", "fpga2_ip"),
-            ):
-                self.component_manager._on_tile_attribute_change(
-                    args["tile_id"],
-                    attr,
-                    args[key],
-                    tango.AttrQuality.ATTR_VALID,
-                )
+            self.component_manager._on_tile_attribute_change(
+                args["tile_id"],
+                "fortygbcoreconfigurations",
+                json.dumps(args["value"]),
+                tango.AttrQuality.ATTR_VALID,
+            )
 
         @command(dtype_in="DevString")
         def MockTileFlaggedCountChange(

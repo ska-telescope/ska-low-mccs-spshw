@@ -243,6 +243,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("beamformerTable", True, False)
         self.set_change_event("beamformerRegions", True, False)
         self.set_change_event("beamformerDaisyChainValid", True, False)
+        self.set_change_event("tileDataRoutingValid", True, False)
         self.set_change_event("finalTileBeamformerFlaggedCountOk", True, False)
         self.set_change_event("staticTimeDelays", True, False)
         self.set_change_event("preaduLevels", True, False)
@@ -262,6 +263,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_archive_event("beamformerTable", True, True)
         self.set_archive_event("beamformerRegions", True, True)
         self.set_archive_event("beamformerDaisyChainValid", True, True)
+        self.set_archive_event("tileDataRoutingValid", True, True)
         self.set_archive_event("finalTileBeamformerFlaggedCountOk", True, True)
         self.set_archive_event("staticTimeDelays", False)
         self.set_archive_event("preaduLevels", False)
@@ -417,6 +419,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "self",
             "tile_programming_state",
             "beamformer_daisy_chain",
+            "tile_data_routing",
             "beamformer_flagged_count",
         ]
         # TODO: Make these thresholds fully dynamic based on deployment.
@@ -424,6 +427,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "self": (1, 1, 1),
             "tile_programming_state": (1, 1, 1),
             "beamformer_daisy_chain": (1, 1, 1),
+            "tile_data_routing": (1, 1, 1),
             "beamformer_flagged_count": (1, 1, 1),
         }
         if len(self.SubrackFQDNs) > 0:
@@ -471,6 +475,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "beamformer_daisy_chain",
             ["beamformer_daisy_chain"],
             thresholds["beamformer_daisy_chain"],
+        )
+        health_rollup.define(
+            "tile_data_routing",
+            ["tile_data_routing"],
+            thresholds["tile_data_routing"],
         )
         health_rollup.define(
             "beamformer_flagged_count",
@@ -724,6 +733,18 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_rollup.health_changed(
                 "beamformer_daisy_chain", daisy_chain_health
             )
+
+        if "tileDataRoutingValid" in state_change:
+            routing_valid = state_change["tileDataRoutingValid"]
+            self.push_change_event("tileDataRoutingValid", bool(routing_valid))
+            self.push_archive_event("tileDataRoutingValid", bool(routing_valid))
+            if routing_valid is None:
+                routing_health = HealthState.UNKNOWN
+            elif routing_valid:
+                routing_health = HealthState.OK
+            else:
+                routing_health = HealthState.FAILED
+            self._health_rollup.health_changed("tile_data_routing", routing_health)
 
         if "finalTileBeamformerFlaggedCountOk" in state_change:
             # None means a final tile count is INVALID, so the result can no
@@ -1278,6 +1299,23 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :return: True if the daisy chain is correctly configured.
         """
         return bool(self.component_manager.beamformer_daisy_chain_valid)
+
+    @attribute(
+        dtype="DevBoolean",
+        label="Tile Data Routing Valid",
+        doc="Return whether the TPMs route the station beam to CSP ingest.",
+    )
+    def tileDataRoutingValid(self: SpsStation) -> bool:
+        """
+        Return whether the TPMs route the station beam to CSP ingest.
+
+        True once the CSP ingest address is configured and the last tile
+        reports 40G routes to the CSP ingest address and port on ARP table
+        entries 0 and 1 of both cores.
+
+        :return: True if the tile data routing is correctly configured.
+        """
+        return bool(self.component_manager.tile_data_routing_valid)
 
     @attribute(
         dtype="DevBoolean",

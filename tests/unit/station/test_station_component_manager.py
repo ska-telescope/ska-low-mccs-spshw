@@ -2067,10 +2067,6 @@ def test_pointing_delays_with_unsupported_beams_still_publishes(
     callbacks["component_state"].assert_call(pointingdelays=expected_call)
 
 
-# Fixture uses IPv4Interface("10.0.0.152/16").
-_SDN_BASE = ipaddress.IPv4Address("10.0.0.152")
-
-
 def _push_tile_attribute(
     station_component_manager: SpsStationComponentManager,
     tile_id: int,
@@ -2092,22 +2088,34 @@ def _push_tile_attribute(
     )
 
 
-def _set_dst_ips(
+def _set_beamformer_routes(
     station_component_manager: SpsStationComponentManager,
     tile_id: int,
-    fpga1: str,
-    fpga2: str,
+    routes: list[dict[str, Any]] | None,
 ) -> None:
     """
-    Push a tile's beamformer destination IPs to the station.
+    Push a tile's 40G core configurations to the station.
 
     :param station_component_manager: the SPS station component manager
     :param tile_id: the logical id of the tile.
-    :param fpga1: the destination IP of the tile's first 40G core.
-    :param fpga2: the destination IP of the tile's second 40G core.
+    :param routes: the 40G core configurations, or None for an INVALID
+        reading.
     """
-    _push_tile_attribute(station_component_manager, tile_id, "dstip40gfpga1", fpga1)
-    _push_tile_attribute(station_component_manager, tile_id, "dstip40gfpga2", fpga2)
+    if routes is None:
+        _push_tile_attribute(
+            station_component_manager,
+            tile_id,
+            "fortyGbCoreConfigurations",
+            None,
+            tango.AttrQuality.ATTR_INVALID,
+        )
+    else:
+        _push_tile_attribute(
+            station_component_manager,
+            tile_id,
+            "fortyGbCoreConfigurations",
+            json.dumps(routes),
+        )
 
 
 def _set_tile_power(
@@ -2127,7 +2135,8 @@ def _set_tile_power(
 
 
 def _make_daisy_chain_valid(
-    station_component_manager: SpsStationComponentManager, num_tiles: int
+    station_component_manager: SpsStationComponentManager,
+    beamformer_routes: list[list[dict[str, Any]]],
 ) -> None:
     """
     Bring every stage of the beamformer daisy chain to valid.
@@ -2136,8 +2145,10 @@ def _make_daisy_chain_valid(
     The beamformer is not running, so the receiving check is skipped.
 
     :param station_component_manager: the SPS station component manager
-    :param num_tiles: the number of tiles in the station.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
     """
+    num_tiles = len(beamformer_routes)
     _mark_tiles_established(station_component_manager, num_tiles)
     for tile_id in range(num_tiles):
         _set_tile_power(station_component_manager, tile_id, PowerState.ON)
@@ -2147,18 +2158,12 @@ def _make_daisy_chain_valid(
         _push_tile_attribute(
             station_component_manager, tile_id, "tileProgrammingState", "Synchronised"
         )
-    # Tiles within the chain send to each other; last tile is ignored.
-    for tile_id in range(num_tiles - 1):
-        _set_dst_ips(
-            station_component_manager,
-            tile_id,
-            str(_SDN_BASE + 2 * tile_id + 2),
-            str(_SDN_BASE + 2 * tile_id + 3),
-        )
+    for tile_id, routes in enumerate(beamformer_routes):
+        _set_beamformer_routes(station_component_manager, tile_id, routes)
 
 
 @pytest.mark.parametrize(
-    ("attribute_name", "attribute_value", "valid"),
+    ("attribute_name", "attribute_value", "expected_validity"),
     [
         pytest.param("power", PowerState.OFF, False, id="tile off"),
         pytest.param("power", PowerState.UNKNOWN, False, id="tile power unknown"),
@@ -2170,14 +2175,49 @@ def _make_daisy_chain_valid(
         pytest.param(
             "tileProgrammingState", None, False, id="tile programming state unknown"
         ),
-        pytest.param("dstip40gfpga1", "1.2.3.4", False, id="tile wrong dst ip"),
-        pytest.param("dstip40gfpga1", None, None, id="tile dst ips unknown"),
+        pytest.param(
+            "fortyGbCoreConfigurations",
+            json.dumps(
+                [
+                    {
+                        "core_id": 0,
+                        "arp_table_entry": 0,
+                        "destination_ip": "1.2.3.4",
+                        "destination_port": 4660,
+                    },
+                    {
+                        "core_id": 0,
+                        "arp_table_entry": 1,
+                        "destination_ip": "10.0.0.158",
+                        "destination_port": 4662,
+                    },
+                    {
+                        "core_id": 1,
+                        "arp_table_entry": 0,
+                        "destination_ip": "10.0.0.159",
+                        "destination_port": 4660,
+                    },
+                    {
+                        "core_id": 1,
+                        "arp_table_entry": 1,
+                        "destination_ip": "10.0.0.159",
+                        "destination_port": 4662,
+                    },
+                ]
+            ),
+            False,
+            id="tile wrong dst ip",
+        ),
+        pytest.param(
+            "fortyGbCoreConfigurations", None, None, id="tile dst ips unknown"
+        ),
     ],
 )
 def test_beamformer_daisy_chain(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
     num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
     attribute_name: str,
     attribute_value: Any,
     expected_validity: bool | None,
@@ -2200,11 +2240,13 @@ def test_beamformer_daisy_chain(
     :param station_component_manager: the SPS station component manager under test
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
     :param attribute_name: the tile attribute to change, or "power".
     :param attribute_value: the new value of the attribute.
     :param expected_validity: the expected result of the validation.
     """
-    _make_daisy_chain_valid(station_component_manager, num_tiles)
+    _make_daisy_chain_valid(station_component_manager, beamformer_routes)
     callbacks["component_state"].assert_call(
         beamformerDaisyChainValid=True,
         lookahead=10 * num_tiles,
@@ -2232,7 +2274,7 @@ def test_beamformer_daisy_chain(
         consume_nonmatches=True,
     )
 
-    _make_daisy_chain_valid(station_component_manager, num_tiles)
+    _make_daisy_chain_valid(station_component_manager, beamformer_routes)
     callbacks["component_state"].assert_call(
         beamformerDaisyChainValid=True,
         lookahead=10 * num_tiles,
@@ -2243,12 +2285,15 @@ def test_beamformer_daisy_chain(
 def test_beamformer_daisy_chain_receiving(
     station_component_manager: SpsStationComponentManager,
     num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
 ) -> None:
     """
     Test that, while beamforming, every tile but the first must be receiving.
 
     :param station_component_manager: the SPS station component manager under test
     :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
     """
 
     def set_rx_received(tile_id: int, rx_received: int) -> None:
@@ -2267,7 +2312,7 @@ def test_beamformer_daisy_chain_receiving(
             ),
         )
 
-    _make_daisy_chain_valid(station_component_manager, num_tiles)
+    _make_daisy_chain_valid(station_component_manager, beamformer_routes)
     for tile_id in range(num_tiles):
         _push_tile_attribute(
             station_component_manager, tile_id, "isBeamformerRunning", True
@@ -2287,6 +2332,410 @@ def test_beamformer_daisy_chain_receiving(
     # Nothing is expected to flow once the beamformer stops.
     _push_tile_attribute(station_component_manager, 0, "isBeamformerRunning", False)
     assert station_component_manager.beamformer_daisy_chain_valid is True
+
+
+def _make_tile_data_routing_valid(
+    station_component_manager: SpsStationComponentManager,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+) -> None:
+    """
+    Configure CSP ingest and give every tile the expected beam routes.
+
+    :param station_component_manager: the SPS station component manager
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    """
+    _mark_tiles_established(station_component_manager, len(beamformer_routes))
+    station_component_manager._csp_ingest_address = csp_ingest_ip
+    for tile_id, routes in enumerate(beamformer_routes):
+        _set_beamformer_routes(station_component_manager, tile_id, routes)
+
+
+def _mock_last_tile(
+    station_component_manager: SpsStationComponentManager,
+    power: PowerState,
+    result_code: ResultCode,
+) -> None:
+    """
+    Mock the last tile, so that SetCspIngest can be sent to it.
+
+    :param station_component_manager: the SPS station component manager
+    :param power: the power state of the last tile.
+    :param result_code: the result code of the last tile's SetCspDownload.
+    """
+    last_fqdn, last_proxy = list(station_component_manager._tile_proxies.items())[-1]
+    last_proxy._proxy = unittest.mock.Mock()
+    last_proxy._proxy.SetCspDownload.return_value = (
+        [result_code],
+        ["SetCspDownload result"],
+    )
+    station_component_manager._tile_power_states[last_fqdn] = power
+
+
+@pytest.mark.parametrize(
+    "new_routes",
+    [
+        pytest.param(
+            [
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 0,
+                    "destination_ip": "1.2.3.4",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 0,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 1,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 1,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+            ],
+            id="last tile wrong destination ip",
+        ),
+        pytest.param(
+            [
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 0,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 0,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 1234,
+                },
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 1,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 1,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+            ],
+            id="last tile wrong destination port",
+        ),
+        pytest.param(
+            [
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 0,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 0,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 1,
+                    "destination_ip": "1.2.3.4",
+                    "destination_port": 4660,
+                },
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 1,
+                    "destination_ip": "10.0.1.10",
+                    "destination_port": 4660,
+                },
+            ],
+            id="last tile second chain wrong destination ip",
+        ),
+    ],
+)
+def test_tile_data_routing(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+    new_routes: list[dict[str, Any]] | None,
+) -> None:
+    """
+    Test that the station validates the station beam routing to CSP ingest.
+
+    Verifies that the component manager emits tileDataRoutingValid=True
+    once CSP ingest is configured and the last tile reports routes to it,
+    False when the last tile reports wrong routes, and True again once the
+    expected routes are restored.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    :param new_routes: the 40G core configurations the last tile reports,
+        or None for an INVALID reading.
+    """
+    _make_tile_data_routing_valid(
+        station_component_manager, beamformer_routes, csp_ingest_ip
+    )
+    callbacks["component_state"].assert_call(
+        tileDataRoutingValid=True,
+        lookahead=10 * num_tiles,
+        consume_nonmatches=True,
+    )
+
+    last = num_tiles - 1
+    _set_beamformer_routes(station_component_manager, last, new_routes)
+    callbacks["component_state"].assert_call(tileDataRoutingValid=False)
+
+    _set_beamformer_routes(station_component_manager, last, beamformer_routes[last])
+    callbacks["component_state"].assert_call(tileDataRoutingValid=True)
+
+
+def test_tile_data_routing_csp_ingest(
+    station_component_manager: SpsStationComponentManager,
+    num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+    csp_ingest_port: int,
+) -> None:
+    """
+    Test that the routing follows the station's CSP ingest configuration.
+
+    The routing is invalid while CSP ingest is not configured, and
+    becomes invalid when CSP ingest is moved until the last tile reports
+    the new route.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    :param csp_ingest_port: the port CSP ingests station beams on.
+    """
+    last = num_tiles - 1
+    _mark_tiles_established(station_component_manager, num_tiles)
+    for tile_id in range(last):
+        _set_beamformer_routes(
+            station_component_manager, tile_id, beamformer_routes[tile_id]
+        )
+    _set_beamformer_routes(
+        station_component_manager,
+        last,
+        [
+            {
+                "core_id": 0,
+                "arp_table_entry": 0,
+                "destination_ip": "0.0.0.0",
+                "destination_port": 4660,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 0,
+                "destination_ip": "0.0.0.0",
+                "destination_port": 4660,
+            },
+            {
+                "core_id": 0,
+                "arp_table_entry": 1,
+                "destination_ip": "0.0.0.0",
+                "destination_port": 4660,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 1,
+                "destination_ip": "0.0.0.0",
+                "destination_port": 4660,
+            },
+        ],
+    )
+    # The last tile matches, but CSP ingest has not been configured.
+    assert station_component_manager.tile_data_routing_valid is False
+
+    _mock_last_tile(station_component_manager, PowerState.ON, ResultCode.OK)
+    station_component_manager.set_csp_ingest(csp_ingest_ip, 0xF0D0, csp_ingest_port)
+    # The last tile has not yet reported the new route.
+    assert station_component_manager.tile_data_routing_valid is False
+
+    _set_beamformer_routes(station_component_manager, last, beamformer_routes[last])
+    assert station_component_manager.tile_data_routing_valid is True
+
+
+def test_tile_data_routing_unknown(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+) -> None:
+    """
+    Test that the routing is unknown while the last tile's routes are unknown.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    """
+    _make_tile_data_routing_valid(
+        station_component_manager, beamformer_routes, csp_ingest_ip
+    )
+    callbacks["component_state"].assert_call(
+        tileDataRoutingValid=True,
+        lookahead=10 * num_tiles,
+        consume_nonmatches=True,
+    )
+
+    last = num_tiles - 1
+    _set_beamformer_routes(station_component_manager, last, None)
+    callbacks["component_state"].assert_call(tileDataRoutingValid=None)
+
+    _set_beamformer_routes(station_component_manager, last, beamformer_routes[last])
+    callbacks["component_state"].assert_call(tileDataRoutingValid=True)
+
+
+def test_set_csp_ingest_waits_for_last_tile_routes(
+    station_component_manager: SpsStationComponentManager,
+    num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+    csp_ingest_port: int,
+) -> None:
+    """
+    Test that moving CSP ingest does not briefly report the routing as wrong.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    :param csp_ingest_port: the port CSP ingests station beams on.
+    """
+    _make_tile_data_routing_valid(
+        station_component_manager, beamformer_routes, csp_ingest_ip
+    )
+    assert station_component_manager.tile_data_routing_valid is True
+
+    _mock_last_tile(station_component_manager, PowerState.ON, ResultCode.OK)
+    station_component_manager.set_csp_ingest("10.0.1.20", 0xF0D0, csp_ingest_port)
+    # The last tile has not yet reported its new routes.
+    assert station_component_manager.tile_data_routing_valid is True
+
+    _set_beamformer_routes(
+        station_component_manager,
+        num_tiles - 1,
+        [
+            {
+                "core_id": 0,
+                "arp_table_entry": 0,
+                "destination_ip": "10.0.1.20",
+                "destination_port": 4660,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 0,
+                "destination_ip": "10.0.1.20",
+                "destination_port": 4660,
+            },
+            {
+                "core_id": 0,
+                "arp_table_entry": 1,
+                "destination_ip": "10.0.1.20",
+                "destination_port": 4660,
+            },
+            {
+                "core_id": 1,
+                "arp_table_entry": 1,
+                "destination_ip": "10.0.1.20",
+                "destination_port": 4660,
+            },
+        ],
+    )
+    assert station_component_manager.tile_data_routing_valid is True
+
+
+def test_set_csp_ingest_routes_already_match(
+    station_component_manager: SpsStationComponentManager,
+    num_tiles: int,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+    csp_ingest_port: int,
+) -> None:
+    """
+    Test that SetCspIngest validates routes that the last tile already has.
+
+    The last tile may not report routes that have not changed, so the
+    station must not wait for it.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param num_tiles: number of TPMs in the test.
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    :param csp_ingest_port: the port CSP ingests station beams on.
+    """
+    _mark_tiles_established(station_component_manager, num_tiles)
+    for tile_id, routes in enumerate(beamformer_routes):
+        _set_beamformer_routes(station_component_manager, tile_id, routes)
+    # CSP ingest has not been configured.
+    assert station_component_manager.tile_data_routing_valid is False
+
+    _mock_last_tile(station_component_manager, PowerState.ON, ResultCode.OK)
+    station_component_manager.set_csp_ingest(csp_ingest_ip, 0xF0D0, csp_ingest_port)
+    assert station_component_manager.tile_data_routing_valid is True
+
+
+@pytest.mark.parametrize(
+    ("power", "result_code"),
+    [
+        pytest.param(PowerState.OFF, ResultCode.OK, id="last tile not on"),
+        pytest.param(PowerState.ON, ResultCode.FAILED, id="SetCspDownload failed"),
+    ],
+)
+def test_set_csp_ingest_failed(
+    station_component_manager: SpsStationComponentManager,
+    beamformer_routes: list[list[dict[str, Any]]],
+    csp_ingest_ip: str,
+    csp_ingest_port: int,
+    power: PowerState,
+    result_code: ResultCode,
+) -> None:
+    """
+    Test that the routing is invalid at once when the last tile isn't reconfigured.
+
+    :param station_component_manager: the SPS station component manager under test
+    :param beamformer_routes: the expected 40G core configurations of
+        each tile.
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
+    :param csp_ingest_port: the port CSP ingests station beams on.
+    :param power: the power state of the last tile.
+    :param result_code: the result code of the last tile's SetCspDownload.
+    """
+    _make_tile_data_routing_valid(
+        station_component_manager, beamformer_routes, csp_ingest_ip
+    )
+    assert station_component_manager.tile_data_routing_valid is True
+
+    _mock_last_tile(station_component_manager, power, result_code)
+    station_component_manager.set_csp_ingest("10.0.1.20", 0xF0D0, csp_ingest_port)
+    assert station_component_manager.tile_data_routing_valid is False
 
 
 def test_beamformer_flagged_count(

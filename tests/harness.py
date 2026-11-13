@@ -291,6 +291,7 @@ class SpsTangoTestHarness:
         sdn_first_interface: str = "10.0.0.152/25",
         sdn_gateway: str = "10.0.0.254",
         subrack_ids: Iterable[int] = range(1, 3),
+        csp_ingest_ip: str = "0.0.0.0",
         tile_ids: Iterable[int] = range(1, 17),
         lmc_daq_trl: str = "",
         bandpass_daq_trl: str = "",
@@ -308,6 +309,7 @@ class SpsTangoTestHarness:
             allocated to this station for science data
         :param sdn_gateway: the IP address of the SDN gateway
         :param subrack_ids: IDs of the subracks in this station.
+        :param csp_ingest_ip: the IP address CSP ingests station beams on.
         :param tile_ids: IDS of the tiles in this station.
         :param lmc_daq_trl: TRL of this Station's LMC DAQ.
         :param bandpass_daq_trl: TRL of this Station's Bandpass DAQ.
@@ -336,6 +338,7 @@ class SpsTangoTestHarness:
             ],
             SdnFirstInterface=sdn_first_interface,
             SdnGateway=sdn_gateway,
+            CspIngestIp=csp_ingest_ip,
             LoggingLevelDefault=logging_level,
         )
 

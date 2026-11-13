@@ -155,10 +155,12 @@ class TaskCompleteWaiter(TaskCallbackType):
         self._exception: Exception | None = None
         self._condition = threading.Condition()
 
+    # pylint: disable=too-many-arguments
     def __call__(
         self: TaskCompleteWaiter,
         status: TaskStatus | None = None,
         progress: int | None = None,
+        progress_info: str | None = None,
         result: Any = None,
         exception: Exception | None = None,
     ) -> None:

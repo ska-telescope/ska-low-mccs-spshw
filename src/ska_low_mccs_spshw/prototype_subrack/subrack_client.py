@@ -104,6 +104,49 @@ class SubrackPollResponse:
     """The wall clock time at which the poll completed."""
 
 
+class _WakeableCondition(threading.Condition):
+    """
+    A condition whose ``wait_for`` calls a wake can end early.
+
+    The base poller waits between polls with ``wait_for`` and a predicate on
+    its polling state. A plain ``notify`` cannot end that wait, because
+    ``wait_for`` checks the predicate again and goes back to waiting. Here
+    each wait also ends once :py:meth:`wake` has run since the wait began.
+    """
+
+    def __init__(self: _WakeableCondition) -> None:
+        """Initialise a new instance."""
+        super().__init__()
+        # Counts wakes. A wait compares it to the count at its start, so a
+        # wake ends only the waits already running, never a later one.
+        self._wakes = 0
+
+    def wake(self: _WakeableCondition) -> None:
+        """End every wait that is running now."""
+        with self:
+            self._wakes += 1
+            self.notify_all()
+
+    def wait_for(  # type: ignore[override]
+        self: _WakeableCondition,
+        predicate: Callable[[], Any],
+        timeout: Optional[float] = None,
+    ) -> Any:
+        """
+        Wait until the predicate is true, the timeout ends, or a wake arrives.
+
+        :param predicate: the condition to wait for.
+        :param timeout: the longest time, in seconds, to wait.
+
+        :return: the last value of the predicate, or ``True`` after a wake.
+        """
+        # The caller holds the lock, so this read cannot race a wake.
+        wakes_at_start = self._wakes
+        return super().wait_for(
+            lambda: self._wakes != wakes_at_start or predicate(), timeout
+        )
+
+
 class SubrackPoller(Poller[tuple[str, ...], SubrackPollResponse]):
     """
     The poller that drives a :py:class:`Subrack`.
@@ -113,16 +156,28 @@ class SubrackPoller(Poller[tuple[str, ...], SubrackPollResponse]):
     once.
     """
 
+    # The base poller assigns its condition, then starts the polling thread,
+    # all in its __init__. A property swaps in a wakeable condition at that
+    # assignment, so the thread only ever sees the wakeable one. Swapping it
+    # after __init__ would leave the thread waiting on the old condition.
+    @property
+    def _condition(self: SubrackPoller) -> _WakeableCondition:
+        return self._wakeable_condition
+
+    @_condition.setter
+    def _condition(self: SubrackPoller, _: threading.Condition) -> None:
+        self._wakeable_condition = _WakeableCondition()
+
     def wake(self: SubrackPoller) -> None:
         """
         Make the next poll run now, rather than at the end of the poll rate.
 
         This only interrupts the wait between polls. It leaves the polling
-        state alone, so it never starts a stopped poller. A wake that arrives
+        state alone, so it never starts a stopped poller: a stopped poller
+        that is woken goes back to waiting for a start. A wake that arrives
         while a poll runs has no wait to interrupt, so it does nothing.
         """
-        with self._condition:
-            self._condition.notify()
+        self._wakeable_condition.wake()
 
 
 class Subrack(PollModel[tuple[str, ...], SubrackPollResponse]):

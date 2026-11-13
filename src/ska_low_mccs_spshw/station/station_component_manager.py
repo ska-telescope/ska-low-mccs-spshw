@@ -2633,6 +2633,23 @@ class SpsStationComponentManager(
 
         return (result_code, failure_step)
 
+    def _subrack_supports_on(self: SpsStationComponentManager, fqdn: str) -> bool:
+        """
+        Check whether a subrack device exposes an On command.
+
+        :param fqdn: the subrack's TRL.
+        :return: True if the device has an On command, or if this cannot be
+            determined (so that the On attempt, and any failure, is reported).
+        """
+        proxy = self._subrack_proxies[fqdn]._proxy
+        if proxy is None:
+            return True
+        try:
+            return "On" in [cmd.cmd_name for cmd in proxy.command_list_query()]
+        except Exception:  # pylint: disable=broad-except
+            self.logger.warning(f"Could not query commands of {fqdn}", exc_info=True)
+            return True
+
     @check_communicating
     def _turn_on_subracks(
         self: SpsStationComponentManager,
@@ -2649,6 +2666,14 @@ class SpsStationComponentManager(
             fqdn
             for fqdn, power_state in dict(self._subrack_power_states).items()
             if power_state != PowerState.ON
+        ]
+        # MccsPrototypeSubrack has no On command: it is powered externally
+        # (e.g. via PDU) and reports ON once its board is reachable. Only
+        # command subracks that support On; the rest are just waited on below.
+        # MccsSubrack has an On command but this just calls a simulated power
+        # that then gates communication with simulated power reply.
+        subracks_to_turn_on = [
+            fqdn for fqdn in subracks_to_turn_on if self._subrack_supports_on(fqdn)
         ]
         if subracks_to_turn_on:
             on_commands = MccsCompositeCommandProxy(self.logger, task_abort_event)

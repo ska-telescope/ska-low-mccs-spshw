@@ -2137,40 +2137,6 @@ class SpsStationComponentManager(
             )
             self._update_component_state(power=evaluated_power_state)
 
-    def set_power_state(
-        self: SpsStationComponentManager,
-        power_state: PowerState,
-        fqdn: Optional[str] = None,
-    ) -> None:
-        """
-        Set the power_state of the component.
-
-        :TODO: Power state should be set in the component mananger and then
-            the device updated. Current design sets the component power state
-            from the device component_state_changed callback. This should be
-            corrected
-
-        :param power_state: the value of PowerState to be set.
-        :param fqdn: the fqdn of the component's device.
-
-        :raises ValueError: fqdn not found
-        """
-        # Note: this setter was, prior to V0.13 of the base classes, in
-        # MccsComponentManager.update_component_power_mode
-        with self._power_state_lock:
-            if fqdn is None:
-                # pylint: disable-next=attribute-defined-outside-init
-                self.power_state = power_state
-            elif fqdn in self._subrack_proxies:
-                self._subrack_proxies[fqdn]._power_state = power_state
-            elif fqdn in self._tile_proxies:
-                self._tile_proxies[fqdn]._power_state = power_state
-            else:
-                raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to subrack "
-                    "or tile"
-                )
-
     def off(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -2279,9 +2245,7 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
-            result_code, message = self._turn_on_subracks(
-                task_callback, task_abort_event
-            )
+            result_code, message = self._turn_on_subracks(task_abort_event)
         if result_code != ResultCode.OK:
             if task_callback:
                 task_callback(
@@ -2291,17 +2255,16 @@ class SpsStationComponentManager(
                 return
         self.logger.debug("Subracks now on")
         self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
-        with self._power_state_lock:
-            self.logger.debug("Starting off sequence on tiles")
-            results = []
-            for proxy in self._tile_proxies.values():
-                [task_status, task_id] = proxy.off()
-                time.sleep(0.25)  # stagger power off by 0.25 seconds per tile
-                results.append(task_status)
-            if ResultCode.FAILED in results:
-                result_code = ResultCode.FAILED
-            else:
-                result_code = ResultCode.OK
+        self.logger.debug("Starting off sequence on tiles")
+        results = []
+        for proxy in self._tile_proxies.values():
+            [task_status, task_id] = proxy.off()
+            time.sleep(0.25)  # stagger power off by 0.25 seconds per tile
+            results.append(task_status)
+        if ResultCode.FAILED in results:
+            result_code = ResultCode.FAILED
+        else:
+            result_code = ResultCode.OK
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             timeout = 60
             tick = 2
@@ -2401,9 +2364,7 @@ class SpsStationComponentManager(
             for power_state in self._subrack_power_states.values()
         ):
             self.logger.info("Starting on sequence on subracks")
-            result_code, failure_step = self._turn_on_subracks(
-                task_callback, task_abort_event
-            )
+            result_code, failure_step = self._turn_on_subracks(task_abort_event)
         if result_code == ResultCode.OK:
             self.logger.info("Subracks now on")
 
@@ -2672,50 +2633,74 @@ class SpsStationComponentManager(
 
         return (result_code, failure_step)
 
+    def _subrack_supports_on(self: SpsStationComponentManager, fqdn: str) -> bool:
+        """
+        Check whether a subrack device exposes an On command.
+
+        :param fqdn: the subrack's TRL.
+        :return: True if the device has an On command, or if this cannot be
+            determined (so that the On attempt, and any failure, is reported).
+        """
+        proxy = self._subrack_proxies[fqdn]._proxy
+        if proxy is None:
+            return True
+        try:
+            return "On" in [cmd.cmd_name for cmd in proxy.command_list_query()]
+        except Exception:  # pylint: disable=broad-except
+            self.logger.warning(f"Could not query commands of {fqdn}", exc_info=True)
+            return True
+
     @check_communicating
     def _turn_on_subracks(
         self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> tuple[ResultCode, str]:
         """
         Turn on subracks if not already on.
 
-        :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        with self._power_state_lock:
-            if not all(
-                power_state == PowerState.ON
-                for power_state in self._subrack_power_states.values()
-            ):
-                results = {}
-                for proxy in self._subrack_proxies.values():
-                    # BUG: This is fire and forget.
-                    # If the device is OFFLINE, we do not listen to the reply and
-                    # proceed to wait for 180 seconds. THORN-690
-                    results[proxy._name] = proxy.on()
-                failed = [
-                    name
-                    for name, (status, _) in results.items()
-                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
-                ]
-                if failed:
-                    msg = f"subracks failed to power on: {failed}"
-                    self.logger.error(msg)
-                    return ResultCode.FAILED, msg
-        # wait for subracks to come up
-        timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        # Snapshot copy: event handlers may update power states concurrently.
+        subracks_to_turn_on = [
+            fqdn
+            for fqdn, power_state in dict(self._subrack_power_states).items()
+            if power_state != PowerState.ON
+        ]
+        # MccsPrototypeSubrack has no On command: it is powered externally
+        # (e.g. via PDU) and reports ON once its board is reachable. Only
+        # command subracks that support On; the rest are just waited on below.
+        # MccsSubrack has an On command but this just calls a simulated power
+        # that then gates communication with simulated power reply.
+        subracks_to_turn_on = [
+            fqdn for fqdn in subracks_to_turn_on if self._subrack_supports_on(fqdn)
+        ]
+        if subracks_to_turn_on:
+            on_commands = MccsCompositeCommandProxy(self.logger, task_abort_event)
+            for fqdn in subracks_to_turn_on:
+                on_commands += MccsCommandProxy(fqdn, "On", self.logger)
+            result_code, message = on_commands(
+                command_evaluator=CompositeCommandResultEvaluator(), timeout=20
+            )
+            if result_code != ResultCode.OK:
+                msg = f"subracks failed to power on: {message}"
+                self.logger.error(msg)
+                return result_code, msg
+
         tick = 2
-        last_time = time.time() + timeout
-        while time.time() < last_time:
-            time.sleep(tick)
+        deadline = time.time() + 180
+
+        # wait for subracks to come up
+        while time.time() < deadline:
             if all(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
             ):
                 return ResultCode.OK, ""
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("subrack power command has been aborted")
+                return ResultCode.ABORTED, "task aborted"
+            time.sleep(tick)
         self.logger.error("Timed out waiting for subracks to come up")
         return ResultCode.FAILED, "timed out waiting for subracks to come up"
 
@@ -2732,29 +2717,28 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code and message
         """
-        with self._power_state_lock:
-            if not all(
-                power_state == PowerState.ON
-                for power_state in self._tile_power_states.values()
-            ):
-                results = {}
-                for proxy in self._tile_proxies.values():
-                    if proxy._proxy is None:
-                        msg = f"tile proxy {proxy} not formed"
-                        self.logger.error(msg)
-                        return ResultCode.FAILED, msg
-                    self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
-                    results[proxy._proxy.name()] = proxy.on()
-                    time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
-                failed = [
-                    name
-                    for name, (status, _) in results.items()
-                    if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
-                ]
-                if failed:
-                    msg = f"tiles failed to power on: {failed}"
+        if not all(
+            power_state == PowerState.ON
+            for power_state in list(self._tile_power_states.values())
+        ):
+            results = {}
+            for proxy in self._tile_proxies.values():
+                if proxy._proxy is None:
+                    msg = f"tile proxy {proxy} not formed"
                     self.logger.error(msg)
                     return ResultCode.FAILED, msg
+                self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
+                results[proxy._proxy.name()] = proxy.on()
+                time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
+            failed = [
+                name
+                for name, (status, _) in results.items()
+                if status in (TaskStatus.REJECTED, TaskStatus.FAILED)
+            ]
+            if failed:
+                msg = f"tiles failed to power on: {failed}"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
@@ -2925,20 +2909,19 @@ class SpsStationComponentManager(
         # The LRC id of each tile's ReInitialise command, by tile TRL.
         command_ids: dict[str, str] = {}
         rejected: list[str] = []
-        with self._power_state_lock:
-            for tile_trl, proxy in self._tile_proxies.items():
-                if proxy._proxy is None:
-                    msg = f"tile proxy {proxy} not formed"
-                    self.logger.error(msg)
-                    return ResultCode.FAILED, msg
-                self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
-                [result_code], [command_id] = proxy._proxy.ReInitialise(
-                    json.dumps({"force_reprogramming": force_reprogramming})
-                )
-                time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
-                if result_code in [ResultCode.FAILED, ResultCode.REJECTED]:
-                    rejected.append(f"{tile_trl}: {command_id}")
-                command_ids[tile_trl] = command_id
+        for tile_trl, proxy in self._tile_proxies.items():
+            if proxy._proxy is None:
+                msg = f"tile proxy {proxy} not formed"
+                self.logger.error(msg)
+                return ResultCode.FAILED, msg
+            self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
+            [result_code], [command_id] = proxy._proxy.ReInitialise(
+                json.dumps({"force_reprogramming": force_reprogramming})
+            )
+            time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
+            if result_code in [ResultCode.FAILED, ResultCode.REJECTED]:
+                rejected.append(f"{tile_trl}: {command_id}")
+            command_ids[tile_trl] = command_id
         if rejected:
             msg = f"tiles failed to start initialising: {rejected}"
             self.logger.error(msg)

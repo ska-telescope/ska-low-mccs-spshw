@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* [THORN-690] Use MccsCommandProxy to listen for the real result of a
+subrack's On() command during SpsStation's power-on sequence, instead of
+firing it and forgetting the reply. A rejected/failed On() (e.g. because a
+subrack is administratively OFFLINE) now fails fast instead of causing a
+blind 180s timeout.
 * [THORN-802] Updated thresholds for every TPM attribute which the new SPS thresholds give. No new attrbutes have thresholds, but many have been updated.
 
 ## 18.0.0

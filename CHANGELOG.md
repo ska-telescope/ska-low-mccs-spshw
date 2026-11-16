@@ -2,6 +2,77 @@
 
 ## Unreleased
 
+* [THORN-690] Use MccsCommandProxy to listen for the real result of a
+subrack's On() command during SpsStation's power-on sequence, instead of
+firing it and forgetting the reply. A rejected/failed On() (e.g. because a
+subrack is administratively OFFLINE) now fails fast instead of causing a
+blind 180s timeout.
+* [THORN-802] Updated thresholds for every TPM attribute which the new SPS thresholds give. No new attrbutes have thresholds, but many have been updated.
+
+## 18.0.0
+
+* [THORN-757] bump TPM API to 5.0.1.
+  * timing_pps_present: previously mapped to status now maps to present
+  * timing_pps_period introduced as new monitoring point from TPM API
+* [THORN-791] MccsSubrack `pduHealth` is now a `HealthState` enum, not a string. Reading it used to fail with "TypeError: can't translate python object to C char*", because the PDU's `healthState` enum was passed to a string attribute.
+* [THORN-757] Rename `MccsTile` Tango attributes used for monitoring TPM health, using the convention of the full TPM API path with the leading category (`temperatures_`, `voltages_`, `currents_`, `alarms_`, `adcs_`, `timing_`, `io_`, `dsp_`). The mapping of attributes to monitoring points is in the MccsTile health page of the documentation.
+  * `src/ska_low_mccs_spshw/tile/tile_device.py`:
+    * Renamed the attributes, and updated the signal maps, `attribute_monitoring_point_map` and the attributes excluded from health to match.
+    * FPGA numbering now follows the TPM API: `fpga1Temperature` -> `temperatures_fpga0`, `fpga2Temperature` -> `temperatures_fpga1`.
+    * Renamed `ppsDelay` -> `timing_pps_delay` and `ppsDrift` -> `timing_pps_drift`.
+    * Corrected the `ppsDrift_signal` type from `list[int]` to `int`, matching the `DevLong` attribute.
+    * Renamed the `AttrSignal`s backing the renamed attributes to `<attribute_name>_signal` (e.g. `fpga0_temperature_signal` -> `temperatures_fpga0_signal`), and updated the signal maps and `tests/unit/tile/test_tile_device.py` to match.
+  * `src/ska_low_mccs_spshw/station/station_health_rules.py`: pps delay spread health reports now refer to `timing_pps_delay`.
+  * `src/ska_low_mccs_spshw/station/station_component_manager.py`: `_TileProxy` subscriptions and the `SpsStation` tile attribute caches now use the new temperature, PPS and beamformer flagged count names.
+  * `charts/ska-low-mccs-spshw/values.yaml`: renamed the `MccsTile` alarm and warning threshold properties.
+  * `charts/ska-low-mccs-spshw/data/eda-config.yaml`:
+    * Renamed `MccsTile` attributes with updated names.
+    * Corrected entries left outdated by [THORN-656]: `fpga0_data_router_status` and `fpga1_data_router_status`, and `f2f_soft_errors`, `f2f_hard_errors`, `f2f_pll_lock_status` and `f2f_pll_counter`, which are now split per FPGA.
+    * Removed `lane_status`, which no longer exists.
+  * `tests/unit/charts/test_eda_config.py`: new unit test that every `MccsTile` attribute in the EDA config exists on the device.
+  * `tests/data/default_values.yaml`
+    * renamed the threshold properties to match `values.yaml`.
+    * deleted deprecated `voltageMon`
+  * `tests/test_tools.py`: updated `TileWrapper` read-only attributes to the new names, replaced entries that no longer existed with their per-FPGA attributes, and removed `lane_status`.
+  * `tests/unit`, `tests/integration` and `tests/functional`: updated to the new attribute names, including the attributes excluded from bulk attribute reads.
+  * `docs/src/reference/tile_health.rst`, `docs/src/reference/tile_device_methods.rst`, `docs/src/api/tile/tile_device_class_diagram.uml`: updated to the new attribute names.
+* [THORN-802] MccsPrototypeSubrack exposes every SMM monitoring point that the SPS thresholds give a limit or an expected value for.
+  * 14 new attributes have limits in the chart and feed health.
+    * SMM `boardPower`, `boardMaxPower` and `boardPllTemperature`.
+    * PLL counters `boardApllUnlockCount`, `boardDpllUnlockCount` and `boardSysclkEventCount`.
+    * PSU `powerSupplyFanSpeedsRpm`, `powerSupplyFetTemperatures` and `powerSupplyInletTemperatures`.
+    * Peak hold values `internalVoltagesPOWERINMIN`, `internalVoltagesPOWERINMAX`, `tpmMinVoltages`, `tpmMaxVoltages` and `tpmMaxPowers`.
+  * 27 new attributes report status values and do not feed health.
+    * PLL, PPS and REF `pllSource`, `ppsPresent`, `ppsFaultCount`, `ppsPhase`, `ppsPhaseStdev`, `ppsPhaseOutliers`, `refPresent` and `refFaultCount`.
+    * SMM `backplanePowerGood` and `cpldPings`.
+    * PSU `powerSupplyBusy`, `powerSupplyOff` and `powerSupplyPowerGood`.
+    * PSU faults `powerSupplyCmlFaults`, `powerSupplyFanFaults`, `powerSupplyInputFaults`, `powerSupplyIoutFaults`, `powerSupplyIoutOcFaults`, `powerSupplyTempFaults`, `powerSupplyVinUvFaults`, `powerSupplyVoutFaults`, `powerSupplyVoutOvFaults`, `powerSupplyOtherFaults` and `powerSupplyUnknownFaults`.
+    * TPM slot `tpmFaults`, `tpmPings` and `tpmSinglewire`.
+  * An element that the board reports as None, such as a powered off TPM bay, reads as NaN or False, so it does not fail the health. A point the board omits entirely reads as invalid. The health recorder is built after the first poll that reads the board info, and rebuilt when the BIOS version changes, because API 1.6.0 has no peak hold values or PLL counters and those attributes do not feed its health. The simulator now reports SMM power, the SMM PLL temperature, slot singlewire status and PSU fan speeds in rpm.
+* [THORN-802] MccsPrototypeSubrack sets every backplane fan to MANUAL each time it can read the board again. The speed is 85% at cabinet position 3 and 70% at other positions. The cabinet position comes from the last octet of SubrackIp. A host name gives no position, so the fans of a simulator are not set.
+* [SKB-1579] Fix MccsTile concurrency and reconnection issues seen under CPU contention.
+  * New `LockTimeoutError` (a subclass of `TimeoutError`) is raised when the hardware lock cannot be acquired. A lock timeout during a poll or connect now counts as "hardware busy". It no longer triggers a reconnect or a fault re-evaluation. A long running command that cannot get the lock is marked failed.
+  * `update_fault_state` and `_is_connected` no longer block when the hardware lock is held by another thread. They keep the last known state.
+  * The subrack power-on callback no longer connects to the TPM from the event thread. It asks the polling loop to reconnect, and initialisation runs from there once connected.
+  * A failed connect now disconnects fully, so a half-connected TPM (e.g. plugins not loaded) no longer blocks the next reconnect.
+  * `firmware_version` is no longer read from an unprogrammed TPM.
+  * New `PollLockStarvationTimeout` property. If every poll is skipped because the hardware lock is busy for longer than this many seconds, report FAULT.
+
+## 17.1.0
+
+* [SKB-1660] Update ska-low-mccs-common to 4.10.1. HealthRecorder now calls its health callback on every monitored attribute event, and Tango change detection decides which events to push. A new subscriber can get one repeat of the current value.
+* [SKB-1660] Tile, Subrack and SpsStation push healthState and healthReport with the same timestamp. Subrack and SpsStation now push healthReport change and archive events.
+* [SKB-1660] SpsStation builds its healthReport with the ska-control-model 1.4.0 health_report helper. The report lists only the sources that are not OK, by name.
+* [SKB-1660] Tile no longer logs health changes, and restores its intermediate health attributes after power OFF.
+* [THORN-795] Added a PDU simulator. It is snmpsim serving data recorded from a real Enlogic PDU, with a variation module that switches an outlet when its control object is written.
+* [THORN-759] MccsPrototypeSubrack gets the same support as current subrack for SMM 1.8.0. It derives tpmCurrents and rejects SetPowerSupplyFanSpeed on SMM 1.8.0. A board command fails when command_completed reports that it failed.
+
+## 17.0.0
+
+* [THORN-759] Update MccsSubrack to support SMM 1.8.0
+  * Extra information exposed in subrackBoardInfo and healthStatus.
+  * SetPowerSupplyFanSpeed is rejected when not available (SMM version 1.8.0 does not support this.)
+  * tpmCurrents is derived when device interfacing with SMM 1.8.0
 * [THORN-772] Updated chart default thresholds for Subrack.MaxFanSpeed, added a docs page for users.
 * [THORN-755] Modified subrack simulator to support different api versions. Added a manual parity test that makes sure the simulator has the same attributes and commands as the actual api. Added some docs for the simulator.
   * New in `1.8.0`:

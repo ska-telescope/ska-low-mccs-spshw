@@ -403,6 +403,108 @@ class TestDerivedValues:  # pylint: disable=too-many-public-methods
         assert fresh["tpm_currents"] == pytest.approx([20.0])
 
     # ----------------
+    # The derived TPM currents
+    # ----------------
+    def test_tpm_currents_are_derived_from_powers_and_voltages(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        From API 1.8.0 each TPM current must be its power over its voltage.
+
+        A bay with an unknown reading is unknown, which reads as ``nan``, and a
+        bay with no voltage draws no current.
+
+        :param logger: a logger.
+        """
+        values: dict[str, Any] = {
+            "tpm_powers": [24.0, None, 6.0, 0.0],
+            "tpm_voltages": [12.0, 12.0, None, 0.0],
+        }
+
+        self._derived(logger).apply(values, derive_tpm_currents=True)
+
+        (current, no_power, no_voltage, unpowered) = values["tpm_currents"]
+        assert current == pytest.approx(2.0)
+        assert math.isnan(no_power)
+        assert math.isnan(no_voltage)
+        assert unpowered == 0.0
+
+    def test_derived_tpm_currents_are_filtered(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        Derived TPM currents must pass through the filter, like read ones.
+
+        :param logger: a logger.
+        """
+        derived = self._derived(
+            logger, attribute_filter_type="mean", attribute_filter_max_samples=5
+        )
+
+        derived.apply(
+            {"tpm_powers": [12.0], "tpm_voltages": [12.0]}, derive_tpm_currents=True
+        )
+        values: dict[str, Any] = {"tpm_powers": [36.0], "tpm_voltages": [6.0]}
+        derived.apply(values, derive_tpm_currents=True)
+
+        # The mean of 1 A and 6 A. Deriving from the filtered powers and
+        # voltages would give 24 W / 9 V instead.
+        assert values["tpm_currents"] == pytest.approx([3.5])
+
+    def test_tpm_currents_are_unknown_when_the_powers_are(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        TPM powers the board could not supply must give unknown TPM currents.
+
+        :param logger: a logger.
+        """
+        values: dict[str, Any] = {"tpm_powers": None, "tpm_voltages": [12.0]}
+
+        self._derived(logger).apply(values, derive_tpm_currents=True)
+
+        assert values["tpm_currents"] is None
+
+    @pytest.mark.parametrize(
+        "values",
+        [{"tpm_voltages": [12.0]}, {"tpm_powers": [24.0]}],
+        ids=["no powers", "no voltages"],
+    )
+    def test_tpm_currents_are_not_derived_when_an_input_was_not_read(
+        self: TestDerivedValues, logger: logging.Logger, values: dict[str, Any]
+    ) -> None:
+        """
+        A board that turned busy before both inputs were read gives no currents.
+
+        The TPM currents are left out, so they keep their last value and their
+        filter history, the same as any value a busy board does not read.
+
+        :param logger: a logger.
+        :param values: the poll values, with one input absent.
+        """
+        self._derived(logger).apply(values, derive_tpm_currents=True)
+
+        assert "tpm_currents" not in values
+
+    def test_read_tpm_currents_are_kept_unless_derived(
+        self: TestDerivedValues, logger: logging.Logger
+    ) -> None:
+        """
+        Before API 1.8.0 the read TPM currents must stand as the board gave them.
+
+        :param logger: a logger.
+        """
+        values: dict[str, Any] = {
+            "tpm_currents": [0.5],
+            "tpm_powers": [24.0],
+            "tpm_voltages": [12.0],
+        }
+
+        self._derived(logger).apply(values)
+
+        assert values["tpm_currents"] == pytest.approx([0.5])
+
+    # ----------------
     # The dead power supply count
     # ----------------
     @pytest.mark.parametrize(

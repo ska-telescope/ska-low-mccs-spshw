@@ -49,6 +49,7 @@ from ska_low_mccs_spshw.prototype_subrack.constants import (
 )
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_attributes import (
     HEALTH_ATTRIBUTES,
+    HEALTH_ATTRIBUTES_FROM_1_8_0,
 )
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
@@ -69,6 +70,10 @@ FILTER_MAX_SAMPLES = 7
 MAX_FAN_ERRORS = 3
 MAX_FAN_RPM_DELTA = 21
 TIMESTAMP = 1700000000.0
+
+# The board info the subrack client holds after a poll, for each BIOS version.
+BOARD_INFO_1_6_0 = {"SMM": {"bios": "v1.6.0"}}
+BOARD_INFO_1_8_0 = {"SMM": {"bios": "v1.8.0"}}
 
 # The health info the base device starts with, before any health report.
 BASE_HEALTH_INFO = ("Device implementation has not provided a health report",)
@@ -158,6 +163,90 @@ HEALTH: list[tuple[str, tuple[str, ...], Any]] = [
     ("psu2VoltageIn", ("psus", "voltage_in", "PSU2"), 231.0),
     ("psu1VoltageOut", ("psus", "voltage_out", "PSU1"), 12.2),
     ("psu2VoltageOut", ("psus", "voltage_out", "PSU2"), 12.3),
+    ("internalVoltagesPOWERINMIN", ("internal_voltages", "V_POWERIN_MIN"), 11.9),
+    ("internalVoltagesPOWERINMAX", ("internal_voltages", "V_POWERIN_MAX"), 12.2),
+    ("backplanePowerGood", ("internal_voltages", "BkplnPowerGood"), True),
+    # Distinct, so a cross-wiring between these three is caught.
+    ("boardApllUnlockCount", ("plls", "BoardApllUnlockCount"), 1),
+    ("boardDpllUnlockCount", ("plls", "BoardDpllUnlockCount"), 2),
+    ("boardSysclkEventCount", ("plls", "BoardSysclkEventCount"), 3),
+    ("pllSource", ("plls", "PllSource"), "external"),
+    ("ppsPresent", ("plls", "PPS"), True),
+    # Distinct from the counts above and from each other.
+    ("ppsFaultCount", ("plls", "PPSFaultCount"), 4),
+    ("ppsPhase", ("plls", "PPSPhase"), 120.0),
+    ("ppsPhaseStdev", ("plls", "PPSPhaseStdev"), 15.0),
+    ("ppsPhaseOutliers", ("plls", "PPSPhaseOutliers"), 5),
+    ("refPresent", ("plls", "REF"), False),
+    ("refFaultCount", ("plls", "REFFaultCount"), 6),
+    ("cpldPings", ("pings", "pings_CPLD"), True),
+    ("boardPower", ("SMM", "power"), 20.5),
+    ("boardMaxPower", ("SMM", "power_max"), 21.5),
+    ("boardPllTemperature", ("temperatures", "SMM_PLL"), 45.5),
+]
+
+_PSUS = ("PSU1", "PSU2")
+_SLOTS = tuple(f"SLOT{n}" for n in range(1, 9))
+
+# One row per spectrum attribute the device unpacks from the health status,
+# giving the Tango attribute, the path that ends at a dictionary of its
+# elements, the element names in order, and their values. The values are in a
+# different order from the names in each bool row, so an element out of
+# order fails.
+HEALTH_SPECTRA: list[tuple[str, tuple[str, str], tuple[str, ...], list[Any]]] = [
+    ("powerSupplyFanSpeedsRpm", ("psus", "fan_speed"), _PSUS, [15000.0, 15500.0]),
+    ("powerSupplyFetTemperatures", ("psus", "temp_fet"), _PSUS, [30.5, 31.5]),
+    ("powerSupplyInletTemperatures", ("psus", "temp_inlet"), _PSUS, [20.5, 21.5]),
+    ("powerSupplyBusy", ("psus", "busy"), _PSUS, [True, False]),
+    ("powerSupplyOff", ("psus", "off"), _PSUS, [False, True]),
+    ("powerSupplyPowerGood", ("psus", "pwr_gd"), _PSUS, [True, False]),
+    ("powerSupplyCmlFaults", ("psus", "cml_fault"), _PSUS, [False, True]),
+    ("powerSupplyFanFaults", ("psus", "fan_fault"), _PSUS, [True, False]),
+    ("powerSupplyInputFaults", ("psus", "input_fault"), _PSUS, [False, True]),
+    ("powerSupplyIoutFaults", ("psus", "iout_fault"), _PSUS, [True, False]),
+    ("powerSupplyIoutOcFaults", ("psus", "iout_oc_fault"), _PSUS, [False, True]),
+    ("powerSupplyTempFaults", ("psus", "temp_fault"), _PSUS, [True, False]),
+    ("powerSupplyVinUvFaults", ("psus", "vin_uv_fault"), _PSUS, [False, True]),
+    ("powerSupplyVoutFaults", ("psus", "vout_fault"), _PSUS, [True, False]),
+    ("powerSupplyVoutOvFaults", ("psus", "vout_ov_fault"), _PSUS, [False, True]),
+    ("powerSupplyOtherFaults", ("psus", "other"), _PSUS, [True, False]),
+    ("powerSupplyUnknownFaults", ("psus", "unknown"), _PSUS, [False, True]),
+    (
+        "tpmMinVoltages",
+        ("slots", "voltages_min"),
+        _SLOTS,
+        [11.81, 11.82, 11.83, 11.84, 11.85, 11.86, 11.87, 11.88],
+    ),
+    (
+        "tpmMaxVoltages",
+        ("slots", "voltages_max"),
+        _SLOTS,
+        [12.11, 12.12, 12.13, 12.14, 12.15, 12.16, 12.17, 12.18],
+    ),
+    (
+        "tpmMaxPowers",
+        ("slots", "powers_max"),
+        _SLOTS,
+        [61.0, 62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0],
+    ),
+    (
+        "tpmFaults",
+        ("slots", "faults"),
+        _SLOTS,
+        [True, False, False, False, False, False, False, True],
+    ),
+    (
+        "tpmPings",
+        ("slots", "pings"),
+        _SLOTS,
+        [False, True, True, True, True, True, True, False],
+    ),
+    (
+        "tpmSinglewire",
+        ("slots", "singlewire"),
+        _SLOTS,
+        [True, True, False, True, True, True, True, True],
+    ),
 ]
 
 
@@ -183,12 +272,20 @@ POLL_VALUES: dict[str, Any] = {key: value for _, key, value in POLLED}
 POLL_VALUES.update({key: reported for _, key, reported, _ in CONVERTED})
 
 POLL_VALUES["tpm_on_off"] = TPM_ON_OFF
-POLL_VALUES[HEALTH_STATUS_KEY] = _nest(HEALTH)
+POLL_VALUES[HEALTH_STATUS_KEY] = _nest(
+    HEALTH
+    + [
+        (attribute, path + (name,), value)
+        for attribute, path, names, values in HEALTH_SPECTRA
+        for name, value in zip(names, values)
+    ]
+)
 
 # Every attribute the health status feeds, and the value it should report. The
 # health status itself is reported whole, as JSON.
 EXPECTED_FROM_HEALTH: dict[str, Any] = {
     **{attribute: value for attribute, _, value in HEALTH},
+    **{attribute: values for attribute, _, _, values in HEALTH_SPECTRA},
     "healthStatus": json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]),
 }
 
@@ -235,11 +332,14 @@ def subrack_factory_fixture() -> mock.Mock:
 
     The call it records carries the device's own poll callbacks, which is how
     the :py:func:`poll_succeeded` and :py:func:`poll_failed` fixtures reach
-    them.
+    them. The subrack it returns holds a 1.8.0 board info, which a test can
+    replace.
 
     :return: the factory.
     """
-    return mock.Mock(name="subrack_factory")
+    factory = mock.Mock(name="subrack_factory")
+    factory.return_value.board_info = BOARD_INFO_1_8_0
+    return factory
 
 
 @pytest.fixture(name="pollers")
@@ -602,13 +702,9 @@ def test_assembles_from_its_properties(
         subrack_factory.return_value, UPDATE_RATE, mock.ANY
     )
     pollers[0].start_polling.assert_not_called()
-    health_recorder_factory.assert_called_once_with(
-        subrack_device.dev_name(),
-        mock.ANY,
-        attributes=list(HEALTH_ATTRIBUTES),
-        health_callback=mock.ANY,
-        attr_conf_callback=mock.ANY,
-    )
+    # The health attributes depend on the BIOS version, which only a poll
+    # tells.
+    health_recorder_factory.assert_not_called()
 
 
 def test_starts_disabled(
@@ -715,6 +811,117 @@ def test_missing_health_status_invalidates_only_its_attributes(
             == tango.AttrQuality.ATTR_INVALID
         ), attribute_name
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
+
+
+def _with_no_reading(points: dict[tuple[str, str], str]) -> dict[str, Any]:
+    """
+    Return the poll values with some elements reported as ``None``.
+
+    :param points: the slot to blank, keyed by the group and point it is in.
+
+    :return: the poll values, with a copy of the health status.
+    """
+    health_status = json.loads(json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]))
+    for (group, point), name in points.items():
+        health_status[group][point][name] = None
+    return {**POLL_VALUES, HEALTH_STATUS_KEY: health_status}
+
+
+def test_an_element_with_no_reading_takes_the_fill(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that an element the board reports as None takes the spectrum's fill.
+
+    The board has no reading for a TPM bay that is powered off. A float
+    element becomes NaN and a flag becomes False, and the rest of the spectrum
+    keeps its values.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    poll_succeeded(
+        values=_with_no_reading(
+            {("slots", "voltages_min"): "SLOT5", ("slots", "pings"): "SLOT2"}
+        )
+    )
+
+    voltages = online_device.read_attribute("tpmMinVoltages")
+    assert voltages.quality == tango.AttrQuality.ATTR_VALID
+    expected = list(EXPECTED["tpmMinVoltages"])
+    expected[4] = float("nan")
+    assert list(voltages.value) == pytest.approx(expected, nan_ok=True)
+
+    pings = online_device.read_attribute("tpmPings")
+    assert pings.quality == tango.AttrQuality.ATTR_VALID
+    expected_pings = list(EXPECTED["tpmPings"])
+    expected_pings[1] = False
+    assert list(pings.value) == expected_pings
+
+
+def test_an_element_with_no_reading_does_not_alarm(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that a NaN element does not put its attribute in alarm.
+
+    This is what lets a station with some TPMs powered off stay healthy. The
+    limits are the ones the chart gives ``tpmMinVoltages``.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    config = online_device.get_attribute_config("tpmMinVoltages")
+    config.alarms.min_alarm = "11.4"
+    config.alarms.max_alarm = "12.6"
+    config.alarms.min_warning = "11.58"
+    config.alarms.max_warning = "12.26"
+    online_device.set_attribute_config(config)
+
+    # A control, to show that the limits apply. A reading below min_alarm
+    # alarms.
+    low = json.loads(json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]))
+    low["slots"]["voltages_min"]["SLOT5"] = 10.0
+    poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: low})
+    assert (
+        online_device.read_attribute("tpmMinVoltages").quality
+        == tango.AttrQuality.ATTR_ALARM
+    )
+
+    poll_succeeded(values=_with_no_reading({("slots", "voltages_min"): "SLOT5"}))
+
+    assert (
+        online_device.read_attribute("tpmMinVoltages").quality
+        == tango.AttrQuality.ATTR_VALID
+    )
+
+
+def test_a_point_the_board_omits_is_invalid(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+) -> None:
+    """
+    Test that a spectrum whose point is absent from the health status is invalid.
+
+    API 1.6.0 reports no ``voltages_min`` at all, so there is nothing to fill.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    """
+    health_status = json.loads(json.dumps(POLL_VALUES[HEALTH_STATUS_KEY]))
+    del health_status["slots"]["voltages_min"]
+
+    poll_succeeded(values={**POLL_VALUES, HEALTH_STATUS_KEY: health_status})
+
+    assert (
+        online_device.read_attribute("tpmMinVoltages").quality
+        == tango.AttrQuality.ATTR_INVALID
+    )
+    assert list(online_device.tpmMaxVoltages) == pytest.approx(
+        EXPECTED["tpmMaxVoltages"]
+    )
 
 
 def test_a_busy_read_keeps_the_last_value(
@@ -902,6 +1109,7 @@ def test_init_reclaims_the_poller_and_builds_another(
     :param health_recorders: every health recorder the device has built, in
         order.
     """
+    poll_succeeded()
     online_device.Init()
 
     assert len(pollers) == 2, "Init did not build a second poller"
@@ -910,16 +1118,18 @@ def test_init_reclaims_the_poller_and_builds_another(
     first.kill_polling_thread.assert_called_once_with()
     second.kill_polling_thread.assert_not_called()
 
-    assert len(health_recorders) == 2, "Init did not build a second recorder"
-    (first_recorder, second_recorder) = health_recorders
+    (first_recorder,) = health_recorders
     first_recorder.cleanup.assert_called_once_with()
-    second_recorder.cleanup.assert_not_called()
 
     # adminMode is memorized, so the device comes back online by itself, and it
     # is the new poller it starts, not the reclaimed one.
     second.start_polling.assert_called_once_with()
     poll_succeeded()
     assert list(online_device.boardTemperatures) == pytest.approx([40.5, 41.5])
+
+    # The first poll after Init builds the replacement recorder.
+    assert len(health_recorders) == 2, "Init did not build a second recorder"
+    health_recorders[1].cleanup.assert_not_called()
 
 
 def test_board_error_before_any_poll_stays_unknown(
@@ -1006,8 +1216,9 @@ def test_recovers_from_a_fault(
 )
 # pylint: disable-next=too-many-arguments
 def test_reports_the_recorders_verdict(
-    subscribed_device: tango.DeviceProxy,
+    online_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    poll_succeeded: Callable[..., None],
     verdict: Callable[[HealthState, str], None],
     recorded: HealthState,
     health_report: str,
@@ -1017,17 +1228,124 @@ def test_reports_the_recorders_verdict(
     """
     Test that the device reports each verdict of the health recorder.
 
-    :param subscribed_device: the device under test, subscribed to.
+    :param online_device: the device under test, online and not yet polled.
     :param change_event_callbacks: the callbacks subscribed to the device.
+    :param poll_succeeded: supplies a successful poll response, which builds
+        the health recorder.
     :param verdict: gives the device a verdict of the health recorder.
     :param recorded: the health the recorder gives.
     :param health_report: the report the recorder gives.
     :param reported: the health the device should report.
     :param health_info: the reasons the device should report.
     """
+    poll_succeeded()
     verdict(recorded, health_report)
 
     change_event_callbacks["healthState"].assert_change_event(reported)
     change_event_callbacks["healthInfo"].assert_change_event(tuple(health_info))
     # The report is emitted before the health, so it is already readable.
-    assert subscribed_device.healthReport == ("\n".join(health_info) or "Health is OK.")
+    assert online_device.healthReport == ("\n".join(health_info) or "Health is OK.")
+
+
+@pytest.mark.parametrize(
+    ("board_info", "attributes"),
+    [
+        pytest.param(BOARD_INFO_1_8_0, list(HEALTH_ATTRIBUTES), id="1.8.0"),
+        pytest.param(
+            BOARD_INFO_1_6_0,
+            [a for a in HEALTH_ATTRIBUTES if a not in HEALTH_ATTRIBUTES_FROM_1_8_0],
+            id="1.6.0",
+        ),
+    ],
+)
+# pylint: disable-next=too-many-arguments
+def test_first_poll_builds_the_health_recorder(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+    subrack_factory: mock.Mock,
+    health_recorder_factory: mock.Mock,
+    board_info: dict,
+    attributes: list[str],
+) -> None:
+    """
+    Test that the first poll builds the recorder for the board's BIOS version.
+
+    A 1.6.0 board does not report the 1.8.0 points, so their attributes would
+    always be invalid and fail the health. A later poll of the same board
+    keeps the recorder.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    :param subrack_factory: the injected subrack factory.
+    :param health_recorder_factory: the injected health recorder factory.
+    :param board_info: the board info the subrack client holds.
+    :param attributes: the health attributes the recorder should get.
+    """
+    subrack_factory.return_value.board_info = board_info
+
+    poll_succeeded()
+    poll_succeeded()
+
+    health_recorder_factory.assert_called_once_with(
+        online_device.dev_name(),
+        mock.ANY,
+        attributes=attributes,
+        health_callback=mock.ANY,
+        attr_conf_callback=mock.ANY,
+    )
+
+
+def test_new_firmware_rebuilds_the_health_recorder(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+    subrack_factory: mock.Mock,
+    health_recorders: list[mock.Mock],
+    health_recorder_factory: mock.Mock,
+) -> None:
+    """
+    Test that a board that comes back with other firmware gets a new recorder.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    :param subrack_factory: the injected subrack factory.
+    :param health_recorders: every health recorder the device has built, in
+        order.
+    :param health_recorder_factory: the injected health recorder factory.
+    """
+    subrack_factory.return_value.board_info = BOARD_INFO_1_6_0
+    poll_succeeded()
+    subrack_factory.return_value.board_info = BOARD_INFO_1_8_0
+    poll_succeeded()
+
+    assert len(health_recorders) == 2
+    health_recorders[0].cleanup.assert_called_once_with()
+    health_recorders[1].cleanup.assert_not_called()
+    assert health_recorder_factory.call_args.kwargs["attributes"] == list(
+        HEALTH_ATTRIBUTES
+    )
+    assert online_device.state() == DevState.ON
+
+
+def test_no_board_info_builds_no_health_recorder(
+    online_device: tango.DeviceProxy,
+    poll_succeeded: Callable[..., None],
+    subrack_factory: mock.Mock,
+    health_recorder_factory: mock.Mock,
+) -> None:
+    """
+    Test that a poll without the board info leaves the recorder to a later poll.
+
+    The board can be too busy to give its board info, and then the BIOS
+    version is unknown.
+
+    :param online_device: the device under test, online and not yet polled.
+    :param poll_succeeded: supplies a successful poll response.
+    :param subrack_factory: the injected subrack factory.
+    :param health_recorder_factory: the injected health recorder factory.
+    """
+    subrack_factory.return_value.board_info = None
+
+    poll_succeeded()
+
+    health_recorder_factory.assert_not_called()
+    assert online_device.state() == DevState.ON

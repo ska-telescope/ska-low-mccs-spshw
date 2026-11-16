@@ -122,6 +122,52 @@
                   }
                 }
               ]
+            },
+            "pdus": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "$comment": "Slug used to construct server name, k8s pods, etc",
+                    "format": "hostname"
+                  },
+                  "additionalProperties": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "host": {
+                            "$comment": "The name of the simulator's Service, which MccsPdu uses as its Host",
+                            "type": "string",
+                            "format": "hostname"
+                          },
+                          "port": {
+                            "$comment": "The UDP port of the Service; defaults to the SNMP port, 161",
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "model": {
+                            "$comment": "The PDU model whose recorded data to serve",
+                            "type": "string",
+                            "enum": ["ENLOGIC"]
+                          }
+                        },
+                        "required": [
+                          "host",
+                          "model"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           },
           "additionalProperties": false

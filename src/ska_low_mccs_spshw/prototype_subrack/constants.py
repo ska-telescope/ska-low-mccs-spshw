@@ -48,6 +48,7 @@ class ReadKey(str, Enum):
     implement it.
     """
 
+    BOARD_INFO = "board_info"
     TPM_PRESENT = "tpm_present"
     TPM_ON_OFF = "tpm_on_off"
     BACKPLANE_TEMPERATURES = "backplane_temperatures"
@@ -66,7 +67,6 @@ class ReadKey(str, Enum):
     TPM_CURRENTS = "tpm_currents"
     TPM_POWERS = "tpm_powers"
     TPM_VOLTAGES = "tpm_voltages"
-    BOARD_INFO = "board_info"
 
 
 class DerivedKey(str, Enum):

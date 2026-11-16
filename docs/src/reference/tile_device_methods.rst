@@ -95,7 +95,7 @@ as *RW*.
   * *runningBeams*: Bool array with 48 elements. Each element is True if the corresponding
     beam (hardware beam) is running.
 
-  * *ppsDelay*: delay between PPS and 10 MHz clock in 200 MHz cycles
+  * *timing_pps_delay*: delay between PPS and 10 MHz clock in 200 MHz cycles
 
   * *fpgaTime*: Time of the TPM second counter. String in UTC format, with seconds 
     component always integer. Time is synchronised to
@@ -625,17 +625,17 @@ Health monitoring
 
 The following attributes are used to monitor board health status. 
 
-  * *boardTemperature*: Temperature measured at mid-board, in degrees Celsius.
+  * *temperatures_board*: Temperature measured at mid-board, in degrees Celsius.
 
-  * *fpga1Temperature*: Temperature of the FPGA1 die, in degrees Celsius.
+  * *temperatures_fpga0*: Temperature of the FPGA0 die, in degrees Celsius.
 
-  * *fpga2Temperature*: Temperature of the FPGA2 die, in degrees Celsius.
+  * *temperatures_fpga1*: Temperature of the FPGA1 die, in degrees Celsius.
 
   * *clockPresent*: Report if 10 MHz clock signal is present at the TPM input.
 
   * *pllLocked*: Report if ADC clock PLL is in locked state.
 
-  * *ppsPresent*: Report if PPS signal is present at the TPM input.
+  * *timing_pps_present*: Report if PPS signal is present at the TPM input.
 
   * *sysrefPresent*: Report if SYSREF signal is present at the FPGA.
 

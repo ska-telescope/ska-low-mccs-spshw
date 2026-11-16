@@ -1,18 +1,26 @@
-Feature: Test pdu
-    Test the PDU device
+Feature: Test the PDU
+    Test that we can monitor a PDU and switch its outlets.
 
-    Scenario: Pdu turns ports ON
-        Given an SPS deployment against HW
-        And a PDU that is online and ON
-        And a subrack that is online and ON
-        And all the PDU ports are OFF
-        When subrack commands pdu turn ON port
-        Then the PDU port turns ON
+    Scenario: Monitor the PDU
+        Given a PDU that is online and on
 
-    Scenario: Pdu turns ports OFF
-        Given an SPS deployment against HW
-        And a PDU that is online and ON
-        And a subrack that is online and ON
-        And all the PDU ports are ON
-        When subrack commands pdu turn OFF port
-        Then the PDU port turns OFF
+        Then the PDU reports its model and its number of ports
+        And the PDU reports the state of each port
+
+    Scenario: Switch a PDU port on
+        Given a PDU that is online and on
+        And the PDU is simulated
+        And PDU port 3 is off
+
+        When I switch PDU port 3 on
+
+        Then PDU port 3 reports that it is on
+
+    Scenario: Switch a PDU port off
+        Given a PDU that is online and on
+        And the PDU is simulated
+        And PDU port 3 is on
+
+        When I switch PDU port 3 off
+
+        Then PDU port 3 reports that it is off

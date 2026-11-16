@@ -1298,15 +1298,6 @@ class TileSimulator:
         self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
 
-    @property
-    def spead_ska_format_supported(self) -> bool:
-        """
-        Check if new (SKA) format for CSP SPEAD header is supported.
-
-        :return: True if new (SKA) format for CSP SPEAD header is supported
-        """
-        return True
-
     @check_mocked_overheating
     @connected
     def erase_fpgas(self: TileSimulator) -> None:
@@ -3074,8 +3065,15 @@ class TileSimulator:
         self._polling_thread.join()
 
     def disconnect(self) -> None:
-        """Disconnect the simulator by executing cleanup logic."""
-        self.cleanup()
+        """
+        Disconnect from the simulated TPM.
+
+        Only the connection is dropped. The timed thread is left running
+        (as the FPGA clock keeps running on real hardware); stopping it
+        here would freeze fpgas_time and make a reconnected TPM look
+        un-initialised. Use cleanup() for teardown.
+        """
+        self.tpm = None
 
     @check_mocked_overheating
     @connected

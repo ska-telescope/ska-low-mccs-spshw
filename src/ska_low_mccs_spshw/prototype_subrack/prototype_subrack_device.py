@@ -20,6 +20,8 @@ run through, and the poller that reads it.
 """
 from __future__ import annotations
 
+import ipaddress
+import json
 import sys
 import time
 from typing import Any, Final, Optional, cast
@@ -33,22 +35,23 @@ from tango.server import device_property
 
 from utils import walk
 
-from ..subrack.subrack_data import SubrackData
+from ..subrack.subrack_data import FanMode, SubrackData
 from .constants import HEALTH_NO_VALUE_REASON, HEALTH_STATUS_KEY, ReadKey, RequestError
 from .derived_values import DerivedValues
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,
-    HEALTH_ATTRIBUTES,
     HEALTH_PATH_TO_SIGNAL,
+    HEALTH_PATHS_TO_SPECTRUM_SIGNAL,
     READ_KEY_TO_SIGNAL,
     TPM_POWER_STATE_SIGNALS,
     VALUE_CONVERTERS,
     SubrackAttributes,
+    health_attributes,
 )
 from .prototype_subrack_commands import SubrackCommands
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
 
-__all__ = ["MccsPrototypeSubrack", "main"]
+__all__ = ["MccsPrototypeSubrack", "cabinet_position", "main"]
 
 # The control level each admin mode asks for. A mode that is absent leaves the
 # control level as it is, the same as a write to ``adminMode`` does.
@@ -58,8 +61,35 @@ _CONTROL_LEVELS: Final[dict[AdminMode, ControlLevel]] = {
     AdminMode.ENGINEERING: ControlLevel.FULL_CONTROL,
 }
 
+# The manual speed of every backplane fan, for each cabinet position.
+_FAN_SPEED_PERCENT_BY_CABINET_POSITION: Final[dict[int, int]] = {
+    0: 70,
+    1: 70,
+    2: 70,
+    3: 85,
+}
 
-# pylint: disable=too-many-ancestors
+
+def cabinet_position(subrack_ip: str) -> Optional[int]:
+    """
+    Return the position of a subrack in its cabinet, from its IP address.
+
+    This is the rule that ``scripts/generate_telmodel_data.py`` in
+    ska-low-tmdata uses to give each subrack its address.
+
+    :param subrack_ip: the IP address of the subrack, or its host name.
+
+    :return: the cabinet position, from 0 to 3, or ``None`` when
+        ``subrack_ip`` is a host name and so gives no position.
+    """
+    try:
+        last_octet = ipaddress.IPv4Address(subrack_ip).packed[-1]
+    except ValueError:
+        return None
+    return (last_octet // 16) % 4
+
+
+# pylint: disable=too-many-ancestors, too-many-instance-attributes
 class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface):
     """
     A Tango device that monitors and commands an SPS subrack management board.
@@ -78,7 +108,10 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
     Health reflects only the hardware. It comes from the
     :py:class:`~ska_low_mccs_common.HealthRecorder`, which subscribes to the
-    attributes in ``HEALTH_ATTRIBUTES``. An attribute in warning
+    health attributes that the board reports. The BIOS version decides which
+    those are, so the recorder is built after the first poll that reads the
+    board info, and rebuilt when the board comes back with other firmware.
+    Until then the base device reports ``FAILED``. An attribute in warning
     makes the device ``DEGRADED``, and one in alarm makes it ``FAILED``. An
     invalid attribute also makes it ``FAILED``, because ``report_health`` does
     not accept ``UNKNOWN``. Whether the device can poll the subrack shows in
@@ -103,6 +136,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _poller: Optional[SubrackPoller] = None
     _subrack: Optional[Subrack] = None
     _health_recorder: Optional[HealthRecorder] = None
+    _health_attributes: Optional[list[str]] = None
+    _health: Optional[HealthState] = None
     _tpm_power_states: list[PowerState]
     _web_hardware_client_factory: type[WebHardwareClient]
     _derived_values_factory: type[DerivedValues]
@@ -180,13 +215,8 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         self.assemble()
 
-        self._health_recorder = self._health_recorder_factory(
-            self.get_name(),
-            self.logger,
-            attributes=list(HEALTH_ATTRIBUTES),
-            health_callback=self._health_changed,
-            attr_conf_callback=self._attribute_config_changed,
-        )
+        # Cleared so the first health after an Init() is logged.
+        self._health = None
 
         # The parent can pass on its admin mode before the poller exists, and
         # then the poller never starts. So the admin mode is applied again here.
@@ -303,6 +333,9 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         :param poll_response: the response to the poll.
         """
+        # A device that was not ON could not read the board until now. The
+        # board can also have restarted in that time.
+        board_came_up = self.get_state() != DevState.ON
         timestamp = poll_response.timestamp
         values = poll_response.values
         # A key the board was too busy to read is absent, so its attribute keeps
@@ -323,9 +356,87 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 timestamp,
             )
 
+        # After the emits, so a new recorder subscribes to this poll's values.
+        self._update_health_recorder()
+
         self.component_on()
         self.component_no_fault()
         self.logger.debug("Poll succeeded")
+        if board_came_up:
+            self._set_fan_speeds()
+
+    def _update_health_recorder(self: MccsPrototypeSubrack) -> None:
+        """
+        Build the health recorder for the health attributes the board reports.
+
+        Called on the polling thread after each good poll. Only this thread
+        builds or replaces the recorder, and ``delete_device`` joins it before
+        it cleans the recorder up, so no lock is needed.
+
+        The board info is read on every poll, and a failed poll clears it. So a
+        board that comes back with other firmware gets a new recorder, for the
+        attributes that the new firmware reports.
+        """
+        board_info = self.subrack.board_info
+        if board_info is None:
+            # The board was too busy to give its board info. The next poll
+            # tries again.
+            return
+        attributes = health_attributes(board_info)
+        if self._health_recorder is not None:
+            if attributes == self._health_attributes:
+                return
+            self.logger.info(
+                "Rebuilding the health recorder, because the board now runs "
+                "BIOS %s.",
+                board_info["SMM"]["bios"],
+            )
+            self._health_recorder.cleanup()
+        self._health_attributes = attributes
+        self._health_recorder = self._health_recorder_factory(
+            self.get_name(),
+            self.logger,
+            attributes=attributes,
+            health_callback=self._health_changed,
+            attr_conf_callback=self._attribute_config_changed,
+        )
+
+    def _set_fan_speeds(self: MccsPrototypeSubrack) -> None:
+        """
+        Queue the commands that run every backplane fan at a manual speed.
+
+        The speed comes from the cabinet position of the subrack. The board
+        can come back from a restart with its fans in ``AUTO``, so the device
+        queues these commands each time it can read the board again.
+
+        Each command goes through the long running command queue, so it shows
+        in ``lrcQueue`` and going offline aborts it.
+        """
+        position = cabinet_position(self.SubrackIp)
+        if position is None:
+            self.logger.info(
+                "Not setting the fan speeds, because %s is not an IP address "
+                "and so gives no cabinet position.",
+                self.SubrackIp,
+            )
+            return
+        speed_percent = _FAN_SPEED_PERCENT_BY_CABINET_POSITION[position]
+        self.logger.info(
+            "Setting every subrack fan to %s%%, for cabinet position %s.",
+            speed_percent,
+            position,
+        )
+        # Each command takes one JSON string, which its validator unpacks into
+        # the keyword arguments that pylint expects.
+        # pylint: disable=no-value-for-parameter
+        for fan_id in range(1, SubrackData.FAN_COUNT + 1):
+            # The mode goes first, so the speed is set on a fan in MANUAL.
+            self.SetSubrackFanMode(
+                json.dumps({"fan_id": fan_id, "mode": FanMode.MANUAL.value})
+            )
+            self.SetSubrackFanSpeed(
+                json.dumps({"subrack_fan_id": fan_id, "speed_percent": speed_percent})
+            )
 
     def _poll_failed(self: MccsPrototypeSubrack, exception: Exception) -> None:
         """
@@ -374,7 +485,9 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         """
         Report the health that the attribute qualities give.
 
-        Called on the health recorder's event thread.
+        Called on the health recorder's event thread. It logs the health
+        only when the health state changes, because the reasons hold the
+        attribute values and change on every poll.
 
         :param health: the health the attribute qualities give.
         :param health_report: the recorder's reasons, one on each line.
@@ -448,6 +561,22 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         """
         for signal_name, path in HEALTH_PATH_TO_SIGNAL.items():
             self._emit(signal_name, walk(health_status, path), timestamp)
+        for signal_name, spectrum in HEALTH_PATHS_TO_SPECTRUM_SIGNAL.items():
+            group, point, names, fill = spectrum
+            # A board that does not report the point at all, such as a 1.6.0
+            # board for the peak hold values, leaves the attribute invalid.
+            readings = walk(health_status, (group, point))
+            if readings is None:
+                self._emit(signal_name, None, timestamp)
+                continue
+            # The board reports None for an element it has no reading for,
+            # such as a TPM bay that is powered off.
+            values = [readings.get(name) for name in names]
+            self._emit(
+                signal_name,
+                [fill if value is None else value for value in values],
+                timestamp,
+            )
 
     def _update_tpm_power_states(
         self: MccsPrototypeSubrack,

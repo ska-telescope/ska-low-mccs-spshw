@@ -10,7 +10,7 @@
 from typing import Any
 
 import pytest
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -20,6 +20,7 @@ from ska_low_mccs_spshw.subrack import (
     SubrackDriver,
     SubrackSimulator,
 )
+from ska_low_mccs_spshw.subrack.http_stack import HttpPollRequest
 
 
 def test_attribute_reads(
@@ -593,6 +594,48 @@ def test_health_status_not_coscheduled_with_action_command(
     command_names = [cmd[0] for cmd in poll_request.commands]
     assert "turn_on_tpm" in command_names
     assert "get_health_status" not in command_names
+
+
+def test_failed_command_completed(
+    subrack_driver: SubrackDriver,
+    subrack_client: Any,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test that a command the board reports as failed fails the active callback.
+
+    From API 1.8.0, command_completed reports whether the finished command
+    failed. The simulator never reports a failure, so mock the client.
+
+    :param subrack_driver: the subrack driver under test
+    :param subrack_client: a subrack client, mocked to report the failure.
+    :param callbacks: dictionary of driver callbacks.
+    """
+    subrack_client.execute_command = lambda command, args: {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "TPM 3 failed to power on",
+        "command": command,
+        "retvalue": True,
+        "failed": True,
+    }
+    # Simulate an asynchronous command that is running on the board.
+    subrack_driver._board_is_busy = True
+    subrack_driver._active_callback = callbacks["task"]
+
+    poll_request = HttpPollRequest()
+    poll_request.add_command("command_completed")
+    poll_response = subrack_driver.poll(poll_request)
+    assert poll_response.command_failure == "TPM 3 failed to power on"
+
+    subrack_driver.poll_succeeded(poll_response)
+
+    callbacks["task"].assert_call(
+        status=TaskStatus.FAILED,
+        result=(ResultCode.FAILED, "Command failed: TPM 3 failed to power on"),
+    )
+    callbacks["task"].assert_not_called()
+    assert subrack_driver._active_callback is None
+    assert not subrack_driver._board_is_busy
 
 
 @pytest.mark.parametrize(

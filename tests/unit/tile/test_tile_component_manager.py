@@ -10,9 +10,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime
 import ipaddress
 import json
+import threading
 import time
 import unittest.mock
 from typing import Any, Iterator
@@ -37,10 +39,13 @@ from ska_low_mccs_spshw.tile import (
     MockTpm,
     TileComponentManager,
     TileData,
+    TileRequestProvider,
     TileSimulator,
     TpmStatus,
 )
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
+from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
+from ska_low_mccs_spshw.tile.utils import LockTimeoutError
 from time_utils import str_from_float_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -602,6 +607,240 @@ class TestTileComponentManager:
             result=(ResultCode.OK, "Command executed to completion."),
         )
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _lock_held_by_other_thread(
+        tile_component_manager: TileComponentManager,
+    ) -> Iterator[None]:
+        """
+        Hold the hardware lock from another thread for the duration.
+
+        :param tile_component_manager: the tile component manager whose
+            hardware lock to hold.
+
+        :yields: while the lock is held by another thread.
+        """
+        held = threading.Event()
+        release = threading.Event()
+
+        def _hold() -> None:
+            with tile_component_manager._hardware_lock:
+                held.set()
+                release.wait(10)
+
+        holder = threading.Thread(target=_hold)
+        holder.start()
+        assert held.wait(1)
+        try:
+            yield
+        finally:
+            release.set()
+            holder.join()
+
+    def test_subrack_on_callback_does_not_take_hardware_lock(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        subrack_tpm_id: int,
+    ) -> None:
+        """
+        Test the subrack ON callback defers connecting to the polling loop.
+
+        A slow connect on the event thread used to hold the hardware lock
+        and starve the polling loop. The callback should now only request
+        a connection.
+
+        :param tile_component_manager: the tile component manager under test
+        :param subrack_tpm_id: This tile's position in its subrack
+        """
+        provider = TileRequestProvider(unittest.mock.Mock())
+        tile_component_manager._request_provider = provider
+
+        with self._lock_held_by_other_thread(tile_component_manager):
+            start = time.monotonic()
+            tile_component_manager._subrack_says_tpm_power_changed(
+                f"tpm{subrack_tpm_id}powerstate",
+                PowerState.ON,
+                tango.EventType.CHANGE_EVENT,
+            )
+            # Well under the lock timeouts: it didn't wait for the lock.
+            assert time.monotonic() - start < 0.2
+
+        assert provider.get_request(TpmStatus.UNKNOWN) == "CONNECT"
+
+    def test_poll_failed_on_lock_timeout_is_not_a_fault(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test a lock timeout in a poll is treated as busy, not disconnected.
+
+        :param tile_component_manager: the tile component manager under test
+        """
+        provider = TileRequestProvider(unittest.mock.Mock())
+        tile_component_manager._request_provider = provider
+        lrc = unittest.mock.Mock(spec=TileLRCRequest)
+        tile_component_manager.active_request = lrc
+
+        with (
+            unittest.mock.patch.object(
+                tile_component_manager, "update_fault_state"
+            ) as update_fault_state,
+            unittest.mock.patch.object(
+                provider, "desire_connection"
+            ) as desire_connection,
+        ):
+            tile_component_manager.poll_failed(
+                LockTimeoutError("lock not acquired in 6.000s")
+            )
+
+        update_fault_state.assert_not_called()
+        lrc.notify_failed.assert_called_once()
+        assert tile_component_manager.active_request is None
+        # No reconnect requested. (Note: get_request(UNKNOWN) can't be used
+        # to check this, as CONNECT is a routine poll in the UNKNOWN state.)
+        desire_connection.assert_not_called()
+
+    def test_persistent_lock_timeout_reports_fault(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test polls starved of the lock for too long report a fault.
+
+        Also check the fault is cleared once a poll gets the lock again.
+
+        :param tile_component_manager: the tile component manager under test
+        """
+        tile_component_manager._request_provider = TileRequestProvider(
+            unittest.mock.Mock()
+        )
+        tile_component_manager._lock_starvation_timeout = 10.0
+        tile_component_manager.fault_state = False
+        busy = LockTimeoutError("lock not acquired in 6.000s")
+
+        with (
+            unittest.mock.patch(
+                "ska_low_mccs_spshw.tile.tile_component_manager.time.monotonic"
+            ) as monotonic,
+            unittest.mock.patch.object(
+                tile_component_manager, "_update_component_state"
+            ) as update_component_state,
+        ):
+            # First skipped poll starts the clock; within the limit, no fault.
+            monotonic.return_value = 100.0
+            tile_component_manager.poll_failed(busy)
+            monotonic.return_value = 109.0
+            tile_component_manager.poll_failed(busy)
+            assert tile_component_manager.fault_state is False
+            update_component_state.assert_not_called()
+
+            # Past the limit: fault reported once.
+            monotonic.return_value = 111.0
+            tile_component_manager.poll_failed(busy)
+            assert tile_component_manager.fault_state is True
+            update_component_state.assert_called_once_with(fault=True)
+
+            # A successful poll resets the clock and clears the fault
+            # (provided subrack agrees the TPM is ON).
+            tile_component_manager._subrack_says_tpm_power = PowerState.ON
+            tile_component_manager.poll_succeeded(
+                TileResponse("dummy", None, publish=False)
+            )
+            assert tile_component_manager._lock_busy_since is None
+            assert tile_component_manager.fault_state is False
+
+    def test_update_fault_state_without_lock_leaves_fault_unchanged(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test update_fault_state doesn't touch hardware without the lock.
+
+        :param tile_component_manager: the tile component manager under test
+        """
+        tile_component_manager.power_state = PowerState.ON
+        tile_component_manager.fault_state = False
+
+        with (
+            self._lock_held_by_other_thread(tile_component_manager),
+            unittest.mock.patch.object(
+                tile_component_manager, "_is_connected"
+            ) as is_connected,
+        ):
+            tile_component_manager.update_fault_state(poll_success=False)
+
+        is_connected.assert_not_called()
+        assert tile_component_manager.fault_state is False
+
+    def test_is_connected_without_lock_does_not_read_hardware(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test _is_connected returns the last known state if the lock is busy.
+
+        :param tile_component_manager: the tile component manager under test
+        """
+        tile_component_manager._last_known_connected = True
+        mock_tile = unittest.mock.MagicMock()
+
+        with (
+            self._lock_held_by_other_thread(tile_component_manager),
+            unittest.mock.patch.object(tile_component_manager, "tile", mock_tile),
+        ):
+            assert tile_component_manager._is_connected(raise_exception=False)
+            with pytest.raises(LockTimeoutError):
+                tile_component_manager._is_connected(raise_exception=True)
+
+        mock_tile.__getitem__.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("power_on_event", "tpm_status", "expect_initialise"),
+        [
+            (True, TpmStatus.UNPROGRAMMED, True),
+            (True, TpmStatus.PROGRAMMED, True),
+            (True, TpmStatus.INITIALISED, False),
+            (True, TpmStatus.SYNCHRONISED, False),
+            # A plain reconnect, with no subrack power-on event, must not
+            # initialise, e.g. a TPM deliberately left PROGRAMMED.
+            (False, TpmStatus.UNPROGRAMMED, False),
+            (False, TpmStatus.PROGRAMMED, False),
+        ],
+    )
+    def test_initialise_after_power_on(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        subrack_tpm_id: int,
+        power_on_event: bool,
+        tpm_status: TpmStatus,
+        expect_initialise: bool,
+    ) -> None:
+        """
+        Test initialise is enqueued once after connect, only after power-on.
+
+        :param tile_component_manager: the tile component manager under test
+        :param subrack_tpm_id: This tile's position in its subrack
+        :param power_on_event: whether the subrack reported the TPM turning ON
+        :param tpm_status: the TPM status at connect time
+        :param expect_initialise: whether an initialise should be enqueued
+        """
+        provider = TileRequestProvider(unittest.mock.Mock())
+        tile_component_manager._request_provider = provider
+        if power_on_event:
+            tile_component_manager._subrack_says_tpm_power_changed(
+                f"tpm{subrack_tpm_id}powerstate",
+                PowerState.ON,
+                tango.EventType.CHANGE_EVENT,
+            )
+        tile_component_manager._tpm_status = tpm_status
+
+        # As called from the polling thread on each successful (re)connect.
+        tile_component_manager._handle_power_on_if_pending()
+        tile_component_manager._handle_power_on_if_pending()
+
+        assert provider.initialise_queued is expect_initialise
+        assert provider._lrc_queue.qsize() == (1 if expect_initialise else 0)
+
 
 class TestStaticSimulator:  # pylint: disable=too-many-public-methods
     """Class for testing TileComponentManger using the TileSimulator as a backend."""
@@ -674,7 +913,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             assert not tile_component_manager._component_state["fault"]
 
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=5
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=6
         )
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
@@ -3811,7 +4050,7 @@ class TestDynamicSimulator:
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-            lookahead=5,
+            lookahead=6,
             consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)

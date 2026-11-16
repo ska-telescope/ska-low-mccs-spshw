@@ -14,6 +14,7 @@ import importlib
 import json
 import sys
 import threading
+import time
 from typing import Any, Final, Optional
 
 import numpy as np
@@ -22,8 +23,9 @@ from numpy.typing import NDArray
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_control_model.faults import StateModelError
 from ska_low_mccs_common import HealthRecorder, MccsBaseDevice
+from ska_tango_base.long_running_commands import LRCReqType
 from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
-from tango import AttrQuality, DevFailed
+from tango import AttrQuality, DevFailed, Except
 from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -218,7 +220,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         super().__init__(*args, **kwargs)
 
         self._health_model: SubrackHealthModel
-        self._health_state: HealthState
         self._stopping = False
         self._health_recorder: HealthRecorder | None
         self._health_report = ""
@@ -293,9 +294,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
     def delete_device(self: MccsSubrack) -> None:
         """Delete the device."""
-        if self.component_manager.pdu_proxy:
-            self.component_manager.pdu_proxy.cleanup()
-
         self._stopping = True
         if self._health_recorder is not None:
             self._health_recorder.cleanup()
@@ -307,18 +305,29 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self: MccsSubrack, health: HealthState, health_report: str
     ) -> None:
         """
-        Handle change in health from new health Model.
+        Handle an evaluation of this device's health.
 
-        :param health: the new health value
+        The HealthRecorder calls this hook on every event from a monitored
+        attribute. It pushes the health report and the health state every
+        time, and Tango change detection suppresses repeated values.
+
+        :param health: the evaluated health value
         :param health_report: the health report
         """
         if self._stopping:
             return
 
         if self.UseAttributesForHealth:
+            # Give both events one timestamp, so that a client can pair them.
+            timestamp = time.time()
             self._health_report = health_report
-            if self._health_state != health:
-                self._health_state = health
+            self.push_change_event(
+                "healthReport", health_report, timestamp, AttrQuality.ATTR_VALID
+            )
+            self.push_archive_event(
+                "healthReport", health_report, timestamp, AttrQuality.ATTR_VALID
+            )
+            self._health_state = (health, timestamp, AttrQuality.ATTR_VALID)
 
     def _attr_conf_changed(self: MccsSubrack, attribute_name: str) -> None:
         """
@@ -361,8 +370,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
                 "cpldPllLocked",
                 "powerSupplyCurrents",
                 "powerSupplyFanSpeeds",
-                "subrackFanSpeeds",
-                "subrackFanSpeedsPercent",
                 "subrackFanModes",
                 "subrackPllLocked",
                 "subrackTimestamp",
@@ -386,6 +393,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._health_model = SubrackHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
+        self.set_change_event("healthReport", True, True)
+        self.set_archive_event("healthReport", True, True)
 
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
         """
@@ -584,7 +593,35 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         return task
 
-    @stb.long_running_commands.long_running_command
+    def is_SetPowerSupplyFanSpeed_allowed(  # pylint: disable=invalid-name
+        self: MccsSubrack,
+        request_type: Optional[LRCReqType] = None,
+    ) -> bool:
+        """
+        Return whether the subrack can set the power supply fan speed.
+
+        :param request_type: whether the command is being queued or executed.
+            Both are refused on the same grounds, so this is not read.
+
+        :return: True if the command is allowed.
+        """
+        board_info = self._hardware_attributes.get("subrackBoardInfo")
+        if board_info is None:
+            # The API version is unknown until board info has been read, so
+            # let the command through and leave any error to the board.
+            return True
+        if not SubrackData.supports_power_supply_fan_speed(board_info):
+            Except.throw_exception(
+                "CommandNotAllowed",
+                "SetPowerSupplyFanSpeed is not supported by subrack "
+                f"API {board_info['SMM']['bios']}.",
+                self.get_name(),
+            )
+        return True
+
+    @stb.long_running_commands.long_running_command(
+        fisallowed="is_SetPowerSupplyFanSpeed_allowed"
+    )
     @stb.validators.validate_json_args(schema=SetPowerSupplyFanSpeed_SCHEMA)
     def SetPowerSupplyFanSpeed(  # pylint: disable=invalid-name
         self: MccsSubrack,
@@ -1190,10 +1227,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         dtype=("DevFloat",),
         max_dim_x=4,
         abs_change=0.1,
-        max_alarm=9750,  # 150%
-        max_warning=8125,  # 125%
-        min_alarm=1625,  # 25%
-        min_warning=4875,  # 75%
         label="Estimated Max Fan Speed",
         unit="RPM",
         doc="Expected Fan Speeds at 100% pwm duty.",
@@ -1537,8 +1570,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1PowerIn = attribute_from_signal(  # noqa: N815
         psu1_power_in_signal,
         dtype="DevDouble",
-        max_alarm=600.0,
-        max_warning=575.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Input Power",
@@ -1549,8 +1580,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2PowerIn = attribute_from_signal(  # noqa: N815
         psu2_power_in_signal,
         dtype="DevDouble",
-        max_alarm=600.0,
-        max_warning=575.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Input Power",
@@ -1561,8 +1590,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1PowerOut = attribute_from_signal(  # noqa: N815
         psu1_power_out_signal,
         dtype="DevDouble",
-        max_alarm=1140.0,
-        max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Output Power",
@@ -1573,8 +1600,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2PowerOut = attribute_from_signal(  # noqa: N815
         psu2_power_out_signal,
         dtype="DevDouble",
-        max_alarm=1140.0,
-        max_warning=600.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Output Power",
@@ -1585,10 +1610,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1VoltageIn = attribute_from_signal(  # noqa: N815
         psu1_voltage_in_signal,
         dtype="DevDouble",
-        max_alarm=253.00,
-        max_warning=240.0,
-        min_warning=215.0,
-        min_alarm=207.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Input Voltage",
@@ -1599,10 +1620,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2VoltageIn = attribute_from_signal(  # noqa: N815
         psu2_voltage_in_signal,
         dtype="DevDouble",
-        max_alarm=253.00,
-        max_warning=240.0,
-        min_warning=215.0,
-        min_alarm=207.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Input Voltage",
@@ -1613,10 +1630,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu1VoltageOut = attribute_from_signal(  # noqa: N815
         psu1_voltage_out_signal,
         dtype="DevDouble",
-        max_alarm=14.0,
-        max_warning=13.0,
-        min_warning=11.0,
-        min_alarm=10.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU1 Output Voltage",
@@ -1627,10 +1640,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psu2VoltageOut = attribute_from_signal(  # noqa: N815
         psu2_voltage_out_signal,
         dtype="DevDouble",
-        max_alarm=14.0,
-        max_warning=13.0,
-        min_warning=11.0,
-        min_alarm=10.0,
         abs_change=0.1,
         archive_abs_change=0.1,
         label="PSU2 Output Voltage",
@@ -1641,8 +1650,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     psuDeadCount = attribute_from_signal(  # noqa: N815
         psu_dead_count_signal,
         dtype="DevShort",
-        max_warning=1,
-        max_alarm=2,
         abs_change=1,
         archive_abs_change=1,
         label="Dead PSU Count",
@@ -1689,12 +1696,14 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
-    @attribute(dtype=str, label="PDU Health", doc="The current health of the PDU.")
-    def pduHealth(self: MccsSubrack) -> str | None:
+    @attribute(
+        dtype=HealthState, label="PDU Health", doc="The current health of the PDU."
+    )
+    def pduHealth(self: MccsSubrack) -> HealthState | None:
         """
         Handle a Tango attribute read of the pdu health.
 
-        :return: the pdu health
+        :return: the pdu health, or None if no PDU is configured.
         """
         return self.component_manager.pdu_health_state()
 
@@ -1796,7 +1805,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
-        max_alarm=120.0,
         abs_change=0.1,
         label="TPM Powers",
         unit="Watt",
@@ -1838,8 +1846,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     @attribute(
         dtype=("DevFloat",),
         max_dim_x=8,
-        min_alarm=11.4,
-        max_alarm=12.6,
         abs_change=0.1,
         label="TPM Voltages",
         unit="Volt",

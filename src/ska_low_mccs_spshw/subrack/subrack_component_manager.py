@@ -14,7 +14,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
@@ -85,6 +91,19 @@ class _PowerMarshallerProxy(DeviceComponentManager):
         input_str = json.dumps(input_dict)
         self._proxy._device.SchedulePower(input_str)
 
+    def cleanup(self: _PowerMarshallerProxy) -> None:
+        """
+        Stop the connection task, then clean up.
+
+        The connection task retries subscription for up to 120 seconds when
+        the device is not there. Abort cancels the retry, so the executor
+        shutdown does not wait for it, and the task never logs through a
+        device that has been deleted.
+        """
+        if self._proxy is not None:
+            self._proxy.abort()
+        super().cleanup()
+
 
 class _PDUProxy(DeviceComponentManager):
     """A proxy to a PDU, for a subrack to use."""
@@ -115,7 +134,20 @@ class _PDUProxy(DeviceComponentManager):
             component_state_callback,
         )
 
-    def _get_health_state(self: _PDUProxy) -> str:
+    def cleanup(self: _PDUProxy) -> None:
+        """
+        Stop the connection task, then clean up.
+
+        The connection task retries subscription for up to 120 seconds when
+        the device is not there. Abort cancels the retry, so the executor
+        shutdown does not wait for it, and the task never logs through a
+        device that has been deleted.
+        """
+        if self._proxy is not None:
+            self._proxy.abort()
+        super().cleanup()
+
+    def _get_health_state(self: _PDUProxy) -> HealthState:
         """
         Get the pdu health.
 
@@ -124,7 +156,9 @@ class _PDUProxy(DeviceComponentManager):
         assert self._proxy is not None  # for the type checker
         assert self._proxy._device is not None  # for the type checker
 
-        return self._proxy._device.healthState
+        # The proxy returns a Tango-generated IntEnum rather than
+        # ska_control_model's HealthState, so convert by value.
+        return HealthState(int(self._proxy._device.healthState))
 
     def _get_model(self: _PDUProxy) -> str:
         """
@@ -410,6 +444,14 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         if self._communication_manager is not None:
             self._communication_manager.stop_communicating()
 
+    def cleanup(self: SubrackComponentManager) -> None:
+        """Stop the threads of the upstream proxies and the subrack."""
+        try:
+            for proxy in self.proxy_map.values():
+                proxy.cleanup()
+        finally:
+            super().cleanup()
+
     def _device_communication_state_changed(
         self: SubrackComponentManager,
         trl: str,
@@ -576,7 +618,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_health_state(
         self: SubrackComponentManager,
-    ) -> Optional[str]:
+    ) -> Optional[HealthState]:
         """
         Get PDU health.
 

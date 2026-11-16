@@ -15,6 +15,9 @@ supplies that are fed but supplying nothing, ``tpm_count`` counts the occupied
 bays, and ``psu1_load`` and ``psu2_load`` give the load on each power supply.
 These keep no state.
 
+From API 1.8.0 the board does not report ``tpm_currents``, so they are derived
+from the TPM powers and voltages when the caller asks.
+
 This module holds no HTTP code and reads no status codes. It works on a
 dictionary of poll values.
 """
@@ -102,6 +105,7 @@ class DerivedValues:
     def apply(
         self: DerivedValues,
         values: dict[str, Any],
+        derive_tpm_currents: bool = False,
     ) -> None:
         """
         Add the derived values, and filter the noisy ones, in place.
@@ -112,6 +116,8 @@ class DerivedValues:
 
         :param values: the poll values, modified in place. The health status
             is under ``HEALTH_STATUS_KEY``.
+        :param derive_tpm_currents: whether to derive ``tpm_currents`` from the
+            TPM powers and voltages, because the board does not report them.
         """
         fan_speeds = ReadKey.SUBRACK_FAN_SPEEDS.value
         fan_speeds_percent = ReadKey.SUBRACK_FAN_SPEEDS_PERCENT.value
@@ -132,6 +138,15 @@ class DerivedValues:
                 values[power_supply_powers], values.get(HEALTH_STATUS_KEY)
             )
             values.update(zip(_PSU_LOAD_KEYS, loads))
+        tpm_powers = ReadKey.TPM_POWERS.value
+        tpm_voltages = ReadKey.TPM_VOLTAGES.value
+        # Both keys are needed. The board can turn busy between the two reads,
+        # and an absent key is not an unknown value. Derived before the filter
+        # loop, so they are filtered the same as read currents.
+        if derive_tpm_currents and tpm_powers in values and tpm_voltages in values:
+            values[ReadKey.TPM_CURRENTS.value] = self.tpm_currents_from_powers(
+                values[tpm_powers], values[tpm_voltages]
+            )
         for key, attribute_filter in self._filters.items():
             if key not in values:
                 continue
@@ -166,6 +181,33 @@ class DerivedValues:
         if not isinstance(value, list):
             return value
         return [math.nan if reading is None else reading for reading in value]
+
+    @staticmethod
+    def tpm_currents_from_powers(
+        tpm_powers: Optional[list[Optional[float]]],
+        tpm_voltages: Optional[list[Optional[float]]],
+    ) -> Optional[list[Optional[float]]]:
+        """
+        Derive the TPM currents from the TPM powers and voltages.
+
+        :param tpm_powers: the power drawn by each TPM, or ``None`` when the
+            board could not say.
+        :param tpm_voltages: the voltage supplied to each TPM, or ``None`` when
+            the board could not say.
+
+        :return: the current drawn by each TPM, or ``None`` when either input
+            is unknown. A bay is ``None`` if either reading is unknown, and
+            ``0.0`` if its voltage is zero.
+        """
+        if tpm_powers is None or tpm_voltages is None:
+            return None
+        currents: list[Optional[float]] = []
+        for power, voltage in zip(tpm_powers, tpm_voltages):
+            if power is None or voltage is None:
+                currents.append(None)
+            else:
+                currents.append(power / voltage if voltage else 0.0)
+        return currents
 
     @staticmethod
     def count_tpms(tpm_present: Optional[list[bool]]) -> Optional[int]:

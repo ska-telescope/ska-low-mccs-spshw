@@ -524,7 +524,7 @@ def test_tile_invalidation_ordered_after_queued_events(
     )
     serialiser.queue_event(
         tile_fqdn,
-        "boardTemperature",
+        "temperatures_board",
         42.0,
         tango.AttrQuality.ATTR_VALID,
         callback=tile_proxy._on_attribute_change,
@@ -548,13 +548,13 @@ def test_tile_events_dropped_when_not_established(
         under test
     """
     station_component_manager._on_tile_attribute_change(
-        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+        0, "temperatures_board", 42.0, tango.AttrQuality.ATTR_VALID
     )
     assert np.isnan(station_component_manager._board_temperatures[0])
 
     _mark_tiles_established(station_component_manager, 1)
     station_component_manager._on_tile_attribute_change(
-        0, "boardTemperature", 42.0, tango.AttrQuality.ATTR_VALID
+        0, "temperatures_board", 42.0, tango.AttrQuality.ATTR_VALID
     )
     assert station_component_manager._board_temperatures[0] == 42.0
 
@@ -1622,6 +1622,182 @@ def test_power_state_transitions(
     assert station_component_manager._component_state["power"] == PowerState.UNKNOWN
 
 
+def _patch_subrack_on_commands(
+    monkeypatch: pytest.MonkeyPatch,
+    result: tuple[ResultCode, str],
+) -> tuple[unittest.mock.Mock, unittest.mock.Mock]:
+    """
+    Patch MccsCommandProxy/MccsCompositeCommandProxy used by _turn_on_subracks.
+
+    :param monkeypatch: pytest monkeypatch fixture.
+    :param result: the (ResultCode, message) the composite command call
+        should return by default. Callers may overwrite
+        ``mock_composite.side_effect``/``return_value`` afterwards for
+        more specific behaviour.
+
+    :return: the mocked MccsCommandProxy class and the mocked
+        MccsCompositeCommandProxy instance (so callers can make
+        assertions or attach a side_effect).
+    """
+    mock_command_cls = unittest.mock.MagicMock(name="MccsCommandProxy")
+    mock_composite = unittest.mock.MagicMock(name="MccsCompositeCommandProxy instance")
+    mock_composite.__iadd__.return_value = mock_composite
+    mock_composite.return_value = result
+    mock_composite_cls = unittest.mock.MagicMock(
+        name="MccsCompositeCommandProxy", return_value=mock_composite
+    )
+    monkeypatch.setattr(station_cm, "MccsCommandProxy", mock_command_cls)
+    monkeypatch.setattr(station_cm, "MccsCompositeCommandProxy", mock_composite_cls)
+    return mock_command_cls, mock_composite
+
+
+def test_turn_on_subracks_only_commands_subracks_not_already_on(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test _turn_on_subracks only commands subracks that are not already ON.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    subrack_names = list(station_component_manager._subrack_proxies.keys())
+
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.ON
+    )
+    station_component_manager._subrack_state_changed(
+        subrack_names[1], power=PowerState.OFF
+    )
+
+    def _bring_subrack_1_on(*args: Any, **kwargs: Any) -> tuple[ResultCode, str]:
+        station_component_manager._subrack_state_changed(
+            subrack_names[1], power=PowerState.ON
+        )
+        return (ResultCode.OK, "")
+
+    mock_command_cls, mock_composite = _patch_subrack_on_commands(
+        monkeypatch, (ResultCode.OK, "")
+    )
+    mock_composite.side_effect = _bring_subrack_1_on
+
+    result_code, message = station_component_manager._turn_on_subracks()
+
+    mock_command_cls.assert_called_once_with(
+        subrack_names[1], "On", station_component_manager.logger
+    )
+    assert result_code == ResultCode.OK
+    assert message == ""
+
+
+def test_turn_on_subracks_skips_command_when_all_already_on(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test _turn_on_subracks doesn't command anything when all are already ON.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    for fqdn in station_component_manager._subrack_proxies:
+        station_component_manager._subrack_state_changed(fqdn, power=PowerState.ON)
+
+    mock_command_cls, mock_composite_cls = (
+        unittest.mock.MagicMock(name="MccsCommandProxy"),
+        unittest.mock.MagicMock(name="MccsCompositeCommandProxy"),
+    )
+    monkeypatch.setattr(station_cm, "MccsCommandProxy", mock_command_cls)
+    monkeypatch.setattr(station_cm, "MccsCompositeCommandProxy", mock_composite_cls)
+
+    result_code, message = station_component_manager._turn_on_subracks()
+
+    mock_command_cls.assert_not_called()
+    mock_composite_cls.assert_not_called()
+    assert result_code == ResultCode.OK
+
+
+def test_turn_on_subracks_fails_fast_on_rejected_command(
+    communicating_station_component_manager: SpsStationComponentManager,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test _turn_on_subracks fails fast when a subrack's On() is rejected.
+
+    Reproduces THORN-690: previously a fire-and-forget On() call meant a
+    rejected/failed command (e.g. because a subrack is administratively
+    OFFLINE) was silently dropped, and _turn_on_subracks would blindly poll
+    for 180s waiting for a subrack that would never turn on. Now that the
+    command's real result is listened to via MccsCommandProxy, a rejection
+    must be reported immediately.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    for fqdn in station_component_manager._subrack_proxies:
+        station_component_manager._subrack_state_changed(fqdn, power=PowerState.OFF)
+
+    rejected_result = (
+        ResultCode.FAILED,
+        "LRC failed: Command On not allowed when the device is in DISABLE state",
+    )
+    _patch_subrack_on_commands(monkeypatch, rejected_result)
+
+    result_code, message = station_component_manager._turn_on_subracks()
+
+    assert result_code == ResultCode.FAILED
+    assert "LRC failed" in message
+
+
+def test_standby_fails_fast_when_subrack_command_rejected(
+    communicating_station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that Standby fails fast when a subrack's On() command is rejected.
+
+    Reproduces THORN-690 end-to-end: with one subrack ON and one whose
+    On() is rejected (e.g. because it is administratively OFFLINE),
+    Standby() must fail promptly, instead of hanging for 180s waiting for
+    a subrack that will never turn on.
+
+    :param communicating_station_component_manager: the SPS station component
+        manager under test
+    :param callbacks: dictionary of driver callbacks.
+    :param monkeypatch: pytest monkeypatch fixture.
+    """
+    station_component_manager = communicating_station_component_manager
+    subrack_names = list(station_component_manager._subrack_proxies.keys())
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.ON
+    )
+    station_component_manager._subrack_state_changed(
+        subrack_names[1], power=PowerState.OFF
+    )
+
+    rejected_result = (
+        ResultCode.FAILED,
+        "LRC failed: Command On not allowed when the device is in DISABLE state",
+    )
+    _patch_subrack_on_commands(monkeypatch, rejected_result)
+
+    station_component_manager.standby(task_callback=callbacks["task"])
+    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+    callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+    callbacks["task"].assert_call(
+        status=TaskStatus.FAILED,
+        result=(ResultCode.FAILED, unittest.mock.ANY),
+        lookahead=5,
+    )
+
+
 def test_pps_delay_spread(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
@@ -1641,13 +1817,13 @@ def test_pps_delay_spread(
     assert station_component_manager._number_of_tiles >= 4  # Test assumes 4 tiles.
 
     for idx, tile in enumerate(mock_tiles):
-        tile.ppsDelay = 12 + idx  # 12, 13, 14, 15 — distinct from tile indices
+        tile.timing_pps_delay = 12 + idx  # 12, 13, 14, 15 — distinct from tile indices
         tile.tileProgrammingState = "Unprogrammed"
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    # Wait for ppsDelay subscription callbacks to populate _pps_delays[0-n].
+    # Wait for timing_pps_delay subscription callbacks to populate _pps_delays[0-n].
     total_slots = 16
     expected_delays = [12 + i for i in range(num_tiles)] + [0] * (
         total_slots - num_tiles
@@ -1655,7 +1831,7 @@ def test_pps_delay_spread(
     deadline = time.time() + 5.0
     while station_component_manager._pps_delays != expected_delays:
         assert time.time() < deadline, (
-            f"Timed out waiting for ppsDelay callbacks: "
+            f"Timed out waiting for timing_pps_delay callbacks: "
             f"{station_component_manager._pps_delays}"
         )
         time.sleep(0.01)
@@ -1684,7 +1860,7 @@ def test_pps_delay_spread(
     for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
-            attribute_name="ppsDelay",
+            attribute_name="timing_pps_delay",
             attribute_value=0,
             attribute_quality=tango.AttrQuality.ATTR_VALID,
         )
@@ -1693,7 +1869,7 @@ def test_pps_delay_spread(
     # Change one tile and verify the spread is computed correctly (4 - 0 == 4).
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=1,
-        attribute_name="ppsDelay",
+        attribute_name="timing_pps_delay",
         attribute_value=4,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
@@ -1703,16 +1879,16 @@ def test_pps_delay_spread(
     for tile_id in range(0, num_tiles):
         station_component_manager._on_tile_attribute_change(
             logical_tile_id=tile_id,
-            attribute_name="ppsDelay",
+            attribute_name="timing_pps_delay",
             attribute_value=4,
             attribute_quality=tango.AttrQuality.ATTR_VALID,
         )
     assert station_component_manager._pps_delay_spread == 0
 
-    # Set 1 Tile to ppsDelay of 16 for a delta of 12.
+    # Set 1 Tile to timing_pps_delay of 16 for a delta of 12.
     station_component_manager._on_tile_attribute_change(
         logical_tile_id=3,
-        attribute_name="ppsDelay",
+        attribute_name="timing_pps_delay",
         attribute_value=16,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
@@ -2767,7 +2943,7 @@ def test_beamformer_flagged_count(
     for tile_id in range(last):
         station_component_manager._on_tile_attribute_change(
             tile_id,
-            "fpga0_station_beamformer_flagged_count",
+            "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
             5,
             tango.AttrQuality.ATTR_VALID,
         )
@@ -2776,7 +2952,7 @@ def test_beamformer_flagged_count(
     # Final tile fpga0 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         5,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2785,7 +2961,7 @@ def test_beamformer_flagged_count(
     # Same value again — no duplicate callback.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         5,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2794,7 +2970,7 @@ def test_beamformer_flagged_count(
     # fpga0 back to zero (fpga1 still zero) → ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga0_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
         0,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2803,7 +2979,7 @@ def test_beamformer_flagged_count(
     # fpga1 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         3,
         tango.AttrQuality.ATTR_VALID,
     )
@@ -2812,7 +2988,7 @@ def test_beamformer_flagged_count(
     # Both zero → ok.
     station_component_manager._on_tile_attribute_change(
         last,
-        "fpga1_station_beamformer_flagged_count",
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
         0,
         tango.AttrQuality.ATTR_VALID,
     )

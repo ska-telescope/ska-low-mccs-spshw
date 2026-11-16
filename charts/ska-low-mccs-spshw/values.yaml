@@ -21,7 +21,7 @@ mccs_anchor: &mccs_anchor
   image:
     registry: artefact.skao.int
     name: ska-low-mccs-spshw
-    tag: 16.0.3
+    tag: 18.0.0
     pullPolicy: IfNotPresent
 
 <<: *mccs_anchor
@@ -37,6 +37,11 @@ simulators: {} # e.g.
   #     srmb_host: subrack-simulator-s8-1
   #     srmb_port: 8081
   #     bios_version: "1.8.0"  # optional; the simulator defaults to 1.6.0
+  # pdus:
+  #   ci-1:
+  #     host: pdu-simulator-ci-1
+  #     model: ENLOGIC
+  #     port: 161  # optional; the Service defaults to the SNMP port
 
 pgadmin4:
   enabled: false
@@ -51,325 +56,598 @@ ska-tango-devices:
   # deviceDefaults:
   classProperties:
     MccsTile:
-      boardTemperature->max_alarm: 70.0
-      boardTemperature->max_warning: 65.0
-      boardTemperature->min_warning: 16.0
-      boardTemperature->min_alarm: 15.0
+      temperatures_board->max_alarm: 78
+      temperatures_board->max_warning: 75
+      temperatures_board->min_warning: "Not specified"
+      temperatures_board->min_alarm: "Not specified"
 
-      adc_pll_lock_status->min_alarm: 0
+      adcs_pll_status->min_alarm: 0
 
-      fpga0_station_beamformer_error_count->max_alarm: 1
-      fpga1_station_beamformer_error_count->max_alarm: 1
+      dsp_station_beamf_ddr_parity_error_count_fpga0->max_alarm: 1
+      dsp_station_beamf_ddr_parity_error_count_fpga1->max_alarm: 1
 
-      fpga0_station_beamformer_flagged_count->max_alarm: 1
-      fpga1_station_beamformer_flagged_count->max_alarm: 1
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga0->max_alarm: 1
+      dsp_station_beamf_discarded_or_flagged_packet_count_fpga1->max_alarm: 1
 
-      fpga0_crc_error_count->max_alarm: 1
-      fpga1_crc_error_count->max_alarm: 1
+      io_udp_interface_crc_error_count_fpga0->max_alarm: 1
+      io_udp_interface_crc_error_count_fpga1->max_alarm: 1
 
-      fpga0_bip_error_count->max_alarm: 1
-      fpga1_bip_error_count->max_alarm: 1
+      io_udp_interface_bip_error_count_fpga0->max_alarm: 1
+      io_udp_interface_bip_error_count_fpga1->max_alarm: 1
 
-      fpga0_decode_error_count->max_alarm: 1
-      fpga1_decode_error_count->max_alarm: 1
+      io_udp_interface_decode_error_count_fpga0->max_alarm: 1
+      io_udp_interface_decode_error_count_fpga1->max_alarm: 1
 
-      fpga0_linkup_loss_count->max_alarm: 1
-      fpga1_linkup_loss_count->max_alarm: 1
+      io_udp_interface_linkup_loss_count_fpga0->max_alarm: 1
+      io_udp_interface_linkup_loss_count_fpga1->max_alarm: 1
 
-      fpga0_data_router_status->max_alarm: 1
-      fpga1_data_router_status->max_alarm: 1
+      io_data_router_status_fpga0->min_alarm: 0
+      io_data_router_status_fpga1->min_alarm: 0
 
-      fpga0_ddr_reset_counter->max_alarm: 1
-      fpga1_ddr_reset_counter->max_alarm: 1
+      io_ddr_interface_reset_counter_fpga0->max_alarm: 1
+      io_ddr_interface_reset_counter_fpga1->max_alarm: 1
 
-      f2f_soft_errors->max_alarm: 1
-      f2f_soft_errors->min_alarm: -1
+      io_f2f_interface_soft_error_fpga0->max_alarm: 1
+      io_f2f_interface_soft_error_fpga0->min_alarm: -1
 
-      f2f_hard_errors->max_alarm: 1
-      f2f_hard_errors->min_alarm: -1
+      io_f2f_interface_soft_error_fpga1->max_alarm: 1
+      io_f2f_interface_soft_error_fpga1->min_alarm: -1
 
-      fpga0_resync_count->max_alarm: 1
-      fpga1_resync_count->max_alarm: 1
+      io_f2f_interface_hard_error_fpga0->max_alarm: 1
+      io_f2f_interface_hard_error_fpga0->min_alarm: -1
 
-      fpga0_lane_error_count->max_alarm: 1
-      fpga1_lane_error_count->max_alarm: 1
+      io_f2f_interface_hard_error_fpga1->max_alarm: 1
+      io_f2f_interface_hard_error_fpga1->min_alarm: -1
 
-      fpga0_clock_managers_count->max_alarm: 1
-      fpga1_clock_managers_count->max_alarm: 1
+      io_jesd_interface_resync_count_fpga0->max_alarm: 1
+      io_jesd_interface_resync_count_fpga1->max_alarm: 1
 
-      fpga0_clock_managers_status->min_alarm: 0
-      fpga1_clock_managers_status->min_alarm: 0
+      io_jesd_interface_lane_error_count_fpga0->max_alarm: 1
+      io_jesd_interface_lane_error_count_fpga1->max_alarm: 1
 
-      fpga0_clocks->min_alarm: 0
-      fpga1_clocks->min_alarm: 0
+      timing_clock_managers_fpga0_count->max_alarm: 1
+      timing_clock_managers_fpga1_count->max_alarm: 1
 
-      adc_sysref_counter->min_alarm: 0
+      timing_clock_managers_fpga0_status->min_alarm: 0
+      timing_clock_managers_fpga1_status->min_alarm: 0
 
-      adc_sysref_timing_requirements->min_alarm: 0
+      timing_clocks_fpga0->min_alarm: 0
+      timing_clocks_fpga1->min_alarm: 0
 
-      fpga0_qpll_status->min_alarm: 0
-      fpga1_qpll_status->min_alarm: 0
+      adcs_sysref_counter->min_alarm: 0
 
-      fpga0_qpll_counter->max_alarm: 1
-      fpga1_qpll_counter->max_alarm: 1
+      adcs_sysref_timing_requirements->min_alarm: 0
 
-      f2f_pll_lock_status->min_alarm: 0
+      io_jesd_interface_qpll_status_fpga0_status->min_alarm: 0
+      io_jesd_interface_qpll_status_fpga1_status->min_alarm: 0
 
-      f2f_pll_counter->max_alarm: 1
+      io_jesd_interface_qpll_status_fpga0_count->max_alarm: 1
+      io_jesd_interface_qpll_status_fpga1_count->max_alarm: 1
 
-      timing_pll_lock_status->min_alarm: 0
+      io_f2f_interface_pll_status_fpga0_status->min_alarm: 0
+      io_f2f_interface_pll_status_fpga1_status->min_alarm: 0
+
+      io_f2f_interface_pll_status_fpga0_count->max_alarm: 1
+      io_f2f_interface_pll_status_fpga1_count->max_alarm: 1
+
+      timing_pll_status->min_alarm: 0
 
       timing_pll_count->max_alarm: 1
 
-      timing_pll_40g_lock_status->min_alarm: 0
+      timing_pll_40g_status->min_alarm: 0
 
       timing_pll_40g_count->max_alarm: 1
 
-      ppsDrift->max_alarm: 10
-      ppsDrift->max_warning: 4
+      timing_pps_drift->max_alarm: 10
+      timing_pps_drift->max_warning: 4
 
-      temperatureADC0->max_alarm: 90.0
-      temperatureADC0->min_alarm: 10.0
+      temperatures_adc0->max_alarm: 100
+      temperatures_adc0->max_warning: 90
+      temperatures_adc0->min_warning: 20
+      temperatures_adc0->min_alarm: -40
 
-      temperatureADC1->max_alarm: 90.0
-      temperatureADC1->min_alarm: 10.0
+      temperatures_adc1->max_alarm: 100
+      temperatures_adc1->max_warning: 90
+      temperatures_adc1->min_warning: 20
+      temperatures_adc1->min_alarm: -40
 
-      temperatureADC2->max_alarm: 90.0
-      temperatureADC2->min_alarm: 10.0
+      temperatures_adc2->max_alarm: 100
+      temperatures_adc2->max_warning: 90
+      temperatures_adc2->min_warning: 20
+      temperatures_adc2->min_alarm: -40
 
-      temperatureADC3->max_alarm: 90.0
-      temperatureADC3->min_alarm: 10.0
+      temperatures_adc3->max_alarm: 100
+      temperatures_adc3->max_warning: 90
+      temperatures_adc3->min_warning: 20
+      temperatures_adc3->min_alarm: -40
 
-      temperatureADC4->max_alarm: 90.0
-      temperatureADC4->min_alarm: 10.0
+      temperatures_adc4->max_alarm: 100
+      temperatures_adc4->max_warning: 90
+      temperatures_adc4->min_warning: 20
+      temperatures_adc4->min_alarm: -40
 
-      temperatureADC5->max_alarm: 90.0
-      temperatureADC5->min_alarm: 10.0
+      temperatures_adc5->max_alarm: 100
+      temperatures_adc5->max_warning: 90
+      temperatures_adc5->min_warning: 20
+      temperatures_adc5->min_alarm: -40
 
-      temperatureADC6->max_alarm: 90.0
-      temperatureADC6->min_alarm: 10.0
+      temperatures_adc6->max_alarm: 100
+      temperatures_adc6->max_warning: 90
+      temperatures_adc6->min_warning: 20
+      temperatures_adc6->min_alarm: -40
 
-      temperatureADC7->max_alarm: 90.0
-      temperatureADC7->min_alarm: 10.0
+      temperatures_adc7->max_alarm: 100
+      temperatures_adc7->max_warning: 90
+      temperatures_adc7->min_warning: 20
+      temperatures_adc7->min_alarm: -40
 
-      temperatureADC8->max_alarm: 90.0
-      temperatureADC8->min_alarm: 10.0
+      temperatures_adc8->max_alarm: 100
+      temperatures_adc8->max_warning: 90
+      temperatures_adc8->min_warning: 20
+      temperatures_adc8->min_alarm: -40
 
-      temperatureADC9->max_alarm: 90.0
-      temperatureADC9->min_alarm: 10.0
+      temperatures_adc9->max_alarm: 100
+      temperatures_adc9->max_warning: 90
+      temperatures_adc9->min_warning: 20
+      temperatures_adc9->min_alarm: -40
 
-      temperatureADC10->max_alarm: 90.0
-      temperatureADC10->min_alarm: 10.0
+      temperatures_adc10->max_alarm: 100
+      temperatures_adc10->max_warning: 90
+      temperatures_adc10->min_warning: 20
+      temperatures_adc10->min_alarm: -40
 
-      temperatureADC11->max_alarm: 90.0
-      temperatureADC11->min_alarm: 10.0
+      temperatures_adc11->max_alarm: 100
+      temperatures_adc11->max_warning: 90
+      temperatures_adc11->min_warning: 20
+      temperatures_adc11->min_alarm: -40
 
-      temperatureADC12->max_alarm: 90.0
-      temperatureADC12->min_alarm: 10.0
+      temperatures_adc12->max_alarm: 100
+      temperatures_adc12->max_warning: 90
+      temperatures_adc12->min_warning: 20
+      temperatures_adc12->min_alarm: -40
 
-      temperatureADC13->max_alarm: 90.0
-      temperatureADC13->min_alarm: 10.0
+      temperatures_adc13->max_alarm: 100
+      temperatures_adc13->max_warning: 90
+      temperatures_adc13->min_warning: 20
+      temperatures_adc13->min_alarm: -40
 
-      temperatureADC14->max_alarm: 90.0
-      temperatureADC14->min_alarm: 10.0
+      temperatures_adc14->max_alarm: 100
+      temperatures_adc14->max_warning: 90
+      temperatures_adc14->min_warning: 20
+      temperatures_adc14->min_alarm: -40
 
-      temperatureADC15->max_alarm: 90.0
-      temperatureADC15->min_alarm: 10.0
+      temperatures_adc15->max_alarm: 100
+      temperatures_adc15->max_warning: 90
+      temperatures_adc15->min_warning: 20
+      temperatures_adc15->min_alarm: -40
 
-      I2C_access_alm->max_alarm: 2
-      I2C_access_alm->max_warning: 1
+      alarms_i2c_access_alm->max_alarm: 2
+      alarms_i2c_access_alm->max_warning: 1
 
-      temperature_alm->max_alarm: 2
-      temperature_alm->max_warning: 1
+      alarms_temperature_alm->max_alarm: 2
+      alarms_temperature_alm->max_warning: 1
 
-      voltage_alm->max_alarm: 2
-      voltage_alm->max_warning: 1
+      alarms_voltage_alm->max_alarm: 2
+      alarms_voltage_alm->max_warning: 1
 
-      SEM_wd->max_alarm: 2
-      SEM_wd->max_warning: 1
+      alarms_sem_wd->max_alarm: 2
+      alarms_sem_wd->max_warning: 1
 
-      MCU_wd->max_alarm: 2
-      MCU_wd->max_warning: 1
+      alarms_mcu_wd->max_alarm: 2
+      alarms_mcu_wd->max_warning: 1
 
-      voltageMon->max_alarm: 5.19
-      voltageMon->min_alarm: 4.69
+      temperatures_fpga0->max_alarm: 93
+      temperatures_fpga0->max_warning: 90
+      temperatures_fpga0->min_warning: "Not specified"
+      temperatures_fpga0->min_alarm: "Not specified"
 
-      fpga1Temperature->max_alarm: 75.0
-      fpga1Temperature->max_warning: 68.0
-      fpga1Temperature->min_warning: 16.0
-      fpga1Temperature->min_alarm: 15.0
+      temperatures_fpga1->max_alarm: 93
+      temperatures_fpga1->max_warning: 90
+      temperatures_fpga1->min_warning: "Not specified"
+      temperatures_fpga1->min_alarm: "Not specified"
 
-      fpga2Temperature->max_alarm: 75.0
-      fpga2Temperature->max_warning: 68.0
-      fpga2Temperature->min_warning: 16.0
-      fpga2Temperature->min_alarm: 15.0
+      currents_fe0_mva->max_alarm: "Not specified"
+      currents_fe0_mva->max_warning: 2.62
+      currents_fe0_mva->min_warning: "Not specified"
+      currents_fe0_mva->min_alarm: "Not specified"
+      currents_fe1_mva->max_alarm: "Not specified"
+      currents_fe1_mva->max_warning: 2.62
+      currents_fe1_mva->min_warning: "Not specified"
+      currents_fe1_mva->min_alarm: "Not specified"
 
-      currentFE0->max_alarm: 2.62
-      currentFE1->max_alarm: 2.62
+      voltages_avdd3->max_alarm: 2.7
+      voltages_avdd3->max_warning: 2.53
+      voltages_avdd3->min_warning: 2.47
+      voltages_avdd3->min_alarm: 2.403
 
-      voltageAVDD3->max_alarm: 2.6
-      voltageAVDD3->max_warning: 2.57
-      voltageAVDD3->min_warning: 2.40
-      voltageAVDD3->min_alarm: 2.37
+      voltages_ddr0_vref->max_alarm: 0.65
+      voltages_ddr0_vref->max_warning: 0.618
+      voltages_ddr0_vref->min_warning: 0.58
+      voltages_ddr0_vref->min_alarm: 0.562
 
-      voltageVrefDDR0->max_alarm: 0.63
-      voltageVrefDDR0->min_alarm: 0.57
+      voltages_ddr1_vref->max_alarm: 0.65
+      voltages_ddr1_vref->max_warning: 0.619
+      voltages_ddr1_vref->min_warning: 0.579
+      voltages_ddr1_vref->min_alarm: 0.561
 
-      voltageVrefDDR1->max_alarm: 0.63
-      voltageVrefDDR1->min_alarm: 0.57
+      voltages_man_1v2->max_alarm: 1.32
+      voltages_man_1v2->max_warning: 1.231
+      voltages_man_1v2->min_warning: 1.161
+      voltages_man_1v2->min_alarm: 1.113
 
-      voltageMan1V2->max_alarm: 1.26
-      voltageMan1V2->min_alarm: 1.14
+      voltages_mgt_avcc->max_alarm: 1
+      voltages_mgt_avcc->max_warning: 0.929
+      voltages_mgt_avcc->min_warning: 0.839
+      voltages_mgt_avcc->min_alarm: 0.795
 
-      voltageMGT_AVCC->max_alarm: 0.97
-      voltageMGT_AVCC->min_alarm: 0.83
+      voltages_mgt_avtt->max_alarm: 1.3
+      voltages_mgt_avtt->max_warning: 1.218
+      voltages_mgt_avtt->min_warning: 1.119
+      voltages_mgt_avtt->min_alarm: 1.062
 
-      voltageMGT_AVTT->max_alarm: 1.26
-      voltageMGT_AVTT->min_alarm: 1.104
+      voltages_mon_5v0->max_alarm: 5.5
+      voltages_mon_5v0->max_warning: 5.1
+      voltages_mon_5v0->min_warning: 4.82
+      voltages_mon_5v0->min_alarm: 4.5
 
-      voltageMon5V0->max_alarm: 5.19
-      voltageMon5V0->min_alarm: 4.69
+      voltages_mon_3v3->max_alarm: 3.979
+      voltages_mon_3v3->max_warning: 3.8
+      voltages_mon_3v3->min_warning: 3.5
+      voltages_mon_3v3->min_alarm: 3.465
 
-      voltageMon3V3->max_alarm: 3.88
-      voltageMon3V3->min_alarm: 3.51
+      voltages_mon_1v8->max_alarm: 2.5
+      voltages_mon_1v8->max_warning: 2.1
+      voltages_mon_1v8->min_warning: 1.93
+      voltages_mon_1v8->min_alarm: 1.844
 
-      voltageMon1V8->max_alarm: 2.10
-      voltageMon1V8->min_alarm: 1.90
+      voltages_sw_avdd1->max_alarm: 2.16
+      voltages_sw_avdd1->max_warning: 1.118
+      voltages_sw_avdd1->min_warning: 1.059
+      voltages_sw_avdd1->min_alarm: 1.02
 
-      voltageSW_AVDD1->max_alarm: 1.16
-      voltageSW_AVDD1->min_alarm: 1.04
+      voltages_sw_avdd2->max_alarm: 4
+      voltages_sw_avdd2->max_warning: 2.37
+      voltages_sw_avdd2->min_warning: 2.25
+      voltages_sw_avdd2->min_alarm: 2.19
 
-      voltageSW_AVDD2->max_alarm: 2.42
-      voltageSW_AVDD2->min_alarm: 2.18
+      voltages_vin->max_alarm: 12.6
+      voltages_vin->max_warning: 12.27
+      voltages_vin->min_warning: 11.42
+      voltages_vin->min_alarm: 11.4
 
-      voltageVIN->max_alarm: 12.6
-      voltageVIN->min_alarm: 11.4
+      voltages_vm_agp0->max_alarm: 1
+      voltages_vm_agp0->max_warning: 0.931
+      voltages_vm_agp0->min_warning: 0.905
+      voltages_vm_agp0->min_alarm: 0.8
 
-      voltageVM_AGP0->max_alarm: 0.99
-      voltageVM_AGP0->min_alarm: 0.84
+      voltages_vm_agp1->max_alarm: 1
+      voltages_vm_agp1->max_warning: 0.931
+      voltages_vm_agp1->min_warning: 0.904
+      voltages_vm_agp1->min_alarm: 0.8
 
-      voltageVM_AGP1->max_alarm: 0.99
-      voltageVM_AGP1->min_alarm: 0.84
+      voltages_vm_agp2->max_alarm: 1
+      voltages_vm_agp2->max_warning: 0.931
+      voltages_vm_agp2->min_warning: 0.904
+      voltages_vm_agp2->min_alarm: 0.8
 
-      voltageVM_AGP2->max_alarm: 0.99
-      voltageVM_AGP2->min_alarm: 0.84
+      voltages_vm_agp3->max_alarm: 1
+      voltages_vm_agp3->max_warning: 0.931
+      voltages_vm_agp3->min_warning: 0.905
+      voltages_vm_agp3->min_alarm: 0.8
 
-      voltageVM_AGP3->max_alarm: 0.99
-      voltageVM_AGP3->min_alarm: 0.84
+      voltages_vm_agp4->max_alarm: 1
+      voltages_vm_agp4->max_warning: 0.931
+      voltages_vm_agp4->min_warning: 0.905
+      voltages_vm_agp4->min_alarm: 0.8
 
-      voltageVM_AGP4->max_alarm: 0.99
-      voltageVM_AGP4->min_alarm: 0.84
+      voltages_vm_agp5->max_alarm: 1
+      voltages_vm_agp5->max_warning: 0.931
+      voltages_vm_agp5->min_warning: 0.903
+      voltages_vm_agp5->min_alarm: 0.8
 
-      voltageVM_AGP5->max_alarm: 0.99
-      voltageVM_AGP5->min_alarm: 0.84
+      voltages_vm_agp6->max_alarm: 1
+      voltages_vm_agp6->max_warning: 0.931
+      voltages_vm_agp6->min_warning: 0.905
+      voltages_vm_agp6->min_alarm: 0.8
 
-      voltageVM_AGP6->max_alarm: 0.99
-      voltageVM_AGP6->min_alarm: 0.84
+      voltages_vm_agp7->max_alarm: 1
+      voltages_vm_agp7->max_warning: 0.931
+      voltages_vm_agp7->min_warning: 0.904
+      voltages_vm_agp7->min_alarm: 0.8
 
-      voltageVM_AGP7->max_alarm: 0.99
-      voltageVM_AGP7->min_alarm: 0.84
+      voltages_vm_clk0b->max_alarm: 3.63
+      voltages_vm_clk0b->max_warning: 3.36
+      voltages_vm_clk0b->min_warning: 3.22
+      voltages_vm_clk0b->min_alarm: 2.97
 
-      voltageVM_CLK0B->max_alarm: 3.56
-      voltageVM_CLK0B->min_alarm: 3.04
+      voltages_vm_clk1b->max_alarm: 3.63
+      voltages_vm_clk1b->max_warning: 3.36
+      voltages_vm_clk1b->min_warning: 3.21
+      voltages_vm_clk1b->min_alarm: 2.97
 
-      voltageVM_CLK1B->max_alarm: 3.56
-      voltageVM_CLK1B->min_alarm: 3.04
+      voltages_vm_ddr0_vtt->max_alarm: 0.75
+      voltages_vm_ddr0_vtt->max_warning: 0.623
+      voltages_vm_ddr0_vtt->min_warning: 0.583
+      voltages_vm_ddr0_vtt->min_alarm: 0.57
 
-      voltageVM_DDR0_VTT->max_alarm: 0.65
-      voltageVM_DDR0_VTT->min_alarm: 0.55
+      voltages_vm_ddr1_vdd->max_alarm: 1.5
+      voltages_vm_ddr1_vdd->max_warning: 1.217
+      voltages_vm_ddr1_vdd->min_warning: 1.178
+      voltages_vm_ddr1_vdd->min_alarm: 1.14
 
-      voltageVM_DDR1_VDD->max_alarm: 1.30
-      voltageVM_DDR1_VDD->min_alarm: 1.10
+      voltages_vm_ddr1_vtt->max_alarm: 0.75
+      voltages_vm_ddr1_vtt->max_warning: 0.625
+      voltages_vm_ddr1_vtt->min_warning: 0.587
+      voltages_vm_ddr1_vtt->min_alarm: 0.57
 
-      voltageVM_DDR1_VTT->max_alarm: 0.65
-      voltageVM_DDR1_VTT->min_alarm: 0.55
+      voltages_vm_drvdd->max_alarm: 2
+      voltages_vm_drvdd->max_warning: 1.861
+      voltages_vm_drvdd->min_warning: 1.761
+      voltages_vm_drvdd->min_alarm: 1.707
 
-      voltageVM_DRVDD->max_alarm: 1.89
-      voltageVM_DRVDD->min_alarm: 1.71
+      voltages_vm_dvdd->max_alarm: 1.98
+      voltages_vm_dvdd->max_warning: 1.12
+      voltages_vm_dvdd->min_warning: 1.084
+      voltages_vm_dvdd->min_alarm: 1.05
 
-      voltageVM_DVDD->max_alarm: 1.19
-      voltageVM_DVDD->min_alarm: 1.01
+      voltages_vm_fe0->max_alarm: 4
+      voltages_vm_fe0->max_warning: 3.6
+      voltages_vm_fe0->min_warning: 3.44
+      voltages_vm_fe0->min_alarm: 3.244
 
-      voltageVM_FE0->max_alarm: 3.78
-      voltageVM_FE0->min_alarm: 3.22
+      voltages_vm_fe1->max_alarm: 4
+      voltages_vm_fe1->max_warning: 3.6
+      voltages_vm_fe1->min_warning: 3.44
+      voltages_vm_fe1->min_alarm: 3.257
 
-      voltageVM_FE1->max_alarm: 3.78
-      voltageVM_FE1->min_alarm: 3.22
+      voltages_vm_mgt0_aux->max_alarm: 1.9
+      voltages_vm_mgt0_aux->max_warning: 1.837
+      voltages_vm_mgt0_aux->min_warning: 1.751
+      voltages_vm_mgt0_aux->min_alarm: 1.72
 
-      voltageVM_MGT0_AUX->max_alarm: 1.94
-      voltageVM_MGT0_AUX->min_alarm: 1.66
+      voltages_vm_mgt1_aux->max_alarm: 1.9
+      voltages_vm_mgt1_aux->max_warning: 1.836
+      voltages_vm_mgt1_aux->min_warning: 1.75
+      voltages_vm_mgt1_aux->min_alarm: 1.72
 
-      voltageVM_MGT1_AUX->max_alarm: 1.94
-      voltageVM_MGT1_AUX->min_alarm: 1.66
+      voltages_vm_pll->max_alarm: 3.6
+      voltages_vm_pll->max_warning: 3.36
+      voltages_vm_pll->min_warning: 3.21
+      voltages_vm_pll->min_alarm: 3.135
 
-      voltageVM_PLL->max_alarm: 3.56
-      voltageVM_PLL->min_alarm: 3.04
-
-      voltageVM_SW_AMP->max_alarm: 3.78
-      voltageVM_SW_AMP->min_alarm: 3.22
+      voltages_vm_sw_amp->max_alarm: 4
+      voltages_vm_sw_amp->max_warning: 3.65
+      voltages_vm_sw_amp->min_warning: 3.42
+      voltages_vm_sw_amp->min_alarm: 3.24
 
     MccsSubrack:
-      backplaneTemperatures->max_alarm: 50.0
-      backplaneTemperatures->max_warning: 45.0
-      backplaneTemperatures->min_warning: 15.0
-      backplaneTemperatures->min_alarm: 10.0
+      backplaneTemperatures->max_alarm: 65
+      backplaneTemperatures->max_warning: 55
+      backplaneTemperatures->min_warning: 10
+      backplaneTemperatures->min_alarm: 5
 
       subrackMaxFanSpeeds->max_alarm: 9750
       subrackMaxFanSpeeds->max_warning: 8125
       subrackMaxFanSpeeds->min_warning: 4875
       subrackMaxFanSpeeds->min_alarm: 1625
 
-      boardTemperatures->max_alarm: 50.0
-      boardTemperatures->max_warning: 45.0
-      boardTemperatures->min_warning: 15.0
-      boardTemperatures->min_alarm: 10.0
+      psuDeadCount->max_alarm: 2
+      psuDeadCount->max_warning: 1
+      psuDeadCount->min_warning: "Not specified"
+      psuDeadCount->min_alarm: "Not specified"
 
-      powerSupplyPowers->max_alarm: 600.0
-      powerSupplyPowers->max_warning: 550.0
+      boardTemperatures->max_alarm: 58
+      boardTemperatures->max_warning: 48
+      boardTemperatures->min_warning: 10
+      boardTemperatures->min_alarm: 5
+
+      powerSupplyPowers->max_alarm: 1200
+      powerSupplyPowers->max_warning: 620
+      powerSupplyPowers->min_warning: "Not specified"
+      powerSupplyPowers->min_alarm: "Not specified"
 
       powerSupplyVoltages->max_alarm: 12.6
+      powerSupplyVoltages->max_warning: 12.24
+      powerSupplyVoltages->min_warning: 11.76
       powerSupplyVoltages->min_alarm: 11.4
 
-      internalVoltages1V1->max_alarm: 1.13
-      internalVoltages1V1->min_alarm: 1.07
+      internalVoltages1V1->max_alarm: 1.55
+      internalVoltages1V1->max_warning: 1.134
+      internalVoltages1V1->min_warning: 1.064
+      internalVoltages1V1->min_alarm: 0.969
 
-      internalVoltages1V5->max_alarm: 1.54
-      internalVoltages1V5->min_alarm: 1.46
+      internalVoltages1V5->max_alarm: 2
+      internalVoltages1V5->max_warning: 1.54
+      internalVoltages1V5->min_warning: 1.456
+      internalVoltages1V5->min_alarm: 1.377
 
-      internalVoltages2V5->max_alarm: 2.62
-      internalVoltages2V5->min_alarm: 2.38
+      internalVoltages2V5->max_alarm: 2.725
+      internalVoltages2V5->max_warning: 2.61
+      internalVoltages2V5->min_warning: 2.43
+      internalVoltages2V5->min_alarm: 2.25
 
-      internalVoltages2V8->max_alarm: 2.94
-      internalVoltages2V8->min_alarm: 2.66
+      internalVoltages2V8->max_alarm: 3.6
+      internalVoltages2V8->max_warning: 2.97
+      internalVoltages2V8->min_warning: 2.71
+      internalVoltages2V8->min_alarm: 2.594
 
-      internalVoltages3V->max_alarm: 3.15
-      internalVoltages3V->min_alarm: 2.85
+      internalVoltages3V->max_alarm: 3.4
+      internalVoltages3V->max_warning: 3.1
+      internalVoltages3V->min_warning: 2.89
+      internalVoltages3V->min_alarm: 2.698
 
-      internalVoltages3V3->max_alarm: 3.46
-      internalVoltages3V3->min_alarm: 3.13
+      internalVoltages3V3->max_alarm: 3.6
+      internalVoltages3V3->max_warning: 3.44
+      internalVoltages3V3->min_warning: 3.23
+      internalVoltages3V3->min_alarm: 2.375
 
-      internalVoltages5V->max_alarm: 5.25
-      internalVoltages5V->min_alarm: 4.75
+      internalVoltages5V->max_alarm: 5.5
+      internalVoltages5V->max_warning: 5.21
+      internalVoltages5V->min_warning: 4.86
+      internalVoltages5V->min_alarm: 4.6
 
-      internalVoltagesARM->max_alarm: 1.42
-      internalVoltagesARM->min_alarm: 1.28
+      internalVoltagesARM->max_alarm: 1.6
+      internalVoltagesARM->max_warning: 1.434
+      internalVoltagesARM->min_warning: 1.254
+      internalVoltagesARM->min_alarm: 1.166
 
-      internalVoltagesCORE->max_alarm: 1.24
-      internalVoltagesCORE->min_alarm: 1.16
+      internalVoltagesCORE->max_alarm: 1.32
+      internalVoltagesCORE->max_warning: 1.264
+      internalVoltagesCORE->min_warning: 1.154
+      internalVoltagesCORE->min_alarm: 1.088
 
-      internalVoltagesDDR->max_alarm: 1.39
-      internalVoltagesDDR->min_alarm: 1.31
+      internalVoltagesDDR->max_alarm: 1.75
+      internalVoltagesDDR->max_warning: 1.447
+      internalVoltagesDDR->min_warning: 1.265
+      internalVoltagesDDR->min_alarm: 1.171
 
-      internalVoltagesPOWERIN->max_alarm: 12.60
-      internalVoltagesPOWERIN->min_alarm: 11.40
+      internalVoltagesPOWERIN->max_alarm: 12.6
+      internalVoltagesPOWERIN->max_warning: 12.26
+      internalVoltagesPOWERIN->min_warning: 11.58
+      internalVoltagesPOWERIN->min_alarm: 11.4
 
-      internalVoltagesSOC->max_alarm: 1.39
-      internalVoltagesSOC->min_alarm: 1.31
+      internalVoltagesSOC->max_alarm: 1.6
+      internalVoltagesSOC->max_warning: 1.397
+      internalVoltagesSOC->min_warning: 1.299
+      internalVoltagesSOC->min_alarm: 1.182
 
       tpmVoltages->max_alarm: 12.6
+      tpmVoltages->max_warning: 12.26
+      tpmVoltages->min_warning: 11.58
       tpmVoltages->min_alarm: 11.4
 
-      tpmPowers->max_alarm: 120.0
+      tpmPowers->max_alarm: 130
+      tpmPowers->max_warning: 125
+      tpmPowers->min_warning: "Not specified"
+      tpmPowers->min_alarm: "Not specified"
+
+      subrackFanSpeeds->max_alarm: 7150
+      subrackFanSpeeds->max_warning: "Not specified"
+      subrackFanSpeeds->min_warning: "Not specified"
+      subrackFanSpeeds->min_alarm: "Not specified"
+
+      subrackFanSpeedsPercent->max_alarm: "Not specified"
+      subrackFanSpeedsPercent->max_warning: 90
+      subrackFanSpeedsPercent->min_warning: 20
+      subrackFanSpeedsPercent->min_alarm: "Not specified"
+
+      psu1PowerIn->max_alarm: 1345
+      psu1PowerIn->max_warning: 676
+      psu1PowerIn->min_warning: "Not specified"
+      psu1PowerIn->min_alarm: "Not specified"
+
+      psu1PowerOut->max_alarm: 1200
+      psu1PowerOut->max_warning: 620
+      psu1PowerOut->min_warning: "Not specified"
+      psu1PowerOut->min_alarm: "Not specified"
+
+      psu1VoltageIn->max_alarm: 305
+      psu1VoltageIn->max_warning: 253
+      psu1VoltageIn->min_warning: 207
+      psu1VoltageIn->min_alarm: 90
+
+      psu1VoltageOut->max_alarm: 12.6
+      psu1VoltageOut->max_warning: 12.24
+      psu1VoltageOut->min_warning: 11.76
+      psu1VoltageOut->min_alarm: 11.4
+
+      psu2PowerIn->max_alarm: 1345
+      psu2PowerIn->max_warning: 676
+      psu2PowerIn->min_warning: "Not specified"
+      psu2PowerIn->min_alarm: "Not specified"
+
+      psu2PowerOut->max_alarm: 1200
+      psu2PowerOut->max_warning: 620
+      psu2PowerOut->min_warning: "Not specified"
+      psu2PowerOut->min_alarm: "Not specified"
+
+      psu2VoltageIn->max_alarm: 305
+      psu2VoltageIn->max_warning: 253
+      psu2VoltageIn->min_warning: 207
+      psu2VoltageIn->min_alarm: 90
+
+      psu2VoltageOut->max_alarm: 12.6
+      psu2VoltageOut->max_warning: 12.24
+      psu2VoltageOut->min_warning: 11.76
+      psu2VoltageOut->min_alarm: 11.4
+
+      boardPower->max_alarm: 47
+      boardPower->max_warning: 42
+      boardPower->min_warning: "Not specified"
+      boardPower->min_alarm: "Not specified"
+
+      boardMaxPower->max_alarm: 47
+      boardMaxPower->max_warning: 42
+      boardMaxPower->min_warning: "Not specified"
+      boardMaxPower->min_alarm: "Not specified"
+
+      boardPllTemperature->max_alarm: 70
+      boardPllTemperature->max_warning: 60
+      boardPllTemperature->min_warning: 10
+      boardPllTemperature->min_alarm: 5
+
+      powerSupplyFanSpeedsRpm->max_alarm: 29700
+      powerSupplyFanSpeedsRpm->max_warning: 27000
+      powerSupplyFanSpeedsRpm->min_warning: 4200
+      powerSupplyFanSpeedsRpm->min_alarm: 3600
+
+      powerSupplyFetTemperatures->max_alarm: 115
+      powerSupplyFetTemperatures->max_warning: "Not specified"
+      powerSupplyFetTemperatures->min_warning: "Not specified"
+      powerSupplyFetTemperatures->min_alarm: "Not specified"
+
+      powerSupplyInletTemperatures->max_alarm: 65
+      powerSupplyInletTemperatures->max_warning: 40
+      powerSupplyInletTemperatures->min_warning: -5
+      powerSupplyInletTemperatures->min_alarm: -5
+
+      # ---------------------------------------------------------------
+      # SMM API 1.8.0 only. A 1.6.0 board does not report these points, so
+      # they do not feed its health.
+      # ---------------------------------------------------------------
+      internalVoltagesPOWERINMIN->max_alarm: 12.6
+      internalVoltagesPOWERINMIN->max_warning: 12.26
+      internalVoltagesPOWERINMIN->min_warning: 11.58
+      internalVoltagesPOWERINMIN->min_alarm: 11.4
+
+      internalVoltagesPOWERINMAX->max_alarm: 12.6
+      internalVoltagesPOWERINMAX->max_warning: 12.26
+      internalVoltagesPOWERINMAX->min_warning: 11.58
+      internalVoltagesPOWERINMAX->min_alarm: 11.4
+
+      # The thresholds allow a count of 0 only. Tango limits are inclusive, so
+      # a limit of 1 flags any count above 0.
+      boardApllUnlockCount->max_alarm: 1
+      boardApllUnlockCount->max_warning: "Not specified"
+      boardApllUnlockCount->min_warning: "Not specified"
+      boardApllUnlockCount->min_alarm: "Not specified"
+
+      boardDpllUnlockCount->max_alarm: "Not specified"
+      boardDpllUnlockCount->max_warning: 1
+      boardDpllUnlockCount->min_warning: "Not specified"
+      boardDpllUnlockCount->min_alarm: "Not specified"
+
+      boardSysclkEventCount->max_alarm: 1
+      boardSysclkEventCount->max_warning: "Not specified"
+      boardSysclkEventCount->min_warning: "Not specified"
+      boardSysclkEventCount->min_alarm: "Not specified"
+
+      tpmMinVoltages->max_alarm: 12.6
+      tpmMinVoltages->max_warning: 12.26
+      tpmMinVoltages->min_warning: 11.58
+      tpmMinVoltages->min_alarm: 11.4
+
+      tpmMaxVoltages->max_alarm: 12.6
+      tpmMaxVoltages->max_warning: 12.26
+      tpmMaxVoltages->min_warning: 11.58
+      tpmMaxVoltages->min_alarm: 11.4
+
+      # The lower limits are left out, as for tpmPowers, because an empty or
+      # powered off bay draws no power.
+      tpmMaxPowers->max_alarm: 130
+      tpmMaxPowers->max_warning: 125
+      tpmMaxPowers->min_warning: "Not specified"
+      tpmMaxPowers->min_alarm: "Not specified"
 
   # devices:
   #   MccsTile:
@@ -384,10 +662,10 @@ ska-tango-devices:
     # daq:
     #   metadata:
     #     component: daq
-      # image:
-      #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-      #   tag: 9.0.0-dev.cdd6afaaf
-      #   name: ska-low-mccs-daq
+    #   image:
+    #     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+    #     tag: 9.0.0-dev.cdd6afaaf
+    #     name: ska-low-mccs-daq
     spshw:
       metadata:
         component: spshw

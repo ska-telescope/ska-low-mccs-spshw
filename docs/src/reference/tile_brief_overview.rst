@@ -90,7 +90,7 @@ The PPS signal must be stable enough to correctly identify the 100 MHz transitio
 The MccsTile attribute `ppsDelayCorrection` is used to internally shift the PPS signal, in units of 1.25 ns, in order to avoid 
 metastability problems and to unambiguously define the 100 MHz transition with a "reasonable" relative jitter
 between the two signals. This delay can be slightly adjusted by the PPS synchronisation hardware, with the 
-actual value returned in the `ppsDelay` attribute. At each active edge, the alignment of the internal 
+actual value returned in the `timing_pps_delay` attribute. At each active edge, the alignment of the internal 
 PPS is checked, to detect cycle jumps. 
 
 The 100 MHz clock is used to generate an internal version of the PPS, and tis is counted in a second counter. 

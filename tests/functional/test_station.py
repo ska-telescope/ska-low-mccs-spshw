@@ -675,8 +675,8 @@ def _poll_all_tile_attributes(
             # These are documented by the API as do not use unless final tile.
             exclusions.update(
                 {
-                    "fpga0_station_beamformer_flagged_count",
-                    "fpga1_station_beamformer_flagged_count",
+                    "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+                    "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
                 }
             )
         tile_exclusions[tile.dev_name()] = exclusions

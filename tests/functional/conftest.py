@@ -776,8 +776,9 @@ def poll_until_state_change(
     if no_of_iters == 1:
         print(f"{device.healthreport=}")
         pytest.fail(
-            f"device not in desired state, \
-        wanted: {wanted_state}, actual: {device.state()}"
+            f"device {device.dev_name()} not in desired state, "
+            f"wanted: {wanted_state}, actual: {device.state()}, "
+            f"status: {device.status()}"
         )
 
     sleep(2)
@@ -991,13 +992,13 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "longRunningCommandResult",  # deprecated and noisy
         "stationBeamFlagEnabled",  # not allowed when initialising.
         # OverflowError: Value is too large error (related SKB-1397 ?)
-        "fpga0_station_beamformer_error_count",
+        "dsp_station_beamf_ddr_parity_error_count_fpga0",
         # OverflowError: Value is too large error (related SKB-1397 ?)
-        "fpga1_station_beamformer_error_count",
+        "dsp_station_beamf_ddr_parity_error_count_fpga1",
         "_lrcEvent",  # Requires more setup than the test performs.
         "timing_pll_40g_count",  # Only available in specific bios versions.
     ] + [
-        f"temperatureADC{i}" for i in range(16)
+        f"temperatures_adc{i}" for i in range(16)
     ]  # Only available in > 2 Hardware versions
 
 

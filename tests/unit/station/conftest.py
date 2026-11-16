@@ -241,16 +241,16 @@ def mock_tile_builder_fixture(
     builder.add_attribute("preaduLevels", np.array([22.0] * 32))
     builder.add_attribute("adcPower", np.array([17.0] * 32))
     builder.add_attribute("staticTimeDelays", np.array([0] * 32))
-    builder.add_attribute("ppsDelay", 0)
+    builder.add_attribute("timing_pps_delay", 0)
     builder.add_attribute("ppsDelayCorrection", 0)
     builder.add_attribute("cspRounding", np.array([2] * 384))
     builder.add_attribute("channeliserRounding", np.array([3] * 512))
-    builder.add_attribute("boardTemperature", 25.0)
-    builder.add_attribute("fpga1Temperature", 25.0)
-    builder.add_attribute("fpga2Temperature", 25.0)
+    builder.add_attribute("temperatures_board", 25.0)
+    builder.add_attribute("temperatures_fpga0", 25.0)
+    builder.add_attribute("temperatures_fpga1", 25.0)
     builder.add_attribute("sysrefPresent", True)
     builder.add_attribute("pllLocked", True)
-    builder.add_attribute("ppsPresent", True)
+    builder.add_attribute("timing_pps_present", True)
     builder.add_attribute("clockPresent", True)
     builder.add_attribute("testGeneratorActive", False)
     builder.add_attribute("isBeamformerRunning", False)
@@ -259,10 +259,14 @@ def mock_tile_builder_fixture(
     builder.add_attribute("beamformerRegions", tile_initial_beamformer_regions)
     builder.add_attribute("tileProgrammingState", "Unknown")
     builder.add_attribute("pointingDelays", tile_initial_pointing_delays)
+    builder.add_attribute(
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0", 0
+    )
+    builder.add_attribute(
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1", 0
+    )
     builder.add_attribute("fortyGPacketCount", "{}")
     builder.add_attribute("fortyGbCoreConfigurations", "[]")
-    builder.add_attribute("fpga0_station_beamformer_flagged_count", 0)
-    builder.add_attribute("fpga1_station_beamformer_flagged_count", 0)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
@@ -582,8 +586,8 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             """
             argin_dict = json.loads(argin)
             device = argin_dict["device"]
-            health = argin_dict["health"]
-            self._health_rollup.health_changed(source=device, health=health)
+            health = HealthState(argin_dict["health"])
+            self._rollup_health_changed(source=device, health=health)
 
         @command()
         def MockCalibrationDataReceived(
@@ -680,8 +684,14 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             """
             args = json.loads(argin)
             for attr, key in (
-                ("fpga0_station_beamformer_flagged_count", "fpga0_count"),
-                ("fpga1_station_beamformer_flagged_count", "fpga1_count"),
+                (
+                    "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
+                    "fpga0_count",
+                ),
+                (
+                    "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
+                    "fpga1_count",
+                ),
             ):
                 self.component_manager._on_tile_attribute_change(
                     args["tile_id"],

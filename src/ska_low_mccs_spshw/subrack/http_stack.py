@@ -120,6 +120,7 @@ class HttpPollResponse:
         """Initialise a new instance."""
         self._query_responses: dict[str, Any] = {}
         self._command_responses: dict[str, Any] = {}
+        self._command_failure: str | None = None
 
     def add_query_response(
         self: HttpPollResponse,
@@ -165,6 +166,24 @@ class HttpPollResponse:
         """
         return dict(self._command_responses)
 
+    def set_command_failure(self: HttpPollResponse, info: str) -> None:
+        """
+        Record that the board reported the completed command as failed.
+
+        :param info: the board's description of the failure.
+        """
+        self._command_failure = info
+
+    @property
+    def command_failure(self: HttpPollResponse) -> str | None:
+        """
+        Return the board's description of a failed command, if any.
+
+        :return: the description of the failure, or None if no completed
+            command was reported as failed.
+        """
+        return self._command_failure
+
     def __eq__(self: HttpPollResponse, other: object) -> bool:
         """
         Check for equality with another object.
@@ -178,5 +197,7 @@ class HttpPollResponse:
         if self._query_responses != other._query_responses:
             return False
         if self._command_responses != other._command_responses:
+            return False
+        if self._command_failure != other._command_failure:
             return False
         return True

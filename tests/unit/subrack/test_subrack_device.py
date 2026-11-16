@@ -13,7 +13,7 @@ import gc
 import json
 import math
 import time
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 import numpy as np
 import pytest
@@ -36,7 +36,11 @@ from ska_low_mccs_spshw.subrack import (
     SubrackSimulator,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
-from tests.test_tools import LRCManager, wait_for_condition
+from tests.test_tools import (
+    LRCManager,
+    subrack_simulator_config_for,
+    wait_for_condition,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -137,6 +141,24 @@ def filter_type_fixture(request: pytest.FixtureRequest) -> str | None:
     if hasattr(request, "param"):
         return request.param
     return None
+
+
+@pytest.fixture(name="subrack_simulator")
+def subrack_simulator_fixture(
+    subrack_simulator_config: dict[str, Any],
+) -> SubrackSimulator:
+    """
+    Return a subrack simulator emulating version 1.8.0 of the web API.
+
+    :param subrack_simulator_config: a keyword dictionary that specifies
+        the desired configuration of the simulator backend.
+
+    :return: a subrack simulator.
+    """
+    return SubrackSimulator(
+        bios_version="1.8.0",
+        **subrack_simulator_config_for(subrack_simulator_config, "1.8.0"),
+    )
 
 
 @pytest.fixture(name="test_context")
@@ -633,19 +655,12 @@ def test_monitoring_and_control(
         PowerState.OFF
     )
 
-    fan_to_change = 1
-    percent_to_set = 99.0
-    power_supply_fan_speeds = subrack_device.powerSupplyFanSpeeds
-    expected_speeds = [pytest.approx(i) for i in power_supply_fan_speeds]
-    expected_speeds[fan_to_change - 1] = pytest.approx(percent_to_set)
-
-    json_kwargs = json.dumps(
-        {"power_supply_fan_id": fan_to_change, "speed_percent": percent_to_set}
-    )
-    _ = subrack_device.SetPowerSupplyFanSpeed(json_kwargs)
-    change_event_callbacks["powerSupplyFanSpeeds"].assert_change_event(
-        expected_speeds, lookahead=5, consume_nonmatches=True
-    )
+    # API 1.8.0 has no set_power_supply_fan_speed command, so the command
+    # is rejected before it is queued.
+    with pytest.raises(tango.DevFailed, match="not supported by subrack API v1.8.0"):
+        subrack_device.SetPowerSupplyFanSpeed(
+            json.dumps({"power_supply_fan_id": 1, "speed_percent": 99.0})
+        )
 
     fan_to_change = 2
     percent_to_set = 49.0
@@ -1309,6 +1324,7 @@ def test_psu_dead_count_health_transitions(
     subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    change_alarms: Callable[..., None],
 ) -> None:
     """
     Test that the derived dead PSU count drives attribute-based health.
@@ -1317,6 +1333,8 @@ def test_psu_dead_count_health_transitions(
     :param subrack_simulator: Simulator for the backend subrack.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param change_alarms: changes alarm thresholds, and changes them back
+        after the test.
     """
     assert subrack_device.adminMode == AdminMode.OFFLINE
 
@@ -1353,17 +1371,8 @@ def test_psu_dead_count_health_transitions(
         HealthState.OK, lookahead=2, consume_nonmatches=True
     )
 
-    # Change alarm thresholds on voltage out before we change the value so that
-    # the voltage attr does not alarm and we can cleanly see the dead psu detection
-    original_psu1_voltage_config = subrack_device.get_attribute_config(
-        "psu1VoltageOut".lower()
-    )
-    new_attribute_config = original_psu1_voltage_config
-    alarm_config = new_attribute_config.alarms
-    alarm_config.min_warning = str(0)
-    alarm_config.min_alarm = str(0)
-    new_attribute_config.alarms = alarm_config
-    subrack_device.set_attribute_config(new_attribute_config)
+    # The chart gives these limits in a deployment.
+    change_alarms(subrack_device, "psuDeadCount", max_warning="1", max_alarm="2")
 
     subrack_simulator._set_attribute("power_supply_voltages", [0.1, 12.0], _force=True)
 
@@ -1373,25 +1382,11 @@ def test_psu_dead_count_health_transitions(
     change_event_callbacks["healthState"].assert_change_event(HealthState.DEGRADED)
     assert subrack_device.state() == DevState.ALARM
 
-    original_psu2_voltage_config = subrack_device.get_attribute_config(
-        "psu2VoltageOut".lower()
-    )
-    new_attribute_config = original_psu2_voltage_config
-    alarm_config = new_attribute_config.alarms
-    alarm_config.min_warning = str(0)
-    alarm_config.min_alarm = str(0)
-    new_attribute_config.alarms = alarm_config
-    subrack_device.set_attribute_config(new_attribute_config)
-
     subrack_simulator._set_attribute("power_supply_voltages", [0.1, 0.1], _force=True)
     change_event_callbacks["psuDeadCount"].assert_change_event(2)
     change_event_callbacks["healthState"].assert_change_event(HealthState.FAILED)
     time.sleep(1)
     assert subrack_device.state() == DevState.ALARM
-
-    # Reset thresholds.
-    subrack_device.set_attribute_config(original_psu1_voltage_config)
-    subrack_device.set_attribute_config(original_psu2_voltage_config)
 
     subrack_simulator._set_attribute("power_supply_voltages", [12.1, 12.2], _force=True)
     change_event_callbacks["psuDeadCount"].assert_change_event(0)
@@ -1453,7 +1448,11 @@ def test_tpm_voltages_none_replaced_with_zero_when_tpm_powered_off(
     voltages_with_none = [None, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0]
     currents_with_none = [None, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
     subrack_simulator.simulate_attribute("tpm_voltages", voltages_with_none)
-    subrack_simulator.simulate_attribute("tpm_currents", currents_with_none)
+    powers_with_none = [
+        None if c is None or v is None else c * v
+        for c, v in zip(currents_with_none, voltages_with_none)
+    ]
+    subrack_simulator.simulate_attribute("tpm_powers", powers_with_none)
 
     # The device must not crash; None elements must be replaced with np.nan.
     expected_voltages = np.array(
@@ -1533,7 +1532,9 @@ def test_subrack_device_tpm_attribute_filtering(
     for i in range(voltages.shape[0]):
         # For each new set of values, set the values in the simulator
         subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
-        subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())
+        subrack_simulator.simulate_attribute(
+            "tpm_powers", (currents[i] * voltages[i]).tolist()
+        )
 
         # Then we need ot wait 1 seconds for the values to be polled
         # We add 2 ticks of 0.1 seconds to ensure this definitely happens
@@ -1637,7 +1638,9 @@ def test_subrack_device_attribute_filter_type_changed(
 
         # For each new set of values, set the values in the simulator
         subrack_simulator.simulate_attribute("tpm_voltages", voltages[i].tolist())
-        subrack_simulator.simulate_attribute("tpm_currents", currents[i].tolist())
+        subrack_simulator.simulate_attribute(
+            "tpm_powers", (currents[i] * voltages[i]).tolist()
+        )
 
         # Then we need ot wait 1 seconds for the values to be polled
         # We add 2 ticks of 0.1 seconds to ensure this definitely happens

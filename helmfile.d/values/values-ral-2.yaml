@@ -63,10 +63,8 @@ helm_values:
           BiosVersion: 0.6.0
           HardwareVersion: v2.0.2a
           PreAduFitted: [false, false]
-      MccsSubrack: # SPRTS-787
+      MccsSubrack:
         low-mccs/subrack/stfc-ral-2-sr2:
-          tpmPowers->max_alarm: 124.0
-
           # override minimum alarm threshold as fan is broken
           # this will fail multiple tests.
           subrackMaxFanSpeeds->min_warning: "Not specified"

@@ -33,7 +33,7 @@ from ska_control_model import (
     PowerState,
     ResultCode,
 )
-from ska_control_model.health_rollup import HealthRollup, HealthSummary
+from ska_control_model.health_rollup import HealthRollup, HealthSummary, health_report
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.faults import CmdNotAllowedError
 from ska_tango_base.long_running_commands import LRCReqType
@@ -153,8 +153,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         super().__init__(*args, **kwargs)
 
-        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_state = HealthState.UNKNOWN
         self._health_report: str = ""
+        self._health_summary: HealthSummary = {}
+        self._health_timestamp: float
         # Need to dynamically define the health rollup members based on deployment.
         self._use_new_health_model: bool
         self._health_model: SpsStationHealthModel
@@ -215,12 +217,16 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
         self.init_completed()
 
+    # pylint: disable-next=too-many-statements
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
         self._obs_state_model = SpsStationObsStateModel(
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+        self.set_change_event("healthReport", True, True)
+        self.set_archive_event("healthReport", True, True)
+        self._health_timestamp = time.time()
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
@@ -494,7 +500,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Redefine the health rollup members and thresholds.
 
         Redefines the health rollup following a change in subdevice thresholds.
-        This pulls the old/current healths from the health report, instantiates
+        This pulls the old/current healths from the health summary, instantiates
         a new health_rollup instance and restores those healthstates.
         """
 
@@ -523,14 +529,30 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             return _flatten(d)
 
         # Pull out the old healthstates.
-        old_report = json.loads(self._health_report)
-        old_subdevice_healths = _flatten_dict(old_report)
+        old_subdevice_healths = _flatten_dict(self._health_summary)
+        self._health_timestamp = time.time()
         old_online = self._health_rollup.online
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
         # Restore old healthstates.
         for subdevice, health in old_subdevice_healths.items():
-            self._health_rollup.health_changed(subdevice, cast(HealthState, health))
+            self._rollup_health_changed(subdevice, cast(HealthState, health))
+
+    def _rollup_health_changed(
+        self: SpsStation, source: str, health: HealthState
+    ) -> None:
+        """
+        Report a change in the health of a source to the health rollup.
+
+        The timestamp is taken before the rollup is updated, because the
+        rollup calls the healthState and healthReport callbacks
+        synchronously, and both of them read this timestamp.
+
+        :param source: name of the source whose health changed.
+        :param health: the new health state of the source.
+        """
+        self._health_timestamp = time.time()
+        self._health_rollup.health_changed(source, health)
 
     # ----------
     # Callbacks
@@ -556,6 +578,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     def _update_admin_mode(self: SpsStation, admin_mode: AdminMode) -> None:
         super()._update_admin_mode(admin_mode)
+        self._health_timestamp = time.time()
         self._health_rollup.online = admin_mode in [
             AdminMode.ENGINEERING,
             AdminMode.ONLINE,
@@ -611,7 +634,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
             if health is not None:
                 if device_name in self._health_rollup_devices:
-                    self._health_rollup.health_changed(device_name, health)
+                    self._rollup_health_changed(device_name, health)
                 else:
                     self.logger.warning(f"{device_name} is not in health rollup")
         else:
@@ -710,11 +733,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._health_model.update_state(pps_delay_spread=pps_delay_spread)
             # Check if pps_delay_spread is beyond thresholds, update health.
             if pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
-                self._health_rollup.health_changed("self", HealthState.FAILED)
+                self._rollup_health_changed("self", HealthState.FAILED)
             elif pps_delay_spread >= self._health_thresholds["pps_delta_degraded"]:
-                self._health_rollup.health_changed("self", HealthState.DEGRADED)
+                self._rollup_health_changed("self", HealthState.DEGRADED)
             else:
-                self._health_rollup.health_changed("self", HealthState.OK)
+                self._rollup_health_changed("self", HealthState.OK)
 
         if "beamformerDaisyChainValid" in state_change:
             # None means the chain can no longer be verified (e.g. a tile's
@@ -730,9 +753,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 daisy_chain_health = HealthState.OK
             else:
                 daisy_chain_health = HealthState.FAILED
-            self._health_rollup.health_changed(
-                "beamformer_daisy_chain", daisy_chain_health
-            )
+            self._rollup_health_changed("beamformer_daisy_chain", daisy_chain_health)
 
         if "tileDataRoutingValid" in state_change:
             routing_valid = state_change["tileDataRoutingValid"]
@@ -762,7 +783,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 flagged_count_health = HealthState.OK
             else:
                 flagged_count_health = HealthState.DEGRADED
-            self._health_rollup.health_changed(
+            self._rollup_health_changed(
                 "beamformer_flagged_count", flagged_count_health
             )
 
@@ -797,11 +818,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             if all(tpm_state == "Off" for tpm_state in tile_programming_state) or all(
                 tpm_state == "Synchronised" for tpm_state in tile_programming_state
             ):
-                self._health_rollup.health_changed(
-                    "tile_programming_state", HealthState.OK
-                )
+                self._rollup_health_changed("tile_programming_state", HealthState.OK)
             else:
-                self._health_rollup.health_changed(
+                self._rollup_health_changed(
                     "tile_programming_state", HealthState.FAILED
                 )
         pointing_delays = state_change.get("pointingdelays")
@@ -836,7 +855,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :param health: the new health value
         """
         if self._use_new_health_model:
-            self._health_state = health
+            # The healthReport event carries the same timestamp.
+            self._health_state = (
+                health,
+                self._health_timestamp,
+                AttrQuality.ATTR_VALID,
+            )
 
     def _old_health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -866,7 +890,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :param health_summary: the new health summary
         """
-        self._health_report = json.dumps(health_summary)
+        self._health_summary = health_summary
+        self._health_report = json.dumps(health_report(health_summary))
+        if self._use_new_health_model:
+            # The healthState event carries the same timestamp.
+            self.push_change_event(
+                "healthReport",
+                self._health_report,
+                self._health_timestamp,
+                AttrQuality.ATTR_VALID,
+            )
+            self.push_archive_event(
+                "healthReport",
+                self._health_report,
+                self._health_timestamp,
+                AttrQuality.ATTR_VALID,
+            )
 
     # ----------
     # Attributes

@@ -2694,9 +2694,8 @@ def test_tile_data_routing_csp_ingest(
     """
     Test that the routing follows the station's CSP ingest configuration.
 
-    The routing is invalid while CSP ingest is not configured, and
-    becomes invalid when CSP ingest is moved until the last tile reports
-    the new route.
+    The routing is not checked, so valid, while CSP ingest is not
+    configured. Once it is configured, the last tile's routes must match it.
 
     :param station_component_manager: the SPS station component manager under test
     :param num_tiles: number of TPMs in the test.
@@ -2711,42 +2710,40 @@ def test_tile_data_routing_csp_ingest(
         _set_beamformer_routes(
             station_component_manager, tile_id, beamformer_routes[tile_id]
         )
-    _set_beamformer_routes(
-        station_component_manager,
-        last,
-        [
-            {
-                "core_id": 0,
-                "arp_table_entry": 0,
-                "destination_ip": "0.0.0.0",
-                "destination_port": 4660,
-            },
-            {
-                "core_id": 1,
-                "arp_table_entry": 0,
-                "destination_ip": "0.0.0.0",
-                "destination_port": 4660,
-            },
-            {
-                "core_id": 0,
-                "arp_table_entry": 1,
-                "destination_ip": "0.0.0.0",
-                "destination_port": 4660,
-            },
-            {
-                "core_id": 1,
-                "arp_table_entry": 1,
-                "destination_ip": "0.0.0.0",
-                "destination_port": 4660,
-            },
-        ],
-    )
-    # The last tile matches, but CSP ingest has not been configured.
-    assert station_component_manager.tile_data_routing_valid is False
+    unconfigured_routes = [
+        {
+            "core_id": 0,
+            "arp_table_entry": 0,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+        },
+        {
+            "core_id": 1,
+            "arp_table_entry": 0,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+        },
+        {
+            "core_id": 0,
+            "arp_table_entry": 1,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+        },
+        {
+            "core_id": 1,
+            "arp_table_entry": 1,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+        },
+    ]
+    _set_beamformer_routes(station_component_manager, last, unconfigured_routes)
+    # CSP ingest has not been configured, so the routes are not checked.
+    assert station_component_manager.tile_data_routing_valid is True
 
     _mock_last_tile(station_component_manager, PowerState.ON, ResultCode.OK)
     station_component_manager.set_csp_ingest(csp_ingest_ip, 0xF0D0, csp_ingest_port)
-    # The last tile has not yet reported the new route.
+    # The last tile still reports its old routes, which are now checked.
+    _set_beamformer_routes(station_component_manager, last, unconfigured_routes)
     assert station_component_manager.tile_data_routing_valid is False
 
     _set_beamformer_routes(station_component_manager, last, beamformer_routes[last])
@@ -2867,10 +2864,10 @@ def test_set_csp_ingest_routes_already_match(
     :param csp_ingest_ip: the IP address CSP ingests station beams on.
     :param csp_ingest_port: the port CSP ingests station beams on.
     """
-    _mark_tiles_established(station_component_manager, num_tiles)
-    for tile_id, routes in enumerate(beamformer_routes):
-        _set_beamformer_routes(station_component_manager, tile_id, routes)
-    # CSP ingest has not been configured.
+    _make_tile_data_routing_valid(
+        station_component_manager, beamformer_routes, "10.0.1.20"
+    )
+    # The last tile's routes do not match the configured CSP ingest yet.
     assert station_component_manager.tile_data_routing_valid is False
 
     _mock_last_tile(station_component_manager, PowerState.ON, ResultCode.OK)

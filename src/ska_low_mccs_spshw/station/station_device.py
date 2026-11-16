@@ -1348,9 +1348,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """
         Return whether the TPMs route the station beam to CSP ingest.
 
-        True once the CSP ingest address is configured and the last tile
-        reports 40G routes to the CSP ingest address and port on ARP table
-        entries 0 and 1 of both cores.
+        True once the last tile reports 40G routes to the CSP ingest
+        address and port on ARP table entries 0 and 1 of both cores. Also
+        True if no CSP ingest address is configured, as the routing is then
+        not checked.
 
         :return: True if the tile data routing is correctly configured.
         """

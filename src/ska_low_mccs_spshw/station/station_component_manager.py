@@ -1859,16 +1859,19 @@ class SpsStationComponentManager(
         the first stage that does not: False if it failed, or None if it
         cannot yet be verified.
         """
-        for check in (
-            self._check_daisy_chain_tiles_on,
-            self._check_daisy_chain_tiles_online,
-            self._check_daisy_chain_tiles_initialised,
-            self._validate_beamformer_daisy_chain_ips,
-            self._check_daisy_chain_tiles_receiving,
-        ):
-            valid = check()
-            if not valid:
-                break
+        valid: Optional[bool] = True
+        power_states = list(self._tile_power_states.values())
+        if not all(power == PowerState.OFF for power in power_states):
+            for check in (
+                self._check_daisy_chain_tiles_on,
+                self._check_daisy_chain_tiles_online,
+                self._check_daisy_chain_tiles_initialised,
+                self._validate_beamformer_daisy_chain_ips,
+                self._check_daisy_chain_tiles_receiving,
+            ):
+                valid = check()
+                if not valid:
+                    break
 
         if valid == self._beamformer_daisy_chain_valid:
             return
@@ -1988,15 +1991,20 @@ class SpsStationComponentManager(
         """
         Validate that the station beam is routed to CSP ingest, publishing any change.
 
-        The routing is valid if the CSP ingest address is configured and
-        the last tile sends the station beam to it, and unknown if the
-        address is configured but the last tile's routes are not known.
+        The routing is valid if the last tile sends the station beam to CSP
+        ingest, and unknown if the last tile's routes are not known. If no
+        CSP ingest address is configured (e.g. at a test facility without
+        CSP), there is nothing to check against, so the routing is valid.
         """
-        valid = (
-            self._csp_ingest_address != "0.0.0.0" and self._check_csp_ingest_routes()
-        )
+        unconfigured = self._csp_ingest_address == "0.0.0.0"
+        valid = True if unconfigured else self._check_csp_ingest_routes()
         if valid == self._tile_data_routing_valid:
             return
+        if unconfigured:
+            self.logger.warning(
+                "CSP ingest address is not configured, "
+                "so the station beam routing is not checked"
+            )
         self._tile_data_routing_valid = valid
         if self._component_state_callback:
             self._component_state_callback(tileDataRoutingValid=valid)

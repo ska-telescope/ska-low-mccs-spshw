@@ -765,7 +765,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 routing_health = HealthState.OK
             else:
                 routing_health = HealthState.FAILED
-            self._health_rollup.health_changed("tile_data_routing", routing_health)
+            self._rollup_health_changed("tile_data_routing", routing_health)
 
         if "finalTileBeamformerFlaggedCountOk" in state_change:
             # None means a final tile count is INVALID, so the result can no

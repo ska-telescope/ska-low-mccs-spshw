@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-723] Added new health checks for spsstation
+  that check the beamformer daisy chain, verifying
+  each tile's admin mode, programming state and data
+  routing including csp ingest.
 * [THORN-690] Use MccsCommandProxy to listen for the real result of a
 subrack's On() command during SpsStation's power-on sequence, instead of
 firing it and forgetting the reply. A rejected/failed On() (e.g. because a

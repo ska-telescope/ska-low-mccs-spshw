@@ -682,10 +682,12 @@ class SpsStationComponentManager(
         self._pointing_delays_received: set[int] = set()
         self._tile_dst_ips: dict[int, tuple[str, str]] = {}
         self._beamformer_daisy_chain_valid: Optional[bool] = None
+        self._beamformer_daisy_chain_details: dict[str, str] | None = None
         # None when the final tile's count is INVALID.
         self._final_tile_fpga0_flagged_count: Optional[int] = 0
         self._final_tile_fpga1_flagged_count: Optional[int] = 0
         self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
+        self._final_tile_beamformer_flagged_count_details: dict[str, str] | None = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = np.full(TileData.ADC_CHANNELS, np.nan)
             self._static_delays[logical_tile_id] = np.full(
@@ -1357,7 +1359,9 @@ class SpsStationComponentManager(
         # health_rollup components that were reset to UNKNOWN by
         # HealthStateRollup.online = True would never recover.
         self._beamformer_daisy_chain_valid = None
+        self._beamformer_daisy_chain_details = None
         self._final_tile_beamformer_flagged_count_ok = None
+        self._final_tile_beamformer_flagged_count_details = None
         self._communication_manager.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
@@ -1815,28 +1819,60 @@ class SpsStationComponentManager(
         longer be verified.
         """
         valid: Optional[bool]
+        details: dict[str, str] | None = None
         last = self._number_of_tiles - 1
         for tile_id in range(last):
             ip1, ip2 = self._tile_dst_ips.get(tile_id, ("", ""))
             if not ip1 or not ip2:
                 valid = None
+                details = {
+                    "diagnosis": (
+                        f"Tile {tile_id} has not reported its beamformer "
+                        f"destination IPs: got ({ip1!r}, {ip2!r})"
+                    ),
+                    "remedy": (
+                        f"Check that tile {tile_id} is ON and communicating, "
+                        "and that its dstip40gfpga1 and dstip40gfpga2 can be "
+                        "read. If they are empty, Initialise the station to "
+                        "configure the tiles' 40G ports."
+                    ),
+                }
                 break
             exp1 = str(self._sdn_first_address + 2 * tile_id + 2)
             exp2 = str(self._sdn_first_address + 2 * tile_id + 3)
             if ip1 != exp1 or ip2 != exp2:
-                self.logger.warning(
+                diagnosis = (
                     f"Tile {tile_id} has incorrect beamformer destination IPs: "
                     f"Expected ({exp1}, {exp2}), got ({ip1}, {ip2})"
                 )
+                self.logger.warning(diagnosis)
                 valid = False
+                details = {
+                    "diagnosis": diagnosis,
+                    "remedy": (
+                        "Initialise the station, which sets every tile's "
+                        "beamformer destination IPs. If the error returns, "
+                        "check the SdnFirstInterface device property, and "
+                        "whether the tile's 40G destination was changed "
+                        "by hand."
+                    ),
+                }
                 break
         else:
             valid = True
-        if valid == self._beamformer_daisy_chain_valid:
+        # Fire on a change of details too, e.g. a different tile is now wrong.
+        if (valid, details) == (
+            self._beamformer_daisy_chain_valid,
+            self._beamformer_daisy_chain_details,
+        ):
             return
         self._beamformer_daisy_chain_valid = valid
+        self._beamformer_daisy_chain_details = details
         if self._component_state_callback:
-            self._component_state_callback(beamformerDaisyChainValid=valid)
+            self._component_state_callback(
+                beamformerDaisyChainValid=valid,
+                beamformerDaisyChainDetails=details,
+            )
 
     def _update_beamformer_flagged_count_health(
         self: SpsStationComponentManager,
@@ -1849,22 +1885,58 @@ class SpsStationComponentManager(
         neither count is non-zero but one is INVALID, the status is unknown
         (None).
         """
-        counts = (
-            self._final_tile_fpga0_flagged_count,
-            self._final_tile_fpga1_flagged_count,
-        )
+        fpga = {
+            "fpga0": self._final_tile_fpga0_flagged_count,
+            "fpga1": self._final_tile_fpga1_flagged_count,
+        }
+        non_zero = [f for f, c in fpga.items() if c is not None and c != 0]
+        invalid = [f for f, c in fpga.items() if c is None]
         ok: Optional[bool]
-        if any(count is not None and count != 0 for count in counts):
+        details: dict[str, str] | None = None
+        final_tile = f"Final tile (logical tile id {self._number_of_tiles - 1})"
+        attribute_name = "dsp_station_beamf_discarded_or_flagged_packet_count"
+        if non_zero:
             ok = False
-        elif None in counts:
+            details = {
+                "diagnosis": (
+                    f"{final_tile} has a non-zero {attribute_name} on "
+                    f"{', '.join(non_zero)}"
+                ),
+                "remedy": (
+                    "The station beamformer is discarding or flagging packets "
+                    "(e.g. parity errors). Check the beamformer_daisy_chain "
+                    "and tile_programming_state health first, then compare "
+                    "the same counts on the other tiles to find where in "
+                    "the chain the errors start."
+                ),
+            }
+        elif invalid:
             ok = None
+            details = {
+                "diagnosis": (
+                    f"{final_tile} has an INVALID {attribute_name} on "
+                    f"{', '.join(invalid)}"
+                ),
+                "remedy": (
+                    "The count cannot be read. Check that the final tile is "
+                    "ON and communicating."
+                ),
+            }
         else:
             ok = True
-        if ok == self._final_tile_beamformer_flagged_count_ok:
+        # Fire on a change of details too, e.g. the other FPGA is now non-zero.
+        if (ok, details) == (
+            self._final_tile_beamformer_flagged_count_ok,
+            self._final_tile_beamformer_flagged_count_details,
+        ):
             return
         self._final_tile_beamformer_flagged_count_ok = ok
+        self._final_tile_beamformer_flagged_count_details = details
         if self._component_state_callback:
-            self._component_state_callback(finalTileBeamformerFlaggedCountOk=ok)
+            self._component_state_callback(
+                finalTileBeamformerFlaggedCountOk=ok,
+                finalTileBeamformerFlaggedCountDetails=details,
+            )
 
     def _update_communication_state(
         self: SpsStationComponentManager,
@@ -3544,17 +3616,22 @@ class SpsStationComponentManager(
 
     def _fire_pps_delay_spread(self: SpsStationComponentManager) -> None:
         """Recompute ppsDelaySpread from Synchronised tiles and fire callback."""
-        reported_sync = [
-            self._pps_delays[i]
+        reported_sync = {
+            i: self._pps_delays[i]
             for i in range(self._number_of_tiles)
             if i in self._pps_delays_reported
             and self._tile_programming_state[i] == "Synchronised"
-        ]
+        }
         self._pps_delay_spread = (
-            max(reported_sync) - min(reported_sync) if reported_sync else 0
+            max(reported_sync.values()) - min(reported_sync.values())
+            if reported_sync
+            else 0
         )
         if self._component_state_callback:
-            self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
+            self._component_state_callback(
+                ppsDelaySpread=self._pps_delay_spread,
+                synchronisedPpsDelays=reported_sync,
+            )
 
     @property
     def beamformer_daisy_chain_valid(

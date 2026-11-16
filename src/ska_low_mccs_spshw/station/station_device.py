@@ -155,6 +155,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self._health_state = HealthState.UNKNOWN
         self._health_report: str = ""
+        # Details of each source that is not OK, where the source provides
+        # them: {source: {"diagnosis": ..., "remedy": ...}}.
+        self._health_details: dict[str, dict[str, str]] = {}
+        self._health_details_lock = threading.Lock()
         self._health_summary: HealthSummary = {}
         self._health_timestamp: float
         # Need to dynamically define the health rollup members based on deployment.
@@ -217,6 +221,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
         self.init_completed()
 
+    # pylint: disable-next=too-many-statements
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
         self._obs_state_model = SpsStationObsStateModel(
@@ -225,6 +230,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self.set_change_event("healthReport", True, True)
         self.set_archive_event("healthReport", True, True)
+        self.set_change_event("healthDetails", True, True)
+        self.set_archive_event("healthDetails", True, True)
         self._health_timestamp = time.time()
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
@@ -524,12 +531,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         old_online = self._health_rollup.online
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_rollup.online = old_online
-        # Restore old healthstates.
+        # Restore old healthstates, and their details.
         for subdevice, health in old_subdevice_healths.items():
-            self._rollup_health_changed(subdevice, cast(HealthState, health))
+            self._rollup_health_changed(
+                subdevice,
+                cast(HealthState, health),
+                self._health_details.get(subdevice),
+            )
 
     def _rollup_health_changed(
-        self: SpsStation, source: str, health: HealthState
+        self: SpsStation,
+        source: str,
+        health: HealthState,
+        details: dict[str, str] | None = None,
     ) -> None:
         """
         Report a change in the health of a source to the health rollup.
@@ -540,9 +554,64 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :param source: name of the source whose health changed.
         :param health: the new health state of the source.
+        :param details: why the source is not OK ("diagnosis") and what
+            to do about it ("remedy"), or None if the source does not
+            provide them.
         """
         self._health_timestamp = time.time()
         self._health_rollup.health_changed(source, health)
+        if self._health_rollup.online:
+            # Like the rollup, ignore updates while offline.
+            self._update_health_details(source, health, details)
+
+    def _update_health_details(
+        self: SpsStation,
+        source: str,
+        health: HealthState,
+        details: dict[str, str] | None,
+    ) -> None:
+        """
+        Record the details of a source's health, and push them if they changed.
+
+        A source that is OK, or that gives no details, is removed, so that
+        details never outlive the health they explain.
+
+        :param source: name of the source whose health changed.
+        :param health: the new health state of the source.
+        :param details: why the source is not OK ("diagnosis") and what
+            to do about it ("remedy"), or None if the source does not
+            provide them.
+        """
+        new_details = None if health == HealthState.OK else details
+        with self._health_details_lock:
+            if self._health_details.get(source) == new_details:
+                return
+            if new_details is None:
+                del self._health_details[source]
+            else:
+                self._health_details[source] = new_details
+            self._push_health_details()
+
+    def _push_health_details(self: SpsStation) -> None:
+        """
+        Push healthDetails events.
+
+        The caller must hold the health details lock. The events carry the
+        same timestamp as the healthState and healthReport events.
+        """
+        health_details = json.dumps(self._health_details)
+        self.push_change_event(
+            "healthDetails",
+            health_details,
+            self._health_timestamp,
+            AttrQuality.ATTR_VALID,
+        )
+        self.push_archive_event(
+            "healthDetails",
+            health_details,
+            self._health_timestamp,
+            AttrQuality.ATTR_VALID,
+        )
 
     # ----------
     # Callbacks
@@ -573,6 +642,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             AdminMode.ENGINEERING,
             AdminMode.ONLINE,
         ]
+        if not self._health_rollup.online:
+            # The rollup resets every source to UNKNOWN, so drop their details.
+            with self._health_details_lock:
+                if self._health_details:
+                    self._health_details.clear()
+                    self._push_health_details()
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements, too-many-locals # noqa
@@ -722,12 +797,31 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.push_archive_event("ppsDelaySpread", pps_delay_spread)
             self._health_model.update_state(pps_delay_spread=pps_delay_spread)
             # Check if pps_delay_spread is beyond thresholds, update health.
-            if pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
-                self._rollup_health_changed("self", HealthState.FAILED)
-            elif pps_delay_spread >= self._health_thresholds["pps_delta_degraded"]:
-                self._rollup_health_changed("self", HealthState.DEGRADED)
+            pps_degraded = self._health_thresholds["pps_delta_degraded"]
+            pps_failed = self._health_thresholds["pps_delta_failed"]
+            if pps_delay_spread > pps_failed:
+                pps_health = HealthState.FAILED
+            elif pps_delay_spread >= pps_degraded:
+                pps_health = HealthState.DEGRADED
             else:
-                self._rollup_health_changed("self", HealthState.OK)
+                pps_health = HealthState.OK
+            pps_details = {
+                "diagnosis": (
+                    f"ppsDelaySpread is {pps_delay_spread} (DEGRADED at >= "
+                    f"{pps_degraded}, FAILED at > {pps_failed}). PPS delays of "
+                    "Synchronised tiles, by logical tile id: "
+                    f"{state_change.get('synchronisedPpsDelays')}"
+                ),
+                "remedy": (
+                    "Find the tiles whose PPS delay is furthest from the "
+                    "others, and check the PPS and timing distribution to "
+                    "them (see ppsPresentSummary). If their offset is "
+                    "expected and stable, compensate it with "
+                    "ppsDelayCorrections, which take effect at the next "
+                    "Initialise."
+                ),
+            }
+            self._rollup_health_changed("self", pps_health, pps_details)
 
         if "beamformerDaisyChainValid" in state_change:
             # None means the chain can no longer be verified (e.g. a tile's
@@ -743,7 +837,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 daisy_chain_health = HealthState.OK
             else:
                 daisy_chain_health = HealthState.FAILED
-            self._rollup_health_changed("beamformer_daisy_chain", daisy_chain_health)
+            self._rollup_health_changed(
+                "beamformer_daisy_chain",
+                daisy_chain_health,
+                state_change.get("beamformerDaisyChainDetails"),
+            )
 
         if "finalTileBeamformerFlaggedCountOk" in state_change:
             # None means a final tile count is INVALID, so the result can no
@@ -762,7 +860,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 flagged_count_health = HealthState.DEGRADED
             self._rollup_health_changed(
-                "beamformer_flagged_count", flagged_count_health
+                "beamformer_flagged_count",
+                flagged_count_health,
+                state_change.get("finalTileBeamformerFlaggedCountDetails"),
             )
 
         static_time_delays = state_change.get("staticTimeDelays")
@@ -798,8 +898,27 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             ):
                 self._rollup_health_changed("tile_programming_state", HealthState.OK)
             else:
+                tiles_by_state: dict[str, list[int]] = {}
+                for tile_id, tpm_state in enumerate(tile_programming_state):
+                    tiles_by_state.setdefault(tpm_state, []).append(tile_id)
                 self._rollup_health_changed(
-                    "tile_programming_state", HealthState.FAILED
+                    "tile_programming_state",
+                    HealthState.FAILED,
+                    {
+                        "diagnosis": (
+                            "Tiles should be all Off or all Synchronised. "
+                            "Logical tile ids by programming state: "
+                            f"{tiles_by_state}"
+                        ),
+                        "remedy": (
+                            "Mixed states are expected while the station is "
+                            "powering on or initialising. If they persist, "
+                            "Initialise the station to bring all tiles to "
+                            "Synchronised. A tile in state Unknown is not "
+                            "reporting: check that its device is running and "
+                            "communicating."
+                        ),
+                    },
                 )
         pointing_delays = state_change.get("pointingdelays")
         if pointing_delays is not None:
@@ -1912,6 +2031,26 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         if self._use_new_health_model:
             return self._health_report
         return self._health_model.health_report
+
+    @attribute(
+        dtype="DevString",
+        label="Health Details",
+        doc=(
+            "JSON object mapping each health source that is not OK to a "
+            "diagnosis of its health and a proposed remedy, where the "
+            "source provides them. (New health model.)"
+        ),
+    )
+    def healthDetails(self: SpsStation) -> str:
+        """
+        Get the health details.
+
+        :return: JSON object mapping each health source that is not OK
+            to {"diagnosis": ..., "remedy": ...}, where the source
+            provides them.
+        """
+        with self._health_details_lock:
+            return json.dumps(self._health_details)
 
     @attribute(
         dtype="DevString",

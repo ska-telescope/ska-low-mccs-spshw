@@ -116,6 +116,7 @@ _CACHED_TILE_ATTRIBUTES = (
     "cspRounding",
     "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
     "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
+    "healthReport",
 )
 
 
@@ -204,6 +205,7 @@ class _TileProxy(DeviceComponentManager):
             "isBeamformerRunning": self._on_attribute_change,
             "channeliserRounding": self._on_attribute_change,
             "cspRounding": self._on_attribute_change,
+            "healthReport": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -257,6 +259,50 @@ class _TileProxy(DeviceComponentManager):
         """
         assert self._proxy is not None  # for the type checker
         return self._proxy.adcPower
+
+
+class _SubrackProxy(DeviceComponentManager):
+    """A proxy to a subrack, for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self: _SubrackProxy,
+        fqdn: str,
+        logger: logging.Logger,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        attribute_changed_callback: Callable,
+        event_serialiser: Optional[EventSerialiser] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param logger: the logger to be used by this object.
+        :param communication_state_changed_callback: callback
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param attribute_changed_callback: callback to be called when
+            desired attributes change.
+        :param event_serialiser: the event serialiser to be used by this object
+        """
+        self._attribute_changed_callback = attribute_changed_callback
+        super().__init__(
+            fqdn,
+            logger,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            event_serialiser=event_serialiser,
+        )
+
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "healthReport": self._on_attribute_change,
+        }
+
+    def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
+        self._attribute_changed_callback(self._name, *args, **kwargs)
 
 
 class _LMCDaqProxy(DeviceComponentManager):
@@ -671,6 +717,9 @@ class SpsStationComponentManager(
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
+        self._tile_fqdns = list(tile_fqdns)  # indexed by logical tile id
+        # The latest healthReport of each tile and subrack.
+        self._sub_device_health_reports: dict[str, str] = {}
         self._number_of_tiles = len(tile_fqdns)
         # cppTango doesn't handle None in a list of floats well, so unknown
         # per-tile readings are represented as an np.nan-filled np.ndarray
@@ -721,13 +770,14 @@ class SpsStationComponentManager(
         self._tile_group = tile_group
 
         self._subrack_proxies = {
-            subrack_fqdn: DeviceComponentManager(
+            subrack_fqdn: _SubrackProxy(
                 subrack_fqdn,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
                 functools.partial(self._subrack_state_changed, subrack_fqdn),
+                self._on_subrack_attribute_change,
                 event_serialiser=self._event_serialiser,
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
@@ -1559,6 +1609,11 @@ class SpsStationComponentManager(
                 self._final_tile_fpga0_flagged_count = None
             case "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1":
                 self._final_tile_fpga1_flagged_count = None
+            case "healthreport":
+                # Nothing to publish: the next health change has no details.
+                self._sub_device_health_reports.pop(
+                    self._tile_fqdns[logical_tile_id], None
+                )
             case _:
                 return False
         return True
@@ -1631,6 +1686,10 @@ class SpsStationComponentManager(
         :param attribute_value: the new value.
         """
         match attribute_name:
+            case "healthreport":
+                self._sub_device_health_report_changed(
+                    self._tile_fqdns[logical_tile_id], attribute_value
+                )
             case "adcpower":
                 self._adc_power[logical_tile_id] = np.array(
                     attribute_value, dtype=float
@@ -1976,7 +2035,11 @@ class SpsStationComponentManager(
             self._tile_health_changed_callback(fqdn, HealthState(health))
             # New health model.
             if self._component_state_callback is not None:
-                self._component_state_callback(device_name=fqdn, health=health)
+                self._component_state_callback(
+                    device_name=fqdn,
+                    health=health,
+                    health_details=self._sub_device_health_details(fqdn),
+                )
 
     @threadsafe
     def _subrack_state_changed(
@@ -1998,7 +2061,90 @@ class SpsStationComponentManager(
             self._component_state_callback(
                 device_name=fqdn,
                 health=health,
+                health_details=self._sub_device_health_details(fqdn),
             )
+
+    def _on_subrack_attribute_change(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        attribute_name: str,
+        attribute_value: Any,
+        attribute_quality: tango.AttrQuality,
+    ) -> None:
+        if attribute_name.lower() == "healthreport":
+            self._sub_device_health_report_changed(
+                fqdn,
+                (
+                    ""
+                    if attribute_quality == tango.AttrQuality.ATTR_INVALID
+                    else attribute_value
+                ),
+            )
+
+    def _sub_device_health_report_changed(
+        self: SpsStationComponentManager, fqdn: str, health_report: str
+    ) -> None:
+        """
+        Handle a new healthReport from a tile or subrack.
+
+        healthState and healthReport arrive as separate events, in either
+        order, so a changed report is passed on with the device's current
+        health.
+
+        :param fqdn: the FQDN of the tile or subrack.
+        :param health_report: the device's new healthReport.
+        """
+        if self._sub_device_health_reports.get(fqdn, "") == health_report:
+            # skip reports that we have already
+            return
+        self._sub_device_health_reports[fqdn] = health_report
+
+        proxy: DeviceComponentManager | None
+        if fqdn in self._tile_proxies:
+            proxy = self._tile_proxies[fqdn]
+        elif fqdn in self._subrack_proxies:
+            proxy = self._subrack_proxies[fqdn]
+        else:
+            self.logger.error(
+                f"Health report update failed: {fqdn} not found in "
+                f"{self._tile_proxies} or {self._subrack_proxies}"
+            )
+            return
+
+        if (
+            proxy is not None
+            and proxy.health is not None
+            and self._component_state_callback is not None
+        ):
+            self._component_state_callback(
+                device_name=fqdn,
+                health=proxy.health,
+                health_details=self._sub_device_health_details(fqdn),
+            )
+
+    def _sub_device_health_details(
+        self: SpsStationComponentManager, fqdn: str
+    ) -> dict[str, str] | None:
+        """
+        Return the health details of a tile or subrack, from its healthReport.
+
+        :param fqdn: the FQDN of the tile or subrack.
+        :return: the diagnosis and remedy, or None if there is no report.
+        """
+        health_report = self._sub_device_health_reports.get(fqdn)
+        if not health_report:
+            return None
+        device_type = "tile" if fqdn in self._tile_proxies else "subrack"
+        return {
+            "diagnosis": health_report,
+            "remedy": (
+                f"The {device_type}'s own health checks raised this. "
+                f"Investigate what the diagnosis names on the {device_type}: "
+                "an attribute in ATTR_WARNING or ATTR_ALARM is outside the "
+                "limits in its attribute configuration. Check the "
+                f"{device_type}'s logs too."
+            ),
+        }
 
     @threadsafe
     def _lmc_daq_state_changed(

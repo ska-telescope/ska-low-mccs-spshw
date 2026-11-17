@@ -699,7 +699,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
             if health is not None:
                 if device_name in self._health_rollup_devices:
-                    self._rollup_health_changed(device_name, health)
+                    self._rollup_health_changed(
+                        device_name, health, state_change.get("health_details")
+                    )
                 else:
                     self.logger.warning(f"{device_name} is not in health rollup")
         else:

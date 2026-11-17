@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-812] Update PyTango to 10.3.2.
 * [THORN-690] Use MccsCommandProxy to listen for the real result of a
 subrack's On() command during SpsStation's power-on sequence, instead of
 firing it and forgetting the reply. A rejected/failed On() (e.g. because a

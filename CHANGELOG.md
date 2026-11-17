@@ -9,6 +9,8 @@ firing it and forgetting the reply. A rejected/failed On() (e.g. because a
 subrack is administratively OFFLINE) now fails fast instead of causing a
 blind 180s timeout.
 * [THORN-802] Updated thresholds for every TPM attribute which the new SPS thresholds give. No new attrbutes have thresholds, but many have been updated.
+* [THORN-615] The OK results of MccsTile ApplyCalibration and ApplyPointingDelays now say when the switch occurs (immediately, at a given frame, or in a number of frames with the time in seconds).
+* [THORN-615] MccsTile time validation errors now include the requested time. This applies to "Time too early" from SendDataSamples, StartBeamformer, ApplyCalibration, ApplyPointingDelays and ConfigureTestGenerator, and to "Invalid time" from StartAcquisition and ConfigureTestGenerator.
 
 ## 18.0.0
 

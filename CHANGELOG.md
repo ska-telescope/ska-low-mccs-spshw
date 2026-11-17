@@ -4,6 +4,7 @@
 
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.
 * [THORN-813] Prototype subrack only sets fan speeds for fan pairs that the poll reads in `AUTO`.
+* [THORN-812] Update PyTango to 10.3.2.
 * [THORN-690] Use MccsCommandProxy to listen for the real result of a
 subrack's On() command during SpsStation's power-on sequence, instead of
 firing it and forgetting the reply. A rejected/failed On() (e.g. because a

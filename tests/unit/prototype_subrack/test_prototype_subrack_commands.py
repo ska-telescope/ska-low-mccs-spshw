@@ -661,6 +661,9 @@ def test_cabinet_position_comes_from_the_ip_address(
     [
         pytest.param([FanMode.AUTO] * 4, [1, 3], id="every-pair-auto"),
         pytest.param([FanMode.MANUAL] * 3 + [FanMode.AUTO], [3], id="one-fan-auto"),
+        pytest.param(
+            [FanMode.MANUAL] * 2 + [FanMode.AUTO] * 2, [3], id="first-two-manual"
+        ),
         pytest.param([FanMode.MANUAL] * 4, [], id="no-fan-auto"),
     ],
 )

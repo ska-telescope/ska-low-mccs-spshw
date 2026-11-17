@@ -1,6 +1,6 @@
 [project]
 dependencies = [
-    "ska-low-sps-tpm-api @ git+https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/@c047351d5c3079117eafe8f95bba4feb8b592a24",
+    "ska-low-sps-tpm-api @ git+https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/@3d8acd8a0dac4c6c263e188d722797c7f5042a86",
     "fire >= 0.5.0, <0.6.0",
     "numpy >= 1.26.4, <2.0.0",
     # pytango 10.3.1 doesn't play well with our version of Numpy.

@@ -333,9 +333,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         :param poll_response: the response to the poll.
         """
-        # A device that was not ON could not read the board until now. The
-        # board can also have restarted in that time.
-        board_came_up = self.get_state() != DevState.ON
         timestamp = poll_response.timestamp
         values = poll_response.values
         # A key the board was too busy to read is absent, so its attribute keeps
@@ -362,8 +359,9 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self.component_on()
         self.component_no_fault()
         self.logger.debug("Poll succeeded")
-        if board_came_up:
-            self._set_fan_speeds()
+        fan_modes = values.get(ReadKey.SUBRACK_FAN_MODE.value)
+        if fan_modes is not None:
+            self._set_fan_speeds(fan_modes)
 
     def _update_health_recorder(self: MccsPrototypeSubrack) -> None:
         """
@@ -401,17 +399,30 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             attr_conf_callback=self._attribute_config_changed,
         )
 
-    def _set_fan_speeds(self: MccsPrototypeSubrack) -> None:
+    def _set_fan_speeds(self: MccsPrototypeSubrack, fan_modes: list[int]) -> None:
         """
-        Queue the commands that run every backplane fan at a manual speed.
+        Queue the commands that run each fan pair in ``AUTO`` at a manual speed.
 
-        The speed comes from the cabinet position of the subrack. The board
-        can come back from a restart with its fans in ``AUTO``, so the device
-        queues these commands each time it can read the board again.
+        The speed comes from the cabinet position of the subrack. A board comes
+        back from a restart with its fans in ``AUTO``, so a fan in ``AUTO`` is
+        what calls for these commands. A fan in ``MANUAL`` keeps the speed it
+        has, so a speed that a client sets stays set.
 
-        Each command goes through the long running command queue, so it shows
-        in ``lrcQueue`` and going offline aborts it.
+        The commands put each fan pair in ``MANUAL``, so a later poll queues
+        nothing for it. Each command goes through the long running command
+        queue, so it shows in ``lrcQueue`` and going offline aborts it.
+
+        :param fan_modes: the mode of each backplane fan, as the poll read it.
         """
+        # The board sets the fans in pairs, 1 with 2 and 3 with 4, so each pair
+        # gets one command, through its first fan.
+        auto_pair_fan_ids = [
+            fan_id
+            for fan_id in range(1, SubrackData.FAN_COUNT + 1, 2)
+            if FanMode.AUTO in fan_modes[fan_id - 1 : fan_id + 1]
+        ]
+        if not auto_pair_fan_ids:
+            return
         position = cabinet_position(self.SubrackIp)
         if position is None:
             self.logger.info(
@@ -422,14 +433,16 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             return
         speed_percent = _FAN_SPEED_PERCENT_BY_CABINET_POSITION[position]
         self.logger.info(
-            "Setting every subrack fan to %s%%, for cabinet position %s.",
+            "Setting the subrack fan pairs of fans %s from AUTO to %s%%, for "
+            "cabinet position %s.",
+            auto_pair_fan_ids,
             speed_percent,
             position,
         )
         # Each command takes one JSON string, which its validator unpacks into
         # the keyword arguments that pylint expects.
         # pylint: disable=no-value-for-parameter
-        for fan_id in range(1, SubrackData.FAN_COUNT + 1):
+        for fan_id in auto_pair_fan_ids:
             # The mode goes first, so the speed is set on a fan in MANUAL.
             self.SetSubrackFanMode(
                 json.dumps({"fan_id": fan_id, "mode": FanMode.MANUAL.value})

@@ -39,6 +39,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevState
 
 from ska_low_mccs_spshw.prototype_subrack import BoardCommandStatus
+from ska_low_mccs_spshw.prototype_subrack.constants import ReadKey
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     cabinet_position,
 )
@@ -46,6 +47,7 @@ from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
     subrack_factory as device_class_factory,
 )
 from ska_low_mccs_spshw.prototype_subrack.subrack_client import SubrackPollResponse
+from ska_low_mccs_spshw.subrack.subrack_data import FanMode
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import LRCManager
 
@@ -654,22 +656,37 @@ def test_cabinet_position_comes_from_the_ip_address(
 
 # Kept last in the module, because the fan commands push lrcFinished events
 # that the module's shared ``lrc`` callbacks would otherwise see.
-def test_a_board_that_comes_up_gets_its_fan_speeds(
+@pytest.mark.parametrize(
+    ("fan_modes", "pair_fan_ids"),
+    [
+        pytest.param([FanMode.AUTO] * 4, [1, 3], id="every-pair-auto"),
+        pytest.param([FanMode.MANUAL] * 3 + [FanMode.AUTO], [3], id="one-fan-auto"),
+        pytest.param(
+            [FanMode.MANUAL] * 2 + [FanMode.AUTO] * 2, [3], id="first-two-manual"
+        ),
+        pytest.param([FanMode.MANUAL] * 4, [], id="no-fan-auto"),
+    ],
+)
+def test_a_fan_pair_in_auto_gets_its_fan_speed(
     online_device: tango.DeviceProxy,
     subrack: mock.Mock,
     subrack_factory: mock.Mock,
+    fan_modes: list[int],
+    pair_fan_ids: list[int],
 ) -> None:
     """
-    Test that the first good poll queues the fan commands, and later ones do not.
+    Test that a poll queues the fan commands only for the fan pairs in AUTO.
 
-    The device is at cabinet position 3, so each fan goes to MANUAL at 85%.
-    A second good poll finds the device already ON, so it queues nothing. The
-    task executor runs one task at a time in order, so a sentinel command that
-    runs straight after the fan commands shows that nothing came in between.
+    The device is at cabinet position 3, so each pair goes to MANUAL at 85%.
+    A second poll finds every fan in MANUAL, so it queues nothing. The task
+    executor runs one task at a time in order, so a sentinel command that runs
+    straight after the fan commands shows that nothing came in between.
 
     :param online_device: the device under test, online.
     :param subrack: the mocked subrack client.
     :param subrack_factory: the factory, which carries the poll callbacks.
+    :param fan_modes: the fan modes that the first poll reads.
+    :param pair_fan_ids: the first fan of each pair that should get commands.
     """
     sentinel_ran = threading.Event()
 
@@ -680,20 +697,24 @@ def test_a_board_that_comes_up_gets_its_fan_speeds(
             sentinel_ran.set()
         return (BoardCommandStatus.COMPLETED, "The command completed.", None)
 
+    def poll_response(modes: list[int]) -> SubrackPollResponse:
+        return SubrackPollResponse(
+            values={ReadKey.SUBRACK_FAN_MODE.value: modes}, timestamp=time.time()
+        )
+
     subrack.run_board_command.side_effect = run_board_command
     data_callback = subrack_factory.call_args.kwargs["data_callback"]
     try:
         with tango.EnsureOmniThread():
-            data_callback(SubrackPollResponse(timestamp=time.time()))
-            assert online_device.state() == DevState.ON
-            data_callback(SubrackPollResponse(timestamp=time.time()))
+            data_callback(poll_response(fan_modes))
+            data_callback(poll_response([FanMode.MANUAL] * 4))
         online_device.PowerUpTpms()
         assert sentinel_ran.wait(COMMAND_TIMEOUT)
     finally:
         subrack.run_board_command.side_effect = None
 
     expected = []
-    for fan_id in range(1, 5):
+    for fan_id in pair_fan_ids:
         expected.append(mock.call("set_fan_mode", f"{fan_id},0", abort_event=mock.ANY))
         expected.append(
             mock.call("set_subrack_fan_speed", f"{fan_id},85", abort_event=mock.ANY)

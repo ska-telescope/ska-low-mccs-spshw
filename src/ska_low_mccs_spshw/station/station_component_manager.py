@@ -17,6 +17,7 @@ import ipaddress
 import itertools
 import json
 import logging
+import re
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -118,6 +119,41 @@ _CACHED_TILE_ATTRIBUTES = (
     "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
     "healthReport",
 )
+
+# A line of a healthReport from ska-low-mccs-common's HealthRecorder:
+# "<attribute> is in <quality> with value <value>". Group 1 is the line
+# without its value.
+_HEALTH_REPORT_ATTRIBUTE_LINE = re.compile(r"^(\S+ is in ATTR_\w+) with value ")
+
+
+def _strip_health_report_values(health_report: str) -> str:
+    """
+    Remove the attribute values from a tile or subrack healthReport.
+
+    If a health report is caused by an attribute that is outside its
+    healthy range, the report will update with the attribute value.
+    
+    This generates a lot more reports, while the only relevant info 
+    is which attribute is the cause (the values are still available
+    on the actual device)
+    
+    This method removes that value and keeps the attribute name and
+    state. This is enough information to provide as part of health
+    details
+    
+    :param health_report: the device's healthReport.
+    :return: the report without values.
+    """
+    stripped: list[str] = []
+    in_attribute_lines = False
+    for line in health_report.splitlines():
+        match = _HEALTH_REPORT_ATTRIBUTE_LINE.match(line)
+        if match:
+            stripped.append(match.group(1))
+            in_attribute_lines = True
+        elif not in_attribute_lines:
+            stripped.append(line)
+    return "\n".join(stripped)
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -718,7 +754,7 @@ class SpsStationComponentManager(
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
         self._tile_fqdns = list(tile_fqdns)  # indexed by logical tile id
-        # The latest healthReport of each tile and subrack.
+        # The latest healthReport of each tile and subrack, without values.
         self._sub_device_health_reports: dict[str, str] = {}
         self._number_of_tiles = len(tile_fqdns)
         # cppTango doesn't handle None in a list of floats well, so unknown
@@ -2089,11 +2125,13 @@ class SpsStationComponentManager(
 
         healthState and healthReport arrive as separate events, in either
         order, so a changed report is passed on with the device's current
-        health.
+        health. Values are stripped first, so a report that differs only
+        in its values is not passed on.
 
         :param fqdn: the FQDN of the tile or subrack.
         :param health_report: the device's new healthReport.
         """
+        health_report = _strip_health_report_values(health_report)
         if self._sub_device_health_reports.get(fqdn, "") == health_report:
             # skip reports that we have already
             return
@@ -2141,8 +2179,8 @@ class SpsStationComponentManager(
                 f"The {device_type}'s own health checks raised this. "
                 f"Investigate what the diagnosis names on the {device_type}: "
                 "an attribute in ATTR_WARNING or ATTR_ALARM is outside the "
-                "limits in its attribute configuration. Check the "
-                f"{device_type}'s logs too."
+                "limits in its attribute configuration. Read the attribute "
+                f"for its current value, and check the {device_type}'s logs."
             ),
         }
 

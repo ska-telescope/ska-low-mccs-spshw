@@ -23,17 +23,19 @@ __version_info__ = str(
 
 __all__ = [
     "MccsPrototypeSubrack",
-    "MccsSubrack",
+    "MccsSubrack",  # pylint: disable=undefined-all-variable
     "MccsTile",
     "SpsStation",
     "MccsPdu",
     "PowerMarshaller",
     "SUBRACK_IMPLEMENTATION_ENV_VAR",
     "server_classes",
+    "subrack_class",
     "version",
 ]
 
 import os
+from typing import Any
 
 import tango.server
 
@@ -42,7 +44,7 @@ from .power_marshaller import PowerMarshaller
 from .prototype_subrack import MccsPrototypeSubrack
 from .prototype_subrack.prototype_subrack_device import subrack_factory
 from .station import SpsStation
-from .subrack import MccsSubrack
+from .subrack import MccsSubrack as _LegacyMccsSubrack
 from .tile import MccsTile
 from .version import version_info
 
@@ -52,39 +54,70 @@ SUBRACK_IMPLEMENTATION_ENV_VAR = "MCCS_SUBRACK_IMPLEMENTATION"
 """The environment variable that selects the subrack implementation."""
 
 
-def server_classes() -> tuple[type[tango.server.Device], ...]:
+def subrack_class() -> type[tango.server.Device]:
     """
-    Return the device classes that the spshw server registers.
+    Return the class to serve under the Tango class name ``MccsSubrack``.
 
-    The ``MCCS_SUBRACK_IMPLEMENTATION`` environment variable selects the class
-    that is served under the Tango class name ``MccsSubrack``. With ``legacy``,
-    or with the variable not set, this is :py:class:`~.MccsSubrack`. With
-    ``prototype``, it is :py:class:`~.MccsPrototypeSubrack`. The Tango DB rows
-    for the subrack devices are the same in both cases.
+    The ``MCCS_SUBRACK_IMPLEMENTATION`` environment variable selects the class.
+    With ``legacy``, or with the variable not set, this is
+    :py:class:`ska_low_mccs_spshw.subrack.MccsSubrack`. With ``prototype``, it
+    is :py:class:`~.MccsPrototypeSubrack`. The Tango class name, the Tango DB
+    rows, the class properties and the EDA configuration are the same in both
+    cases.
+
+    The package attribute ``ska_low_mccs_spshw.MccsSubrack`` returns this
+    class too. So the switch applies to the ``spshw`` command, and to a device
+    server that names ``ska_low_mccs_spshw.MccsSubrack`` as an entry point.
 
     :raises ValueError: if the environment variable has an unknown value. A
         typo must stop the server, rather than silently select the old
         subrack.
 
-    :return: the device classes to serve.
+    :return: the subrack device class to serve.
     """
     implementation = os.environ.get(SUBRACK_IMPLEMENTATION_ENV_VAR, "legacy")
-    subrack_class: type[tango.server.Device]
     match implementation:
         case "legacy":
-            subrack_class = MccsSubrack
+            return _LegacyMccsSubrack
         case "prototype":
-            subrack_class = subrack_factory(class_name="MccsSubrack")
+            return subrack_factory(class_name="MccsSubrack")
         case _:
             raise ValueError(
                 f"{SUBRACK_IMPLEMENTATION_ENV_VAR} is {implementation!r}. "
                 "Use 'legacy' or 'prototype'."
             )
+
+
+def __getattr__(name: str) -> Any:
+    """
+    Return the subrack class that the environment selects.
+
+    A device server entry point imports ``ska_low_mccs_spshw.MccsSubrack`` by
+    name, so this attribute must give the same class as
+    :py:func:`server_classes`.
+
+    :param name: the name of the attribute.
+
+    :raises AttributeError: if the package has no attribute with this name.
+
+    :return: the attribute.
+    """
+    if name == "MccsSubrack":
+        return subrack_class()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def server_classes() -> tuple[type[tango.server.Device], ...]:
+    """
+    Return the device classes that the spshw server registers.
+
+    :return: the device classes to serve.
+    """
     return (
         MccsPdu,
         PowerMarshaller,
         subrack_factory(),
-        subrack_class,
+        subrack_class(),
         MccsTile,
         SpsStation,
     )

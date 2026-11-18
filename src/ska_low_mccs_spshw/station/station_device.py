@@ -1986,7 +1986,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.logger.warning(
                 "These are the thresholds for the old health model. "
                 "New health model is currently in use. "
-                "To see new health model thresholds use healthThresholds."
+                "To see new health model thresholds use"
+                "healthRollupThresholds and healthPPSDelayThresholds."
             )
         return json.dumps(self._health_model.health_params)
 
@@ -2006,7 +2007,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "These thresholds are for the old health model."
                 "Thresholds will be updated but will not "
                 "be used unless the old health model is activated. "
-                "To update new health model thresholds use healthThresholds."
+                "To update new health model thresholds use"
+                "healthRollupThresholds and healthPPSDelayThresholds"
             )
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()

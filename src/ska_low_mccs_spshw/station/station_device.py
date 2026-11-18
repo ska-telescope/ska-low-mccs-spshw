@@ -76,44 +76,6 @@ def engineering_mode_required(func: Callable) -> Callable:
     return wrapper
 
 
-def json_arrays_to_tuples(json_object_in: dict[str, Any]) -> dict[str, Any]:
-    """
-    Convert lists in the dictionary into tuples.
-
-    The health thresholds are provided in a flat dictionary structure and tuples are
-    encoded as lists.
-    :param json_object_in: incoming dictionary.
-    :returns: dictionary containing tuples.
-    """
-    json_object_out = {}
-    for key, value in json_object_in.items():
-        if isinstance(value, list):
-            json_object_out[key] = tuple(value)
-        else:
-            json_object_out[key] = value
-    return json_object_out
-
-
-def parse_health_thresholds_property(
-    threshold_property: str,
-) -> Optional[dict[str, Any]]:
-    """
-    Parse the JSON in the property value.
-
-    The health thresholds value is provided as a JSON string which must be
-    parsed into a dictionary.
-    :param threshold_property: value from the property.
-    :returns: dictionary containing tuples.
-    """
-    if threshold_property:
-        try:
-            return json_arrays_to_tuples(json.loads(threshold_property))
-        except json.JSONDecodeError:
-            pass
-
-    return None
-
-
 # pylint: disable=too-many-instance-attributes, too-many-ancestors
 class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
@@ -169,15 +131,30 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         default_value=2400,  # [ms]
     )
 
-    # JSON value containing all the the health thresholds
-    HealthThresholds = device_property(
+    # JSON value containing the health pps delay thresholds
+    HealthPPSDelayThresholds = device_property(
         dtype=str,
         doc=(
-            "The health theshholds are provided as a JSON string where"
-            "keys are the devices names and values are an array of"
-            "three values corresponding to the rollup thresholds"
+            "The health PPS delay theshholds are provided as a JSON string where"
+            "keys are `pps_delta_degraded` or `pps_delta_failed` and indicate the"
+            "change in the PPS value that triggers degraded or failed health status"
         ),
-        default_value="",
+        default_value='{ "pps_delta_degraded": 4, "pps_delta_failed": 9 }',
+    )
+
+    # JSON value containing all the health rollup thresholds
+    HealthRollupThresholds = device_property(
+        dtype=str,
+        doc=(
+            "The health rollup theshholds are provided as a JSON string where"
+            "keys are the devices names and values are an array of"
+            "three elements corresponding to the rollup levels"
+        ),
+        default_value="""
+                        { "subracks": [1, 1, 1],
+                          "tiles": [1, 1, 2],
+                          "wren": [1, 1, 1] }
+                      """,
     )
 
     # ---------------
@@ -207,8 +184,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model: SpsStationHealthModel
         self._health_rollup: HealthRollup
         self._health_rollup_devices: list[str]
-        self._health_thresholds: dict[str, Any]
-
+        self._health_rollup_thresholds: dict[str, tuple[int, int, int]]
+        self._health_pps_delay_thresholds: dict[str, int]
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
@@ -263,7 +240,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
             f"\tBandpassIntegrationTime: {self.BandpassIntegrationTime}\n"
             f"\tParentTRL: {self.ParentTRL}\n"
-            f"\tHealthThresholds: {self.HealthThresholds}\n"
+            f"\tHealthPPSDelayThresholds: {self.HealthPPSDelayThresholds}\n"
+            f"\tHealthRollupThresholds: {self.HealthRollupThresholds}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -272,27 +250,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     # pylint: disable-next=too-many-statements
     def _init_state_model(self: SpsStation) -> None:
-        # Why is this here?  Unfortunately we need to wait until
-        # tando.Device.init_device() is called as this sets up properties within
-        # the Device itself.  Unfortunately the many layers of SKA base device
-        # code do a whole array of things along the way, one of which results
-        # in our _init_state_model() method being called.  So the only place
-        # this code can be placed is here so that the _health_thresholds value
-        # is setup ready for when it is needed.
-        parsed_thresholds_value = parse_health_thresholds_property(
-            self.HealthThresholds
-        )
-        if parsed_thresholds_value:
-            self._health_thresholds = parsed_thresholds_value
-        else:
-            self._health_thresholds = {
-                "pps_delta_degraded": 4,
-                "pps_delta_failed": 9,
-                "subracks": (1, 1, 1),
-                "tiles": (1, 1, 2),
-                "wren": (1, 1, 1),
-            }
-
         super()._init_state_model()
 
         self._obs_state_model = SpsStationObsStateModel(
@@ -301,6 +258,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("healthReport", True, True)
         self.set_archive_event("healthReport", True, True)
         self._health_timestamp = time.time()
+        self._health_pps_delay_thresholds = json.loads(self.HealthPPSDelayThresholds)
+
+        self._health_rollup_thresholds = {
+            key: tuple(value)
+            for key, value in json.loads(self.HealthRollupThresholds).items()
+        }
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
@@ -309,8 +272,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._old_health_changed,
         )
         # Update thresholds so we don't have to define ppsDelta in two places.
-        self._health_model.health_params = (
-            self._health_thresholds | self._health_model.health_params
+        # This combines everything under the health params for the model/rules
+        # TODO: This seems messy and should be refactored in the model/rules
+        # TODO: This is also hacky since we're merging different types
+        self._health_model.health_params = dict[str, Any](
+            self._health_pps_delay_thresholds
+            | self._health_rollup_thresholds
+            | self._health_model.health_params
         )
 
         self._setup_change_and_archive_events()
@@ -515,10 +483,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         }
         if len(self.SubrackFQDNs) > 0:
             rollup_members.append("subracks")
-            thresholds["subracks"] = self._health_thresholds["subracks"]
+            thresholds["subracks"] = self._health_rollup_thresholds["subracks"]
         if len(self.TileFQDNs) > 0:
             rollup_members.append("tiles")
-            thresholds["tiles"] = self._health_thresholds["tiles"]
+            thresholds["tiles"] = self._health_rollup_thresholds["tiles"]
 
         # Add WREN device to rollup members. For reasons that are unclear to
         # me, but which seems to affect other device properties too, if the
@@ -526,7 +494,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # so let's strip the trl of surrounding white space
         if self.WRENTRL not in ["", " "]:
             rollup_members.append("wren")
-            thresholds["wren"] = self._health_thresholds["wren"]
+            thresholds["wren"] = self._health_rollup_thresholds["wren"]
 
         health_rollup = HealthRollup(
             rollup_members,
@@ -810,9 +778,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.push_archive_event("ppsDelaySpread", pps_delay_spread)
             self._health_model.update_state(pps_delay_spread=pps_delay_spread)
             # Check if pps_delay_spread is beyond thresholds, update health.
-            if pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
+            if pps_delay_spread > self._health_pps_delay_thresholds["pps_delta_failed"]:
                 self._rollup_health_changed("self", HealthState.FAILED)
-            elif pps_delay_spread >= self._health_thresholds["pps_delta_degraded"]:
+            elif (
+                pps_delay_spread
+                >= self._health_pps_delay_thresholds["pps_delta_degraded"]
+            ):
                 self._rollup_health_changed("self", HealthState.DEGRADED)
             else:
                 self._rollup_health_changed("self", HealthState.OK)
@@ -1888,12 +1859,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @attribute(
         dtype="DevString",
         format="%s",
-        label="Health Thresholds (New health model)",
-        doc="Get the current health thresholds in use. (New health model.)",
+        label="Health PPS Delay Thresholds (New health model)",
+        doc="Get the current health PPS delay thresholds in use. (New health model.)",
     )
-    def healthThresholds(self: SpsStation) -> str:
+    def healthPPSDelayThresholds(self: SpsStation) -> str:
         """
-        Get the health params from the health model.
+        Get the health PPS delay threshold params from the health model.
 
         Default health thresholds:
 
@@ -1901,14 +1872,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 int: PPS delay spread in 1.25ns units that triggers degraded health.
             "pps_delta_failed": 9,
                 int: PPS delay spread in 1.25ns units that triggers failed health.
-            "subracks": (f2f, d2f, d2d),
-                tuple(int, int, int): Number of subracks failed before health failed,
-                                      Number of subracks degraded before health failed,
-                                      Number of subracks degraded before health degraded
-            "tiles": (f2f, d2f, d2d),
-                tuple(int, int, int): Number of tiles failed before health failed,
-                                      Number of tiles degraded before health failed,
-                                      Number of tiles degraded before health degraded.
 
         :return: the health params
         """
@@ -1918,28 +1881,19 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 "Old health model is in use. "
                 "To see old health model thresholds use healthModelParams."
             )
-        return json.dumps(self._health_thresholds)
+        return json.dumps(self._health_pps_delay_thresholds)
 
-    @healthThresholds.write  # type: ignore[no-redef]
-    def healthThresholds(self: SpsStation, argin: str) -> None:
+    @healthPPSDelayThresholds.write  # type: ignore[no-redef]
+    def healthPPSDelayThresholds(self: SpsStation, argin: str) -> None:
         """
-        Set the params for health transition rules.
+        Set the params for health PPS delay threshold values.
 
-        Default health thresholds:
+        Default health pps delay thresholds:
 
             "pps_delta_degraded": 4,
                 int: PPS delay spread in 1.25ns units that triggers degraded health.
             "pps_delta_failed": 9,
                 int: PPS delay spread in 1.25ns units that triggers failed health.
-            "subracks": (f2f, d2f, d2d),
-                tuple(int, int, int): Number of subracks failed before health failed,
-                                      Number of subracks degraded before health failed,
-                                      Number of subracks degraded before health degraded
-            "tiles": (f2f, d2f, d2d),
-                tuple(int, int, int): Number of tiles failed before health failed,
-                                      Number of tiles degraded before health failed,
-                                      Number of tiles degraded before health degraded.
-
 
         :param argin: JSON-string of dictionary of health thresholds
         """
@@ -1953,28 +1907,107 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
         thresholds = json.loads(argin)
         for key, threshold in thresholds.items():
-            if key not in self._health_thresholds:
+            if key not in self._health_pps_delay_thresholds:
                 self.logger.info(
                     f"Invalid Key Supplied: {key}. "
-                    f"Allowed keys: {self._health_thresholds.keys()}"
+                    f"Allowed keys: {self._health_pps_delay_thresholds.keys()}"
                 )
                 continue
-            self._health_thresholds[key] = threshold
+            self._health_pps_delay_thresholds[key] = threshold
 
-            # TODO: Modify rollup classes to allow this.
-            # Redefine health thresholds if needed.
-            # if key == "tiles":
-            #     self._health_rollup.define("tiles", self.TileFQDNs, threshold)
-            # if key == "subracks":
-            #     self._health_rollup.define("subracks", self.SubrackFQDNs, threshold)
+        # If old health model is around, update it too.
+        if self._health_model is not None:
+            self._health_model.health_params = (
+                self._health_model.health_params | self._health_pps_delay_thresholds
+            )
+
+    @attribute(
+        dtype="DevString",
+        format="%s",
+        label="Health Rollup Thresholds (New health model)",
+        doc="Get the current health rollup thresholds in use. (New health model.)",
+    )
+    def healthRollupThresholds(self: SpsStation) -> str:
+        """
+        Get the health rollup params from the health model.
+
+        Default health rollup thresholds:
+
+            "subracks": (f2f, d2f, d2d),
+                tuple(int, int, int): Number of subracks failed before health failed,
+                                      Number of subracks degraded before health failed,
+                                      Number of subracks degraded before health degraded
+            "tiles": (f2f, d2f, d2d),
+                tuple(int, int, int): Number of tiles failed before health failed,
+                                      Number of tiles degraded before health failed,
+                                      Number of tiles degraded before health degraded.
+
+        :return: the health rollup params
+        """
+        if not self._use_new_health_model:
+            self.logger.warning(
+                "These are thresholds used by the new health model. "
+                "Old health model is in use. "
+                "To see old health model thresholds use healthModelParams."
+            )
+        return json.dumps(self._health_rollup_thresholds)
+
+    @healthRollupThresholds.write  # type: ignore[no-redef]
+    def healthRollupThresholds(self: SpsStation, argin: str) -> None:
+        """
+        Set the params for health rollup thresholds.
+
+        Default health thresholds:
+
+            "subracks": (f2f, d2f, d2d),
+                tuple(int, int, int): Number of subracks failed before health failed,
+                                      Number of subracks degraded before health failed,
+                                      Number of subracks degraded before health degraded
+            "tiles": (f2f, d2f, d2d),
+                tuple(int, int, int): Number of tiles failed before health failed,
+                                      Number of tiles degraded before health failed,
+                                      Number of tiles degraded before health degraded.
+
+
+        :param argin: JSON-string of dictionary of health rollup thresholds
+        """
+        if not self._use_new_health_model:
+            self.logger.warning(
+                "Old health model is in use. "
+                "These thresholds are for the new health model. "
+                "Thresholds will be updated but will not be used unless the "
+                "new health model is activated. "
+                "To update old health model thresholds use healthModelParams."
+            )
+        thresholds = json.loads(argin)
+        for key, threshold in thresholds.items():
+            if key not in self._health_rollup_thresholds:
+                self.logger.info(
+                    f"Invalid Key Supplied: {key}. "
+                    f"Allowed keys: {self._health_rollup_thresholds.keys()}"
+                )
+                continue
+            self._health_rollup_thresholds[key] = threshold
+
+        # TODO: Modify rollup classes to allow this.
+        # Redefine health thresholds if needed.
+        # if key == "tiles":
+        #     self._health_rollup.define("tiles", self.TileFQDNs, threshold)
+        # if key == "subracks":
+        #     self._health_rollup.define("subracks", self.SubrackFQDNs, threshold)
+
         # If we changed thresholds for subdevices, redefine health rollup.
         if any(subdevice in thresholds for subdevice in ["tiles", "subracks", "wren"]):
             self.logger.info("Reconfiguring subdevice health thresholds.")
             self._redefine_health_rollup()
+
         # If old health model is around, update it too.
         if self._health_model is not None:
             self._health_model.health_params = (
-                self._health_model.health_params | self._health_thresholds
+                # TODO: Squishing all the thresholds into one parameter in the model
+                # TODO: seems messy and could do with refactoring/removing
+                self._health_model.health_params
+                | self._health_rollup_thresholds
             )
 
     @attribute(

@@ -59,10 +59,17 @@ gc.disable()
 
 TARGET = "ska_low_mccs_common.component.command_proxy.invoke_lrc"
 
-HEALTH_THRESHOLDS_PROPERTY_VALUE = """
+HEALTH_PPS_DELAY_THRESHOLDS_PROPERTY_VALUE = """
       {
         "pps_delta_degraded": 4,
         "pps_delta_failed": 9,
+        "pps_delta_wing": 100,
+        "pps_delta_force": 200
+      }
+    """
+
+HEALTH_ROLLUP_THRESHOLDS_PROPERTY_VALUE = """
+      {
         "subracks": [1, 1, 1],
         "tiles": [1, 1, 2],
         "wren": [1, 1, 1],
@@ -194,7 +201,8 @@ def test_context_fixture(
         bandpass_daq_trl=get_bandpass_daq_name(),
         wren_trl="",  # This is a causing intermittent test failure.
         device_class=patched_sps_station_device_class,
-        health_thresholds=HEALTH_THRESHOLDS_PROPERTY_VALUE,
+        health_pps_thresholds=HEALTH_PPS_DELAY_THRESHOLDS_PROPERTY_VALUE,
+        health_rollup_thresholds=HEALTH_ROLLUP_THRESHOLDS_PROPERTY_VALUE,
     )
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
@@ -2606,6 +2614,8 @@ def test_programing_state_health_rollup(
                 "wren_failed": 1.0,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
+                "pps_delta_wing": 100,
+                "pps_delta_force": 200,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
                 "wren": [1, 1, 1],
@@ -2687,6 +2697,8 @@ def test_healthParams(
                 "wren_failed": 1.0,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
+                "pps_delta_wing": 100,
+                "pps_delta_force": 200,
                 "subracks": [1, 1, 1],  # Expect these to be overwritten
                 "tiles": [1, 1, 2],  # Expect these to be overwritten
                 "wren": [1, 1, 1],
@@ -2755,15 +2767,26 @@ def test_health_params_with_property_override(
     assert station_device.healthModelParams == new_params_json
 
 
-def test_health_threshold_property_set(station_device: SpsStation) -> None:
+def test_health_pps_threshold_property_set(station_device: SpsStation) -> None:
     """
-    Test HealthThresholds property exists.
+    Test HealthPPSDelayThresholds property set.
 
     :param station_device: the SPS station Tango device under test.
     """
-    result = station_device.healthThresholds
+    result = station_device.healthPPSDelayThresholds
     assert result is not None
-    assert json.loads(result) == json.loads(HEALTH_THRESHOLDS_PROPERTY_VALUE)
+    assert json.loads(result) == json.loads(HEALTH_PPS_DELAY_THRESHOLDS_PROPERTY_VALUE)
+
+
+def test_health_rollup_threshold_property_set(station_device: SpsStation) -> None:
+    """
+    Test HealthRollupThresholds property set.
+
+    :param station_device: the SPS station Tango device under test.
+    """
+    result = station_device.healthRollupThresholds
+    assert result is not None
+    assert json.loads(result) == json.loads(HEALTH_ROLLUP_THRESHOLDS_PROPERTY_VALUE)
 
 
 def test_csp_set_reset(

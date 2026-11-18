@@ -299,7 +299,8 @@ class SpsTangoTestHarness:
         wren_trl: str = "",
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.SpsStation",
-        health_thresholds: str = "",
+        health_pps_thresholds: str = "",
+        health_rollup_thresholds: str = "",
     ) -> None:
         """
         Set the SPS station Tango device in the test harness.
@@ -320,7 +321,10 @@ class SpsTangoTestHarness:
         :param device_class: The device class to use.
             This may be used to override the usual device class,
             for example with a patched subclass.
-        :param health_thresholds: HealthThresholds value to use in tests.
+        :param health_pps_thresholds: HealthPPSDelayThresholds
+            value to use in the tests.
+        :param health_rollup_thresholds: HealthRollupThresholds
+            value to use in tests.
         """
         self._tango_test_harness.add_device(
             get_sps_station_name(self._station_label),
@@ -342,7 +346,8 @@ class SpsTangoTestHarness:
             SdnGateway=sdn_gateway,
             CspIngestIp=csp_ingest_ip,
             LoggingLevelDefault=logging_level,
-            HealthThresholds=health_thresholds,
+            HealthPPSDelayThresholds=health_pps_thresholds,
+            HealthRollupThresholds=health_rollup_thresholds,
         )
 
     def add_subrack_simulator(

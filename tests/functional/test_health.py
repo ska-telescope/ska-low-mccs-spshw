@@ -72,9 +72,9 @@ def test_failed_when_subrack_power_monitoring_point_is_out_of_bounds() -> None:
 
 @scenario(
     "features/health.feature",
-    "Health changes when healthThresholds changes",
+    "Health changes when healthRollupThresholds changes",
 )
-def test_health_changes_when_healththresholds_changes(
+def test_health_changes_when_healthrollupthresholds_changes(
     station_devices: dict[str, tango.DeviceProxy],
 ) -> None:
     """
@@ -89,7 +89,7 @@ def test_health_changes_when_healththresholds_changes(
         "subracks": [1, 1, 1],
     }
     for station in station_devices["Station"]:
-        station.healthThresholds = json.dumps(new_health_params)
+        station.healthRollupThresholds = json.dumps(new_health_params)
 
 
 def set_tpm_attribute_in_simulator(
@@ -366,7 +366,7 @@ def station_delays_corrected(
             station.ppsDelayCorrections = corrections
         if "ral" in station_name:
             # Buggy TPMs at RAL cause wider ppsDelaySpread, so relax thresholds.
-            station.healthThresholds = json.dumps(
+            station.healthPPSDelayThresholds = json.dumps(
                 {"pps_delta_degraded": 10, "pps_delta_failed": 14}
             )
 
@@ -702,12 +702,14 @@ def set_tile_subrack_power_thresholds_exceeded(
     pass
 
 
-@when("the Station healthThresholds are adjusted")
-def set_station_health_params(station_devices: dict[str, tango.DeviceProxy]) -> None:
+@when("the Station healthRollupThresholds are adjusted")
+def set_station_health_rollup_thresholds(
+    station_devices: dict[str, tango.DeviceProxy]
+) -> None:
     """
     Set the health thresholds of the Station.
 
-    Changes the Station's healthThresholds for subracks from the default
+    Changes the Station's healthRollupThresholds for subracks from the default
     of [1, 1, 1] to [2, 2, 2] so that one failed subrack will not cause
     health to be FAILED.
 
@@ -717,7 +719,7 @@ def set_station_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
         "subracks": [2, 2, 2],
     }
     for station in station_devices["Station"]:
-        station.healthThresholds = json.dumps(new_health_params)
+        station.healthRollupThresholds = json.dumps(new_health_params)
 
 
 @when("all attributes are read on a Tile")

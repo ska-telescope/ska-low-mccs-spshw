@@ -56,7 +56,7 @@ Feature: Test health
         And the Station reports that its HealthState is FAILED
         And the Subracks reports that its HealthState is FAILED
 
-    Scenario: Health changes when healthThresholds changes
+    Scenario: Health changes when healthRollupThresholds changes
         Given the Station is online
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
@@ -69,7 +69,7 @@ Feature: Test health
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is FAILED
         And the Subracks reports that its HealthState is FAILED
-        When the Station healthThresholds are adjusted
+        When the Station healthRollupThresholds are adjusted
         Then the Station reports that its HealthState is OK
 
     # This isn't really a health scenario but the code exists for these steps already.

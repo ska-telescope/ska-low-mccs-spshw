@@ -201,8 +201,8 @@ def test_context_fixture(
         bandpass_daq_trl=get_bandpass_daq_name(),
         wren_trl="",  # This is a causing intermittent test failure.
         device_class=patched_sps_station_device_class,
-        health_pps_thresholds=HEALTH_PPS_DELAY_THRESHOLDS_PROPERTY_VALUE,
-        health_rollup_thresholds=HEALTH_ROLLUP_THRESHOLDS_PROPERTY_VALUE,
+        HealthPPSDelayThresholds=HEALTH_PPS_DELAY_THRESHOLDS_PROPERTY_VALUE,
+        HealthRollupThresholds=HEALTH_ROLLUP_THRESHOLDS_PROPERTY_VALUE,
     )
 
     harness.add_mock_lmc_daq_device(mock_daq_device_proxy)

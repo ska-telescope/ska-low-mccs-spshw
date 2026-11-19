@@ -70,7 +70,7 @@ class TestTileComponentManager:
             ),
             (
                 ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
-                "tpm_firmware_12.0.0.bit",
+                "tpm_firmware_13.1.0.bit",
             ),
             ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
             ("TileSimulatorBios", "tpm_firmware_10.0.0.bit"),
@@ -1510,6 +1510,45 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
+    @pytest.mark.parametrize(
+        ("firmware_major", "expected_global_start_time"),
+        [(12, 946684763 + 864), (13, None)],
+    )
+    def test_start_acquisition_global_start_time(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        firmware_major: int,
+        expected_global_start_time: int | None,
+    ) -> None:
+        """
+        Test that TAI2000 firmware gets no global start time.
+
+        :param tile_component_manager: The tile_component_manager under test.
+        :param tile_simulator: A mock object representing
+            a simulated tile (`TileSimulator`)
+        :param firmware_major: the firmware major version to simulate.
+        :param expected_global_start_time: the global start time
+            that the TPM must receive.
+        """
+        tile_simulator.connect()
+        firmware_list = [
+            {**firmware, "major": firmware_major}
+            for firmware in tile_simulator.FIRMWARE_LIST
+        ]
+        with (
+            unittest.mock.patch.object(tile_simulator, "FIRMWARE_LIST", firmware_list),
+            unittest.mock.patch.object(
+                tile_simulator,
+                "start_acquisition",
+                wraps=tile_simulator.start_acquisition,
+            ) as start_acquisition,
+        ):
+            tile_component_manager._start_acquisition(
+                global_reference_time=946684763 + 864, delay=1
+            )
+        start_acquisition.assert_called_once_with(None, 1, expected_global_start_time)
+
     def test_start_acquisition(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -2224,7 +2263,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
-        assert tile_component_manager.firmware_name == "tpm_firmware_12.0.0.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_13.1.0.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,

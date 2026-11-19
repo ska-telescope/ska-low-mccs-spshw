@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [SKB-1699] Bump TPM API to 5.3.0.
+* [SKB-1699] Bump TPM firmware used when BIOS version >= 1.0.0 from 12.0.0 to 13.1.0.
+* [SKB-1699] MccsTile does not send a global reference time to TPMs with firmware 13.0.0 or later, because that firmware fixes the global sync time to the TAI2000 epoch.
+* [SKB-1699] MccsTile `currentFrame` is now `DevLong64`, because firmware 13.0.0 counts frames from the TAI2000 epoch.
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.
 * [THORN-813] Prototype subrack only sets fan speeds for fan pairs that the poll reads in `AUTO`.
 * [THORN-812] Update PyTango to 10.3.2.

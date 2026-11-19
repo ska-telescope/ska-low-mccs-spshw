@@ -1512,7 +1512,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
     @pytest.mark.parametrize(
         ("firmware_major", "expected_global_start_time"),
-        [(12, 946684763 + 864), (13, None)],
+        [(10, 946684763 + 864), (13, None)],
     )
     def test_start_acquisition_global_start_time(
         self: TestStaticSimulator,

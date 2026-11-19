@@ -2161,7 +2161,7 @@ requires-dist = [
     { name = "ska-control-model", extras = ["health-rollup"], specifier = ">=1.4.0,<2.0.0" },
     { name = "ska-low-mccs-common", specifier = ">=4.10.1" },
     { name = "ska-low-mccs-daq", specifier = ">=9.0.0,<10.0.0" },
-    { name = "ska-low-sps-tpm-api", git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=5.0.1" },
+    { name = "ska-low-sps-tpm-api", specifier = ">=5.3.0,<6.0.0" },
     { name = "ska-ser-skuid", specifier = ">=6.0.0,<7.0.0" },
     { name = "ska-ser-snmp", specifier = ">=0.6.1,<1.0.0" },
     { name = "ska-tango-base", specifier = ">=1.6.1,<2.0.0" },
@@ -2227,11 +2227,15 @@ docs = [
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "5.0.1"
-source = { git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/?rev=5.0.1#f6145b5ffdb41d113e9421363d0622cd158151a8" }
+version = "5.3.0"
+source = { registry = "https://artefact.skao.int/repository/pypi-internal/simple" }
 dependencies = [
     { name = "future" },
     { name = "numpy" },
+]
+sdist = { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-sps-tpm-api/5.3.0/ska_low_sps_tpm_api-5.3.0.tar.gz", hash = "sha256:9628e68ad191623321a44b61c5a1c6bf7117196e94678c555783240efa136083", size = 189852, upload-time = "2026-11-18T13:21:13.813Z" }
+wheels = [
+    { url = "https://artefact.skao.int/repository/pypi-internal/packages/ska-low-sps-tpm-api/5.3.0/ska_low_sps_tpm_api-5.3.0-py3-none-any.whl", hash = "sha256:2f26f20d0571acd2d70f87a45f4340f4c6b7cf98d6705af9670d90039eaa611e", size = 216534, upload-time = "2026-11-18T13:21:13.408Z" },
 ]
 
 [[package]]

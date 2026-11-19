@@ -65,9 +65,11 @@ from .utils import LockTimeoutError, LogLock, abort_task_on_exception, acquire_t
 __all__ = ["TileComponentManager"]
 
 FIRMWARE_NAME_OLD = "tpm_firmware_10.0.0.bit"
-FIRMWARE_NAME_NEW = "tpm_firmware_12.0.0.bit"
+FIRMWARE_NAME_NEW = "tpm_firmware_13.1.0.bit"
 _BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
 _MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
+# Firmware from this major version counts frames from the TAI2000 epoch.
+_MIN_TAI2000_FIRMWARE_MAJOR: Final[int] = 13
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 _MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
 # ARP table entries per 40G core in the firmware shipped with this release
@@ -1882,6 +1884,18 @@ class TileComponentManager(
                 global_reference_time = self._global_reference_time
             else:
                 self._global_reference_time = global_reference_time
+
+            # The TPM API rejects a global start time for TAI2000 firmware,
+            # because that firmware fixes the global sync time to TAI2000.
+            # The "major" field is the design revision (1 for every release),
+            # so compare the release version. Old firmware may not report one.
+            firmware_version = self.tile.get_firmware_list()[0].get("firmware_version")
+            if (
+                firmware_version
+                and semver.Version.parse(firmware_version).major
+                >= _MIN_TAI2000_FIRMWARE_MAJOR
+            ):
+                global_reference_time = None
 
             self.logger.info(
                 f"Start acquisition: start time: {start_time}, delay: {delay}"

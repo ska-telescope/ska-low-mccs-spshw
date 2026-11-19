@@ -4776,7 +4776,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     currentFrame = attribute_from_signal(
         currentFrame_signal,
-        dtype="DevLong",
+        dtype="DevLong64",
         abs_change=MIN_ABS_CHANGE,
         archive_abs_change=1,
         label="Current Frame",

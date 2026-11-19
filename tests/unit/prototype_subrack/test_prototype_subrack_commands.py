@@ -348,7 +348,6 @@ def reset_device_fixture(
     subrack.board_info = None
     pdu_link.reset_mock()
     pdu_link.power_state = PowerState.UNKNOWN
-    pdu_link.port_states = [PowerState.UNKNOWN] * len(PDU_PORTS)
     pdu_link.set_ports.return_value = (ResultCode.OK, "The PDU accepted every port.")
     pdu_link.wait_for.return_value = (CommandOutcome.COMPLETED, "What the PDU did.")
     smm_socket.reset_mock()

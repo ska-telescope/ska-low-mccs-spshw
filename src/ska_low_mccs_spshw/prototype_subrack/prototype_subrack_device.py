@@ -170,7 +170,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _pdu_link: Optional[PduLink] = None
     _callback_scheduler: Optional[CallbackScheduler] = None
     _tpm_power_states: list[PowerState]
-    _pdu_port_states_cache: Optional[list[PowerState]]
     _evaluated_state: DevState
     _web_hardware_client_factory: type[WebHardwareClient]
     _derived_values_factory: type[DerivedValues]
@@ -267,7 +266,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         for signal_name in TPM_POWER_STATE_SIGNALS:
             self._emit(signal_name, PowerState.UNKNOWN, time.time())
-        self._pdu_port_states_cache = None
         self._evaluated_state = DevState.UNKNOWN
 
         # Built before assembly, because the PDU link subscribes through it.
@@ -440,7 +438,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
                 ],
                 timestamp,
             )
-        self._emit_pdu_port_states(timestamp)
 
         # After the emits, so a new recorder subscribes to this poll's values.
         self._update_health_recorder()
@@ -569,7 +566,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             * SubrackData.TPM_BAY_COUNT,
             timestamp,
         )
-        self._emit_pdu_port_states(timestamp)
         self._apply_state(outcome)
         self.logger.warning(f"Poll failed with {type(exception).__name__}. {exception}")
 
@@ -586,8 +582,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         self._update_tpm_power_states(
             [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT, time.time()
         )
-        self._pdu_port_states_cache = None
-        self._emit("_pdu_port_states", None, time.time())
         self.component_disconnected()
         self.logger.info("Stopped polling the subrack.")
 
@@ -749,24 +743,6 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             if self._tpm_power_states[bay] != power_state:
                 self._tpm_power_states[bay] = power_state
                 self._emit(TPM_POWER_STATE_SIGNALS[bay], power_state, timestamp)
-
-    def _emit_pdu_port_states(self: MccsPrototypeSubrack, timestamp: float) -> None:
-        """
-        Emit the PDU port states, if they changed since they were last emitted.
-
-        Only a change is emitted, the same as for the TPM power states. Every
-        caller runs on the polling thread, so no lock is needed for the cache.
-
-        :param timestamp: the wall clock time to emit the states with.
-        """
-        if self._pdu_link is None:
-            return
-        port_states = self._pdu_link.port_states
-        if port_states != self._pdu_port_states_cache:
-            self._pdu_port_states_cache = port_states
-            self._emit(
-                "_pdu_port_states", [int(state) for state in port_states], timestamp
-            )
 
     def _invalidate_all(self: MccsPrototypeSubrack) -> None:
         """Mark every attribute invalid, so no stale value is readable."""

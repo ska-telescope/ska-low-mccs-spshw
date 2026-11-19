@@ -26,7 +26,6 @@ __all__ = [
     "MIN_PWM_DUTY_FRACTION",
     "PDU_ABORT_CHECK_INTERVAL",
     "PDU_COMMAND_TIMEOUT",
-    "PDU_MAX_PORTS",
     "PSU_DEAD_VOLTAGE_THRESHOLD",
     "PSU_MAX_POWER",
     "PSU_NAMES",
@@ -172,9 +171,6 @@ SMM_PROBE_INTERVAL: Final = 1.0
 
 It is also the pause between probes.
 """
-
-PDU_MAX_PORTS: Final = 24
-"""The most switched ports a PDU in the device definitions has."""
 
 PDU_ABORT_CHECK_INTERVAL: Final = 0.1
 """The longest time, in seconds, between abort checks while a PDU wait runs.

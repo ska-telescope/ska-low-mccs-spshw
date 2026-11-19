@@ -416,13 +416,12 @@ def pdu_link_fixture() -> mock.Mock:
     """
     Return the PDU link the device holds.
 
-    Both ports start unknown, as on a real link. An unknown PDU leaves the
+    The link starts unknown, as on a real link. An unknown PDU leaves the
     state to the poll, so a test that does not set the link sees no effect.
 
     :return: a mock of the PDU link.
     """
     link = mock.Mock(name="pdu_link")
-    link.port_states = [PowerState.UNKNOWN, PowerState.UNKNOWN]
     link.power_state = PowerState.UNKNOWN
     return link
 
@@ -1606,37 +1605,3 @@ def test_tpms_have_no_supply_while_the_pdu_is_off(
 
     poll_succeeded()
     assert tpm_power_states() == TPM_POWER_STATES
-
-
-def test_pdu_port_states_follow_the_link(
-    online_device: tango.DeviceProxy,
-    pdu_link: mock.Mock,
-    poll_succeeded: Callable[..., None],
-    poll_failed: Callable[[Exception], None],
-    polling_stopped: Callable[[], None],
-) -> None:
-    """
-    Test that pduPortStates reports the link, and survives a failed poll.
-
-    The PDU port states come from the PDU, so a lost board leaves them. Only
-    going offline invalidates them.
-
-    :param online_device: the device under test, online and not yet polled.
-    :param pdu_link: the mocked PDU link.
-    :param poll_succeeded: supplies a successful poll response.
-    :param poll_failed: supplies a failed poll.
-    :param polling_stopped: tells the device that polling has stopped.
-    """
-    pdu_link.port_states = [PowerState.ON, PowerState.OFF]
-    poll_succeeded()
-    _assert_reads(online_device, "pduPortStates", [PowerState.ON, PowerState.OFF])
-
-    poll_failed(RequestError("Connection refused"))
-    _assert_reads(online_device, "pduPortStates", [PowerState.ON, PowerState.OFF])
-
-    online_device.adminMode = AdminMode.OFFLINE
-    polling_stopped()
-    assert (
-        online_device.read_attribute("pduPortStates").quality
-        == tango.AttrQuality.ATTR_INVALID
-    )

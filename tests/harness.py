@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# mypy: allow-untyped-defs
 """This module provides a flexible test harness for testing Tango devices."""
 from __future__ import annotations
 
@@ -286,7 +287,8 @@ class SpsTangoTestHarness:
         self._station_label = station_label or DEFAULT_STATION_LABEL
         self._tango_test_harness = TangoTestHarness()
 
-    def set_sps_station_device(  # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments
+    def set_sps_station_device(
         self: SpsTangoTestHarness,
         sdn_first_interface: str = "10.0.0.152/25",
         sdn_gateway: str = "10.0.0.254",
@@ -299,7 +301,7 @@ class SpsTangoTestHarness:
         wren_trl: str = "",
         logging_level: int = int(LoggingLevel.DEBUG),
         device_class: type[Device] | str = "ska_low_mccs_spshw.SpsStation",
-        **kwargs, 
+        **kwargs,
     ) -> None:
         """
         Set the SPS station Tango device in the test harness.

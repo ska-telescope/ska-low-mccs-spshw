@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 18.1.0
 
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.
 * [THORN-813] Prototype subrack only sets fan speeds for fan pairs that the poll reads in `AUTO`.

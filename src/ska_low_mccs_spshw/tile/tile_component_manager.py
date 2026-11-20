@@ -1887,8 +1887,14 @@ class TileComponentManager(
 
             # The TPM API rejects a global start time for TAI2000 firmware,
             # because that firmware fixes the global sync time to TAI2000.
-            firmware_major = self.tile.get_firmware_list()[0]["major"]
-            if firmware_major >= _MIN_TAI2000_FIRMWARE_MAJOR:
+            # The "major" field is the design revision (1 for every release),
+            # so compare the release version. Old firmware may not report one.
+            firmware_version = self.tile.get_firmware_list()[0].get("firmware_version")
+            if (
+                firmware_version
+                and semver.Version.parse(firmware_version).major
+                >= _MIN_TAI2000_FIRMWARE_MAJOR
+            ):
                 global_reference_time = None
 
             self.logger.info(

@@ -1511,14 +1511,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator._tile_id == initial_tile_id
 
     @pytest.mark.parametrize(
-        ("firmware_major", "expected_global_start_time"),
-        [(10, 946684763 + 864), (13, None)],
+        ("firmware_version", "expected_global_start_time"),
+        [("", 946684763 + 864), ("10.0.0", 946684763 + 864), ("13.1.0", None)],
     )
     def test_start_acquisition_global_start_time(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
-        firmware_major: int,
+        firmware_version: str,
         expected_global_start_time: int | None,
     ) -> None:
         """
@@ -1527,13 +1527,13 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The tile_component_manager under test.
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
-        :param firmware_major: the firmware major version to simulate.
+        :param firmware_version: the firmware release version to simulate.
         :param expected_global_start_time: the global start time
             that the TPM must receive.
         """
         tile_simulator.connect()
         firmware_list = [
-            {**firmware, "major": firmware_major}
+            {**firmware, "firmware_version": firmware_version}
             for firmware in tile_simulator.FIRMWARE_LIST
         ]
         with (

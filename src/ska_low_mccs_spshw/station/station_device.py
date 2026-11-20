@@ -135,9 +135,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     HealthPPSDelayThresholds = device_property(
         dtype=str,
         doc=(
-            "The health PPS delay theshholds are provided as a JSON string where"
-            "keys are `pps_delta_degraded` or `pps_delta_failed` and indicate the"
-            "change in the PPS value that triggers degraded or failed health status"
+            "The health PPS delay theshholds are provided as a JSON string where "
+            "keys are `pps_delta_degraded` or `pps_delta_failed` and indicate the "
+            "change in the PPS value that triggers degraded or failed health status."
         ),
         default_value="""
                         { "pps_delta_degraded": 4, "pps_delta_failed": 9 }
@@ -148,9 +148,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     HealthRollupThresholds = device_property(
         dtype=str,
         doc=(
-            "The health rollup theshholds are provided as a JSON string where"
-            "keys are the devices names and values are an array of"
-            "three elements corresponding to the rollup levels"
+            "The health rollup theshholds are provided as a JSON string where "
+            "keys are the devices names and values are an array of "
+            "three elements corresponding to the rollup levels."
         ),
         default_value="""
                         { "subracks": [1, 1, 1],
@@ -260,10 +260,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self.set_change_event("healthReport", True, True)
         self.set_archive_event("healthReport", True, True)
         self._health_timestamp = time.time()
-        print(f"#### {repr(self.HealthPPSDelayThresholds)}")
         self._health_pps_delay_thresholds = json.loads(self.HealthPPSDelayThresholds)
 
-        print(f"#### {repr(self.HealthRollupThresholds)}")
         self._health_rollup_thresholds = {
             key: tuple(value)
             for key, value in json.loads(self.HealthRollupThresholds).items()

@@ -1277,7 +1277,7 @@ def test_recovers_from_a_fault(
 @pytest.mark.parametrize(
     ("recorded", "health_report", "reported", "health_info"),
     [
-        pytest.param(HealthState.OK, "Health is OK.", HealthState.OK, [], id="ok"),
+        pytest.param(HealthState.OK, "Health is OK.", HealthState.OK, [""], id="ok"),
         pytest.param(
             HealthState.DEGRADED,
             "psudeadcount is in ATTR_WARNING with value 1",

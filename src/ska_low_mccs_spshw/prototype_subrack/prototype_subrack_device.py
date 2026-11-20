@@ -651,10 +651,16 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
 
         # Emitted first, so the report is already readable when a client hears
         # of the new health.
+        timestamp = time.time()
         self._emit(
-            "_health_report", "\n".join(health_info) or "Health is OK.", time.time()
+            "_health_report", "\n".join(health_info) or "Health is OK.", timestamp
         )
-        self.report_health(health, health_info)
+        # These are the emits of report_health. It is not called, because it
+        # rejects any health_info for OK. Tango clients give errors for an empty
+        # spectrum, so no reasons is [""] instead of [].
+        quality = AttrQuality.ATTR_VALID
+        self.shared_bus.emit("._health_state", (health, timestamp, quality), store=True)
+        self.shared_bus.emit("._health_info", (health_info or [""], timestamp, quality))
 
     def _attribute_config_changed(
         self: MccsPrototypeSubrack, attribute_name: str

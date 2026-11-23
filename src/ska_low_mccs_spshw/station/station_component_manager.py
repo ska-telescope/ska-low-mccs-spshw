@@ -1860,6 +1860,7 @@ class SpsStationComponentManager(
         cannot yet be verified.
         """
         valid: Optional[bool] = True
+        failed_check = ""
         power_states = list(self._tile_power_states.values())
         if not all(power == PowerState.OFF for power in power_states):
             for check in (
@@ -1871,10 +1872,15 @@ class SpsStationComponentManager(
             ):
                 valid = check()
                 if not valid:
+                    failed_check = check.__name__
                     break
 
         if valid == self._beamformer_daisy_chain_valid:
             return
+        if failed_check:
+            self.logger.warning(
+                f"Beamformer daisy chain check {failed_check} returned {valid}"
+            )
         self._beamformer_daisy_chain_valid = valid
         if self._component_state_callback:
             self._component_state_callback(beamformerDaisyChainValid=valid)

@@ -20,7 +20,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Final, Optional, cast
+from typing import Any, Callable, Final, Iterator, Optional, cast
 
 import numpy as np
 import ska_tango_base as stb
@@ -33,7 +33,7 @@ from ska_control_model import (
     PowerState,
     ResultCode,
 )
-from ska_control_model.health_rollup import HealthRollup, HealthSummary
+from ska_control_model.health_rollup import HealthRollup, HealthSummary, health_report
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.faults import CmdNotAllowedError
 from ska_tango_base.long_running_commands import LRCReqType
@@ -63,36 +63,53 @@ _AWAITING_HEALTH_REMEDIES = {
 }
 
 
+def _sources_not_ok(summary: HealthSummary) -> Iterator[tuple[str, HealthState]]:
+    """
+    Yield each source in a health summary that is not OK, with its health.
+
+    Subordinate rollups are walked, so only sources themselves (the
+    station's own sources and device TRLs) are yielded, not rollup names.
+
+    :param summary: the health summary to walk.
+    :yield: each source that is not OK, and its health.
+    """
+    for source, health in summary.items():
+        if isinstance(health, dict):
+            yield from _sources_not_ok(health)
+        elif health != HealthState.OK:
+            yield source, health
+
+
 def _detailed_health_report(
     summary: HealthSummary, details: dict[str, dict[str, str]]
 ) -> dict[str, Any]:
     """
     Reduce a health summary to a report of the sources that are not OK.
 
-    This is ska-control-model's ``health_report``, except that each source
-    is reported as an object: its state by name, plus the reason it is
-    not OK and a remedy. A source that gives none has a generic reason,
-    "<source> is <state>", and an empty remedy.
+    The report is ska-control-model's ``health_report``, unchanged, so that
+    tools that already read rolled-up health reports still work. To it is
+    added a "details" key, which maps each source that is not OK to the
+    reason it is not OK and a remedy. It is flat: a device is given by its
+    TRL, whichever rollup it is in. A source that gives no details has a
+    generic reason, "<source> is <state>", and an empty remedy.
 
     :param summary: the health summary to reduce.
     :param details: the reason and remedy of each source that gives them.
-    :return: a report of the sources that are not OK.
+    :return: a report of the sources that are not OK, with their details.
     """
-    report: dict[str, Any] = {}
-    for source, health in summary.items():
-        if isinstance(health, dict):
-            sub_report = _detailed_health_report(health, details)
-            if sub_report:
-                report[source] = sub_report
-        elif health != HealthState.OK:
-            report[source] = {
-                "state": health.name,
-                "reason": HealthDetailText.GENERIC_REASON.format(
-                    source=source, state=health.name
-                ),
-                "remedy": "",
-                **details.get(source, {}),
-            }
+    report: dict[str, Any] = dict(health_report(summary))
+    sources_details = {
+        source: {
+            "reason": HealthDetailText.GENERIC_REASON.format(
+                source=source, state=health.name
+            ),
+            "remedy": "",
+            **details.get(source, {}),
+        }
+        for source, health in _sources_not_ok(summary)
+    }
+    if sources_details:
+        report["details"] = sources_details
     return report
 
 
@@ -2104,8 +2121,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype="DevString",
         label="Health Report",
         doc=(
-            "JSON object reporting each health source that is not OK as "
-            '{"state": ..., "reason": ..., "remedy": ...}, nested by group. '
+            "JSON object reporting each health source that is not OK by "
+            "the name of its health state, nested by group. Under the "
+            '"details" key, each of those sources (a device by its TRL) '
+            'is mapped to {"reason": ..., "remedy": ...}. '
             "A source that gives no reason has a generic one, and an "
             "empty remedy. "
             "(New health model.)"

@@ -2474,13 +2474,10 @@ def test_health_events_share_timestamp(
     report_event = change_event_callbacks["health_report"].assert_change_event(
         json.dumps(
             {
-                "tiles": {
-                    tile_trl: {
-                        "state": "FAILED",
-                        "reason": f"{tile_trl} is FAILED",
-                        "remedy": "",
-                    }
-                }
+                "tiles": {tile_trl: "FAILED"},
+                "details": {
+                    tile_trl: {"reason": f"{tile_trl} is FAILED", "remedy": ""}
+                },
             }
         )
     )["call_args"][0]

@@ -2470,8 +2470,19 @@ def test_health_events_share_timestamp(
     state_event = change_event_callbacks["health_state"].assert_change_event(
         HealthState.FAILED
     )["call_args"][0]
+    # The mocked health gives no reason, so the station gives a generic one.
     report_event = change_event_callbacks["health_report"].assert_change_event(
-        json.dumps({"tiles": {tile_trl: "FAILED"}})
+        json.dumps(
+            {
+                "tiles": {
+                    tile_trl: {
+                        "state": "FAILED",
+                        "reason": f"{tile_trl} is FAILED",
+                        "remedy": "",
+                    }
+                }
+            }
+        )
     )["call_args"][0]
     assert state_event.attr_value.time.totime() == (
         report_event.attr_value.time.totime()

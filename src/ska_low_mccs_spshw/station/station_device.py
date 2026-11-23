@@ -33,7 +33,7 @@ from ska_control_model import (
     PowerState,
     ResultCode,
 )
-from ska_control_model.health_rollup import HealthRollup, HealthSummary, health_report
+from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.faults import CmdNotAllowedError
 from ska_tango_base.long_running_commands import LRCReqType
@@ -43,12 +43,57 @@ from tango import AttrQuality
 from tango.server import attribute, command, device_property
 
 from .station_component_manager import SpsStationComponentManager
+from .station_health_details import HealthDetailText
 from .station_health_model import SpsStationHealthModel
 from .station_obs_state_model import SpsStationObsStateModel
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["SpsStation", "main"]
+
+
+# The station's own health sources, with what to check when one has not
+# reported since the station came online. The other sources are tiles,
+# subracks and WREN.
+_AWAITING_HEALTH_REMEDIES = {
+    "self": HealthDetailText.AWAITING_PPS_REMEDY,
+    "tile_programming_state": HealthDetailText.AWAITING_TILE_PROGRAMMING_STATE_REMEDY,
+    "beamformer_daisy_chain": HealthDetailText.AWAITING_DAISY_CHAIN_REMEDY,
+    "beamformer_flagged_count": HealthDetailText.AWAITING_FLAGGED_COUNT_REMEDY,
+}
+
+
+def _detailed_health_report(
+    summary: HealthSummary, details: dict[str, dict[str, str]]
+) -> dict[str, Any]:
+    """
+    Reduce a health summary to a report of the sources that are not OK.
+
+    This is ska-control-model's ``health_report``, except that each source
+    is reported as an object: its state by name, plus the reason it is
+    not OK and a remedy. A source that gives none has a generic reason,
+    "<source> is <state>", and an empty remedy.
+
+    :param summary: the health summary to reduce.
+    :param details: the reason and remedy of each source that gives them.
+    :return: a report of the sources that are not OK.
+    """
+    report: dict[str, Any] = {}
+    for source, health in summary.items():
+        if isinstance(health, dict):
+            sub_report = _detailed_health_report(health, details)
+            if sub_report:
+                report[source] = sub_report
+        elif health != HealthState.OK:
+            report[source] = {
+                "state": health.name,
+                "reason": HealthDetailText.GENERIC_REASON.format(
+                    source=source, state=health.name
+                ),
+                "remedy": "",
+                **details.get(source, {}),
+            }
+    return report
 
 
 def engineering_mode_required(func: Callable) -> Callable:
@@ -155,10 +200,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         self._health_state = HealthState.UNKNOWN
         self._health_report: str = ""
-        # Details of each source that is not OK, where the source provides
-        # them: {source: {"diagnosis": ..., "remedy": ...}}.
+        # The reason and remedy of each source that is not OK, where the
+        # source gives them: {source: {"reason": ..., "remedy": ...}}.
         self._health_details: dict[str, dict[str, str]] = {}
         self._health_details_lock = threading.Lock()
+        # Serialises building and pushing healthReport. Take no other lock
+        # while holding it.
+        self._health_report_lock = threading.Lock()
         self._health_summary: HealthSummary = {}
         self._health_timestamp: float
         # Need to dynamically define the health rollup members based on deployment.
@@ -221,7 +269,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
         self.init_completed()
 
-    # pylint: disable-next=too-many-statements
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
         self._obs_state_model = SpsStationObsStateModel(
@@ -230,8 +277,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self.set_change_event("healthReport", True, True)
         self.set_archive_event("healthReport", True, True)
-        self.set_change_event("healthDetails", True, True)
-        self.set_archive_event("healthDetails", True, True)
         self._health_timestamp = time.time()
         self._health_rollup, self._health_rollup_devices = self._setup_health_rollup()
         self._health_model = SpsStationHealthModel(
@@ -554,15 +599,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :param source: name of the source whose health changed.
         :param health: the new health state of the source.
-        :param details: why the source is not OK ("diagnosis") and what
-            to do about it ("remedy"), or None if the source does not
-            provide them.
+        :param details: why the source is not OK ("reason") and what to
+            do about it ("remedy"), or None if the source does not give
+            them.
         """
         self._health_timestamp = time.time()
-        self._health_rollup.health_changed(source, health)
         if self._health_rollup.online:
             # Like the rollup, ignore updates while offline.
             self._update_health_details(source, health, details)
+        self._health_rollup.health_changed(source, health)
+        # In case only the details changed, and the rollup pushed nothing.
+        self._push_health_report()
 
     def _update_health_details(
         self: SpsStation,
@@ -571,47 +618,58 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         details: dict[str, str] | None,
     ) -> None:
         """
-        Record the details of a source's health, and push them if they changed.
+        Record the details of a source's health.
 
         A source that is OK, or that gives no details, is removed, so that
         details never outlive the health they explain.
 
         :param source: name of the source whose health changed.
         :param health: the new health state of the source.
-        :param details: why the source is not OK ("diagnosis") and what
-            to do about it ("remedy"), or None if the source does not
-            provide them.
+        :param details: why the source is not OK ("reason") and what to
+            do about it ("remedy"), or None if the source does not give
+            them.
         """
         new_details = None if health == HealthState.OK else details
         with self._health_details_lock:
             if self._health_details.get(source) == new_details:
                 return
+            health_details = dict(self._health_details)
             if new_details is None:
-                del self._health_details[source]
+                del health_details[source]
             else:
-                self._health_details[source] = new_details
-            self._push_health_details()
+                health_details[source] = new_details
+            self._health_details = health_details
 
-    def _push_health_details(self: SpsStation) -> None:
+    def _push_health_report(self: SpsStation) -> None:
         """
-        Push healthDetails events.
+        Rebuild healthReport, and push it if it changed.
 
-        The caller must hold the health details lock. The events carry the
-        same timestamp as the healthState and healthReport events.
+        The events carry the same timestamp as the healthState event.
+        Nothing is pushed until the rollup has given a summary: an empty
+        summary would report every source as OK.
         """
-        health_details = json.dumps(self._health_details)
-        self.push_change_event(
-            "healthDetails",
-            health_details,
-            self._health_timestamp,
-            AttrQuality.ATTR_VALID,
-        )
-        self.push_archive_event(
-            "healthDetails",
-            health_details,
-            self._health_timestamp,
-            AttrQuality.ATTR_VALID,
-        )
+        with self._health_report_lock:
+            if not self._health_summary:
+                return
+            report = json.dumps(
+                _detailed_health_report(self._health_summary, self._health_details)
+            )
+            if report == self._health_report:
+                return
+            self._health_report = report
+            if self._use_new_health_model:
+                self.push_change_event(
+                    "healthReport",
+                    report,
+                    self._health_timestamp,
+                    AttrQuality.ATTR_VALID,
+                )
+                self.push_archive_event(
+                    "healthReport",
+                    report,
+                    self._health_timestamp,
+                    AttrQuality.ATTR_VALID,
+                )
 
     # ----------
     # Callbacks
@@ -638,16 +696,53 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     def _update_admin_mode(self: SpsStation, admin_mode: AdminMode) -> None:
         super()._update_admin_mode(admin_mode)
         self._health_timestamp = time.time()
-        self._health_rollup.online = admin_mode in [
-            AdminMode.ENGINEERING,
-            AdminMode.ONLINE,
-        ]
-        if not self._health_rollup.online:
-            # The rollup resets every source to UNKNOWN, so drop their details.
-            with self._health_details_lock:
-                if self._health_details:
-                    self._health_details.clear()
-                    self._push_health_details()
+        online = admin_mode in [AdminMode.ENGINEERING, AdminMode.ONLINE]
+        # Hold the lock while switching the rollup, so that no source update
+        # can change the details in between.
+        with self._health_details_lock:
+            health_details = self._health_details
+            # if we were offline, and are turning online now
+            # then we need to set defaults for the subdevices/health sources
+            # until we get a report from all of them
+            if online and not self._health_rollup.online:
+                since = datetime.fromtimestamp(self._health_timestamp, timezone.utc)
+                reason = HealthDetailText.AWAITING_REASON.format(
+                    since=since.isoformat(timespec="seconds")
+                )
+                health_details = {
+                    source: {"reason": reason, "remedy": remedy.value}
+                    for source, remedy in _AWAITING_HEALTH_REMEDIES.items()
+                }
+                for device in self._health_rollup_devices:
+                    # WREN's health does not depend on its adminMode.
+                    remedy = (
+                        HealthDetailText.WREN_AWAITING_REMEDY
+                        if device == self.WRENTRL
+                        else HealthDetailText.AWAITING_DEVICE_REMEDY
+                    )
+                    health_details[device] = {
+                        "reason": reason,
+                        "remedy": remedy.format(device=device),
+                    }
+            elif not online:
+                # When station is offline, all the sources go to unknown.
+                # Give each of them the reason.
+                offline_details = {
+                    "reason": HealthDetailText.OFFLINE_REASON.format(
+                        admin_mode=admin_mode.name
+                    ),
+                    "remedy": HealthDetailText.OFFLINE_REMEDY.value,
+                }
+                health_details = {
+                    source: offline_details
+                    for source in [
+                        *_AWAITING_HEALTH_REMEDIES,
+                        *self._health_rollup_devices,
+                    ]
+                }
+            self._health_details = health_details
+            self._health_rollup.online = online
+        self._push_health_report()
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements, too-many-locals # noqa
@@ -699,9 +794,23 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
             if health is not None:
                 if device_name in self._health_rollup_devices:
-                    self._rollup_health_changed(
-                        device_name, health, state_change.get("health_details")
-                    )
+                    health_details = state_change.get("health_details")
+                    if device_name == self.WRENTRL:
+                        generic_reason = (
+                            HealthDetailText.WREN_UNKNOWN_REASON
+                            if health == HealthState.UNKNOWN
+                            else HealthDetailText.WREN_REASON
+                        )
+                        health_details = {
+                            "reason": generic_reason.format(
+                                device=device_name, state=health.name
+                            ),
+                            "remedy": HealthDetailText.WREN_REMEDY.format(
+                                device=device_name
+                            ),
+                            **(health_details or {}),
+                        }
+                    self._rollup_health_changed(device_name, health, health_details)
                 else:
                     self.logger.warning(f"{device_name} is not in health rollup")
         else:
@@ -808,20 +917,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 pps_health = HealthState.OK
             pps_details = {
-                "diagnosis": (
-                    f"ppsDelaySpread is {pps_delay_spread} (DEGRADED at >= "
-                    f"{pps_degraded}, FAILED at > {pps_failed}). PPS delays of "
-                    "Synchronised tiles, by logical tile id: "
-                    f"{state_change.get('synchronisedPpsDelays')}"
+                "reason": HealthDetailText.PPS_REASON.format(
+                    spread=pps_delay_spread,
+                    degraded=pps_degraded,
+                    failed=pps_failed,
+                    delays=state_change.get("synchronisedPpsDelays"),
                 ),
-                "remedy": (
-                    "Find the tiles whose PPS delay is furthest from the "
-                    "others, and check the PPS and timing distribution to "
-                    "them (see ppsPresentSummary). If their offset is "
-                    "expected and stable, compensate it with "
-                    "ppsDelayCorrections, which take effect at the next "
-                    "Initialise."
-                ),
+                "remedy": HealthDetailText.PPS_REMEDY.value,
             }
             self._rollup_health_changed("self", pps_health, pps_details)
 
@@ -907,19 +1009,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     "tile_programming_state",
                     HealthState.FAILED,
                     {
-                        "diagnosis": (
-                            "Tiles should be all Off or all Synchronised. "
-                            "Logical tile ids by programming state: "
-                            f"{tiles_by_state}"
+                        "reason": HealthDetailText.TILE_PROGRAMMING_STATE_REASON.format(
+                            tiles_by_state=tiles_by_state
                         ),
-                        "remedy": (
-                            "Mixed states are expected while the station is "
-                            "powering on or initialising. If they persist, "
-                            "Initialise the station to bring all tiles to "
-                            "Synchronised. A tile in state Unknown is not "
-                            "reporting: check that its device is running and "
-                            "communicating."
-                        ),
+                        "remedy": HealthDetailText.TILE_PROGRAMMING_STATE_REMEDY.value,
                     },
                 )
         pointing_delays = state_change.get("pointingdelays")
@@ -990,21 +1083,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :param health_summary: the new health summary
         """
         self._health_summary = health_summary
-        self._health_report = json.dumps(health_report(health_summary))
-        if self._use_new_health_model:
-            # The healthState event carries the same timestamp.
-            self.push_change_event(
-                "healthReport",
-                self._health_report,
-                self._health_timestamp,
-                AttrQuality.ATTR_VALID,
-            )
-            self.push_archive_event(
-                "healthReport",
-                self._health_report,
-                self._health_timestamp,
-                AttrQuality.ATTR_VALID,
-            )
+        self._push_health_report()
 
     # ----------
     # Attributes
@@ -2022,7 +2101,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         self._health_model.update_health()
 
     @attribute(
-        dtype="DevString", label="Health Report", doc="The current health report."
+        dtype="DevString",
+        label="Health Report",
+        doc=(
+            "JSON object reporting each health source that is not OK as "
+            '{"state": ..., "reason": ..., "remedy": ...}, nested by group. '
+            "A source that gives no reason has a generic one, and an "
+            "empty remedy. "
+            "(New health model.)"
+        ),
     )
     def healthReport(self: SpsStation) -> str:
         """
@@ -2033,26 +2120,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         if self._use_new_health_model:
             return self._health_report
         return self._health_model.health_report
-
-    @attribute(
-        dtype="DevString",
-        label="Health Details",
-        doc=(
-            "JSON object mapping each health source that is not OK to a "
-            "diagnosis of its health and a proposed remedy, where the "
-            "source provides them. (New health model.)"
-        ),
-    )
-    def healthDetails(self: SpsStation) -> str:
-        """
-        Get the health details.
-
-        :return: JSON object mapping each health source that is not OK
-            to {"diagnosis": ..., "remedy": ...}, where the source
-            provides them.
-        """
-        with self._health_details_lock:
-            return json.dumps(self._health_details)
 
     @attribute(
         dtype="DevString",

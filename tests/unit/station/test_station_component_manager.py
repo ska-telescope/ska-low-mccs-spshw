@@ -32,6 +32,7 @@ from ska_control_model import (
 from ska_low_mccs_common import EventSerialiser
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
+from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.station import (
     SpsStationComponentManager,
@@ -1532,6 +1533,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=subrack._name,
             health=HealthState.OK,
+            health_details=Anything,
             lookahead=100,
         )
 
@@ -1541,6 +1543,7 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             health=HealthState.OK,
+            health_details=Anything,
             lookahead=100,
         )
         # Need to wait for this event to come through before we turn a tile OFF.
@@ -2074,9 +2077,10 @@ def test_beamformer_daisy_chain(
     """
     Test that the station validates beamformer daisy-chain routing.
 
-    Verifies that the component manager emits beamformerDaisyChainValid=True
-    once all tiles report the expected destination IPs, and flips to False when
-    a tile reports a wrong IP.
+    Verifies that the component manager emits beamformerDaisyChainValid=None,
+    naming the first tile whose destination IPs are missing, until all tiles
+    report the expected destination IPs; then True, and False, naming the tile,
+    when a tile reports a wrong IP. The details are None when the chain is valid.
 
     Calls _on_tile_attribute_change directly without start_communicating() to
     avoid race conditions with background Tango subscription event threads.
@@ -2090,30 +2094,62 @@ def test_beamformer_daisy_chain(
     sdn_base = ipaddress.IPv4Address("10.0.0.152")
     last = num_tiles - 1
 
-    def set_dst_ips(tile_id: int, fpga1: str, fpga2: str) -> None:
+    def set_dst_ip(tile_id: int, fpga: int, ip: str) -> None:
         station_component_manager._on_tile_attribute_change(
-            tile_id, "dstip40gfpga1", fpga1, tango.AttrQuality.ATTR_VALID
-        )
-        station_component_manager._on_tile_attribute_change(
-            tile_id, "dstip40gfpga2", fpga2, tango.AttrQuality.ATTR_VALID
+            tile_id, f"dstip40gfpga{fpga}", ip, tango.AttrQuality.ATTR_VALID
         )
 
-    # Tiles within the chain send to each other; last tile is ignored.
-    for tile_id in range(last):
-        set_dst_ips(
-            tile_id,
-            str(sdn_base + 2 * tile_id + 2),
-            str(sdn_base + 2 * tile_id + 3),
+    def assert_missing(tile_id: int, ip1: str, ip2: str) -> None:
+        callbacks["component_state"].assert_call(
+            beamformerDaisyChainValid=None,
+            beamformerDaisyChainDetails={
+                "reason": (
+                    f"Tile {tile_id} has not reported its beamformer "
+                    f"destination IPs: got ({ip1!r}, {ip2!r})"
+                ),
+                "remedy": Anything,
+            },
         )
-    callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)
+
+    # Tiles within the chain send to each other; last tile is ignored. Until
+    # every tile has reported, the chain is unknown, and the details name the
+    # first tile that has not.
+    for tile_id in range(last):
+        ip1 = str(sdn_base + 2 * tile_id + 2)
+        ip2 = str(sdn_base + 2 * tile_id + 3)
+        set_dst_ip(tile_id, 1, ip1)
+        assert_missing(tile_id, ip1, "")
+        set_dst_ip(tile_id, 2, ip2)
+        if tile_id + 1 < last:
+            assert_missing(tile_id + 1, "", "")
+    callbacks["component_state"].assert_call(
+        beamformerDaisyChainValid=True, beamformerDaisyChainDetails=None
+    )
 
     # Oh no someone broke it.
-    set_dst_ips(1, "1.2.3.4", str(sdn_base + 2 * 1 + 3))
-    callbacks["component_state"].assert_call(beamformerDaisyChainValid=False)
+    expected_ip1 = str(sdn_base + 2 * 1 + 2)
+    expected_ip2 = str(sdn_base + 2 * 1 + 3)
+    set_dst_ip(1, 1, "1.2.3.4")
+    callbacks["component_state"].assert_call(
+        beamformerDaisyChainValid=False,
+        beamformerDaisyChainDetails={
+            "reason": (
+                "Tile 1 has incorrect beamformer destination IPs: "
+                f"Expected ({expected_ip1}, {expected_ip2}), "
+                f"got (1.2.3.4, {expected_ip2})"
+            ),
+            "remedy": Anything,
+        },
+    )
+    # Rewriting the other IP, unchanged, changes nothing.
+    set_dst_ip(1, 2, expected_ip2)
+    callbacks["component_state"].assert_not_called()
 
     # Yay they fixed it.
-    set_dst_ips(1, str(sdn_base + 2 * 1 + 2), str(sdn_base + 2 * 1 + 3))
-    callbacks["component_state"].assert_call(beamformerDaisyChainValid=True)
+    set_dst_ip(1, 1, expected_ip1)
+    callbacks["component_state"].assert_call(
+        beamformerDaisyChainValid=True, beamformerDaisyChainDetails=None
+    )
 
 
 def test_beamformer_flagged_count(
@@ -2130,6 +2166,7 @@ def test_beamformer_flagged_count(
     Checks:
     - Non-final tiles' counts do not fire any component_state callback.
     - Final tile non-zero fpga0 count → finalTileBeamformerFlaggedCountOk=False.
+    - Details name the non-zero FPGA, and are None when ok.
     - Repeated identical value does not re-fire (deduplication).
     - fpga0 cleared while fpga1 still zero → True.
     - Non-zero fpga1 → False; clearing → True.
@@ -2140,6 +2177,16 @@ def test_beamformer_flagged_count(
     """
     _mark_tiles_established(station_component_manager, num_tiles)
     last = num_tiles - 1
+
+    def non_zero_details(fpga: str) -> dict[str, Any]:
+        return {
+            "reason": (
+                f"Final tile (logical tile id {last}) has a non-zero "
+                "dsp_station_beamf_discarded_or_flagged_packet_count on "
+                f"{fpga}"
+            ),
+            "remedy": Anything,
+        }
 
     # Non-final tiles must not trigger any callback.
     for tile_id in range(last):
@@ -2158,7 +2205,10 @@ def test_beamformer_flagged_count(
         5,
         tango.AttrQuality.ATTR_VALID,
     )
-    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=False)
+    callbacks["component_state"].assert_call(
+        finalTileBeamformerFlaggedCountOk=False,
+        finalTileBeamformerFlaggedCountDetails=non_zero_details("fpga0"),
+    )
 
     # Same value again — no duplicate callback.
     station_component_manager._on_tile_attribute_change(
@@ -2176,7 +2226,10 @@ def test_beamformer_flagged_count(
         0,
         tango.AttrQuality.ATTR_VALID,
     )
-    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=True)
+    callbacks["component_state"].assert_call(
+        finalTileBeamformerFlaggedCountOk=True,
+        finalTileBeamformerFlaggedCountDetails=None,
+    )
 
     # fpga1 non-zero → not ok.
     station_component_manager._on_tile_attribute_change(
@@ -2185,7 +2238,10 @@ def test_beamformer_flagged_count(
         3,
         tango.AttrQuality.ATTR_VALID,
     )
-    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=False)
+    callbacks["component_state"].assert_call(
+        finalTileBeamformerFlaggedCountOk=False,
+        finalTileBeamformerFlaggedCountDetails=non_zero_details("fpga1"),
+    )
 
     # Both zero → ok.
     station_component_manager._on_tile_attribute_change(
@@ -2194,7 +2250,10 @@ def test_beamformer_flagged_count(
         0,
         tango.AttrQuality.ATTR_VALID,
     )
-    callbacks["component_state"].assert_call(finalTileBeamformerFlaggedCountOk=True)
+    callbacks["component_state"].assert_call(
+        finalTileBeamformerFlaggedCountOk=True,
+        finalTileBeamformerFlaggedCountDetails=None,
+    )
 
 
 @pytest.mark.parametrize(

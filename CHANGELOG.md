@@ -2,16 +2,19 @@
 
 ## Unreleased
 
-* [THORN-723] Added new health checks for spsstation
-  that check the beamformer daisy chain, verifying
-  each tile's admin mode, programming state and data
-  routing including csp ingest.
+* [THORN-723] Added new health checks for spsstation that check the beamformer daisy chain, verifying
+  each tile's admin mode, programming state and data routing including csp ingest.
+* [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.
+* [THORN-813] Prototype subrack only sets fan speeds for fan pairs that the poll reads in `AUTO`.
+* [THORN-812] Update PyTango to 10.3.2.
 * [THORN-690] Use MccsCommandProxy to listen for the real result of a
 subrack's On() command during SpsStation's power-on sequence, instead of
 firing it and forgetting the reply. A rejected/failed On() (e.g. because a
 subrack is administratively OFFLINE) now fails fast instead of causing a
 blind 180s timeout.
 * [THORN-802] Updated thresholds for every TPM attribute which the new SPS thresholds give. No new attrbutes have thresholds, but many have been updated.
+* [THORN-615] The OK results of MccsTile ApplyCalibration and ApplyPointingDelays now say when the switch occurs (immediately, at a given frame, or in a number of frames with the time in seconds).
+* [THORN-615] MccsTile time validation errors now include the requested time. This applies to "Time too early" from SendDataSamples, StartBeamformer, ApplyCalibration, ApplyPointingDelays and ConfigureTestGenerator, and to "Invalid time" from StartAcquisition and ConfigureTestGenerator.
 
 ## 18.0.0
 

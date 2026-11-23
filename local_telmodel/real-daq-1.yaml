@@ -8,6 +8,7 @@ platform:
           - file://local_telmodel
           - real-daq-1.yaml
         sdn_first_interface: 10.1.0.152/25
+        csp_ingest_ip: 10.1.0.250
         subracks:
           sr1:
             simulated: true

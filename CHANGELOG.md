@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [THORN-723] Added new health checks for spsstation that check the beamformer daisy chain, verifying
+  each tile's admin mode, programming state and data routing including csp ingest.
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.
 * [THORN-813] Prototype subrack only sets fan speeds for fan pairs that the poll reads in `AUTO`.
 * [THORN-812] Update PyTango to 10.3.2.

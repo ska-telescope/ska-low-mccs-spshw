@@ -210,53 +210,30 @@ class _PDUProxy(DeviceComponentManager):
 
         func()
 
-    def _pdu_port_current(self: _PDUProxy, port_number: int) -> float:
+    def _pdu_port_values(self: _PDUProxy, suffix: str) -> list[Any]:
         """
-        Get the current for a PDU port.
+        Read the ``pduPort<n><suffix>`` attribute for every PDU port.
 
-        :param port_number: the port number to get current for.
+        :param suffix: the attribute name suffix, e.g. "Current".
 
-        :return: current for port provided.
-        """
-        assert self._proxy is not None  # for the type checker
-        assert self._proxy._device is not None  # for the type checker
-
-        attr_name = f"pduPort{port_number}Current"
-        func = getattr(self._proxy._device, attr_name)
-
-        return func()
-
-    def _pdu_port_voltage(self: _PDUProxy, port_number: int) -> float:
-        """
-        Get the voltage for a PDU port.
-
-        :param port_number: the port number to get voltage for.
-
-        :return: voltage for port provided.
+        :return: one value per port, in port order. Empty if this PDU model
+            does not define the attribute (e.g. Enlogic has no port voltage).
         """
         assert self._proxy is not None  # for the type checker
         assert self._proxy._device is not None  # for the type checker
 
-        attr_name = f"pduPort{port_number}Voltage"
-        func = getattr(self._proxy._device, attr_name)
-
-        return func()
-
-    def _pdu_port_state(self: _PDUProxy, port_number: int) -> int:
-        """
-        Get the state for a PDU port.
-
-        :param port_number: the port number to get state for.
-
-        :return: state for port provided.
-        """
-        assert self._proxy is not None  # for the type checker
-        assert self._proxy._device is not None  # for the type checker
-
-        attr_name = f"pduPort{port_number}State"
-        func = getattr(self._proxy._device, attr_name)
-
-        return func()
+        values: list[Any] = []
+        # PDU port attributes are one-based (pduPort1..., see
+        # pdu/device_definitions/*.yaml), so there is no pduPort0.
+        for port_number in range(1, self._number_of_ports() + 1):
+            attr_name = f"pduPort{port_number}{suffix}"
+            try:
+                # Reading an attribute through a DeviceProxy gives its value.
+                values.append(getattr(self._proxy._device, attr_name))
+            except AttributeError:
+                self.logger.debug(f"PDU {self.fqdn} has no attribute {attr_name}")
+                return []
+        return values
 
 
 # pylint: disable = too-many-instance-attributes, too-many-public-methods
@@ -701,53 +678,41 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_port_currents(
         self: SubrackComponentManager,
-    ) -> Optional[list[float]]:
+    ) -> list[float]:
         """
-        Get the currents for a pdu port.
+        Get the currents of all pdu ports.
 
-        :return: pdu port currents.
+        :return: pdu port currents, empty if there is no PDU.
         """
-        currents: list[float] = []
-        if self.pdu_proxy is not None:
-            number_of_ports = self.pdu_proxy._number_of_ports()
-            for port_number in range(number_of_ports):
-                currents.append(self.pdu_proxy._pdu_port_current(port_number))
-            return currents
-        return None
+        if self.pdu_proxy is None:
+            return []
+        return self.pdu_proxy._pdu_port_values("Current")
 
     @check_communicating
     def pdu_port_voltages(
         self: SubrackComponentManager,
-    ) -> Optional[list[float]]:
+    ) -> list[float]:
         """
-        Get the voltages for a pdu port.
+        Get the voltages of all pdu ports.
 
-        :return: pdu port voltages.
+        :return: pdu port voltages, empty if there is no PDU.
         """
-        if self.pdu_proxy is not None:
-            voltages: list[float] = []
-            number_of_ports = self.pdu_proxy._number_of_ports()
-            for port_number in range(number_of_ports):
-                voltages.append(self.pdu_proxy._pdu_port_voltage(port_number))
-            return voltages
-        return None
+        if self.pdu_proxy is None:
+            return []
+        return self.pdu_proxy._pdu_port_values("Voltage")
 
     @check_communicating
     def pdu_port_states(
         self: SubrackComponentManager,
-    ) -> Optional[list[int]]:
+    ) -> list[int]:
         """
-        Get the states for a pdu port.
+        Get the states of all pdu ports.
 
-        :return: pdu port statuses.
+        :return: pdu port states, empty if there is no PDU.
         """
-        if self.pdu_proxy is not None:
-            states: list[int] = []
-            number_of_ports = self.pdu_proxy._number_of_ports()
-            for port_number in range(number_of_ports):
-                states.append(self.pdu_proxy._pdu_port_state(port_number))
-            return states
-        return None
+        if self.pdu_proxy is None:
+            return []
+        return self.pdu_proxy._pdu_port_values("State")
 
     def schedule_on(
         self: SubrackComponentManager,

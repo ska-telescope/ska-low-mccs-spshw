@@ -749,3 +749,82 @@ def test_pdu_health_state_is_a_health_state(
     # compare equal to the HealthState by value without being converted.
     assert type(pdu_health) is HealthState  # pylint: disable=unidiomatic-typecheck
     assert pdu_health == health_state
+
+
+def _pdu_proxy_with_device(logger: logging.Logger, **attributes: Any) -> _PDUProxy:
+    """
+    Make a PDU proxy whose device has only the given attributes.
+
+    :param logger: the logger to be used by this object.
+    :param attributes: the attribute values the PDU device reports.
+
+    :return: the PDU proxy.
+    """
+    pdu_proxy = _PDUProxy(
+        "low-mccs/pdu/pdu_1",
+        logger,
+        unittest.mock.Mock(),
+        unittest.mock.Mock(),
+    )
+    pdu_proxy._proxy = unittest.mock.Mock()
+    # spec_set means any attribute not given (e.g. pduPort0Current)
+    # raises AttributeError, as a real DeviceProxy does.
+    device = unittest.mock.NonCallableMock(spec_set=list(attributes))
+    for name, value in attributes.items():
+        setattr(device, name, value)
+    pdu_proxy._proxy._device = device
+    return pdu_proxy
+
+
+@pytest.mark.parametrize(
+    ("suffix", "port_values"),
+    [
+        ("Current", [1, 2]),
+        ("Voltage", [230.0, 231.0]),
+        ("State", [7, 8]),
+    ],
+)
+def test_pdu_port_values_are_one_based(
+    logger: logging.Logger,
+    suffix: str,
+    port_values: list[Any],
+) -> None:
+    """
+    Test that the PDU port values are read from one-based attributes.
+
+    The PDU names its port attributes pduPort1... to pduPortN...
+    Reading pduPort0... previously failed with
+    "AttributeError: pduPort0Current".
+
+    :param logger: the logger to be used by this object.
+    :param suffix: the attribute name suffix.
+    :param port_values: the value the PDU reports for each port.
+    """
+    pdu_proxy = _pdu_proxy_with_device(
+        logger,
+        pduNumberOfPorts=len(port_values),
+        **{
+            f"pduPort{port}{suffix}": value
+            for port, value in enumerate(port_values, start=1)
+        },
+    )
+
+    assert pdu_proxy._pdu_port_values(suffix) == port_values
+
+
+def test_pdu_port_values_missing_attribute(logger: logging.Logger) -> None:
+    """
+    Test that an attribute the PDU model does not have gives an empty list.
+
+    The Enlogic PDU does not define pduPort<n>Voltage.
+
+    :param logger: the logger to be used by this object.
+    """
+    pdu_proxy = _pdu_proxy_with_device(
+        logger,
+        pduNumberOfPorts=2,
+        pduPort1Current=1,
+        pduPort2Current=2,
+    )
+
+    assert not pdu_proxy._pdu_port_values("Voltage")

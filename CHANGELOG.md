@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-791] Fix AttributeErrors in pduPortStates, pduPortCurrents, pduPortVoltages.
+  * There was an index error 1-based system but indexing with zero.
+  * Enlogic does not have pduPort{}Voltage attribute.
+  * attributes return [] instead of None.
 * [THORN-723] Added new health checks for spsstation that check the beamformer daisy chain, verifying
   each tile's admin mode, programming state and data routing including csp ingest.
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.

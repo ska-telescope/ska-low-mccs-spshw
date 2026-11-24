@@ -59,6 +59,7 @@ _AWAITING_HEALTH_REMEDIES = {
     "self": HealthDetailText.AWAITING_PPS_REMEDY,
     "tile_programming_state": HealthDetailText.AWAITING_TILE_PROGRAMMING_STATE_REMEDY,
     "beamformer_daisy_chain": HealthDetailText.AWAITING_DAISY_CHAIN_REMEDY,
+    "tile_data_routing": HealthDetailText.AWAITING_TILE_DATA_ROUTING_REMEDY,
     "beamformer_flagged_count": HealthDetailText.AWAITING_FLAGGED_COUNT_REMEDY,
 }
 
@@ -984,7 +985,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 routing_health = HealthState.OK
             else:
                 routing_health = HealthState.FAILED
-            self._rollup_health_changed("tile_data_routing", routing_health)
+            self._rollup_health_changed(
+                "tile_data_routing",
+                routing_health,
+                state_change.get("tileDataRoutingDetails"),
+            )
 
         if "finalTileBeamformerFlaggedCountOk" in state_change:
             # None means a final tile count is INVALID, so the result can no

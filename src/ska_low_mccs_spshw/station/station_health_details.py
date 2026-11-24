@@ -71,7 +71,12 @@ class HealthDetailText(str, Enum):
     )
     AWAITING_DAISY_CHAIN_REMEDY = (
         "Check that the tiles are ON and communicating, and that their "
-        "dstip40gfpga1 and dstip40gfpga2 can be read."
+        "adminMode, tileProgrammingState, fortyGbCoreConfigurations and "
+        "fortyGPacketCount can be read."
+    )
+    AWAITING_TILE_DATA_ROUTING_REMEDY = (
+        "Check that the last tile is ON and communicating, and that its "
+        "fortyGbCoreConfigurations can be read."
     )
     AWAITING_FLAGGED_COUNT_REMEDY = (
         "Check that the final tile is ON and communicating, and that its "
@@ -99,27 +104,81 @@ class HealthDetailText(str, Enum):
         "Port and community properties."
     )
 
-    # The beamformer daisy chain cannot be verified: a tile has not reported
-    # its destination IPs.
-    DAISY_CHAIN_MISSING_REASON = (
-        "Tile {tile_id} has not reported its beamformer destination IPs: "
-        "got ({ip1!r}, {ip2!r})"
+    # The beamformer daisy chain is checked in stages.
+    # Stage: every tile is ON.
+    DAISY_CHAIN_TILES_NOT_ON_REASON = (
+        "Beamformer daisy chain is broken: not every tile is ON."
     )
-    DAISY_CHAIN_MISSING_REMEDY = (
-        "Check that tile {tile_id} is ON and communicating, and that its "
-        "dstip40gfpga1 and dstip40gfpga2 can be read. If they are empty, "
-        "Initialise the station to configure the tiles' 40G ports."
+    DAISY_CHAIN_TILES_NOT_ON_REMEDY = (
+        "Turn on the tiles, e.g. by turning the station On. If a tile does "
+        "not turn on, check its subrack, and the tile's healthReport."
     )
-    # The beamformer daisy chain is broken: a tile sends to the wrong IPs.
-    DAISY_CHAIN_WRONG_REASON = (
-        "Tile {tile_id} has incorrect beamformer destination IPs: "
-        "Expected ({expected_ip1}, {expected_ip2}), got ({ip1}, {ip2})"
+    # Stage: every tile is ONLINE or ENGINEERING.
+    DAISY_CHAIN_TILES_NOT_ONLINE_REASON = (
+        "Beamformer daisy chain is broken: not every tile is ONLINE or ENGINEERING."
     )
-    DAISY_CHAIN_WRONG_REMEDY = (
+    DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY = (
+        "Set the adminMode of every tile to ONLINE. If a tile's adminMode "
+        "cannot be read, check that the tile device is running and reachable."
+    )
+    # Stage: every tile is initialised.
+    DAISY_CHAIN_TILES_NOT_INITIALISED_REASON = (
+        "Beamformer daisy chain is broken: not every tile is Initialised or "
+        "Synchronised."
+    )
+    DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY = (
+        "Initialise the station. If a tile does not reach Initialised, check "
+        "its tileProgrammingState and healthReport."
+    )
+    # Stage: every tile but the last sends its beamformer output to the next.
+    DAISY_CHAIN_IPS_WRONG_REASON = (
+        "Beamformer daisy chain is broken: a tile does not send its "
+        "beamformer output to the next tile."
+    )
+    DAISY_CHAIN_IPS_UNKNOWN_REASON = (
+        "Beamformer daisy chain cannot be verified: a tile has not reported "
+        "its beamformer destination IPs."
+    )
+    DAISY_CHAIN_IPS_REMEDY = (
         "Initialise the station, which sets every tile's beamformer "
-        "destination IPs. If the error returns, check the SdnFirstInterface "
-        "device property, and whether the tile's 40G destination was "
-        "changed by hand."
+        "destination IPs. If they are wrong, the station logs which tile, "
+        "and the IPs it expected: check the SdnFirstInterface device "
+        "property, and whether the tile's 40G destination was changed by "
+        "hand. If they are not reported, check that every tile's "
+        "fortyGbCoreConfigurations can be read."
+    )
+    # Stage: while beamforming, every tile but the first receives data from
+    # the previous tile.
+    DAISY_CHAIN_NOT_RECEIVING_REASON = (
+        "Beamformer daisy chain is broken: while beamforming, a tile is not "
+        "receiving data from the previous tile."
+    )
+    DAISY_CHAIN_NOT_RECEIVING_REMEDY = (
+        "Check every tile's fortyGPacketCount: each tile but the first should "
+        "be receiving (rx_received), and the tile before it sending "
+        "(tx_transmitted). If so, check the 40G links between the tiles."
+    )
+
+    # The station beam is routed from the last tile to CSP ingest. This is
+    # only checked once CSP ingest is configured.
+    TILE_DATA_ROUTING_WRONG_REASON = (
+        "Station beam is not routed to CSP ingest: the last tile does not "
+        "send its beamformer output to the CSP ingest address and port."
+    )
+    TILE_DATA_ROUTING_WRONG_REMEDY = (
+        "Run SetCspIngest again, with the last tile ON, which sets the last "
+        "tile's routes. The station logs which core and ARP table entry is "
+        "wrong, and the route it expected. If the error returns, check "
+        "whether the last tile's 40G destination was changed by hand."
+    )
+    TILE_DATA_ROUTING_UNKNOWN_REASON = (
+        "Station beam routing to CSP ingest cannot be verified: the last "
+        "tile has not reported its fortyGbCoreConfigurations."
+    )
+    TILE_DATA_ROUTING_UNKNOWN_REMEDY = (
+        "Check that the last tile is communicating, and that its "
+        "fortyGbCoreConfigurations can be read: the station checks the "
+        "routes they report."
     )
 
     # The final tile's beamformer discarded or flagged packet count is not OK.

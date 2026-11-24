@@ -1976,33 +1976,79 @@ class SpsStationComponentManager(
 
         The result is True if every stage passes, otherwise the result of
         the first stage that does not: False if it failed, or None if it
-        cannot yet be verified.
+        cannot yet be verified. If every tile is OFF, there is no chain to
+        check, so the result is True.
+
+        Unless the result is True, the details give the reason that stage
+        failed, or cannot be verified, and a remedy.
         """
+        stages: dict[str, dict[str, Any]] = {
+            "tiles_on": {
+                "method": self._check_daisy_chain_tiles_on,
+                "failure_case": HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+                "unknown_case": None,
+                "remedy": HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REMEDY,
+            },
+            "tiles_online": {
+                "method": self._check_daisy_chain_tiles_online,
+                "failure_case": HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+                "unknown_case": None,
+                "remedy": HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY,
+            },
+            "tiles_initialised": {
+                "method": self._check_daisy_chain_tiles_initialised,
+                "failure_case": (
+                    HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON
+                ),
+                "unknown_case": None,
+                "remedy": HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY,
+            },
+            "destination_ips": {
+                "method": self._validate_beamformer_daisy_chain_ips,
+                "failure_case": HealthDetailText.DAISY_CHAIN_IPS_WRONG_REASON,
+                "unknown_case": HealthDetailText.DAISY_CHAIN_IPS_UNKNOWN_REASON,
+                "remedy": HealthDetailText.DAISY_CHAIN_IPS_REMEDY,
+            },
+            "tiles_receiving": {
+                "method": self._check_daisy_chain_tiles_receiving,
+                "failure_case": HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON,
+                "unknown_case": None,
+                "remedy": HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REMEDY,
+            },
+        }
         valid: Optional[bool] = True
-        failed_check = ""
+        details: dict[str, str] | None = None
+        failed_stage = ""
         power_states = list(self._tile_power_states.values())
         if not all(power == PowerState.OFF for power in power_states):
-            for check in (
-                self._check_daisy_chain_tiles_on,
-                self._check_daisy_chain_tiles_online,
-                self._check_daisy_chain_tiles_initialised,
-                self._validate_beamformer_daisy_chain_ips,
-                self._check_daisy_chain_tiles_receiving,
-            ):
-                valid = check()
+            for stage_name, stage in stages.items():
+                valid = stage["method"]()
                 if not valid:
-                    failed_check = check.__name__
+                    failed_stage = stage_name
+                    case = (
+                        stage["failure_case"]
+                        if valid is False
+                        else stage["unknown_case"]
+                    )
+                    details = {"reason": case.value, "remedy": stage["remedy"].value}
                     break
 
-        if valid == self._beamformer_daisy_chain_valid:
+        if (valid, details) == (
+            self._beamformer_daisy_chain_valid,
+            self._beamformer_daisy_chain_details,
+        ):
             return
-        if failed_check:
+        if failed_stage:
             self.logger.warning(
-                f"Beamformer daisy chain check {failed_check} returned {valid}"
+                f"Beamformer daisy chain check {failed_stage} returned {valid}"
             )
         self._beamformer_daisy_chain_valid = valid
+        self._beamformer_daisy_chain_details = details
         if self._component_state_callback:
-            self._component_state_callback(beamformerDaisyChainValid=valid)
+            self._component_state_callback(
+                beamformerDaisyChainValid=valid,
+                beamformerDaisyChainDetails=details,
+            )
 
     def _check_daisy_chain_tiles_on(
         self: SpsStationComponentManager,
@@ -2130,9 +2176,22 @@ class SpsStationComponentManager(
                 "CSP ingest address is not configured, "
                 "so the station beam routing is not checked"
             )
+        details: dict[str, str] | None = None
+        if valid is False:
+            details = {
+                "reason": HealthDetailText.TILE_DATA_ROUTING_WRONG_REASON.value,
+                "remedy": HealthDetailText.TILE_DATA_ROUTING_WRONG_REMEDY.value,
+            }
+        elif valid is None:
+            details = {
+                "reason": HealthDetailText.TILE_DATA_ROUTING_UNKNOWN_REASON.value,
+                "remedy": HealthDetailText.TILE_DATA_ROUTING_UNKNOWN_REMEDY.value,
+            }
         self._tile_data_routing_valid = valid
         if self._component_state_callback:
-            self._component_state_callback(tileDataRoutingValid=valid)
+            self._component_state_callback(
+                tileDataRoutingValid=valid, tileDataRoutingDetails=details
+            )
 
     def _check_csp_ingest_routes(
         self: SpsStationComponentManager, log_mismatches: bool = True
@@ -2162,6 +2221,12 @@ class SpsStationComponentManager(
             for arp_table_entry in (0, 1):
                 route = routes.get((core_id, arp_table_entry))
                 if route is None:
+                    if log_mismatches:
+                        self.logger.warning(
+                            f"Tile {last} core {core_id} ARP table entry "
+                            f"{arp_table_entry} has no route to CSP ingest: "
+                            f"Expected {expected}"
+                        )
                     return False
                 actual = {field: route.get(field) for field in expected}
                 if actual != expected:

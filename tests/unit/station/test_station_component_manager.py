@@ -40,6 +40,7 @@ from ska_low_mccs_spshw.station import (
     SpsStationSelfCheckManager,
 )
 from ska_low_mccs_spshw.station import station_component_manager as station_cm
+from ska_low_mccs_spshw.station.station_health_details import HealthDetailText
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 from tests.test_tools import FakeGroup as _FakeGroup
@@ -2342,17 +2343,49 @@ def _make_daisy_chain_valid(
 
 
 @pytest.mark.parametrize(
-    ("attribute_name", "attribute_value", "expected_validity"),
+    ("attribute_name", "attribute_value", "expected_validity", "expected_reason"),
     [
-        pytest.param("power", PowerState.OFF, False, id="tile off"),
-        pytest.param("power", PowerState.UNKNOWN, False, id="tile power unknown"),
-        pytest.param("adminMode", AdminMode.OFFLINE, False, id="tile offline"),
-        pytest.param("adminMode", None, False, id="tile admin mode unknown"),
         pytest.param(
-            "tileProgrammingState", "Programmed", False, id="tile not initialised"
+            "power",
+            PowerState.OFF,
+            False,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+            id="tile off",
         ),
         pytest.param(
-            "tileProgrammingState", None, False, id="tile programming state unknown"
+            "power",
+            PowerState.UNKNOWN,
+            False,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+            id="tile power unknown",
+        ),
+        pytest.param(
+            "adminMode",
+            AdminMode.OFFLINE,
+            False,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+            id="tile offline",
+        ),
+        pytest.param(
+            "adminMode",
+            None,
+            False,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+            id="tile admin mode unknown",
+        ),
+        pytest.param(
+            "tileProgrammingState",
+            "Programmed",
+            False,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON,
+            id="tile not initialised",
+        ),
+        pytest.param(
+            "tileProgrammingState",
+            None,
+            False,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON,
+            id="tile programming state unknown",
         ),
         pytest.param(
             "fortyGbCoreConfigurations",
@@ -2385,10 +2418,15 @@ def _make_daisy_chain_valid(
                 ]
             ),
             False,
+            HealthDetailText.DAISY_CHAIN_IPS_WRONG_REASON,
             id="tile wrong dst ip",
         ),
         pytest.param(
-            "fortyGbCoreConfigurations", None, None, id="tile dst ips unknown"
+            "fortyGbCoreConfigurations",
+            None,
+            None,
+            HealthDetailText.DAISY_CHAIN_IPS_UNKNOWN_REASON,
+            id="tile dst ips unknown",
         ),
     ],
 )
@@ -2400,6 +2438,7 @@ def test_beamformer_daisy_chain(
     attribute_name: str,
     attribute_value: Any,
     expected_validity: bool | None,
+    expected_reason: HealthDetailText,
 ) -> None:
     """
     Test that the station validates the beamformer daisy chain.
@@ -2408,8 +2447,9 @@ def test_beamformer_daisy_chain(
     once all tiles are ON, ONLINE and initialised, and every tile but the
     last reports the expected destination IPs (the beamformer is not
     running, so the receiving stage is skipped). It then emits the
-    expected result when a tile's reading changes, and True again once
-    the chain is restored.
+    expected result when a tile's reading changes, with the reason of the
+    stage that did not pass, and True again, without details, once the
+    chain is restored.
 
     A value of None stands for an INVALID reading.
 
@@ -2424,10 +2464,12 @@ def test_beamformer_daisy_chain(
     :param attribute_name: the tile attribute to change, or "power".
     :param attribute_value: the new value of the attribute.
     :param expected_validity: the expected result of the validation.
+    :param expected_reason: the reason of the stage that does not pass.
     """
     _make_daisy_chain_valid(station_component_manager, beamformer_routes)
     callbacks["component_state"].assert_call(
         beamformerDaisyChainValid=True,
+        beamformerDaisyChainDetails=None,
         lookahead=10 * num_tiles,
         consume_nonmatches=True,
     )
@@ -2449,6 +2491,10 @@ def test_beamformer_daisy_chain(
     # A power change also publishes the tile and station power.
     callbacks["component_state"].assert_call(
         beamformerDaisyChainValid=expected_validity,
+        beamformerDaisyChainDetails={
+            "reason": expected_reason.value,
+            "remedy": Anything,
+        },
         lookahead=5,
         consume_nonmatches=True,
     )
@@ -2456,6 +2502,7 @@ def test_beamformer_daisy_chain(
     _make_daisy_chain_valid(station_component_manager, beamformer_routes)
     callbacks["component_state"].assert_call(
         beamformerDaisyChainValid=True,
+        beamformerDaisyChainDetails=None,
         lookahead=10 * num_tiles,
         consume_nonmatches=True,
     )
@@ -2468,6 +2515,8 @@ def test_beamformer_daisy_chain_receiving(
 ) -> None:
     """
     Test that, while beamforming, every tile but the first must be receiving.
+
+    The details give the reason of the receiving stage.
 
     :param station_component_manager: the SPS station component manager under test
     :param num_tiles: number of TPMs in the test.
@@ -2496,17 +2545,26 @@ def test_beamformer_daisy_chain_receiving(
         _push_tile_attribute(
             station_component_manager, tile_id, "isBeamformerRunning", True
         )
+
+    def reason() -> str:
+        details = station_component_manager._beamformer_daisy_chain_details
+        assert details is not None
+        return details["reason"]
+
     # No packet counts reported yet.
     assert station_component_manager.beamformer_daisy_chain_valid is False
+    assert reason() == HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON.value
 
     # The first tile has no previous tile to receive from.
     set_rx_received(0, 0)
     for tile_id in range(1, num_tiles):
         set_rx_received(tile_id, 1234)
     assert station_component_manager.beamformer_daisy_chain_valid is True
+    assert station_component_manager._beamformer_daisy_chain_details is None
 
     set_rx_received(2, 0)
     assert station_component_manager.beamformer_daisy_chain_valid is False
+    assert reason() == HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON.value
 
     # Nothing is expected to flow once the beamformer stops.
     _push_tile_attribute(station_component_manager, 0, "isBeamformerRunning", False)
@@ -2658,8 +2716,9 @@ def test_tile_data_routing(
 
     Verifies that the component manager emits tileDataRoutingValid=True
     once CSP ingest is configured and the last tile reports routes to it,
-    False when the last tile reports wrong routes, and True again once the
-    expected routes are restored.
+    False, with the reason and remedy, when the last tile reports wrong
+    routes, and True again, without details, once the expected routes are
+    restored.
 
     :param station_component_manager: the SPS station component manager under test
     :param callbacks: dictionary of driver callbacks.
@@ -2675,16 +2734,25 @@ def test_tile_data_routing(
     )
     callbacks["component_state"].assert_call(
         tileDataRoutingValid=True,
+        tileDataRoutingDetails=None,
         lookahead=10 * num_tiles,
         consume_nonmatches=True,
     )
 
     last = num_tiles - 1
     _set_beamformer_routes(station_component_manager, last, new_routes)
-    callbacks["component_state"].assert_call(tileDataRoutingValid=False)
+    callbacks["component_state"].assert_call(
+        tileDataRoutingValid=False,
+        tileDataRoutingDetails={
+            "reason": HealthDetailText.TILE_DATA_ROUTING_WRONG_REASON.value,
+            "remedy": HealthDetailText.TILE_DATA_ROUTING_WRONG_REMEDY.value,
+        },
+    )
 
     _set_beamformer_routes(station_component_manager, last, beamformer_routes[last])
-    callbacks["component_state"].assert_call(tileDataRoutingValid=True)
+    callbacks["component_state"].assert_call(
+        tileDataRoutingValid=True, tileDataRoutingDetails=None
+    )
 
 
 def test_tile_data_routing_csp_ingest(
@@ -2763,6 +2831,8 @@ def test_tile_data_routing_unknown(
     """
     Test that the routing is unknown while the last tile's routes are unknown.
 
+    The details give the reason the routing cannot be verified, and a remedy.
+
     :param station_component_manager: the SPS station component manager under test
     :param callbacks: dictionary of driver callbacks.
     :param num_tiles: number of TPMs in the test.
@@ -2775,16 +2845,25 @@ def test_tile_data_routing_unknown(
     )
     callbacks["component_state"].assert_call(
         tileDataRoutingValid=True,
+        tileDataRoutingDetails=None,
         lookahead=10 * num_tiles,
         consume_nonmatches=True,
     )
 
     last = num_tiles - 1
     _set_beamformer_routes(station_component_manager, last, None)
-    callbacks["component_state"].assert_call(tileDataRoutingValid=None)
+    callbacks["component_state"].assert_call(
+        tileDataRoutingValid=None,
+        tileDataRoutingDetails={
+            "reason": HealthDetailText.TILE_DATA_ROUTING_UNKNOWN_REASON.value,
+            "remedy": HealthDetailText.TILE_DATA_ROUTING_UNKNOWN_REMEDY.value,
+        },
+    )
 
     _set_beamformer_routes(station_component_manager, last, beamformer_routes[last])
-    callbacks["component_state"].assert_call(tileDataRoutingValid=True)
+    callbacks["component_state"].assert_call(
+        tileDataRoutingValid=True, tileDataRoutingDetails=None
+    )
 
 
 def test_set_csp_ingest_waits_for_last_tile_routes(

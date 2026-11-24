@@ -293,6 +293,9 @@ class SubrackCommands(LRCMixin):
 
         The argument is a JSON string with both keywords.
 
+        A fan in ``AUTO`` does not stay there. The next poll finds it and puts
+        its pair back in ``MANUAL``, at the speed for the cabinet position.
+
         :param fan_id: the one-based fan number, from 1 to 4.
         :param mode: 0 means MANUAL and 1 means AUTO.
 

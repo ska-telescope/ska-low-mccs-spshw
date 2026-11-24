@@ -52,6 +52,7 @@ For a station configured with 2 subracks and 4 tiles, with everything healthy, `
      "self": 0,
      "tile_programming_state": 0,
      "beamformer_daisy_chain": 0,
+     "tile_data_routing": 0,
      "beamformer_flagged_count": 0,
      "subracks": {
        "low-mccs/subrack/s8-1-1": 0,

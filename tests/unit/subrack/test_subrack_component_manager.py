@@ -9,10 +9,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+import enum
+import logging
+import unittest.mock
+from typing import Any, Callable, Literal
 
 import pytest
-from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
@@ -21,6 +30,7 @@ from ska_low_mccs_spshw.subrack import (
     SubrackData,
     SubrackSimulator,
 )
+from ska_low_mccs_spshw.subrack.subrack_component_manager import _PDUProxy
 
 
 class TestNoSupply:
@@ -688,3 +698,54 @@ class TestOn:
         callbacks["component_state"].assert_call(
             power_supply_fan_speeds=[pytest.approx(s) for s in power_supply_fan_speeds],
         )
+
+
+# PyTango returns DevEnum attributes as a dynamically generated IntEnum,
+# not as the ska_control_model HealthState class.
+_TangoHealthState = enum.IntEnum(  # type: ignore[misc]
+    "healthState", [(state.name, state.value) for state in HealthState]
+)
+
+
+@pytest.mark.parametrize("health_state", list(HealthState))
+@pytest.mark.parametrize(
+    "as_returned_by_proxy",
+    [
+        pytest.param(lambda s: s, id="HealthState"),
+        pytest.param(lambda s: _TangoHealthState(s.value), id="tango_enum"),
+        pytest.param(int, id="int"),
+    ],
+)
+def test_pdu_health_state_is_a_health_state(
+    logger: logging.Logger,
+    health_state: HealthState,
+    as_returned_by_proxy: Callable[[HealthState], Any],
+) -> None:
+    """
+    Test that the PDU health is returned as a HealthState.
+
+    The subrack's pduHealth attribute is a HealthState DevEnum. It was
+    previously a DevString, which failed with
+    "TypeError: can't translate python object to C char*" when given the
+    PDU's healthState enum.
+
+    :param logger: the logger to be used by this object.
+    :param health_state: the health state the PDU reports.
+    :param as_returned_by_proxy: converts the health state into the form
+        the device proxy might return it in.
+    """
+    pdu_proxy = _PDUProxy(
+        "low-mccs/pdu/pdu_1",
+        logger,
+        unittest.mock.Mock(),
+        unittest.mock.Mock(),
+    )
+    pdu_proxy._proxy = unittest.mock.Mock()
+    pdu_proxy._proxy._device.healthState = as_returned_by_proxy(health_state)
+
+    pdu_health = pdu_proxy._get_health_state()
+
+    # type() rather than ==: a Tango-generated IntEnum or a plain int would
+    # compare equal to the HealthState by value without being converted.
+    assert type(pdu_health) is HealthState  # pylint: disable=unidiomatic-typecheck
+    assert pdu_health == health_state

@@ -85,7 +85,6 @@ def _iterate_stack() -> Iterator[_FrameInfo]:
         frame = frame.f_back
 
 
-# pylint: disable=too-many-instance-attributes
 class LogLock:
     """A logging lock."""
 

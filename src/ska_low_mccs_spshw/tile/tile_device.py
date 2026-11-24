@@ -360,6 +360,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     timing_pps_drift_signal: AttrSignal[int] = AttrSignal[int]()
     ppsDelayCorrection_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
     timing_pps_present_signal: AttrSignal[bool] = AttrSignal[bool]()
+    timing_pps_period_signal: AttrSignal[bool] = AttrSignal[bool]()
     pllLocked_signal: AttrSignal[bool] = AttrSignal[bool]()
     beamformerTable_signal: AttrSignal[list[list[int]]] = AttrSignal[list[list[int]]]()
     beamformerRegions_signal: AttrSignal[list[int]] = AttrSignal[list[int]]()
@@ -580,6 +581,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         "dsp": "dsp_signal",
         "adcs": "adcs_signal",
         "timing_pps_present": "timing_pps_present_signal",
+        "timing_pps_period": "timing_pps_period_signal",
         "timing_sync_time": "timing_sync_time_signal",
     }
 
@@ -961,7 +963,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
-            "timing_pps_present": ["timing", "pps", "status"],
+            "timing_pps_present": ["timing", "pps", "present"],
+            "timing_pps_period": ["timing", "pps", "period"],
             "temperatures_fpga0": ["temperatures", "FPGA0"],
             "temperatures_fpga1": ["temperatures", "FPGA1"],
             "temperatures_board": ["temperatures", "board"],
@@ -1872,7 +1875,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return
 
         emit_value = attribute_value
-        if attribute_name == "timing_pps_present" and attribute_value is False:
+        if (
+            attribute_name in ("timing_pps_present", "timing_pps_period")
+            and attribute_value is False
+        ):
             # Signal ALARM quality directly rather than relying on
             # Tango's min_alarm, which isn't usable on a DevBoolean.
             emit_value = (False, None, tango.AttrQuality.ATTR_ALARM)
@@ -4861,6 +4867,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="PPS Present",
         doc="Report if PPS signal is present at the TPM input.",
+    )
+
+    timing_pps_period = attribute_from_signal(
+        timing_pps_period_signal,
+        dtype="DevBoolean",
+        label="PPS Period",
+        doc="Check PPS period has been as expected since PPS error flags were cleared.",
     )
 
     pllLocked = attribute_from_signal(

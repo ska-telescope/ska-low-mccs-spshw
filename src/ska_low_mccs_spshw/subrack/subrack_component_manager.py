@@ -14,7 +14,13 @@ import logging
 import threading
 from typing import Any, Callable, Optional, cast
 
-from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
@@ -141,7 +147,7 @@ class _PDUProxy(DeviceComponentManager):
             self._proxy.abort()
         super().cleanup()
 
-    def _get_health_state(self: _PDUProxy) -> str:
+    def _get_health_state(self: _PDUProxy) -> HealthState:
         """
         Get the pdu health.
 
@@ -150,7 +156,9 @@ class _PDUProxy(DeviceComponentManager):
         assert self._proxy is not None  # for the type checker
         assert self._proxy._device is not None  # for the type checker
 
-        return self._proxy._device.healthState
+        # The proxy returns a Tango-generated IntEnum rather than
+        # ska_control_model's HealthState, so convert by value.
+        return HealthState(int(self._proxy._device.healthState))
 
     def _get_model(self: _PDUProxy) -> str:
         """
@@ -610,7 +618,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     @check_communicating
     def pdu_health_state(
         self: SubrackComponentManager,
-    ) -> Optional[str]:
+    ) -> Optional[HealthState]:
         """
         Get PDU health.
 

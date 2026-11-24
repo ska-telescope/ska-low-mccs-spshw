@@ -1298,15 +1298,6 @@ class TileSimulator:
         self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
 
-    @property
-    def spead_ska_format_supported(self) -> bool:
-        """
-        Check if new (SKA) format for CSP SPEAD header is supported.
-
-        :return: True if new (SKA) format for CSP SPEAD header is supported
-        """
-        return True
-
     @check_mocked_overheating
     @connected
     def erase_fpgas(self: TileSimulator) -> None:
@@ -2287,16 +2278,21 @@ class TileSimulator:
         }
         self.logger.debug(f"Set CSP download config: {self._csp_download_config}")
         assert self.tpm
+        dst_port = self._csp_download_config["dst_port"]
+        dst_ports = {0: dst_port, 1: dst_port if is_last else dst_port + 2}
         for core_id, dst_ip in [(0, dst_ip_1 or ""), (1, dst_ip_2 or "")]:
-            existing = self.tpm._40g_configuration.get((core_id, 0))
-            if existing is not None:
-                existing["dst_ip"] = dst_ip
-            else:
-                self.tpm._40g_configuration[(core_id, 0)] = {
-                    "core_id": core_id,
-                    "arp_table_entry": 0,
-                    "dst_ip": dst_ip,
-                }
+            for arp_table_entry, entry_dst_port in dst_ports.items():
+                existing = self.tpm._40g_configuration.get((core_id, arp_table_entry))
+                if existing is not None:
+                    existing["dst_ip"] = dst_ip
+                    existing["dst_port"] = entry_dst_port
+                else:
+                    self.tpm._40g_configuration[(core_id, arp_table_entry)] = {
+                        "core_id": core_id,
+                        "arp_table_entry": arp_table_entry,
+                        "dst_ip": dst_ip,
+                        "dst_port": entry_dst_port,
+                    }
 
     @check_mocked_overheating
     @connected

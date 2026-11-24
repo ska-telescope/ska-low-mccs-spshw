@@ -605,7 +605,21 @@ def functional_test_context_fixture(
             harness.add_subrack_device(subrack_id, subrack_address)
             harness.add_tile_device(1)
             harness.set_sps_station_device(
-                subrack_ids=range(1, 2), tile_ids=range(1, 2)
+                subrack_ids=range(1, 2),
+                tile_ids=range(1, 2),
+                HealthPPSDelayThresholds="""
+                                        {
+                                        "pps_delta_degraded": 4,
+                                        "pps_delta_failed": 9
+                                        }
+                                        """,
+                HealthRollupThresholds="""
+                                       {
+                                       "subracks": [1, 1, 1],
+                                       "tiles": [1, 1, 2],
+                                       "wren": [1, 1, 1]
+                                       }
+                                       """,
             )
             with harness as context:
                 yield context

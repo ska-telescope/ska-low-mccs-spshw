@@ -134,29 +134,23 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # JSON value containing the health pps delay thresholds
     HealthPPSDelayThresholds = device_property(
         dtype=str,
+        mandatory=True,
         doc=(
             "The health PPS delay theshholds are provided as a JSON string where "
             "keys are `pps_delta_degraded` or `pps_delta_failed` and indicate the "
             "change in the PPS value that triggers degraded or failed health status."
         ),
-        default_value="""
-                        { "pps_delta_degraded": 4, "pps_delta_failed": 9 }
-                      """,
     )
 
     # JSON value containing all the health rollup thresholds
     HealthRollupThresholds = device_property(
         dtype=str,
+        mandatory=True,
         doc=(
             "The health rollup theshholds are provided as a JSON string where "
             "keys are the devices names and values are an array of "
             "three elements corresponding to the rollup levels."
         ),
-        default_value="""
-                        { "subracks": [1, 1, 1],
-                          "tiles": [1, 1, 2],
-                          "wren": [1, 1, 1] }
-                      """,
     )
 
     # ---------------

@@ -52,8 +52,14 @@ ska-tango-devices:
   labels:
     app: ska-low-mccs-spshw
 
-  # Attribute alarm device defaults.
-  # deviceDefaults:
+  deviceDefaults:
+    SpsStation:
+      HealthPPSDelayThresholds: >
+        { "pps_delta_degraded": 4, "pps_delta_failed": 9 }
+
+      HealthRollupThresholds: >
+        { "subracks": [1, 1, 1], "tiles": [1, 1, 2], "wren": [1, 1, 1] }
+    
   classProperties:
     MccsTile:
       temperatures_board->max_alarm: 78
@@ -648,7 +654,7 @@ ska-tango-devices:
       tpmMaxPowers->max_warning: 125
       tpmMaxPowers->min_warning: "Not specified"
       tpmMaxPowers->min_alarm: "Not specified"
-
+      
   # devices:
   #   MccsTile:
   #     low-mccs/tile/s8-1-tpm01:

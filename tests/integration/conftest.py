@@ -185,6 +185,19 @@ def integration_test_context_fixture(
         harness.set_sps_station_device(
             subrack_ids=[subrack_id],
             tile_ids=[tile_id],
+            HealthPPSDelayThresholds="""
+                                     {
+                                     "pps_delta_degraded": 4,
+                                     "pps_delta_failed": 9
+                                     }
+                                     """,
+            HealthRollupThresholds="""
+                                   {
+                                   "subracks": [1, 1, 1],
+                                   "tiles": [1, 1, 2],
+                                   "wren": [1, 1, 1]
+                                   }
+                                   """,
         )
 
         with harness as context:

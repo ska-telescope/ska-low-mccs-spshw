@@ -1,7 +1,7 @@
 # Version History
 
 ## Unreleased
-
+* [THORN-491] Added HealthPPSDelayThresholds and HealthRollupThresholds properties so that configuration is external to the code.  These are mandatory properties.
 * [THORN-723] Added new health checks for spsstation that check the beamformer daisy chain, verifying
   each tile's admin mode, programming state and data routing including csp ingest.
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.

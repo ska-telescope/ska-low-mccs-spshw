@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-819] Upload pod logs with the soak test.
 * [THORN-791] Fix AttributeErrors in pduPortStates, pduPortCurrents, pduPortVoltages.
   * There was an index error 1-based system but indexing with zero.
   * Enlogic does not have pduPort{}Voltage attribute.

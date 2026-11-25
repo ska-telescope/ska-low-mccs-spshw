@@ -305,6 +305,7 @@ ral-low-soak-test:
     name: "$CI_PROJECT_NAME-soak-$CI_JOB_ID"
     paths:
       - "build/reports/soak-iteration-*/"
+      - "build/k8s-logs/"
     when: always
 
 helmfile-lint:

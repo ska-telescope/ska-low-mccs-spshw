@@ -38,7 +38,12 @@ from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.faults import CmdNotAllowedError
 from ska_tango_base.long_running_commands import LRCReqType
 from ska_tango_base.obs import SKAObsDevice
-from ska_tango_base.software_bus import AttrSignal, attribute_from_signal
+from ska_tango_base.software_bus import (
+    AttrSignal,
+    Signal,
+    attribute_from_signal,
+    listen_to_signal,
+)
 from tango import AttrQuality
 from tango.server import attribute, command, device_property
 
@@ -222,9 +227,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         # source gives them: {source: {"reason": ..., "remedy": ...}}.
         self._health_details: dict[str, dict[str, str]] = {}
         self._health_details_lock = threading.Lock()
-        # Serialises building and pushing healthReport. Take no other lock
-        # while holding it.
-        self._health_report_lock = threading.Lock()
         self._health_summary: HealthSummary = {}
         self._health_timestamp: float
         # Need to dynamically define the health rollup members based on deployment.
@@ -668,36 +670,58 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 health_details[source] = new_details
             self._health_details = health_details
 
+    # Emitted whenever the health may have changed. Its value is unused.
+    _health_report_outdated = Signal[None]()
+
     def _push_health_report(self: SpsStation) -> None:
+        """
+        Have healthReport rebuilt, and pushed if it changed.
+
+        This only emits a signal: it does not wait for the report to be
+        built or pushed, so it can be called from any thread, holding any
+        lock or the Tango device monitor. The report is rebuilt on the
+        signal bus thread, by ``_rebuild_health_report``.
+        """
+        self._health_report_outdated = None
+
+    @listen_to_signal(_health_report_outdated)
+    def _rebuild_health_report(self: SpsStation, _: None) -> None:
         """
         Rebuild healthReport, and push it if it changed.
 
-        The events carry the same timestamp as the healthState event.
-        Nothing is pushed until the rollup has given a summary: an empty
-        summary would report every source as OK.
+        This runs only on the signal bus thread
+
+        The events carry the timestamp of the latest health change, as
+        the healthState event does. Nothing is pushed until the rollup has
+        given a summary: an empty summary would report every source as OK.
+
+        A push fails if a command holds the Tango device monitor for longer
+        than the monitor timeout. The signal bus logs the error, and the
+        next change of healthReport is pushed as usual.
+
+        :param _: the emitted value, which is unused.
         """
-        with self._health_report_lock:
-            if not self._health_summary:
-                return
-            report = json.dumps(
-                _detailed_health_report(self._health_summary, self._health_details)
+        if not self._health_summary:
+            return
+        report = json.dumps(
+            _detailed_health_report(self._health_summary, self._health_details)
+        )
+        if report == self._health_report:
+            return
+        self._health_report = report
+        if self._use_new_health_model:
+            self.push_change_event(
+                "healthReport",
+                report,
+                self._health_timestamp,
+                AttrQuality.ATTR_VALID,
             )
-            if report == self._health_report:
-                return
-            self._health_report = report
-            if self._use_new_health_model:
-                self.push_change_event(
-                    "healthReport",
-                    report,
-                    self._health_timestamp,
-                    AttrQuality.ATTR_VALID,
-                )
-                self.push_archive_event(
-                    "healthReport",
-                    report,
-                    self._health_timestamp,
-                    AttrQuality.ATTR_VALID,
-                )
+            self.push_archive_event(
+                "healthReport",
+                report,
+                self._health_timestamp,
+                AttrQuality.ATTR_VALID,
+            )
 
     # ----------
     # Callbacks

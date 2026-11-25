@@ -16,7 +16,6 @@ import queue
 import re
 import time
 import warnings
-from datetime import datetime
 from time import sleep
 from typing import Any, Callable, Iterator
 from unittest.mock import patch
@@ -37,7 +36,6 @@ from tests.harness import (
 
 from ..test_tools import AttributeWaiter
 
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 TIMEOUT = 90  # Used in wait for obsState and lrcs to finish
 
 
@@ -874,15 +872,7 @@ def synchronised_tile_device_fixture(
                 lookahead=5,
             )
 
-    # Grab the previous GRT, used to return to this state in teardown.
-    initial_grt = tile_device.globalreferenceTime
-
     if tile_device.tileProgrammingState != "Synchronised":
-        if initial_grt == "":
-            start_time = datetime.strftime(
-                datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
-            )
-            tile_device.globalreferenceTime = start_time
         if tile_device.state() in [tango.DevState.UNKNOWN]:
             # We are adminMode.ONLINE, we should discover state.
             AttributeWaiter(timeout=8).wait_for_value(
@@ -903,9 +893,6 @@ def synchronised_tile_device_fixture(
         )
 
     yield tile_device
-
-    # Restore the previous GRT
-    tile_device.globalreferenceTime = initial_grt
 
 
 @pytest.fixture(name="wait_for_lrcs_to_finish")

@@ -20,7 +20,6 @@ import json
 import time
 import typing
 from contextlib import contextmanager
-from datetime import datetime
 from typing import Any, Callable, Generator, Optional, Union
 
 import numpy as np
@@ -30,8 +29,6 @@ from ska_control_model import AdminMode, ResultCode, TaskStatus
 from ska_tango_testing.context import DeviceProxy as ContextDeviceProxy
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class FakeGroupReply:
@@ -932,7 +929,7 @@ class _ProgrammingStateAccess:
                     AttributeWaiter(timeout=30).wait_for_value(
                         obj._tile_device,
                         "tileProgrammingState",
-                        "Initialised",
+                        "Synchronised",
                         lookahead=5,
                     )
                 # trigger a overheating event.
@@ -943,61 +940,10 @@ class _ProgrammingStateAccess:
                 )
                 obj._tile_device.adminMode = cached_adminmode
 
-            case TpmStatus.INITIALISED:
-                obj._tile_device.globalReferenceTime = ""
-                if obj._tile_device.tileProgrammingState == "Synchronised":
-                    obj._tile_device.globalReferenceTime = ""
-                    obj._tile_device.Initialise()
-                    AttributeWaiter(timeout=30).wait_for_value(
-                        obj._tile_device,
-                        "tileProgrammingState",
-                        "NotProgrammed",
-                        lookahead=5,
-                    )
-                    AttributeWaiter(timeout=30).wait_for_value(
-                        obj._tile_device,
-                        "tileProgrammingState",
-                        "Initialised",
-                        lookahead=5,
-                    )
-                elif obj._tile_device.tileProgrammingState == "Initialised":
-                    obj._tile_device.Initialise()
-                    AttributeWaiter(timeout=30).wait_for_value(
-                        obj._tile_device,
-                        "tileProgrammingState",
-                        "NotProgrammed",
-                        lookahead=4,
-                    )
-                    AttributeWaiter(timeout=30).wait_for_value(
-                        obj._tile_device,
-                        "tileProgrammingState",
-                        "Initialised",
-                        lookahead=5,
-                    )
-                else:
-                    obj._tile_device.globalReferenceTime = ""
-                    obj._tile_device.Off()
-                    AttributeWaiter(timeout=30).wait_for_value(
-                        obj._tile_device,
-                        "tileProgrammingState",
-                        "Off",
-                        lookahead=5,
-                    )
-                    obj._tile_device.On()
-                    AttributeWaiter(timeout=30).wait_for_value(
-                        obj._tile_device,
-                        "tileProgrammingState",
-                        "Initialised",
-                        lookahead=5,
-                    )
             case TpmStatus.SYNCHRONISED:
                 if obj._tile_device.tileprogrammingstate == "Initialised":
                     obj._tile_device.StartAcquisition("{}")
                 else:
-                    start_time = datetime.strftime(
-                        datetime.fromtimestamp(time.time() + 2), RFC_FORMAT
-                    )
-                    obj._tile_device.globalReferenceTime = start_time
                     if obj._tile_device.tileProgrammingState == "Off":
                         obj._tile_device.On()
                         AttributeWaiter(timeout=30).wait_for_value(
@@ -1078,7 +1024,6 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
         ("csp_rounding", "cspRounding"),
         ("static_time_delays", "staticTimeDelays"),
         ("channeliser_rounding", "channeliserRounding"),
-        ("global_reference_time", "globalReferenceTime"),
         ("health_model_params", "healthModelParams"),
         ("srcip40gfpga1", "srcip40gfpga1"),
         ("srcip40gfpga2", "srcip40gfpga2"),

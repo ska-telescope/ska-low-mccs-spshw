@@ -79,20 +79,6 @@ def test_tile_synchronised_recover(
         device.adminmode = AdminMode.ONLINE
 
 
-@scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
-def test_tile_initialised_recover(
-    stations_devices_exported: list[tango.DeviceProxy],
-) -> None:
-    """
-    Run a test scenario that tests the tile device.
-
-    :param stations_devices_exported: Fixture containing the trl
-        root for all sps devices.
-    """
-    for device in stations_devices_exported:
-        device.adminmode = AdminMode.ONLINE
-
-
 @scenario(
     "features/tile.feature",
     "Apply and read back staged calibration coefficients per antenna",
@@ -379,32 +365,6 @@ def tile_device_fixture(
     """
     station_tiles[-1].ping()
     return station_tiles[-1]
-
-
-@given("the Tile is in a defined initialised state", target_fixture="defined_state")
-def tile_has_defined_initialised_state(
-    tile_device: tango.DeviceProxy,
-) -> dict[str, Any]:
-    """
-    Verify that a device is in the desired state.
-
-    :param tile_device: tile device under test.
-
-    :returns: a fixture with the defined_state
-    """
-    defined_state = {
-        "logical_tile_id": 2,
-        "station_id": 2,
-        "static_time_delays": np.array([6.25] * 32),
-        # "csp_rounding": np.array([4] * 384),
-        "channeliser_rounding": np.array([3] * 512),
-    }
-    tw = TileWrapper(tile_device)
-    tw.set_state(
-        programming_state=TpmStatus.INITIALISED,
-        **defined_state,
-    )
-    return defined_state
 
 
 @when("the Tile TANGO device is restarted")

@@ -17,14 +17,6 @@ Feature: Test tile
         When the Tile TANGO device is restarted
         Then the Tile comes up in the defined Synchronised state
 
-    Scenario: Tile initialised state recovered after dev_init
-        Given an SPS deployment against HW
-        And the SpsStation and tiles are ON
-        And the Tile is available
-        And the Tile is in a defined initialised state
-        When the Tile TANGO device is restarted
-        Then the Tile comes up in the defined Initialised state
-
     Scenario: Apply and read back staged calibration coefficients per antenna
         Given an SPS deployment against a real context
         And the SpsStation and tiles are ON

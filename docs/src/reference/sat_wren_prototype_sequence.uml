@@ -19,7 +19,7 @@ else healthState == OK
 station -> subrack: _turn_on_subracks()\n(power up subrack + ports)
 subrack --> station: PowerState.ON
 
-station -> station: _set_tile_source_ips()\n_set_global_reference_time()
+station -> station: _set_tile_source_ips()
 
 station -> tile: _turn_on_tiles()
 tile --> station: PowerState.ON / tileProgrammingState
@@ -45,7 +45,7 @@ end
 alt healthState != OK (wait_time elapsed)
 station --> user: longRunningCommandResult (FAILED)
 else healthState == OK
-station -> station: _set_tile_source_ips()\n_set_global_reference_time()
+station -> station: _set_tile_source_ips()
 
 station -> tile: _reinitialise_tiles()\ninitialise() (per tile)
 tile --> station: tileProgrammingState

@@ -101,22 +101,14 @@ by software. The MccsTile device wites the current Unix time in the hardware cou
 second. Unix time is determined by NTP, with respect to the telescope NTP server. 
 
 During initialisation the ADC links are synchronised and aligned, and generate a continuous stream of samples,
-aligned with the internal clock. Data processing is not started. Internal high accuracy timing is determined 
-by conuting samples, or group of samples (frames), from a specific Unix time (reference time). This time must
-be the same for all TPMs in the telescope, and is given by the `globalReferenceTime` attribute. 
-The `StartAcquisition` method is used to start the actual signal processing chain, at a specific Unix time
-(in the future), using the `globalReferenceTime` (in the past) specified in the attribute 
-or as a command parameter. 
+aligned with the internal clock. Internal high accuracy timing comes from a count of samples, or groups of
+samples (frames). The firmware counts frames from the TAI2000 epoch, so all TPMs in the telescope share
+the same reference time. At the end of initialisation, the tile starts the signal processing chain.
+The `StartAcquisition` command starts it again, at a specified Unix time in the future.
 
-In short, there are two ways to synchronise a tile
+In short, a tile is synchronised when you turn it On or initialise it with the Initialise command.
 
--  (preferred): Specify the desired reference time in the `globalReferenceTime` attribute, and initialise
-   the TPM by turning it On or with the Initialise command. 
-
--  Initialise the TPM and then start the acquisition using the StartAcquisition command. This must
-   specify a common reference time 
-
-Frames are composed of 864 ADC samples, starting at `globalReferenceTime`, and corresponding to one
+Frames are composed of 864 ADC samples, counted from the TAI2000 epoch, and corresponding to one
 channelised sample (1.08 microseconds sampling period). All internal commands to the TPM are
 specified at hardware level in units of 256 frames (276.48 microseconds). These units are used also to
 timestamp SPEAD packets to the DAQ system, and is indicated in the software/firmware as a `timestamp`. 
@@ -124,12 +116,5 @@ As the frame period does not divide exactly one second,
 the StartAcquisition command does not start the acquisition at a second boundary, but at the 
 correct time to align frames with the common (virtual) frame phase. 
 
-SPEAD packets to CBF contain 2048 channelised samples (2.21184 ms). The number of packets between 
-TAI 2000 epoch and the `globalReferenceTime` is added to the packet counter in the SPEAD 
-header to mark the start time of the packet. Representing time using an integer
-number of packets imposes that the `globalReferenceTime` must
-be at a multiple of 864 seconds since TAI 2000. This is enforced in the software, and the 
-attribute value is corrected to represent the actual used value. Another important
-limitation si due to the fact that the timestamp counter is currently sized at 32 bits, limiting
-the maximum representable time at 13.74 days after the `globalReferenceTime`. This 
-implies that the TPMS must be reinitialised and synchronised at most every 13 days. 
+SPEAD packets to CBF contain 2048 channelised samples (2.21184 ms). The packet counter in the SPEAD
+header counts packets from the TAI2000 epoch, and marks the start time of the packet.

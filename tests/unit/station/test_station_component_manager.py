@@ -719,26 +719,6 @@ def test_preadu_levels_not_stored_on_tile_write_failure(
     )
 
 
-def test_global_reference_time_broadcast_to_all_tiles(
-    station_component_manager: SpsStationComponentManager,
-    mock_tiles: list[MccsDeviceProxy],
-    num_tiles: int,
-) -> None:
-    """
-    Test that global_reference_time broadcasts the same value to every tile.
-
-    :param station_component_manager: the SPS station component manager
-        under test
-    :param mock_tiles: mock tile proxies, one per tile in the harness.
-    :param num_tiles: number of tiles in the test.
-    """
-    reference_time = "2026-08-04T00:00:00.000Z"
-    station_component_manager.global_reference_time = reference_time
-
-    for i in range(num_tiles):
-        assert mock_tiles[i].globalReferenceTime == reference_time
-
-
 def test_port_to_antenna_order(
     communicating_station_component_manager: SpsStationComponentManager,
 ) -> None:
@@ -1996,11 +1976,6 @@ def test_initialise_progress_callbacks(
             station_component_manager, "_set_tile_source_ips", return_value=ok
         ),
         unittest.mock.patch.object(
-            station_component_manager,
-            "_set_global_reference_time",
-            return_value=ResultCode.OK,
-        ),
-        unittest.mock.patch.object(
             station_component_manager, "_reinitialise_tiles", return_value=ok
         ) as mock_reinitialise_tiles,
         unittest.mock.patch.object(
@@ -2073,7 +2048,6 @@ def test_reinitialise_tiles_fails_if_a_tile_command_fails(
     :param num_tiles: number of TPMs in the test.
     """
     station_component_manager = communicating_station_component_manager
-    station_component_manager._global_reference_time = "2026-01-01T00:00:00.000000Z"
     tile_trl, proxy = next(iter(station_component_manager._tile_proxies.items()))
     assert proxy._proxy is not None
     proxy._proxy.lrcFinished = (
@@ -2118,11 +2092,6 @@ def test_reinitialise_tiles_progress_callbacks(
         manager under test
     :param num_tiles: number of TPMs in the test.
     """
-    # Set a non-empty global reference time so the desired state is only "Synchronised"
-    communicating_station_component_manager._global_reference_time = (
-        "2026-01-01T00:00:00.000000Z"
-    )
-
     task_callback = unittest.mock.Mock()
 
     # The mock tile programming state function simulates tiles coming up one at a time.

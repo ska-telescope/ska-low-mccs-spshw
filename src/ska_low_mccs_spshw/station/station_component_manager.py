@@ -19,7 +19,7 @@ import json
 import logging
 import threading
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -822,7 +822,6 @@ class SpsStationComponentManager(
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
         self._csp_spead_format = "SKA"
-        self._global_reference_time = ""
 
         # TODO: this needs to be scaled,
         self.tile_attributes_to_subscribe = [
@@ -2592,10 +2591,6 @@ class SpsStationComponentManager(
                 task_callback, task_abort_event
             )
 
-        if result_code == ResultCode.OK:
-            self.logger.info("Setting global reference time")
-            self._set_global_reference_time(self._global_reference_time or None)
-
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
@@ -2657,7 +2652,6 @@ class SpsStationComponentManager(
     def initialise(  # noqa: C901
         self: SpsStationComponentManager,
         start_bandpasses: Optional[bool] = None,
-        global_reference_time: Optional[str] = None,
         force_reprogramming: bool = True,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -2667,9 +2661,6 @@ class SpsStationComponentManager(
 
         :param start_bandpasses: Whether to configure TPMs to send
             integrated data.
-        :param global_reference_time: Common global reference time for all TPMs,
-            needs to be some time in the last 2 weeks.
-            If not provided, midnight today (TAI) will be used.
         :param force_reprogramming: whether to erase and reprogram the tile
             FPGAs. If false, the tiles keep their firmware and are only
             re-initialised (used by ReInitialise).
@@ -2703,12 +2694,8 @@ class SpsStationComponentManager(
                 task_callback, task_abort_event
             )
 
-        if result_code == ResultCode.OK:
-            if task_callback:
-                task_callback(progress=10)
-            self.logger.info("Setting global reference time")
-            self._set_global_reference_time(global_reference_time)
-            # This is very quick to complete so no progress update here
+        if result_code == ResultCode.OK and task_callback:
+            task_callback(progress=10)
 
         if result_code == ResultCode.OK:
             self.logger.info(f"Re-initialising tiles ({force_reprogramming=})")
@@ -2963,8 +2950,6 @@ class SpsStationComponentManager(
         start_time = time.time()
         last_time = start_time + timeout
         desired_states = ["Synchronised"]
-        if self._global_reference_time == "":
-            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             if task_abort_event and task_abort_event.is_set():
@@ -3032,31 +3017,6 @@ class SpsStationComponentManager(
             ),
         )
         return ResultCode.OK, ""
-
-    @check_communicating
-    def _set_global_reference_time(
-        self: SpsStationComponentManager, global_reference_time: Optional[str] = None
-    ) -> ResultCode:
-        if self.csp_spead_format != "SKA":
-            self.logger.info("Not setting global reference time for non-SKA format")
-            return ResultCode.OK
-        if global_reference_time is not None:
-            self.global_reference_time = global_reference_time
-        else:
-            rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
-
-            time_ref = int(
-                Time(  # parse
-                    date.today().isoformat(),  # last midnight
-                    scale="tai",  # as a TAI time
-                ).unix  # convert to unix timestamp
-            )
-
-            self.global_reference_time = datetime.strftime(
-                datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
-            )
-        self.logger.info(f"Global reference time: {self.global_reference_time}")
-        return ResultCode.OK
 
     @check_communicating
     def _wait_for_arp_table(
@@ -3151,8 +3111,6 @@ class SpsStationComponentManager(
         start_time = time.time()
         last_time = start_time + timeout
         desired_states = ["Synchronised"]
-        if self._global_reference_time == "":
-            desired_states.append("Initialised")
         last_reported_count = 0
         n_tiles = len(self._tile_proxies)
         while time.time() < last_time:
@@ -3337,12 +3295,6 @@ class SpsStationComponentManager(
             "write cspSpeadFormat",
             group_write_attribute(
                 self._tile_group, "cspSpeadFormat", self._csp_spead_format
-            ),
-        )
-        raise_for_group_failures(
-            "write globalReferenceTime",
-            group_write_attribute(
-                self._tile_group, "globalReferenceTime", self._global_reference_time
             ),
         )
         raise_for_group_failures(
@@ -3951,34 +3903,6 @@ class SpsStationComponentManager(
         final_tile = list(self._tile_proxies.values())[-1]
         assert final_tile._proxy is not None  # for the type checker
         final_tile._proxy.cspRounding = truncation
-
-    @property
-    def global_reference_time(self: SpsStationComponentManager) -> str:
-        """
-        Return the UTC time used as global synchronization time.
-
-        :return: UTC time in ISOT format used as global synchronization time
-        """
-        return self._global_reference_time
-
-    @global_reference_time.setter  # type: ignore[no-redef]
-    def global_reference_time(
-        self: SpsStationComponentManager, reference_time: str
-    ) -> None:
-        """
-        Set the Unix time used as global synchronization time.
-
-        Time will be used by all tiles as a common start time for timestamps.
-        If specified, StartAcquisition is also performed in Station.On()
-        :param reference_time: Reference time in ISOT format, or null string
-        """
-        self._global_reference_time = reference_time
-        raise_for_group_failures(
-            "write globalReferenceTime",
-            group_write_attribute(
-                self._tile_group, "globalReferenceTime", reference_time
-            ),
-        )
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:

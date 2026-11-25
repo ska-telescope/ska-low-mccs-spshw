@@ -411,6 +411,10 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised"
         )
+        # The tile starts acquisition at the end of initialisation.
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised"
+        )
         # check that the fpga time is moving.
         initial_time = tile_device.GetFpgaUnixTime()[0]
         sleep_time = 2.5
@@ -466,7 +470,7 @@ class TestMccsTileTpmDriver:
             tile_subs,
             subrack_subs,
         )
-        assert tile_device.tileprogrammingstate == "Initialised"
+        assert tile_device.tileprogrammingstate == "Synchronised"
         delay_time = 2  # seconds
         # TODO: Using an int() has to be done so that, when it's used,
         # TODO: this timestamp doesn't get rounded up (there is a call
@@ -499,7 +503,7 @@ class TestMccsTileTpmDriver:
         subrack_subs: list[int],
     ) -> None:
         """
-        Test SendDataSamples can only be called if startAcquisition has been.
+        Test SendDataSamples once the tile has synchronised.
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
@@ -517,27 +521,6 @@ class TestMccsTileTpmDriver:
             change_event_callbacks,
             tile_subs,
             subrack_subs,
-        )
-        with pytest.raises(
-            tango.DevFailed,
-            match="To execute this command we must be in state 'Synchronised'! "
-            "Tile is currently in state Initialised",
-        ):
-            [[result_code], [message]] = tile_device.SendDataSamples(
-                json.dumps({"data_type": "beam"})
-            )
-
-        # Start Acquisition
-        delay_time = 2
-        execute_lrc_to_completion(
-            tile_device,
-            "StartAcquisition",
-            json.dumps({"delay": delay_time}),
-        )
-
-        # Wait for synchronisation
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Synchronised"
         )
         [[_], [command_id]] = tile_device.SendDataSamples(
             json.dumps({"data_type": "raw"})
@@ -1105,7 +1088,7 @@ class TestMccsTileTpmDriver:
             )
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=2
+            "Synchronised", lookahead=2
         )
 
         # Set the alarming value in backend TileSimulator
@@ -1129,7 +1112,11 @@ class TestMccsTileTpmDriver:
         # Temperature attributes have a soft shutdown.
         # After overheating the Tile will turn off the port
         # and report the Power as OFF.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+        # Lookahead of 2 because an intermediate state event can arrive
+        # before OFF, as in test_setting_shutdown_temperatures.
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.OFF, lookahead=2
+        )
         assert tile_device.state() == tango.DevState.OFF
         for sub_id in tile_subs:
             tile_device.unsubscribe_event(sub_id)
@@ -1232,7 +1219,7 @@ class TestMccsTileTpmDriver:
             )
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=2
+            "Synchronised", lookahead=2
         )
 
         # Set a max threshold below current temperature
@@ -1382,7 +1369,7 @@ class TestMccsTileTpmDriver:
         # We are mocking the TPM in a prexisting SYNCHRONISED state.
         # To check we do not re-initialise.
         tile_simulator.mock_on(lock=True)
-        tile_simulator.program_fpgas("tpm_firmware_10.0.0.bit")
+        tile_simulator.program_fpgas("tpm_firmware_13.1.0.bit")
         tile_simulator.initialise()
         tile_simulator.start_acquisition(delay=0)
         tile_simulator._mocked_tpm = tile_simulator.tpm

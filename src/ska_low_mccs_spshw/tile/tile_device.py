@@ -4247,28 +4247,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="Global Reference Time",
-        description="The global FPGA synchronization time (UTC).",
-    )
-    def globalReferenceTime(self: MccsTile) -> str:
-        """
-        Return the global FPGA synchronization time.
-
-        :return: the global synchronization time, in UTC format
-        """
-        return self.component_manager.global_reference_time
-
-    @globalReferenceTime.write  # type: ignore[no-redef]
-    def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
-        """
-        Set the global global synchronization timestamp.
-
-        :param reference_time: the synchronization time, in ISO9660 format, or ""
-        """
-        self.component_manager.global_reference_time = reference_time
-
-    @attribute(
-        dtype="DevString",
         label="CSP Spead Format",
         description="The format of Spead header in use. Either AAVS or SKA.",
         fisallowed="_check_initialised_for_write",
@@ -7429,7 +7407,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def StartAcquisition(
         self: MccsTile,
         start_time: Optional[str] = None,
-        global_reference_time: Optional[str] = None,
         delay: Optional[int] = 2,
     ) -> stb.type_hints.TaskFunctionType:
         """
@@ -7439,7 +7416,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param start_time: the acquisition start time
         :param delay: a delay to the acquisition start (default 2s)
-        :param global_reference_time: the start time assumed for starting the timestamp
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -7459,7 +7435,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ) -> None:
             self.component_manager.start_acquisition(
                 start_time=start_time,
-                global_reference_time=global_reference_time,
                 delay=delay if delay is not None else 2,
                 task_callback=task_callback,
             )

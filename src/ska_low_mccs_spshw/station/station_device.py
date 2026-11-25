@@ -18,7 +18,6 @@ import json
 import sys
 import threading
 import time
-from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable, Final, Optional, cast
 
@@ -83,7 +82,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     DEFAULT_CSP_SRC_PORT: Final = 0xF0D0
     DEFAULT_CSP_DST_PORT: Final = 4660
-    RFC_FORMAT: Final = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     # -----------------
     # Device Properties
@@ -1502,49 +1500,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.csp_source_port
 
     @attribute(
-        dtype="DevString",
-        label="Global Reference Time",
-        doc="Return the global FPGA synchronization time. (UTC)",
-    )
-    def globalReferenceTime(self: SpsStation) -> str:
-        """
-        Return the global FPGA synchronization time.
-
-        :return: the global synchronization time, in UTC format
-        """
-        return self.component_manager.global_reference_time
-
-    @globalReferenceTime.write  # type: ignore[no-redef]
-    def globalReferenceTime(self: SpsStation, reference_time: str) -> None:
-        """
-        Set the global global synchronization timestamp.
-
-        :param reference_time: the synchronization time, in ISO9660 format, or ""
-        :raises ValueError: if specified time not in ISO format or < TAI2000
-        """
-        #   tai_2000_epoch = int(AstropyTime('2000-01-01 00:00:00',
-        #                        scale='tai').unix) - extra_leap_seconds
-        tai_2000_epoch = 946684763
-        # check syntax and positive time.
-        # TODO Convert to astropy Time
-        try:
-            # time_ref = Time(reference_time, format="isot").unix
-            dt = datetime.strptime(reference_time, self.RFC_FORMAT)
-            time_ref = dt.replace(tzinfo=timezone.utc).timestamp()
-        except ValueError as error:
-            self.logger.error(f"Invalid ISO time: {error}")
-            raise ValueError(error) from error
-        time_ref = int(time_ref - (time_ref - tai_2000_epoch) % 864)
-        if time_ref < int(time.time()) - 864000:
-            raise ValueError("Reference time too old: more than 10 days")
-        self.component_manager.global_reference_time = (
-            # Time(time_ref, format="unix").isot + "Z"
-            datetime.strftime(
-                datetime.fromtimestamp(time_ref, tz=timezone.utc), self.RFC_FORMAT
-            )
-        )
-
-    @attribute(
         dtype="DevBoolean",
         label="Is Programmed",
         doc="Return a flag indicating whether of not the TPM boards are programmed. "
@@ -2241,10 +2196,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
     @stb.long_running_commands.long_running_command
     @stb.validators.validate_json_args
-    def ReInitialise(
+    def ReInitialise(  # pylint: disable=line-too-long
         self: SpsStation,
         start_bandpasses: Optional[bool] = None,
-        global_reference_time: Optional[str] = None,
     ) -> stb.type_hints.TaskFunctionType:
         """
         Reinitialise the station with overridable defaults.
@@ -2252,19 +2206,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         This runs the same sequence as Initialise, except that the tiles are
         re-initialised without reprogramming their FPGAs.
 
+        :param start_bandpasses: whether to start the bandpasses after initialisation
+            defaults to true. A json string adhering to the initialise schema:
+
+            .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/station/SpsStation_Initialise.json
+                    :language: json
+
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-
-        A json string adhering to the initialise schema:
-
-        :param start_bandpasses: whether to start the bandpasses after initialisation
-            defaults to true
-        :param global_reference_time: the global synchronization time, in ISO9660 format
-            or "" to use current time, defaults to ""
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/station/SpsStation_Initialise.json
-            :language: json
 
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
@@ -2277,7 +2227,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         ) -> None:
             self.component_manager.initialise(
                 start_bandpasses,
-                global_reference_time,
                 force_reprogramming=False,
                 task_callback=task_callback,
                 task_abort_event=task_abort_event,

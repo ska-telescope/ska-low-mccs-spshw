@@ -743,10 +743,12 @@ def on_tile_device_fixture(
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
+    # The tile starts acquisition at the end of initialisation.
+    change_event_callbacks["tile_programming_state"].assert_change_event("Synchronised")
 
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-    assert tile_device.tileProgrammingState == "Initialised"
+    assert tile_device.tileProgrammingState == "Synchronised"
     for subscription_id in subscription_ids:
         tile_device.unsubscribe_event(subscription_id)
     wait_for_completed_command_to_clear_from_queue(tile_device)
@@ -807,10 +809,12 @@ def turn_tile_on(
     change_event_callbacks["tile_programming_state"].assert_change_event(
         "Initialised", lookahead=2, consume_nonmatches=True
     )
+    # The tile starts acquisition at the end of initialisation.
+    change_event_callbacks["tile_programming_state"].assert_change_event("Synchronised")
 
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-    assert tile_device.tileProgrammingState == "Initialised"
+    assert tile_device.tileProgrammingState == "Synchronised"
     for subscription_id in subscription_ids:
         tile_device.unsubscribe_event(subscription_id)
     return tile_device
@@ -1211,7 +1215,6 @@ class TestMccsTile:
             "firmwareVersion",
             "stationBeamFlagEnabled",
             "firmwareName",
-            "globalReferenceTime",
             "cspDestinationIp",
             "cspDestinationMac",
             "cspDestinationPort",
@@ -1359,7 +1362,7 @@ class TestMccsTile:
             change_event_callbacks["tile_programming_state"],
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised"
+            "Synchronised"
         )
         # Turning the device OFFLINE means that we can no longer say we know the
         # configuration of the device_under_test. Check they move to INVALID.
@@ -1368,12 +1371,13 @@ class TestMccsTile:
         self.__check_attributes_invalid(on_tile_device, tpm_configuration_attributes)
         change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
         # Turning the device ONLINE should prompt a read of configuration.
+        # The TPM is still acquiring, so the tile discovers Synchronised.
         on_tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(
             DevState.ON, lookahead=2, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=2, consume_nonmatches=True
+            "Synchronised", lookahead=2, consume_nonmatches=True
         )
         time.sleep(3)
         self.__check_attributes_valid(on_tile_device, tpm_configuration_attributes)
@@ -3978,6 +3982,8 @@ class TestMccsTileCommands:
     def test_start_beamformer_not_allowed_when_not_synchronised(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
+        tile_component_manager: TileComponentManager,
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test that StartBeamformer is rejected when the tile is not Synchronised.
@@ -3985,8 +3991,26 @@ class TestMccsTileCommands:
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: the component manager of the tile.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
         """
-        assert on_tile_device.tileProgrammingState == "Initialised"
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised"
+        )
+        # The tile starts acquisition at the end of initialisation, so publish
+        # Initialised directly to get a tile that is not Synchronised.
+        tile_component_manager._update_attribute_callback(
+            programming_state="Initialised"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
+        )
         with pytest.raises(
             DevFailed,
             match=(
@@ -4058,15 +4082,9 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
-        change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
-        execute_lrc_to_completion(
-            on_tile_device,
-            "StartAcquisition",
-            json.dumps({"delay": 5}),
-        )
-
+        # The tile starts acquisition at the end of initialisation.
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Synchronised", lookahead=8
+            "Synchronised"
         )
         args = [
             {"data_type": "raw", "sync": True, "seconds": 6.7},
@@ -4155,6 +4173,10 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised", lookahead=6, consume_nonmatches=True
+        )
+        # The tile starts acquisition at the end of initialisation.
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised"
         )
         change_event_callbacks["tile_programming_state"].assert_not_called()
         args = [

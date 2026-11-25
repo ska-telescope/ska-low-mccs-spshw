@@ -1,5 +1,4 @@
-FIRMWARE_VERSION=10.0.0
-FIRMWARE_VERSION_NEW=13.1.0
+FIRMWARE_VERSION=13.1.0
 
 download_and_extract() {
     FW_URL="https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$1.tar.gz"
@@ -13,4 +12,3 @@ shutil.copyfileobj(
 }
 
 download_and_extract $FIRMWARE_VERSION || exit 1
-download_and_extract $FIRMWARE_VERSION_NEW || exit 1

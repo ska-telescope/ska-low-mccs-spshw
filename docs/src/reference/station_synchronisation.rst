@@ -25,48 +25,9 @@ following steps, in order:
 4. Set the tile source IPs (``_set_tile_source_ips``). 
    Loop through the stations TPMs and set the source IP from the science data network first address.
 
-5. Set the global reference time (``_set_global_reference_time``).
-   With the updated SPEAD header in MCCS-2170, this reference time is global to a station and distributed to its tiles. 
-   Its use is detailed in https://developer.skao.int/projects/ska-low-mccs-spshw/en/thorn-595/reference/tile_brief_overview.html#synchronization-procedure.
-
-6. Turn on all tiles (``_turn_on_tiles``), if not already on. As part of
+5. Turn on all tiles (``_turn_on_tiles``), if not already on. As part of
    bringing a Tile to ``PowerState.ON``, the Tile is also initialised - see
    the MccsTile general overview page linked below for what this involves.
-
-7. Initialise the tile parameters (``_initialise_tile_parameters``). e.g.
-   ``staticTimeDelays``, ``channeliserRounding``, ``cspRounding``, ``preaduLevels``, ``ppsDelayCorrection``.
-   Also configure control data using ``SetLmcDownload`` and initialise the beamformer ``ConfigureStationBeamformer``
-
-8. Initialise the station (``_initialise_station``). Configure the CSP, LMC and LMC integrated data routing.
-   Internally using ``SetCspDownload``, ``SetLmcDownload`` and ``SetLmcIntegratedDownload``.
-
-9. Wait for the ARP table to be populated (``_wait_for_arp_table``).
-
-10. Route data to the DAQ/CSP destinations (``_route_data``). Route data streams to the relevant DAQ endpoints,
-    Internally uses ``SetLmcDownload``, ``SetLmcIntegratedDownload`` and ``ConfigureIntegratedChannelData``.
-
-11. Check station synchronisation (``_check_station_synchronisation``).
-
-Initialise command
-====================
-
-The ``Initialise`` command (``SpsStationComponentManager.initialise``) is
-used when the station is already ``On``, and resets it to the
-``Initialised`` state. It performs the following steps, in order:
-
-1. Check that all subracks and tiles are already on; fail otherwise.
-
-2. Wait for the WREN health to be OK (``_wait_for_wren``).
-
-3. Set the tile source IPs (``_set_tile_source_ips``).
-
-4. Set the global reference time (``_set_global_reference_time``). 
-   With the updated SPEAD header in MCCS-2170, this reference time is global to a station and distributed to its tiles. 
-   Its use is detailed in https://developer.skao.int/projects/ska-low-mccs-spshw/en/thorn-595/reference/tile_brief_overview.html#synchronization-procedure.
-
-5. Re-initialise the tiles (``_reinitialise_tiles``): send ``initialise()``
-   to each Tile and wait for ``tileProgrammingState`` to reach
-   ``Initialised``/``Synchronised`` for all tiles.
 
 6. Initialise the tile parameters (``_initialise_tile_parameters``). e.g.
    ``staticTimeDelays``, ``channeliserRounding``, ``cspRounding``, ``preaduLevels``, ``ppsDelayCorrection``.
@@ -82,15 +43,44 @@ used when the station is already ``On``, and resets it to the
 
 10. Check station synchronisation (``_check_station_synchronisation``).
 
+Initialise command
+====================
+
+The ``Initialise`` command (``SpsStationComponentManager.initialise``) is
+used when the station is already ``On``, and resets it to the
+``Initialised`` state. It performs the following steps, in order:
+
+1. Check that all subracks and tiles are already on; fail otherwise.
+
+2. Wait for the WREN health to be OK (``_wait_for_wren``).
+
+3. Set the tile source IPs (``_set_tile_source_ips``).
+
+4. Re-initialise the tiles (``_reinitialise_tiles``). Send ``initialise()``
+   to each Tile and wait for ``tileProgrammingState`` to reach
+   ``Synchronised`` for all tiles.
+
+5. Initialise the tile parameters (``_initialise_tile_parameters``). e.g.
+   ``staticTimeDelays``, ``channeliserRounding``, ``cspRounding``, ``preaduLevels``, ``ppsDelayCorrection``.
+   Also configure control data using ``SetLmcDownload`` and initialise the beamformer ``ConfigureStationBeamformer``
+
+6. Initialise the station (``_initialise_station``). Configure the CSP, LMC and LMC integrated data routing.
+   Internally using ``SetCspDownload``, ``SetLmcDownload`` and ``SetLmcIntegratedDownload``.
+
+7. Wait for the ARP table to be populated (``_wait_for_arp_table``).
+
+8. Route data to the DAQ/CSP destinations (``_route_data``). Route data streams to the relevant DAQ endpoints,
+   Internally uses ``SetLmcDownload``, ``SetLmcIntegratedDownload`` and ``ConfigureIntegratedChannelData``.
+
+9. Check station synchronisation (``_check_station_synchronisation``).
+
 Further reading
 =================
 
-Steps 5-7 of ``Initialise`` (and the equivalent step 6 of ``On``) are where
-each Tile is actually brought from ``Programmed`` through to
-``Initialised``/``Synchronised``. For a detailed description of that
-procedure - PPS alignment, ADC synchronisation, the ``globalReferenceTime``
-attribute, and the two supported ways of synchronising a Tile - see the
-`Synchronization Procedure` section of the MccsTile general overview page:
+Steps 4-5 of ``Initialise`` (and the equivalent step 5 of ``On``) bring
+each Tile from ``Programmed`` to ``Synchronised``. The `Synchronization Procedure`
+section of the MccsTile general overview page describes this procedure, which
+includes PPS alignment, ADC synchronisation and the TAI2000 frame count:
 https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/reference/tile_brief_overview.html#synchronization-procedure
 
 *********************************

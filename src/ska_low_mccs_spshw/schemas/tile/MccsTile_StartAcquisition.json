@@ -10,11 +10,6 @@
             "type": "string",
             "format": "time"
         },
-        "global_reference_time": {
-            "description": "Reference time used for timestamp",
-            "type": "string",
-            "format": "time"
-        },
         "delay": {
             "description": "An acquisition start delay",
             "type": "integer"

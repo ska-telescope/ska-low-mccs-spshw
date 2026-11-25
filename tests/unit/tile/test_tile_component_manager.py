@@ -30,7 +30,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
-from ska_low_sps_tpm_api.base.definitions import LibraryError, PluginError
+from ska_low_sps_tpm_api.base.definitions import LibraryError
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
@@ -43,7 +43,6 @@ from ska_low_mccs_spshw.tile import (
     TileSimulator,
     TpmStatus,
 )
-from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
 from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
 from ska_low_mccs_spshw.tile.utils import LockTimeoutError
 from time_utils import str_from_float_epoch_utc_time
@@ -60,34 +59,6 @@ class TestTileComponentManager:
     we just perform tests of functionality in the tile component manager
     itself.
     """
-
-    @pytest.mark.parametrize(
-        ("bios", "expected_firmware_name"),
-        [
-            (
-                "v0.6.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
-                "tpm_firmware_10.0.0.bit",
-            ),
-            (
-                ("v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"),
-                "tpm_firmware_13.1.0.bit",
-            ),
-            ("v0.9.0 (dummy)", "tpm_firmware_10.0.0.bit"),
-            ("TileSimulatorBios", "tpm_firmware_10.0.0.bit"),
-        ],
-    )
-    def test_select_firmware_name(
-        self: TestTileComponentManager,
-        bios: str,
-        expected_firmware_name: str,
-    ) -> None:
-        """
-        Test that the firmware file is selected from the TPM BIOS string.
-
-        :param bios: the BIOS string reported by tile_info.
-        :param expected_firmware_name: the firmware file expected for that BIOS.
-        """
-        assert _select_firmware_name(bios) == expected_firmware_name
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize("power_state", PowerState)
@@ -221,6 +192,13 @@ class TestTileComponentManager:
                     lookahead=8,
                     consume_nonmatches=True,
                 )
+                # The tile starts acquisition at the end of initialisation.
+                # Polled attribute updates arrive before it synchronises.
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.SYNCHRONISED.pretty_name(),
+                    lookahead=50,
+                    consume_nonmatches=True,
+                )
                 # A try except block in a test is unusual.
                 # It is done here due to the multithreaded
                 # nature of the application.
@@ -248,7 +226,7 @@ class TestTileComponentManager:
                     assert not tile_component_manager._component_state["fault"]
                     callbacks["component_state"].assert_not_called()
 
-                assert tile_component_manager._tpm_status == TpmStatus.INITIALISED
+                assert tile_component_manager._tpm_status == TpmStatus.SYNCHRONISED
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
@@ -987,43 +965,28 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert getattr(tile_component_manager, attribute_name) == expected_value
 
     @pytest.mark.parametrize(
-        ("attribute_name", "expected_value", "expected_component_value"),
-        (
-            ("formatted_fpga_reference_time", 0, "1970-01-01T00:00:00.000000Z"),
-            ("fpga_frame_time", None, "1970-01-01T00:00:00.000000Z"),
-        ),
+        "attribute_name", ("formatted_fpga_reference_time", "fpga_frame_time")
     )
     def test_read_time_attribute(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         attribute_name: str,
-        expected_value: Any,
-        expected_component_value: Any,
     ) -> None:
         """
-        Tests that read-only time attributes take known initial values.
+        Test that read-only time attributes report the acquisition start.
 
-        This is a weak test; over time we should find ways to more thoroughly
-        test each of these independently.
+        The tile starts acquisition at the end of initialisation, so both
+        times are within a few seconds of now.
 
         :param tile_component_manager: the tile_component_manager class
             object under test.
         :param attribute_name: the name of the attribute under test
-        :param expected_value: the expected value of the attribute. This
-            can be any type, but the test of the attribute is a single
-            "==" equality test.
-        :param expected_component_value: the expected value in the component
-            manager, which is in different format wrt. the value in the
-            underlying driver/simulator
         """
-        if not isinstance(tile_component_manager, TileComponentManager):
-            if expected_value is not None:
-                assert getattr(tile_component_manager, attribute_name) == expected_value
-        else:
-            assert (
-                getattr(tile_component_manager, attribute_name)
-                == expected_component_value
-            )
+        value = datetime.datetime.strptime(
+            getattr(tile_component_manager, attribute_name), RFC_FORMAT
+        ).replace(tzinfo=datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        assert abs((value - now).total_seconds()) < 10
 
     @pytest.mark.parametrize(
         ("attribute_name", "initial_value", "values_to_write"),
@@ -1510,45 +1473,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
-    @pytest.mark.parametrize(
-        ("firmware_version", "expected_global_start_time"),
-        [("", 946684763 + 864), ("10.0.0", 946684763 + 864), ("13.1.0", None)],
-    )
-    def test_start_acquisition_global_start_time(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-        firmware_version: str,
-        expected_global_start_time: int | None,
-    ) -> None:
-        """
-        Test that TAI2000 firmware gets no global start time.
-
-        :param tile_component_manager: The tile_component_manager under test.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)
-        :param firmware_version: the firmware release version to simulate.
-        :param expected_global_start_time: the global start time
-            that the TPM must receive.
-        """
-        tile_simulator.connect()
-        firmware_list = [
-            {**firmware, "firmware_version": firmware_version}
-            for firmware in tile_simulator.FIRMWARE_LIST
-        ]
-        with (
-            unittest.mock.patch.object(tile_simulator, "FIRMWARE_LIST", firmware_list),
-            unittest.mock.patch.object(
-                tile_simulator,
-                "start_acquisition",
-                wraps=tile_simulator.start_acquisition,
-            ) as start_acquisition,
-        ):
-            tile_component_manager._start_acquisition(
-                global_reference_time=946684763 + 864, delay=1
-            )
-        start_acquisition.assert_called_once_with(None, 1, expected_global_start_time)
-
     def test_start_acquisition(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -1593,28 +1517,25 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
-        # Assert
-        with tile_component_manager._hardware_lock:
-            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-
         # check the fpga time is moving
         initial_time1 = tile_component_manager.fpgas_time
         time.sleep(1.5)
         final_time1 = tile_component_manager.fpgas_time
         assert initial_time1 != final_time1
 
-        # check the fpga timestamp is not moving
+        # The tile starts acquisition at the end of initialisation,
+        # so the fpga timestamp is moving.
         initial_time2 = tile_component_manager.fpga_current_frame
         time.sleep(1.5)
         final_time2 = tile_component_manager.fpga_current_frame
-        assert initial_time2 == final_time2
+        assert initial_time2 != final_time2
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
         # ---------------------------------------------------------
-        # Call start_acquisition and check fpga_timestamp is moving
+        # Call start_acquisition again and check fpga_timestamp is moving
         # ---------------------------------------------------------
         future_time = 4.0
         start_time_str = str_from_float_epoch_utc_time(time.time() + future_time)
-        with tile_component_manager._hardware_lock:
-            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(
             start_time=start_time_str, delay=1, task_callback=callbacks["task"]
         )
@@ -2169,12 +2090,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         final_time = tile_component_manager.fpgas_time
         assert initial_time == final_time
 
-        # check the fpga timestamp is not moving
-        initial_time1 = tile_component_manager.fpga_current_frame
-        time.sleep(1)
-        final_time1 = tile_component_manager.fpga_current_frame
-        assert initial_time1 == final_time1
-
         tile_component_manager.initialise(
             force_reprogramming=True, task_callback=callbacks["task"]
         )
@@ -2186,21 +2101,21 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
 
         # Assert
-        with tile_component_manager._hardware_lock:
-            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-            assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
-        assert tile_component_manager.firmware_name == "tpm_firmware_10.0.0.bit"
+        assert tile_component_manager.firmware_name == "tpm_firmware_13.1.0.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
         time.sleep(1.5)
         final_time2 = tile_component_manager.fpgas_time
         assert initial_time2 != final_time2
 
-        # check the fpga timestamp is not moving
+        # The tile starts acquisition at the end of initialisation,
+        # so the fpga timestamp is moving.
         initial_time3 = tile_component_manager.fpga_current_frame
         time.sleep(1)
         final_time3 = tile_component_manager.fpga_current_frame
-        assert initial_time3 == final_time3
+        assert initial_time3 != final_time3
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
 
         # -----------------------------------------
         # Initialise called with unprogrammable TPM
@@ -2225,45 +2140,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Check TpmStatus is UNPROGRAMMED.
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
-
-    def test_initialise_selects_new_firmware_for_new_bios(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test that initialise selects the new firmware for BIOS >= 1.0.0.
-
-        :param tile_component_manager: The tile_component_manager under test.
-        :param tile_simulator: A mock object representing a simulated tile.
-        :param callbacks: dictionary of mock callbacks.
-        """
-        tile_simulator.connect()
-        assert tile_simulator.tpm
-        # Clear the firmware name and replace the BIOS version of the simulator.
-        # This is necessary as the simulator default BIOS is 0.6.0 and the
-        # `_firmware_name` will be chosen during the startup initialise accordingly.
-        # This means that the call to initialise below will be required to
-        # again automatically detect the BIOS version.
-        # An alternative is to create a separate TileSimulator with the
-        # BIOS set to ^1.0.0
-        tile_component_manager._firmware_name = None  # type: ignore[assignment]
-        tile_simulator.tpm._bios_version = (
-            "v1.0.0 (CPLD_0x26031616-MCU_0xb000011c_0x20260318_0x828bd55)"
-        )
-        tile_simulator.tpm._is_programmed = False
-
-        tile_component_manager.initialise(
-            force_reprogramming=True, task_callback=callbacks["task"]
-        )
-
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.COMPLETED,
-            result=(ResultCode.OK, "Command executed to completion."),
-        )
-        assert tile_component_manager.firmware_name == "tpm_firmware_13.1.0.bit"
 
     def test_initialise_beamformer_with_invalid_input(
         self: TestStaticSimulator,
@@ -2590,10 +2466,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         Unit test for the _get_all_pointing_delays function.
 
-        Covers both a TPM whose firmware/BIOS supports all 48 beams, and
-        an older TPM whose firmware only supports 8 beams and raises a
-        PluginError for higher beam indices.
-
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
@@ -2602,7 +2474,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         def _delay_for_beam(beam_index: int) -> list[list[list[float]]]:
             return [[[float(beam_index), float(beam_index)]] * 8] * 2
 
-        # New firmware/BIOS: all 48 beams are readable.
         mock = unittest.mock.Mock(side_effect=_delay_for_beam)
         tile_simulator.get_pointing_delay = mock  # type: ignore[assignment]
         delays = tile_component_manager._get_all_pointing_delays()
@@ -2610,23 +2481,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert not np.isnan(delays).any()
         tile_simulator.get_pointing_delay.assert_any_call(47)
         assert tile_simulator.get_pointing_delay.call_count == 48
-
-        # Old firmware/BIOS: only beams 0-7 are supported.
-        def _old_firmware_delay_for_beam(
-            beam_index: int,
-        ) -> list[list[list[float]]]:
-            if beam_index >= 8:
-                raise PluginError("Invalid Beam Index")
-            return _delay_for_beam(beam_index)
-
-        old_delay = unittest.mock.Mock(side_effect=_old_firmware_delay_for_beam)
-        tile_simulator.get_pointing_delay = old_delay  # type: ignore[assignment]
-        delays = tile_component_manager._get_all_pointing_delays()
-        assert delays.shape == (48, 32)
-        assert not np.isnan(delays[:8]).any()
-        assert np.isnan(delays[8:]).all()
-        # Should stop at the first unsupported beam, not probe all the way to 48.
-        assert tile_simulator.get_pointing_delay.call_count == 9
 
     def test_start_beamformer(
         self: TestStaticSimulator,

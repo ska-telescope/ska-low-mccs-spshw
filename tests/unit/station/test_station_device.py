@@ -18,7 +18,6 @@ import json
 import threading
 import time
 import unittest.mock
-from datetime import timezone
 from logging import Logger
 from typing import Any, Callable, Iterator
 from unittest.mock import ANY, MagicMock, call, patch
@@ -26,7 +25,6 @@ from unittest.mock import ANY, MagicMock, call, patch
 import numpy as np
 import pytest
 import tango
-from astropy.utils import iers
 from ska_control_model import AdminMode, HealthState, ResultCode, TaskStatus
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
@@ -117,7 +115,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        "globalReferenceTime",
         timeout=20.0,
     )
 
@@ -602,22 +599,6 @@ def test_Initialise(
     time.sleep(4)
     station_lrc_manager.assert_command_finished("COMPLETED")
 
-    # get total number of leap seconds
-    iers_table = iers.LeapSeconds.auto_open()
-    total_leap_seconds = max(iers_table["tai_utc"])
-
-    current_time = datetime.datetime.now()
-    midnight = current_time.replace(
-        hour=0,
-        minute=0,
-        second=0,
-        tzinfo=timezone.utc,
-    )
-    # The expected global reference time will be the last midnight in tai.
-    # To get this, take the current time, change hours/min/s to midnight, transform
-    # it to a posix value (number of seconds) then subtract the leap seconds.
-    expected_grt = int(np.floor(midnight.timestamp())) - int(total_leap_seconds)
-
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         tile.Configure40GCore.assert_not_called()
@@ -626,14 +607,6 @@ def test_Initialise(
             "is_first": (i == 0),
             "is_last": (last_tile),
         }
-
-        assert tile.globalReferenceTime == station_device.globalReferenceTime
-        dt = datetime.datetime.strptime(
-            tile.globalReferenceTime, "%Y-%m-%dT%H:%M:%S.%fZ"
-        )
-        # Transform to Posix timestamp to match the expected_grt
-        ts = dt.replace(tzinfo=timezone.utc).timestamp()
-        assert int(np.ceil(ts)) == expected_grt
 
         tile.SetLmcDownload.assert_last_call(
             json.dumps(

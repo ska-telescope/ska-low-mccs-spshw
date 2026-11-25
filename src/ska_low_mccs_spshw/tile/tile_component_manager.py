@@ -10,14 +10,12 @@
 from __future__ import annotations
 
 import logging
-import re
 import threading
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Final, Iterator, List, Optional, cast
 
 import numpy as np
-import semver
 import tango
 from ska_control_model import (
     CommunicationStatus,
@@ -34,7 +32,6 @@ from ska_low_sps_tpm_api.base.definitions import (
     BoardError,
     Device,
     LibraryError,
-    PluginError,
     RegisterInfo,
 )
 from ska_low_sps_tpm_api.tile import Tile
@@ -64,12 +61,7 @@ from .utils import LockTimeoutError, LogLock, abort_task_on_exception, acquire_t
 
 __all__ = ["TileComponentManager"]
 
-FIRMWARE_NAME_OLD = "tpm_firmware_10.0.0.bit"
-FIRMWARE_NAME_NEW = "tpm_firmware_13.1.0.bit"
-_BIOS_VERSION_PATTERN = re.compile(r"v(\d+\.\d+\.\d+)")
-_MIN_NEW_BIOS_VERSION = semver.Version.parse("1.0.0")
-# Firmware from this major version counts frames from the TAI2000 epoch.
-_MIN_TAI2000_FIRMWARE_MAJOR: Final[int] = 13
+FIRMWARE_NAME = "tpm_firmware_13.1.0.bit"
 _POWER_COMMAND_TIMEOUT: Final[int] = 20  # seconds
 _MAX_BEAMS: Final[int] = 48  # Max hardware station beams supported per tile
 # ARP table entries per 40G core in the firmware shipped with this release
@@ -80,22 +72,6 @@ _NUMBER_OF_ARP_TABLE_ENTRIES: Final[int] = 10
 _TEST_GENERATOR_LOAD_DELAY_FRAMES: Final[int] = int(
     TileData.TEST_GENERATOR_LOAD_DELAY / TileData.FRAME_PERIOD
 )
-
-
-def _select_firmware_name(bios: str) -> str:
-    """
-    Select the firmware file to use for a TPM BIOS string.
-
-    :param bios: BIOS string reported by tile.info.
-
-    :return: firmware filename to program.
-    """
-    match = _BIOS_VERSION_PATTERN.search(bios)
-    if match is None:
-        return FIRMWARE_NAME_OLD
-
-    version = semver.Version.parse(match.group(1))
-    return FIRMWARE_NAME_NEW if version >= _MIN_NEW_BIOS_VERSION else FIRMWARE_NAME_OLD
 
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
@@ -209,9 +185,7 @@ class TileComponentManager(
     # This firmware name is generic to versions supported by
     # ska-low-sps-tpm-api library. Supporting both TPM_1_6 and
     # TPM_2_0 for example.
-    FIRMWARE_NAME_OLD: str = FIRMWARE_NAME_OLD
-    FIRMWARE_NAME_NEW: str = FIRMWARE_NAME_NEW
-    FIRMWARE_NAME: str = FIRMWARE_NAME_OLD
+    FIRMWARE_NAME: str = FIRMWARE_NAME
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
@@ -336,7 +310,6 @@ class TileComponentManager(
         self._tile_id = tile_id
         self._tpm_status = TpmStatus.UNKNOWN
         self._csp_spead_format = "SKA"
-        self._global_reference_time: int | None = None
         self._test_generator_active = False
         self.antenna_buffer_mode: str = "Not set"
         self.data_transmission_mode: str = "Not transmitting"
@@ -1456,40 +1429,6 @@ class TileComponentManager(
         )
         return destination_ips, destination_ports, dst_ip_40g_fpga1, dst_ip_40g_fpga2
 
-    @property
-    def global_reference_time(self: TileComponentManager) -> str | None:
-        """
-        Return the Unix time used as global synchronization time.
-
-        :return: Unix time used as global synchronization time
-        """
-        if self._global_reference_time:
-            return self._tile_time.format_time_from_timestamp(
-                self._global_reference_time
-            )
-        return ""
-
-    @global_reference_time.setter
-    def global_reference_time(self: TileComponentManager, reference_time: str) -> None:
-        """
-        Set the Unix time used as global synchronization time.
-
-        :param reference_time: Reference time representing timestamp for frame 0
-        """
-        if reference_time == "":
-            global_reference_time = None
-        else:
-            global_reference_time = self._tile_time.timestamp_from_utc_time(
-                reference_time
-            )
-        start_time = global_reference_time
-
-        self.logger.info(f"Global reference time set to {start_time}")
-        if start_time is None or start_time <= 0:
-            self._global_reference_time = None
-        else:
-            self._global_reference_time = start_time
-
     def reevaluate_tpm_status(self: TileComponentManager) -> bool:
         """
         Reevaluate the TpmStatus.
@@ -1666,9 +1605,7 @@ class TileComponentManager(
                     )
 
                 prog_status = False
-                tile_info = self.tile.info
-                bios = tile_info.get("hardware", {}).get("bios", "")
-                self._firmware_name = _select_firmware_name(bios)
+                self._firmware_name = self.FIRMWARE_NAME
 
                 if self.tile.is_programmed() is False:
                     self.logger.info(
@@ -1743,11 +1680,8 @@ class TileComponentManager(
                     )
                     # The initial pps_delay must be reset after initialisation.
                     self._initial_pps_delay = None
-                    if self._global_reference_time:
-                        self.logger.info(
-                            "Global reference time specifed, starting acquisition"
-                        )
-                        self._start_acquisition()
+                    self.logger.info("Starting acquisition")
+                    self._start_acquisition()
 
     @abort_task_on_exception
     @check_communicating
@@ -1809,7 +1743,6 @@ class TileComponentManager(
         task_callback: Optional[Callable] = None,
         start_time: Optional[str] = None,
         delay: int = 2,
-        global_reference_time: Optional[str] = None,
     ) -> tuple[list[ResultCode], list[str]]:
         """
         Submit the start_acquisition slow task.
@@ -1817,7 +1750,6 @@ class TileComponentManager(
         :param task_callback: Update task state, defaults to None
         :param start_time: the acquisition start time
         :param delay: a delay to the acquisition start
-        :param global_reference_time: the start time assumed for starting the timestamp
 
         :return: A tuple containing a result code and a unique id string to
             identify the command
@@ -1831,41 +1763,28 @@ class TileComponentManager(
                 start_timestamp = None
             delay = 0
 
-        if global_reference_time is None:
-            global_start_timestamp = None
-        else:
-            global_start_timestamp = self._tile_time.timestamp_from_utc_time(
-                global_reference_time
-            )
-            if global_start_timestamp < 0:
-                self.logger.error(
-                    f"Invalid time for global_reference_time: {global_reference_time}"
-                )
-                global_start_timestamp = None
-            delay = 0
-
         return self._submit_lrc_request(
             command_name="start_acquisition",
             command_object=self._start_acquisition,
             task_callback=task_callback,
             start_time=start_timestamp,
             delay=delay,
-            global_reference_time=global_start_timestamp,
         )
 
     @check_communicating
     def _start_acquisition(
         self: TileComponentManager,
         start_time: Optional[int] = None,
-        global_reference_time: Optional[int] = None,
         delay: int = 2,
     ) -> None:
         """
         Start acquisition using slow command.
 
+        The firmware counts frames from the TAI2000 epoch, so the TPM API
+        derives the global sync time itself.
+
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
-        :param global_reference_time: the start time assumed for starting the timestamp
 
         :raises TimeoutError: When unable to abort previous command.
         """
@@ -1880,23 +1799,6 @@ class TileComponentManager(
             if not task_waiter.wait(timeout=10):
                 raise TimeoutError("Unable to abort previous waiter thread in time. ")
 
-            if global_reference_time is None:
-                global_reference_time = self._global_reference_time
-            else:
-                self._global_reference_time = global_reference_time
-
-            # The TPM API rejects a global start time for TAI2000 firmware,
-            # because that firmware fixes the global sync time to TAI2000.
-            # The "major" field is the design revision (1 for every release),
-            # so compare the release version. Old firmware may not report one.
-            firmware_version = self.tile.get_firmware_list()[0].get("firmware_version")
-            if (
-                firmware_version
-                and semver.Version.parse(firmware_version).major
-                >= _MIN_TAI2000_FIRMWARE_MAJOR
-            ):
-                global_reference_time = None
-
             self.logger.info(
                 f"Start acquisition: start time: {start_time}, delay: {delay}"
             )
@@ -1905,11 +1807,7 @@ class TileComponentManager(
             self.tile.reset_eth_errors()
             self.tile.check_arp_table()
             # Start data acquisition on board
-            self.tile.start_acquisition(
-                start_time,
-                delay,
-                global_reference_time,
-            )
+            self.tile.start_acquisition(start_time, delay)
             self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
 
             if start_time is None:
@@ -4891,26 +4789,14 @@ class TileComponentManager(
         """
         Read pointing delays from the TPM for all beams.
 
-        Older firmware/BIOS only supports 8 beams (see
-        ``BeamfFD.max_beams`` in ska-low-sps-tpm-api), and raises a
-        ``PluginError`` for beam indices beyond what it supports. Rows for
-        beams unsupported by the connected TPM are left as NaN, so the
-        shape is always (48, 32) regardless of firmware.
-
         :return: pointing delays for all beams as (48, 32) ndarray.
         """
-        delays = np.full((_MAX_BEAMS, 32), np.nan)
-
-        for beam in range(_MAX_BEAMS):
-            try:
-                delays[beam] = np.array(self.tile.get_pointing_delay(beam)).reshape(-1)
-            except PluginError:
-                self.logger.debug(
-                    f"Beam {beam} not supported by this TPM's firmware/BIOS"
-                )
-                break
-
-        return delays
+        return np.array(
+            [
+                np.array(self.tile.get_pointing_delay(beam)).reshape(-1)
+                for beam in range(_MAX_BEAMS)
+            ]
+        )
 
     def load_scan_id(
         self: TileComponentManager,

@@ -18,7 +18,7 @@ a :py:class:`SubrackPollResponse`, or with a verdict from the health recorder,
 and asserts what the device does with it. A test sets what the PDU link
 reports too. That leaves only the device's own code under test.
 
-Two fixtures cover each of the poller, the health recorder and the callback
+Three fixtures cover each of the poller, the health recorder and the callback
 scheduler, because a mock with a ``side_effect`` bypasses its ``return_value``
 and so cannot report what it handed back. ``poller_factory`` is the factory,
 for asserting how a poller was built. ``pollers`` is what it built, in order,

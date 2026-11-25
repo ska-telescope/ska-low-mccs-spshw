@@ -5,6 +5,7 @@
 * [SKB-1699] Bump TPM API to 5.3.0, installed from the SKAO PyPI index instead of git.
 * [SKB-1699] Bump TPM firmware used when BIOS version >= 1.0.0 from 12.0.0 to 13.1.0.
 * [SKB-1699] MccsTile does not send a global reference time to TPMs with firmware 13.0.0 or later, because that firmware fixes the global sync time to the TAI2000 epoch.
+* [SKB-1699] Remove SpsStation `timeToFrameCounterWrap`. Firmware 13.0.0 counts frames from TAI2000 and does not wrap until about 2077. For older firmware the tile health monitor still reports a timestamp overflow.
 * [SKB-1699] MccsTile `currentFrame` is now `DevLong64`, because firmware 13.0.0 counts frames from the TAI2000 epoch.
 * [THORN-819] Upload pod logs with the soak test.
 * [THORN-791] Fix AttributeErrors in pduPortStates, pduPortCurrents, pduPortVoltages.

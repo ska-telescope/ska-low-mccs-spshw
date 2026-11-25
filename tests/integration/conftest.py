@@ -24,7 +24,7 @@ from tango import DeviceProxy
 from tango.server import command
 
 from ska_low_mccs_spshw.prototype_subrack.prototype_subrack_device import (
-    subrack_factory,
+    MccsSubrack as PrototypeMccsSubrack,
 )
 from ska_low_mccs_spshw.subrack import SubrackSimulator
 from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulator
@@ -163,7 +163,7 @@ def integration_test_context_fixture(
             harness.add_prototype_subrack_device(
                 subrack_id,
                 logging_level=int(LoggingLevel.ERROR),
-                device_class=subrack_factory(class_name="MccsSubrack"),
+                device_class=PrototypeMccsSubrack,
                 device_name=get_subrack_name(subrack_id),
                 define_parent_trl=True,
             )

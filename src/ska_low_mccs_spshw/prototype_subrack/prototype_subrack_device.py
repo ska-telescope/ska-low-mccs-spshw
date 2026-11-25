@@ -51,7 +51,7 @@ from .prototype_subrack_attributes import (
 from .prototype_subrack_commands import SubrackCommands
 from .subrack_client import Subrack, SubrackPoller, SubrackPollResponse
 
-__all__ = ["MccsPrototypeSubrack", "cabinet_position", "main"]
+__all__ = ["MccsPrototypeSubrack", "MccsSubrack", "cabinet_position", "main"]
 
 # The control level each admin mode asks for. A mode that is absent leaves the
 # control level as it is, the same as a write to ``adminMode`` does.
@@ -139,11 +139,13 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
     _health_attributes: Optional[list[str]] = None
     _health: Optional[HealthState] = None
     _tpm_power_states: list[PowerState]
-    _web_hardware_client_factory: type[WebHardwareClient]
-    _derived_values_factory: type[DerivedValues]
-    _subrack_factory: type[Subrack]
-    _subrack_poller_factory: type[SubrackPoller]
-    _health_recorder_factory: type[HealthRecorder]
+    # What the device builds its parts with. Tests replace these through
+    # subrack_factory().
+    _web_hardware_client_factory: type[WebHardwareClient] = WebHardwareClient
+    _derived_values_factory: type[DerivedValues] = DerivedValues
+    _subrack_factory: type[Subrack] = Subrack
+    _subrack_poller_factory: type[SubrackPoller] = SubrackPoller
+    _health_recorder_factory: type[HealthRecorder] = HealthRecorder
 
     def assemble(self: MccsPrototypeSubrack) -> None:
         """
@@ -617,21 +619,34 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             setattr(self, signal_name, None)
 
 
+# pylint: disable-next=too-many-ancestors
+class MccsSubrack(MccsPrototypeSubrack):
+    """
+    The prototype subrack, served under the Tango class name ``MccsSubrack``.
+
+    ``MCCS_SUBRACK_IMPLEMENTATION=prototype`` serves this class in place of
+    :py:class:`ska_low_mccs_spshw.subrack.MccsSubrack`. The Tango DB rows, the
+    class properties and the archiver configuration for ``MccsSubrack`` then
+    apply to it with no change.
+    """
+
+
 # ----------
 # Run server
 # ----------
 
 
-def subrack_factory(  # pylint: disable=too-many-arguments
+def subrack_factory(
     web_hardware_client: type[WebHardwareClient] = WebHardwareClient,
     derived_values: type[DerivedValues] = DerivedValues,
     subrack: type[Subrack] = Subrack,
     subrack_poller: type[SubrackPoller] = SubrackPoller,
     health_recorder: type[HealthRecorder] = HealthRecorder,
-    class_name: str = "MccsPrototypeSubrack",
 ) -> type[MccsPrototypeSubrack]:
     """
-    Build the device class, choosing what the device builds its parts with.
+    Build a device class that builds its parts with the given factories.
+
+    Tests use this to give the device mock parts.
 
     :param web_hardware_client: builds the hardware client, from a host and a
         port.
@@ -643,14 +658,11 @@ def subrack_factory(  # pylint: disable=too-many-arguments
         and a logger.
     :param health_recorder: builds the health recorder, from the device name,
         a logger, the health attributes and the device's health callbacks.
-    :param class_name: the Tango class name to serve the device under. Pass
-        ``MccsSubrack`` to stand the device in for the old subrack, so that the
-        Tango DB rows for the device do not change.
 
     :return: the device class to serve.
     """
     return type(
-        class_name,
+        MccsPrototypeSubrack.__name__,
         (MccsPrototypeSubrack,),
         {
             "_web_hardware_client_factory": web_hardware_client,
@@ -671,10 +683,7 @@ def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
 
     :return: exit code.
     """
-    return cast(
-        int,
-        subrack_factory().run_server(args=args or None, **kwargs),
-    )
+    return cast(int, MccsPrototypeSubrack.run_server(args=args or None, **kwargs))
 
 
 if __name__ == "__main__":

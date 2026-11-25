@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-820] `MCCS_SUBRACK_IMPLEMENTATION=prototype` now serves a static `MccsSubrack` class that inherits from `MccsPrototypeSubrack`, in place of a class built at run time. Each lookup gives the same class, so the archivers see one fixed `MccsSubrack` class.
 * [THORN-819] Upload pod logs with the soak test.
 * [THORN-791] Fix AttributeErrors in pduPortStates, pduPortCurrents, pduPortVoltages.
   * There was an index error 1-based system but indexing with zero.

@@ -42,7 +42,9 @@ import tango.server
 from .pdu import MccsPdu
 from .power_marshaller import PowerMarshaller
 from .prototype_subrack import MccsPrototypeSubrack
-from .prototype_subrack.prototype_subrack_device import subrack_factory
+from .prototype_subrack.prototype_subrack_device import (
+    MccsSubrack as _PrototypeMccsSubrack,
+)
 from .station import SpsStation
 from .subrack import MccsSubrack as _LegacyMccsSubrack
 from .tile import MccsTile
@@ -61,9 +63,10 @@ def subrack_class() -> type[tango.server.Device]:
     The ``MCCS_SUBRACK_IMPLEMENTATION`` environment variable selects the class.
     With ``legacy``, or with the variable not set, this is
     :py:class:`ska_low_mccs_spshw.subrack.MccsSubrack`. With ``prototype``, it
-    is :py:class:`~.MccsPrototypeSubrack`. The Tango class name, the Tango DB
-    rows, the class properties and the EDA configuration are the same in both
-    cases.
+    is :py:class:`~.prototype_subrack_device.MccsSubrack`, a subclass of
+    :py:class:`~.MccsPrototypeSubrack`. Both classes are named
+    ``MccsSubrack``, so the Tango class name, the Tango DB rows, the class
+    properties and the EDA configuration are the same in both cases.
 
     The package attribute ``ska_low_mccs_spshw.MccsSubrack`` returns this
     class too. So the switch applies to the ``spshw`` command, and to a device
@@ -80,7 +83,7 @@ def subrack_class() -> type[tango.server.Device]:
         case "legacy":
             return _LegacyMccsSubrack
         case "prototype":
-            return subrack_factory(class_name="MccsSubrack")
+            return _PrototypeMccsSubrack
         case _:
             raise ValueError(
                 f"{SUBRACK_IMPLEMENTATION_ENV_VAR} is {implementation!r}. "
@@ -116,7 +119,7 @@ def server_classes() -> tuple[type[tango.server.Device], ...]:
     return (
         MccsPdu,
         PowerMarshaller,
-        subrack_factory(),
+        MccsPrototypeSubrack,
         subrack_class(),
         MccsTile,
         SpsStation,

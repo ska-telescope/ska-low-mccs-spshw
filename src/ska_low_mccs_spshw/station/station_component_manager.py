@@ -2642,7 +2642,7 @@ class SpsStationComponentManager(
         subracks_to_turn_on = [
             fqdn
             for fqdn, power_state in dict(self._subrack_power_states).items()
-            if power_state != PowerState.ON
+            if power_state in (PowerState.OFF, PowerState.NO_SUPPLY)
         ]
         if subracks_to_turn_on:
             on_commands = MccsCompositeCommandProxy(self.logger, task_abort_event)

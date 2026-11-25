@@ -369,7 +369,10 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         :py:meth:`assemble`, where the PDU device may not be running yet.
         Once built, it lasts until the scheduler is shut down.
         """
-        if self._pdu_link is not None or not (self.PduTrl and self.PduPorts):
+        if self._pdu_link is not None:
+            return
+        if not (self.PduTrl and self.PduPorts):
+            self.logger.info("Following no PDU, because PduTrl or PduPorts is not set.")
             return
         assert self._callback_scheduler is not None  # for the type checker
         self._pdu_link = self._pdu_link_factory(

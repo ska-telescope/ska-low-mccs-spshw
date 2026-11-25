@@ -126,6 +126,7 @@ class PduLink:
                 tango.EventType.CHANGE_EVENT,
                 functools.partial(self._port_event, port),
             )
+        self._logger.info(f"Following PDU {pdu_trl} ports {list(self._port_states)}.")
 
     # ----------
     # Properties

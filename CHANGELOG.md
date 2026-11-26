@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-793] Fix attribute converters to handle None
 * [THORN-727] The prototype subrack powers itself on and off through the PDU ports named by its `PduTrl` and `PduPorts` properties. Without both properties it rejects `On` and `Off`.
   * `On` switches every port on, then waits up to 30 s for the PDU to report every port on.
   * `Off` first shuts the SMM down with `poweroff_subrack` and waits for it to leave the network, then switches every port off and waits up to 30 s for the PDU to report every port off. The shutdown is skipped when the ports are already off.

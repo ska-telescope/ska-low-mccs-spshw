@@ -8,11 +8,14 @@
 """This module implements simple type conversions relevant to Tile attributes."""
 from __future__ import annotations
 
+import functools
 import itertools
 import json
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 import numpy as np
+
+_T = TypeVar("_T")
 
 __all__ = [
     "NumpyEncoder",
@@ -21,8 +24,10 @@ __all__ = [
     "clock_managers_count",
     "clock_managers_status",
     "clocks_to_list",
+    "find_missing_values",
     "flatten_list",
     "lane_error_to_array",
+    "none_if_missing",
     "serialise_np_object",
     "serialise_object",
     "udp_error_count_to_list",
@@ -50,6 +55,75 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, complex):
             return obj.real, obj.imag
         return json.JSONEncoder.default(self, obj)
+
+
+def find_missing_values(val: Any, path: str = "") -> list[str]:
+    """
+    Find the locations of any ``None`` values within a nested structure.
+
+    The tpm-api reports ``None`` for an individual entry (e.g. a single ADC)
+    when reading it from hardware raised an exception. The converters in this
+    module cannot represent such entries in a Tango attribute, so function
+    `none_if_missing` uses this to detect them up front.
+
+    :example:
+        >>> find_missing_values({"ADC0": True, "ADC9": None})
+        ['ADC9']
+        >>> find_missing_values({"Core0": {"lane0": 0, "lane3": None}})
+        ['Core0.lane3']
+        >>> find_missing_values({"C2C_MMCM": (True, None)})
+        ['C2C_MMCM[1]']
+
+    :param val: the (possibly nested) dict/list/tuple to search.
+    :param path: the location of ``val`` within the outermost structure,
+        used to build the reported paths during recursion.
+
+    :return: the path of each ``None`` found, or an empty list if none.
+    """
+    if val is None:
+        return [path]
+    # Recurse into containers, extending the path with ".key" for dicts
+    # and "[index]" for sequences so the log pinpoints the bad entry.
+    if isinstance(val, dict):
+        return [
+            missing
+            for key, item in val.items()
+            for missing in find_missing_values(
+                item, f"{path}.{key}" if path else str(key)
+            )
+        ]
+    if isinstance(val, (list, tuple)):
+        return [
+            missing
+            for index, item in enumerate(val)
+            for missing in find_missing_values(item, f"{path}[{index}]")
+        ]
+    return []
+
+
+def none_if_missing(
+    converter: Callable[[Any], _T],
+) -> Callable[[Any], _T | None]:
+    """
+    Make a converter return ``None`` if its input has any ``None`` entries.
+
+    The signal bus publishes a ``None`` from an attribute's ``to_tango``
+    conversion with ``ATTR_INVALID`` quality. A warning naming the missing
+    entries is logged each time, so it is clear why the attribute is invalid.
+
+    :param converter: the converter to wrap.
+
+    :return: the wrapped converter.
+    """
+
+    @functools.wraps(converter)
+    def _wrapper(val: Any) -> _T | None:
+        missing = find_missing_values(val)
+        if missing:
+            return None
+        return converter(val)
+
+    return _wrapper
 
 
 def flatten_list(val: list[list[Any]]) -> list[Any]:
@@ -85,6 +159,7 @@ def serialise_np_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
     return json.dumps(val, cls=NumpyEncoder)
 
 
+@none_if_missing
 def adc_pll_to_list(val: dict[str, tuple[bool, bool]]) -> np.ndarray:
     """
     Flatten adc indexed dictionary to list.
@@ -101,6 +176,7 @@ def adc_pll_to_list(val: dict[str, tuple[bool, bool]]) -> np.ndarray:
     return arr
 
 
+@none_if_missing
 def adc_to_list(val: dict[str, bool]) -> list[int]:
     """
     Flatten adc indexed dictionary to list.
@@ -116,6 +192,7 @@ def adc_to_list(val: dict[str, bool]) -> list[int]:
     return flattened_list
 
 
+@none_if_missing
 def udp_error_count_to_list(val: dict[str, int]) -> list[int]:
     """
     Flatten udp error count to 1d list.
@@ -130,6 +207,7 @@ def udp_error_count_to_list(val: dict[str, int]) -> list[int]:
     return flattened_list
 
 
+@none_if_missing
 def lane_error_to_array(val: dict[str, dict[str, int | None]]) -> np.ndarray:
     """
     Flatten udp error count to 1d list.
@@ -167,6 +245,7 @@ def _extract_mmcm_array(
     return np.array(data, dtype=int)
 
 
+@none_if_missing
 def clock_managers_status(val: dict[str, tuple[bool, int]]) -> np.ndarray:
     """
     Extract MMCM 'status' values into a (3) NumPy array.
@@ -178,6 +257,7 @@ def clock_managers_status(val: dict[str, tuple[bool, int]]) -> np.ndarray:
     return _extract_mmcm_array(val, index=0)
 
 
+@none_if_missing
 def clock_managers_count(val: dict[str, tuple[bool, int]]) -> np.ndarray:
     """
     Extract MMCM 'count' values into a (3) NumPy array.
@@ -189,6 +269,7 @@ def clock_managers_count(val: dict[str, tuple[bool, int]]) -> np.ndarray:
     return _extract_mmcm_array(val, index=1)
 
 
+@none_if_missing
 def clocks_to_list(val: dict[str, bool]) -> list[int]:
     """
     Convert the clocks to a list.

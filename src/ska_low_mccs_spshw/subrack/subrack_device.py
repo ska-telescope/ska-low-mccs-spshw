@@ -1738,7 +1738,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self.component_manager.pdu_number_of_ports()
 
     @attribute(dtype=(int,), label="PDU Port States", doc="Read the PDU port states.")
-    def pduPortStates(self: MccsSubrack) -> list[int] | None:
+    def pduPortStates(self: MccsSubrack) -> list[int]:
         """
         Handle a Tango attribute read of the state of pdu port.
 
@@ -1752,7 +1752,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         unit="Ampere",
         doc="Read the PDU port currents.",
     )
-    def pduPortCurrents(self: MccsSubrack) -> list[float] | None:
+    def pduPortCurrents(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the current of pdu port.
 
@@ -1766,7 +1766,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         unit="Volt",
         doc="Read the PDU port voltages.",
     )
-    def pduPortVoltages(self: MccsSubrack) -> list[float] | None:
+    def pduPortVoltages(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the current of pdu port.
 

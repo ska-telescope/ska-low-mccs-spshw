@@ -6,6 +6,13 @@
   * `On` switches every port on, then waits up to 30 s for the PDU to report every port on.
   * `Off` first shuts the SMM down with `poweroff_subrack` and waits for it to leave the network, then switches every port off and waits up to 30 s for the PDU to report every port off. The shutdown is skipped when the ports are already off.
   * When the board does not answer and every port is off, the subrack reports `OFF` and its TPMs report `NO_SUPPLY`.
+* [THORN-819] Upload pod logs with the soak test.
+* [THORN-791] Fix AttributeErrors in pduPortStates, pduPortCurrents, pduPortVoltages.
+  * There was an index error 1-based system but indexing with zero.
+  * Enlogic does not have pduPort{}Voltage attribute.
+  * attributes return [] instead of None.
+* [THORN-723] Added new health checks for spsstation that check the beamformer daisy chain, verifying
+  each tile's admin mode, programming state and data routing including csp ingest.
 * [THORN-813] Fix prototype subrack feature flag for deployments not using the command `spshw`.
 * [THORN-813] Prototype subrack only sets fan speeds for fan pairs that the poll reads in `AUTO`.
 * [THORN-812] Update PyTango to 10.3.2.

@@ -137,6 +137,7 @@ def sdn_gateway_fixture() -> str:
 def test_context_fixture(
     sdn_first_interface: str,
     sdn_gateway: str,
+    csp_ingest_ip: str,
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     mock_daq_device_proxy: unittest.mock.Mock,
@@ -149,6 +150,7 @@ def test_context_fixture(
     :param sdn_first_interface: the first interface of the block
         allocated to this station for science data.
     :param sdn_gateway: the IP address of the SDN gateway
+    :param csp_ingest_ip: the IP address CSP ingests station beams on.
     :param mock_subrack_device_proxy: a mock return as a device proxy to
         the subrack device
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
@@ -174,6 +176,7 @@ def test_context_fixture(
         sdn_gateway,
         subrack_ids=[1],
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
+        csp_ingest_ip=csp_ingest_ip,
         lmc_daq_trl=get_lmc_daq_name(),
         bandpass_daq_trl=get_bandpass_daq_name(),
         wren_trl="",  # This is a causing intermittent test failure.
@@ -595,7 +598,8 @@ def test_Initialise(
     change_event_callbacks["state"].assert_not_called()
 
     csp_ingest_address = "123.234.123.234"
-    csp_ingest_port = 4660
+    # Not the default port, so that Initialise is seen to keep it.
+    csp_ingest_port = 4670
 
     station_device.SetCspIngest(
         json.dumps(
@@ -685,6 +689,23 @@ def test_Initialise(
                 }
             )
         )
+        if last_tile:
+            # Initialise keeps the CSP ingest set by SetCspIngest.
+            tile.SetCspDownload.assert_last_call(
+                json.dumps(
+                    {
+                        "source_port": 0,
+                        "destination_ip_1": csp_ingest_address,
+                        "destination_ip_2": csp_ingest_address,
+                        "destination_port": csp_ingest_port,
+                        "is_last": True,
+                        "netmask": str(
+                            ipaddress.ip_interface(sdn_first_interface).netmask
+                        ),
+                        "gateway": sdn_gateway,
+                    }
+                )
+            )
 
 
 def test_Standby(
@@ -2712,15 +2733,37 @@ def test_beamformer_daisy_chain_health_rollup(
     change_event_callbacks["beamformerDaisyChainValid"].assert_not_called()
     change_event_callbacks["health_state"].assert_not_called()
 
-    sdn_base = ipaddress.IPv4Address("10.0.0.152")
-
     # Oh no someone broke it.
-    station_device.MockTileDstIpChange(
+    station_device.MockTileFortyGbCoreConfigurationsChange(
         json.dumps(
             {
                 "tile_id": 1,
-                "fpga1_ip": "1.2.3.4",
-                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+                "value": [
+                    {
+                        "core_id": 0,
+                        "arp_table_entry": 0,
+                        "destination_ip": "1.2.3.4",
+                        "destination_port": 4660,
+                    },
+                    {
+                        "core_id": 0,
+                        "arp_table_entry": 1,
+                        "destination_ip": "10.0.0.156",
+                        "destination_port": 4662,
+                    },
+                    {
+                        "core_id": 1,
+                        "arp_table_entry": 0,
+                        "destination_ip": "10.0.0.157",
+                        "destination_port": 4660,
+                    },
+                    {
+                        "core_id": 1,
+                        "arp_table_entry": 1,
+                        "destination_ip": "10.0.0.157",
+                        "destination_port": 4662,
+                    },
+                ],
             }
         )
     )
@@ -2728,12 +2771,36 @@ def test_beamformer_daisy_chain_health_rollup(
     change_event_callbacks["health_state"].assert_change_event(HealthState.FAILED)
 
     # Yay they fixed it.
-    station_device.MockTileDstIpChange(
+    station_device.MockTileFortyGbCoreConfigurationsChange(
         json.dumps(
             {
                 "tile_id": 1,
-                "fpga1_ip": str(sdn_base + 2 * 1 + 2),
-                "fpga2_ip": str(sdn_base + 2 * 1 + 3),
+                "value": [
+                    {
+                        "core_id": 0,
+                        "arp_table_entry": 0,
+                        "destination_ip": "10.0.0.156",
+                        "destination_port": 4660,
+                    },
+                    {
+                        "core_id": 0,
+                        "arp_table_entry": 1,
+                        "destination_ip": "10.0.0.156",
+                        "destination_port": 4662,
+                    },
+                    {
+                        "core_id": 1,
+                        "arp_table_entry": 0,
+                        "destination_ip": "10.0.0.157",
+                        "destination_port": 4660,
+                    },
+                    {
+                        "core_id": 1,
+                        "arp_table_entry": 1,
+                        "destination_ip": "10.0.0.157",
+                        "destination_port": 4662,
+                    },
+                ],
             }
         )
     )

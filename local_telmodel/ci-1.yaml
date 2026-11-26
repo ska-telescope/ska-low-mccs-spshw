@@ -17,6 +17,7 @@ platform:
           - file://local_telmodel
           - ci-1.yaml
         sdn_first_interface: 10.0.0.152/25
+        csp_ingest_ip: 10.0.0.250
         daq:
           calibration:
             simulated: true

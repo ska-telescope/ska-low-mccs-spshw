@@ -1454,6 +1454,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 # # stuck ATTR_INVALID when empty and polled (Tango rejects empty
                 # # arrays in the polling buffer), e.g. after upgrading from 15.0.0.
                 "rfiBlankingEnabledAntennas",
+                # Only polled once the TPM is INITIALISED/SYNCHRONISED, so its
+                # quality briefly goes INVALID during transient TpmStatus changes
+                # (e.g. during Initialise). Not a health signal; exclude so these
+                # blips do not degrade health.
+                "currentTileBeamformerFrame",
+                "rfiCount",
                 "dstip40gfpga1",
                 "dstip40gfpga2",
                 "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",

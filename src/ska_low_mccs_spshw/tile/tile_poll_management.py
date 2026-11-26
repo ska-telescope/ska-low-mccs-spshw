@@ -10,9 +10,10 @@
 from __future__ import annotations
 
 import time
+from concurrent.futures import Future
 from dataclasses import dataclass
 from itertools import count
-from queue import Empty, PriorityQueue
+from queue import Empty, PriorityQueue, SimpleQueue
 from typing import Any, Callable, Optional
 
 from ska_control_model import ResultCode, TaskStatus
@@ -22,6 +23,7 @@ from .tpm_status import TpmStatus
 __all__ = [
     "TileRequestProvider",
     "TileLRCRequest",
+    "TileCommandRequest",
     "TileRequest",
     "TileResponse",
     "RequestIterator",
@@ -146,6 +148,37 @@ class TileLRCRequest(TileRequest):
                 status=TaskStatus.ABORTED,
                 result=(ResultCode.ABORTED, "Command aborted"),
             )
+
+
+class TileCommandRequest(TileRequest):
+    """
+    A fast command, executed on the polling thread for a waiting caller.
+
+    All hardware access is meant to happen on the polling thread, so a
+    caller on another thread (e.g. a Tango request thread executing a
+    fast command) queues one of these, and waits on its ``future`` for
+    the result. Command requests are served ahead of monitoring.
+    """
+
+    def __init__(
+        self: TileCommandRequest,
+        name: str,
+        command_object: Callable,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Initialise a new command request.
+
+        :param name: Name of the command.
+        :param command_object: The object to call
+        :param args: optional arguments to pass
+        :param kwargs: Optional kwargs
+        """
+        super().__init__(name, command_object, *args, publish=False, **kwargs)
+        # Resolved by the polling thread with the result or exception.
+        # Cancelled by the caller if it stops waiting before execution.
+        self.future: Future[Any] = Future()
 
 
 @dataclass
@@ -371,6 +404,8 @@ class TileRequestProvider:
         self._command_counter = count()
         self._desire_connection = False
         self._read_configuration = False
+        # Fast commands waiting for the polling thread (see TileCommandRequest).
+        self._command_queue: SimpleQueue[TileCommandRequest] = SimpleQueue()
 
     def desire_connection(self) -> None:
         """Register a request to connect with the TPM."""
@@ -383,6 +418,14 @@ class TileRequestProvider:
     def inform_configuration_read(self) -> None:
         """Remove request to read configuration from TPM."""
         self._read_configuration = False
+
+    def enqueue_command(self, request: TileCommandRequest) -> None:
+        """
+        Queue a fast command, to be executed ahead of monitoring.
+
+        :param request: the command request.
+        """
+        self._command_queue.put(request)
 
     def enqueue_lrc(
         self,
@@ -424,6 +467,15 @@ class TileRequestProvider:
                 request.notify_removed_from_queue()
             except Empty:
                 break
+        while True:
+            try:
+                command = self._command_queue.get_nowait()
+            except Empty:
+                break
+            if command.future.set_running_or_notify_cancel():
+                command.future.set_exception(
+                    ConnectionError("Polling stopped before command executed")
+                )
 
     # pylint: disable=too-many-return-statements
     def get_request(self, tpm_status: TpmStatus) -> str | TileRequest | None:
@@ -445,6 +497,12 @@ class TileRequestProvider:
         if self._desire_connection:
             self._desire_connection = False
             return "CONNECT"
+
+        # Then fast commands, which have a caller waiting.
+        try:
+            return self._command_queue.get_nowait()
+        except Empty:
+            pass
 
         try:
             lrc_entry = self._lrc_queue.get_nowait()

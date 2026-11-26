@@ -3964,6 +3964,136 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert beam_flags[0] is False
         assert beam_flags[1] is False
 
+    # ------------------------------------------------------------------
+    # Fast commands executed on the polling (hardware) thread
+    # ------------------------------------------------------------------
+    def test_fast_command_runs_on_polling_thread(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test a routed fast command touches the hardware on the polling thread.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        """
+        tile = tile_component_manager.tile
+        original = tile.set_phase_terminal_count
+        threads: list[int] = []
+
+        def _record(value: int) -> None:
+            threads.append(threading.get_ident())
+            original(value)
+
+        with unittest.mock.patch.object(
+            tile, "set_phase_terminal_count", side_effect=_record
+        ):
+            tile_component_manager.set_phase_terminal_count(3)
+
+        assert threads == [tile_component_manager._hardware_thread_id]
+        assert threads[0] != threading.get_ident()
+        assert tile.get_phase_terminal_count() == 3
+
+    def test_fast_command_waits_out_slow_monitoring(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test fast commands succeed while monitoring reads are slow.
+
+        Each health read is made slower than the 0.8 s this command used
+        to wait for the shared hardware lock, so on main a command
+        arriving during one fails. Routed through the polling thread, a
+        command instead waits for the read in progress, then runs ahead
+        of the next poll.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        """
+        slow_read_s = 1.0
+        tile = tile_component_manager.tile
+        original = tile.get_health_status
+
+        def _slow_health_status(*args: Any, **kwargs: Any) -> Any:
+            time.sleep(slow_read_s)
+            return original(*args, **kwargs)
+
+        latencies: list[float] = []
+        with unittest.mock.patch.object(
+            tile, "get_health_status", side_effect=_slow_health_status
+        ):
+            for value in range(10):
+                start = time.monotonic()
+                tile_component_manager.set_phase_terminal_count(value % 4)
+                latencies.append(time.monotonic() - start)
+                time.sleep(0.07)  # land at varying points in the poll cycle
+
+        # Never more than one (slow) read in progress, plus some slack.
+        assert max(latencies) < slow_read_s + 0.3, latencies
+
+    def test_fast_command_rejected_during_lrc(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test a fast command fails at once, saying why, while an LRC runs.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        """
+        release = threading.Event()
+        started = threading.Event()
+
+        def _long_command() -> None:
+            started.set()
+            release.wait(5)
+
+        tile_component_manager._submit_lrc_request(
+            command_name="long_command", command_object=_long_command
+        )
+        try:
+            assert started.wait(5)
+            start = time.monotonic()
+            with pytest.raises(TimeoutError, match="while long_command is executing"):
+                tile_component_manager.set_phase_terminal_count(1)
+            assert time.monotonic() - start < 0.1
+        finally:
+            release.set()
+
+    def test_fast_command_not_executed_after_timeout(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+    ) -> None:
+        """
+        Test a command that times out before it starts is never executed.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        """
+        release = threading.Event()
+        started = threading.Event()
+
+        def _blocking_access() -> None:
+            started.set()
+            release.wait(5)
+
+        # Occupy the polling thread with another command.
+        blocker = threading.Thread(
+            target=tile_component_manager._run_on_hardware_thread,
+            args=("blocker", _blocking_access),
+            kwargs={"timeout": 10},
+        )
+        blocker.start()
+        assert started.wait(5)
+
+        late_access = unittest.mock.Mock()
+        try:
+            with pytest.raises(TimeoutError, match="not executed"):
+                tile_component_manager._run_on_hardware_thread(
+                    "late", late_access, timeout=0.2
+                )
+        finally:
+            release.set()
+            blocker.join(5)
+        time.sleep(0.5)  # give the polling thread a chance to (not) run it
+        late_access.assert_not_called()
+
 
 class TestDynamicSimulator:
     """Class for testing using the DynamicTileSimulator as a backend."""

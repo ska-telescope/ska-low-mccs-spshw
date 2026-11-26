@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import re
 import threading
@@ -52,6 +53,7 @@ from .firmware_threshold_interface import (
 )
 from .tile_data import TileData
 from .tile_poll_management import (
+    TileCommandRequest,
     TileLRCRequest,
     TileRequest,
     TileRequestProvider,
@@ -236,6 +238,7 @@ class TileComponentManager(
         poll_timeout: float = 6.0,
         power_callback_timeout: float = 6.0,
         lock_starvation_timeout: float = 120.0,
+        command_timeout: float = 2.0,
     ) -> None:
         """
         Initialise a new instance.
@@ -286,6 +289,10 @@ class TileComponentManager(
         :param lock_starvation_timeout: if polls are continuously skipped
             because the hardware serialisation lock is busy for longer than
             this many seconds, report the component as faulty.
+        :param command_timeout: how long a fast command waits for the
+            polling thread to execute it. It runs holding the Tango
+            device monitor, so this must stay well under the 3 s client
+            and 3.2 s monitor timeouts.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
@@ -349,6 +356,10 @@ class TileComponentManager(
         self._poll_timeout: float = poll_timeout
         self._power_callback_timeout: float = power_callback_timeout
         self._lock_starvation_timeout: float = lock_starvation_timeout
+        self._command_timeout: float = command_timeout
+        # Identity of the polling thread, which executes all hardware
+        # access routed through _run_on_hardware_thread.
+        self._hardware_thread_id: int | None = None
         # Monotonic time of the first poll in the current unbroken run of
         # polls skipped due to LockTimeoutError. None when the last poll
         # managed to claim the lock.
@@ -703,6 +714,8 @@ class TileComponentManager(
         self.logger.debug(f"Executing request {poll_request.name} ...")
         # A callback hook to be updated after command executed.
         self.active_request = poll_request
+        if isinstance(poll_request, TileCommandRequest):
+            return self._execute_command_request(poll_request)
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
@@ -720,6 +733,108 @@ class TileComponentManager(
             result,
             poll_request.publish,
         )
+
+    def _execute_command_request(
+        self: TileComponentManager, request: TileCommandRequest
+    ) -> TileResponse:
+        """
+        Execute a fast command for a caller waiting on another thread.
+
+        The outcome, result or exception, goes to the caller through the
+        request's future. It is not treated as a poll failure: a command
+        raising (e.g. a bad argument) says nothing about the connection.
+
+        :param request: the command request.
+
+        :return: an unpublished response.
+        """
+        if not request.future.set_running_or_notify_cancel():
+            # The caller gave up waiting before we got to it.
+            self.logger.warning(f"{request.name} cancelled before execution.")
+            return TileResponse(request.name, None, publish=False)
+        try:
+            with acquire_timeout(
+                self._hardware_lock,
+                self._poll_timeout,
+                raise_exception=True,
+                context=request.name,
+            ):
+                result = request()
+        except BaseException as e:  # pylint: disable=broad-except
+            request.future.set_exception(e)
+        else:
+            request.future.set_result(result)
+        return TileResponse(request.name, None, publish=False)
+
+    def _run_on_hardware_thread(
+        self: TileComponentManager,
+        name: str,
+        func: Callable[[], Any],
+        timeout: float | None = None,
+    ) -> Any:
+        """
+        Execute a hardware access on the polling thread, and wait for it.
+
+        Fast commands run on Tango request threads; routing their hardware
+        access through the polling thread means all hardware access happens
+        on one thread. Commands are served ahead of monitoring, so a command
+        waits for at most the request in progress.
+
+        :param name: a name for the access, for logging.
+        :param func: the hardware access to execute.
+        :param timeout: how long to wait for it, in seconds. Defaults to
+            the command timeout.
+
+        :raises ConnectionError: if not polling.
+        :raises TimeoutError: if the polling thread did not get to it in
+            time (it is then not executed), or it did not finish in time.
+
+        :return: whatever ``func`` returns.
+        """
+        if threading.get_ident() == self._hardware_thread_id:
+            # Already on the polling thread, e.g. called from within a
+            # long running command.
+            return func()
+        provider = self._request_provider
+        if provider is None:
+            raise ConnectionError(f"Cannot execute {name}: not polling.")
+        active = self.active_request
+        if isinstance(active, TileLRCRequest):
+            # It would only time out waiting for the LRC; say why now.
+            raise TimeoutError(
+                f"Cannot execute {name} while {active.name} is executing."
+            )
+
+        timeout = self._command_timeout if timeout is None else timeout
+        deadline = time.monotonic() + timeout
+        request = TileCommandRequest(name, func)
+        provider.enqueue_command(request)
+        while True:
+            # Re-notify until the request starts: a notify sent while the
+            # polling thread is mid-poll is lost, and it would then wait a
+            # whole poll_rate before picking the command up.
+            if not request.future.running():
+                self._wake_polling_thread()
+            remaining = deadline - time.monotonic()
+            try:
+                return request.future.result(timeout=max(0.0, min(0.05, remaining)))
+            except concurrent.futures.TimeoutError as e:
+                if remaining > 0.05:
+                    continue
+                if request.future.cancel():
+                    raise TimeoutError(
+                        f"{name} not executed: hardware busy for {timeout}s."
+                    ) from e
+                raise TimeoutError(f"{name} still executing after {timeout}s.") from e
+
+    def _wake_polling_thread(self: TileComponentManager) -> None:
+        """Cut short the polling thread's wait between polls."""
+        # NOTE: prototype. This reaches into ska-tango-base's Poller, which
+        # waits on this condition for poll_rate between polls. A public
+        # "wake" method on Poller would be the proper fix.
+        condition = self._poller._condition  # pylint: disable=protected-access
+        with condition:
+            condition.notify()
 
     def poll_failed(self: TileComponentManager, exception: Exception) -> None:
         """
@@ -882,6 +997,10 @@ class TileComponentManager(
         :param poll_response: response to the pool, including any values
             read.
         """
+        if isinstance(self.active_request, TileCommandRequest):
+            # Resolved through its future; nothing to publish.
+            self.active_request = None
+            return
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_completed()
         self.active_request = None
@@ -1013,6 +1132,7 @@ class TileComponentManager(
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
+        self._hardware_thread_id = threading.get_ident()
         self._polling_stopped_event.clear()
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
@@ -1928,12 +2048,10 @@ class TileComponentManager(
         def _acquisition_started() -> bool:
             started = False
             try:
-                with acquire_timeout(
-                    self._hardware_lock,
-                    self._default_lock_timeout,
-                    raise_exception=True,
-                ):
-                    started = self._is_acquisition_started()
+                # On the polling thread, like all hardware access.
+                started = self._run_on_hardware_thread(
+                    "is_acquisition_started", self._is_acquisition_started
+                )
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
@@ -4068,26 +4186,21 @@ class TileComponentManager(
             raise ValueError("register name is a mandatory parameter")
         if self.tile.tpm is None:
             raise ValueError("Cannot read register on unconnected TPM.")
-        with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if len(self.tile.find_register(register_name)) == 0:
-                        self.logger.error(
-                            "Register '" + register_name + "' not present"
-                        )
-                        return []
-                    value = self.tile.read_register(register_name)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-                    return []
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                return []
+
+        def _read() -> Any:
+            if len(self.tile.find_register(register_name)) == 0:
+                self.logger.error("Register '" + register_name + "' not present")
+                return None
+            return self.tile.read_register(register_name)
+
+        try:
+            value = self._run_on_hardware_thread("read_register", _read)
+        # pylint: disable=broad-except
+        except Exception as e:
+            self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+            return []
+        if value is None:
+            return []
 
         if isinstance(value, list):
             lvalue = cast(list, value)
@@ -4215,13 +4328,13 @@ class TileComponentManager(
                 f"length must be 32. Attempting to set with length {len(levels)}"
             )
 
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
+        def _set_and_read_back() -> list[float]:
             self.tile.set_preadu_levels(levels)
-            _preadu_levels = self.tile.get_preadu_levels()
+            return self.tile.get_preadu_levels()
+
+        _preadu_levels = self._run_on_hardware_thread(
+            "set_preadu_levels", _set_and_read_back
+        )
 
         self._update_attribute_callback(preadu_levels=_preadu_levels)
 
@@ -4247,9 +4360,14 @@ class TileComponentManager(
 
         :param value: the phase terminal count
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
+
+        def _set_and_read_back() -> int:
             self.tile.set_phase_terminal_count(value)
-            read_value = self.tile.get_phase_terminal_count()
+            return self.tile.get_phase_terminal_count()
+
+        read_value = self._run_on_hardware_thread(
+            "set_phase_terminal_count", _set_and_read_back
+        )
         self._update_attribute_callback(phase_terminal_count=read_value)
 
     @property

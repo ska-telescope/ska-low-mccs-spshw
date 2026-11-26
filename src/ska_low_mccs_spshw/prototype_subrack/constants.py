@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, auto
 from typing import Final
 
 __all__ = [
@@ -17,17 +17,23 @@ __all__ = [
     "COMMAND_POLL_INTERVAL",
     "COMMAND_TIMEOUT",
     "ClientCommand",
+    "CommandOutcome",
     "DerivedKey",
     "FILTERED_ATTRIBUTES",
     "HEALTH_NO_VALUE_REASON",
     "HEALTH_STATUS_KEY",
     "HttpError",
     "MIN_PWM_DUTY_FRACTION",
+    "PDU_ABORT_CHECK_INTERVAL",
+    "PDU_COMMAND_TIMEOUT",
     "PSU_DEAD_VOLTAGE_THRESHOLD",
     "PSU_MAX_POWER",
     "PSU_NAMES",
     "ReadKey",
     "RequestError",
+    "SMM_LEAVE_NETWORK_TIMEOUT",
+    "SMM_PROBE_INTERVAL",
+    "SMM_SHUTDOWN_TIME",
 ]
 
 
@@ -69,6 +75,18 @@ class ReadKey(str, Enum):
     TPM_VOLTAGES = "tpm_voltages"
 
 
+class CommandOutcome(Enum):
+    """
+    The outcome of a command the device runs on the board or on the PDU.
+
+    Each outcome maps to one terminal task status.
+    """
+
+    COMPLETED = auto()
+    FAILED = auto()
+    ABORTED = auto()
+
+
 class DerivedKey(str, Enum):
     """The keys computed from a poll rather than read from the board."""
 
@@ -95,6 +113,7 @@ class ClientCommand(str, Enum):
     SET_SUBRACK_FAN_SPEED = "set_subrack_fan_speed"
     SET_FAN_MODE = "set_fan_mode"
     SET_POWER_SUPPLY_FAN_SPEED = "set_power_supply_fan_speed"
+    POWEROFF_SUBRACK = "poweroff_subrack"
 
     # The asynchronous handshake. A caller runs a command and waits for it
     # through :py:meth:`~.subrack_client.Subrack.run_board_command`, which is
@@ -133,6 +152,32 @@ COMMAND_TIMEOUT: Final = 30.0
 
 COMMAND_POLL_INTERVAL: Final = 0.1
 """How long, in seconds, between ``command_completed`` probes."""
+
+PDU_COMMAND_TIMEOUT: Final = 30.0
+"""How long, in seconds, ``On`` and ``Off`` wait for the PDU ports to switch."""
+
+SMM_SHUTDOWN_TIME: Final = 30.0
+"""How long, in seconds, ``Off`` waits after the SMM leaves the network.
+
+The SMM takes its network down before it unmounts its filesystems and cuts its
+own supply. This wait covers those last steps.
+"""
+
+SMM_LEAVE_NETWORK_TIMEOUT: Final = 60.0
+"""How long, in seconds, ``Off`` waits for the SMM to leave the network."""
+
+SMM_PROBE_INTERVAL: Final = 1.0
+"""How long, in seconds, a connection probe of the SMM waits for an answer.
+
+It is also the pause between probes.
+"""
+
+PDU_ABORT_CHECK_INTERVAL: Final = 0.1
+"""The longest time, in seconds, between abort checks while a PDU wait runs.
+
+A port change ends the wait at once. Nothing signals an abort to the wait, so
+it looks at the abort event at this interval.
+"""
 
 PSU_NAMES: Final[tuple[str, ...]] = ("PSU1", "PSU2")
 """The power supplies the health status reports on."""

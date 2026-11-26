@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-727] The prototype subrack powers itself on and off through the PDU ports named by its `PduTrl` and `PduPorts` properties. Without both properties it rejects `On` and `Off`.
+  * `On` switches every port on, then waits up to 30 s for the PDU to report every port on.
+  * `Off` first shuts the SMM down with `poweroff_subrack` and waits for it to leave the network, then switches every port off and waits up to 30 s for the PDU to report every port off. The shutdown is skipped when the ports are already off.
+  * When the board does not answer and every port is off, the subrack reports `OFF` and its TPMs report `NO_SUPPLY`.
 * [THORN-819] Upload pod logs with the soak test.
 * [THORN-791] Fix AttributeErrors in pduPortStates, pduPortCurrents, pduPortVoltages.
   * There was an index error 1-based system but indexing with zero.

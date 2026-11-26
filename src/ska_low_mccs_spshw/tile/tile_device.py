@@ -1669,11 +1669,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         if db_configuration_fault is not None:
             self.db_configuration_fault = db_configuration_fault
 
-        # Propagate power state to base implementation
-        super()._component_state_changed(power=power)
+        # The base implementation has no NO_SUPPLY action, so a TPM with no
+        # supply goes to OFF. The power_state attribute keeps NO_SUPPLY.
+        super()._component_state_changed(
+            power=PowerState.OFF if power == PowerState.NO_SUPPLY else power
+        )
 
         match power:
-            case PowerState.OFF | PowerState.UNKNOWN:
+            case PowerState.OFF | PowerState.NO_SUPPLY | PowerState.UNKNOWN:
                 for signal in self._HEALTH_SIGNAL_MAP.values():
                     setattr(self, signal, None)
                 for name, signal in self._GENERIC_SIGNAL_MAP.items():

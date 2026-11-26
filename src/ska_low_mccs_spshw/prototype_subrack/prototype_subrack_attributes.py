@@ -166,8 +166,8 @@ TPM_POWER_STATE_SIGNALS: Final[tuple[str, ...]] = tuple(
     f"_tpm{bay}_power_state" for bay in range(1, SubrackData.TPM_BAY_COUNT + 1)
 )
 
-# Every signal this device emits, so that a lost board can invalidate all
-# of them.
+# Every signal this device emits from the board, so that a lost board can
+# invalidate all of them.
 ALL_SIGNALS: Final[tuple[str, ...]] = (
     tuple(READ_KEY_TO_SIGNAL.values())
     + tuple(HEALTH_PATH_TO_SIGNAL)

@@ -53,9 +53,11 @@ def tile_state_map() -> dict[tuple[PowerState, bool], tango.DevState]:
     return {
         (PowerState.UNKNOWN, False): tango.DevState.UNKNOWN,
         (PowerState.OFF, False): tango.DevState.OFF,
+        (PowerState.NO_SUPPLY, False): tango.DevState.OFF,
         (PowerState.ON, False): tango.DevState.FAULT,
         (PowerState.UNKNOWN, True): tango.DevState.FAULT,
         (PowerState.OFF, True): tango.DevState.FAULT,
+        (PowerState.NO_SUPPLY, True): tango.DevState.FAULT,
         (PowerState.ON, True): tango.DevState.ON,
     }
 

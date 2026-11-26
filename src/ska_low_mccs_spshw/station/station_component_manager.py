@@ -2379,46 +2379,40 @@ class SpsStationComponentManager(
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
-        Turn off this station.
+        Turn off this station by turning off its subracks.
+
+        A subrack turns off through its PDU ports, which also removes power
+        from its TPMs. So the tiles need no command of their own.
+
+        The command ends when every subrack finishes its own ``Off``. The
+        station state follows later, from the subrack and tile power events.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
         if task_callback:
-            task_callback(
-                status=TaskStatus.REJECTED,
-                result=(
-                    ResultCode.REJECTED,
-                    "MCCS has no control over subrack PDUs. "
-                    "Unable to drive to the OFF state."
-                    "Try Standby to turn off all TPMs.",
-                ),
-            )
-        # The following is commented out because
-        # MCCS has no control over subrack PDUs, meaning
-        # the lowest drivable state for spsStation is STANDBY.
-        # There is already a method Standby() that does this.
-        # message: str = ""
-        # if task_callback:
-        #     task_callback(status=TaskStatus.IN_PROGRESS)
-        # results = [proxy.off() for proxy in self._subrack_proxies.values()]
-        # # Never mind tiles, turning off subracks suffices
-        # # TODO: Here we need to monitor Tiles. This will eventually
-        # # use the mechanism described in MCCS-945, but until that is implemented
-        # # we might instead just poll these devices' longRunngCommandAttribute.
-        # # For the moment, however, we just submit the subservient devices' commands
-        # # for execution and forget about them.
-        # if all(
-        #     result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
-        #     for (result, _) in results
-        # ):
-        #     task_status = TaskStatus.COMPLETED
-        #     result_code = ResultCode.OK
-        #     message = "Off Command Completed"
-        # else:
-        #     task_status = TaskStatus.FAILED
-        #     result_code = ResultCode.FAILED
-        #     message = "Off Command Failed"
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        off_commands = MccsCompositeCommandProxy(self.logger, task_abort_event)
+        for subrack_trl in self._subrack_proxies:
+            off_commands += MccsCommandProxy(subrack_trl, "Off", self.logger)
+        # A prototype subrack shuts its SMM down before it switches its PDU
+        # ports. Its Off usually takes about a minute, but its own waits add
+        # up to about 150s, so this timeout must be longer than that.
+        result_code, message = off_commands(
+            command_evaluator=CompositeCommandResultEvaluator(), timeout=180
+        )
+
+        if result_code == ResultCode.OK:
+            task_status = TaskStatus.COMPLETED
+            message = "Off Command Completed"
+        elif result_code == ResultCode.ABORTED:
+            self.logger.error(f"Off aborted: {message}")
+            task_status = TaskStatus.ABORTED
+        else:
+            self.logger.error(f"Off failed: {message}")
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def standby(
@@ -2851,23 +2845,6 @@ class SpsStationComponentManager(
 
         return (result_code, failure_step)
 
-    def _subrack_supports_on(self: SpsStationComponentManager, fqdn: str) -> bool:
-        """
-        Check whether a subrack device exposes an On command.
-
-        :param fqdn: the subrack's TRL.
-        :return: True if the device has an On command, or if this cannot be
-            determined (so that the On attempt, and any failure, is reported).
-        """
-        proxy = self._subrack_proxies[fqdn]._proxy
-        if proxy is None:
-            return True
-        try:
-            return "On" in [cmd.cmd_name for cmd in proxy.command_list_query()]
-        except Exception:  # pylint: disable=broad-except
-            self.logger.warning(f"Could not query commands of {fqdn}", exc_info=True)
-            return True
-
     @check_communicating
     def _turn_on_subracks(
         self: SpsStationComponentManager,
@@ -2883,22 +2860,16 @@ class SpsStationComponentManager(
         subracks_to_turn_on = [
             fqdn
             for fqdn, power_state in dict(self._subrack_power_states).items()
-            if power_state != PowerState.ON
-        ]
-        # MccsPrototypeSubrack has no On command: it is powered externally
-        # (e.g. via PDU) and reports ON once its board is reachable. Only
-        # command subracks that support On; the rest are just waited on below.
-        # MccsSubrack has an On command but this just calls a simulated power
-        # that then gates communication with simulated power reply.
-        subracks_to_turn_on = [
-            fqdn for fqdn in subracks_to_turn_on if self._subrack_supports_on(fqdn)
+            if power_state in (PowerState.OFF, PowerState.NO_SUPPLY)
         ]
         if subracks_to_turn_on:
             on_commands = MccsCompositeCommandProxy(self.logger, task_abort_event)
             for fqdn in subracks_to_turn_on:
                 on_commands += MccsCommandProxy(fqdn, "On", self.logger)
+            # A prototype subrack On waits up to 30s for its PDU ports to
+            # switch, so this timeout must be longer than that.
             result_code, message = on_commands(
-                command_evaluator=CompositeCommandResultEvaluator(), timeout=20
+                command_evaluator=CompositeCommandResultEvaluator(), timeout=40
             )
             if result_code != ResultCode.OK:
                 msg = f"subracks failed to power on: {message}"

@@ -76,15 +76,76 @@ The power commands of tile are implemented as follows:
 MccsSubrack
 ^^^^^^^^^^^
 
-.. note::
+Two device classes can serve the Tango class ``MccsSubrack``. The
+``MCCS_SUBRACK_IMPLEMENTATION`` environment variable of the device server
+selects one. With ``legacy``, or with the variable not set, the server runs the
+legacy ``ska_low_mccs_spshw.subrack.MccsSubrack``. With ``prototype``, it runs
+``MccsPrototypeSubrack``, which switches the PDU ports that feed the subrack.
+This section describes the legacy device.
 
-  The Subrack Tango Device and the Subrack API are both under redesign and while this is meant only to improve maintainability and efficiency, some of this information might change in the future.
+The **Power state** of the legacy subrack is set by polling the subrack
+management board (SMB) over HTTP. A successful poll means ``ON``. A poll that
+gets no answer from the board means ``UNKNOWN``. The device does not read the
+PDU, so a subrack whose PDU ports are off reports ``UNKNOWN``, not ``OFF``.
 
-The **Power state:** of the subrack is set by polling the subrack management board over HTTP. A successful poll means ``ON``. A connection error means ``UNKNOWN``. The subrack also publishes a ``tpm{N}PowerState`` value for each bay: ``ON``/``OFF`` from the board's ``tpm_on_off`` reading, or ``NO_SUPPLY`` for every bay when the subrack is ``OFF``.
+The subrack also publishes a ``tpm{N}PowerState`` value for each bay. It is
+``ON`` or ``OFF`` from the board's ``tpm_on_off`` reading. Every bay is
+``NO_SUPPLY`` while the subrack is ``OFF``, and ``UNKNOWN`` while the subrack
+is ``UNKNOWN`` or communication is lost. The board values are read every
+``UpdateRate`` seconds (15 s by default), and straight after a board command
+finishes.
 
-The power commands of subrack are implemented as follows:
+The legacy subrack has a power supply layer between the device and the board.
+That layer is a ``PowerSupplyProxySimulator`` that starts ``ON``. It stands in
+for the PDU, and it switches no real power. The ``On`` and ``Off`` commands act
+only on that simulated supply.
 
-- ``On``/``Off``: go through ``ComponentManagerWithUpstreamPowerSupply``, but the upstream supply is a ``PowerSupplyProxySimulator`` (starts ``ON``), so these commands don't switch any real power. ``Off`` just stops hardware polling and makes the device report ``OFF``, which the subrack's TPMs then see as ``NO_SUPPLY``. ``On`` starts polling again.
+- ``On`` sets the simulated supply to ``ON`` at its next poll. The device then
+  starts polling the board again, and goes ``ON`` after the first successful
+  poll. ``On`` does not switch the PDU, so it cannot power up a subrack that has
+  no power.
+- ``Off`` sets the simulated supply to ``OFF`` at its next poll. The device
+  stops polling the board, clears its hardware attributes, reports ``OFF``,
+  and sets every ``tpm{N}PowerState`` to ``NO_SUPPLY``. The board and its TPMs
+  stay powered. A tile whose TPM still answers keeps reporting ``ON``, and
+  flags the mismatch with the subrack as a fault.
+- ``Standby`` is not implemented and raises ``NotImplementedError``.
+
+The TPM commands queue a request that the poller sends to the board on its next
+poll. The poller sends one board command at a time. When the board runs a
+command asynchronously, the poller asks ``command_completed`` on each poll
+until the command finishes. The command then reports ``COMPLETED``, or
+``FAILED`` if the board reports a failure. A later request for the same bay,
+or for all bays, replaces a request that has not been sent yet, and the
+replaced request reports ``ABORTED``.
+
+- ``PowerOnTpm(N)`` and ``PowerOffTpm(N)`` send ``turn_on_tpm`` or
+  ``turn_off_tpm`` for bay ``N`` (one-based). ``MccsTile`` calls these from its
+  own ``On`` and ``Off``.
+- ``PowerUpTpms`` and ``PowerDownTpms`` send ``turn_on_tpms`` or
+  ``turn_off_tpms`` for every bay.
+
+The legacy subrack also has commands that act on the PDU. The ``PduTrl`` and
+``PduPorts`` device properties name the ``MccsPdu`` device and the ports that
+feed the subrack. ``SimulatedPDU`` is ``True`` by default, and then the device
+does not connect to the PDU at all.
+
+- ``PowerPduPortOn(port)`` and ``PowerPduPortOff(port)`` are meant to switch one
+  PDU port directly. With ``SimulatedPDU`` set, or with no ``PduTrl``, they do
+  nothing and report ``OK``.
+- ``ScheduleOn`` and ``ScheduleOff`` send one ``SchedulePower`` request to the
+  ``PowerMarshaller`` named by ``PowerMarshallerTrl`` for each port in
+  ``PduPorts``, to run ``pduPortOn`` or ``pduPortOff`` on the PDU. With no
+  ``PowerMarshallerTrl``, they log a warning and do nothing.
+
+.. warning::
+
+  ``PowerPduPortOn`` and ``PowerPduPortOff`` do not switch the port when a PDU
+  is configured. ``pduPort{N}OnOff`` is an attribute of ``MccsPdu``, not a
+  command, so the call fails and the command reports ``FAILED``. Use
+  ``pduPortOn`` and ``pduPortOff`` on ``MccsPdu`` instead. ``ScheduleOn`` and
+  ``ScheduleOff`` never report a result, so they stay ``QUEUED`` even after the
+  requests are sent.
 
 .. figure:: images/subrack_power_sequence.png
    :alt: A graph of the power on/off commands sequences in the subrack
@@ -131,8 +192,11 @@ The WREN power state is logged but not used.
 
 - ``On``: does nothing if all tiles are already initialised or synchronised. Otherwise it waits for the WREN (if one is configured), turns on the subracks, sets the tile source IPs and the global reference time, and turns on the tiles 0.25 s apart. It then initialises the tiles and the station, waits for the ARP table, routes data and checks synchronisation.
 - ``Standby``: makes sure the subracks are ``ON``, then turns the tiles off 0.25 s apart and waits (up to 60 s) for every tile to report ``OFF``.
-- ``Off``: always rejected. MCCS can't switch the subracks' PDUs from here, so
-  ``STANDBY`` is the lowest state the station can be commanded to.
+- ``Off``: sends ``Off`` to every subrack and waits for each result. A
+  prototype subrack switches off its PDU ports, which also removes power from
+  its TPMs. The station goes ``OFF`` when the subrack and tile power states
+  report it. A legacy subrack only stops polling its board, so its TPMs stay
+  powered and the station does not go ``OFF``.
 
 .. figure:: images/sps_station_on_sequence.png
   :alt: A graph of the power on command sequence in the SpsStation.
